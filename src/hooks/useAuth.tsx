@@ -21,6 +21,8 @@ interface UserProfile {
   // New multi-org fields
   organizations: Organization[]
   isPlatformAdmin: boolean
+  // Organization setup requirement flag
+  requiresOrgSetup: boolean
 }
 
 interface AuthContextType {
@@ -30,7 +32,7 @@ interface AuthContextType {
   loading: boolean
   signInWithEmail: (email: string, password: string) => Promise<{ error: AuthError | null }>
   signInWithGoogle: () => Promise<{ error: AuthError | null }>
-  signUp: (email: string, password: string, displayName?: string) => Promise<{ error: AuthError | null }>
+  signUp: (email: string, password: string, displayName?: string, requiresOrgSetup?: boolean) => Promise<{ error: AuthError | null }>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>
   updatePassword: (password: string) => Promise<{ error: AuthError | null }>
@@ -58,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Fetch user profile
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('id, email, phone, display_name, role, family_id, org_id')
+        .select('id, email, phone, display_name, role, family_id, org_id, requires_org_setup')
         .eq('id', userId)
         .single()
 
@@ -142,6 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         org_id: userData.org_id,
         organizations,
         isPlatformAdmin: !!adminData,
+        requiresOrgSetup: userData.requires_org_setup ?? false,
       }
 
       // #region agent log
@@ -247,7 +250,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error }
   }
 
-  async function signUp(email: string, password: string, displayName?: string) {
+  async function signUp(email: string, password: string, displayName?: string, requiresOrgSetup?: boolean) {
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -255,6 +258,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         emailRedirectTo: `${window.location.origin}/portal/auth/callback`,
         data: {
           display_name: displayName,
+          // Pass requires_org_setup to metadata - the database trigger will read this
+          requires_org_setup: requiresOrgSetup ?? false,
         },
       },
     })

@@ -64,31 +64,89 @@ export default function OrganizationOnboarding() {
     cleanupStaleFlags()
   }, [])
 
+  // Load organization data - defined before the main effect that uses it
+  const loadOrganizationData = useCallback(async () => {
+    // #endregion
+    if (!currentOrganization?.id) {
+      // #endregion
+      setLoading(false)
+      return
+    }
+
+    try {
+      // #endregion
+      const { data, error: fetchError } = await supabase
+        .from('organizations')
+        .select('name, slug, org_type, contact_email')
+        .eq('id', currentOrganization.id)
+        .single()
+
+      // #endregion
+
+      if (fetchError) throw fetchError
+
+      if (data) {
+        // Check if organization is already complete
+        if (data.slug && data.org_type) {
+          // #endregion
+          // Organization is complete, redirect to settings (or dashboard)
+          if (!hasRedirected.current) {
+            hasRedirected.current = true
+            // Clear local flag
+            clearSetupOrganizationFlag()
+            
+            // Clear database flag explicitly (if set) to break potential loop
+            // The user has a valid org, so they shouldn't be forced to setup again
+            try {
+              if (profile?.requiresOrgSetup) {
+                await supabase
+                  .from('users')
+                  .update({ requires_org_setup: false })
+                  .eq('id', profile.id)
+              }
+            } catch (err) {
+              console.error('Error clearing DB flag:', err)
+            }
+
+            navigate('/admin/organization', { replace: true })
+          }
+          return
+        }
+        
+        // #endregion
+        // Organization needs completion, populate form
+        setValue('name', data.name || '')
+        setValue('slug', data.slug || '')
+        setValue('org_type', (data.org_type as OrganizationFormData['org_type']) || '')
+        setValue('contact_email', data.contact_email || '')
+      }
+    } catch (err) {
+      // #endregion
+      console.error('Error loading organization:', err)
+      // Don't block the user from filling out the form
+    } finally {
+      // #endregion
+      setLoading(false)
+    }
+  }, [currentOrganization?.id, setValue, navigate])
+
   // Main effect for handling authentication and redirection
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'OrganizationOnboarding.tsx:66',message:'Main useEffect triggered',data:{authLoading,hasUser:!!user,hasProfile:!!profile,hasCurrentOrg:!!currentOrganization,currentOrgId:currentOrganization?.id,loading,hasRedirected:hasRedirected.current},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
     // #endregion
     // Prevent race conditions with multiple redirects
     if (hasRedirected.current) {
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'OrganizationOnboarding.tsx:69',message:'Early return: already redirected',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
       // #endregion
       return
     }
 
     // Still waiting for auth to initialize
     if (authLoading) {
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'OrganizationOnboarding.tsx:73',message:'Early return: authLoading true',data:{authLoading},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
       // #endregion
       return
     }
 
     // User is not authenticated
     if (!user) {
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'OrganizationOnboarding.tsx:78',message:'User not authenticated, checking setup flag',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
       // #endregion
       const hasSetupFlag = getSetupOrganizationFlag()
       
@@ -113,8 +171,6 @@ export default function OrganizationOnboarding() {
 
     // User is authenticated but profile hasn't loaded yet
     if (!profile) {
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'OrganizationOnboarding.tsx:101',message:'Early return: profile not loaded',data:{hasUser:!!user},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
       // #endregion
       return
     }
@@ -131,7 +187,6 @@ export default function OrganizationOnboarding() {
       const orgId = currentOrganization.id
       if (hasLoadedOrgData.current !== orgId) {
         // #region agent log
-        fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'OrganizationOnboarding.tsx:129',message:'Current org exists, calling loadOrganizationData',data:{currentOrgId:orgId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
         // #endregion
         hasLoadedOrgData.current = orgId
         // We need to fetch full org details from DB to check if onboarding is complete
@@ -140,8 +195,6 @@ export default function OrganizationOnboarding() {
         loadOrganizationData()
       }
     } else {
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'OrganizationOnboarding.tsx:142',message:'No current org, setting loading false',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
       // #endregion
       // No organization, proceed with fresh onboarding
       hasLoadedOrgData.current = null
@@ -150,7 +203,7 @@ export default function OrganizationOnboarding() {
 
     // Clear the setup flag since we've successfully reached onboarding
     clearSetupOrganizationFlag()
-  }, [authLoading, user, profile, currentOrganization?.id, navigate, setValue])
+  }, [authLoading, user, profile, currentOrganization?.id, navigate, loadOrganizationData, setValue])
 
   // Timeout protection for loading state
   useEffect(() => {
@@ -168,72 +221,6 @@ export default function OrganizationOnboarding() {
 
     return () => clearTimeout(timeoutId)
   }, [loading])
-
-  const loadOrganizationData = useCallback(async () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'OrganizationOnboarding.tsx:143',message:'loadOrganizationData called',data:{currentOrgId:currentOrganization?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
-    if (!currentOrganization?.id) {
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'OrganizationOnboarding.tsx:144',message:'No org ID, setting loading false',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
-      setLoading(false)
-      return
-    }
-
-    try {
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'OrganizationOnboarding.tsx:149',message:'Starting Supabase query',data:{orgId:currentOrganization.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
-      const { data, error: fetchError } = await supabase
-        .from('organizations')
-        .select('name, slug, org_type, contact_email')
-        .eq('id', currentOrganization.id)
-        .single()
-
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'OrganizationOnboarding.tsx:156',message:'Supabase query completed',data:{hasData:!!data,hasError:!!fetchError,error:fetchError?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
-
-      if (fetchError) throw fetchError
-
-      if (data) {
-        // Check if organization is already complete
-        if (data.slug && data.org_type) {
-          // #region agent log
-          fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'OrganizationOnboarding.tsx:160',message:'Org complete, redirecting',data:{slug:data.slug,orgType:data.org_type},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
-          // Organization is complete, redirect to settings (or dashboard)
-          if (!hasRedirected.current) {
-            hasRedirected.current = true
-            clearSetupOrganizationFlag()
-            navigate('/admin/organization', { replace: true })
-          }
-          return
-        }
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'OrganizationOnboarding.tsx:170',message:'Org incomplete, populating form',data:{hasName:!!data.name,hasSlug:!!data.slug},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
-        // Organization needs completion, populate form
-        setValue('name', data.name || '')
-        setValue('slug', data.slug || '')
-        setValue('org_type', (data.org_type as OrganizationFormData['org_type']) || '')
-        setValue('contact_email', data.contact_email || '')
-      }
-    } catch (err) {
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'OrganizationOnboarding.tsx:176',message:'Error in loadOrganizationData',data:{error:err instanceof Error?err.message:String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
-      console.error('Error loading organization:', err)
-      // Don't block the user from filling out the form
-    } finally {
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'OrganizationOnboarding.tsx:179',message:'loadOrganizationData finally: setting loading false',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
-      setLoading(false)
-    }
-  }, [currentOrganization?.id, setValue, navigate])
 
   const onStep1Submit = async (data: OrganizationFormData) => {
     // Prevent duplicate submissions
@@ -367,6 +354,18 @@ export default function OrganizationOnboarding() {
 
       // Clear the setup flag since organization is created
       clearSetupOrganizationFlag()
+      
+      // Explicitly clear the DB flag as a backup (trigger should have done it)
+      if (profile) {
+        try {
+          await supabase
+            .from('users')
+            .update({ requires_org_setup: false })
+            .eq('id', profile.id)
+        } catch (err) {
+          console.error('Error clearing DB flag:', err)
+        }
+      }
 
       // Move to next step
       setCurrentStep(2)

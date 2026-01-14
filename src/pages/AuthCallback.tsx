@@ -36,12 +36,50 @@ export default function AuthCallback() {
 
       if (data.session) {
         // Session is valid, determine where to redirect
+        const userId = data.session.user.id
+
+        // Priority 0: Check database for requires_org_setup flag (most reliable)
+        // This handles email confirmation flows where localStorage may be on different device
+        try {
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('requires_org_setup')
+            .eq('id', userId)
+            .single()
+
+          if (!userError && userData?.requires_org_setup) {
+            // Clear any localStorage flag (since database has it)
+            clearSetupOrganizationFlag()
+            navigate('/admin/onboarding', { replace: true })
+            return
+          }
+        } catch (err) {
+          console.error('Error checking requires_org_setup flag:', err)
+          // Continue with fallback logic
+        }
 
         // Priority 1: Check localStorage for setupOrganization flag
         // This handles Google OAuth flow where navigation state is lost
         const hasSetupOrgFlag = getSetupOrganizationFlag()
         if (hasSetupOrgFlag) {
-          // Clear the flag immediately to prevent redirect loops
+          // Set the database flag for this user (for OAuth flow)
+          // The trigger should have set it from metadata, but this is a backup
+          try {
+            await supabase
+              .from('users')
+              .update({ requires_org_setup: true })
+              .eq('id', userId)
+
+            // Also update auth metadata for consistency
+            await supabase.auth.updateUser({
+              data: { requires_org_setup: true }
+            })
+          } catch (err) {
+            console.error('Error setting requires_org_setup flag:', err)
+            // Continue anyway - the redirect will still work
+          }
+
+          // Clear the localStorage flag immediately to prevent redirect loops
           clearSetupOrganizationFlag()
           navigate('/admin/onboarding', { replace: true })
           return

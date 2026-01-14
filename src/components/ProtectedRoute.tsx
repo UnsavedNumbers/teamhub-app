@@ -67,6 +67,14 @@ export function ProtectedRoute({
     )
   }
 
+  // Check organization setup requirement flag
+  // Platform admins bypass this check
+  // Allow access to onboarding route even with flag set
+  const isOnboardingRoute = location.pathname === '/admin/onboarding'
+  if (!profile.isPlatformAdmin && profile.requiresOrgSetup && !isOnboardingRoute) {
+    return <Navigate to="/admin/onboarding" replace />
+  }
+
   // Check if organization is required but user has no orgs
   if (requireOrganization && profile.organizations.length === 0) {
     return (

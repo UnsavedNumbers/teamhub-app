@@ -61,7 +61,7 @@ export default function Signup() {
 
     setLoading(true)
 
-    const { error } = await signUp(email, password, displayName || undefined)
+    const { error } = await signUp(email, password, displayName || undefined, isOrgSetupFlow)
     
     if (error) {
       setError(error.message)

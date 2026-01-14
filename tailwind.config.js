@@ -43,6 +43,7 @@ export default {
             fontFamily: {
                 sans: ['Inter', 'system-ui', 'sans-serif'],
                 display: ['Bebas Neue', 'sans-serif'],
+                impact: ['Lexend', 'sans-serif'],
             },
             borderRadius: {
                 DEFAULT: '0.5rem',
