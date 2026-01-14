@@ -1,6 +1,10 @@
-import { useState, FormEvent } from 'react'
+import { useState, FormEvent, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import {
+  setSetupOrganizationFlag,
+  cleanupStaleFlags,
+} from '../utils/setupOrganization'
 
 type RoleType = 'parent' | 'coach' | 'admin'
 
@@ -14,8 +18,13 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
 
-  const { signInWithEmail, signInWithGoogle } = useAuth()
+  const { signInWithEmail, signInWithGoogle, user } = useAuth()
   const navigate = useNavigate()
+
+  // Clean up stale localStorage flags on mount
+  useEffect(() => {
+    cleanupStaleFlags()
+  }, [])
 
   async function handleEmailLogin(e: FormEvent) {
     e.preventDefault()
@@ -45,6 +54,27 @@ export default function Login() {
     // If successful, the page will redirect to Google OAuth
   }
 
+  /**
+   * Handle clicking the "Setup an Organization" button.
+   * If user is authenticated, redirect directly to onboarding.
+   * Otherwise, store flag and redirect to signup.
+   */
+  function handleSetupOrganization() {
+    if (user) {
+      // User is already authenticated, go directly to onboarding
+      navigate('/admin/onboarding')
+    } else {
+      // Store flag in localStorage for the signup/OAuth flow
+      setSetupOrganizationFlag()
+      navigate('/portal/signup', {
+        state: {
+          setupOrganization: true,
+          returnTo: '/admin/onboarding',
+        },
+      })
+    }
+  }
+
   const roleCards = [
     { id: 'parent', icon: 'family_restroom', label: 'Parent' },
     { id: 'coach', icon: 'sports', label: 'Coach' },
@@ -53,21 +83,77 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen font-sans bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 antialiased">
-      {/* Left side - Hero Image (hidden on mobile) */}
+      {/* Left side - Organization Setup Section (hidden on mobile) */}
       <div className="relative hidden w-0 flex-1 lg:block">
+        {/* Background Image */}
         <img
           alt="Peaceful empty sports stadium at sunset"
           className="absolute inset-0 h-full w-full object-cover"
           src="https://lh3.googleusercontent.com/aida-public/AB6AXuD0EioYyXup8hWypN337Pbn_TYldQzX6pJ4B-XzTwJNpPYzGkJM01_RX7voFn-WqPfzeKYEV3uehlCj6Ydm2kjcJgKhzjTJFk4ivzAGO71ShxUz2s0urAT6vdIuo1L6WOCPkjK_G3zgt7Ydml45W9KGChFKid43FWMrIDJEQ3Mo6QfpKjlwuFkFyCV5TwbqkBBH-M_0Uqg9OViXz-ry9d9HkTPPNWa7E6D153LVwiEQyYTbFEZdVULTK-loC4YTy2yXfn98L3Y0F-Q"
         />
-        <div className="absolute inset-0 bg-slate-900/40 mix-blend-multiply"></div>
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent"></div>
-        <div className="absolute bottom-16 left-16 right-16">
-          <h2 className="font-display text-5xl text-white tracking-wider mb-4">
-            Empowering Youth Sports
-          </h2>
-          <p className="text-xl text-slate-200 max-w-lg leading-relaxed">
-            A calm, professional space for athletes, families, and mentors to connect and grow together.
+        <div className="absolute inset-0 bg-slate-900/60 mix-blend-multiply"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/30"></div>
+
+        {/* Organization Setup Card Overlay */}
+        <div className="absolute inset-0 flex items-center justify-center p-16">
+          <div className="w-full max-w-md bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-10 shadow-2xl">
+            {/* Icon */}
+            <div className="w-16 h-16 mb-6 rounded-2xl bg-primary/20 flex items-center justify-center">
+              <span className="material-symbols-outlined text-4xl text-white">corporate_fare</span>
+            </div>
+
+            {/* Title & Description */}
+            <h2 className="font-display text-3xl text-white tracking-wide mb-3">
+              Create Your Organization
+            </h2>
+            <p className="text-lg text-slate-200/90 leading-relaxed mb-8">
+              Start managing your youth sports organization with professional tools for registration, scheduling, payments, and communication.
+            </p>
+
+            {/* Features List */}
+            <ul className="space-y-3 mb-8">
+              <li className="flex items-center gap-3 text-sm text-white/80">
+                <span className="material-symbols-outlined text-lg text-emerald-400">check_circle</span>
+                <span>Unlimited teams and players</span>
+              </li>
+              <li className="flex items-center gap-3 text-sm text-white/80">
+                <span className="material-symbols-outlined text-lg text-emerald-400">check_circle</span>
+                <span>Integrated payments and invoicing</span>
+              </li>
+              <li className="flex items-center gap-3 text-sm text-white/80">
+                <span className="material-symbols-outlined text-lg text-emerald-400">check_circle</span>
+                <span>Event scheduling and attendance</span>
+              </li>
+              <li className="flex items-center gap-3 text-sm text-white/80">
+                <span className="material-symbols-outlined text-lg text-emerald-400">check_circle</span>
+                <span>Parent and coach portals</span>
+              </li>
+            </ul>
+
+            {/* CTA Button */}
+            <button
+              type="button"
+              onClick={handleSetupOrganization}
+              className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+              style={{
+                backgroundColor: '#137fec',
+                boxShadow: '0 15px 30px -10px rgba(19, 127, 236, 0.4)',
+              }}
+            >
+              <span className="material-symbols-outlined">arrow_forward</span>
+              Get Started Free
+            </button>
+
+            <p className="mt-4 text-center text-xs text-white/50">
+              No credit card required. Setup in under 5 minutes.
+            </p>
+          </div>
+        </div>
+
+        {/* Bottom tagline (moved down) */}
+        <div className="absolute bottom-10 left-16 right-16">
+          <p className="text-sm text-slate-300 opacity-70">
+            Trusted by youth sports organizations nationwide
           </p>
         </div>
       </div>
@@ -272,6 +358,24 @@ export default function Login() {
                     Create an account
                   </Link>
                 </p>
+              </div>
+
+              {/* Mobile-only: Organization Setup CTA */}
+              <div className="mt-6 lg:hidden">
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <p className="text-sm text-slate-600 dark:text-slate-300 mb-3">
+                    Representing an organization?
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleSetupOrganization}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold text-white text-sm transition-colors"
+                    style={{ backgroundColor: '#137fec' }}
+                  >
+                    <span className="material-symbols-outlined text-lg">corporate_fare</span>
+                    Setup an Organization
+                  </button>
+                </div>
               </div>
             </div>
           </div>

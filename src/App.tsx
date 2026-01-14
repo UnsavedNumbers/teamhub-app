@@ -53,6 +53,7 @@ const CreateTravelPlan = lazy(() => import('./pages/admin/CreateTravelPlan'))
 const AdminTryouts = lazy(() => import('./pages/admin/AdminTryouts'))
 const OrganizationSettings = lazy(() => import('./pages/admin/OrganizationSettings'))
 const OrganizationUsers = lazy(() => import('./pages/admin/OrganizationUsers'))
+const OrganizationOnboarding = lazy(() => import('./pages/admin/OrganizationOnboarding'))
 
 function App() {
   return (
@@ -90,6 +91,17 @@ function App() {
             {/* Redirect root portal to dashboard */}
             <Route index element={<Navigate to="/portal/dashboard" replace />} />
           </Route>
+
+          {/* Organization Onboarding - Standalone route outside AdminLayout */}
+          {/* Allow unauthenticated access - will prompt for login/signup when submitting */}
+          <Route
+            path="/admin/onboarding"
+            element={
+              <Suspense fallback={<AdminLoadingSpinner />}>
+                <OrganizationOnboarding />
+              </Suspense>
+            }
+          />
 
           {/* Admin Routes - Material Dashboard Layout with nested routing */}
           <Route

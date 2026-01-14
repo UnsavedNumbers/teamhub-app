@@ -4,6 +4,8 @@ export interface Organization {
   id: string
   name: string
   role: 'parent' | 'coach' | 'org_admin'
+  slug?: string
+  org_type?: 'school' | 'club' | 'league' | 'academy' | 'aau' | null
 }
 
 interface OrganizationContextType {

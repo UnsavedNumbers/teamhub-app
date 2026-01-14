@@ -1,6 +1,11 @@
-import { useState, FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, FormEvent, useEffect } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import {
+  getSetupOrganizationFlag,
+  setSetupOrganizationFlag,
+  cleanupStaleFlags,
+} from '../utils/setupOrganization'
 
 export default function Signup() {
   const [email, setEmail] = useState('')
@@ -15,6 +20,29 @@ export default function Signup() {
 
   const { signUp, signInWithGoogle } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Check for setupOrganization flag from both location state and localStorage
+  const locationState = location.state as {
+    returnTo?: string
+    setupOrganization?: boolean
+  } | null
+
+  // Determine if this is an organization setup flow
+  const isOrgSetupFlow =
+    locationState?.setupOrganization === true ||
+    locationState?.returnTo === '/admin/onboarding' ||
+    getSetupOrganizationFlag()
+
+  // Determine where to redirect after signup
+  const returnTo = isOrgSetupFlow
+    ? '/admin/onboarding'
+    : (locationState?.returnTo || '/portal/dashboard')
+
+  // Clean up stale localStorage flags on mount
+  useEffect(() => {
+    cleanupStaleFlags()
+  }, [])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -39,15 +67,27 @@ export default function Signup() {
       setError(error.message)
       setLoading(false)
     } else {
-      // Redirect to email confirmation page
-      navigate('/portal/confirm-email', { state: { email } })
+      // Navigate to email confirmation page with returnTo info
+      navigate('/portal/confirm-email', {
+        state: {
+          email,
+          returnTo,
+          setupOrganization: isOrgSetupFlow,
+        },
+      })
     }
   }
 
   async function handleGoogleSignup() {
     setError(null)
     setGoogleLoading(true)
-    
+
+    // Store the setupOrganization flag in localStorage BEFORE OAuth redirect
+    // This is critical because OAuth redirects lose navigation state
+    if (isOrgSetupFlow) {
+      setSetupOrganizationFlag()
+    }
+
     const { error } = await signInWithGoogle()
     
     if (error) {
@@ -55,6 +95,7 @@ export default function Signup() {
       setGoogleLoading(false)
     }
     // If successful, the page will redirect to Google OAuth
+    // The flag is persisted in localStorage and will be checked in AuthCallback
   }
 
   // Password strength indicator
@@ -86,10 +127,12 @@ export default function Signup() {
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent"></div>
         <div className="absolute bottom-16 left-16 right-16">
           <h2 className="font-display text-5xl text-white tracking-wider mb-4">
-            Join the Community
+            {isOrgSetupFlow ? 'Setup Your Organization' : 'Join the Community'}
           </h2>
           <p className="text-xl text-slate-200 max-w-lg leading-relaxed">
-            Create your account and start connecting with teams, coaches, and fellow parents.
+            {isOrgSetupFlow
+              ? 'Create your account to get started with organization setup and team management.'
+              : 'Create your account and start connecting with teams, coaches, and fellow parents.'}
           </p>
         </div>
       </div>
@@ -108,15 +151,29 @@ export default function Signup() {
           {/* Header */}
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Create your account
+              {isOrgSetupFlow ? 'Create your admin account' : 'Create your account'}
             </h2>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-              Join TeamHub to manage your youth sports experience.
+              {isOrgSetupFlow
+                ? 'First, create an account. Then you can setup your organization.'
+                : 'Join TeamHub to manage your youth sports experience.'}
             </p>
           </div>
 
+          {/* Organization Setup Banner (visible when in setup flow) */}
+          {isOrgSetupFlow && (
+            <div className="mt-4 p-3 rounded-lg flex items-center gap-3 text-sm"
+              style={{ backgroundColor: 'rgba(19, 127, 236, 0.1)' }}
+            >
+              <span className="material-symbols-outlined text-primary">corporate_fare</span>
+              <span className="text-slate-700 dark:text-slate-200">
+                You&apos;ll be redirected to organization setup after creating your account.
+              </span>
+            </div>
+          )}
+
           {/* Form */}
-          <div className="mt-10">
+          <div className="mt-8">
             {/* Error Message */}
             {error && (
               <div className="mb-4 p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg text-red-600 dark:text-red-400 text-sm">

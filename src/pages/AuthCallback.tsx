@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import {
+  getSetupOrganizationFlag,
+  clearSetupOrganizationFlag,
+  cleanupStaleFlags,
+} from '../utils/setupOrganization'
 
 export default function AuthCallback() {
   const [searchParams] = useSearchParams()
@@ -8,6 +13,9 @@ export default function AuthCallback() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    // Clean up any stale flags first
+    cleanupStaleFlags()
+
     async function handleCallback() {
       // Check for error in URL params
       const errorParam = searchParams.get('error')
@@ -27,28 +35,41 @@ export default function AuthCallback() {
       }
 
       if (data.session) {
-        // Check for pending invite token
-        const pendingInviteToken = sessionStorage.getItem('pending_invite_token')
-        
-        if (pendingInviteToken) {
-          // Redirect to accept invite page
-          navigate(`/portal/accept-invite?token=${pendingInviteToken}`)
+        // Session is valid, determine where to redirect
+
+        // Priority 1: Check localStorage for setupOrganization flag
+        // This handles Google OAuth flow where navigation state is lost
+        const hasSetupOrgFlag = getSetupOrganizationFlag()
+        if (hasSetupOrgFlag) {
+          // Clear the flag immediately to prevent redirect loops
+          clearSetupOrganizationFlag()
+          navigate('/admin/onboarding', { replace: true })
           return
         }
 
-        // Check for redirect param
+        // Priority 2: Check for pending invite token in sessionStorage
+        const pendingInviteToken = sessionStorage.getItem('pending_invite_token')
+        if (pendingInviteToken) {
+          navigate(`/portal/accept-invite?token=${pendingInviteToken}`, { replace: true })
+          return
+        }
+
+        // Priority 3: Check for redirect param in URL
         const redirectTo = searchParams.get('redirect')
         if (redirectTo) {
-          navigate(redirectTo)
-          return
+          // Validate the redirect URL is internal to prevent open redirect attacks
+          if (redirectTo.startsWith('/')) {
+            navigate(redirectTo, { replace: true })
+            return
+          }
         }
 
-        // Default redirect to dashboard
-        navigate('/portal/dashboard')
+        // Default: redirect to dashboard
+        navigate('/portal/dashboard', { replace: true })
       } else {
         // No session, might be email confirmation
         // Supabase should handle this automatically
-        navigate('/portal/login')
+        navigate('/portal/login', { replace: true })
       }
     }
 
