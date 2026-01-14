@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
 
 export interface Organization {
   id: string
@@ -26,52 +26,49 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   const [currentOrganization, setCurrentOrganizationState] = useState<Organization | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Load current org from sessionStorage on mount
+  // Auto-select current org when organizations change
   useEffect(() => {
+    if (organizations.length === 0) {
+      // No organizations - clear current org but don't stay in loading
+      setCurrentOrganizationState(null)
+      return
+    }
+
+    // If we already have a current org that's still in the list, keep it
+    if (currentOrganization && organizations.some(o => o.id === currentOrganization.id)) {
+      return
+    }
+
+    // Otherwise, select from storage or use first available
     const storedOrgId = sessionStorage.getItem(STORAGE_KEY)
-    if (storedOrgId && organizations.length > 0) {
-      const org = organizations.find(o => o.id === storedOrgId)
-      if (org) {
-        setCurrentOrganizationState(org)
-      } else {
-        // Stored org not in list, use first available
-        setCurrentOrganizationState(organizations[0])
-        sessionStorage.setItem(STORAGE_KEY, organizations[0].id)
-      }
-    } else if (organizations.length > 0) {
-      // No stored org, use first available
-      setCurrentOrganizationState(organizations[0])
-      sessionStorage.setItem(STORAGE_KEY, organizations[0].id)
-    }
-    setIsLoading(false)
-  }, [organizations])
+    const org = storedOrgId ? organizations.find(o => o.id === storedOrgId) : null
+    const selectedOrg = org || organizations[0]
+    
+    setCurrentOrganizationState(selectedOrg)
+    sessionStorage.setItem(STORAGE_KEY, selectedOrg.id)
+  }, [organizations, currentOrganization])
 
-  const setOrganizations = (orgs: Organization[]) => {
+  const setOrganizations = useCallback((orgs: Organization[]) => {
     setOrganizationsState(orgs)
-    // If no current org set and we have orgs, set the first one
-    if (orgs.length > 0 && !currentOrganization) {
-      const storedOrgId = sessionStorage.getItem(STORAGE_KEY)
-      const org = storedOrgId ? orgs.find(o => o.id === storedOrgId) : orgs[0]
-      setCurrentOrganizationState(org || orgs[0])
-      sessionStorage.setItem(STORAGE_KEY, (org || orgs[0]).id)
-    }
-  }
+    // Mark as loaded once organizations are set (even if empty array)
+    setIsLoading(false)
+  }, [])
 
-  const setCurrentOrganization = (org: Organization | null) => {
+  const setCurrentOrganization = useCallback((org: Organization | null) => {
     setCurrentOrganizationState(org)
     if (org) {
       sessionStorage.setItem(STORAGE_KEY, org.id)
     } else {
       sessionStorage.removeItem(STORAGE_KEY)
     }
-  }
+  }, [])
 
-  const switchOrganization = (orgId: string) => {
+  const switchOrganization = useCallback((orgId: string) => {
     const org = organizations.find(o => o.id === orgId)
     if (org) {
       setCurrentOrganization(org)
     }
-  }
+  }, [organizations, setCurrentOrganization])
 
   const value: OrganizationContextType = {
     currentOrganization,

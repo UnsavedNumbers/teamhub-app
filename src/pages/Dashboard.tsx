@@ -1,8 +1,22 @@
-import { Link } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import {
+  getSetupOrganizationFlag,
+  clearSetupOrganizationFlag,
+} from '../utils/setupOrganization'
 
 export default function Dashboard() {
   const { user, profile, signOut } = useAuth()
+  const navigate = useNavigate()
+
+  // Safety net: If user landed here with setupOrganization flag, redirect to onboarding
+  useEffect(() => {
+    if (getSetupOrganizationFlag()) {
+      clearSetupOrganizationFlag()
+      navigate('/admin/onboarding', { replace: true })
+    }
+  }, [navigate])
 
   return (
     <div className="min-h-screen bg-slate-900">
@@ -12,7 +26,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
               <Link to="/portal/dashboard" className="text-xl font-bold bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent">
-                TeamHub
+                YouthSports
               </Link>
               {profile && (
                 <span className="px-2.5 py-0.5 text-xs font-medium rounded-full bg-primary-600/20 text-primary-400 capitalize">

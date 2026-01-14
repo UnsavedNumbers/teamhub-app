@@ -82,14 +82,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Fetch organization memberships
-      const { data: orgData, error: orgError } = await supabase
-        .rpc('get_user_organizations', { check_user_id: userId })
+      // Wrap in try-catch to gracefully handle missing RPC function
+      let orgData = null
+      let orgError = null
+      try {
+        const result = await supabase.rpc('get_user_organizations', { check_user_id: userId })
+        orgData = result.data
+        orgError = result.error
+        
+        // If function doesn't exist (404/PGRST202), treat as empty orgs
+        if (orgError && (orgError.code === 'PGRST202' || orgError.message?.includes('not found') || orgError.message?.includes('does not exist'))) {
+          console.warn('get_user_organizations RPC function not found. Run migrations to create it.')
+          orgError = null // Clear error so we continue with empty orgs
+          orgData = []
+        }
+      } catch (err) {
+        // Network or other errors - continue with empty orgs
+        console.error('Error calling get_user_organizations RPC:', err)
+        orgError = err as any
+        orgData = []
+      }
 
       // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:70',message:'Org query completed',data:{hasData:!!orgData,orgCount:orgData?.length||0,hasError:!!orgError},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:85',message:'Org query completed',data:{hasData:!!orgData,orgCount:orgData?.length||0,hasError:!!orgError,errorCode:orgError?.code,errorMessage:orgError?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
       // #endregion
 
-      if (orgError) {
+      if (orgError && orgError.code !== 'PGRST202') {
         console.error('Error fetching organizations:', orgError)
         // Continue with empty orgs rather than failing completely
       }
@@ -160,11 +178,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change event:', event)
         setSession(session)
         setUser(session?.user ?? null)
         
         if (session?.user) {
-          await fetchProfile(session.user.id)
+          // Only refetch profile on specific events to avoid unnecessary fetches
+          // TOKEN_REFRESHED happens frequently and shouldn't trigger profile refetch
+          if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+            await fetchProfile(session.user.id)
+          }
           
           // Check for pending invites after signup/signin
           if (event === 'SIGNED_IN') {
@@ -183,14 +206,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function checkPendingInvites() {
     try {
-      const { data: invites } = await supabase.rpc('get_pending_invites_for_user')
+      const { data: invites, error } = await supabase.rpc('get_pending_invites_for_user')
+      
+      // If function doesn't exist (404/PGRST202), just skip silently
+      if (error) {
+        if (error.code === 'PGRST202' || error.message?.includes('not found') || error.message?.includes('does not exist')) {
+          // Function doesn't exist yet - this is okay, just skip
+          return
+        }
+        // Other errors - log but don't block
+        console.error('Error checking pending invites:', error)
+        return
+      }
       
       if (invites && invites.length > 0) {
         // Store pending invites in sessionStorage for the accept invite page
         sessionStorage.setItem('pending_invites', JSON.stringify(invites))
       }
     } catch (err) {
-      console.error('Error checking pending invites:', err)
+      // RPC function might not exist - this is okay, just skip
+      // Only log if it's not a "function doesn't exist" error
+      if (!(err instanceof Error && (err.message.includes('not found') || err.message.includes('does not exist')))) {
+        console.error('Error checking pending invites:', err)
+      }
     }
   }
 
