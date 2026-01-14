@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Parent Portal: Athletic Minimalist V2</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#ffffff",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Lexend', sans-serif;
+        }
+        .field-grid {
+            background-image: linear-gradient(to right, #f3f4f6 1px, transparent 1px),
+                              linear-gradient(to bottom, #f3f4f6 1px, transparent 1px);
+            background-size: 100px 100px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased min-h-screen">
+<!-- Top Navigation -->
+<header class="border-b border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md sticky top-0 z-50">
+<div class="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-2 group cursor-pointer">
+<div class="size-8 bg-primary rounded flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-xl">bolt</span>
+</div>
+<span class="font-bold text-xl tracking-tight uppercase">Athletic<span class="text-primary">Portal</span></span>
+</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-sm font-semibold border-b-2 border-primary pb-5 mt-5" href="#">Dashboard</a>
+<a class="text-sm font-medium text-slate-500 hover:text-primary transition-colors pb-5 mt-5 border-b-2 border-transparent" href="#">Schedule</a>
+<a class="text-sm font-medium text-slate-500 hover:text-primary transition-colors pb-5 mt-5 border-b-2 border-transparent" href="#">Teams</a>
+<a class="text-sm font-medium text-slate-500 hover:text-primary transition-colors pb-5 mt-5 border-b-2 border-transparent" href="#">Payments</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="size-10 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors relative">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-300">notifications</span>
+<span class="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-white dark:border-background-dark"></span>
+</button>
+<div class="h-10 w-10 rounded-full bg-slate-200 bg-cover bg-center border border-slate-100" data-alt="Parent profile picture minimalist avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBKxVKUfsC9K_ICaTEknZeYzcRNRnphdONgvVm_TU8DVM7-7QhxDa1TATnaZCyepISrq41fa-5E0JsXbgffTPHmO93iE7OvqP3LaKgk78qh6DPDkNy7So4aoGPrihP3_fyxqEOJJIxBl9BITtcYhYce8-Lodzgl_llI7MGktLkGczlDaMNO13urzQQCfbdO6gVf-PoWP34IugE5iCw2xPhbLvdwMHnBWzDM0N8TQB4hj69Gqwx7eWa49tmtCC4297ncB2qzIqaZJXw");'></div>
+</div>
+</div>
+</header>
+<main class="max-w-[1200px] mx-auto px-6 py-8">
+<!-- Breadcrumbs & Greeting -->
+<div class="mb-12">
+<nav class="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">
+<a class="hover:text-primary transition-colors" href="#">Home</a>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-slate-900 dark:text-white">Parent Portal</span>
+</nav>
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div>
+<h1 class="text-5xl font-black tracking-tighter text-slate-900 dark:text-white mb-2 leading-none">GOOD MORNING, SARAH.</h1>
+<p class="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">Elite performance starts with the right logistics.</p>
+</div>
+<div class="flex gap-4">
+<div class="px-6 py-3 border border-slate-200 dark:border-slate-800 rounded-lg flex flex-col">
+<span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Season</span>
+<span class="font-bold text-slate-900 dark:text-white">Spring 2024</span>
+</div>
+<div class="px-6 py-3 border border-slate-200 dark:border-slate-800 rounded-lg flex flex-col">
+<span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Players</span>
+<span class="font-bold text-slate-900 dark:text-white">Leo &amp; Emma</span>
+</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+<!-- Main Content: What's Next -->
+<div class="lg:col-span-8">
+<div class="flex items-center justify-between mb-8 border-b border-slate-100 dark:border-slate-800 pb-4">
+<h2 class="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white">Priority Actions</h2>
+<span class="text-xs font-bold text-primary cursor-pointer hover:underline">View Full Calendar</span>
+</div>
+<div class="space-y-6">
+<!-- Event Card 1 -->
+<div class="group bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-300">
+<div class="flex flex-col md:flex-row">
+<div class="md:w-1/3 aspect-[4/3] bg-cover bg-center" data-alt="High quality overhead view of a soccer field" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDxbj541wNlurnNwGhTLFazauaJW2MoqiIs_3FOkmlzxX3WqWSJHJFykbT4aHo9ri9MK-i3GI0mckq85_rriYFFx4bLIAk32mJviEOo8avoxdLaQghWC_GHHOr5aGr3RiMwvwXdXT4tfbfHZepDigX3oiRBr_7c0ybkmtH9aE2LnpjbJ1KJ1QmTcmroii43egBFezC3A7xVBOogutjYFFVqhDB6Q8wLFm1ZUWNatxJzD_xbT3cT3_V9ROtgRyqFN8tevD7f_U8O0N8");'></div>
+<div class="flex-1 p-8 flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-2 mb-3">
+<div class="status-dot bg-primary"></div>
+<span class="text-[10px] font-black uppercase tracking-widest text-primary">Live Now • Field 4</span>
+</div>
+<h3 class="text-2xl font-black text-slate-900 dark:text-white mb-2 leading-tight uppercase">Varsity Soccer Practice</h3>
+<p class="text-slate-500 dark:text-slate-400 font-light mb-6">Equipment Check: Shin guards, water bottle, and alternate jersey required for Leo.</p>
+</div>
+<div class="flex flex-wrap gap-3">
+<button class="bg-primary hover:bg-primary/90 text-white px-8 py-3 rounded font-bold text-sm tracking-wide transition-all active:scale-95 flex items-center gap-2">
+                                        CHECK IN <span class="material-symbols-outlined text-sm">login</span>
+</button>
+<button class="border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 px-8 py-3 rounded font-bold text-sm tracking-wide transition-all text-slate-900 dark:text-white flex items-center gap-2">
+                                        LOCATION <span class="material-symbols-outlined text-sm">location_on</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Event Card 2 -->
+<div class="group bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-300">
+<div class="flex flex-col md:flex-row">
+<div class="md:w-1/3 aspect-[4/3] bg-cover bg-center grayscale group-hover:grayscale-0 transition-all duration-500" data-alt="Close up of a basketball on a hardwood court" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBKff8NO2ZMnDbwCRjQHZ4pzF9yaCLmgoZN5xgfe0kU4AZdfqm40vCH-avrFGZVvl1B9qcF33Ff0Yo1VhH6wiF17fudXJJjV7RZQoLhKY505lxEVG6Y4opW399lYAeOK2eJT1HEtNC6iSQ1a2s0C4KvC05q3rjuUphD-f1PgRjtV6bI1zX89S0uiT3giuBTTpEXNKIBIlRvscvyGufx4wNJN5n4vceSnn8rWIiBlHPkL6fvRfqfGHyFfMiUabYAPEEBr455rgsYoDE");'></div>
+<div class="flex-1 p-8 flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-2 mb-3">
+<div class="status-dot bg-orange-500"></div>
+<span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Tomorrow • 10:00 AM</span>
+</div>
+<h3 class="text-2xl font-black text-slate-900 dark:text-white mb-2 leading-tight uppercase">U12 Basketball Playoffs</h3>
+<p class="text-slate-500 dark:text-slate-400 font-light mb-6">Emma starts as Point Guard. Arrive 30 minutes early for warm-ups at South Gymnasium.</p>
+</div>
+<div class="flex flex-wrap gap-3">
+<button class="bg-slate-900 dark:bg-white dark:text-slate-900 text-white px-8 py-3 rounded font-bold text-sm tracking-wide transition-all active:scale-95 flex items-center gap-2">
+                                        RSVP NOW <span class="material-symbols-outlined text-sm">event_available</span>
+</button>
+<button class="border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 px-8 py-3 rounded font-bold text-sm tracking-wide transition-all text-slate-900 dark:text-white">
+                                        VIEW DETAILS
+                                    </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sidebar: Status Lines & Announcements -->
+<div class="lg:col-span-4 space-y-12">
+<!-- Financials -->
+<div>
+<h2 class="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-6 border-b border-slate-100 dark:border-slate-800 pb-4">Financial Overview</h2>
+<div class="space-y-4">
+<div class="flex items-center justify-between group py-2">
+<div class="flex items-center gap-3">
+<div class="size-2 rounded-full bg-emerald-500"></div>
+<div>
+<p class="text-sm font-bold text-slate-900 dark:text-white">Spring Registration</p>
+<p class="text-[10px] text-slate-400 uppercase font-black">Leo • Varsity Soccer</p>
+</div>
+</div>
+<span class="text-xs font-bold text-emerald-500">PAID</span>
+</div>
+<div class="h-px bg-slate-50 dark:bg-slate-800 w-full"></div>
+<div class="flex items-center justify-between group py-2">
+<div class="flex items-center gap-3">
+<div class="size-2 rounded-full bg-primary animate-pulse"></div>
+<div>
+<p class="text-sm font-bold text-slate-900 dark:text-white">Tournament Fees</p>
+<p class="text-[10px] text-slate-400 uppercase font-black">Emma • Basketball</p>
+</div>
+</div>
+<a class="text-xs font-bold text-primary underline" href="#">PAY $45.00</a>
+</div>
+<div class="h-px bg-slate-50 dark:bg-slate-800 w-full"></div>
+<div class="flex items-center justify-between group py-2">
+<div class="flex items-center gap-3">
+<div class="size-2 rounded-full bg-slate-300"></div>
+<div>
+<p class="text-sm font-bold text-slate-900 dark:text-white">Uniform Package</p>
+<p class="text-[10px] text-slate-400 uppercase font-black">Upcoming May 1</p>
+</div>
+</div>
+<span class="text-xs font-bold text-slate-400">PENDING</span>
+</div>
+</div>
+</div>
+<!-- Bulletin -->
+<div class="bg-slate-50 dark:bg-slate-900/80 p-6 rounded-xl border border-slate-100 dark:border-slate-800">
+<h2 class="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">campaign</span> Bulletin Board
+                    </h2>
+<div class="space-y-6">
+<div class="relative pl-6 border-l-2 border-primary">
+<p class="text-xs font-bold text-slate-900 dark:text-white mb-1 uppercase tracking-wider">Weather Update</p>
+<p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-light">Fields are currently open. In case of lightning, we will transition to the indoor facility.</p>
+</div>
+<div class="relative pl-6 border-l-2 border-slate-200 dark:border-slate-700">
+<p class="text-xs font-bold text-slate-900 dark:text-white mb-1 uppercase tracking-wider">Coach's Note</p>
+<p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-light">Great hustle in yesterday's game. Focus for next week: defensive positioning.</p>
+</div>
+</div>
+<button class="w-full mt-8 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                        All Announcements
+                    </button>
+</div>
+<!-- Team Quick Links -->
+<div class="flex flex-col gap-2">
+<h2 class="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Support</h2>
+<a class="text-sm font-bold text-slate-900 dark:text-white hover:text-primary flex items-center justify-between group" href="#">
+                        Contact League Office
+                        <span class="material-symbols-outlined text-lg opacity-0 group-hover:opacity-100 transition-opacity">arrow_forward</span>
+</a>
+<a class="text-sm font-bold text-slate-900 dark:text-white hover:text-primary flex items-center justify-between group" href="#">
+                        Help &amp; Documentation
+                        <span class="material-symbols-outlined text-lg opacity-0 group-hover:opacity-100 transition-opacity">arrow_forward</span>
+</a>
+</div>
+</div>
+</div>
+</main>
+<!-- Background Field Markings (Grid) -->
+<div class="fixed inset-0 field-grid pointer-events-none opacity-[0.03] z-[-1]"></div>
+</body></html>

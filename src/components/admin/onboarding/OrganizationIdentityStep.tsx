@@ -133,8 +133,8 @@ export default function OrganizationIdentityStep({
       </div>
 
       {/* Right Side - Form */}
-      <div className="bg-white flex flex-col justify-center px-12 lg:px-24 py-16 overflow-y-auto">
-        <div className="max-w-md w-full mx-auto">
+      <div className="bg-white flex flex-col justify-center pl-12 lg:pl-16 pr-12 lg:pr-24 py-16 overflow-y-auto">
+        <div className="max-w-md w-full">
           <header className="mb-12">
             <h1 className="text-7xl lg:text-8xl uppercase mb-2 font-black" style={{ lineHeight: '0.9', letterSpacing: '-0.05em' }}>
               Organization Setup
