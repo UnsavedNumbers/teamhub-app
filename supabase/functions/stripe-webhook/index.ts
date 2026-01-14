@@ -103,6 +103,50 @@ serve(async (req) => {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session
+        if (session.mode === "payment") {
+          const checkoutSessionId = (session.client_reference_id || session.metadata?.checkout_session_id) as string | null
+          const paymentIntentId = typeof session.payment_intent === "string" ? session.payment_intent : null
+          if (!checkoutSessionId || !paymentIntentId) break
+
+          const { data: checkout } = await supabase
+            .from("checkout_sessions")
+            .select("id, organization_id, parent_id")
+            .eq("id", checkoutSessionId)
+            .maybeSingle()
+          if (!checkout) break
+
+          const existingPayment = await supabase
+            .from("payments")
+            .select("id")
+            .eq("stripe_payment_intent_id", paymentIntentId)
+            .maybeSingle()
+
+          if (!existingPayment.data) {
+            await supabase.from("payments").insert({
+              organization_id: checkout.organization_id,
+              checkout_session_id: checkout.id,
+              parent_id: checkout.parent_id,
+              amount_cents: session.amount_total ?? 0,
+              currency: session.currency ?? "usd",
+              stripe_payment_intent_id: paymentIntentId,
+              stripe_charge_id: typeof session.latest_charge === "string" ? session.latest_charge : null,
+              platform_fee_cents: 0,
+              status: "pending",
+            })
+          }
+
+          await supabase
+            .from("checkout_sessions")
+            .update({
+              status: "succeeded",
+              stripe_checkout_session_id: session.id,
+              stripe_payment_intent_id: paymentIntentId,
+            })
+            .eq("id", checkout.id)
+
+          break
+        }
+
         if (session.mode !== "subscription") break
         const subId = session.subscription as string | null
         const orgId = (session.client_reference_id || session.metadata?.organization_id) as string | null
@@ -159,6 +203,51 @@ serve(async (req) => {
           stripe_latest_invoice_id: invoice.id,
           grace_days: 7,
         })
+        break
+      }
+      case "payment_intent.succeeded": {
+        const intent = event.data.object as Stripe.PaymentIntent
+        const paymentIntentId = intent.id
+        const { data: payment } = await supabase
+          .from("payments")
+          .select("id, checkout_session_id")
+          .eq("stripe_payment_intent_id", paymentIntentId)
+          .maybeSingle()
+        if (!payment) break
+
+        await supabase.rpc("complete_payment_processing", {
+          p_payment_id: payment.id,
+          p_checkout_session_id: payment.checkout_session_id,
+        })
+
+        await supabase
+          .from("payments")
+          .update({
+            status: "succeeded",
+            stripe_charge_id: typeof intent.latest_charge === "string" ? intent.latest_charge : null,
+            paid_at: new Date().toISOString(),
+          })
+          .eq("id", payment.id)
+
+        await supabase
+          .from("checkout_sessions")
+          .update({ status: "succeeded" })
+          .eq("id", payment.checkout_session_id)
+
+        break
+      }
+      case "payment_intent.payment_failed": {
+        const intent = event.data.object as Stripe.PaymentIntent
+        const paymentIntentId = intent.id
+        const { data: payment } = await supabase
+          .from("payments")
+          .select("id, checkout_session_id")
+          .eq("stripe_payment_intent_id", paymentIntentId)
+          .maybeSingle()
+        if (!payment) break
+
+        await supabase.from("payments").update({ status: "failed" }).eq("id", payment.id)
+        await supabase.from("checkout_sessions").update({ status: "canceled" }).eq("id", payment.checkout_session_id)
         break
       }
       case "customer.subscription.updated": {

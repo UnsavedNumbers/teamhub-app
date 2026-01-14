@@ -27,6 +27,8 @@ import JoinTeam from './pages/JoinTeam'
 import Calendar from './pages/Calendar'
 import EventDetail from './pages/EventDetail'
 import MyPayments from './pages/MyPayments'
+import PaymentSuccess from './pages/PaymentSuccess'
+import PaymentCancel from './pages/PaymentCancel'
 import Settings from './pages/Settings'
 import Uniforms from './pages/Uniforms'
 import Travel from './pages/Travel'
@@ -87,6 +89,8 @@ function App() {
             <Route path="calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
             <Route path="events/:eventId" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />
             <Route path="payments" element={<ProtectedRoute><MyPayments /></ProtectedRoute>} />
+            <Route path="payments/success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
+            <Route path="payments/cancel" element={<ProtectedRoute><PaymentCancel /></ProtectedRoute>} />
             <Route path="uniforms" element={<ProtectedRoute><Uniforms /></ProtectedRoute>} />
             <Route path="travel" element={<ProtectedRoute><Travel /></ProtectedRoute>} />
             <Route path="tryouts" element={<ProtectedRoute><Tryouts /></ProtectedRoute>} />

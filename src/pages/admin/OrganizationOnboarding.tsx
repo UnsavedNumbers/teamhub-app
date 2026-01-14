@@ -309,27 +309,15 @@ export default function OrganizationOnboarding() {
           throw new Error('Failed to set up organization membership. Please try again.')
         }
 
-        // Update organization context
-        const { data: orgs, error: fetchOrgError } = await supabase
-          .from('organizations')
-          .select('id, name, slug')
-          .eq('id', orgId)
-          .single()
-
-        if (fetchOrgError) {
-          console.error('Error fetching created org:', fetchOrgError)
+        // Update organization context with the newly created org (no need to re-fetch)
+        const nextOrg: Organization = {
+          id: newOrg.id,
+          name: newOrg.name,
+          slug: newOrg.slug ?? undefined,
+          role: 'org_admin',
         }
-
-        if (orgs) {
-          const nextOrg: Organization = {
-            id: orgs.id,
-            name: orgs.name,
-            slug: orgs.slug ?? undefined,
-            role: 'org_admin',
-          }
-          setCurrentOrganization(nextOrg)
-          setOrganizations([nextOrg])
-        }
+        setCurrentOrganization(nextOrg)
+        setOrganizations([nextOrg])
       } else {
         // Update existing organization
         // Convert empty string to undefined for database
