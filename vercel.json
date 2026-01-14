@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/portal/:path*",
+      "destination": "/portal/:path*"
+    },
+    {
+      "source": "/admin/:path*",
+      "destination": "/admin/:path*"
+    },
+    {
+      "source": "/",
+      "destination": "/"
+    }
+  ]
+}
