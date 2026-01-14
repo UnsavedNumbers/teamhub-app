@@ -1,0 +1,51 @@
+PHASE 08 - TRAVEL PLANS
+=====================
+
+Goal:
+Provide tournament travel information to parents.
+
+----------------------------------------------------------------
+REQUIREMENTS
+----------------------------------------------------------------
+
+- Admin can create travel plans for a team
+- Travel plans include:
+  - title
+  - location
+  - dates
+  - hotel info
+  - notes
+- Parents can view travel plans
+
+----------------------------------------------------------------
+DATA
+----------------------------------------------------------------
+
+Use travel_plans table
+
+----------------------------------------------------------------
+DELIVERABLES
+----------------------------------------------------------------
+
+- SQL
+- RLS
+- Admin travel creation UI
+- Parent travel view UI
+
+----------------------------------------------------------------
+OUTPUT
+----------------------------------------------------------------
+
+Provide:
+- SQL
+- RLS
+- React components
+- Test plan
+
+----------------------------------------------------------------
+STOP CONDITIONS
+----------------------------------------------------------------
+
+If carpools or room sharing is needed, ask.
+
+END

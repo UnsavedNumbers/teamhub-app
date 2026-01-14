@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tryouts: Roster Offer &amp; Status V3</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#000000",
+                        "accent": "#FA5400",
+                        "background-light": "#FFFFFF",
+                        "background-dark": "#111111",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "none": "0",
+                        "DEFAULT": "0",
+                        "lg": "0",
+                        "xl": "0",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body {
+            font-family: 'Lexend', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .step-active {
+            @apply border-black text-black dark:border-white dark:text-white;
+        }
+        .step-complete {
+            @apply border-neutral-200 text-neutral-400 dark:border-neutral-800;
+        }
+        .block-button {
+            @apply flex-1 py-6 text-center text-sm font-black uppercase tracking-[0.2em] transition-all active:scale-[0.98] border-2;
+        }
+    </style>
+</head>
+<body class="bg-white dark:bg-neutral-950 text-primary dark:text-white min-h-screen">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<header class="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-900 px-6 md:px-12 py-5 bg-white dark:bg-neutral-950 sticky top-0 z-50">
+<div class="flex items-center gap-4 text-primary dark:text-white">
+<div class="size-8">
+<svg fill="currentColor" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M42.4379 44C42.4379 44 36.0744 33.9038 41.1692 24C46.8624 12.9336 42.2078 4 42.2078 4L7.01134 4C7.01134 4 11.6577 12.932 5.96912 23.9969C0.876273 33.9029 7.27094 44 7.27094 44L42.4379 44Z"></path>
+</svg>
+</div>
+<h2 class="text-xl font-black leading-tight tracking-tighter uppercase italic">TeamHub</h2>
+</div>
+<div class="hidden md:flex flex-1 justify-center gap-12">
+<a class="text-xs font-black uppercase tracking-[0.2em] hover:opacity-50 transition-opacity" href="#">Portal</a>
+<a class="text-xs font-black uppercase tracking-[0.2em] border-b-2 border-primary" href="#">Tryouts</a>
+<a class="text-xs font-black uppercase tracking-[0.2em] hover:opacity-50 transition-opacity" href="#">Academy</a>
+<a class="text-xs font-black uppercase tracking-[0.2em] hover:opacity-50 transition-opacity" href="#">Shop</a>
+</div>
+<div class="flex items-center gap-6">
+<span class="material-symbols-outlined text-2xl">shopping_bag</span>
+<div class="bg-neutral-200 dark:bg-neutral-800 rounded-full size-10 flex items-center justify-center">
+<span class="material-symbols-outlined">person</span>
+</div>
+</div>
+</header>
+<main class="flex-1 flex flex-col items-center">
+<div class="w-full max-w-4xl px-6 pt-12">
+<div class="flex items-center justify-between relative">
+<div class="absolute top-1/2 left-0 w-full h-[1px] bg-neutral-200 dark:bg-neutral-800 -z-10"></div>
+<div class="flex flex-col items-center gap-3">
+<div class="size-8 rounded-full bg-white dark:bg-neutral-950 border-2 border-neutral-300 dark:border-neutral-700 flex items-center justify-center">
+<span class="material-symbols-outlined text-sm text-neutral-400">check</span>
+</div>
+<span class="text-[10px] font-black uppercase tracking-widest text-neutral-400">Registered</span>
+</div>
+<div class="flex flex-col items-center gap-3">
+<div class="size-8 rounded-full bg-white dark:bg-neutral-950 border-2 border-neutral-300 dark:border-neutral-700 flex items-center justify-center">
+<span class="material-symbols-outlined text-sm text-neutral-400">check</span>
+</div>
+<span class="text-[10px] font-black uppercase tracking-widest text-neutral-400">Checked In</span>
+</div>
+<div class="flex flex-col items-center gap-3">
+<div class="size-8 rounded-full bg-white dark:bg-neutral-950 border-2 border-neutral-300 dark:border-neutral-700 flex items-center justify-center">
+<span class="material-symbols-outlined text-sm text-neutral-400">check</span>
+</div>
+<span class="text-[10px] font-black uppercase tracking-widest text-neutral-400">Evaluated</span>
+</div>
+<div class="flex flex-col items-center gap-3">
+<div class="size-8 rounded-full bg-black dark:bg-white border-2 border-black dark:border-white flex items-center justify-center">
+<div class="size-2 bg-white dark:bg-black rounded-full"></div>
+</div>
+<span class="text-[10px] font-black uppercase tracking-widest text-black dark:text-white">Offered</span>
+</div>
+</div>
+</div>
+<div class="layout-content-container flex flex-col max-w-[800px] w-full px-6 py-12">
+<div class="flex flex-col items-center text-center gap-6 mb-12">
+<div class="bg-neutral-100 dark:bg-neutral-900 p-12 w-full border border-neutral-200 dark:border-neutral-800">
+<h4 class="text-accent text-sm font-black tracking-[0.3em] uppercase mb-4">Elite Prospect Division</h4>
+<h1 class="text-6xl md:text-8xl font-black italic tracking-tighter uppercase leading-none mb-8">Offer<br/>Received</h1>
+<div class="flex flex-col items-center gap-2">
+<p class="text-[10px] font-black uppercase tracking-widest text-neutral-500">Decision Deadline</p>
+<div class="flex gap-4 font-black text-3xl">
+<div class="flex flex-col items-center">
+<span>23</span>
+<span class="text-[8px] tracking-normal font-bold uppercase text-neutral-400">Hours</span>
+</div>
+<span>:</span>
+<div class="flex flex-col items-center">
+<span>48</span>
+<span class="text-[8px] tracking-normal font-bold uppercase text-neutral-400">Mins</span>
+</div>
+<span>:</span>
+<div class="flex flex-col items-center">
+<span>12</span>
+<span class="text-[8px] tracking-normal font-bold uppercase text-neutral-400">Secs</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16 px-4">
+<div>
+<h3 class="text-xs font-black uppercase tracking-[0.2em] text-neutral-400 mb-6">Roster Position</h3>
+<p class="text-2xl font-black uppercase tracking-tight italic">U16 Premier Academy</p>
+<p class="text-sm text-neutral-500 mt-2 font-medium">Head Coach: Marcus Sterling</p>
+</div>
+<div>
+<h3 class="text-xs font-black uppercase tracking-[0.2em] text-neutral-400 mb-6">Next Steps</h3>
+<ul class="text-sm space-y-3 font-medium">
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-xs mt-1">arrow_forward</span>
+<span>Review scholarship &amp; contract terms</span>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-xs mt-1">arrow_forward</span>
+<span>Sign digital liability waivers</span>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-xs mt-1">arrow_forward</span>
+<span>Complete initial deposit for kit sizing</span>
+</li>
+</ul>
+</div>
+</div>
+<div class="flex flex-col md:flex-row gap-4 mb-20">
+<button class="block-button bg-black text-white border-black hover:bg-neutral-800">
+                    Accept Offer
+                </button>
+<button class="block-button bg-white text-black border-neutral-200 hover:border-black dark:bg-transparent dark:text-white dark:border-neutral-700">
+                    Decline
+                </button>
+</div>
+<div class="border-t border-neutral-100 dark:border-neutral-900 pt-10 text-center">
+<p class="text-[10px] text-neutral-400 uppercase tracking-widest max-w-md mx-auto leading-relaxed">
+                    By accepting, you commit to the Fall/Winter 2024 season requirements and team conduct policies. Scholarship offers are valid until the countdown expires.
+                </p>
+</div>
+</div>
+</main>
+<div class="fixed bottom-0 left-0 w-full bg-accent text-white py-3 px-6 flex justify-center items-center gap-4 z-50">
+<span class="material-symbols-outlined text-sm">celebration</span>
+<p class="text-[10px] font-black uppercase tracking-[0.2em]">Congratulations! You are in the top 5% of this year's tryout class.</p>
+</div>
+</div>
+
+</body></html>

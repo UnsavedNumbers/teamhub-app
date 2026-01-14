@@ -1,0 +1,51 @@
+PHASE 04 - CALENDAR AND EVENTS
+=============================
+
+Goal:
+Allow admins to create events and parents to view them.
+
+----------------------------------------------------------------
+REQUIREMENTS
+----------------------------------------------------------------
+
+- Admin can create events
+- Events belong to team and season
+- Parents see only their team events
+- Calendar supports:
+  - Agenda view
+  - Week view
+  - Month view
+- Event detail page shows:
+  - title
+  - time
+  - arrival time
+  - location
+  - notes
+
+----------------------------------------------------------------
+DELIVERABLES
+----------------------------------------------------------------
+
+- SQL for events
+- RLS for events
+- Admin event creation UI
+- Parent calendar UI
+- Event detail page
+
+----------------------------------------------------------------
+OUTPUT
+----------------------------------------------------------------
+
+Provide:
+- SQL
+- RLS
+- React components
+- Test plan
+
+----------------------------------------------------------------
+STOP CONDITIONS
+----------------------------------------------------------------
+
+If event types need expansion, ask before adding.
+
+END

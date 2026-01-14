@@ -1,0 +1,102 @@
+PHASE 07 - UNIFORMS
+==================
+
+Goal:
+Collect and manage uniform sizes per child.
+
+----------------------------------------------------------------
+REQUIREMENTS
+----------------------------------------------------------------
+
+- Parents enter sizes for:
+  - Jersey
+  - Shorts
+- Admin can see all sizes
+- Admin can mark orders as:
+  - pending
+  - ordered
+  - delivered
+
+----------------------------------------------------------------
+DATA
+----------------------------------------------------------------
+
+Use uniform_orders table
+
+----------------------------------------------------------------
+DELIVERABLES
+----------------------------------------------------------------
+
+- SQL
+- RLS
+- Parent uniform size UI
+- Admin uniform manager UI
+
+----------------------------------------------------------------
+OUTPUT
+----------------------------------------------------------------
+
+Provide:
+- SQL
+- RLS
+- React components
+- Test plan
+
+----------------------------------------------------------------
+STOP CONDITIONS
+----------------------------------------------------------------
+
+If more uniform items are needed, ask.
+
+END
+PHASE 07 - UNIFORMS
+==================
+
+Goal:
+Collect and manage uniform sizes per child.
+
+----------------------------------------------------------------
+REQUIREMENTS
+----------------------------------------------------------------
+
+- Parents enter sizes for:
+  - Jersey
+  - Shorts
+- Admin can see all sizes
+- Admin can mark orders as:
+  - pending
+  - ordered
+  - delivered
+
+----------------------------------------------------------------
+DATA
+----------------------------------------------------------------
+
+Use uniform_orders table
+
+----------------------------------------------------------------
+DELIVERABLES
+----------------------------------------------------------------
+
+- SQL
+- RLS
+- Parent uniform size UI
+- Admin uniform manager UI
+
+----------------------------------------------------------------
+OUTPUT
+----------------------------------------------------------------
+
+Provide:
+- SQL
+- RLS
+- React components
+- Test plan
+
+----------------------------------------------------------------
+STOP CONDITIONS
+----------------------------------------------------------------
+
+If more uniform items are needed, ask.
+
+END

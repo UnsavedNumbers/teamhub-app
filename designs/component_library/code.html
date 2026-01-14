@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TeamHub Athletic Component Library</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100;300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#258cf4",
+                        "background-light": "#f5f7f8",
+                        "background-dark": "#0a0a0a",
+                        "surface-dark": "#161b22",
+                        "lakers": "#552583",
+                        "celtics": "#007A33",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .athletic-italic {
+            font-style: italic;
+        }
+        .mesh-pattern {
+            background-image: radial-gradient(#222 0.5px, transparent 0.5px);
+            background-size: 10px 10px;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white transition-colors duration-200">
+<!-- Top Navigation Bar -->
+<header class="sticky top-0 z-50 border-b border-slate-200 dark:border-white/10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
+<div class="max-w-[1440px] mx-auto px-6 h-16 flex items-center justify-between">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3">
+<div class="bg-primary p-1 rounded-sm">
+<span class="material-symbols-outlined text-white text-2xl">bolt</span>
+</div>
+<h2 class="text-xl font-black tracking-tighter athletic-italic uppercase italic">TeamHub <span class="text-primary">Athletic</span></h2>
+</div>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-sm font-bold uppercase tracking-widest hover:text-primary" href="#">Foundations</a>
+<a class="text-sm font-bold uppercase tracking-widest text-primary border-b-2 border-primary" href="#">Components</a>
+<a class="text-sm font-bold uppercase tracking-widest hover:text-primary text-slate-500 dark:text-slate-400" href="#">Templates</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden lg:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+<input class="bg-slate-100 dark:bg-white/5 border-none rounded-lg pl-10 pr-4 py-2 text-xs font-bold uppercase tracking-wider w-64 focus:ring-2 focus:ring-primary" placeholder="SEARCH SYSTEM..." type="text"/>
+</div>
+<button class="bg-primary hover:bg-primary/90 text-white px-5 py-2 rounded-lg font-black uppercase text-xs tracking-widest transition-all">
+                    Download Kit
+                </button>
+</div>
+</div>
+</header>
+<main class="max-w-[1200px] mx-auto px-6 py-10">
+<!-- Breadcrumbs & Hero -->
+<div class="flex flex-wrap gap-2 mb-6">
+<a class="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-widest hover:text-primary" href="#">Design System</a>
+<span class="text-slate-400 text-sm">/</span>
+<span class="text-slate-900 dark:text-white text-sm font-bold uppercase tracking-widest">Athletic Premium UI v1.0.4</span>
+</div>
+<div class="flex flex-col lg:flex-row justify-between items-start gap-8 mb-16">
+<div class="max-w-2xl">
+<h1 class="text-6xl md:text-8xl font-black italic tracking-tighter uppercase leading-[0.85] mb-6">
+                    Built for <br/><span class="text-primary">High-Performance</span> Teams.
+                </h1>
+<p class="text-xl text-slate-600 dark:text-slate-400 font-medium">
+                    Heavy typography, tactile inputs, and team-driven theming designed for the next generation of youth sports management.
+                </p>
+</div>
+<div class="flex flex-col gap-3 w-full lg:w-auto">
+<button class="flex items-center justify-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-black font-black uppercase tracking-widest py-4 px-8 rounded-lg text-sm hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-xl">
+<span class="material-symbols-outlined">sync</span>
+                    Sync to Figma
+                </button>
+<div class="flex items-center gap-2 px-4">
+<span class="size-2 rounded-full bg-green-500"></span>
+<span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Version 1.0.4 - Live</span>
+</div>
+</div>
+</div>
+<hr class="border-slate-200 dark:border-white/10 mb-16"/>
+<!-- Typography Section -->
+<section class="mb-24">
+<div class="flex items-baseline justify-between mb-8 border-b-4 border-slate-900 dark:border-white pb-2">
+<h2 class="text-2xl font-black uppercase italic tracking-tighter">01. Typography Scale</h2>
+<span class="text-xs font-bold uppercase tracking-widest text-slate-400">Lexend Family</span>
+</div>
+<div class="space-y-12">
+<div>
+<span class="text-[10px] font-black uppercase text-primary mb-2 block">Display Extra Bold Italic / 96px</span>
+<h1 class="text-7xl md:text-9xl font-extrabold italic uppercase tracking-tighter leading-none">THE ARENA</h1>
+</div>
+<div>
+<span class="text-[10px] font-black uppercase text-primary mb-2 block">Headline Black / 48px</span>
+<h2 class="text-4xl md:text-5xl font-black uppercase tracking-tight">Tournament Ready</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+<div>
+<span class="text-[10px] font-black uppercase text-primary mb-2 block">Subhead Bold / 24px</span>
+<h3 class="text-2xl font-bold uppercase">Game Day Protocol</h3>
+<p class="mt-2 text-slate-600 dark:text-slate-400 leading-relaxed">
+                            Athletic performance is more than just practice; it's the tools you use to manage the journey. Our typography is built for rapid scanning in high-pressure environments.
+                        </p>
+</div>
+<div class="bg-slate-100 dark:bg-white/5 p-6 rounded-xl border-l-4 border-primary">
+<span class="text-[10px] font-black uppercase text-slate-500 mb-4 block">Spec Card</span>
+<div class="space-y-2">
+<div class="flex justify-between border-b border-slate-200 dark:border-white/10 pb-1">
+<span class="text-xs font-bold">Line Height</span>
+<span class="text-xs font-mono">1.1 (Display)</span>
+</div>
+<div class="flex justify-between border-b border-slate-200 dark:border-white/10 pb-1">
+<span class="text-xs font-bold">Letter Spacing</span>
+<span class="text-xs font-mono">-0.05em</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Dynamic Card System -->
+<section class="mb-24">
+<div class="flex items-baseline justify-between mb-8 border-b-4 border-slate-900 dark:border-white pb-2">
+<h2 class="text-2xl font-black uppercase italic tracking-tighter">02. Theme-Responsive Cards</h2>
+<span class="text-xs font-bold uppercase tracking-widest text-slate-400">Light vs Dark Foundations</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<!-- Light Theme Card -->
+<div class="bg-white p-8 rounded-xl shadow-2xl border border-slate-200 group">
+<div class="flex justify-between items-start mb-6">
+<div class="bg-slate-100 p-3 rounded-lg">
+<span class="material-symbols-outlined text-slate-900">sports_basketball</span>
+</div>
+<span class="bg-primary/10 text-primary text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">Live Now</span>
+</div>
+<h3 class="text-slate-900 text-3xl font-black uppercase tracking-tighter italic mb-2">Regional Finals</h3>
+<p class="text-slate-500 font-bold text-sm uppercase mb-6">Saturday, Oct 14 • 4:00 PM</p>
+<div class="flex items-center gap-4 mb-8">
+<div class="size-12 rounded-full bg-slate-200 bg-center bg-cover border-2 border-white shadow-md" data-alt="Lakers team logo" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuACx4lu0AOLGnuSXJaPahC8Y_LUOkSJl7E8C9quTEYcHgdxwqkchhf44ilFBYl8vwWL5yl7ND9E1sCDhUM5nO_UrbkFUGj-rVa96skIjLhCSIYBVcXBfvyUWoPm_cCoN46g5yYb4KDArRAjQql0QCj5hSzw7XNu09akyatzhKepbBRj2MhpY-Y1X_ZD6LWfg8Za65LHmd-VU01Gyfsn3SoWMIWprY5yYVm5GWwzDglY-B8Gj0wowzms8NXDNqSNoZkWe9iu_XHc1fE')"></div>
+<div class="text-2xl font-black text-slate-900">88</div>
+<div class="text-slate-300 font-black text-xl italic">VS</div>
+<div class="text-2xl font-black text-slate-900">76</div>
+<div class="size-12 rounded-full bg-slate-200 bg-center bg-cover border-2 border-white shadow-md" data-alt="Celtics team logo" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCeXQ9HbxWgAkfnphv7wn4AlwvH4s5usXIzAhGmjEuwfpbcVV2wYRVpPWdTqEbIxX71PnzhgXGDxPATP9SxeN86vY0h5nf_TY9KAiq2-kirVcbGKoDWVbwmG5GZdikmAHgDwUalb4FdOZ8TygFOHgDr7ARQeIUbfhPowykNKzvTEqIlENg7-ySUrTN7ziYbs_iw0hnJBolFiBwl94r17AuCR9Hqkm6YNf9DTYAE-YBkRChhI_lOc5ib8dB3qCbgv7c4Oyzt6cUCQ-c')"></div>
+</div>
+<button class="w-full bg-slate-900 text-white font-black uppercase tracking-widest py-3 rounded hover:bg-black transition-colors">View Stats</button>
+</div>
+<!-- Dark Theme Card -->
+<div class="bg-surface-dark p-8 rounded-xl shadow-2xl border border-white/5 mesh-pattern">
+<div class="flex justify-between items-start mb-6">
+<div class="bg-white/10 p-3 rounded-lg">
+<span class="material-symbols-outlined text-white">sports_soccer</span>
+</div>
+<span class="bg-primary text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-primary/40">Upcoming</span>
+</div>
+<h3 class="text-white text-3xl font-black uppercase tracking-tighter italic mb-2">Training Camp</h3>
+<p class="text-slate-400 font-bold text-sm uppercase mb-6">Monday, Oct 16 • 6:30 AM</p>
+<div class="flex items-center gap-3 mb-8">
+<div class="flex -space-x-4">
+<div class="size-10 rounded-full border-2 border-surface-dark bg-slate-400 bg-cover bg-center" data-alt="Player profile 1" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCYi8HyVIf9nPSve4BTCyEWGSH_C41jBnhu9wgryz7c9e7CSDrbCfl2Hz6X_VEtqdNe_1y79cwqBwxnWhFNRNRT0ZNFAjNzoUBrmd1rhvaADCfwiCC5stsSDOuCmFhTvbCusNu6WP-4b4wSmLGvryjLmj38sy4EhAJL4EE4cQMI5plMYrQEFL7NADUMYa28YKk5Wevw_rVC_KVcu0IS9A3e2RgUTovVeQ6MpmLQlay8JKJ2TFJMAUmJk2_-QKhoALsEJdeNMu4dJas')"></div>
+<div class="size-10 rounded-full border-2 border-surface-dark bg-slate-500 bg-cover bg-center" data-alt="Player profile 2" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDjNEg1UuktSztVYqEPKogr2a_OnjJ6kcg1Iczc4p7Skiq2IkFhqusLxCcHbVgkhWRCHyowFhVZs3zi16dYRQ_xZZCy7tDOvB7M5nk5AKkOOi1pXgrIIQBCHjK-Yy2hAl_h6NtB0mI9C26LdFCH7Hs1o3UWATkn3FvRWkKqAC179PsknH33s_AQyVo9cBo9WXDnNlD-uutc9gh6h1qkN_axvhpwXJIxc-IXs9nBbKZOhnWCcxB0UVwIfkFi4zAbjXpCQllK35iYNeI')"></div>
+<div class="size-10 rounded-full border-2 border-surface-dark bg-slate-600 bg-cover bg-center" data-alt="Player profile 3" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBxLaiU7B6ToJpF-ZwXUeEN-2BcKeAsBmTpbz92ZiUiCwl_ZGQ15nZ0slg-KebfHR29ITsuYCC6-e0_UTKU9TrTMCjJTM1ijeZHe4u_CStvrsm4SY6H4G5ZN019k05vn7jzWdHkW2S_C8k2pKzQ3CkBak9LlzkUIINTUbfenLE60vj2p4VijlidImJ1iKRkoCIpYfOZfQrVK2CgkCK9wBhxZ5sfpPHRhWurV04F-gX6Ltt_FiZw8qOLBGTQtKF5NkLopcgNrqTvh3A')"></div>
+<div class="size-10 rounded-full border-2 border-surface-dark bg-primary flex items-center justify-center text-[10px] font-black">+18</div>
+</div>
+<span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Roster Confirmed</span>
+</div>
+<button class="w-full bg-white text-black font-black uppercase tracking-widest py-3 rounded hover:bg-slate-200 transition-colors">Join Drill</button>
+</div>
+</div>
+</section>
+<!-- Team Theming Section -->
+<section class="mb-24">
+<div class="flex items-baseline justify-between mb-8 border-b-4 border-slate-900 dark:border-white pb-2">
+<h2 class="text-2xl font-black uppercase italic tracking-tighter">03. The Arena: Team Theming</h2>
+<span class="text-xs font-bold uppercase tracking-widest text-slate-400">Dynamic Color Engine</span>
+</div>
+<div class="bg-slate-100 dark:bg-white/5 p-8 rounded-xl border border-slate-200 dark:border-white/10">
+<p class="mb-8 font-bold uppercase tracking-widest text-sm text-slate-500">Select a team to preview UI transformation:</p>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+<!-- Default -->
+<div class="border-2 border-primary bg-background-light dark:bg-background-dark p-6 rounded-lg cursor-pointer">
+<div class="flex items-center gap-3 mb-4">
+<div class="size-4 bg-primary rounded-full"></div>
+<span class="font-black uppercase italic tracking-tighter">Default Blue</span>
+</div>
+<div class="h-2 w-full bg-primary rounded-full opacity-50 mb-2"></div>
+<div class="h-8 w-2/3 bg-primary rounded-sm"></div>
+</div>
+<!-- Lakers -->
+<div class="border-2 border-transparent hover:border-lakers/50 bg-background-light dark:bg-background-dark p-6 rounded-lg cursor-pointer transition-all opacity-60 hover:opacity-100">
+<div class="flex items-center gap-3 mb-4">
+<div class="size-4 bg-lakers rounded-full"></div>
+<span class="font-black uppercase italic tracking-tighter text-lakers">Showtime Purple</span>
+</div>
+<div class="h-2 w-full bg-lakers rounded-full opacity-50 mb-2"></div>
+<div class="h-8 w-2/3 bg-lakers rounded-sm"></div>
+</div>
+<!-- Celtics -->
+<div class="border-2 border-transparent hover:border-celtics/50 bg-background-light dark:bg-background-dark p-6 rounded-lg cursor-pointer transition-all opacity-60 hover:opacity-100">
+<div class="flex items-center gap-3 mb-4">
+<div class="size-4 bg-celtics rounded-full"></div>
+<span class="font-black uppercase italic tracking-tighter text-celtics">Clover Green</span>
+</div>
+<div class="h-2 w-full bg-celtics rounded-full opacity-50 mb-2"></div>
+<div class="h-8 w-2/3 bg-celtics rounded-sm"></div>
+</div>
+</div>
+<div class="relative overflow-hidden rounded-xl bg-slate-900 p-12 border-4 border-primary">
+<div class="absolute top-0 right-0 p-4">
+<span class="text-[10px] font-black text-primary uppercase tracking-[0.2em] italic">Active Theme: Default</span>
+</div>
+<div class="relative z-10 flex flex-col items-center text-center">
+<h3 class="text-white text-5xl font-black italic uppercase tracking-tighter mb-4">Unleash Your Athlete</h3>
+<p class="text-slate-400 mb-8 max-w-md font-medium">Custom branding allows every league to feel elite. All buttons, borders, and accents follow the theme token.</p>
+<div class="flex gap-4">
+<button class="bg-primary text-white font-black uppercase tracking-widest px-8 py-4 rounded-sm shadow-[4px_4px_0px_#101a23]">Register Now</button>
+<button class="border-2 border-white text-white font-black uppercase tracking-widest px-8 py-4 rounded-sm">Learn More</button>
+</div>
+</div>
+<!-- Abstract Background Graphic -->
+<div class="absolute -bottom-10 -left-10 size-64 bg-primary/20 blur-[80px] rounded-full"></div>
+<div class="absolute -top-10 -right-10 size-64 bg-primary/10 blur-[60px] rounded-full"></div>
+</div>
+</div>
+</section>
+<!-- Iconography Vault -->
+<section class="mb-24">
+<div class="flex items-baseline justify-between mb-8 border-b-4 border-slate-900 dark:border-white pb-2">
+<h2 class="text-2xl font-black uppercase italic tracking-tighter">04. Iconography Vault</h2>
+<span class="text-xs font-bold uppercase tracking-widest text-slate-400">Custom Sports &amp; Environment Sets</span>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+<!-- Sports -->
+<div class="flex flex-col items-center justify-center p-6 bg-slate-100 dark:bg-white/5 rounded-xl border border-transparent hover:border-primary group transition-all">
+<span class="material-symbols-outlined text-3xl mb-3 group-hover:scale-110 transition-transform">sports_basketball</span>
+<span class="text-[10px] font-black uppercase text-slate-500">Basketball</span>
+</div>
+<div class="flex flex-col items-center justify-center p-6 bg-slate-100 dark:bg-white/5 rounded-xl border border-transparent hover:border-primary group transition-all">
+<span class="material-symbols-outlined text-3xl mb-3 group-hover:scale-110 transition-transform">sports_soccer</span>
+<span class="text-[10px] font-black uppercase text-slate-500">Soccer</span>
+</div>
+<div class="flex flex-col items-center justify-center p-6 bg-slate-100 dark:bg-white/5 rounded-xl border border-transparent hover:border-primary group transition-all">
+<span class="material-symbols-outlined text-3xl mb-3 group-hover:scale-110 transition-transform">sports_baseball</span>
+<span class="text-[10px] font-black uppercase text-slate-500">Baseball</span>
+</div>
+<div class="flex flex-col items-center justify-center p-6 bg-slate-100 dark:bg-white/5 rounded-xl border border-transparent hover:border-primary group transition-all">
+<span class="material-symbols-outlined text-3xl mb-3 group-hover:scale-110 transition-transform">sports_football</span>
+<span class="text-[10px] font-black uppercase text-slate-500">Football</span>
+</div>
+<!-- Weather -->
+<div class="flex flex-col items-center justify-center p-6 bg-slate-100 dark:bg-white/5 rounded-xl border border-transparent hover:border-primary group transition-all">
+<span class="material-symbols-outlined text-3xl mb-3 group-hover:scale-110 transition-transform">sunny</span>
+<span class="text-[10px] font-black uppercase text-slate-500">Clear Sky</span>
+</div>
+<div class="flex flex-col items-center justify-center p-6 bg-slate-100 dark:bg-white/5 rounded-xl border border-transparent hover:border-primary group transition-all">
+<span class="material-symbols-outlined text-3xl mb-3 group-hover:scale-110 transition-transform">rainy</span>
+<span class="text-[10px] font-black uppercase text-slate-500">Rain Delay</span>
+</div>
+<div class="flex flex-col items-center justify-center p-6 bg-slate-100 dark:bg-white/5 rounded-xl border border-transparent hover:border-primary group transition-all">
+<span class="material-symbols-outlined text-3xl mb-3 group-hover:scale-110 transition-transform">cloud</span>
+<span class="text-[10px] font-black uppercase text-slate-500">Overcast</span>
+</div>
+<div class="flex flex-col items-center justify-center p-6 bg-slate-100 dark:bg-white/5 rounded-xl border border-transparent hover:border-primary group transition-all">
+<span class="material-symbols-outlined text-3xl mb-3 group-hover:scale-110 transition-transform">thermostat</span>
+<span class="text-[10px] font-black uppercase text-slate-500">Heat Index</span>
+</div>
+</div>
+</section>
+<!-- Tactile Button Suite -->
+<section class="mb-24">
+<div class="flex items-baseline justify-between mb-8 border-b-4 border-slate-900 dark:border-white pb-2">
+<h2 class="text-2xl font-black uppercase italic tracking-tighter">05. Tactile Button Suite</h2>
+<span class="text-xs font-bold uppercase tracking-widest text-slate-400">Shadows &amp; Interaction</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+<div class="space-y-4">
+<span class="text-[10px] font-black uppercase text-slate-500">Primary Heavy</span>
+<button class="w-full bg-primary text-white font-black uppercase tracking-widest py-4 rounded-lg shadow-[0px_8px_0px_#1d70c2] hover:translate-y-1 hover:shadow-[0px_4px_0px_#1d70c2] active:translate-y-2 active:shadow-none transition-all">
+                        Action Label
+                    </button>
+</div>
+<div class="space-y-4">
+<span class="text-[10px] font-black uppercase text-slate-500">Ghost Outline</span>
+<button class="w-full border-4 border-slate-900 dark:border-white text-slate-900 dark:text-white font-black uppercase tracking-widest py-4 rounded-lg hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
+                        Ghost Action
+                    </button>
+</div>
+<div class="space-y-4">
+<span class="text-[10px] font-black uppercase text-slate-500">Minimal Accent</span>
+<button class="w-full bg-slate-200 dark:bg-white/10 text-slate-900 dark:text-white font-black uppercase tracking-widest py-4 rounded-lg hover:bg-primary hover:text-white transition-all">
+                        Secondary
+                    </button>
+</div>
+<div class="space-y-4">
+<span class="text-[10px] font-black uppercase text-slate-500">Alert / Negative</span>
+<button class="w-full bg-red-600 text-white font-black uppercase tracking-widest py-4 rounded-lg shadow-[0px_8px_0px_#b91c1c] hover:translate-y-1 hover:shadow-[0px_4px_0px_#b91c1c] active:translate-y-2 active:shadow-none transition-all">
+                        Delete Data
+                    </button>
+</div>
+</div>
+</section>
+</main>
+<footer class="bg-slate-100 dark:bg-white/5 border-t border-slate-200 dark:border-white/10 py-12">
+<div class="max-w-[1200px] mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
+<div class="flex flex-col gap-2">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-3xl">bolt</span>
+<h2 class="text-xl font-black tracking-tighter athletic-italic uppercase italic">TeamHub <span class="text-primary">Athletic</span></h2>
+</div>
+<p class="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Empowering the next generation of athletes.</p>
+</div>
+<div class="flex gap-8">
+<a class="text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-2xl">language</span>
+</a>
+<a class="text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-2xl">alternate_email</span>
+</a>
+<a class="text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-2xl">share</span>
+</a>
+</div>
+</div>
+<div class="max-w-[1200px] mx-auto px-6 mt-8 pt-8 border-t border-slate-200 dark:border-white/5 flex flex-wrap gap-4 justify-center md:justify-start">
+<span class="text-[10px] font-black uppercase tracking-widest text-slate-400">© 2024 TeamHub Digital Systems</span>
+<span class="text-[10px] font-black uppercase tracking-widest text-slate-400">All Performance Rights Reserved</span>
+</div>
+</footer>
+</body></html>

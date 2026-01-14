@@ -1,0 +1,49 @@
+PHASE 03 - TEAM JOIN AND INVITES
+===============================
+
+Goal:
+Allow parents to join teams using invite codes and links.
+
+----------------------------------------------------------------
+REQUIREMENTS
+----------------------------------------------------------------
+
+- Each team has an invite code
+- Admin or coach can generate invite links
+- Parent enters code or clicks link
+- Parent selects child to join
+- Membership is created in team_memberships with status=active
+
+----------------------------------------------------------------
+DATA
+----------------------------------------------------------------
+
+Add to teams:
+- invite_code
+
+----------------------------------------------------------------
+DELIVERABLES
+----------------------------------------------------------------
+
+- SQL migration to add invite_code
+- RLS allowing join via valid code
+- React Join Team screen
+- Validation and error handling
+
+----------------------------------------------------------------
+OUTPUT
+----------------------------------------------------------------
+
+Provide:
+- SQL
+- RLS
+- UI
+- Test plan
+
+----------------------------------------------------------------
+STOP CONDITIONS
+----------------------------------------------------------------
+
+If multiple seasons are active, ask how to select season.
+
+END

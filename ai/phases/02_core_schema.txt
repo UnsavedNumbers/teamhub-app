@@ -1,0 +1,48 @@
+PHASE 02 - CORE ORGANIZATION AND TEAM STRUCTURE
+==============================================
+
+Goal:
+Implement organizations, teams, seasons, children, and memberships.
+
+----------------------------------------------------------------
+REQUIREMENTS
+----------------------------------------------------------------
+
+- Admin can create organizations
+- Admin can create teams
+- Admin can create seasons
+- Parent can add children
+- Admin can assign children to teams/seasons
+
+----------------------------------------------------------------
+DELIVERABLES
+----------------------------------------------------------------
+
+- SQL for:
+  - organizations
+  - teams
+  - seasons
+  - children
+  - team_memberships
+- RLS for all tables
+- Admin UI for managing teams and seasons
+- Parent UI for adding children
+- Membership assignment UI
+
+----------------------------------------------------------------
+OUTPUT
+----------------------------------------------------------------
+
+Provide:
+- SQL
+- RLS
+- React components
+- Test plan
+
+----------------------------------------------------------------
+STOP CONDITIONS
+----------------------------------------------------------------
+
+If membership rules are unclear, ask before implementing.
+
+END

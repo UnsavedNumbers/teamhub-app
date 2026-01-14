@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TeamHub | Wallet Home</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#258cf4",
+                        "background-light": "#f5f7f8",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Lexend', sans-serif;
+        }
+        .wallet-stack > div {
+            transition: transform 0.2s ease;
+        }
+        .wallet-stack > div:hover {
+            transform: translateY(-4px);
+        }
+        .card-depth {
+            box-shadow: 0 -8px 20px -5px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white min-h-screen flex overflow-hidden">
+<!-- Side Navigation -->
+<aside class="w-64 border-r border-slate-200 dark:border-slate-800 flex flex-col h-screen bg-background-light dark:bg-background-dark hidden lg:flex">
+<div class="p-6 flex items-center gap-3">
+<div class="bg-primary p-1.5 rounded-lg text-white">
+<span class="material-symbols-outlined text-2xl">sports_soccer</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-lg font-bold leading-none tracking-tight">TEAMHUB</h1>
+<p class="text-xs text-slate-500 dark:text-slate-400 font-medium">ELITE YOUTH SPORTS</p>
+</div>
+</div>
+<nav class="flex-1 px-4 space-y-2 mt-4">
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 text-primary" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-semibold text-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">groups</span>
+<span class="font-semibold text-sm">Roster</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="font-semibold text-sm">Schedule</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="font-semibold text-sm">Finances</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-semibold text-sm">Settings</span>
+</a>
+</nav>
+<div class="p-6 border-t border-slate-200 dark:border-slate-800">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-slate-300 dark:bg-slate-700 overflow-hidden" data-alt="Parent profile photo" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBifr17Qp55dNWMfKROAzK389zLfzwEbvejBwOkXRLwLMneK3tdtCBD_UZ5_v-vq8TOegjSg2tZYNUdHXDvEywfP_PtS3rrPFWld4onBR79Cqky07P0G6M1gu-nIt_9w-l8odzSXN7S27zBkyWnIuaMMG46T9XyGlkZuDlFWWlFeqqsuy1iO_iyeX1QfALJqYMz--1OonXpzKwcPMXo8YhFo7ctp-GtZqVmrs6Jd37jvT9_IZZsv17sYkQZTmULkRZ2S_ZKemR0S9c');"></div>
+<div class="flex flex-col">
+<p class="text-sm font-bold">Alex Johnson</p>
+<p class="text-xs text-slate-500">U14 Parent</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col h-screen overflow-y-auto">
+<!-- Top Navigation -->
+<header class="h-16 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 sticky top-0 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md z-50">
+<h2 class="text-lg font-bold tracking-tight">Team Wallet</h2>
+<div class="flex items-center gap-4">
+<div class="relative max-w-xs hidden md:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">search</span>
+<input class="bg-slate-100 dark:bg-slate-800 border-none rounded-full pl-10 pr-4 py-2 text-sm w-64 focus:ring-2 focus:ring-primary" placeholder="Search team feed..." type="text"/>
+</div>
+<button class="size-10 rounded-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 relative">
+<span class="material-symbols-outlined text-xl">notifications</span>
+<span class="absolute top-2 right-2 size-2 bg-primary rounded-full ring-2 ring-background-light dark:ring-background-dark"></span>
+</button>
+</div>
+</header>
+<!-- Wallet View Container -->
+<div class="max-w-4xl mx-auto w-full px-6 py-10 flex flex-col gap-8">
+<!-- Section Header: Primary Action -->
+<div class="flex items-end justify-between px-2">
+<div>
+<h3 class="text-primary font-bold tracking-widest text-sm uppercase mb-1">Coming Up Next</h3>
+<h2 class="text-3xl font-black tracking-tight">Game Day</h2>
+</div>
+<p class="text-slate-500 font-medium text-sm">Saturday, Oct 14</p>
+</div>
+<!-- THE STACKED WALLET SYSTEM -->
+<div class="wallet-stack flex flex-col -space-y-4">
+<!-- HERO CARD: GAME DAY -->
+<div class="relative z-40 bg-primary rounded-3xl overflow-hidden shadow-2xl p-8 text-white">
+<!-- Subtle Texture Overlay -->
+<div class="absolute inset-0 opacity-10 bg-center bg-no-repeat bg-cover pointer-events-none" data-alt="Abstract stadium grass pattern" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD-eVT7r8Y3auhTJPrJoijE7JFJNJJfEw0YgmGFT-jPGHvu0NrBm28bNGbu-VBFKeR2LNqvFpNztaU5sSk5OWt0DfY1CsCxM7DhA-xtU817UP5Mo65kjHu-t6Pt5dPWa8kC3xu2UiZe8NA6PRnBz9HRaVEy9YTK-0vNbRUaYzaER7ZcuUA93BuC628wpA4oryuH-7hJnqCVy1BFgBETv_Mnxz7VuO6RHio0wWfjRQ1BaVwl2LFGaXmbXDWH0644SLtdNauEb1gj9V4');"></div>
+<div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+<div class="flex-1">
+<div class="flex items-center gap-2 mb-4">
+<span class="bg-white/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider backdrop-blur-sm">Action Required</span>
+</div>
+<h4 class="text-6xl md:text-7xl font-black leading-tight tracking-tighter mb-2">8:15 AM</h4>
+<p class="text-white/80 font-bold text-xl uppercase tracking-wide">Arrival Time</p>
+</div>
+<div class="flex flex-col gap-6 md:text-right">
+<div>
+<h5 class="text-white/70 text-sm font-bold uppercase tracking-widest mb-1">Opponent &amp; Field</h5>
+<p class="text-2xl font-black uppercase">STRIKERS FC</p>
+<p class="text-lg font-medium opacity-90 uppercase">Orange County Complex - Field 4</p>
+</div>
+<div class="flex items-center gap-3 md:justify-end">
+<button class="bg-white text-primary px-8 py-3 rounded-xl font-black text-sm hover:bg-slate-100 transition-colors shadow-lg">
+                                    GOING
+                                </button>
+<button class="bg-primary/50 backdrop-blur-md border border-white/20 text-white px-6 py-3 rounded-xl font-black text-sm hover:bg-primary/60 transition-colors">
+                                    DECLINE
+                                </button>
+</div>
+</div>
+</div>
+</div>
+<!-- CARD 2: TEAM FINANCES -->
+<div class="relative z-30 bg-[#1e293b] dark:bg-[#1c2a38] rounded-3xl p-8 border border-white/5 card-depth">
+<div class="pt-4 flex items-center justify-between">
+<div class="flex items-center gap-5">
+<div class="size-14 rounded-2xl bg-emerald-500/20 text-emerald-500 flex items-center justify-center">
+<span class="material-symbols-outlined text-3xl">payments</span>
+</div>
+<div>
+<h4 class="text-lg font-black text-white uppercase tracking-tight">Tournament Fees</h4>
+<p class="text-slate-400 text-sm font-medium">Due by end of October</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-2xl font-black text-white">$145.00</p>
+<button class="text-primary text-sm font-bold flex items-center gap-1 mt-1 justify-end">
+                                Pay Now <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- CARD 3: EQUIPMENT CHECKLIST -->
+<div class="relative z-20 bg-[#f8fafc] dark:bg-[#16212b] rounded-3xl p-8 border border-slate-200 dark:border-white/5 card-depth">
+<div class="pt-4 flex items-center justify-between">
+<div class="flex items-center gap-5">
+<div class="size-14 rounded-2xl bg-orange-500/20 text-orange-500 flex items-center justify-center">
+<span class="material-symbols-outlined text-3xl">check_box</span>
+</div>
+<div>
+<h4 class="text-lg font-black dark:text-white uppercase tracking-tight">Equipment Kit</h4>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">White Jerseys &amp; Away Socks</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-400">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Secondary Grid for Analytics/Quick Actions -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+<div class="bg-white dark:bg-background-dark/50 border border-slate-200 dark:border-slate-800 p-6 rounded-3xl">
+<div class="flex items-center justify-between mb-6">
+<h4 class="font-black uppercase tracking-tight text-sm">Team Standings</h4>
+<span class="material-symbols-outlined text-slate-400">trending_up</span>
+</div>
+<div class="flex items-end gap-2">
+<span class="text-4xl font-black">2nd</span>
+<span class="text-slate-500 font-bold mb-1">in Coastal League</span>
+</div>
+<div class="mt-4 flex gap-1 h-2 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800">
+<div class="w-3/4 bg-primary rounded-full"></div>
+</div>
+</div>
+<div class="bg-white dark:bg-background-dark/50 border border-slate-200 dark:border-slate-800 p-6 rounded-3xl">
+<div class="flex items-center justify-between mb-4">
+<h4 class="font-black uppercase tracking-tight text-sm">Coach's Note</h4>
+<span class="material-symbols-outlined text-slate-400">forum</span>
+</div>
+<p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed italic">
+                        "Great work at training tonight. Remember to hydrate early for the 8am game tomorrow. See you on the pitch!"
+                    </p>
+<p class="mt-3 text-xs font-bold text-primary">— COACH MIKE</p>
+</div>
+</div>
+<!-- Bottom Spacer -->
+<div class="h-20"></div>
+</div>
+</main>
+<!-- Mobile Navigation Bar (Visible only on small screens) -->
+<nav class="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-background-dark border-t border-slate-200 dark:border-slate-800 flex items-center justify-around z-[100]">
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-bold">HOME</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined">calendar_month</span>
+<span class="text-[10px] font-bold">SCHEDULE</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="text-[10px] font-bold">WALLET</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-bold">PROFILE</span>
+</button>
+</nav>
+</body></html>

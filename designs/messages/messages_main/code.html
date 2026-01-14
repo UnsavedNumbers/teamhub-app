@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Messages: Calm Communication Home V1</title>
+<!-- Google Fonts & Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "primary": "#137fec",
+                "background-light": "#f6f7f8",
+                "background-dark": "#101922",
+              },
+              fontFamily: {
+                "display": ["Inter", "sans-serif"]
+              },
+              borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+            },
+          },
+        }
+      </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display transition-colors duration-200">
+<div class="flex h-screen overflow-hidden">
+<!-- Minimalist Side Navigation -->
+<aside class="w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark flex flex-col justify-between p-6">
+<div class="flex flex-col gap-8">
+<!-- Branding -->
+<div class="flex items-center gap-3">
+<div class="size-10 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined">sports_basketball</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-slate-900 dark:text-white text-base font-bold leading-none">TeamHub</h1>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-medium">Elite Athletics Portal</p>
+</div>
+</div>
+<!-- Nav Links -->
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="text-sm font-medium">Schedule</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-primary/10 text-primary rounded-lg" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">chat_bubble</span>
+<span class="text-sm font-bold">Messages</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">groups</span>
+<span class="text-sm font-medium">Roster</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+</nav>
+</div>
+<button class="w-full flex items-center justify-center gap-2 py-3 bg-primary text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
+<span class="material-symbols-outlined text-sm">edit</span>
+<span>New Message</span>
+</button>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col overflow-y-auto">
+<!-- Top Navigation Bar -->
+<header class="flex items-center justify-between px-10 py-5 bg-white dark:bg-background-dark border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
+<div class="flex items-center gap-2">
+<h2 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Messages</h2>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+<input class="pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary w-64 transition-all" placeholder="Search conversations..." type="text"/>
+</div>
+<div class="flex items-center gap-3">
+<button class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="h-8 w-[1px] bg-slate-200 dark:border-slate-700 mx-1"></div>
+<div class="flex items-center gap-3">
+<div class="size-9 rounded-full bg-slate-300 bg-cover bg-center" data-alt="User profile photo avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAEW0yL3NMxxj4X1aly3BVTfz6sN9VbAlT6sgzaD1w6rozhxTuQwS15Zbs6DGcf4g-U-EhanRQ-BSQNuhjDO-QZtYhR8g4ThURJWlSfqmNnU5WZCj2vq05GmBaouspNn_ibTWisEN91OjPRFuMUtQRWgHMZa9c13S8covdIymutQGtWWcbEUydY2BULe69UOM8GoE3TVyUn-RhAnqBrTjPT9ecIF8fVp2cMCo7xCpEinIjs_e7kBWyM6fvOde59OiiMzftpbbpjNqk');"></div>
+<span class="text-sm font-semibold hidden md:block">Alex Johnson</span>
+</div>
+</div>
+</div>
+</header>
+<div class="max-w-5xl w-full mx-auto px-10 py-8">
+<!-- Breadcrumbs -->
+<nav class="flex items-center gap-2 mb-8">
+<a class="text-sm text-slate-400 hover:text-primary transition-colors" href="#">Home</a>
+<span class="text-slate-300 dark:text-slate-700">/</span>
+<span class="text-sm font-semibold text-slate-900 dark:text-slate-100">Messages</span>
+</nav>
+<!-- OFFICIAL ANNOUNCEMENTS SECTION -->
+<section class="mb-12">
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center gap-3">
+<h3 class="text-xs font-black tracking-widest text-slate-900 dark:text-white uppercase">Official Announcements</h3>
+<span class="px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[10px] font-bold">2 NEW</span>
+</div>
+<button class="text-sm font-medium text-primary hover:underline">Mark all as read</button>
+</div>
+<div class="grid grid-cols-1 gap-4">
+<!-- Announcement Card 1 -->
+<div class="group bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all border-l-4 border-l-primary">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<span class="px-2.5 py-1 rounded bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10px] font-black uppercase tracking-wider">Coach</span>
+<h4 class="text-lg font-bold text-slate-900 dark:text-white">Practice moved to Field 4</h4>
+</div>
+<span class="text-xs text-slate-400">10 mins ago</span>
+</div>
+<p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed mb-4 max-w-3xl">
+                                Please note that due to incoming weather conditions and turf maintenance, today's tactical session has been relocated. All athletes should report to Field 4 by 4:45 PM. Please check the equipment list as metal cleats are not permitted on the turf.
+                            </p>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="size-6 rounded-full bg-slate-200 bg-cover bg-center" data-alt="Coach Miller profile photo" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDHgPsx70BLaVEz_eHzo_9ood8uinSM8fnL-_rhh0SG7Os5XgTNKoLK9-JQ8bKkQ7LfBdta5a-TMs9u80ibeMstOH5aOf3O8TL4sa0czZ2PLvpw61vPj536sEA-jIWGEWfvChIqoJ9g4yluasM5tC-ySqfRzcuPTqRTEu_8Ynk2COWLZXt642s9uECCihZho2L70Bwg1oUjPIDiwFYajYlqeAGCleP8l4WU8-jfNYJWlUWmqCR_fjo60velBbAxiVtcTXtmOqeIwZ8');"></div>
+<span class="text-xs font-medium text-slate-500">Coach Miller</span>
+</div>
+<button class="px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg transition-transform active:scale-95">
+                                    View Details
+                                </button>
+</div>
+</div>
+<!-- Announcement Card 2 -->
+<div class="group bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all border-l-4 border-l-slate-400">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<span class="px-2.5 py-1 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-black uppercase tracking-wider">Admin</span>
+<h4 class="text-lg font-bold text-slate-900 dark:text-white">Spring Tournament Registration</h4>
+</div>
+<span class="text-xs text-slate-400">Yesterday, 4:30 PM</span>
+</div>
+<p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed mb-4 max-w-3xl">
+                                Registration for the Regional Spring Invitational is now open. All team members must confirm their availability and sign the digital waiver by Friday at noon. 
+                            </p>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="size-6 rounded-full bg-slate-200 bg-cover bg-center" data-alt="Admin staff profile photo" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBvMpnX3YObBT007U2xd1U4zNbcxSUHLXTS_ZgUv9hL5hU9CdN3yoWbLfa5LUu43w1EuL7kGUkO3bPITT3xowZad7OGJMGszg5wofwcquemo-_U2T3pTrCT0-z8-b71KAysIvj0slKsODxv9BQz6zfdkXblJ4cdeVJeciPHKzTfpkooEFIhDuwr4OhvWUmk6mstjwyo-g_ms5Z83-InU8V3kVxyrPO25uwgFNQjp8jtiIcHFLWSjbgTnjQiGbwwz6F8kXXehbM5yjQ');"></div>
+<span class="text-xs font-medium text-slate-500">Sarah Jenkins</span>
+</div>
+<button class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors">
+                                    Review Documents
+                                </button>
+</div>
+</div>
+</div>
+</section>
+<!-- TEAM CHAT PREVIEW SECTION -->
+<section>
+<div class="flex items-center gap-3 mb-6">
+<h3 class="text-xs font-black tracking-widest text-slate-900 dark:text-white uppercase">Team Chat</h3>
+<div class="h-[1px] flex-1 bg-slate-200 dark:bg-slate-800"></div>
+</div>
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+<a class="flex items-center gap-4 p-5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group" href="#">
+<div class="relative">
+<div class="size-14 rounded-2xl bg-gradient-to-br from-primary to-blue-300 flex items-center justify-center text-white text-xl font-bold shadow-md">
+<span class="material-symbols-outlined">forum</span>
+</div>
+<span class="absolute -top-1 -right-1 size-4 bg-primary border-2 border-white dark:border-slate-900 rounded-full"></span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline mb-1">
+<h4 class="text-base font-bold text-slate-900 dark:text-white truncate">U14 Blue Tigers Team Chat</h4>
+<span class="text-xs text-slate-400">2 min ago</span>
+</div>
+<p class="text-sm text-slate-600 dark:text-slate-400 truncate">
+<span class="font-semibold text-slate-900 dark:text-slate-200">Lucas M:</span> Does anyone have an extra pair of goalie gloves for tonight's session? My bag was...
+                                </p>
+<div class="mt-2 flex items-center gap-2">
+<div class="flex -space-x-2">
+<div class="size-5 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 bg-cover" data-alt="Team member avatar 1" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCtzSosCXO2vaxto2S0zsNTNQOa2DKpZN_9ZSxcGbDBkhXc1GejCr5xs6LJvCi5tGsuCuDaFYl_pPU_yGvYGpCHqcDsgQn6qL5aEPrDniLJJtT0zzpszz-3B6UJEV5ara0VdlNS6o8671KfM-GRDP3EwhlcmpBbQs0X2yz4kZhkdNhza2sQb498CBAWVOarykkXE6VjXypjmg0bdT1GFj819oQWL0nlv5qXco8cNXc457kWwe43aVAnj9yuX5-rgqj1YqSzR74gLHY');"></div>
+<div class="size-5 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 bg-cover" data-alt="Team member avatar 2" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD6q7WPnI4fFMCBBzCAr-6DzcVg5eNLtvwqVVfAiZvtoRIBGchAHi0OrI_kkLtFGyFYSg-oMFeRKX_2q76m4jSTtCQv0HDVl0KWfMMApdbEW4fWCFX36a5yg1I_L4OQM0S3J8fKCS7l1OOIzTVHyxiuP8SzalnTJ_0hiP4OG75RZtNjY7ym6LKwdGIhPV26xkUiwnRllOC9DZ6EDA1ejrNmYwYvKnREibjwWs0xbbpO9iuqaraLkQciJvwQ4xzI0Zgti4ngxbkwFOs');"></div>
+<div class="size-5 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 bg-cover" data-alt="Team member avatar 3" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAi3_3ch07L9qQZ4YDSWbLN7JvzdC71WA86WCmelDhWiAk7JMvVvLZl_5BHR_OqGzz9iY5bIsPSytGOWw8qBvu4G3Olnv5EMVyjC4v_i4k5YlQeBvfb6qFi66glfGVPBc6cruv3Qou12gGxgZ7VchFbIxq2SNnkTOzK3m7Op3yXdYkFTRBRsJIbmTrJmbLYbWYA9qECTTqvRXIFVtKJQSz8tii4-Xo1wqqGI_IRVZktVWzBj49vlsGNrlIoYU6iyzYtlzO7vUCgoUU');"></div>
+</div>
+<span class="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">18 Members Active</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors translate-x-0 group-hover:translate-x-1 duration-200">chevron_right</span>
+</a>
+</div>
+<div class="mt-6 flex justify-center">
+<button class="flex items-center gap-2 px-6 py-2.5 rounded-full border border-slate-200 dark:border-slate-800 text-sm font-semibold text-slate-500 hover:bg-white hover:text-primary hover:shadow-sm transition-all">
+<span>View All Conversations</span>
+<span class="material-symbols-outlined text-sm">unfold_more</span>
+</button>
+</div>
+</section>
+<!-- Calm Footer State -->
+<footer class="mt-20 text-center">
+<div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 text-xs font-medium">
+<span class="material-symbols-outlined text-sm">verified</span>
+<span>You're all caught up with your team updates.</span>
+</div>
+</footer>
+</div>
+</main>
+</div>
+</body></html>

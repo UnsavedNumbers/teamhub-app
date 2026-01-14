@@ -1,0 +1,45 @@
+PHASE 01 - AUTHENTICATION AND ROLES
+=================================
+
+Goal:
+Implement Supabase Auth and role system.
+
+----------------------------------------------------------------
+REQUIREMENTS
+----------------------------------------------------------------
+
+- Email login
+- Phone OTP login
+- User profile stored in users table
+- Role assignment (parent, coach, admin)
+- Parent linked to a family
+- Coach/Admin not linked to family
+
+----------------------------------------------------------------
+DELIVERABLES
+----------------------------------------------------------------
+
+- SQL for users and families
+- RLS rules enforcing access
+- React login, signup, and session handling
+- Ability to create a family for a parent
+- Ability for admin to create coach/admin accounts
+
+----------------------------------------------------------------
+OUTPUT
+----------------------------------------------------------------
+
+Provide:
+- SQL schema
+- RLS policies
+- React auth pages
+- Supabase auth hooks
+- Test plan
+
+----------------------------------------------------------------
+STOP CONDITIONS
+----------------------------------------------------------------
+
+If role permissions are ambiguous, ask before implementing.
+
+END

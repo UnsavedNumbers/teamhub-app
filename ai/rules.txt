@@ -1,0 +1,87 @@
+TEAMHUB AI DEVELOPMENT RULES
+===========================
+
+These rules apply to all AI actions.
+
+----------------------------------------------------------------
+1) SOURCE OF TRUTH
+----------------------------------------------------------------
+
+The AI must follow:
+- product.txt
+- stack.txt
+- data_model.txt (when created)
+- phase files
+
+If a conflict exists, stop and ask.
+
+----------------------------------------------------------------
+2) NO INVENTION
+----------------------------------------------------------------
+
+The AI is not allowed to invent:
+- New features
+- New tables
+- New flows
+- New roles
+
+If something is missing, the AI must ask.
+
+----------------------------------------------------------------
+3) NO REFACTORING
+----------------------------------------------------------------
+
+The AI must not refactor unrelated code.
+Only change what the phase requires.
+
+----------------------------------------------------------------
+4) OUTPUT REQUIREMENTS
+----------------------------------------------------------------
+
+Each phase implementation must output:
+- SQL migrations
+- RLS policies
+- Supabase functions
+- React components
+- Manual test steps
+
+----------------------------------------------------------------
+5) STOP CONDITIONS
+----------------------------------------------------------------
+
+The AI must stop and wait when:
+- A required field is undefined
+- A relationship is ambiguous
+- A permission is unclear
+- A flow is missing
+
+----------------------------------------------------------------
+6) NO SHORTCUTS
+----------------------------------------------------------------
+
+The AI must not:
+- Fake data
+- Hardcode values
+- Skip error handling
+- Skip validation
+
+----------------------------------------------------------------
+7) PHASE LOCKING
+----------------------------------------------------------------
+
+A phase is complete only when:
+- All tables exist
+- UI works
+- Data saves correctly
+- Tests pass
+
+----------------------------------------------------------------
+8) STYLE
+----------------------------------------------------------------
+
+All code must be:
+- TypeScript for frontend
+- SQL for schema
+- Clean, readable, and documented
+
+END

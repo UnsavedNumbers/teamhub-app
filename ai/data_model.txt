@@ -1,0 +1,159 @@
+TEAMHUB DATA MODEL
+=================
+
+This document defines the canonical database schema.
+All tables, relationships, and permissions must follow this file.
+
+----------------------------------------------------------------
+GLOBAL CONVENTIONS
+----------------------------------------------------------------
+
+- All IDs are UUID
+- All tables include:
+  - id
+  - created_at
+  - updated_at
+- All records belong to an organization (org_id)
+
+----------------------------------------------------------------
+TABLES
+----------------------------------------------------------------
+
+organizations
+- id
+- name
+
+families
+- id
+- org_id
+- name
+
+users
+- id
+- email
+- phone
+- role (parent, coach, admin)
+- family_id (nullable for coaches/admins)
+
+children
+- id
+- family_id
+- first_name
+- last_name
+- birthdate
+
+teams
+- id
+- org_id
+- name
+
+seasons
+- id
+- team_id
+- name
+- start_date
+- end_date
+
+team_memberships
+- id
+- child_id
+- team_id
+- season_id
+- status (active, invited, removed)
+
+events
+- id
+- team_id
+- season_id
+- title
+- type (practice, game, tournament, meeting)
+- start_time
+- end_time
+- location
+- arrival_time
+
+attendance
+- id
+- event_id
+- child_id
+- status (going, late, not_going)
+- note
+
+payments
+- id
+- child_id
+- team_id
+- season_id
+- amount
+- status (due, paid, refunded)
+- stripe_payment_intent_id
+
+uniform_orders
+- id
+- child_id
+- team_id
+- season_id
+- jersey_size
+- short_size
+- status (pending, ordered, delivered)
+
+travel_plans
+- id
+- team_id
+- season_id
+- title
+- location
+- start_date
+- end_date
+- hotel_info
+- notes
+
+tryouts
+- id
+- org_id
+- title
+- age_group
+- date
+
+tryout_registrations
+- id
+- tryout_id
+- child_id
+- status (registered, checked_in, offered, rejected)
+
+tryout_scores
+- id
+- tryout_registration_id
+- score
+- notes
+
+messages
+- id
+- team_id
+- sender_id
+- body
+
+announcements
+- id
+- team_id
+- title
+- body
+
+----------------------------------------------------------------
+SECURITY MODEL
+----------------------------------------------------------------
+
+Parents:
+- Can see only their family, children, and related team data
+
+Coaches:
+- Can see teams they are assigned to
+- Can see rosters and attendance
+- Cannot see payment amounts
+
+Admins:
+- Can see all org data
+
+RLS must enforce this.
+
+END

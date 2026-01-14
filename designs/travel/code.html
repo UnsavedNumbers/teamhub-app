@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TeamHub | Athletic Itinerary V2</title>
+<!-- Tailwind CSS & Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Noto+Sans:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    borderWidth: {
+                        '3': '3px',
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .nike-border {
+            border: 2px solid #000;
+        }
+        .dark .nike-border {
+            border: 2px solid #e2e8f0;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-[#0d141b] dark:text-slate-100 min-h-screen">
+<!-- Top Navigation -->
+<header class="sticky top-0 z-50 bg-white dark:bg-background-dark border-b-2 border-black dark:border-slate-700 px-4 md:px-10 lg:px-40 py-3">
+<div class="max-w-[1200px] mx-auto flex items-center justify-between">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-2">
+<div class="size-8 bg-black dark:bg-primary flex items-center justify-center rounded-sm">
+<span class="material-symbols-outlined text-white text-xl">sports_score</span>
+</div>
+<h1 class="text-xl font-black uppercase tracking-tighter italic">TeamHub</h1>
+</div>
+<nav class="hidden lg:flex items-center gap-6">
+<a class="text-sm font-extrabold uppercase tracking-wider hover:text-primary transition-colors" href="#">Dashboard</a>
+<a class="text-sm font-extrabold uppercase tracking-wider text-primary border-b-2 border-primary" href="#">Travel</a>
+<a class="text-sm font-extrabold uppercase tracking-wider hover:text-primary transition-colors" href="#">Schedule</a>
+<a class="text-sm font-extrabold uppercase tracking-wider hover:text-primary transition-colors" href="#">Roster</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
+<input class="pl-10 pr-4 py-1.5 bg-gray-100 dark:bg-slate-800 border-2 border-black dark:border-slate-600 rounded-none text-xs font-bold uppercase focus:ring-primary focus:border-primary w-48" placeholder="SEARCH TRIPS" type="text"/>
+</div>
+<div class="flex items-center gap-3 border-l-2 border-gray-200 dark:border-slate-700 pl-4">
+<button class="material-symbols-outlined p-1 hover:bg-gray-100 dark:hover:bg-slate-800 rounded">notifications</button>
+<div class="w-8 h-8 rounded-full bg-cover bg-center border-2 border-black" data-alt="Athlete profile avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAPwPPZMQfAAhEz4Mtte3kJvwvZbRmvC3O067vEAlYosrCfmgEKRr0_B5_snefuDUE4IpSUhN2mRtWCHTq4Zdr0i7Daf3jdlJ1KI2KLGQQJMXZKTNnWmN0z8ORJHquh-LwLtIrNrW4xS1bcd5AqHW42R-mkkfWA_y1kvEAEFHmTIr0gW0pybkBKoppBR2HxaxJ5teQ2nnv4BoY30LGvoEq0RWg-ymmKMXsMcHRcuLHfJ7zNEuhC5oSyPlzAbAleqnB5omIQX7o_1fI');"></div>
+</div>
+</div>
+</div>
+</header>
+<main class="max-w-[1200px] mx-auto px-4 md:px-10 lg:px-40 py-8 space-y-8">
+<!-- Page Heading -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div class="space-y-1">
+<div class="inline-flex items-center px-2 py-1 bg-primary text-white text-[10px] font-black uppercase tracking-widest mb-2">
+                    Active Trip
+                </div>
+<h2 class="text-5xl font-black uppercase tracking-tighter leading-none italic">The Athletic Itinerary</h2>
+<p class="text-lg font-bold text-gray-500 uppercase tracking-wide">Florida State Qualifiers • Oct 24-27, 2023</p>
+</div>
+<div class="flex gap-2">
+<button class="flex items-center gap-2 nike-border bg-white dark:bg-slate-800 px-6 py-3 font-black uppercase text-sm hover:bg-gray-50 transition-all active:translate-y-0.5">
+<span class="material-symbols-outlined">file_download</span>
+                    PDF Guide
+                </button>
+<button class="flex items-center gap-2 nike-border bg-black text-white px-6 py-3 font-black uppercase text-sm hover:bg-gray-900 transition-all active:translate-y-0.5">
+<span class="material-symbols-outlined">share</span>
+                    Share
+                </button>
+</div>
+</div>
+<!-- "Game Day" Hero Section -->
+<div class="relative group overflow-hidden nike-border rounded-xl">
+<div class="h-64 md:h-80 w-full bg-cover bg-center transition-transform duration-700 group-hover:scale-105" data-alt="Wide shot of athletic complex fields at sunset" style="background-image: linear-gradient(to top, rgba(0,0,0,0.8), transparent), url('https://lh3.googleusercontent.com/aida-public/AB6AXuAWbROo9KAI1uqT07_92zh39RsHXFBxCK-b_Dcl7uLlctDe2oeDyylD4Bhf4R8baUfsBDbTbTbYyzcrh6DT_tJr2KJ8ByXKgQCzOAZaRcPzX2XD0rVo5cfE_SKDxCdRbiRwqhhF1nWniS0V7psb0IXdLTDnea79x408x9e1SgCtTRFaCe1MFs1ou-80ceQqnbsoDClS-BmAT0yZ9x4wwy_aj-nooa-NwczVX0d2MMw2-oSI1Pkb141DDew7B4Cr1fR7HhISXRm-UfE');">
+</div>
+<div class="absolute bottom-0 left-0 p-8 w-full flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div class="space-y-2">
+<div class="flex items-center gap-2 text-primary font-bold uppercase text-sm bg-white w-fit px-2">
+<span class="material-symbols-outlined text-sm">location_on</span>
+                        Orlando, FL
+                    </div>
+<h3 class="text-3xl md:text-4xl font-black text-white uppercase italic tracking-tighter">ESPN Wide World of Sports Complex</h3>
+<p class="text-white/80 font-bold uppercase tracking-widest text-sm flex items-center gap-4">
+<span>74°F Mostly Sunny</span>
+<span class="w-1 h-1 bg-white/50 rounded-full"></span>
+<span>12 Miles from Hotel</span>
+</p>
+</div>
+<button class="bg-primary hover:bg-blue-600 text-white nike-border border-white/20 px-8 py-4 font-black uppercase italic tracking-tighter transition-all">
+                    View Maps
+                </button>
+</div>
+</div>
+<!-- Tabs Navigation -->
+<div class="border-b-2 border-gray-200 dark:border-slate-800 flex gap-8 overflow-x-auto">
+<button class="pb-4 border-b-4 border-black dark:border-white text-sm font-black uppercase tracking-widest whitespace-nowrap">Overview</button>
+<button class="pb-4 border-b-4 border-transparent text-gray-400 hover:text-black dark:hover:text-white text-sm font-black uppercase tracking-widest transition-colors whitespace-nowrap">Daily Schedule</button>
+<button class="pb-4 border-b-4 border-transparent text-gray-400 hover:text-black dark:hover:text-white text-sm font-black uppercase tracking-widest transition-colors whitespace-nowrap">Logistics &amp; Hotel</button>
+<button class="pb-4 border-b-4 border-transparent text-gray-400 hover:text-black dark:hover:text-white text-sm font-black uppercase tracking-widest transition-colors whitespace-nowrap">Team Roster</button>
+</div>
+<!-- Content Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Main Schedule Section -->
+<div class="lg:col-span-2 space-y-6">
+<div class="flex items-center justify-between">
+<h4 class="text-2xl font-black uppercase italic">Upcoming Games</h4>
+<span class="text-xs font-black uppercase bg-gray-200 dark:bg-slate-800 px-2 py-1">Timezone: EST</span>
+</div>
+<!-- Game Card 1 -->
+<div class="nike-border bg-white dark:bg-slate-900 flex flex-col md:flex-row">
+<div class="md:w-24 bg-black text-white flex flex-col items-center justify-center p-4">
+<span class="text-xs font-black uppercase tracking-widest opacity-70">OCT</span>
+<span class="text-3xl font-black leading-none">25</span>
+<span class="text-xs font-black uppercase tracking-widest mt-1">WED</span>
+</div>
+<div class="flex-1 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="bg-primary/20 text-primary text-[10px] font-black px-1.5 py-0.5 uppercase">Match 01</span>
+<span class="text-gray-400 font-bold uppercase text-[10px]">Field 12 • 09:30 AM</span>
+</div>
+<h5 class="text-xl font-black uppercase tracking-tight">TeamHub U16 vs. Miami Elite</h5>
+<p class="text-sm font-bold text-gray-500 uppercase">Jersey: Primary White | Warmups: Nike Team Navy</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="nike-border p-2 hover:bg-gray-50 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined">calendar_add_on</span>
+</button>
+<button class="nike-border bg-primary text-white px-4 py-2 font-black uppercase text-xs">Pre-Match Prep</button>
+</div>
+</div>
+</div>
+<!-- Game Card 2 (This Week Pill) -->
+<div class="nike-border bg-white dark:bg-slate-900 flex flex-col md:flex-row relative">
+<div class="absolute -top-3 left-4 bg-primary text-white px-3 py-1 text-[10px] font-black uppercase tracking-widest">
+                        Today's Focus
+                    </div>
+<div class="md:w-24 bg-primary text-white flex flex-col items-center justify-center p-4">
+<span class="text-xs font-black uppercase tracking-widest opacity-70">OCT</span>
+<span class="text-3xl font-black leading-none">26</span>
+<span class="text-xs font-black uppercase tracking-widest mt-1">THU</span>
+</div>
+<div class="flex-1 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="bg-primary/20 text-primary text-[10px] font-black px-1.5 py-0.5 uppercase">Match 02</span>
+<span class="text-gray-400 font-bold uppercase text-[10px]">Field 7 • 02:45 PM</span>
+</div>
+<h5 class="text-xl font-black uppercase tracking-tight">Semi-Final Qualifier</h5>
+<p class="text-sm font-bold text-gray-500 uppercase">Arrive 45 mins early for technical brief</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="nike-border p-2 hover:bg-gray-50 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined">map</span>
+</button>
+<button class="nike-border bg-black text-white px-4 py-2 font-black uppercase text-xs">Check-In</button>
+</div>
+</div>
+</div>
+<!-- Logistics Card (Wide/Tactile) -->
+<div class="nike-border bg-gray-50 dark:bg-slate-800/50 p-6 flex flex-col md:flex-row items-center gap-6">
+<div class="size-20 bg-cover bg-center nike-border flex-shrink-0" data-alt="Modern hotel facade" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCO2EOf20wIzzrOkgBOmh8kez1GyglzI0n24Ol4wqm3QuiV3iwy9L2wgPagqv-t9obQX9TitB5V8NuUajyIXquhGgD2LSSovqPvQrKrnrFrG-DqaeKI2eGChBjYxtL2G8RXg5rOcUDPq2ODvvpDkeLuYRgfRhRpD0WPG8wMsNRgl0SAXHCdnK4FQNnOwWA4Awc5W3Mu1A5R27MrZ0EbeBtnb2Xxj1oljP84fwOXrHE7YGiFLIIt5MWfYoyHoTSPIlp2NC0MukR2EiY');"></div>
+<div class="flex-1 space-y-1 text-center md:text-left">
+<h5 class="text-lg font-black uppercase tracking-tight italic">Team HQ: JW Marriott Bonnet Creek</h5>
+<p class="text-sm font-bold text-gray-500 uppercase">14900 Chelonia Pkwy, Orlando, FL 32821</p>
+<div class="flex flex-wrap justify-center md:justify-start gap-4 mt-2">
+<span class="text-[10px] font-bold uppercase bg-white dark:bg-slate-700 px-2 py-1 nike-border">Conf: #TH-99210B</span>
+<span class="text-[10px] font-bold uppercase bg-white dark:bg-slate-700 px-2 py-1 nike-border">Team Block: Floor 4-5</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 w-full md:w-auto">
+<button class="bg-primary text-white nike-border px-6 py-2 font-black uppercase text-xs w-full">Directions</button>
+<button class="bg-white dark:bg-slate-800 nike-border px-6 py-2 font-black uppercase text-xs w-full">Contact Front Desk</button>
+</div>
+</div>
+</div>
+<!-- Sidebar -->
+<div class="space-y-8">
+<!-- Trip Status Checklist -->
+<div class="nike-border bg-white dark:bg-slate-900 p-6 space-y-4">
+<h4 class="font-black uppercase italic border-b-2 border-black dark:border-white pb-2">Pre-Trip Checklist</h4>
+<ul class="space-y-3">
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-green-500 font-black">check_circle</span>
+<span class="text-xs font-bold uppercase line-through opacity-50">Flight Confirmed</span>
+</li>
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-green-500 font-black">check_circle</span>
+<span class="text-xs font-bold uppercase line-through opacity-50">Jersey Kit Packed</span>
+</li>
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary font-black">radio_button_unchecked</span>
+<span class="text-xs font-bold uppercase">Waiver Signed (Digital)</span>
+</li>
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary font-black">radio_button_unchecked</span>
+<span class="text-xs font-bold uppercase">Recovery Gear Check</span>
+</li>
+</ul>
+<button class="w-full bg-black text-white py-3 font-black uppercase text-xs tracking-widest mt-2">Complete Tasks</button>
+</div>
+<!-- Weather/Location Map -->
+<div class="nike-border bg-white dark:bg-slate-900 overflow-hidden">
+<div class="h-40 bg-gray-200" data-location="Orlando, Florida" style="https://lh3.googleusercontent.com/aida-public/AB6AXuAHLyqO9NnZaHf8wbTofXxKy3NDJuW1WRowXcz6rjZ2ngut_FuPiAxgy6DSQcj8ud6wiQ7NJ9cdt007D11uo4f8x9pyoQ1Szl1JBN3t_5cbrsNzlQhUJcrrw2KJ5m0OseW3Efh4CtepqJj2VpNp9A0LJZMcuoznsSZ_nVsjb74H_QeMiFwzNjKHz-46yRlUJ60RHrB0OYABgwjzXHKI7EY_N70_qQJ-Ie1chTsBzB13rPphx_WHhQ7MOWcU1gOu19NErvkVcJQNGEA">
+<img alt="Map of ESPN Wide World of Sports" class="w-full h-full object-cover grayscale brightness-90" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC49MYyC8pLydQWZ3_jm2Gr8PsGti4bP07zBIk61WIXMFKBQr1f1HfOFa3dGeYWH9YYDxn89qqbPVFYVE9N5ACAHVGHkVGYWziSFVMfEFb1nQhJ7dEo0PQ1maZj3KnQlAOM1tnA0qHcB1GLQLabKVZaiU-85MWr24xs3sXV4Yd8MYjWclKZ7Xoz90Z0qn4-z7o55ltqT9iTkh42dQIAoKUW0-vwR_WLX9XRDuwb1cXAY-O9x-sBrsVCV0x_TP1VXW65I9OXlm9rbf0"/>
+</div>
+<div class="p-4 flex items-center justify-between">
+<div>
+<p class="text-[10px] font-black text-gray-400 uppercase">Field Condition</p>
+<p class="text-sm font-bold uppercase">Excellent / Natural Grass</p>
+</div>
+<span class="material-symbols-outlined text-primary">eco</span>
+</div>
+</div>
+<!-- Team Support Card -->
+<div class="nike-border bg-primary p-6 text-white space-y-3">
+<span class="material-symbols-outlined text-4xl">support_agent</span>
+<h4 class="text-xl font-black uppercase italic leading-none">Team Travel Concierge</h4>
+<p class="text-xs font-medium uppercase leading-relaxed opacity-90">Need help with transport or meals? Our team travel rep is available 24/7 during the tournament.</p>
+<button class="bg-white text-black px-4 py-2 font-black uppercase text-xs nike-border border-white">Text Support</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer Meta -->
+<footer class="max-w-[1200px] mx-auto px-4 md:px-10 lg:px-40 py-12 border-t border-gray-200 dark:border-slate-800 mt-12 mb-20">
+<div class="flex flex-col md:flex-row justify-between items-center gap-6">
+<div class="flex items-center gap-2">
+<div class="size-6 bg-black dark:bg-primary flex items-center justify-center rounded-sm">
+<span class="material-symbols-outlined text-white text-sm">sports_score</span>
+</div>
+<h1 class="text-sm font-black uppercase tracking-tighter italic">TeamHub V2.0</h1>
+</div>
+<p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Inspired by Nike Training Club &amp; ESPN Digital Design Systems</p>
+<div class="flex gap-4">
+<a class="text-[10px] font-black uppercase hover:underline underline-offset-4" href="#">Terms</a>
+<a class="text-[10px] font-black uppercase hover:underline underline-offset-4" href="#">Privacy</a>
+<a class="text-[10px] font-black uppercase hover:underline underline-offset-4" href="#">Support</a>
+</div>
+</div>
+</footer>
+</body></html>

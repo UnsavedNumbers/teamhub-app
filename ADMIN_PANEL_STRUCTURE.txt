@@ -1,0 +1,1465 @@
+================================================================================
+YOUTHSPORTS.TEAM - COMPLETE ADMIN PANEL STRUCTURE
+================================================================================
+
+This document outlines the ENTIRE admin panel structure for YouthSports.team.
+Every page, feature, component, and workflow is detailed below.
+
+================================================================================
+NAVIGATION STRUCTURE
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  ADMIN DASHBOARD (Main Entry Point)                                      │
+│  Route: /admin                                                            │
+│  Access: Admin only                                                       │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    ├─── DASHBOARD OVERVIEW
+    │    ├─── Quick Stats Cards
+    │    │    ├─── Total Teams
+    │    │    ├─── Total Players
+    │    │    ├─── Active Seasons
+    │    │    ├─── Outstanding Payments ($)
+    │    │    ├─── Upcoming Events (count)
+    │    │    └─── Pending Uniform Orders
+    │    │
+    │    ├─── Recent Activity Feed
+    │    │    ├─── New registrations
+    │    │    ├─── Payment updates
+    │    │    ├─── Event changes
+    │    │    └─── Team updates
+    │    │
+    │    └─── Quick Actions
+    │         ├─── Create Team
+    │         ├─── Create Fee
+    │         ├─── Create Event
+    │         └─── Add Player
+
+    ├─── ORGANIZATION MANAGEMENT
+    │    ├─── Organization Settings
+    │    │    Route: /admin/organization
+    │    │    ├─── Basic Info
+    │    │    │    ├─── Name
+    │    │    │    ├─── Slug (URL identifier)
+    │    │    │    ├─── Organization Type (school/club/league/academy/aau)
+    │    │    │    ├─── Contact Email
+    │    │    │    └─── Refund Policy (textarea)
+    │    │    │
+    │    │    ├─── Payment Settings
+    │    │    │    ├─── Billing Mode
+    │    │    │    │    ├─── Platform Facilitated (online payments)
+    │    │    │    │    └─── Offline Only (track externally)
+    │    │    │    ├─── Currency (default: USD)
+    │    │    │    ├─── Stripe Connect Setup
+    │    │    │    │    ├─── Payout Account Status
+    │    │    │    │    ├─── Onboarding Status (pending/completed/restricted)
+    │    │    │    │    ├─── Payouts Enabled (boolean)
+    │    │    │    │    └─── Payout Descriptor (what appears on statements)
+    │    │    │    └─── Payment Policies
+    │    │    │         ├─── Allow Partial Payments
+    │    │    │         ├─── Allow Installments
+    │    │    │         ├─── Allow Discounts
+    │    │    │         ├─── Allow Scholarships
+    │    │    │         └─── Allow Late Fees
+    │    │    │
+    │    │    └─── School/Club Specific Settings
+    │    │         ├─── Require Offline Only (for district compliance)
+    │    │         └─── Require Purchase Order Reference (rare)
+    │    │
+    │    └─── Organization Users
+    │         Route: /admin/organization/users
+    │         ├─── User List
+    │         │    ├─── Filter by Role (admin/coach/parent)
+    │         │    ├─── Search by name/email
+    │         │    └─── Sort options
+    │         │
+    │         ├─── User Details Modal
+    │         │    ├─── Basic Info (name, email, phone)
+    │         │    ├─── Role Assignment
+    │         │    ├─── Family Association
+    │         │    ├─── Teams/Seasons Access
+    │         │    └─── Activity Log
+    │         │
+    │         └─── Actions
+    │              ├─── Create User
+    │              ├─── Edit User
+    │              ├─── Change Role
+    │              ├─── Deactivate User
+    │              └─── Reset Password
+
+    ├─── TEAM MANAGEMENT
+    │    ├─── Teams List
+    │    │    Route: /admin/teams
+    │    │    ├─── Team Cards/Table View
+    │    │    │    ├─── Team Name
+    │    │    │    ├─── Active Seasons Count
+    │    │    │    ├─── Player Count
+    │    │    │    ├─── Upcoming Events Count
+    │    │    │    └─── Quick Actions
+    │    │    │
+    │    │    ├─── Filters
+    │    │    │    ├─── Search by name
+    │    │    │    └─── Filter by active/inactive
+    │    │    │
+    │    │    └─── Actions
+    │    │         ├─── Create Team
+    │    │         ├─── View Team Detail
+    │    │         ├─── Edit Team
+    │    │         └─── Archive Team
+    │    │
+    │    ├─── Team Detail
+    │    │    Route: /admin/teams/:id
+    │    │    ├─── Team Overview
+    │    │    │    ├─── Team Name
+    │    │    │    ├─── Organization
+    │    │    │    ├─── Created Date
+    │    │    │    └─── Status
+    │    │    │
+    │    │    ├─── Seasons Tab
+    │    │    │    ├─── Active Seasons List
+    │    │    │    │    ├─── Season Name
+    │    │    │    │    ├─── Start/End Dates
+    │    │    │    │    ├─── Player Count
+    │    │    │    │    └─── Status (active/inactive)
+    │    │    │    │
+    │    │    │    ├─── Create Season
+    │    │    │    │    ├─── Name
+    │    │    │    │    ├─── Start Date
+    │    │    │    │    ├─── End Date
+    │    │    │    │    ├─── Sport ID (optional)
+    │    │    │    │    ├─── Program ID (optional)
+    │    │    │    │    └─── Is Active (boolean)
+    │    │    │    │
+    │    │    │    └─── Season Actions
+    │    │    │         ├─── Edit Season
+    │    │    │         ├─── View Season Details
+    │    │    │         └─── Archive Season
+    │    │    │
+    │    │    ├─── Roster Tab
+    │    │    │    ├─── Players List
+    │    │    │    │    ├─── Player Name
+    │    │    │    │    ├─── Family Name
+    │    │    │    │    ├─── Parent Contact
+    │    │    │    │    ├─── Membership Status
+    │    │    │    │    ├─── Join Date
+    │    │    │    │    └─── Actions
+    │    │    │    │
+    │    │    │    ├─── Filters
+    │    │    │    │    ├─── By Season
+    │    │    │    │    ├─── By Status (active/invited/removed)
+    │    │    │    │    └─── Search by name
+    │    │    │    │
+    │    │    │    ├─── Add Player
+    │    │    │    │    ├─── Search Existing Child
+    │    │    │    │    ├─── Create New Child
+    │    │    │    │    └─── Assign to Season
+    │    │    │    │
+    │    │    │    └─── Bulk Actions
+    │    │    │         ├─── Remove from Team
+    │    │    │         ├─── Change Status
+    │    │    │         └─── Export Roster
+    │    │    │
+    │    │    ├─── Events Tab
+    │    │    │    └─── (See Events Management section)
+    │    │    │
+    │    │    ├─── Payments Tab
+    │    │    │    └─── (See Payments section - filtered by team)
+    │    │    │
+    │    │    └─── Settings Tab
+    │    │         ├─── Team Name
+    │    │         ├─── Team Description
+    │    │         └─── Archive Team
+    │    │
+    │    └─── Team Invite Codes
+    │         Route: /admin/teams/:id/invites
+    │         ├─── Active Invite Codes
+    │         │    ├─── Code
+    │         │    ├─── Expiration Date
+    │         │    ├─── Uses Remaining
+    │         │    └─── Status
+    │         │
+    │         ├─── Create Invite Code
+    │         │    ├─── Expiration Date
+    │         │    ├─── Max Uses
+    │         │    └─── Season Assignment
+    │         │
+    │         └─── Actions
+    │              ├─── Copy Invite Link
+    │              ├─── Revoke Code
+    │              └─── View Usage History
+
+    ├─── PARENT & CHILD MANAGEMENT
+    │    ├─── Families List
+    │    │    Route: /admin/families
+    │    │    ├─── Family Cards/Table
+    │    │    │    ├─── Family Name
+    │    │    │    ├─── Parent Count
+    │    │    │    ├─── Children Count
+    │    │    │    ├─── Teams Associated
+    │    │    │    └─── Last Activity
+    │    │    │
+    │    │    ├─── Filters
+    │    │    │    ├─── Search by name
+    │    │    │    ├─── Filter by team
+    │    │    │    └─── Filter by season
+    │    │    │
+    │    │    └─── Actions
+    │    │         ├─── View Family Detail
+    │    │         ├─── Create Family
+    │    │         └─── Merge Families (if duplicates)
+    │    │
+    │    ├─── Family Detail
+    │    │    Route: /admin/families/:id
+    │    │    ├─── Family Overview
+    │    │    │    ├─── Family Name
+    │    │    │    ├─── Organization
+    │    │    │    └─── Created Date
+    │    │    │
+    │    │    ├─── Parents Tab
+    │    │    │    ├─── Parent List
+    │    │    │    │    ├─── Name
+    │    │    │    │    ├─── Email
+    │    │    │    │    ├─── Phone
+    │    │    │    │    ├─── Role
+    │    │    │    │    └─── Actions
+    │    │    │    │
+    │    │    │    ├─── Add Parent
+    │    │    │    │    ├─── Create New User
+    │    │    │    │    └─── Link Existing User
+    │    │    │    │
+    │    │    │    └─── Parent Actions
+    │    │    │         ├─── Edit Parent
+    │    │    │         ├─── View Payments
+    │    │    │         └─── Send Message
+    │    │    │
+    │    │    ├─── Children Tab
+    │    │    │    ├─── Children List
+    │    │    │    │    ├─── Name
+    │    │    │    │    ├─── Birthdate
+    │    │    │    │    ├─── Age
+    │    │    │    │    ├─── Teams
+    │    │    │    │    └─── Actions
+    │    │    │    │
+    │    │    │    ├─── Add Child
+    │    │    │    │    ├─── First Name
+    │    │    │    │    ├─── Last Name
+    │    │    │    │    ├─── Birthdate
+    │    │    │    │    └─── Assign to Teams (optional)
+    │    │    │    │
+    │    │    │    └─── Child Actions
+    │    │    │         ├─── Edit Child
+    │    │    │         ├─── View Teams
+    │    │    │         ├─── View Payments
+    │    │    │         ├─── View Attendance
+    │    │    │         └─── View Uniform Orders
+    │    │    │
+    │    │    ├─── Payments Tab
+    │    │    │    └─── (See Payments section - filtered by family)
+    │    │    │
+    │    │    └─── Activity Tab
+    │    │         ├─── Payment History
+    │    │         ├─── Event Attendance
+    │    │         └─── Message History
+    │    │
+    │    ├─── Children List (Standalone)
+    │    │    Route: /admin/children
+    │    │    ├─── Children Table
+    │    │    │    ├─── Name
+    │    │    │    ├─── Family
+    │    │    │    ├─── Age
+    │    │    │    ├─── Teams
+    │    │    │    ├─── Payment Status
+    │    │    │    └─── Actions
+    │    │    │
+    │    │    ├─── Filters
+    │    │    │    ├─── By Team
+    │    │    │    ├─── By Season
+    │    │    │    ├─── By Age Group
+    │    │    │    └─── Search by name
+    │    │    │
+    │    │    └─── Bulk Actions
+    │    │         ├─── Assign to Team
+    │    │         ├─── Create Fee for Selected
+    │    │         └─── Export List
+    │    │
+    │    └─── Create User (Parent/Coach/Admin)
+    │         Route: /admin/users/create
+    │         ├─── User Type Selection
+    │         │    ├─── Parent (links to family)
+    │         │    ├─── Coach
+    │         │    └─── Admin
+    │         │
+    │         ├─── Basic Information
+    │         │    ├─── Email (required)
+    │         │    ├─── Phone (optional)
+    │         │    ├─── First Name
+    │         │    ├─── Last Name
+    │         │    └─── Role
+    │         │
+    │         ├─── Family Assignment (if Parent)
+    │         │    ├─── Select Existing Family
+    │         │    └─── Create New Family
+    │         │
+    │         └─── Team Access (if Coach)
+    │              └─── Assign to Teams
+
+    ├─── PAYMENTS & FEES MANAGEMENT
+    │    ├─── Fees Overview
+    │    │    Route: /admin/payments
+    │    │    ├─── Summary Cards
+    │    │    │    ├─── Outstanding Balance ($)
+    │    │    │    ├─── Collected This Month ($)
+    │    │    │    ├─── Pending Payments (count)
+    │    │    │    ├─── Overdue Payments (count)
+    │    │    │    └─── Refunded This Month ($)
+    │    │    │
+    │    │    ├─── Filters
+    │    │    │    ├─── By Team
+    │    │    │    ├─── By Season
+    │    │    │    ├─── By Status (unpaid/partial/paid/refunded/waived)
+    │    │    │    ├─── By Fee Type
+    │    │    │    ├─── Date Range
+    │    │    │    └─── Search by child/parent name
+    │    │    │
+    │    │    └─── Quick Actions
+    │    │         ├─── Create Fee
+    │    │         ├─── Create Installment Plan
+    │    │         ├─── Create Discount Code
+    │    │         ├─── Create Scholarship Program
+    │    │         └─── Export Payment Report
+    │    │
+    │    ├─── Fee Templates (Fees)
+    │    │    Route: /admin/payments/fees
+    │    │    ├─── Fees List
+    │    │    │    ├─── Fee Title
+    │    │    │    ├─── Fee Type (registration/uniform/tournament/travel/fundraiser/misc)
+    │    │    │    ├─── Amount
+    │    │    │    ├─── Season/Team
+    │    │    │    ├─── Status (draft/published/closed/archived)
+    │    │    │    ├─── Due Date
+    │    │    │    ├─── Assignments Count
+    │    │    │    └─── Actions
+    │    │    │
+    │    │    ├─── Filters
+    │    │    │    ├─── By Status
+    │    │    │    ├─── By Type
+    │    │    │    ├─── By Season
+    │    │    │    └─── Search
+    │    │    │
+    │    │    ├─── Create Fee
+    │    │    │    Route: /admin/payments/fees/create
+    │    │    │    ├─── Basic Information
+    │    │    │    │    ├─── Title (required)
+    │    │    │    │    ├─── Description
+    │    │    │    │    ├─── Fee Type (required)
+    │    │    │    │    ├─── Amount in Cents (required)
+    │    │    │    │    └─── Currency (default: USD)
+    │    │    │    │
+    │    │    │    ├─── Assignment Settings
+    │    │    │    │    ├─── Organization (auto)
+    │    │    │    │    ├─── Season (optional - can be org-wide)
+    │    │    │    │    ├─── Scope
+    │    │    │    │    │    ├─── Team (all players on team)
+    │    │    │    │    │    ├─── Selected Players (manual selection)
+    │    │    │    │    │    └─── Individual (one child)
+    │    │    │    │    ├─── Due Date
+    │    │    │    │    └─── Visibility
+    │    │    │    │         ├─── All Parents (visible to all)
+    │    │    │    │         └─── Assigned Only (only those with assignment)
+    │    │    │    │
+    │    │    │    ├─── Payment Options
+    │    │    │    │    ├─── Allow Partial Payments
+    │    │    │    │    │    └─── Minimum Partial Amount (if enabled)
+    │    │    │    │    ├─── Allow Late Payments
+    │    │    │    │    │    ├─── Late Fee Amount (if enabled)
+    │    │    │    │    │    └─── Late Fee Starts On (date)
+    │    │    │    │    ├─── Allow Installments
+    │    │    │    │    │    └─── Installment Plan (if enabled)
+    │    │    │    │    ├─── Allow Discounts (boolean)
+    │    │    │    │    └─── Allow Scholarships (boolean)
+    │    │    │    │
+    │    │    │    ├─── Additional Settings
+    │    │    │    │    ├─── Require Acknowledgement
+    │    │    │    │    │    └─── Acknowledgement Text (if required)
+    │    │    │    │    └─── Status (draft/published)
+    │    │    │    │
+    │    │    │    └─── Player Selection (if scope = selected_players)
+    │    │    │         ├─── Select Team
+    │    │    │         ├─── Select Season
+    │    │    │         └─── Multi-select Children
+    │    │    │
+    │    │    ├─── Edit Fee
+    │    │    │    Route: /admin/payments/fees/:id/edit
+    │    │    │    └─── (Same form as Create, pre-filled)
+    │    │    │
+    │    │    ├─── Fee Detail
+    │    │    │    Route: /admin/payments/fees/:id
+    │    │    │    ├─── Fee Information
+    │    │    │    │    ├─── All fee details
+    │    │    │    │    ├─── Created By
+    │    │    │    │    ├─── Published Date
+    │    │    │    │    └─── Closed Date
+    │    │    │    │
+    │    │    │    ├─── Assignments Tab
+    │    │    │    │    ├─── Fee Assignments List
+    │    │    │    │    │    ├─── Child Name
+    │    │    │    │    │    ├─── Parent Name
+    │    │    │    │    │    ├─── Amount (can override template)
+    │    │    │    │    │    ├─── Status
+    │    │    │    │    │    ├─── Balance
+    │    │    │    │    │    ├─── Paid Total
+    │    │    │    │    │    ├─── Due Date
+    │    │    │    │    │    └─── Actions
+    │    │    │    │    │
+    │    │    │    │    ├─── Filters
+    │    │    │    │    │    ├─── By Status
+    │    │    │    │    │    └─── Search
+    │    │    │    │    │
+    │    │    │    │    └─── Actions
+    │    │    │    │         ├─── Create Assignment (manual)
+    │    │    │    │         ├─── Bulk Assign (to team/season)
+    │    │    │    │         ├─── Export Assignments
+    │    │    │    │         └─── Apply Waiver
+    │    │    │    │
+    │    │    │    ├─── Payments Tab
+    │    │    │    │    └─── (See Payments section)
+    │    │    │    │
+    │    │    │    └─── Actions
+    │    │    │         ├─── Publish Fee
+    │    │    │         ├─── Close Fee
+    │    │    │         ├─── Archive Fee
+    │    │    │         └─── Duplicate Fee
+    │    │    │
+    │    │    └─── Fee Assignment Detail
+    │    │         Route: /admin/payments/assignments/:id
+    │    │         ├─── Assignment Overview
+    │    │         │    ├─── Child & Parent Info
+    │    │         │    ├─── Fee Details
+    │    │         │    ├─── Amount
+    │    │         │    ├─── Status
+    │    │         │    ├─── Balance
+    │    │         │    └─── Due Date
+    │    │         │
+    │    │         ├─── Payment History Tab
+    │    │         │    ├─── Online Payments
+    │    │         │    ├─── Offline Payments
+    │    │         │    ├─── Refunds
+    │    │         │    └─── Payment Timeline
+    │    │         │
+    │    │         ├─── Charges Tab
+    │    │         │    ├─── Fee Payment Charges
+    │    │         │    ├─── Late Fee Charges
+    │    │         │    ├─── Discount Credits
+    │    │         │    ├─── Scholarship Credits
+    │    │         │    ├─── Waiver Credits
+    │    │         │    └─── Adjustments
+    │    │         │
+    │    │         ├─── Installments Tab (if applicable)
+    │    │         │    ├─── Installment Schedule
+    │    │         │    ├─── Installment List
+    │    │         │    │    ├─── Installment Number
+    │    │         │    │    ├─── Due Date
+    │    │         │    │    ├─── Amount
+    │    │         │    │    ├─── Status
+    │    │         │    │    └─── Paid Amount
+    │    │         │    └─── Actions
+    │    │         │
+    │    │         └─── Actions
+    │    │              ├─── Record Offline Payment
+    │    │              ├─── Apply Waiver
+    │    │              ├─── Apply Scholarship
+    │    │              ├─── Apply Discount
+    │    │              ├─── Create Refund
+    │    │              ├─── Add Adjustment
+    │    │              └─── View Receipt
+    │    │
+    │    ├─── Installment Plans
+    │    │    Route: /admin/payments/installments
+    │    │    ├─── Plans List
+    │    │    │    ├─── Plan Name
+    │    │    │    ├─── Number of Installments
+    │    │    │    ├─── Frequency (weekly/biweekly/monthly)
+    │    │    │    ├─── Down Payment
+    │    │    │    ├─── Active Schedules Count
+    │    │    │    └─── Actions
+    │    │    │
+    │    │    ├─── Create Installment Plan
+    │    │    │    ├─── Name (required)
+    │    │    │    ├─── Number of Installments (2-6)
+    │    │    │    ├─── Frequency
+    │    │    │    ├─── Day of Month (if monthly)
+    │    │    │    ├─── Start Date Rule
+    │    │    │    │    ├─── On Publish (starts when fee published)
+    │    │    │    │    └─── Custom Date
+    │    │    │    ├─── Down Payment (optional, in cents)
+    │    │    │    ├─── Allows Early Payoff (boolean)
+    │    │    │    └─── Grace Days (default: 0)
+    │    │    │
+    │    │    ├─── Edit Plan
+    │    │    └─── Plan Detail
+    │    │         ├─── Plan Information
+    │    │         └─── Active Schedules
+    │    │              ├─── Schedule List
+    │    │              └─── Installment Details
+    │    │
+    │    ├─── Discount Codes
+    │    │    Route: /admin/payments/discounts
+    │    │    ├─── Discounts List
+    │    │    │    ├─── Code
+    │    │    │    ├─── Type (percent/fixed)
+    │    │    │    ├─── Discount Amount
+    │    │    │    ├─── Status (active/inactive)
+    │    │    │    ├─── Redemptions Count
+    │    │    │    ├─── Max Redemptions
+    │    │    │    ├─── Redeem By Date
+    │    │    │    └─── Actions
+    │    │    │
+    │    │    ├─── Create Discount Code
+    │    │    │    ├─── Code (required, unique per org)
+    │    │    │    ├─── Description
+    │    │    │    ├─── Discount Type
+    │    │    │    │    ├─── Percent Off
+    │    │    │    │    └─── Fixed Amount Off
+    │    │    │    ├─── Discount Value
+    │    │    │    ├─── Max Redemptions (optional)
+    │    │    │    ├─── Redeem By Date (optional)
+    │    │    │    ├─── Applies To
+    │    │    │    │    ├─── All Fees
+    │    │    │    │    ├─── Specific Fee
+    │    │    │    │    └─── Specific Season
+    │    │    │    └─── Status (active/inactive)
+    │    │    │
+    │    │    ├─── Edit Discount
+    │    │    └─── Discount Detail
+    │    │         ├─── Discount Information
+    │    │         └─── Redemptions Tab
+    │    │              ├─── Redemption List
+    │    │              │    ├─── Parent Name
+    │    │              │    ├─── Fee Assignment
+    │    │              │    ├─── Amount Applied
+    │    │              │    └─── Redeemed Date
+    │    │              └─── Export Redemptions
+    │    │
+    │    ├─── Scholarships
+    │    │    Route: /admin/payments/scholarships
+    │    │    ├─── Programs List
+    │    │    │    ├─── Program Name
+    │    │    │    ├─── Funding Source (org/sponsor/district)
+    │    │    │    ├─── Budget Total
+    │    │    │    ├─── Budget Remaining
+    │    │    │    ├─── Awards Count
+    │    │    │    ├─── Status (active/inactive)
+    │    │    │    └─── Actions
+    │    │    │
+    │    │    ├─── Create Scholarship Program
+    │    │    │    ├─── Name (required)
+    │    │    │    ├─── Description
+    │    │    │    ├─── Funding Source
+    │    │    │    ├─── Budget Total (optional, in cents)
+    │    │    │    └─── Status (active/inactive)
+    │    │    │
+    │    │    ├─── Program Detail
+    │    │    │    ├─── Program Information
+    │    │    │    ├─── Budget Tracking
+    │    │    │    │    ├─── Total Budget
+    │    │    │    │    ├─── Used Amount
+    │    │    │    │    └─── Remaining Amount
+    │    │    │    │
+    │    │    │    └─── Awards Tab
+    │    │    │         ├─── Awards List
+    │    │    │         │    ├─── Child/Parent Name
+    │    │    │         │    ├─── Fee Assignment
+    │    │    │         │    ├─── Award Amount
+    │    │    │         │    ├─── Awarded By
+    │    │    │         │    ├─── Awarded Date
+    │    │    │         │    └─── Notes
+    │    │    │         │
+    │    │    │         ├─── Create Award
+    │    │    │         │    ├─── Select Fee Assignment
+    │    │    │         │    ├─── Award Amount
+    │    │    │         │    └─── Internal Notes
+    │    │    │         │
+    │    │    │         └─── Export Awards
+    │    │    │
+    │    │    └─── Edit Program
+    │    │
+    │    ├─── Waivers
+    │    │    Route: /admin/payments/waivers
+    │    │    ├─── Waivers List
+    │    │    │    ├─── Child/Parent Name
+    │    │    │    ├─── Fee Assignment
+    │    │    │    ├─── Waiver Amount
+    │    │    │    ├─── Reason
+    │    │    │    ├─── Created By
+    │    │    │    ├─── Created Date
+    │    │    │    └─── Actions
+    │    │    │
+    │    │    ├─── Create Waiver
+    │    │    │    ├─── Select Fee Assignment
+    │    │    │    ├─── Waiver Amount (required)
+    │    │    │    ├─── Reason (required)
+    │    │    │    │    ├─── Admin Comp
+    │    │    │    │    ├─── Fundraiser Credit
+    │    │    │    │    ├─── Volunteer Credit
+    │    │    │    │    ├─── Hardship
+    │    │    │    │    └─── Other (custom text)
+    │    │    │    └─── Notes (internal)
+    │    │    │
+    │    │    └─── Filters
+    │    │         ├─── By Team
+    │    │         ├─── By Season
+    │    │         ├─── By Reason
+    │    │         └─── Date Range
+    │    │
+    │    ├─── Payments (Transaction View)
+    │    │    Route: /admin/payments/transactions
+    │    │    ├─── Payments List
+    │    │    │    ├─── Payment ID
+    │    │    │    ├─── Parent Name
+    │    │    │    ├─── Amount
+    │    │    │    ├─── Payment Method
+    │    │    │    │    ├─── Online (Stripe)
+    │    │    │    │    └─── Offline (cash/check)
+    │    │    │    ├─── Status
+    │    │    │    │    ├─── Pending
+    │    │    │    │    ├─── Succeeded
+    │    │    │    │    ├─── Failed
+    │    │    │    │    ├─── Refunded
+    │    │    │    │    └─── Partially Refunded
+    │    │    │    ├─── Paid Date
+    │    │    │    ├─── Platform Fee
+    │    │    │    └─── Actions
+    │    │    │
+    │    │    ├─── Filters
+    │    │    │    ├─── By Status
+    │    │    │    ├─── By Payment Method
+    │    │    │    ├─── Date Range
+    │    │    │    └─── Search by parent/child
+    │    │    │
+    │    │    ├─── Payment Detail
+    │    │    │    ├─── Payment Information
+    │    │    │    │    ├─── All payment details
+    │    │    │    │    ├─── Stripe Payment Intent ID
+    │    │    │    │    ├─── Stripe Charge ID
+    │    │    │    │    └─── Checkout Session
+    │    │    │    │
+    │    │    │    ├─── Allocations Tab
+    │    │    │    │    ├─── Charge Allocations
+    │    │    │    │    │    ├─── Charge Description
+    │    │    │    │    │    ├─── Fee Assignment
+    │    │    │    │    │    └─── Allocated Amount
+    │    │    │    │    └─── Total Allocated
+    │    │    │    │
+    │    │    │    ├─── Refunds Tab
+    │    │    │    │    ├─── Refund List
+    │    │    │    │    │    ├─── Refund Amount
+    │    │    │    │    │    ├─── Reason
+    │    │    │    │    │    ├─── Stripe Refund ID (if online)
+    │    │    │    │    │    ├─── Created By
+    │    │    │    │    │    └─── Created Date
+    │    │    │    │    └─── Create Refund
+    │    │    │    │
+    │    │    │    └─── Actions
+    │    │    │         ├─── View Receipt
+    │    │    │         ├─── Create Refund
+    │    │    │         └─── Download Invoice
+    │    │    │
+    │    │    └─── Offline Payments
+    │    │         Route: /admin/payments/offline
+    │    │         ├─── Offline Payments List
+    │    │         │    ├─── Child/Parent Name
+    │    │         │    ├─── Fee Assignment
+    │    │         │    ├─── Amount
+    │    │         │    ├─── Method (cash/check/external_processor/other)
+    │    │         │    ├─── Reference (check number, receipt ID)
+    │    │         │    ├─── Received By
+    │    │         │    ├─── Received Date
+    │    │         │    ├─── Status (recorded/voided)
+    │    │         │    └─── Actions
+    │    │         │
+    │    │         ├─── Record Offline Payment
+    │    │         │    ├─── Select Fee Assignment
+    │    │         │    ├─── Amount (required)
+    │    │         │    ├─── Payment Method
+    │    │         │    ├─── Reference (optional)
+    │    │         │    ├─── Received Date
+    │    │         │    └─── Internal Notes
+    │    │         │
+    │    │         └─── Filters
+    │    │              ├─── By Method
+    │    │              ├─── By Status
+    │    │              └─── Date Range
+    │    │
+    │    ├─── Refunds
+    │    │    Route: /admin/payments/refunds
+    │    │    ├─── Refunds List
+    │    │    │    ├─── Refund ID
+    │    │    │    ├─── Parent Name
+    │    │    │    ├─── Original Payment
+    │    │    │    ├─── Refund Amount
+    │    │    │    ├─── Reason
+    │    │    │    ├─── Status
+    │    │    │    ├─── Created By
+    │    │    │    └─── Created Date
+    │    │    │
+    │    │    ├─── Create Refund
+    │    │    │    ├─── Select Payment (online or offline)
+    │    │    │    ├─── Refund Amount (required)
+    │    │    │    ├─── Reason (required)
+    │    │    │    └─── Notes
+    │    │    │
+    │    │    └─── Refund Detail
+    │    │         ├─── Refund Information
+    │    │         ├─── Original Payment Details
+    │    │         └─── Stripe Refund Status (if applicable)
+    │    │
+    │    ├─── Checkout Sessions
+    │    │    Route: /admin/payments/checkouts
+    │    │    ├─── Sessions List
+    │    │    │    ├─── Session ID
+    │    │    │    ├─── Parent Name
+    │    │    │    ├─── Total Amount
+    │    │    │    ├─── Status (created/in_progress/succeeded/canceled/expired)
+    │    │    │    ├─── Created Date
+    │    │    │    └─── Actions
+    │    │    │
+    │    │    └─── Session Detail
+    │    │         ├─── Session Information
+    │    │         ├─── Items Tab
+    │    │         │    ├─── Charge List
+    │    │         │    │    ├─── Charge Description
+    │    │         │    │    ├─── Fee Assignment
+    │    │         │    │    └─── Amount
+    │    │         │    └─── Totals
+    │    │         │         ├─── Subtotal
+    │    │         │         ├─── Platform Fee
+    │    │         │         └─── Total
+    │    │         │
+    │    │         ├─── Payment Tab
+    │    │         │    └─── Associated Payment
+    │    │         │
+    │    │         └─── Receipt Tab
+    │    │              └─── View/Download Receipt
+    │    │
+    │    └─── Payment Reports
+    │         Route: /admin/payments/reports
+    │         ├─── Financial Summary
+    │         │    ├─── Date Range Selector
+    │         │    ├─── Revenue by Fee Type
+    │         │    ├─── Revenue by Team
+    │         │    ├─── Revenue by Season
+    │         │    ├─── Payment Method Breakdown
+    │         │    ├─── Outstanding vs Collected
+    │         │    └─── Refund Summary
+    │         │
+    │         ├─── Export Options
+    │         │    ├─── CSV Export
+    │         │    ├─── PDF Report
+    │         │    └─── Excel Export
+    │         │
+    │         └─── Custom Reports
+    │              ├─── By Team
+    │              ├─── By Season
+    │              ├─── By Fee Type
+    │              └─── By Payment Status
+
+    ├─── EVENTS & SCHEDULING
+    │    ├─── Events List
+    │    │    Route: /admin/events
+    │    │    ├─── Calendar View
+    │    │    │    ├─── Month View
+    │    │    │    ├─── Week View
+    │    │    │    ├─── Day View
+    │    │    │    └─── Agenda View
+    │    │    │
+    │    │    ├─── List View
+    │    │    │    ├─── Event Title
+    │    │    │    ├─── Type (practice/game/tournament/meeting)
+    │    │    │    ├─── Team
+    │    │    │    ├─── Date & Time
+    │    │    │    ├─── Location
+    │    │    │    ├─── Attendance Status
+    │    │    │    └─── Actions
+    │    │    │
+    │    │    ├─── Filters
+    │    │    │    ├─── By Team
+    │    │    │    ├─── By Season
+    │    │    │    ├─── By Type
+    │    │    │    ├─── Date Range
+    │    │    │    └─── Search
+    │    │    │
+    │    │    └─── Quick Actions
+    │    │         ├─── Create Event
+    │    │         ├─── Bulk Create Events (recurring)
+    │    │         └─── Export Calendar
+    │    │
+    │    ├─── Create Event
+    │    │    Route: /admin/events/create
+    │    │    ├─── Basic Information
+    │    │    │    ├─── Title (required)
+    │    │    │    ├─── Type (required)
+    │    │    │    ├─── Team (required)
+    │    │    │    ├─── Season (required)
+    │    │    │    └─── Description
+    │    │    │
+    │    │    ├─── Date & Time
+    │    │    │    ├─── Start Date & Time
+    │    │    │    ├─── End Date & Time
+    │    │    │    └─── All Day Event (boolean)
+    │    │    │
+    │    │    ├─── Location
+    │    │    │    ├─── Location Name/Address
+    │    │    │    ├─── Arrival Time (optional)
+    │    │    │    └─── Map Link (optional)
+    │    │    │
+    │    │    ├─── Recurring Options
+    │    │    │    ├─── One-time Event
+    │    │    │    ├─── Daily
+    │    │    │    ├─── Weekly
+    │    │    │    ├─── Monthly
+    │    │    │    └─── Custom Pattern
+    │    │    │         ├─── Repeat Every (N days/weeks/months)
+    │    │    │         ├─── End Date
+    │    │    │         └─── Days of Week (if weekly)
+    │    │    │
+    │    │    └─── Additional Settings
+    │    │         ├─── Require RSVP
+    │    │         ├─── Send Notifications
+    │    │         └─── Auto-create Attendance Records
+    │    │
+    │    ├─── Event Detail
+    │    │    Route: /admin/events/:id
+    │    │    ├─── Event Overview
+    │    │    │    ├─── All event details
+    │    │    │    ├─── Created By
+    │    │    │    └─── Created Date
+    │    │    │
+    │    │    ├─── Attendance Tab
+    │    │    │    ├─── Attendance Roster
+    │    │    │    │    ├─── Player Name
+    │    │    │    │    ├─── Status (going/late/not_going)
+    │    │    │    │    ├─── Note
+    │    │    │    │    └─── Actions
+    │    │    │    │
+    │    │    │    ├─── Summary
+    │    │    │    │    ├─── Going Count
+    │    │    │    │    ├─── Late Count
+    │    │    │    │    └─── Not Going Count
+    │    │    │    │
+    │    │    │    ├─── Bulk Actions
+    │    │    │    │    ├─── Mark All Going
+    │    │    │    │    ├─── Export Attendance
+    │    │    │    │    └─── Send Reminder
+    │    │    │    │
+    │    │    │    └─── Manual Override
+    │    │    │         └─── Update individual attendance
+    │    │    │
+    │    │    ├─── Edit Event
+    │    │    └─── Delete Event
+    │    │
+    │    └─── Attendance Reports
+    │         Route: /admin/attendance
+    │         ├─── Attendance Roster View
+    │         │    ├─── Select Team
+    │         │    ├─── Select Season
+    │         │    ├─── Select Date Range
+    │         │    │
+    │         │    └─── Attendance Grid
+    │         │         ├─── Players (rows)
+    │         │         ├─── Events (columns)
+    │         │         ├─── Status Indicators
+    │         │         │    ├─── Going (green)
+    │         │         │    ├─── Late (yellow)
+    │         │         │    └─── Not Going (red)
+    │         │         └─── Attendance Percentage
+    │         │
+    │         ├─── Player Attendance Summary
+    │         │    ├─── Player Name
+    │         │    ├─── Total Events
+    │         │    ├─── Going Count
+    │         │    ├─── Late Count
+    │         │    ├─── Not Going Count
+    │         │    └─── Attendance Rate
+    │         │
+    │         └─── Export Options
+    │              ├─── CSV Export
+    │              └─── PDF Report
+
+    ├─── UNIFORMS MANAGEMENT
+    │    ├─── Uniform Orders List
+    │    │    Route: /admin/uniforms
+    │    │    ├─── Orders Table
+    │    │    │    ├─── Child Name
+    │    │    │    ├─── Team
+    │    │    │    ├─── Season
+    │    │    │    ├─── Jersey Size
+    │    │    │    ├─── Shorts Size
+    │    │    │    ├─── Status (pending/ordered/delivered)
+    │    │    │    ├─── Order Date
+    │    │    │    └─── Actions
+    │    │    │
+    │    │    ├─── Summary Cards
+    │    │    │    ├─── Pending Orders
+    │    │    │    ├─── Ordered Count
+    │    │    │    └─── Delivered Count
+    │    │    │
+    │    │    ├─── Filters
+    │    │    │    ├─── By Team
+    │    │    │    ├─── By Season
+    │    │    │    ├─── By Status
+    │    │    │    └─── Search
+    │    │    │
+    │    │    └─── Bulk Actions
+    │    │         ├─── Mark Selected as Ordered
+    │    │         ├─── Mark Selected as Delivered
+    │    │         └─── Export Orders
+    │    │
+    │    ├─── Order Detail
+    │    │    Route: /admin/uniforms/:id
+    │    │    ├─── Order Information
+    │    │    │    ├─── Child Details
+    │    │    │    ├─── Team & Season
+    │    │    │    ├─── Sizes
+    │    │    │    ├─── Status
+    │    │    │    └─── Order Date
+    │    │    │
+    │    │    └─── Actions
+    │    │         ├─── Update Status
+    │    │         ├─── Edit Sizes
+    │    │         └─── Contact Parent
+    │    │
+    │    └─── Size Reports
+    │         Route: /admin/uniforms/reports
+    │         ├─── Size Distribution
+    │         │    ├─── By Jersey Size
+    │         │    └─── By Shorts Size
+    │         │
+    │         └─── Export Options
+    │              └─── CSV Export for Vendor
+
+    ├─── TRAVEL MANAGEMENT
+    │    ├─── Travel Plans List
+    │    │    Route: /admin/travel
+    │    │    ├─── Plans Table
+    │    │    │    ├─── Title
+    │    │    │    ├─── Team
+    │    │    │    ├─── Season
+    │    │    │    ├─── Location
+    │    │    │    ├─── Start Date
+    │    │    │    ├─── End Date
+    │    │    │    └─── Actions
+    │    │    │
+    │    │    ├─── Filters
+    │    │    │    ├─── By Team
+    │    │    │    ├─── By Season
+    │    │    │    └─── Date Range
+    │    │    │
+    │    │    └─── Quick Actions
+    │    │         └─── Create Travel Plan
+    │    │
+    │    ├─── Create Travel Plan
+    │    │    Route: /admin/travel/create
+    │    │    ├─── Basic Information
+    │    │    │    ├─── Title (required)
+    │    │    │    ├─── Team (required)
+    │    │    │    ├─── Season (required)
+    │    │    │    └─── Description
+    │    │    │
+    │    │    ├─── Dates & Location
+    │    │    │    ├─── Start Date
+    │    │    │    ├─── End Date
+    │    │    │    └─── Location
+    │    │    │
+    │    │    ├─── Hotel Information
+    │    │    │    ├─── Hotel Name
+    │    │    │    ├─── Address
+    │    │    │    ├─── Phone
+    │    │    │    ├─── Check-in Date
+    │    │    │    ├─── Check-out Date
+    │    │    │    └─── Room Details
+    │    │    │
+    │    │    └─── Additional Notes
+    │    │         └─── Notes (textarea)
+    │    │
+    │    └─── Travel Plan Detail
+    │         Route: /admin/travel/:id
+    │         ├─── Plan Overview
+    │         │    ├─── All plan details
+    │         │    └─── Created Date
+    │         │
+    │         ├─── Participants Tab
+    │         │    ├─── Players List
+    │         │    │    ├─── Player Name
+    │         │    │    ├─── Parent Contact
+    │         │    │    └─── Room Assignment
+    │         │    │
+    │         │    └─── Actions
+    │         │         ├─── Add Participants
+    │         │         └─── Export Participant List
+    │         │
+    │         └─── Edit/Delete Plan
+
+    ├─── TRYOUTS MANAGEMENT
+    │    ├─── Tryouts List
+    │    │    Route: /admin/tryouts
+    │    │    ├─── Tryouts Table
+    │    │    │    ├─── Title
+    │    │    │    ├─── Age Group
+    │    │    │    ├─── Tryout Date
+    │    │    │    ├─── Registrations Count
+    │    │    │    └─── Actions
+    │    │    │
+    │    │    ├─── Filters
+    │    │    │    ├─── By Age Group
+    │    │    │    ├─── Date Range
+    │    │    │    └─── Search
+    │    │    │
+    │    │    └─── Quick Actions
+    │    │         └─── Create Tryout
+    │    │
+    │    ├─── Create Tryout
+    │    │    Route: /admin/tryouts/create
+    │    │    ├─── Basic Information
+    │    │    │    ├─── Title (required)
+    │    │    │    ├─── Age Group (required)
+    │    │    │    ├─── Tryout Date (required)
+    │    │    │    └─── Description
+    │    │    │
+    │    │    └─── Additional Settings
+    │    │         ├─── Registration Deadline
+    │    │         └─── Max Registrations
+    │    │
+    │    ├─── Tryout Detail
+    │    │    Route: /admin/tryouts/:id
+    │    │    ├─── Tryout Overview
+    │    │    │    ├─── All tryout details
+    │    │    │    └─── Created Date
+    │    │    │
+    │    │    ├─── Registrations Tab
+    │    │    │    ├─── Registrations List
+    │    │    │    │    ├─── Child Name
+    │    │    │    │    ├─── Family Name
+    │    │    │    │    ├─── Registration Date
+    │    │    │    │    ├─── Status
+    │    │    │    │    │    ├─── Registered
+    │    │    │    │    │    ├─── Checked In
+    │    │    │    │    │    ├─── Evaluated
+    │    │    │    │    │    ├─── Offered
+    │    │    │    │    │    ├─── Accepted
+    │    │    │    │    │    ├─── Declined
+    │    │    │    │    │    └─── Rejected
+    │    │    │    │    └─── Actions
+    │    │    │    │
+    │    │    │    ├─── Filters
+    │    │    │    │    ├─── By Status
+    │    │    │    │    └─── Search
+    │    │    │    │
+    │    │    │    └─── Bulk Actions
+    │    │    │         ├─── Update Status
+    │    │    │         └─── Export Registrations
+    │    │    │
+    │    │    ├─── Scores Tab
+    │    │    │    ├─── Scores List
+    │    │    │    │    ├─── Registration
+    │    │    │    │    ├─── Score
+    │    │    │    │    ├─── Evaluated By
+    │    │    │    │    ├─── Notes
+    │    │    │    │    └─── Actions
+    │    │    │    │
+    │    │    │    └─── Add Score
+    │    │    │         ├─── Select Registration
+    │    │    │         ├─── Score (numeric)
+    │    │    │         └─── Notes
+    │    │    │
+    │    │    └─── Edit/Delete Tryout
+    │    │
+    │    └─── Tryout Reports
+    │         Route: /admin/tryouts/reports
+    │         ├─── Registration Summary
+    │         └─── Results Summary
+
+    ├─── MESSAGES & COMMUNICATION
+    │    ├─── Messages List
+    │    │    Route: /admin/messages
+    │    │    ├─── Messages Table
+    │    │    │    ├─── Team
+    │    │    │    ├─── Sender
+    │    │    │    ├─── Message Preview
+    │    │    │    ├─── Sent Date
+    │    │    │    └─── Actions
+    │    │    │
+    │    │    ├─── Filters
+    │    │    │    ├─── By Team
+    │    │    │    ├─── By Sender
+    │    │    │    └─── Date Range
+    │    │    │
+    │    │    └─── Quick Actions
+    │    │         └─── Send Message
+    │    │
+    │    ├─── Send Message
+    │    │    Route: /admin/messages/send
+    │    │    ├─── Recipients
+    │    │    │    ├─── Select Team
+    │    │    │    ├─── Select Specific Parents
+    │    │    │    └─── Select All Parents in Team
+    │    │    │
+    │    │    ├─── Message Content
+    │    │    │    ├─── Subject (optional)
+    │    │    │    ├─── Message Body (required)
+    │    │    │    └─── Attachments (optional)
+    │    │    │
+    │    │    └─── Delivery Options
+    │    │         ├─── Send Now
+    │    │         ├─── Schedule Send
+    │    │         └─── Send as Announcement
+    │    │
+    │    └─── Message Detail
+    │         Route: /admin/messages/:id
+    │         ├─── Message Information
+    │         │    ├─── All message details
+    │         │    ├─── Recipients List
+    │         │    ├─── Sent Date
+    │         │    └─── Delivery Status
+    │         │
+    │         └─── Thread View
+    │              └─── Replies (if threaded)
+
+    └─── REPORTS & ANALYTICS
+         ├─── Dashboard Analytics
+         │    Route: /admin/analytics
+         │    ├─── Key Metrics
+         │    │    ├─── Total Revenue
+         │    │    ├─── Outstanding Balance
+         │    │    ├─── Active Players
+         │    │    ├─── Upcoming Events
+         │    │    └─── Team Performance
+         │    │
+         │    ├─── Charts & Graphs
+         │    │    ├─── Revenue Trends
+         │    │    ├─── Payment Status Distribution
+         │    │    ├─── Attendance Rates
+         │    │    └─── Team Growth
+         │    │
+         │    └─── Date Range Selector
+         │
+         ├─── Financial Reports
+         │    Route: /admin/reports/financial
+         │    ├─── Revenue Reports
+         │    │    ├─── By Period (daily/weekly/monthly/yearly)
+         │    │    ├─── By Team
+         │    │    ├─── By Fee Type
+         │    │    └─── By Season
+         │    │
+         │    ├─── Payment Reports
+         │    │    ├─── Payment Method Breakdown
+         │    │    ├─── Outstanding Payments
+         │    │    ├─── Refund Reports
+         │    │    └─── Installment Reports
+         │    │
+         │    └─── Export Options
+         │         ├─── CSV
+         │         ├─── PDF
+         │         └─── Excel
+         │
+         ├─── Player Reports
+         │    Route: /admin/reports/players
+         │    ├─── Roster Reports
+         │    │    ├─── By Team
+         │    │    ├─── By Season
+         │    │    └─── By Age Group
+         │    │
+         │    ├─── Attendance Reports
+         │    │    ├─── Individual Attendance
+         │    │    ├─── Team Attendance
+         │    │    └─── Event Attendance
+         │    │
+         │    └─── Export Options
+         │
+         └─── Custom Reports Builder
+              Route: /admin/reports/custom
+              ├─── Report Type Selection
+              ├─── Field Selection
+              ├─── Filter Configuration
+              ├─── Date Range
+              └─── Export Format
+
+================================================================================
+COMPONENT STRUCTURE
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  SHARED COMPONENTS                                                       │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    ├─── Layout Components
+    │    ├─── AdminHeader
+    │    │    ├─── Navigation Breadcrumbs
+    │    │    ├─── User Info
+    │    │    ├─── Notifications Bell
+    │    │    └─── Settings Link
+    │    │
+    │    ├─── AdminSidebar (optional)
+    │    │    ├─── Main Navigation
+    │    │    ├─── Quick Actions
+    │    │    └─── User Profile
+    │    │
+    │    └─── AdminLayout
+    │         ├─── Header
+    │         ├─── Sidebar (optional)
+    │         └─── Main Content Area
+    │
+    ├─── Data Display Components
+    │    ├─── DataTable
+    │    │    ├─── Sorting
+    │    │    ├─── Filtering
+    │    │    ├─── Pagination
+    │    │    ├─── Row Selection
+    │    │    └─── Export
+    │    │
+    │    ├─── StatusBadge
+    │    │    ├─── Payment Status
+    │    │    ├─── Event Status
+    │    │    ├─── Order Status
+    │    │    └─── User Role
+    │    │
+    │    ├─── SummaryCard
+    │    │    ├─── Title
+    │    │    ├─── Value
+    │    │    ├─── Change Indicator
+    │    │    └─── Icon
+    │    │
+    │    └─── EmptyState
+    │         ├─── Icon
+    │         ├─── Message
+    │         └─── Action Button
+    │
+    ├─── Form Components
+    │    ├─── FormField
+    │    │    ├─── Label
+    │    │    ├─── Input/Select/Textarea
+    │    │    ├─── Error Message
+    │    │    └─── Help Text
+    │    │
+    │    ├─── DatePicker
+    │    ├─── TimePicker
+    │    ├─── CurrencyInput
+    │    ├─── MultiSelect
+    │    └─── FileUpload
+    │
+    ├─── Payment Components
+    │    ├─── PaymentStatusBadge
+    │    ├─── PaymentAmountDisplay
+    │    ├─── PaymentTimeline
+    │    ├─── ChargeList
+    │    └─── ReceiptViewer
+    │
+    ├─── Modal Components
+    │    ├─── ConfirmModal
+    │    ├─── FormModal
+    │    ├─── DetailModal
+    │    └─── BulkActionModal
+    │
+    └─── Utility Components
+         ├─── LoadingSpinner
+         ├─── ErrorMessage
+         ├─── SuccessToast
+         ├─── SearchBar
+         └─── FilterPanel
+
+================================================================================
+WORKFLOWS & USER FLOWS
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  FEE CREATION & ASSIGNMENT WORKFLOW                                      │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    1. Admin navigates to /admin/payments/fees
+    2. Clicks "Create Fee"
+    3. Fills out fee form:
+       - Basic info (title, type, amount)
+       - Assignment settings (scope, season)
+       - Payment options (partial, installments, etc.)
+    4. Selects players (if scope = selected_players)
+    5. Saves as draft or publishes immediately
+    6. System creates fee_assignments for selected players
+    7. If installments enabled, creates installment_schedules
+    8. Parents receive notification (if published)
+    9. Parents can view and pay fees
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  PAYMENT PROCESSING WORKFLOW                                             │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    Online Payment:
+    1. Parent views fee assignments
+    2. Selects fees to pay (multi-select)
+    3. Applies discount code (optional)
+    4. Clicks "Pay Now"
+    5. System creates checkout_session
+    6. System creates charges for each fee
+    7. Redirects to Stripe Checkout
+    8. Parent completes payment
+    9. Stripe webhook updates payment status
+    10. System creates payment record
+    11. System creates payment_allocations
+    12. System updates fee_assignment balances
+    13. System sends receipt to parent
+
+    Offline Payment:
+    1. Admin navigates to fee assignment
+    2. Clicks "Record Offline Payment"
+    3. Enters payment details (amount, method, reference)
+    4. Saves payment
+    5. System creates offline_payment record
+    6. System creates offline_payment_allocations
+    7. System updates fee_assignment balance
+    8. System sends confirmation to parent
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  WAIVER/SCHOLARSHIP APPLICATION WORKFLOW                                 │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    Waiver:
+    1. Admin navigates to fee assignment
+    2. Clicks "Apply Waiver"
+    3. Enters waiver amount and reason
+    4. Saves waiver
+    5. System creates waiver record
+    6. System creates negative charge (waiver_credit)
+    7. System updates fee_assignment balance
+    8. Parent receives notification
+
+    Scholarship:
+    1. Admin navigates to scholarship program
+    2. Clicks "Create Award"
+    3. Selects fee assignment
+    4. Enters award amount
+    5. Saves award
+    6. System creates scholarship_award record
+    7. System creates negative charge (scholarship_credit)
+    8. System updates fee_assignment balance
+    9. System updates program budget (if applicable)
+    10. Parent receives notification
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  EVENT CREATION & ATTENDANCE WORKFLOW                                    │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    1. Admin navigates to /admin/events
+    2. Clicks "Create Event"
+    3. Fills out event form (title, type, team, date/time, location)
+    4. Optionally sets as recurring
+    5. Saves event
+    6. System creates event record
+    7. System creates attendance records for all team members (if auto-create)
+    8. Parents receive notification
+    9. Parents can RSVP
+    10. Admin can view/manage attendance
+    11. Admin can export attendance report
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  TEAM ROSTER MANAGEMENT WORKFLOW                                        │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    1. Admin navigates to team detail
+    2. Goes to Roster tab
+    3. Clicks "Add Player"
+    4. Searches for existing child or creates new
+    5. Selects season
+    6. Saves membership
+    7. System creates team_membership record
+    8. Parent receives notification (if new child)
+    9. Child appears in roster
+    10. Admin can remove player (changes status to 'removed')
+
+================================================================================
+PERMISSIONS & ACCESS CONTROL
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  ADMIN PERMISSIONS                                                        │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    Full Access:
+    ✅ Create/Edit/Delete all entities
+    ✅ View all financial data (amounts, payments, refunds)
+    ✅ Manage users and roles
+    ✅ Apply waivers and scholarships
+    ✅ Record offline payments
+    ✅ Create refunds
+    ✅ Export all reports
+    ✅ View audit logs
+
+    Restricted:
+    ❌ Cannot view card details (Stripe handles this)
+    ❌ Cannot modify Stripe Connect settings (platform admin only)
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  COACH PERMISSIONS (for reference)                                        │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    Limited Access:
+    ✅ View team rosters
+    ✅ View event attendance (status only, no amounts)
+    ✅ View payment status (unpaid/partial/paid, NO amounts)
+    ✅ Send messages to team
+    ✅ View events
+
+    Restricted:
+    ❌ Cannot view payment amounts
+    ❌ Cannot create fees
+    ❌ Cannot view financial reports
+    ❌ Cannot manage users
+
+================================================================================
+API ENDPOINTS & DATA FLOW
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  SUPABASE QUERIES (Examples)                                             │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    Fees List:
+    - Query: fees table
+    - Filter: by organization_id, status, season_id
+    - Join: seasons, organizations
+    - Aggregate: count of fee_assignments
+
+    Fee Assignments:
+    - Query: fee_assignments table
+    - Filter: by fee_id, child_id, parent_id, status
+    - Join: fees, children, users (parents), organizations
+    - Aggregate: balance_cents, paid_cents_total
+
+    Payments:
+    - Query: payments table
+    - Filter: by organization_id, parent_id, status, date range
+    - Join: checkout_sessions, payment_allocations, charges
+    - Aggregate: total amount, platform fees
+
+    Events:
+    - Query: events table
+    - Filter: by team_id, season_id, date range
+    - Join: teams, seasons, attendance
+    - Aggregate: attendance counts
+
+================================================================================
+NOTES & BEST PRACTICES
+================================================================================
+
+1. All monetary values stored in CENTS (integer)
+2. All dates stored as TIMESTAMPTZ (timezone-aware)
+3. All status changes should log to payment_events (audit trail)
+4. RLS policies enforce data access at database level
+5. Coaches see status only, never amounts (enforced by RLS)
+6. Parents can only see their own data (enforced by RLS)
+7. All financial operations should be atomic (transactions)
+8. Stripe webhooks handle payment status updates
+9. Offline payments still update balances and status
+10. All exports should respect RLS policies
+
+================================================================================
+END OF ADMIN PANEL STRUCTURE
+================================================================================

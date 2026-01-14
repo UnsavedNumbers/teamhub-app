@@ -1,0 +1,44 @@
+PHASE 05 - ATTENDANCE AND RSVP
+=============================
+
+Goal:
+Allow parents to RSVP and coaches to see availability.
+
+----------------------------------------------------------------
+REQUIREMENTS
+----------------------------------------------------------------
+
+- Each child can RSVP for each event
+- Status: going, late, not_going
+- Parents can update until event start
+- Coaches can see all attendance for team events
+- Parents see only their children
+
+----------------------------------------------------------------
+DELIVERABLES
+----------------------------------------------------------------
+
+- SQL for attendance
+- RLS for attendance
+- RSVP UI on event detail
+- Coach attendance roster view
+- Realtime updates
+
+----------------------------------------------------------------
+OUTPUT
+----------------------------------------------------------------
+
+Provide:
+- SQL
+- RLS
+- React components
+- Realtime subscriptions
+- Test plan
+
+----------------------------------------------------------------
+STOP CONDITIONS
+----------------------------------------------------------------
+
+If late arrival logic needs clarification, ask before implementing.
+
+END

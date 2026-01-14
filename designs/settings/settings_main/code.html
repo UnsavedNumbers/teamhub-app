@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TeamHub Settings: Family &amp; Account</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: "Public Sans", sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-[#0d141b] dark:text-slate-200 font-display transition-colors duration-200">
+<div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+<!-- Top Navigation Bar -->
+<header class="flex items-center justify-between border-b border-solid border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-slate-900 px-4 lg:px-10 py-3 sticky top-0 z-50">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3 text-primary">
+<div class="size-8 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined">sports_score</span>
+</div>
+<h2 class="text-[#0d141b] dark:text-white text-lg font-bold leading-tight tracking-tight">TeamHub</h2>
+</div>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-[#4c739a] dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors" href="#">Dashboard</a>
+<a class="text-[#4c739a] dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors" href="#">Teams</a>
+<a class="text-[#4c739a] dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors" href="#">Schedule</a>
+<a class="text-primary text-sm font-bold border-b-2 border-primary py-4" href="#">Settings</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden sm:block">
+<label class="flex items-center h-10 w-64 bg-background-light dark:bg-slate-800 rounded-lg px-3 gap-2 border border-transparent focus-within:border-primary/50 transition-all">
+<span class="material-symbols-outlined text-[#4c739a] text-[20px]">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-[#4c739a]" placeholder="Search settings..." type="text"/>
+</label>
+</div>
+<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-background-light dark:bg-slate-800 text-[#0d141b] dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+</button>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border-2 border-primary/20" data-alt="User profile avatar of a sports parent" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCsRxuf2zd2Q2fMPkEWUHj1ZkiGr1i6mOM8fMwxZn4ez0A6eGp0cVTh3W-BeRkGvGPIhiDbOpTyWlUhQXkNU3-ym3w_0wdXv_gxrv8VnK765UYKomj0bIDfUiTxHtwWltr1msAJ7_oBfxK7qPEXe3j54A0uW_ufjahZXgn1CnF4QiDjOObRWRT5riiay4wm-wTEDatwl_jlGByBIDG8iRw7Zu4jP5JBKB24gkgUHiJXv-I9ty9qH3u9vJrLbaaGak2NKtNGjLTS8xI");'></div>
+</div>
+</header>
+<main class="flex-1 flex justify-center py-8 px-4 lg:px-10">
+<div class="flex w-full max-w-[1200px] gap-8">
+<!-- Sidebar Navigation -->
+<aside class="hidden lg:flex flex-col w-64 shrink-0 gap-6">
+<div class="flex flex-col gap-1">
+<h1 class="text-[#0d141b] dark:text-white text-base font-bold px-3 mb-2">Settings</h1>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary group" href="#">
+<span class="material-symbols-outlined text-[22px] font-variation-fill">manage_accounts</span>
+<span class="text-sm font-semibold">Family &amp; Account</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#4c739a] dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined text-[22px]">notifications</span>
+<span class="text-sm font-medium">Notifications</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#4c739a] dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined text-[22px]">shield</span>
+<span class="text-sm font-medium">Security</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#4c739a] dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined text-[22px]">payments</span>
+<span class="text-sm font-medium">Billing &amp; Payments</span>
+</a>
+</div>
+</aside>
+<!-- Content Area -->
+<div class="flex-1 flex flex-col max-w-[800px]">
+<!-- Breadcrumbs -->
+<nav class="flex items-center gap-2 mb-2 text-sm">
+<a class="text-[#4c739a] dark:text-slate-500 hover:text-primary" href="#">Settings</a>
+<span class="text-slate-300">/</span>
+<span class="text-[#0d141b] dark:text-white font-medium">Family &amp; Account</span>
+</nav>
+<!-- Page Heading -->
+<div class="mb-8">
+<h1 class="text-[#0d141b] dark:text-white text-3xl lg:text-4xl font-black tracking-tight leading-tight">Family &amp; Account</h1>
+<p class="text-[#4c739a] dark:text-slate-400 mt-2 text-base leading-relaxed">Manage your personal profile, family members, and team permissions in one place.</p>
+</div>
+<div class="flex flex-col gap-6">
+<!-- Account Section -->
+<section class="bg-white dark:bg-slate-900 border border-[#e7edf3] dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+<div class="px-6 py-5 border-b border-[#e7edf3] dark:border-slate-800 flex justify-between items-center">
+<h2 class="text-[#0d141b] dark:text-white text-lg font-bold">Account Profile</h2>
+<button class="text-primary text-sm font-bold hover:underline">Edit Info</button>
+</div>
+<div class="p-6">
+<div class="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
+<div class="relative">
+<div class="size-20 bg-center bg-no-repeat bg-cover rounded-full border border-slate-200 dark:border-slate-700" data-alt="Main user profile photo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAasPY4MJ2uYIX5GNX80EMrC562f830BG79w4cXnN-1kHKn_yo_7lzS7EWyNgE42Dlqj-HdEoTINpPQaF_Scn0UoO1je11cTXkcdqVvj2b5Ro5at9CNhy8VKjOk__TJV6dOvv8Sgrv8FH-dym9UFPOHhsXQv0e07uBMeDKy4-fuMf_SXk6EB6NDidMKSIiRY82sEHJP2cUETolRfp9XBCAyTNPNTUPG1Y3fI1GNDcdnMV8gncXAcZHdDaOyEOD-HE_nIdfHgBFoZtQ");'></div>
+<div class="absolute -bottom-1 -right-1 bg-white dark:bg-slate-800 rounded-full p-1 shadow-md border border-slate-100 dark:border-slate-700">
+<span class="material-symbols-outlined text-primary text-[18px]">photo_camera</span>
+</div>
+</div>
+<div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+<div>
+<p class="text-[#4c739a] dark:text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Full Name</p>
+<p class="text-[#0d141b] dark:text-white font-medium">Jonathan Sterling</p>
+</div>
+<div>
+<p class="text-[#4c739a] dark:text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Email Address</p>
+<p class="text-[#0d141b] dark:text-white font-medium">j.sterling@example.com</p>
+</div>
+<div>
+<p class="text-[#4c739a] dark:text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Login Method</p>
+<div class="flex items-center gap-2 mt-1">
+<span class="material-symbols-outlined text-[18px] text-[#4c739a]">passkey</span>
+<span class="text-[#0d141b] dark:text-white font-medium">Google Account</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Family Section -->
+<section class="bg-white dark:bg-slate-900 border border-[#e7edf3] dark:border-slate-800 rounded-xl shadow-sm overflow-hidden">
+<div class="px-6 py-5 border-b border-[#e7edf3] dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/20">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">groups</span>
+<h2 class="text-[#0d141b] dark:text-white text-lg font-bold">Family Members</h2>
+</div>
+<button class="flex items-center gap-1.5 bg-primary text-white px-3 py-1.5 rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                                    Add Member
+                                </button>
+</div>
+<!-- Children List -->
+<div class="p-6 flex flex-col gap-4">
+<h3 class="text-[#4c739a] dark:text-slate-500 text-xs font-bold uppercase tracking-wider">Children</h3>
+<div class="space-y-3">
+<!-- Child 1 -->
+<div class="flex items-center justify-between p-3 rounded-lg border border-slate-100 dark:border-slate-800 bg-background-light/30 dark:bg-slate-800/40 hover:border-slate-200 transition-colors">
+<div class="flex items-center gap-3">
+<div class="size-10 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center font-bold">LS</div>
+<div>
+<p class="text-[#0d141b] dark:text-white font-semibold">Leo Sterling</p>
+<div class="flex items-center gap-1 text-[#4c739a] dark:text-slate-400 text-xs">
+<span class="material-symbols-outlined text-[14px]">sports_soccer</span>
+                                                    Soccer - U12 Eagles
+                                                </div>
+</div>
+</div>
+<button class="p-2 text-[#4c739a] hover:text-primary">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+<!-- Child 2 -->
+<div class="flex items-center justify-between p-3 rounded-lg border border-slate-100 dark:border-slate-800 bg-background-light/30 dark:bg-slate-800/40 hover:border-slate-200 transition-colors">
+<div class="flex items-center gap-3">
+<div class="size-10 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-full flex items-center justify-center font-bold">MS</div>
+<div>
+<p class="text-[#0d141b] dark:text-white font-semibold">Mia Sterling</p>
+<div class="flex items-center gap-1 text-[#4c739a] dark:text-slate-400 text-xs">
+<span class="material-symbols-outlined text-[14px]">sports_volleyball</span>
+                                                    Volleyball - Jr. Spikers
+                                                </div>
+</div>
+</div>
+<button class="p-2 text-[#4c739a] hover:text-primary">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<hr class="mx-6 border-slate-100 dark:border-slate-800"/>
+<!-- Guardians List -->
+<div class="p-6 flex flex-col gap-4">
+<h3 class="text-[#4c739a] dark:text-slate-500 text-xs font-bold uppercase tracking-wider">Guardians</h3>
+<div class="space-y-4">
+<!-- Guardian 1 -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="size-10 bg-center bg-no-repeat bg-cover rounded-full border border-slate-100 dark:border-slate-800" data-alt="Secondary guardian profile photo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBT-nW5P7nTJboPkxqC0kK05PiUD0nriU2EcFEY2CWhQ6rCfuR2KgdtRGFdhau4JJaJ0kZEZQmSUhI9wCgyib13GpD6twYmyAu9_EIV12RZ8SUl-SoeOOAy9KuXr45N_HQ5elyYEb7nr65r_mejRUjNgVe8DTL1QiDeFl_mlOl9xSgEvRuAdFxelfmvAmU60o5jdfe05FkT_igGOoNuFXjUTQolg5q2Yi1nieQs2Z1dbYONIwG2kJD5vfwE5d-Sb2h6pegseRdTDOs");'></div>
+<div>
+<p class="text-[#0d141b] dark:text-white font-semibold">Sarah Sterling</p>
+<p class="text-[#4c739a] dark:text-slate-400 text-xs">Primary Guardian</p>
+</div>
+</div>
+<div class="flex gap-1.5">
+<span class="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] font-bold uppercase rounded border border-green-200 dark:border-green-800">Admin</span>
+<span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold uppercase rounded border border-slate-200 dark:border-slate-700">RSVP</span>
+<span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold uppercase rounded border border-slate-200 dark:border-slate-700">Pay</span>
+</div>
+</div>
+<!-- Guardian 2 (Pending) -->
+<div class="flex items-center justify-between opacity-70">
+<div class="flex items-center gap-3">
+<div class="size-10 bg-slate-200 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-400">
+<span class="material-symbols-outlined text-[20px]">person</span>
+</div>
+<div>
+<p class="text-[#0d141b] dark:text-white font-semibold italic">Invite Pending</p>
+<p class="text-[#4c739a] dark:text-slate-400 text-xs">m.brown@example.com</p>
+</div>
+</div>
+<button class="text-[#4c739a] dark:text-slate-500 text-xs font-bold hover:text-red-500">Cancel</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Notifications Section -->
+<section class="bg-white dark:bg-slate-900 border border-[#e7edf3] dark:border-slate-800 rounded-xl shadow-sm overflow-hidden mb-12">
+<div class="px-6 py-5 border-b border-[#e7edf3] dark:border-slate-800">
+<h2 class="text-[#0d141b] dark:text-white text-lg font-bold">Preferences</h2>
+</div>
+<div class="p-6 space-y-6">
+<div>
+<h3 class="text-[#4c739a] dark:text-slate-500 text-xs font-bold uppercase tracking-wider mb-4">Email Notifications</h3>
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<div>
+<p class="text-[#0d141b] dark:text-white font-medium text-sm">Game &amp; Practice Reminders</p>
+<p class="text-[#4c739a] dark:text-slate-400 text-xs">Get alerts 24h before every event</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="flex items-center justify-between">
+<div>
+<p class="text-[#0d141b] dark:text-white font-medium text-sm">Payment &amp; Dues Alerts</p>
+<p class="text-[#4c739a] dark:text-slate-400 text-xs">Notifications for season registrations</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="flex items-center justify-between">
+<div>
+<p class="text-[#0d141b] dark:text-white font-medium text-sm">Marketing &amp; News</p>
+<p class="text-[#4c739a] dark:text-slate-400 text-xs">Occasional sports tips and news</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Uniforms: Athletic Checklist V1</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#141414",
+                        "background-light": "#f7f7f7",
+                        "background-dark": "#191919",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Lexend', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-primary dark:text-white min-h-screen">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<!-- Top Navigation Bar -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-neutral-200 dark:border-neutral-800 px-6 md:px-20 py-4 bg-white dark:bg-neutral-900 sticky top-0 z-50">
+<div class="flex items-center gap-4 text-primary dark:text-white">
+<div class="size-6">
+<svg fill="currentColor" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M42.4379 44C42.4379 44 36.0744 33.9038 41.1692 24C46.8624 12.9336 42.2078 4 42.2078 4L7.01134 4C7.01134 4 11.6577 12.932 5.96912 23.9969C0.876273 33.9029 7.27094 44 7.27094 44L42.4379 44Z"></path>
+</svg>
+</div>
+<h2 class="text-lg font-black leading-tight tracking-tighter uppercase">Nike Youth</h2>
+</div>
+<div class="hidden md:flex flex-1 justify-center gap-10">
+<a class="text-sm font-bold uppercase tracking-widest hover:opacity-70 transition-opacity" href="#">Dashboard</a>
+<a class="text-sm font-bold uppercase tracking-widest hover:opacity-70 transition-opacity" href="#">Teams</a>
+<a class="text-sm font-bold uppercase tracking-widest hover:opacity-70 transition-opacity" href="#">Schedule</a>
+<a class="text-sm font-bold uppercase tracking-widest border-b-2 border-primary" href="#">Uniforms</a>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex size-10 items-center justify-center rounded-lg bg-neutral-100 dark:bg-neutral-800 text-primary dark:text-white">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border border-neutral-200" data-alt="User profile avatar of a sports parent" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAZ4Oz3_k3S1syUyMH67Gl5Kyh-9B85KqFTFny5D88B8L2U6O7dc8bu6ixF8bOE4foOC_fNS2S9GptULxRA7s7SFg_6DYzZB91py_WUAhkQuNrZCGJEemzMwBhevMSBAOpChPytFYMzfOQAWakgGgUW1Dp1tpiyzeSc2vXtFzRYMMD9Sa03Bd9VQHsB_K6laxC_m3KjT7CGOIbYj01wMascjakfqRVgJbve67dO_YseLUA5s7TMmLm1e6r81m3IWttcQ7_ICS44GjA");'>
+</div>
+</div>
+</header>
+<main class="flex flex-1 justify-center py-10 px-4">
+<div class="layout-content-container flex flex-col max-w-[1000px] flex-1">
+<!-- Section Header -->
+<div class="flex items-end justify-between px-4 pb-6">
+<h2 class="text-primary dark:text-white text-3xl font-black leading-tight tracking-tighter uppercase italic">Uniform Checklist</h2>
+<p class="text-sm font-bold text-neutral-500 uppercase">Season: Fall 2024</p>
+</div>
+<!-- Hero Status Card (Action Required) -->
+<div class="p-4 @container">
+<div class="flex flex-col items-stretch justify-start rounded-xl @xl:flex-row @xl:items-center shadow-2xl bg-white dark:bg-neutral-900 border-l-[12px] border-primary overflow-hidden">
+<div class="w-full md:w-1/2 bg-center bg-no-repeat aspect-video bg-cover" data-alt="Athletic uniform laying on a bench" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBZSk6QQsn84k3f7PuEeXoBDFPcg6h_MELXChYRDAZsrgGZOp6a9qz2YKoCa7-Z437eGvS7mAQxsyEuhM3klsH3nHPm8I5OmKdyTQx_ANxoFvVC5rUP50a17wYxpiURVUFmQ36jJVTl5CXkUpiY_Ocizqlk-be2fGIejBCiVcdiQkLoT79q50lfOBNt2nI5mqUSeZrnlutkWf8S7FC6nxdNo3iK73Rbg9FUe_WzYWGqriFmE8_3hnZTXLLthLwZltQOUwApsSr8_I0");'>
+</div>
+<div class="flex w-full min-w-72 grow flex-col items-start justify-center gap-2 py-8 px-8">
+<p class="text-red-600 text-xs font-black tracking-[0.2em] uppercase mb-1">Action Required</p>
+<h1 class="text-primary dark:text-white text-5xl font-black leading-none tracking-tighter mb-2">SIZES NEEDED</h1>
+<div class="flex flex-col gap-4 w-full">
+<div class="flex items-center gap-2 text-neutral-600 dark:text-neutral-400">
+<span class="material-symbols-outlined text-sm">calendar_today</span>
+<p class="text-base font-bold uppercase leading-normal">Deadline: Oct 12, 2023</p>
+</div>
+<p class="text-neutral-500 text-sm font-medium leading-relaxed max-w-md">
+                                        Please submit your athlete's measurements to ensure on-time production and delivery for the season opener.
+                                    </p>
+<button class="flex w-full md:w-auto min-w-[200px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-6 bg-primary text-white text-sm font-black uppercase tracking-widest hover:bg-neutral-800 transition-colors">
+                                        Submit Sizes Now
+                                    </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Items List -->
+<div class="mt-8">
+<div class="px-4 py-4 border-b border-neutral-200 dark:border-neutral-800 flex justify-between items-center">
+<p class="text-neutral-500 text-xs font-black tracking-widest uppercase">Required Gear (3 Items)</p>
+<p class="text-neutral-500 text-xs font-black tracking-widest uppercase">Status</p>
+</div>
+<!-- Item 1: Jersey -->
+<div class="flex items-center gap-6 bg-white dark:bg-neutral-900 px-6 min-h-[100px] py-4 justify-between border-b border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer">
+<div class="flex items-center gap-6">
+<div class="bg-neutral-100 dark:bg-neutral-800 bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-20 border border-neutral-200" data-alt="Official team game jersey mockup" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBk-D47KBGkFnIrlEdOo9uj16i6ZyOn_ielc2Vr0ExHiX3U9sYR3-XlhZbVRjwthfHKK6iAjgtHXA5msFfqbIwWqH7d_Z5hwQWjBb-owStGRZ1BJPbnitVYCL8ZCxa7zmB9K6HspNa3P9H9H7ONHyZDl1OWHzSRxv_0OQBQil1-zaoAgFm2cAI2XHHDe29iduJnxj8-OjCNNDJ2AgyYLSXt5hulqKVhWJvIwXceCpJOC7OxgbyVF3LAwMP4anacgcbQbF_wViFfrIU");'></div>
+<div class="flex flex-col justify-center">
+<p class="text-primary dark:text-white text-xl font-black uppercase tracking-tighter">Official Game Jersey</p>
+<p class="text-neutral-400 text-xs font-bold uppercase tracking-widest mt-1">Dri-FIT Advanced Technology</p>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="px-4 py-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-400 text-xs font-black uppercase tracking-widest rounded-full flex items-center gap-2">
+<div class="size-2 rounded-full bg-neutral-300"></div>
+                                    Not Set
+                                </span>
+<p class="text-[10px] text-red-500 font-bold uppercase">Selection Required</p>
+</div>
+</div>
+<!-- Item 2: Shorts -->
+<div class="flex items-center gap-6 bg-white dark:bg-neutral-900 px-6 min-h-[100px] py-4 justify-between border-b border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer">
+<div class="flex items-center gap-6">
+<div class="bg-neutral-100 dark:bg-neutral-800 bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-20 border border-neutral-200" data-alt="Athletic performance shorts" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuClWboHFfQLpjvVVPqo9li6Ijjev6jJxuQAa60BNmoDAMZCsUBqydwSY8Qv5fFwdAkF8i5b4hxnwGTIpnJm3YZkpZB0NzqFO7LIwQU_ToKZi-DbSbXKsfnfsWPnhaeG7j6gjHFql5BUvHtrE0WYva0vRcM_gOsPg91i_9XN2AINT2Ohb9o4er6aTdkDx5Ffv_7Eq0OalbmvqVnSS3GYs3jgF0Qf32HCDi9t_yK8qxt_9ckP9NMKb1y_9i1PBSSIlkSzFSTGHWiOBl0");'></div>
+<div class="flex flex-col justify-center">
+<p class="text-primary dark:text-white text-xl font-black uppercase tracking-tighter">Performance Shorts</p>
+<p class="text-neutral-400 text-xs font-bold uppercase tracking-widest mt-1">Lightweight Stretch Mesh</p>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="px-4 py-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-400 text-xs font-black uppercase tracking-widest rounded-full flex items-center gap-2">
+<div class="size-2 rounded-full bg-neutral-300"></div>
+                                    Not Set
+                                </span>
+<p class="text-[10px] text-red-500 font-bold uppercase">Selection Required</p>
+</div>
+</div>
+<!-- Item 3: Socks -->
+<div class="flex items-center gap-6 bg-white dark:bg-neutral-900 px-6 min-h-[100px] py-4 justify-between border-b border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer">
+<div class="flex items-center gap-6">
+<div class="bg-neutral-100 dark:bg-neutral-800 bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-20 border border-neutral-200" data-alt="Performance crew sports socks" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCcs2qgtsQLIR3bFMG_yB_3jAMNw1A9Jokhy3JVgr1UJfkcJDvvuU8sHCfLq-jm3D1UNwm5madQKhpUOtWFjQ3g_9aZsXs6G8LEGXvmiEDyQNriCJlMAM9YTN0h8DzuMyZr3sFPkSO6iP9MNmZx5l8gk3pL8KzN2hz_BDePVNMJXkcu8XtXRyf1NEsisR-ieHEjJPex0Lh2a_4LnJiIu6xt_rdWLCI2eZjmqtiFHBwxv5gyJ9dGUW5EKAf2TV-cE6KlZU1QmNgG48k");'></div>
+<div class="flex flex-col justify-center">
+<p class="text-primary dark:text-white text-xl font-black uppercase tracking-tighter">Squad Crew Socks</p>
+<p class="text-neutral-400 text-xs font-bold uppercase tracking-widest mt-1">Pack of 2 • Zonal Cushioning</p>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="px-4 py-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-400 text-xs font-black uppercase tracking-widest rounded-full flex items-center gap-2">
+<div class="size-2 rounded-full bg-neutral-300"></div>
+                                    Not Set
+                                </span>
+<p class="text-[10px] text-red-500 font-bold uppercase">Selection Required</p>
+</div>
+</div>
+</div>
+<!-- Footer Info -->
+<div class="mt-12 p-8 border-t-4 border-primary bg-neutral-100 dark:bg-neutral-900 rounded-lg flex flex-col md:flex-row items-center justify-between gap-6">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-4xl text-primary dark:text-white">help_outline</span>
+<div>
+<h3 class="font-black uppercase tracking-tighter text-lg">Need Sizing Help?</h3>
+<p class="text-sm text-neutral-500 font-medium">View our universal Nike youth fit guide for accurate measurements.</p>
+</div>
+</div>
+<button class="px-8 py-3 bg-white dark:bg-neutral-800 border-2 border-primary text-primary dark:text-white font-black uppercase tracking-widest text-sm hover:bg-primary hover:text-white transition-all">
+                            Open Fit Guide
+                        </button>
+</div>
+</div>
+</main>
+<!-- Bottom Floating Summary (Mobile/Compact feel) -->
+<footer class="md:hidden fixed bottom-0 w-full bg-white dark:bg-neutral-900 border-t border-neutral-200 px-6 py-4 flex items-center justify-between shadow-[0_-4px_10px_rgba(0,0,0,0.1)]">
+<div>
+<p class="text-xs font-black uppercase text-neutral-400">Items Left</p>
+<p class="text-xl font-black text-red-600">3 / 3</p>
+</div>
+<button class="bg-primary text-white font-black uppercase tracking-widest px-6 py-3 rounded-lg text-sm">
+                    Finish Now
+                </button>
+</footer>
+</div>
+</div>
+</body></html>

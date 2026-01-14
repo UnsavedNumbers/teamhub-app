@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tryouts: Athletic Recruitment Home V1</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#141414",
+                        "background-light": "#f7f7f7",
+                        "background-dark": "#121212",
+                        "brand-accent": "#E2FF00"
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body {
+            font-family: 'Lexend', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .hero-title {
+            font-size: clamp(2rem, 8vw, 6rem);
+            line-height: 0.9;
+        }
+    </style>
+</head>
+<body class="bg-white dark:bg-background-dark text-primary dark:text-white min-h-screen">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<header class="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 px-6 md:px-12 py-5 bg-white dark:bg-neutral-900 sticky top-0 z-50">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-2 text-primary dark:text-white">
+<div class="size-7 bg-primary dark:bg-white flex items-center justify-center rounded-sm">
+<span class="material-symbols-outlined text-white dark:text-black text-xl">bolt</span>
+</div>
+<h2 class="text-xl font-black leading-tight tracking-tighter uppercase italic">TeamHub</h2>
+</div>
+<nav class="hidden lg:flex items-center gap-8 ml-4">
+<a class="text-xs font-black uppercase tracking-widest border-b-2 border-primary py-1" href="#">Tryouts</a>
+<a class="text-xs font-black uppercase tracking-widest text-neutral-400 hover:text-primary transition-colors py-1" href="#">Recruitment</a>
+<a class="text-xs font-black uppercase tracking-widest text-neutral-400 hover:text-primary transition-colors py-1" href="#">Showcases</a>
+</nav>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden md:flex items-center bg-neutral-100 dark:bg-neutral-800 rounded px-3 py-1.5 border border-transparent focus-within:border-primary transition-all">
+<span class="material-symbols-outlined text-neutral-400 text-lg">search</span>
+<input class="bg-transparent border-none text-[10px] font-black tracking-widest focus:ring-0 placeholder:text-neutral-400 w-48 uppercase" placeholder="SEARCH ORGANIZATIONS" type="text"/>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden sm:flex flex-col items-end">
+<p class="text-[10px] font-black text-neutral-400 uppercase tracking-widest leading-none">Athlete Profile</p>
+<p class="text-xs font-black uppercase">Marcus Thompson</p>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border-2 border-primary" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAZ4Oz3_k3S1syUyMH67Gl5Kyh-9B85KqFTFny5D88B8L2U6O7dc8bu6ixF8bOE4foOC_fNS2S9GptULxRA7s7SFg_6DYzZB91py_WUAhkQuNrZCGJEemzMwBhevMSBAOpChPytFYMzfOQAWakgGgUW1Dp1tpiyzeSc2vXtFzRYMMD9Sa03Bd9VQHsB_K6laxC_m3KjT7CGOIbYj01wMascjakfqRVgJbve67dO_YseLUA5s7TMmLm1e6r81m3IWttcQ7_ICS44GjA");'></div>
+</div>
+</div>
+</header>
+<main class="flex flex-1 flex-col pb-20">
+<div class="bg-neutral-50 dark:bg-neutral-900/50 border-b border-neutral-100 dark:border-neutral-800 px-6 md:px-12 py-3 flex items-center justify-between overflow-x-auto">
+<div class="flex items-center gap-2 min-w-max">
+<span class="text-[10px] font-black text-neutral-400 uppercase tracking-widest mr-4">Select Athlete:</span>
+<button class="px-4 py-1.5 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-full">Marcus (U16)</button>
+<button class="px-4 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-[10px] font-black uppercase tracking-widest rounded-full hover:bg-neutral-100 transition-colors">Leo (U12)</button>
+<button class="size-8 flex items-center justify-center rounded-full border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-400">
+<span class="material-symbols-outlined text-lg">add</span>
+</button>
+</div>
+<div class="hidden md:flex items-center gap-4 min-w-max">
+<span class="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Sport:</span>
+<select class="bg-transparent border-none text-[10px] font-black uppercase tracking-widest focus:ring-0 cursor-pointer">
+<option>All Sports</option>
+<option>Basketball</option>
+<option>Soccer</option>
+</select>
+</div>
+</div>
+<div class="max-w-[1400px] mx-auto w-full px-6 md:px-12 py-10">
+<section class="mb-12">
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+<div class="lg:col-span-3 bg-primary text-white p-8 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
+<div class="z-10">
+<h3 class="text-xs font-black tracking-[0.3em] uppercase text-neutral-400 mb-2">Current Lifecycle</h3>
+<h2 class="text-4xl md:text-5xl font-black italic uppercase tracking-tighter leading-none mb-6">RECRUITMENT STATUS</h2>
+<div class="flex items-center gap-2 md:gap-8">
+<div class="flex flex-col items-center gap-2">
+<div class="size-3 rounded-full bg-brand-accent"></div>
+<span class="text-[9px] font-black uppercase tracking-widest">Discovery</span>
+</div>
+<div class="h-[2px] w-8 md:w-16 bg-brand-accent"></div>
+<div class="flex flex-col items-center gap-2">
+<div class="size-3 rounded-full bg-brand-accent"></div>
+<span class="text-[9px] font-black uppercase tracking-widest">Registration</span>
+</div>
+<div class="h-[2px] w-8 md:w-16 bg-neutral-700"></div>
+<div class="flex flex-col items-center gap-2 opacity-40">
+<div class="size-3 rounded-full bg-neutral-500"></div>
+<span class="text-[9px] font-black uppercase tracking-widest">Evaluation</span>
+</div>
+<div class="h-[2px] w-8 md:w-16 bg-neutral-700"></div>
+<div class="flex flex-col items-center gap-2 opacity-40">
+<div class="size-3 rounded-full bg-neutral-500"></div>
+<span class="text-[9px] font-black uppercase tracking-widest">Placement</span>
+</div>
+</div>
+</div>
+<div class="z-10 flex flex-col items-end gap-2 text-right">
+<div class="bg-brand-accent text-black px-4 py-2 font-black uppercase tracking-widest text-xs">2 Action Required</div>
+<p class="text-neutral-400 text-[10px] font-bold uppercase">Next: Elite Showcase Oct 24</p>
+</div>
+<div class="absolute -right-10 -bottom-10 size-64 bg-neutral-800/50 rounded-full blur-3xl"></div>
+</div>
+<div class="bg-neutral-100 dark:bg-neutral-900 p-8 flex flex-col justify-center border-l-4 border-brand-accent">
+<p class="text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-1">Passport Health</p>
+<p class="text-3xl font-black italic uppercase tracking-tighter">Verified</p>
+<p class="text-xs text-neutral-400 mt-2 font-medium">All documents submitted for the 2024 season.</p>
+</div>
+</div>
+</section>
+<section>
+<div class="flex items-baseline justify-between mb-8 border-b-4 border-primary pb-2">
+<h2 class="text-4xl font-black italic uppercase tracking-tighter">Upcoming Tryouts</h2>
+<p class="text-sm font-black text-neutral-400 uppercase tracking-widest">October 2023 - November 2023</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<div class="group relative flex flex-col bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 shadow-sm hover:shadow-2xl transition-all duration-300">
+<div class="relative aspect-[16/9] overflow-hidden">
+<div class="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors z-10"></div>
+<img alt="Elite Basketball Tryouts" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 scale-100 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZSk6QQsn84k3f7PuEeXoBDFPcg6h_MELXChYRDAZsrgGZOp6a9qz2YKoCa7-Z437eGvS7mAQxsyEuhM3klsH3nHPm8I5OmKdyTQx_ANxoFvVC5rUP50a17wYxpiURVUFmQ36jJVTl5CXkUpiY_Ocizqlk-be2fGIejBCiVcdiQkLoT79q50lfOBNt2nI5mqUSeZrnlutkWf8S7FC6nxdNo3iK73Rbg9FUe_WzYWGqriFmE8_3hnZTXLLthLwZltQOUwApsSr8_I0"/>
+<div class="absolute top-4 left-4 z-20 flex flex-col gap-2">
+<span class="bg-green-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1">Registered</span>
+<span class="bg-white/90 backdrop-blur text-black text-[10px] font-black uppercase tracking-widest px-3 py-1">Basketball</span>
+</div>
+</div>
+<div class="p-8 flex flex-col grow">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="text-3xl font-black italic uppercase tracking-tighter leading-tight">North City Elite</h3>
+<p class="text-xs font-black text-neutral-400 uppercase tracking-[0.2em] mt-1">U16 Premier Division</p>
+</div>
+<div class="text-right">
+<p class="text-2xl font-black tracking-tighter leading-none">OCT 18</p>
+<p class="text-[10px] font-black text-neutral-400 uppercase">6:00 PM</p>
+</div>
+</div>
+<div class="mt-auto pt-6 flex items-center justify-between border-t border-neutral-100 dark:border-neutral-800">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-neutral-400">location_on</span>
+<p class="text-[10px] font-black uppercase tracking-widest text-neutral-500">Metro Sports Complex, Court 4</p>
+</div>
+<button class="text-[10px] font-black uppercase tracking-widest border-b-2 border-primary">View Details</button>
+</div>
+</div>
+</div>
+<div class="group relative flex flex-col bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 shadow-sm hover:shadow-2xl transition-all duration-300">
+<div class="relative aspect-[16/9] overflow-hidden">
+<div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors z-10"></div>
+<img alt="Regional Showcase" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 scale-100 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBk-D47KBGkFnIrlEdOo9uj16i6ZyOn_ielc2Vr0ExHiX3U9sYR3-XlhZbVRjwthfHKK6iAjgtHXA5msFfqbIwWqH7d_Z5hwQWjBb-owStGRZ1BJPbnitVYCL8ZCxa7zmB9K6HspNa3P9H9H7ONHyZDl1OWHzSRxv_0OQBQil1-zaoAgFm2cAI2XHHDe29iduJnxj8-OjCNNDJ2AgyYLSXt5hulqKVhWJvIwXceCpJOC7OxgbyVF3LAwMP4anacgcbQbF_wViFfrIU"/>
+<div class="absolute top-4 left-4 z-20 flex flex-col gap-2">
+<span class="bg-primary text-white text-[10px] font-black uppercase tracking-widest px-3 py-1">Not Registered</span>
+<span class="bg-white/90 backdrop-blur text-black text-[10px] font-black uppercase tracking-widest px-3 py-1">Soccer</span>
+</div>
+</div>
+<div class="p-8 flex flex-col grow">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="text-3xl font-black italic uppercase tracking-tighter leading-tight">Statewide ID Clinic</h3>
+<p class="text-xs font-black text-neutral-400 uppercase tracking-[0.2em] mt-1">U14-U16 Regional Pool</p>
+</div>
+<div class="text-right">
+<p class="text-2xl font-black tracking-tighter leading-none">NOV 02</p>
+<p class="text-[10px] font-black text-neutral-400 uppercase">9:00 AM</p>
+</div>
+</div>
+<div class="mt-auto pt-6 flex items-center gap-4">
+<button class="flex-1 bg-primary text-white text-xs font-black uppercase tracking-widest h-12 flex items-center justify-center hover:bg-neutral-800 transition-colors">
+                                    Register Now
+                                </button>
+<button class="size-12 border-2 border-primary flex items-center justify-center hover:bg-primary hover:text-white transition-all">
+<span class="material-symbols-outlined">bookmark</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group relative flex flex-col bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 shadow-sm hover:shadow-2xl transition-all duration-300">
+<div class="relative aspect-[16/9] overflow-hidden">
+<div class="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors z-10"></div>
+<img alt="All-Star Tryouts" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 scale-100 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuClWboHFfQLpjvVVPqo9li6Ijjev6jJxuQAa60BNmoDAMZCsUBqydwSY8Qv5fFwdAkF8i5b4hxnwGTIpnJm3YZkpZB0NzqFO7LIwQU_ToKZi-DbSbXKsfnfsWPnhaeG7j6gjHFql5BUvHtrE0WYva0vRcM_gOsPg91i_9XN2AINT2Ohb9o4er6aTdkDx5Ffv_7Eq0OalbmvqVnSS3GYs3jgF0Qf32HCDi9t_yK8qxt_9ckP9NMKb1y_9i1PBSSIlkSzFSTGHWiOBl0"/>
+<div class="absolute top-4 left-4 z-20 flex flex-col gap-2">
+<span class="bg-brand-accent text-black text-[10px] font-black uppercase tracking-widest px-3 py-1">In Evaluation</span>
+<span class="bg-white/90 backdrop-blur text-black text-[10px] font-black uppercase tracking-widest px-3 py-1">Multi-Sport</span>
+</div>
+</div>
+<div class="p-8 flex flex-col grow">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="text-3xl font-black italic uppercase tracking-tighter leading-tight">Winter All-Stars</h3>
+<p class="text-xs font-black text-neutral-400 uppercase tracking-[0.2em] mt-1">City League Selection</p>
+</div>
+<div class="text-right">
+<p class="text-2xl font-black tracking-tighter leading-none text-green-600">PASSED</p>
+<p class="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Phase 1</p>
+</div>
+</div>
+<div class="mt-auto pt-6 flex items-center justify-between border-t border-neutral-100 dark:border-neutral-800">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-green-500">check_circle</span>
+<p class="text-[10px] font-black uppercase tracking-widest text-neutral-500">Waitlisted for Final Round</p>
+</div>
+<button class="text-[10px] font-black uppercase tracking-widest border-b-2 border-primary">Check Status</button>
+</div>
+</div>
+</div>
+<div class="relative flex flex-col bg-neutral-100 dark:bg-neutral-800 border-2 border-dashed border-neutral-300 dark:border-neutral-700 items-center justify-center p-12 text-center group cursor-pointer hover:border-primary transition-colors">
+<div class="size-20 bg-white dark:bg-neutral-900 flex items-center justify-center rounded-full mb-6 shadow-xl group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-4xl">add</span>
+</div>
+<h3 class="text-2xl font-black italic uppercase tracking-tighter">Explore More</h3>
+<p class="text-xs text-neutral-500 font-bold uppercase tracking-widest mt-2">Find 20+ additional tryouts in your area</p>
+</div>
+</div>
+</section>
+</div>
+</main>
+<div class="hidden md:flex fixed bottom-8 right-8 z-40 bg-white dark:bg-neutral-900 border-2 border-primary shadow-2xl p-6 max-w-sm flex-col gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+<div class="flex items-start justify-between">
+<div class="size-8 bg-brand-accent flex items-center justify-center">
+<span class="material-symbols-outlined text-black font-bold">campaign</span>
+</div>
+<button class="text-neutral-400 hover:text-black">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+</div>
+<div>
+<h4 class="text-sm font-black uppercase tracking-widest">Recruitment Spotlight</h4>
+<p class="text-xs text-neutral-500 mt-2 font-medium">Scouts from 3 Regional Universities are viewing Marcus's profile today. Update film to stay visible.</p>
+</div>
+<button class="w-full bg-primary text-white text-[10px] font-black uppercase tracking-[0.2em] py-3 hover:bg-neutral-800 transition-colors">
+            Update Highlight Reel
+        </button>
+</div>
+<footer class="md:hidden fixed bottom-0 w-full bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 px-6 py-4 flex items-center justify-between z-50">
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[8px] font-black uppercase">Home</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-neutral-400">
+<span class="material-symbols-outlined">search</span>
+<span class="text-[8px] font-black uppercase">Find</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-neutral-400">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="text-[8px] font-black uppercase">Schedule</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-neutral-400">
+<span class="material-symbols-outlined">account_circle</span>
+<span class="text-[8px] font-black uppercase">Profile</span>
+</button>
+</footer>
+</div>
+
+</body></html>

@@ -1,0 +1,60 @@
+PHASE 09 - TRYOUTS
+=================
+
+Goal:
+Allow families to register for tryouts and coaches to evaluate players.
+
+----------------------------------------------------------------
+REQUIREMENTS
+----------------------------------------------------------------
+
+- Admin can create tryouts by org
+- Parents can register a child
+- Tryout has:
+  - age group
+  - date
+- Parents can see registration status
+- Coaches can:
+  - see registered players
+  - score players
+  - add notes
+- Admin can mark:
+  - offered
+  - rejected
+
+----------------------------------------------------------------
+DATA
+----------------------------------------------------------------
+
+Use:
+- tryouts
+- tryout_registrations
+- tryout_scores
+
+----------------------------------------------------------------
+DELIVERABLES
+----------------------------------------------------------------
+
+- SQL
+- RLS
+- Parent tryout registration UI
+- Coach scoring UI
+- Admin decision UI
+
+----------------------------------------------------------------
+OUTPUT
+----------------------------------------------------------------
+
+Provide:
+- SQL
+- RLS
+- React components
+- Test plan
+
+----------------------------------------------------------------
+STOP CONDITIONS
+----------------------------------------------------------------
+
+If tryout fees or deposits are needed, ask.
+
+END

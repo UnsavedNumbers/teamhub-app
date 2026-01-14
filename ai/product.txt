@@ -1,0 +1,120 @@
+TEAMHUB PRODUCT SPECIFICATION
+============================
+
+This document defines the full product behavior of TeamHub.
+All UI, API, and data behavior must conform to this document.
+If something is not specified here, it must not be invented.
+
+----------------------------------------------------------------
+1) PURPOSE
+----------------------------------------------------------------
+
+TeamHub is a web-based parent portal for youth sports.
+
+It replaces:
+- Group chats
+- Email chains
+- Venmo
+- Google Forms
+- Spreadsheets
+- TeamSnap-style tools
+
+It is parent-first, coach-optional, admin-controlled.
+
+----------------------------------------------------------------
+2) CORE CONCEPTS
+----------------------------------------------------------------
+
+Family
+- A household account
+- Has guardians and children
+
+Child
+- A player
+- Can belong to multiple teams
+
+Team
+- A roster for a season
+- Belongs to an organization
+
+Season
+- Time-bounded period for a team
+
+Event
+- Practice, game, tournament, team meeting
+
+Attendance
+- RSVP per child per event
+
+Payment
+- Money owed or paid for a child on a team
+
+Uniform Order
+- Sizes and items for a child on a team
+
+Travel Plan
+- Tournament trip info
+
+Tryout
+- Registration and evaluation for team placement
+
+Message
+- Team communication
+
+----------------------------------------------------------------
+3) PARENT EXPERIENCE
+----------------------------------------------------------------
+
+Parents see a Family Home timeline showing:
+- Next event
+- What is due
+- What is missing
+- Announcements
+
+Parents can:
+- RSVP attendance
+- Pay fees
+- Submit uniform sizes
+- View travel plans
+- Receive announcements
+- Message coaches/admins
+
+Parents can have multiple children across multiple teams.
+
+----------------------------------------------------------------
+4) COACH EXPERIENCE
+----------------------------------------------------------------
+
+Coaches can:
+- View rosters
+- See attendance
+- Post announcements
+- View payment compliance (paid / not paid only)
+- Manage tryout evaluations
+
+----------------------------------------------------------------
+5) ADMIN EXPERIENCE
+----------------------------------------------------------------
+
+Admins can:
+- Create teams and seasons
+- Create events
+- Create fees
+- Track payments
+- Manage uniforms
+- Create travel plans
+- Run tryouts
+- Export data
+
+----------------------------------------------------------------
+6) NON-FUNCTIONAL REQUIREMENTS
+----------------------------------------------------------------
+
+- Web based
+- Mobile responsive
+- Real-time updates
+- Secure
+- Audit trail for payments and attendance
+- Must support multi-child families
+
+END

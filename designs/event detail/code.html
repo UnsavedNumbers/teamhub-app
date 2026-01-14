@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Event Detail: Matchup Graphic V3</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "primary": "#258cf4",
+                "background-light": "#f5f7f8",
+                "background-dark": "#101922",
+              },
+              fontFamily: {
+                "display": ["Lexend", "sans-serif"]
+              },
+              borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+            },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .physical-btn {
+            box-shadow: 0 4px 0 0 #1a64b0;
+            transition: all 0.1s ease-in-out;
+        }
+        .physical-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 0 #1a64b0;
+        }
+        .physical-btn-secondary {
+            box-shadow: 0 4px 0 0 #1e2d3b;
+            transition: all 0.1s ease-in-out;
+        }
+        .physical-btn-secondary:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 0 #1e2d3b;
+        }
+        @keyframes pulse-accent {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.02); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        .pulse-badge {
+            animation: pulse-accent 2s infinite ease-in-out;
+        }
+        .diagonal-pattern {
+            background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.03) 10px, rgba(255,255,255,0.03) 20px);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white min-h-screen">
+<!-- Top Navigation Bar -->
+<header class="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark sticky top-0 z-50">
+<div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-2">
+<div class="bg-primary p-1.5 rounded-lg text-white">
+<span class="material-symbols-outlined text-2xl">sports_soccer</span>
+</div>
+<h2 class="text-xl font-bold tracking-tight">TeamHub</h2>
+</div>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Dashboard</a>
+<a class="text-sm font-bold text-primary border-b-2 border-primary py-5" href="#">Schedule</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Roster</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Stats</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">search</span>
+<input class="bg-slate-100 dark:bg-slate-800 border-none rounded-lg pl-10 pr-4 py-2 text-sm w-64 focus:ring-2 focus:ring-primary" placeholder="Search events..." type="text"/>
+</div>
+<button class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="w-10 h-10 rounded-full bg-cover bg-center border-2 border-primary" data-alt="User profile avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDh17YBduoB8hHl7oi_Q3xMzvR5-OCIwZEgRDW9nWekEkv_KV75vx5zewYWkT4tkYIsmLVDeHVkGspjNeXe_qJZWNwnHjKzci4dKQnEWP1YB41ZzTNaqCvdJxkDKJcS1uaICrGNAmCQESdW5vOeFZNUcQ6U21NSVJda7CNnsgK5H9upRdcqDuTwbiX0pXtTPNrVuq1OLobrC7wQ6vosQ3iyFXUGp4FoKHVy7hZQdZxFH9UcrIZoGpajv9l17RQVe88GISotiBPb-yE')"></div>
+</div>
+</div>
+</header>
+<main class="max-w-7xl mx-auto px-4 py-8">
+<!-- Breadcrumbs -->
+<nav class="flex items-center gap-2 mb-6 text-sm">
+<a class="text-slate-500 hover:text-primary" href="#">Elite Youths SC</a>
+<span class="material-symbols-outlined text-sm text-slate-400">chevron_right</span>
+<a class="text-slate-500 hover:text-primary" href="#">League Schedule</a>
+<span class="material-symbols-outlined text-sm text-slate-400">chevron_right</span>
+<span class="font-semibold">Game Day Detail</span>
+</nav>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Left Column: The Matchup Graphic Card -->
+<div class="lg:col-span-8 space-y-6">
+<!-- Main Broadcast Card -->
+<div class="relative overflow-hidden rounded-xl bg-[#0f172a] shadow-2xl border border-slate-700 diagonal-pattern">
+<div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80"></div>
+<!-- Content Over Background -->
+<div class="relative p-8 flex flex-col items-center">
+<!-- Header Label -->
+<div class="flex justify-between w-full items-start mb-12">
+<span class="bg-primary/20 text-primary border border-primary/30 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest">League Matchup</span>
+<span class="text-white/60 text-xs font-bold uppercase tracking-widest">Round 12 • Field 4B</span>
+</div>
+<!-- Main Matchup Row -->
+<div class="flex items-center justify-between w-full max-w-2xl gap-4">
+<!-- Team Home -->
+<div class="flex flex-col items-center gap-4 flex-1">
+<div class="w-32 h-32 md:w-40 md:h-40 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center p-4 backdrop-blur-sm">
+<img class="w-full h-full object-contain" data-alt="Wolves Academy Team Crest" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnii_Jf_hWYVBtPsvjOeKGRWJAqmShlTkx-42qGZdExTLRGBbu0AyLi5YK-tvnx1w5ce04mIGwG3YfP4bxM2E93OKvszRoorn5CQFEj5YaZeXHgEUFl5mMezuHKVMf2bwDT3zzltk0b1h1D-sc3qb5VkYiNiC88xpxy8Vp6dzPWVz4sxhnPa9jB5TkCVwktdsTiuRCTxq_VI7MPvEYT__XXakj-gRC09iA8dh3JnsEuLnlHpQSFmN5SFlj93J-NS0xJo3RaHTG4wc"/>
+</div>
+<div class="text-center">
+<h3 class="text-xl md:text-2xl font-black uppercase tracking-tight">Wolves</h3>
+<p class="text-primary text-sm font-bold">HOME (8-2-1)</p>
+</div>
+</div>
+<!-- VS Splitter -->
+<div class="flex flex-col items-center gap-2">
+<div class="h-px w-12 bg-gradient-to-r from-transparent via-slate-500 to-transparent"></div>
+<span class="text-4xl md:text-6xl font-black italic text-white/20">VS</span>
+<div class="h-px w-12 bg-gradient-to-r from-transparent via-slate-500 to-transparent"></div>
+</div>
+<!-- Team Away -->
+<div class="flex flex-col items-center gap-4 flex-1">
+<div class="w-32 h-32 md:w-40 md:h-40 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center p-4 backdrop-blur-sm">
+<img class="w-full h-full object-contain" data-alt="Lions FC Team Crest" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC7onItOguhFR78zyzCfgiUEpQerDlAghJ53QAeXfrKAyXh5g71DqGkdqHS8_YstKORcl02P3pLDz8FzUnu0fwzTprKeAjWNa0dzs29GqZTvs88JhyuFLOqDxUTfPNZ8jq5uETAWCFnM58Coy8AyqbeRsL32lHAVzR2QTL07QRCEXnC1OcpgCUj8TBDLLqvyVY9rF2xDOIY3Mm0wpQxBvTxZ5ohl8Njv2o35XE3mgAwyNOxA1xhNjlhmx9ax9aQC3sso20QMBdlvME"/>
+</div>
+<div class="text-center">
+<h3 class="text-xl md:text-2xl font-black uppercase tracking-tight">Lions FC</h3>
+<p class="text-slate-400 text-sm font-bold">AWAY (9-1-0)</p>
+</div>
+</div>
+</div>
+<!-- Date & Time Row -->
+<div class="mt-12 text-center">
+<h1 class="text-3xl md:text-4xl font-black uppercase mb-1">Saturday, Oct 14</h1>
+<div class="flex items-center justify-center gap-3 text-slate-300">
+<span class="material-symbols-outlined text-primary">schedule</span>
+<span class="text-xl font-medium tracking-wide">KICKOFF 10:30 AM</span>
+</div>
+</div>
+<!-- Arrive By Pulse Badge -->
+<div class="mt-8">
+<div class="pulse-badge bg-amber-500 text-black px-6 py-2 rounded-lg font-black text-sm uppercase tracking-tighter flex items-center gap-2 shadow-[0_0_15px_rgba(245,158,11,0.5)]">
+<span class="material-symbols-outlined text-lg">alarm</span>
+                                ARRIVE BY 8:30 AM
+                            </div>
+</div>
+</div>
+<!-- Bottom Logistics Strip -->
+<div class="relative bg-slate-900/80 backdrop-blur-md border-t border-slate-700 px-8 py-4 flex flex-wrap justify-between items-center gap-4">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">cloud</span>
+<span class="text-sm font-bold uppercase">72° Sunny</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">location_on</span>
+<span class="text-sm font-bold uppercase">South Field, Regional Park</span>
+</div>
+</div>
+<button class="flex items-center gap-2 text-primary hover:text-white transition-colors text-sm font-bold uppercase">
+                            Open in Maps <span class="material-symbols-outlined text-sm">open_in_new</span>
+</button>
+</div>
+</div>
+<!-- Logistics Grid (Split Card) -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Column 1: Equipment Checklist -->
+<div class="bg-white dark:bg-background-dark border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">checklist</span>
+</div>
+<h4 class="font-bold text-lg">What to Bring</h4>
+</div>
+<ul class="space-y-3">
+<li class="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
+<span class="material-symbols-outlined text-emerald-500 text-xl">check_circle</span>
+                                Home White Jerseys (Primary)
+                            </li>
+<li class="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
+<span class="material-symbols-outlined text-emerald-500 text-xl">check_circle</span>
+                                Shin guards &amp; Cleats
+                            </li>
+<li class="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
+<span class="material-symbols-outlined text-emerald-500 text-xl">check_circle</span>
+                                32oz Water/Electrolytes
+                            </li>
+<li class="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
+<span class="material-symbols-outlined text-slate-300 dark:text-slate-700 text-xl">radio_button_unchecked</span>
+                                Warm-up jacket (Expect 55° AM)
+                            </li>
+</ul>
+</div>
+<!-- Column 2: Parking & Arrival -->
+<div class="bg-white dark:bg-background-dark border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">local_parking</span>
+</div>
+<h4 class="font-bold text-lg">Parking &amp; Entry</h4>
+</div>
+<div class="space-y-4">
+<p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                                Use the <strong class="text-slate-900 dark:text-white">South Entrance</strong> on Grand Ave. Parking Lot C is closest to Field 4B.
+                            </p>
+<div class="relative h-24 rounded-lg bg-slate-200 dark:bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-300 dark:border-slate-700">
+<img class="w-full h-full object-cover opacity-50" data-location="Chicago, IL" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDG366QGiaeUQZINHvfWrPocwtHqn4wDQS2dx6c0IBcIDLR416D53XxNobmra6WtQR3ZIPS6G11VTYnmYKS_wV7bpdtev1P4QAxmsByH-p_T7us0llR3JhOeC2LmBdUPLjq6BoToZ3fHf3OI4iGhd8HZgDJjYDxbkCPP-oBLHpLU9IpbbBJjalptaSdn93kXnGMb86IdSEGymG9tzVCm0uzHXOyHLPmxo4hs9-KaSALNBaW545kISYEOT2y6wYogTHa6DfN4g3qTE8"/>
+<div class="absolute inset-0 flex flex-col items-center justify-center gap-1">
+<span class="material-symbols-outlined text-primary text-3xl">map</span>
+<span class="text-xs font-bold uppercase tracking-widest bg-black/60 px-2 py-0.5 rounded">View Complex Map</span>
+</div>
+</div>
+<p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest text-center">Parking is limited, carpool recommended</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: RSVP & Actions -->
+<div class="lg:col-span-4 space-y-6">
+<!-- Action Card -->
+<div class="bg-white dark:bg-background-dark border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-xl sticky top-24">
+<h4 class="font-bold text-xl mb-6 flex items-center justify-between">
+                        RSVP Status
+                        <span class="text-xs font-medium text-slate-400">18/22 Attending</span>
+</h4>
+<div class="space-y-4">
+<button class="physical-btn w-full bg-primary text-white py-4 rounded-lg font-black uppercase tracking-wider flex items-center justify-center gap-3">
+<span class="material-symbols-outlined">check</span>
+                            I'M ATTENDING
+                        </button>
+<button class="physical-btn-secondary w-full bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white py-4 rounded-lg font-black uppercase tracking-wider flex items-center justify-center gap-3">
+<span class="material-symbols-outlined">close</span>
+                            CAN'T MAKE IT
+                        </button>
+</div>
+<div class="mt-8 pt-8 border-t border-slate-200 dark:border-slate-800 space-y-4">
+<button class="w-full py-3 px-4 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-between group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary">groups</span>
+<span class="text-sm font-bold uppercase">View Team Roster</span>
+</div>
+<span class="material-symbols-outlined text-sm text-slate-400">chevron_right</span>
+</button>
+<button class="w-full py-3 px-4 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-between group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary">videocam</span>
+<span class="text-sm font-bold uppercase">Watch Live Stream</span>
+</div>
+<span class="material-symbols-outlined text-sm text-slate-400">chevron_right</span>
+</button>
+<button class="w-full py-3 px-4 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-between group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary">share</span>
+<span class="text-sm font-bold uppercase">Share Event Details</span>
+</div>
+<span class="material-symbols-outlined text-sm text-slate-400">chevron_right</span>
+</button>
+</div>
+<!-- Coach's Note -->
+<div class="mt-8 p-4 bg-primary/5 rounded-lg border border-primary/20 italic text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+<div class="flex items-center gap-2 mb-2 not-italic font-bold text-primary uppercase text-xs">
+<span class="material-symbols-outlined text-sm">chat_bubble</span>
+                            Coach Miller's Note
+                        </div>
+                        "Big game tomorrow, boys. Get plenty of sleep and hydrate today. We are wearing WHITE jerseys. See you on the pitch early for drills."
+                    </div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer Space -->
+<footer class="mt-20 border-t border-slate-200 dark:border-slate-800 py-12 bg-white dark:bg-background-dark/50">
+<div class="max-w-7xl mx-auto px-4 text-center">
+<div class="flex items-center justify-center gap-2 mb-4 text-slate-400">
+<span class="material-symbols-outlined">sports_soccer</span>
+<span class="font-black tracking-tighter text-xl">TeamHub</span>
+</div>
+<p class="text-slate-500 text-sm">© 2023 TeamHub Athletics. All rights reserved.</p>
+</div>
+</footer>
+</body></html>

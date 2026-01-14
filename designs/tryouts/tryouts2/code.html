@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tryouts: Performance Detail &amp; Wizard V2</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#141414",
+                        "accent": "#E2FF00", // Team-color accent (Neon athletic yellow/green)
+                        "background-light": "#ffffff",
+                        "background-dark": "#0a0a0a",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0px",
+                        "lg": "0px",
+                        "xl": "0px",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body {
+            font-family: 'Lexend', sans-serif;
+            @apply antialiased;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .step-active {
+            @apply border-primary dark:border-white text-primary dark:text-white font-black;
+        }
+        .step-inactive {
+            @apply border-neutral-200 dark:border-neutral-800 text-neutral-400 font-medium;
+        }
+        .massive-type {
+            font-size: clamp(3rem, 10vw, 8rem);
+            line-height: 0.85;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-primary dark:text-white min-h-screen">
+<div class="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden">
+<nav class="w-full bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 sticky top-0 z-50">
+<div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="size-8 bg-primary dark:bg-white flex items-center justify-center">
+<svg class="text-white dark:text-black size-5" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor"></path>
+<path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2"></path>
+<path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2"></path>
+</svg>
+</div>
+<span class="font-black tracking-tighter text-xl uppercase italic">TeamHub</span>
+</div>
+<div class="hidden md:flex items-center gap-8">
+<div class="flex items-center gap-2 step-active border-b-4 pb-1">
+<span class="text-xs uppercase tracking-widest">01. Child</span>
+</div>
+<div class="flex items-center gap-2 step-inactive border-b-4 border-transparent pb-1">
+<span class="text-xs uppercase tracking-widest">02. Guardian</span>
+</div>
+<div class="flex items-center gap-2 step-inactive border-b-4 border-transparent pb-1">
+<span class="text-xs uppercase tracking-widest">03. Forms</span>
+</div>
+<div class="flex items-center gap-2 step-inactive border-b-4 border-transparent pb-1">
+<span class="text-xs uppercase tracking-widest">04. Review</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-xs font-black uppercase tracking-widest opacity-50 hover:opacity-100 transition-opacity">Save &amp; Exit</button>
+</div>
+</div>
+</nav>
+<main class="flex-1">
+<section class="relative pt-20 pb-12 px-6 lg:px-20 border-b border-neutral-200 dark:border-neutral-800">
+<div class="max-w-7xl mx-auto">
+<div class="flex flex-col lg:flex-row justify-between items-end gap-8 mb-12">
+<div class="flex flex-col">
+<span class="text-accent bg-black px-3 py-1 text-xs font-black uppercase tracking-[0.3em] inline-block w-fit mb-4 italic">Tryout Details</span>
+<h1 class="massive-type font-black uppercase tracking-tighter italic">WHEN &amp;<br/>WHERE</h1>
+</div>
+<div class="flex flex-col items-start lg:items-end text-left lg:text-right gap-4 max-w-md">
+<p class="text-xl font-medium leading-tight">Elite Academy Tryouts (U14-U16) - Fall Season 2024. Registration is now open for prospective athletes.</p>
+<button class="bg-primary dark:bg-white text-white dark:text-black px-10 py-5 font-black uppercase tracking-widest text-sm hover:scale-[1.02] transition-transform active:scale-95 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)]">
+                                Register Athlete
+                            </button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1px bg-neutral-200 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-800">
+<div class="bg-white dark:bg-neutral-900 p-10 flex flex-col gap-4">
+<span class="material-symbols-outlined text-4xl">calendar_today</span>
+<div>
+<h3 class="font-black uppercase tracking-widest text-xs text-neutral-400 mb-1">Date &amp; Time</h3>
+<p class="text-2xl font-black uppercase">Oct 14-15, 2024</p>
+<p class="text-neutral-500 font-medium">8:00 AM - 12:00 PM</p>
+</div>
+</div>
+<div class="bg-white dark:bg-neutral-900 p-10 flex flex-col gap-4">
+<span class="material-symbols-outlined text-4xl">location_on</span>
+<div>
+<h3 class="font-black uppercase tracking-widest text-xs text-neutral-400 mb-1">Location</h3>
+<p class="text-2xl font-black uppercase">Metrostadium Park</p>
+<p class="text-neutral-500 font-medium">Field 4 &amp; 5 (Turf)</p>
+</div>
+</div>
+<div class="bg-white dark:bg-neutral-900 p-10 flex flex-col gap-4">
+<span class="material-symbols-outlined text-4xl">payments</span>
+<div>
+<h3 class="font-black uppercase tracking-widest text-xs text-neutral-400 mb-1">Entry Fee</h3>
+<p class="text-2xl font-black uppercase">$45.00</p>
+<p class="text-neutral-500 font-medium">Includes official tryout jersey</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section class="max-w-7xl mx-auto px-6 lg:px-20 py-20 grid grid-cols-1 lg:grid-cols-12 gap-16">
+<div class="lg:col-span-7 flex flex-col gap-10">
+<div>
+<h2 class="text-4xl font-black uppercase italic tracking-tighter mb-8">WHAT TO BRING</h2>
+<div class="space-y-4">
+<div class="flex items-center justify-between p-6 bg-neutral-50 dark:bg-neutral-900 border-l-8 border-primary dark:border-white">
+<div class="flex items-center gap-6">
+<div class="size-12 bg-white dark:bg-neutral-800 flex items-center justify-center border border-neutral-200 dark:border-neutral-700">
+<span class="material-symbols-outlined">sports_soccer</span>
+</div>
+<div>
+<p class="font-black uppercase text-lg">Cleats &amp; Shin Guards</p>
+<p class="text-sm text-neutral-500 font-medium">Mandatory safety equipment</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-green-500 font-bold">check_circle</span>
+</div>
+<div class="flex items-center justify-between p-6 bg-neutral-50 dark:bg-neutral-900 border-l-8 border-neutral-200 dark:border-neutral-700">
+<div class="flex items-center gap-6">
+<div class="size-12 bg-white dark:bg-neutral-800 flex items-center justify-center border border-neutral-200 dark:border-neutral-700">
+<span class="material-symbols-outlined">water_drop</span>
+</div>
+<div>
+<p class="font-black uppercase text-lg">Hydration (32oz+)</p>
+<p class="text-sm text-neutral-500 font-medium">Water stations provided for refills</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-neutral-300">circle</span>
+</div>
+<div class="flex items-center justify-between p-6 bg-neutral-50 dark:bg-neutral-900 border-l-8 border-neutral-200 dark:border-neutral-700">
+<div class="flex items-center gap-6">
+<div class="size-12 bg-white dark:bg-neutral-800 flex items-center justify-center border border-neutral-200 dark:border-neutral-700">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div>
+<p class="font-black uppercase text-lg">Medical Release Forms</p>
+<p class="text-sm text-neutral-500 font-medium">Digital signatures accepted</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-neutral-300">circle</span>
+</div>
+</div>
+</div>
+<div class="p-8 bg-accent text-black">
+<div class="flex items-start gap-4">
+<span class="material-symbols-outlined font-black">info</span>
+<div>
+<p class="font-black uppercase text-sm tracking-widest mb-1">Pro Tip</p>
+<p class="font-medium">Arrive 30 minutes early for check-in and jersey assignment. Warm-ups begin promptly at 8:00 AM.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="lg:col-span-5 flex flex-col gap-8">
+<div class="border-4 border-primary dark:border-white p-8">
+<h3 class="text-2xl font-black uppercase italic tracking-tighter mb-6">ATHLETE REQUIREMENTS</h3>
+<ul class="space-y-4">
+<li class="flex items-center gap-3 text-sm font-bold uppercase tracking-wide">
+<span class="size-2 bg-primary dark:bg-white"></span>
+                                Birth Year: 2008 - 2010
+                            </li>
+<li class="flex items-center gap-3 text-sm font-bold uppercase tracking-wide">
+<span class="size-2 bg-primary dark:bg-white"></span>
+                                Current USYS Player Card
+                            </li>
+<li class="flex items-center gap-3 text-sm font-bold uppercase tracking-wide">
+<span class="size-2 bg-primary dark:bg-white"></span>
+                                Primary/Secondary Jersey Selection
+                            </li>
+<li class="flex items-center gap-3 text-sm font-bold uppercase tracking-wide">
+<span class="size-2 bg-primary dark:bg-white"></span>
+                                Minimum 2.5 GPA (Academic Rule)
+                            </li>
+</ul>
+</div>
+<div class="relative group cursor-pointer overflow-hidden aspect-[4/3] bg-neutral-200">
+<img alt="Athlete training" class="absolute inset-0 w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500 opacity-80" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZSk6QQsn84k3f7PuEeXoBDFPcg6h_MELXChYRDAZsrgGZOp6a9qz2YKoCa7-Z437eGvS7mAQxsyEuhM3klsH3nHPm8I5OmKdyTQx_ANxoFvVC5rUP50a17wYxpiURVUFmQ36jJVTl5CXkUpiY_Ocizqlk-be2fGIejBCiVcdiQkLoT79q50lfOBNt2nI5mqUSeZrnlutkWf8S7FC6nxdNo3iK73Rbg9FUe_WzYWGqriFmE8_3hnZTXLLthLwZltQOUwApsSr8_I0"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end p-8">
+<p class="text-white text-3xl font-black uppercase italic tracking-tighter leading-none">Ready for the<br/>Next Level?</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<footer class="bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 py-12 px-6 lg:px-20">
+<div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
+<div class="flex items-center gap-8">
+<p class="text-xs font-black uppercase tracking-widest text-neutral-400">© 2024 TeamHub Elite</p>
+<a class="text-xs font-black uppercase tracking-widest hover:underline underline-offset-4" href="#">Privacy Policy</a>
+<a class="text-xs font-black uppercase tracking-widest hover:underline underline-offset-4" href="#">Contact Support</a>
+</div>
+<div class="flex gap-4">
+<button class="px-8 py-4 border-2 border-primary dark:border-white font-black uppercase tracking-widest text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+                        View Full Schedule
+                    </button>
+<button class="px-8 py-4 bg-primary dark:bg-white text-white dark:text-black font-black uppercase tracking-widest text-xs hover:opacity-90 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] transition-all">
+                        Begin Registration
+                    </button>
+</div>
+</div>
+</footer>
+</div>
+
+</body></html>

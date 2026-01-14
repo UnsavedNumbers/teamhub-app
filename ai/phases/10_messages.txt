@@ -1,0 +1,54 @@
+PHASE 10 - MESSAGING AND ANNOUNCEMENTS
+====================================
+
+Goal:
+Provide team communication without external chat apps.
+
+----------------------------------------------------------------
+REQUIREMENTS
+----------------------------------------------------------------
+
+- Team announcements:
+  - created by coach or admin
+  - visible to all team parents
+- Team messages:
+  - created by any team member
+  - visible only to team
+- No cross-team messaging
+
+----------------------------------------------------------------
+DATA
+----------------------------------------------------------------
+
+Use:
+- messages
+- announcements
+
+----------------------------------------------------------------
+DELIVERABLES
+----------------------------------------------------------------
+
+- SQL
+- RLS
+- Announcement creation UI
+- Team message thread UI
+- Realtime updates
+
+----------------------------------------------------------------
+OUTPUT
+----------------------------------------------------------------
+
+Provide:
+- SQL
+- RLS
+- React components
+- Realtime subscriptions
+- Test plan
+
+----------------------------------------------------------------
+STOP CONDITIONS
+----------------------------------------------------------------
+
+If moderation or reporting is needed, ask.
+
+END

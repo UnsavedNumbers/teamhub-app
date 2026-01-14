@@ -1,0 +1,60 @@
+TEAMHUB TECH STACK
+=================
+
+This file defines the only allowed technology stack.
+
+No other backend, database, or auth system may be used.
+
+----------------------------------------------------------------
+FRONTEND
+----------------------------------------------------------------
+
+React
+TypeScript
+Vite
+Tailwind or Chakra UI
+Hosted on Vercel
+
+----------------------------------------------------------------
+BACKEND PLATFORM
+----------------------------------------------------------------
+
+Supabase
+
+Features used:
+- Postgres
+- Row Level Security
+- Supabase Auth
+- Supabase Storage
+- Realtime
+- Edge Functions
+
+----------------------------------------------------------------
+PAYMENTS
+----------------------------------------------------------------
+
+Stripe
+
+All payments must be recorded in Stripe and mirrored in Postgres.
+
+----------------------------------------------------------------
+NOTIFICATIONS
+----------------------------------------------------------------
+
+Email via Resend or SendGrid
+SMS via Twilio
+Push via OneSignal (PWA)
+
+----------------------------------------------------------------
+MAPS
+----------------------------------------------------------------
+
+Mapbox or Google Maps
+
+----------------------------------------------------------------
+NO AWS
+----------------------------------------------------------------
+
+No AWS services of any kind are allowed.
+
+END

@@ -1,0 +1,55 @@
+PHASE 06 - PAYMENTS
+==================
+
+Goal:
+Allow admins to charge fees and parents to pay them.
+
+----------------------------------------------------------------
+REQUIREMENTS
+----------------------------------------------------------------
+
+- Admin can create a fee for a team and season
+- Fee is attached to a child
+- Parents can see:
+  - Amount due
+  - Due date
+  - Payment status
+- Parents can pay via Stripe
+- Receipts stored
+- Coaches see only paid/not paid
+
+----------------------------------------------------------------
+DATA
+----------------------------------------------------------------
+
+Use payments table from data_model.txt
+
+----------------------------------------------------------------
+DELIVERABLES
+----------------------------------------------------------------
+
+- Stripe integration
+- SQL for payments
+- RLS for payments
+- Parent payment UI
+- Admin fee creation UI
+- Webhook handling
+
+----------------------------------------------------------------
+OUTPUT
+----------------------------------------------------------------
+
+Provide:
+- SQL
+- RLS
+- Edge functions
+- React components
+- Test plan
+
+----------------------------------------------------------------
+STOP CONDITIONS
+----------------------------------------------------------------
+
+If partial payments or installments are needed, ask.
+
+END

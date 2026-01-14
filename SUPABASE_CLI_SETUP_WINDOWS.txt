@@ -1,0 +1,613 @@
+================================================================================
+  WINDOWS SUPABASE CLI SETUP INSTRUCTIONS
+  YouthSports.team - Database Migration Guide
+================================================================================
+
+This guide will help you set up the Supabase CLI on Windows and run all
+database migrations for the YouthSports.team application.
+
+IMPORTANT: Run all commands from PowerShell in the project root directory:
+  C:\YouthSports.team\web
+
+
+================================================================================
+  PREREQUISITES CHECK
+================================================================================
+
+Before installing Supabase CLI, verify you have the required tools:
+
+1. Check if Node.js and npm are installed:
+   $ npm --version
+
+   If this fails, install Node.js from: https://nodejs.org/
+   (Choose the LTS version for Windows)
+
+2. Verify you're in the correct directory:
+   $ pwd
+
+   Should show: C:\YouthSports.team\web
+
+   If not, navigate there:
+   $ cd "C:\YouthSports.team\web"
+
+3. Check PowerShell execution policy (may be needed later):
+   $ Get-ExecutionPolicy
+
+   If it shows "Restricted", see the "PowerShell Execution Policy" section below.
+
+
+================================================================================
+  INSTALLING THE SUPABASE CLI
+================================================================================
+
+Choose ONE of the following installation methods. If one fails, try the next.
+
+METHOD 1: Using npm (Recommended - Works on all Windows versions)
+--------------------------------------------------------------------------------
+
+1. Install Supabase CLI globally:
+   $ npm install -g supabase
+
+2. Verify installation:
+   $ supabase --version
+
+   Expected output: v1.x.x or higher
+
+3. If installation fails:
+   - Make sure npm is in your PATH
+   - Try running PowerShell as Administrator
+   - Check npm version: $ npm --version
+   - Reinstall Node.js if npm is missing
+
+
+METHOD 2: Using Scoop (Windows Package Manager)
+--------------------------------------------------------------------------------
+
+1. Check if Scoop is installed:
+   $ scoop --version
+
+2. If Scoop is NOT installed, install it first:
+   $ Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+   $ Invoke-RestMethod get.scoop.sh | Invoke-Expression
+
+3. Add Supabase bucket:
+   $ scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+
+4. Install Supabase CLI:
+   $ scoop install supabase
+
+5. Verify installation:
+   $ supabase --version
+
+
+METHOD 3: Using Chocolatey (Windows Package Manager)
+--------------------------------------------------------------------------------
+
+1. Check if Chocolatey is installed:
+   $ choco --version
+
+2. If Chocolatey is NOT installed:
+   - Open PowerShell as Administrator
+   - Run: Set-ExecutionPolicy Bypass -Scope Process -Force
+   - Then: [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+   - Close and reopen PowerShell
+
+3. Install Supabase CLI:
+   $ choco install supabase
+
+4. Verify installation:
+   $ supabase --version
+
+
+METHOD 4: Manual Download (Fallback)
+--------------------------------------------------------------------------------
+
+If all above methods fail:
+
+1. Visit: https://github.com/supabase/cli/releases
+2. Download the latest Windows .exe file
+3. Extract and add to your PATH, or run directly from the extracted folder
+
+
+================================================================================
+  POWERSHELL EXECUTION POLICY
+================================================================================
+
+If you encounter "execution of scripts is disabled" errors:
+
+1. Check current policy:
+   $ Get-ExecutionPolicy
+
+2. If it shows "Restricted", set it to allow local scripts:
+   $ Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+3. If that fails, run PowerShell as Administrator and try:
+   $ Set-ExecutionPolicy RemoteSigned -Scope LocalMachine
+
+4. Verify the change:
+   $ Get-ExecutionPolicy
+
+   Should now show: RemoteSigned
+
+
+================================================================================
+  LINKING YOUR PROJECT TO SUPABASE
+================================================================================
+
+Before running migrations, you must link your local project to your Supabase project.
+
+STEP 1: Get Your Project Reference ID
+--------------------------------------------------------------------------------
+
+Method A: From Supabase Dashboard (Recommended)
+  1. Go to https://supabase.com/dashboard
+  2. Select your project
+  3. Go to Settings → General
+  4. Find "Reference ID" (looks like: abcdefghijklmnop)
+  5. Copy this ID
+
+Method B: From Project URL
+  Your project URL is: https://YOUR_PROJECT_REF.supabase.co
+  The part before ".supabase.co" is your project reference ID
+
+Method C: From API Settings
+  1. Go to Settings → API
+  2. The Project URL contains your reference ID
+  3. Format: https://YOUR_PROJECT_REF.supabase.co
+
+
+STEP 2: Get Your Database Password
+--------------------------------------------------------------------------------
+
+Method A: Find Existing Password
+  1. Go to Supabase Dashboard → Settings → Database
+  2. Look for "Database password" section
+  3. If visible, copy it
+  4. If not visible (masked), you'll need to reset it (see Method B)
+
+Method B: Reset Password (If Forgotten)
+  1. Go to Supabase Dashboard → Settings → Database
+  2. Click "Reset database password"
+  3. Enter a new password (save it securely!)
+  4. Click "Reset password"
+  5. Use this new password when linking
+
+Note: The database password is set when you first create your Supabase project.
+      If you don't remember it, you must reset it.
+
+
+STEP 3: Link Your Project
+--------------------------------------------------------------------------------
+
+1. Make sure you're in the project root:
+   $ cd "C:\YouthSports.team\web"
+
+2. Link to your Supabase project:
+   $ supabase link --project-ref YOUR_PROJECT_REF
+
+   Replace YOUR_PROJECT_REF with your actual project reference ID.
+
+3. When prompted, enter your database password.
+
+4. Alternative: Provide password directly (avoids prompt):
+   $ supabase link --project-ref YOUR_PROJECT_REF --password YOUR_DB_PASSWORD
+
+5. Verify the link was successful:
+   $ supabase status
+
+   Should show your project details.
+
+
+TROUBLESHOOTING LINKING:
+--------------------------------------------------------------------------------
+
+If linking fails:
+  - Verify project reference ID is correct (no extra spaces)
+  - Check database password is correct
+  - Ensure your Supabase project is active (not paused)
+  - Try resetting database password in dashboard
+  - Check internet connection
+
+
+================================================================================
+  RUNNING DATABASE MIGRATIONS
+================================================================================
+
+IMPORTANT: Migrations MUST run in order (001 through 016). The recommended
+method runs them all automatically in the correct order.
+
+METHOD 1: Run All Migrations at Once (Recommended)
+--------------------------------------------------------------------------------
+
+This is the SAFEST method - it runs all 16 migrations in the correct order:
+
+1. Verify you're in the project root:
+   $ cd "C:\YouthSports.team\web"
+
+2. Check current directory:
+   $ pwd
+   Should show: C:\YouthSports.team\web
+
+3. Push all migrations:
+   $ supabase db push
+
+   This command:
+   - Reads all files from supabase/migrations/
+   - Runs them in numerical order (001, 002, 003, ... 016)
+   - Applies them to your Supabase database
+   - Shows progress for each migration
+
+4. Wait for completion. You should see:
+   - Migration files listed in order
+   - Success messages for each
+   - Final confirmation
+
+
+METHOD 2: Run Migrations Individually (Not Recommended)
+--------------------------------------------------------------------------------
+
+Only use this if METHOD 1 fails and you need to debug a specific migration.
+
+WARNING: You MUST run them in this exact order:
+
+  $ supabase db execute --file supabase/migrations/001_organizations.sql
+  $ supabase db execute --file supabase/migrations/002_families.sql
+  $ supabase db execute --file supabase/migrations/003_users.sql
+  $ supabase db execute --file supabase/migrations/004_teams.sql
+  $ supabase db execute --file supabase/migrations/005_seasons.sql
+  $ supabase db execute --file supabase/migrations/006_children.sql
+  $ supabase db execute --file supabase/migrations/007_team_memberships.sql
+  $ supabase db execute --file supabase/migrations/008_team_invite_codes.sql
+  $ supabase db execute --file supabase/migrations/009_events.sql
+  $ supabase db execute --file supabase/migrations/010_attendance.sql
+  $ supabase db execute --file supabase/migrations/011_payments.sql
+  $ supabase db execute --file supabase/migrations/012_uniform_orders.sql
+  $ supabase db execute --file supabase/migrations/013_travel_plans.sql
+  $ supabase db execute --file supabase/migrations/014_tryouts.sql
+  $ supabase db execute --file supabase/migrations/015_messages.sql
+  $ supabase db execute --file supabase/migrations/016_settings_and_preferences.sql
+
+If any migration fails, DO NOT continue. Fix the error first.
+
+
+MIGRATION FILE PATHS:
+--------------------------------------------------------------------------------
+
+All migration files use RELATIVE paths from the project root:
+  supabase/migrations/001_organizations.sql
+  supabase/migrations/002_families.sql
+  ... etc
+
+You MUST run commands from: C:\YouthSports.team\web
+
+If you're in a different directory, navigate first:
+  $ cd "C:\YouthSports.team\web"
+
+
+================================================================================
+  VERIFYING YOUR SETUP
+================================================================================
+
+After running migrations, verify everything is set up correctly:
+
+1. Check migration status:
+   $ supabase migration list
+
+   Should show all 16 migrations with "Applied" status.
+
+2. View database schema:
+   $ supabase db diff
+
+   Shows differences between local and remote (should be minimal if synced).
+
+3. Verify in Supabase Dashboard:
+   - Go to https://supabase.com/dashboard
+   - Select your project
+   - Go to Table Editor
+   - You should see tables like:
+     * organizations
+     * families
+     * users
+     * teams
+     * seasons
+     * children
+     * team_memberships
+     * events
+     * attendance
+     * payments
+     * ... and more
+
+4. Check Row Level Security (RLS):
+   - In Table Editor, click any table
+   - Go to Settings tab
+   - Verify "Enable Row Level Security" is checked (green/enabled)
+
+5. Generate TypeScript types (optional but recommended):
+   $ supabase gen types typescript --linked > src/lib/database.types.ts
+
+   This updates your TypeScript types to match your database schema.
+
+
+================================================================================
+  ENVIRONMENT VARIABLES
+================================================================================
+
+Your application needs Supabase credentials to connect to the database.
+
+FILE LOCATION:
+--------------------------------------------------------------------------------
+
+Create or edit this file in your project root:
+  C:\YouthSports.team\web\.env
+
+IMPORTANT: The .env file must be in the SAME directory as package.json
+
+
+FILE TEMPLATE:
+--------------------------------------------------------------------------------
+
+Copy this template into your .env file:
+
+  VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+  VITE_SUPABASE_ANON_KEY=your_anon_key_here
+
+Replace:
+  - YOUR_PROJECT_REF with your actual project reference ID
+  - your_anon_key_here with your actual anon/public key
+
+
+WHERE TO FIND THESE VALUES:
+--------------------------------------------------------------------------------
+
+1. Go to Supabase Dashboard: https://supabase.com/dashboard
+2. Select your project
+3. Go to Settings → API
+4. Copy these values:
+   - Project URL → Use for VITE_SUPABASE_URL
+   - anon/public key → Use for VITE_SUPABASE_ANON_KEY
+
+Example .env file:
+  VITE_SUPABASE_URL=https://abcdefghijklmnop.supabase.co
+  VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTY0MDAwMDAwMCwiZXhwIjoxOTU1NTczNjAwfQ.example
+
+
+VERIFYING ENVIRONMENT VARIABLES:
+--------------------------------------------------------------------------------
+
+1. After creating/updating .env file, RESTART your dev server:
+   - Stop the current server (Ctrl+C)
+   - Start it again: $ npm run dev
+
+2. Check if variables are loaded (in your browser console or terminal):
+   - The app should connect to Supabase
+   - No "Supabase not configured" warnings
+
+3. Test in PowerShell (optional):
+   $ Get-Content .env
+
+   Should show your VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
+
+
+COMMON MISTAKES:
+--------------------------------------------------------------------------------
+
+- Wrong file location: .env must be in project root (C:\YouthSports.team\web\.env)
+- Typos in variable names: Must be exactly VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
+- Missing quotes: Not needed for .env files, but no spaces around the = sign
+- Forgot to restart dev server after creating/updating .env
+- Using service_role key instead of anon key (NEVER use service_role in frontend!)
+
+
+================================================================================
+  TROUBLESHOOTING
+================================================================================
+
+ISSUE: "npm: command not found" or "npm is not recognized"
+SOLUTION:
+  - Node.js is not installed or not in PATH
+  - Install Node.js from https://nodejs.org/
+  - Restart PowerShell after installation
+  - Verify: $ npm --version
+
+
+ISSUE: "supabase: command not found" after installation
+SOLUTION:
+  - Close and reopen PowerShell
+  - Verify installation: $ npm list -g supabase
+  - Check if npm global bin is in PATH: $ npm config get prefix
+  - Add npm global bin to PATH if needed
+
+
+ISSUE: "Execution of scripts is disabled on this system"
+SOLUTION:
+  - See "PowerShell Execution Policy" section above
+  - Run: $ Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+  - Or run PowerShell as Administrator
+
+
+ISSUE: "Project not found" when linking
+SOLUTION:
+  - Verify project reference ID is correct (no typos, no spaces)
+  - Check project is active in Supabase dashboard (not paused)
+  - Ensure you have access to the project
+  - Try resetting database password
+
+
+ISSUE: "Invalid database password" when linking
+SOLUTION:
+  - Go to Supabase Dashboard → Settings → Database
+  - Reset database password
+  - Use the new password when linking
+  - Password is case-sensitive
+
+
+ISSUE: Migration fails with "relation already exists"
+SOLUTION:
+  - Table/function already exists in database
+  - This is OK if you're re-running migrations
+  - Migrations use "CREATE TABLE IF NOT EXISTS" so this is usually safe
+  - If error persists, check Supabase dashboard for existing tables
+
+
+ISSUE: Migration fails with "relation does not exist"
+SOLUTION:
+  - You're running migrations out of order
+  - A later migration depends on an earlier one that hasn't run
+  - Use: $ supabase db push (runs all in order automatically)
+  - Or check migration list: $ supabase migration list
+
+
+ISSUE: "Cannot find module" or path errors
+SOLUTION:
+  - You're not in the project root directory
+  - Navigate: $ cd "C:\YouthSports.team\web"
+  - Verify: $ pwd
+  - Migration paths are relative to project root
+
+
+ISSUE: Environment variables not loading
+SOLUTION:
+  - Verify .env file is in: C:\YouthSports.team\web\.env
+  - Check file has correct variable names (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY)
+  - Restart dev server after creating/updating .env
+  - Check for typos or extra spaces
+  - Verify values are correct in Supabase dashboard
+
+
+ISSUE: "Access denied" or permission errors
+SOLUTION:
+  - Run PowerShell as Administrator
+  - Check file permissions on project directory
+  - Verify you own/have access to the Supabase project
+
+
+ISSUE: Migrations run but tables don't appear in dashboard
+SOLUTION:
+  - Refresh the Supabase dashboard
+  - Check Table Editor (not SQL Editor)
+  - Verify you're looking at the correct project
+  - Check migration status: $ supabase migration list
+
+
+================================================================================
+  COMMON ERROR MESSAGES AND FIXES
+================================================================================
+
+ERROR: "The term 'supabase' is not recognized"
+FIX: Supabase CLI not installed or not in PATH
+  - Install using one of the methods above
+  - Restart PowerShell
+  - Verify: $ supabase --version
+
+
+ERROR: "Error: open supabase/config.toml: The system cannot find the path"
+FIX: Not in project root directory
+  - Navigate: $ cd "C:\YouthSports.team\web"
+  - Verify: $ pwd
+
+
+ERROR: "Error: API URL not found. Have you run supabase link?"
+FIX: Project not linked
+  - Run: $ supabase link --project-ref YOUR_PROJECT_REF
+  - Enter database password when prompted
+
+
+ERROR: "Error: Database password is incorrect"
+FIX: Wrong password or password changed
+  - Reset password in Supabase Dashboard → Settings → Database
+  - Re-link: $ supabase link --project-ref YOUR_PROJECT_REF --password NEW_PASSWORD
+
+
+ERROR: "Error: relation 'users' already exists"
+FIX: Migration already partially applied
+  - Check migration status: $ supabase migration list
+  - This is usually safe to ignore (migrations use IF NOT EXISTS)
+  - If blocking, you may need to manually drop and re-run
+
+
+ERROR: "Error: syntax error at or near..."
+FIX: SQL syntax error in migration file
+  - Check the specific migration file mentioned in error
+  - Verify SQL syntax is correct
+  - Check for missing semicolons or quotes
+  - Compare with working migration files
+
+
+ERROR: "Error: permission denied for schema public"
+FIX: Database permissions issue
+  - Verify you're using the correct database password
+  - Check Supabase project settings
+  - Contact Supabase support if issue persists
+
+
+================================================================================
+  NEXT STEPS AFTER SETUP
+================================================================================
+
+Once migrations are complete and environment variables are set:
+
+1. Verify tables in Supabase Dashboard → Table Editor
+2. Check RLS policies are enabled on all tables
+3. Test authentication in your app:
+   - Start dev server: $ npm run dev
+   - Try signing up a test account
+   - Verify user appears in Supabase Dashboard → Authentication
+4. Create test data:
+   - Create an organization (as admin)
+   - Create a team
+   - Add a child
+   - Test other features
+5. Generate TypeScript types:
+   $ supabase gen types typescript --linked > src/lib/database.types.ts
+
+
+================================================================================
+  QUICK REFERENCE
+================================================================================
+
+Essential commands (run from C:\YouthSports.team\web):
+
+  Check Supabase CLI version:
+    $ supabase --version
+
+  Link project:
+    $ supabase link --project-ref YOUR_PROJECT_REF
+
+  Run all migrations:
+    $ supabase db push
+
+  Check migration status:
+    $ supabase migration list
+
+  View project status:
+    $ supabase status
+
+  Generate TypeScript types:
+    $ supabase gen types typescript --linked > src/lib/database.types.ts
+
+  Check current directory:
+    $ pwd
+
+  Navigate to project root:
+    $ cd "C:\YouthSports.team\web"
+
+
+================================================================================
+  SUPPORT
+================================================================================
+
+If you encounter issues not covered here:
+
+1. Check Supabase documentation: https://supabase.com/docs
+2. Check Supabase CLI docs: https://supabase.com/docs/reference/cli
+3. Verify your .env file is correct
+4. Check Supabase dashboard for project status
+5. Review error messages carefully - they often indicate the specific issue
+
+Remember: All commands must be run from the project root:
+  C:\YouthSports.team\web
+
+
+================================================================================
+  END OF GUIDE
+================================================================================

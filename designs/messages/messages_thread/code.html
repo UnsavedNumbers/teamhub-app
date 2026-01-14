@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Messages: Focused Team Chat V3</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Lexend', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-[#0d141b] dark:text-slate-100 transition-colors duration-200">
+<div class="layout-container flex h-screen flex-col">
+<!-- Header -->
+<header class="flex items-center justify-between border-b border-solid border-[#e7edf3] dark:border-slate-800 px-6 py-4 bg-white dark:bg-slate-900 z-10">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined text-3xl font-bold">sports_soccer</span>
+<h2 class="text-xl font-bold leading-tight tracking-[-0.015em] text-[#0d141b] dark:text-white">TeamHub</h2>
+</div>
+<div class="h-6 w-[1px] bg-slate-200 dark:bg-slate-700 mx-2"></div>
+<div class="flex items-center gap-4">
+<a class="text-primary text-sm font-semibold leading-normal" href="#">Messages</a>
+<a class="text-[#4c739a] dark:text-slate-400 text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Schedule</a>
+<a class="text-[#4c739a] dark:text-slate-400 text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Roster</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex -space-x-2">
+<div class="size-8 rounded-full border-2 border-white dark:border-slate-900 bg-cover bg-center" data-alt="Avatar of team member 1" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCIIRJ-ZfxmC29IvWZX0uhY0B5GvPoZQDQLHA4ukv0DNU2hKWuGnRPSK8CRXxL82hQDL3UiF4hrslOhQxt3Gx55OP7bjKxlY3IfSc4ez2jPiKLcNATW2fBJVzJdaYTglqhfpKC_I_tBnKWzkyHAz3mUDwWxGuXoF11UZbACiOKM3IbTGMWYg4dE0E33EQDn41q3aBy9-CCI_BxbJS9km_0k18FFImT0z08pF_D7fPu6Bd8y_JxTzEdsW4MSUHMrj76VOqt2oiUPmdU')"></div>
+<div class="size-8 rounded-full border-2 border-white dark:border-slate-900 bg-cover bg-center" data-alt="Avatar of team member 2" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD1ODzy59LVAK9_l-1afgKerA9A6bDW_Jm-I7rzM8jlLwMb49sfWCuDNWqTW0fNSlrdP0no78Y1emXg37gsWLjKkfSCGg_ZZRWZDeQPalmelTeIDBJZqngFOOhtq9vAkFOP9L8sy6gC6Al_eXvqc6z6Wwv5ISRtC4o7hZE1z8j_9rNa7AnmpdOnt_wFONeCP8tc-RaRMWRcB_Lu4Uun_dSnQ6CwGKRlbGC-efELkU3hNu_QZR2iwvDVy3slek4-zZ9tRcEZTnht5vo')"></div>
+<div class="size-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold">+12</div>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border border-slate-200 dark:border-slate-700" data-alt="User profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDcl4tEb1vsooRprWQ0x16zq5UcoQaqg7J-f6GhXX4kERFNS8fxRVGeptY3Ms3f3L3AU95jtJrx6uCorxrukuF7yhkCWrJHoCN6ur9ksKrqm4e19Ix4SLTtnf6c4A69mhNS3eZ9fbSOKUGNHiSRbYbQivLzxP-Ai7rUZQt0Ru9yVS2lrpNMSgz-RTgAS_4evIggTS4uFJa597z-wXpiT0clxfLyT-_vOP4nAKcsbTYbPoHCn473lvh7uZOX8NHcLxCweLofjsOn5Qg");'></div>
+</div>
+</header>
+<main class="flex flex-1 overflow-hidden">
+<!-- Sidebar: Focused Channels -->
+<aside class="w-72 border-r border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-slate-900 hidden lg:flex flex-col">
+<div class="p-6">
+<h1 class="text-lg font-bold text-[#0d141b] dark:text-white mb-1">Team Messaging</h1>
+<p class="text-[#4c739a] text-sm font-normal">Focused Athletic Chat</p>
+</div>
+<div class="px-3 flex flex-col gap-1">
+<div class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-[#4c739a]">chat_bubble</span>
+<p class="text-sm font-medium">All Chats</p>
+</div>
+<div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 text-primary border border-primary/20 cursor-pointer">
+<span class="material-symbols-outlined">groups</span>
+<p class="text-sm font-bold">U12 Tigers Soccer</p>
+</div>
+<div class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-[#4c739a]">shield_person</span>
+<p class="text-sm font-medium">Coaches Only</p>
+</div>
+<div class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-[#4c739a]">family_restroom</span>
+<p class="text-sm font-medium">Parent Group</p>
+</div>
+<div class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-[#4c739a]">campaign</span>
+<p class="text-sm font-medium">Announcements</p>
+</div>
+</div>
+<div class="mt-auto p-6">
+<div class="rounded-2xl bg-slate-50 dark:bg-slate-800 p-4 border border-slate-100 dark:border-slate-700">
+<p class="text-xs font-bold text-[#4c739a] uppercase tracking-wider mb-2">Pro Tip</p>
+<p class="text-sm text-slate-600 dark:text-slate-300">Quiet hours are active. Your team respects your focus time.</p>
+</div>
+</div>
+</aside>
+<!-- Main Chat Area -->
+<section class="flex flex-1 flex-col bg-background-light dark:bg-background-dark relative">
+<!-- Quiet Hours Banner -->
+<div class="p-4 w-full max-w-4xl mx-auto mt-2">
+<div class="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl border border-primary/20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-5 shadow-sm">
+<div class="flex items-center gap-4">
+<div class="bg-primary/10 p-2 rounded-full text-primary">
+<span class="material-symbols-outlined">notifications_off</span>
+</div>
+<div class="flex flex-col">
+<p class="text-[#0d141b] dark:text-white text-base font-bold leading-tight">Quiet Hours: 9PM - 7AM</p>
+<p class="text-[#4c739a] text-sm font-normal leading-normal">Notifications silenced to protect team boundaries.</p>
+</div>
+</div>
+<a class="text-sm font-bold leading-normal tracking-[0.015em] flex items-center gap-2 text-primary hover:underline" href="#">
+                            Adjust Settings
+                            <span class="material-symbols-outlined text-lg">arrow_forward</span>
+</a>
+</div>
+</div>
+<!-- Messages Thread -->
+<div class="flex-1 overflow-y-auto px-4 py-6 custom-scrollbar max-w-4xl w-full mx-auto flex flex-col gap-6">
+<!-- Date Separator -->
+<div class="flex items-center justify-center gap-4 py-2">
+<div class="h-[1px] flex-1 bg-slate-200 dark:bg-slate-800"></div>
+<p class="text-[#4c739a] text-xs font-bold uppercase tracking-widest px-4">Wednesday, Oct 24</p>
+<div class="h-[1px] flex-1 bg-slate-200 dark:bg-slate-800"></div>
+</div>
+<!-- Received Message -->
+<div class="flex items-end gap-3 max-w-[85%] group">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-10 h-10 shrink-0 shadow-sm border-2 border-white dark:border-slate-800" data-alt="Sarah Miller headshot" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDeENxhmaH53UjS8tx-rNKoRyPNMxThJTbDp-JQLFP9tUI5OaX13CQDJK9qLas9kdv1ha14C_KFCWyIUqsx6yGZH3I9vH-8rKegc7F7LK-6-hEwS1o2rkMVcup-2m2-EiZjH0_8QzfP9vBd-fXVuzPjDw6DjdPlrKjYcyfWcLbS1WMO0aJ5RUpfM24u1cpBXqtbhRy1TyZPb751ctPmkWu38jsXSZS7030fLxy1RqP4kuXt5k2I9TtCtcZYbraLRlW8Wx3Qnbk40XI");'></div>
+<div class="flex flex-col gap-1 items-start">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-bold ml-2">Sarah Miller (Coach)</p>
+<div class="text-base font-normal leading-relaxed rounded-2xl rounded-bl-none px-5 py-3 bg-white dark:bg-slate-800 text-[#0d141b] dark:text-slate-200 shadow-sm border border-slate-100 dark:border-slate-700">
+                                Does anyone know if uniforms are the blue kits or white kits for today's practice?
+                            </div>
+<span class="text-[10px] text-slate-400 ml-2 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">10:42 AM</span>
+</div>
+</div>
+<!-- Sent Message -->
+<div class="flex items-end gap-3 max-w-[85%] self-end flex-row-reverse group">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-10 h-10 shrink-0 shadow-sm border-2 border-white dark:border-slate-800" data-alt="Your profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCE4iSfPHrh33JaFePHmFINs8jLy37ME8sAm6yX-YulE6Ejwihkx-KumA6NViHnzvXF-ETLNe9PzUT972_zYqKzZCOrEojnvTi7LvJk4Rg8m3GLKI4UHLHEhsAYh3xCxlib1YbInH0Q68KrdKCsqE01sgVFNCKyTJUfqi7b2z3CZFsyp1EicTZ1iNSSiXvLHCOXp158IQkvEvSPRIQ9nGxwdx4ZPhzRi8ZQKwoPRqZ_EWUo2Fuzou_cr39xAIAZn1rzQqNleLvsoic");'></div>
+<div class="flex flex-col gap-1 items-end">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-bold mr-2">You</p>
+<div class="text-base font-normal leading-relaxed rounded-2xl rounded-br-none px-5 py-3 bg-primary text-white shadow-md shadow-primary/20">
+                                Pretty sure we're wearing blue today! ⚽️
+                            </div>
+<div class="flex items-center gap-1 mr-2 mt-1">
+<span class="text-[10px] text-slate-400">10:45 AM</span>
+<span class="material-symbols-outlined text-[14px] text-primary">done_all</span>
+</div>
+</div>
+</div>
+<!-- Date Separator -->
+<div class="flex items-center justify-center gap-4 py-2">
+<div class="h-[1px] flex-1 bg-slate-200 dark:bg-slate-800"></div>
+<p class="text-[#4c739a] text-xs font-bold uppercase tracking-widest px-4">Today</p>
+<div class="h-[1px] flex-1 bg-slate-200 dark:bg-slate-800"></div>
+</div>
+<!-- Received Message -->
+<div class="flex items-end gap-3 max-w-[85%] group">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-10 h-10 shrink-0 shadow-sm border-2 border-white dark:border-slate-800" data-alt="Marcus Reed avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBzqD-6Z4yI6YCmV6qH3065ZxRZyY-h8S0B0KUzFadqi340u4-CE8wTgdEclZ0tyuynM2yqeKkqI9CiycNDCvJvxAch7XpAgfff0OduU937-s6C6rSwt6OWjBg8vcRXjKpzKV-ZcMAd_YQhjzKLfKovvih7_PPGvTz4IAvA_WlOh9OuszkXv9NAtfkhVp2nBBbtf5DozTM1L11x0J_1MKyQSCICmxEgbaqTfNnCnus2lmGH5FJYONn_X6Kx9uIEFt8AMxFNumXqD08");'></div>
+<div class="flex flex-col gap-1 items-start">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-bold ml-2">Marcus Reed</p>
+<div class="text-base font-normal leading-relaxed rounded-2xl rounded-bl-none px-5 py-3 bg-white dark:bg-slate-800 text-[#0d141b] dark:text-slate-200 shadow-sm border border-slate-100 dark:border-slate-700">
+                                Practice moved to Field 4 due to the sprinklers being on Field 2. See you all at 5!
+                            </div>
+<span class="text-[10px] text-slate-400 ml-2 mt-1">1:15 PM</span>
+</div>
+</div>
+</div>
+<!-- Message Input Area -->
+<div class="w-full max-w-4xl mx-auto p-4 md:p-6 pb-8 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
+<!-- Quick Actions / Templates -->
+<div class="flex gap-2 overflow-x-auto pb-4 no-scrollbar">
+<button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-sm font-medium whitespace-nowrap hover:border-primary hover:text-primary transition-all shadow-sm">
+                            🏃 Running Late
+                        </button>
+<button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-sm font-medium whitespace-nowrap hover:border-primary hover:text-primary transition-all shadow-sm">
+                            ❓ Question
+                        </button>
+<button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-sm font-medium whitespace-nowrap hover:border-primary hover:text-primary transition-all shadow-sm">
+                            ✅ Be there soon
+                        </button>
+<button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-sm font-medium whitespace-nowrap hover:border-primary hover:text-primary transition-all shadow-sm">
+                            ❌ Can't make it
+                        </button>
+<button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-sm font-medium whitespace-nowrap hover:border-primary hover:text-primary transition-all shadow-sm">
+                            📍 Where are you?
+                        </button>
+</div>
+<!-- Main Composer -->
+<div class="relative flex items-end gap-3 bg-white dark:bg-slate-800 p-2 pl-5 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700">
+<button class="p-2 text-slate-400 hover:text-primary transition-colors mb-1">
+<span class="material-symbols-outlined">add_circle</span>
+</button>
+<textarea class="flex-1 border-none bg-transparent focus:ring-0 text-base py-3 resize-none max-h-32 text-[#0d141b] dark:text-slate-100 placeholder:text-slate-400" placeholder="Type a message..." rows="1"></textarea>
+<div class="flex items-center gap-1 mb-1 pr-1">
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">mood</span>
+</button>
+<button class="bg-primary text-white p-3 rounded-xl hover:bg-primary/90 transition-all flex items-center justify-center shadow-lg shadow-primary/30">
+<span class="material-symbols-outlined">send</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+</main>
+</div>
+</body></html>
