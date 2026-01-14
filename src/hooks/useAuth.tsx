@@ -51,6 +51,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { setOrganizations, currentOrganization } = useOrganization()
 
   const fetchProfile = useCallback(async (userId: string) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:53',message:'fetchProfile called',data:{userId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     try {
       // Fetch user profile
       const { data: userData, error: userError } = await supabase
@@ -59,8 +62,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('id', userId)
         .single()
 
+      // #region agent log
+      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:60',message:'User query completed',data:{hasData:!!userData,hasError:!!userError,error:userError?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+
       if (userError) {
         console.error('Error fetching profile:', userError)
+        
+        // If user doesn't exist in database (deleted user), sign out to clear stale session
+        // PGRST116 = "No rows returned" error code from PostgREST
+        if (userError.code === 'PGRST116' || userError.message?.includes('No rows') || userError.message?.includes('not found')) {
+          console.warn('User not found in database, signing out to clear stale session')
+          await supabase.auth.signOut()
+        }
+        
         setProfile(null)
         setLoading(false)
         return
@@ -69,6 +84,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Fetch organization memberships
       const { data: orgData, error: orgError } = await supabase
         .rpc('get_user_organizations', { check_user_id: userId })
+
+      // #region agent log
+      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:70',message:'Org query completed',data:{hasData:!!orgData,orgCount:orgData?.length||0,hasError:!!orgError},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
 
       if (orgError) {
         console.error('Error fetching organizations:', orgError)
@@ -107,12 +126,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isPlatformAdmin: !!adminData,
       }
 
+      // #region agent log
+      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:110',message:'Setting profile and organizations',data:{profileId:userProfile.id,orgCount:organizations.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       setProfile(userProfile)
       setOrganizations(organizations)
     } catch (err) {
+      // #region agent log
+      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:112',message:'Error in fetchProfile catch',data:{error:err instanceof Error?err.message:String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       console.error('Error in fetchProfile:', err)
       setProfile(null)
     } finally {
+      // #region agent log
+      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:116',message:'fetchProfile finally: setting loading false',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       setLoading(false)
     }
   }, [setOrganizations])
