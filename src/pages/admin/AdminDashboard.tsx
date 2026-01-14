@@ -11,7 +11,6 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
-  CircularProgress,
 } from '@mui/material'
 import {
   Groups as TeamsIcon,

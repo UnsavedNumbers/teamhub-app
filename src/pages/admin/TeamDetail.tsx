@@ -17,7 +17,7 @@ import {
   Tabs,
   Tab,
 } from '@mui/material'
-import { People as PeopleIcon, Event as EventIcon } from '@mui/icons-material'
+import { People as PeopleIcon } from '@mui/icons-material'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useTeamParams } from '../../hooks/useRouteParams'

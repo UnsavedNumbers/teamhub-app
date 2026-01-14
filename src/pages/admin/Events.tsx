@@ -6,7 +6,6 @@ import {
   CardContent,
   Typography,
   Button,
-  Grid,
   Chip,
   Table,
   TableBody,
@@ -20,7 +19,6 @@ import {
 import { Add as AddIcon, Event as EventIcon } from '@mui/icons-material'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
-import { useOrganization } from '../../contexts/OrganizationContext'
 import AdminSkeletonTable from '../../components/admin/AdminSkeletonTable'
 
 interface Event {
@@ -41,7 +39,6 @@ export default function Events() {
   const [totalCount, setTotalCount] = useState(0)
 
   const { profile } = useAuth()
-  const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
 
   useEffect(() => {

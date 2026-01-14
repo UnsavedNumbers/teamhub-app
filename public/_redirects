@@ -1,0 +1,6 @@
+# Cloudflare Pages routing rules for React Router
+# All routes should serve index.html for client-side routing
+
+/portal/*  /index.html  200
+/admin/*   /index.html  200
+/*         /index.html  200

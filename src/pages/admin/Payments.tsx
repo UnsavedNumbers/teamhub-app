@@ -105,7 +105,7 @@ export default function Payments() {
       // Calculate stats
       const { data: statsData } = await supabase
         .from('fee_assignments')
-        .select('balance_cents, paid_cents_total')
+        .select('balance_cents, paid_cents_total, status')
         .eq('organization_id', currentOrganization.id)
 
       if (statsData) {
@@ -129,14 +129,23 @@ export default function Payments() {
   }
 
   async function markPaid(paymentId: string) {
-    await supabase
+    // First get the assignment to get amount_cents
+    const { data: assignment } = await supabase
       .from('fee_assignments')
-      .update({ 
-        status: 'paid',
-        balance_cents: 0,
-        paid_cents_total: supabase.raw('amount_cents')
-      } as never)
+      .select('amount_cents')
       .eq('id', paymentId)
+      .single()
+
+    if (assignment) {
+      await supabase
+        .from('fee_assignments')
+        .update({ 
+          status: 'paid',
+          balance_cents: 0,
+          paid_cents_total: assignment.amount_cents
+        })
+        .eq('id', paymentId)
+    }
     
     fetchPayments()
   }

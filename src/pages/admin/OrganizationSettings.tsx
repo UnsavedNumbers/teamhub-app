@@ -13,7 +13,6 @@ import {
   Divider,
 } from '@mui/material'
 import { supabase } from '../../lib/supabase'
-import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import AdminSkeletonTable from '../../components/admin/AdminSkeletonTable'
 
@@ -30,7 +29,6 @@ export default function OrganizationSettings() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
-  const { profile } = useAuth()
   const { currentOrganization } = useOrganization()
 
   const {

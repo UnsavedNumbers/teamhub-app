@@ -29,9 +29,8 @@ export default function Teams() {
   const [newTeamName, setNewTeamName] = useState('')
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [page, setPage] = useState(0)
+  const [page] = useState(0)
   const [rowsPerPage] = useState(50)
-  const [totalCount, setTotalCount] = useState(0)
 
   const { profile } = useAuth()
   const { currentOrganization } = useOrganization()
@@ -52,14 +51,6 @@ export default function Teams() {
 
     setLoading(true)
     try {
-      // Get total count
-      const { count } = await supabase
-        .from('teams')
-        .select('*', { count: 'exact', head: true })
-        .eq('org_id', currentOrganization.id)
-
-      setTotalCount(count || 0)
-
       // Get paginated data
       const from = page * rowsPerPage
       const to = from + rowsPerPage - 1

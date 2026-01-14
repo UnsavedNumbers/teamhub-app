@@ -5,7 +5,6 @@ import {
   Card,
   CardContent,
   Typography,
-  Button,
   Table,
   TableBody,
   TableCell,
@@ -18,7 +17,6 @@ import {
 } from '@mui/material'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
-import { useOrganization } from '../../contexts/OrganizationContext'
 import AdminSkeletonTable from '../../components/admin/AdminSkeletonTable'
 
 interface Tryout {
@@ -38,7 +36,6 @@ export default function AdminTryouts() {
   const [totalCount, setTotalCount] = useState(0)
 
   const { profile } = useAuth()
-  const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
 
   useEffect(() => {
