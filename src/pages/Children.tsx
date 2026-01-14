@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -20,12 +20,7 @@ export default function Children() {
 
   const { profile } = useAuth()
 
-  useEffect(() => {
-    if (profile?.family_id) fetchChildren()
-    else setLoading(false)
-  }, [profile])
-
-  async function fetchChildren() {
+  const fetchChildren = useCallback(async () => {
     if (!profile?.family_id) {
       setLoading(false)
       return
@@ -39,7 +34,12 @@ export default function Children() {
 
     if (!error) setChildren((data as Child[]) || [])
     setLoading(false)
-  }
+  }, [profile?.family_id])
+
+  useEffect(() => {
+    if (profile?.family_id) fetchChildren()
+    else setLoading(false)
+  }, [profile, fetchChildren])
 
   async function handleSave() {
     if (!form.first_name.trim() || !form.last_name.trim() || !profile?.family_id) return

@@ -166,7 +166,7 @@ export default function Login() {
             <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
               <span className="material-symbols-outlined text-white text-xl">sports_score</span>
             </div>
-            <span className="font-display text-2xl tracking-tight text-slate-900 dark:text-white">TEAMHUB</span>
+            <span className="font-display text-2xl tracking-tight text-slate-900 dark:text-white">YOUTHSPORTS</span>
           </div>
 
           {/* Header */}
@@ -353,7 +353,7 @@ export default function Login() {
               {/* Sign up link */}
               <div className="mt-10 pt-10 border-t border-slate-100 dark:border-slate-800">
                 <p className="text-center text-sm text-slate-500 dark:text-slate-400">
-                  New to TeamHub?{' '}
+                  New to YouthSports?{' '}
                   <Link to="/portal/signup" className="font-semibold leading-6 text-primary hover:text-blue-500">
                     Create an account
                   </Link>
@@ -383,7 +383,7 @@ export default function Login() {
           {/* Footer */}
           <div className="mt-auto pt-10 text-center">
             <p className="text-[11px] text-slate-400 dark:text-slate-600 uppercase tracking-widest">
-              © 2024 TeamHub Professional Sports Management
+              © 2024 YouthSports Professional Sports Management
             </p>
           </div>
         </div>

@@ -143,7 +143,7 @@ export default function OrganizationIdentityStep({
                 fillRule="evenodd"
               ></path>
             </svg>
-            <span className="text-2xl font-black tracking-tight">TeamHub</span>
+            <span className="text-2xl font-black tracking-tight">YouthSports</span>
           </div>
           <p className="text-white/80 font-medium">Professional Season Registration</p>
         </div>

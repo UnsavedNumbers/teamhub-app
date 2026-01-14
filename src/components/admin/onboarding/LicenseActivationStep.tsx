@@ -66,7 +66,7 @@ export default function LicenseActivationStep({
               ></path>
             </svg>
           </div>
-          <h2 className="text-xl font-bold tracking-tight">TeamHub</h2>
+          <h2 className="text-xl font-bold tracking-tight">YouthSports</h2>
         </div>
         <div className="flex flex-1 justify-end gap-8">
           <nav className="flex items-center gap-9">
@@ -249,7 +249,7 @@ export default function LicenseActivationStep({
 
       {/* Footer */}
       <footer className="py-8 px-10 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center text-slate-400">
-        <div className="text-xs font-medium">© 2024 TeamHub Infrastructure. All rights reserved.</div>
+        <div className="text-xs font-medium">© 2024 YouthSports Infrastructure. All rights reserved.</div>
         <div className="flex gap-6 text-xs font-bold uppercase tracking-widest">
           <button 
             className="transition-colors"

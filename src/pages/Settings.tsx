@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -54,11 +54,7 @@ export default function Settings() {
     quiet_hours: false,
   })
 
-  useEffect(() => {
-    if (profile) fetchData()
-  }, [profile])
-
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     
     // 1. Fetch Children
@@ -94,7 +90,11 @@ export default function Settings() {
     }
 
     setLoading(false)
-  }
+  }, [profile?.family_id, profile?.id])
+
+  useEffect(() => {
+    if (profile) fetchData()
+  }, [profile, fetchData])
 
   async function handleLogout() {
     await signOut()

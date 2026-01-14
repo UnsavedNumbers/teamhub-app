@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -39,15 +39,7 @@ export default function TravelPlans() {
   const { profile } = useAuth()
   const navigate = useNavigate()
 
-  useEffect(() => {
-    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
-      navigate('/portal/unauthorized')
-      return
-    }
-    fetchPlans()
-  }, [profile, navigate, page, rowsPerPage])
-
-  async function fetchPlans() {
+  const fetchPlans = useCallback(async () => {
     setLoading(true)
     try {
       const { count } = await supabase
@@ -71,7 +63,15 @@ export default function TravelPlans() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [page, rowsPerPage])
+
+  useEffect(() => {
+    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
+      navigate('/portal/unauthorized')
+      return
+    }
+    fetchPlans()
+  }, [profile, navigate, page, rowsPerPage, fetchPlans])
 
   function formatDateRange(start: string, end: string) {
     const startDate = new Date(start)

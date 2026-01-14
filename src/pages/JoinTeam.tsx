@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -35,27 +35,16 @@ export default function JoinTeam() {
   const { profile } = useAuth()
   const navigate = useNavigate()
 
-  useEffect(() => {
-    if (profile?.family_id) fetchChildren()
-  }, [profile])
-
-  useEffect(() => {
-    // Auto-lookup if code in URL
-    if (searchParams.get('code')) {
-      handleLookup()
-    }
-  }, [])
-
-  async function fetchChildren() {
+  const fetchChildren = useCallback(async () => {
     if (!profile?.family_id) return
     const { data } = await supabase
       .from('children')
       .select('id, first_name, last_name')
       .eq('family_id', profile.family_id)
     setChildren((data as Child[]) || [])
-  }
+  }, [profile?.family_id])
 
-  async function handleLookup() {
+  const handleLookup = useCallback(async () => {
     if (!inviteCode.trim()) return
     
     setLoading(true)
@@ -90,7 +79,18 @@ export default function JoinTeam() {
     
     setStep('select')
     setLoading(false)
-  }
+  }, [inviteCode])
+
+  useEffect(() => {
+    if (profile?.family_id) fetchChildren()
+  }, [profile, fetchChildren])
+
+  useEffect(() => {
+    // Auto-lookup if code in URL
+    if (searchParams.get('code')) {
+      handleLookup()
+    }
+  }, [searchParams, handleLookup])
 
   async function handleJoin() {
     if (!selectedChild || !selectedSeason || !team) return

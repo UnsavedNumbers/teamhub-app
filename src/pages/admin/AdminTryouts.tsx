@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -38,15 +38,7 @@ export default function AdminTryouts() {
   const { profile } = useAuth()
   const navigate = useNavigate()
 
-  useEffect(() => {
-    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
-      navigate('/portal/unauthorized')
-      return
-    }
-    fetchTryouts()
-  }, [profile, navigate, page, rowsPerPage])
-
-  async function fetchTryouts() {
+  const fetchTryouts = useCallback(async () => {
     setLoading(true)
     try {
       const { count } = await supabase
@@ -70,7 +62,15 @@ export default function AdminTryouts() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [page, rowsPerPage])
+
+  useEffect(() => {
+    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
+      navigate('/portal/unauthorized')
+      return
+    }
+    fetchTryouts()
+  }, [profile, navigate, page, rowsPerPage, fetchTryouts])
 
   if (loading && tryouts.length === 0) {
     return <AdminSkeletonTable rows={6} columns={5} />

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -44,15 +44,7 @@ export default function UniformOrders() {
   const { profile } = useAuth()
   const navigate = useNavigate()
 
-  useEffect(() => {
-    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
-      navigate('/portal/unauthorized')
-      return
-    }
-    fetchOrders()
-  }, [profile, navigate, page, rowsPerPage, filter])
-
-  async function fetchOrders() {
+  const fetchOrders = useCallback(async () => {
     setLoading(true)
     try {
       let query = supabase
@@ -79,7 +71,15 @@ export default function UniformOrders() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filter, page, rowsPerPage])
+
+  useEffect(() => {
+    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
+      navigate('/portal/unauthorized')
+      return
+    }
+    fetchOrders()
+  }, [profile, navigate, page, rowsPerPage, filter, fetchOrders])
 
   async function updateStatus(orderId: string, status: 'pending' | 'ordered' | 'delivered') {
     await supabase.from('uniform_orders').update({ status } as never).eq('id', orderId)

@@ -145,7 +145,7 @@ export default function Signup() {
             <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
               <span className="material-symbols-outlined text-white text-xl">sports_score</span>
             </div>
-            <span className="font-display text-2xl tracking-tight text-slate-900 dark:text-white">TEAMHUB</span>
+            <span className="font-display text-2xl tracking-tight text-slate-900 dark:text-white">YOUTHSPORTS</span>
           </div>
 
           {/* Header */}
@@ -156,7 +156,7 @@ export default function Signup() {
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
               {isOrgSetupFlow
                 ? 'First, create an account. Then you can setup your organization.'
-                : 'Join TeamHub to manage your youth sports experience.'}
+                : 'Join YouthSports to manage your youth sports experience.'}
             </p>
           </div>
 
@@ -383,7 +383,7 @@ export default function Signup() {
           {/* Footer */}
           <div className="mt-auto pt-10 text-center">
             <p className="text-[11px] text-slate-400 dark:text-slate-600 uppercase tracking-widest">
-              © 2024 TeamHub Professional Sports Management
+              © 2024 YouthSports Professional Sports Management
             </p>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -45,12 +45,7 @@ export default function Uniforms() {
 
   const { profile } = useAuth()
 
-  useEffect(() => {
-    if (profile?.family_id) fetchData()
-    else setLoading(false)
-  }, [profile])
-
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     const { data: childData } = await supabase
       .from('children')
       .select('id, first_name, last_name')
@@ -77,7 +72,12 @@ export default function Uniforms() {
     }
     setMemberships(membershipMap)
     setLoading(false)
-  }
+  }, [profile?.family_id])
+
+  useEffect(() => {
+    if (profile?.family_id) fetchData()
+    else setLoading(false)
+  }, [profile, fetchData])
 
   function getExistingOrder(childId: string, teamId: string, seasonId: string) {
     return orders.find(o => o.child_id === childId && o.team_id === teamId && o.season_id === seasonId)

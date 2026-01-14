@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import {
@@ -70,24 +70,7 @@ export default function CreateTravelPlan() {
 
   const watchTeamId = watch('team_id')
 
-  useEffect(() => {
-    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
-      navigate('/portal/unauthorized')
-      return
-    }
-    if (currentOrganization?.id) {
-      fetchTeams()
-    }
-  }, [profile, currentOrganization, navigate])
-
-  useEffect(() => {
-    if (watchTeamId) {
-      fetchSeasons(watchTeamId)
-      setValue('season_id', '')
-    }
-  }, [watchTeamId, setValue])
-
-  async function fetchTeams() {
+  const fetchTeams = useCallback(async () => {
     if (!currentOrganization?.id) return
     const { data } = await supabase
       .from('teams')
@@ -96,9 +79,9 @@ export default function CreateTravelPlan() {
       .order('name')
     setTeams((data as Team[]) || [])
     setLoading(false)
-  }
+  }, [currentOrganization?.id])
 
-  async function fetchSeasons(teamId: string) {
+  const fetchSeasons = useCallback(async (teamId: string) => {
     const { data } = await supabase
       .from('seasons')
       .select('id, name')
@@ -106,10 +89,24 @@ export default function CreateTravelPlan() {
       .order('start_date', { ascending: false })
     const seasonsData = data as unknown as Season[]
     setSeasons(seasonsData || [])
-    if (seasonsData && seasonsData.length > 0) {
-      setValue('season_id', seasonsData[0].id)
+  }, [])
+
+  useEffect(() => {
+    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
+      navigate('/portal/unauthorized')
+      return
     }
-  }
+    if (currentOrganization?.id) {
+      fetchTeams()
+    }
+  }, [profile, currentOrganization, navigate, fetchTeams])
+
+  useEffect(() => {
+    if (watchTeamId) {
+      fetchSeasons(watchTeamId)
+      setValue('season_id', '')
+    }
+  }, [watchTeamId, setValue, fetchSeasons])
 
   const onSubmit = async (data: TravelFormData) => {
     setSaving(true)

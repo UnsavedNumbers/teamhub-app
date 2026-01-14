@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -50,15 +50,7 @@ export default function TeamDetail() {
   const { profile } = useAuth()
   const navigate = useNavigate()
 
-  useEffect(() => {
-    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
-      navigate('/portal/unauthorized')
-      return
-    }
-    fetchTeamAndSeasons()
-  }, [profile, teamId, navigate])
-
-  async function fetchTeamAndSeasons() {
+  const fetchTeamAndSeasons = useCallback(async () => {
     setLoading(true)
 
     const { data: teamData } = await supabase
@@ -77,7 +69,15 @@ export default function TeamDetail() {
     if (seasonsData) setSeasons(seasonsData as Season[])
 
     setLoading(false)
-  }
+  }, [teamId])
+
+  useEffect(() => {
+    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
+      navigate('/portal/unauthorized')
+      return
+    }
+    fetchTeamAndSeasons()
+  }, [profile, teamId, navigate, fetchTeamAndSeasons])
 
   async function handleCreateSeason() {
     if (!seasonForm.name.trim() || !teamId) return

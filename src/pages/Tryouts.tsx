@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -41,11 +41,7 @@ export default function Tryouts() {
   const { profile } = useAuth()
   // const navigate = useNavigate()
 
-  useEffect(() => {
-    if (profile) fetchData()
-  }, [profile])
-
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     // Fetch upcoming tryouts
     const { data: tryoutData } = await supabase
       .from('tryouts')
@@ -74,7 +70,11 @@ export default function Tryouts() {
     }
 
     setLoading(false)
-  }
+  }, [profile?.family_id])
+
+  useEffect(() => {
+    if (profile) fetchData()
+  }, [profile, fetchData])
 
   async function handleRegister() {
     if (!selectedTryout || !selectedChild || !profile?.family_id) return

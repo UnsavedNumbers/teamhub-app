@@ -6,11 +6,11 @@
  * redirects.
  * 
  * Flag Schema:
- * - key: 'teamhub_setup_organization'
+ * - key: 'youthsports_setup_organization'
  * - value: JSON string with { flag: boolean, timestamp: number }
  */
 
-const STORAGE_KEY = 'teamhub_setup_organization'
+const STORAGE_KEY = 'youthsports_setup_organization'
 const EXPIRY_MS = 60 * 60 * 1000 // 1 hour in milliseconds
 
 interface SetupOrganizationData {

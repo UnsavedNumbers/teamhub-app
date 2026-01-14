@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import {
@@ -80,26 +80,7 @@ export default function CreateFee() {
   const watchTeamId = watch('team_id')
   const watchApplyToAll = watch('applyToAll')
 
-  useEffect(() => {
-    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
-      navigate('/portal/unauthorized')
-      return
-    }
-    if (currentOrganization?.id) {
-      fetchTeams()
-    }
-  }, [profile, currentOrganization, navigate])
-
-  useEffect(() => {
-    if (watchTeamId) {
-      fetchSeasons(watchTeamId)
-      fetchChildren(watchTeamId)
-      setValue('season_id', '')
-      setValue('child_id', '')
-    }
-  }, [watchTeamId, setValue])
-
-  async function fetchTeams() {
+  const fetchTeams = useCallback(async () => {
     if (!currentOrganization?.id) return
     const { data } = await supabase
       .from('teams')
@@ -108,9 +89,9 @@ export default function CreateFee() {
       .order('name')
     setTeams((data as Team[]) || [])
     setLoading(false)
-  }
+  }, [currentOrganization?.id])
 
-  async function fetchSeasons(teamId: string) {
+  const fetchSeasons = useCallback(async (teamId: string) => {
     const { data } = await supabase
       .from('seasons')
       .select('id, name')
@@ -118,23 +99,37 @@ export default function CreateFee() {
       .order('start_date', { ascending: false })
     const seasonsData = data as unknown as Season[]
     setSeasons(seasonsData || [])
-    if (seasonsData && seasonsData.length > 0) {
-      setValue('season_id', seasonsData[0].id)
-    }
-  }
+  }, [])
 
-  async function fetchChildren(teamId: string) {
+  const fetchChildren = useCallback(async (teamId: string) => {
     const { data } = await supabase
       .from('team_memberships')
       .select('child:children(id, first_name, last_name)')
       .eq('team_id', teamId)
       .eq('status', 'active')
+    const memberships = data as unknown as { child: Child }[]
+    const childList = memberships?.map(m => m.child) || []
+    setChildren(childList)
+  }, [])
 
-    type MembershipRow = { child: Child | null }
-    const members = (data as unknown as MembershipRow[]) || []
-    const kids = members.map((d) => d.child).filter((c): c is Child => !!c)
-    setChildren(kids)
-  }
+  useEffect(() => {
+    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
+      navigate('/portal/unauthorized')
+      return
+    }
+    if (currentOrganization?.id) {
+      fetchTeams()
+    }
+  }, [profile, currentOrganization, navigate, fetchTeams])
+
+  useEffect(() => {
+    if (watchTeamId) {
+      fetchSeasons(watchTeamId)
+      fetchChildren(watchTeamId)
+      setValue('season_id', '')
+      setValue('child_id', '')
+    }
+  }, [watchTeamId, setValue, fetchSeasons, fetchChildren])
 
   const onSubmit = async (data: FeeFormData) => {
     if (!data.team_id || !data.season_id || !data.amount) return

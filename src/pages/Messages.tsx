@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -41,34 +41,7 @@ export default function Messages() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { user, profile } = useAuth()
 
-  useEffect(() => {
-    fetchTeams()
-  }, [profile])
-
-  useEffect(() => {
-    if (selectedTeam && tab === 'announcements') fetchAnnouncements()
-    if (selectedTeam && tab === 'chat') fetchMessages()
-  }, [selectedTeam, tab])
-
-  useEffect(() => {
-    if (!selectedTeam || tab !== 'chat') return
-
-    const channel = supabase
-      .channel(`messages-${selectedTeam}`)
-      .on('postgres_changes', 
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `team_id=eq.${selectedTeam}` },
-        () => fetchMessages()
-      )
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
-  }, [selectedTeam, tab])
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  async function fetchTeams() {
+  const fetchTeams = useCallback(async () => {
     // Get teams from children's memberships for parents, or all for staff
     if (profile?.role === 'parent' && profile.family_id) {
       const { data } = await supabase
@@ -86,9 +59,9 @@ export default function Messages() {
       setTeams((data as Team[]) || [])
     }
     setLoading(false)
-  }
+  }, [profile?.role, profile?.family_id])
 
-  async function fetchAnnouncements() {
+  const fetchAnnouncements = useCallback(async () => {
     const { data } = await supabase
       .from('announcements')
       .select('*, author:users(email, role), team:teams(name)')
@@ -97,9 +70,9 @@ export default function Messages() {
       .limit(20)
 
     setAnnouncements((data as unknown as Announcement[]) || [])
-  }
+  }, [selectedTeam])
 
-  async function fetchMessages() {
+  const fetchMessages = useCallback(async () => {
     const { data } = await supabase
       .from('messages')
       .select('*, author:users(email, role)')
@@ -108,7 +81,34 @@ export default function Messages() {
       .limit(100)
 
     setMessages((data as unknown as Message[]) || [])
-  }
+  }, [selectedTeam])
+
+  useEffect(() => {
+    fetchTeams()
+  }, [profile, fetchTeams])
+
+  useEffect(() => {
+    if (selectedTeam && tab === 'announcements') fetchAnnouncements()
+    if (selectedTeam && tab === 'chat') fetchMessages()
+  }, [selectedTeam, tab, fetchAnnouncements, fetchMessages])
+
+  useEffect(() => {
+    if (!selectedTeam || tab !== 'chat') return
+
+    const channel = supabase
+      .channel(`messages-${selectedTeam}`)
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `team_id=eq.${selectedTeam}` },
+        () => fetchMessages()
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [selectedTeam, tab, fetchMessages])
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   async function sendMessage() {
     if (!newMessage.trim() || !selectedTeam || !user) return

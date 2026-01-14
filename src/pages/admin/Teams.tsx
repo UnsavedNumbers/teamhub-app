@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -39,17 +39,7 @@ export default function Teams() {
   const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
 
-  useEffect(() => {
-    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
-      navigate('/portal/unauthorized')
-      return
-    }
-    if (currentOrganization?.id) {
-      fetchTeams()
-    }
-  }, [profile, currentOrganization, navigate, page, rowsPerPage])
-
-  async function fetchTeams() {
+  const fetchTeams = useCallback(async () => {
     if (!currentOrganization?.id) return
 
     setLoading(true)
@@ -80,7 +70,17 @@ export default function Teams() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentOrganization?.id, page, rowsPerPage])
+
+  useEffect(() => {
+    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
+      navigate('/portal/unauthorized')
+      return
+    }
+    if (currentOrganization?.id) {
+      fetchTeams()
+    }
+  }, [profile, currentOrganization, navigate, page, rowsPerPage, fetchTeams])
 
   async function handleCreateTeam() {
     if (!newTeamName.trim() || !currentOrganization?.id) return

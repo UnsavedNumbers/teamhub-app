@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -39,26 +39,19 @@ export default function EventDetail() {
   const { profile } = useAuth()
   const navigate = useNavigate()
 
-  useEffect(() => {
-    if (eventId) fetchData()
-  }, [eventId, profile])
+  const fetchAttendance = useCallback(async () => {
+    const { data } = await supabase
+      .from('attendance')
+      .select('id, child_id, status, note')
+      .eq('event_id', eventId || '')
 
-  useEffect(() => {
-    // Subscribe to realtime attendance updates
-    if (!eventId) return
-    
-    const channel = supabase
-      .channel(`attendance-${eventId}`)
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'attendance', filter: `event_id=eq.${eventId || ''}` },
-        () => fetchAttendance()
-      )
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
+    const map: Record<string, Attendance> = {}
+    const list = data as unknown as Attendance[]
+    list?.forEach((a) => { map[a.child_id] = a })
+    setAttendance(map)
   }, [eventId])
 
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     
     // Fetch event
@@ -85,19 +78,26 @@ export default function EventDetail() {
 
     await fetchAttendance()
     setLoading(false)
-  }
+  }, [eventId, profile?.family_id, navigate, fetchAttendance])
 
-  async function fetchAttendance() {
-    const { data } = await supabase
-      .from('attendance')
-      .select('id, child_id, status, note')
-      .eq('event_id', eventId || '')
+  useEffect(() => {
+    if (eventId) fetchData()
+  }, [eventId, profile, fetchData])
 
-    const map: Record<string, Attendance> = {}
-    const list = data as unknown as Attendance[]
-    list?.forEach((a) => { map[a.child_id] = a })
-    setAttendance(map)
-  }
+  useEffect(() => {
+    // Subscribe to realtime attendance updates
+    if (!eventId) return
+    
+    const channel = supabase
+      .channel(`attendance-${eventId}`)
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'attendance', filter: `event_id=eq.${eventId || ''}` },
+        () => fetchAttendance()
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [eventId, fetchAttendance])
 
   async function handleRsvp(childId: string, status: 'going' | 'late' | 'not_going') {
     setSaving(childId)

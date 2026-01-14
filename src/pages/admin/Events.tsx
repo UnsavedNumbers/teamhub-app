@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -42,15 +42,7 @@ export default function Events() {
   const { profile } = useAuth()
   const navigate = useNavigate()
 
-  useEffect(() => {
-    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
-      navigate('/portal/unauthorized')
-      return
-    }
-    fetchEvents()
-  }, [profile, navigate, page, rowsPerPage])
-
-  async function fetchEvents() {
+  const fetchEvents = useCallback(async () => {
     setLoading(true)
     try {
       // Get total count
@@ -78,7 +70,15 @@ export default function Events() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [page, rowsPerPage])
+
+  useEffect(() => {
+    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
+      navigate('/portal/unauthorized')
+      return
+    }
+    fetchEvents()
+  }, [profile, navigate, page, rowsPerPage, fetchEvents])
 
   function formatDate(dateStr: string) {
     return new Date(dateStr).toLocaleDateString('en-US', {

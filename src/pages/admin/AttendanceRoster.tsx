@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -42,15 +42,7 @@ export default function AttendanceRoster() {
   const { profile } = useAuth()
   const navigate = useNavigate()
 
-  useEffect(() => {
-    if (!profile || (profile.role !== 'admin' && profile.role !== 'coach' && !profile.organizations.some(org => org.role === 'org_admin' || org.role === 'coach'))) {
-      navigate('/portal/unauthorized')
-      return
-    }
-    if (eventId) fetchData()
-  }, [eventId, profile, navigate])
-
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     try {
       const { data: eventData } = await supabase
@@ -72,7 +64,15 @@ export default function AttendanceRoster() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventId])
+
+  useEffect(() => {
+    if (!profile || (profile.role !== 'admin' && profile.role !== 'coach' && !profile.organizations.some(org => org.role === 'org_admin' || org.role === 'coach'))) {
+      navigate('/portal/unauthorized')
+      return
+    }
+    if (eventId) fetchData()
+  }, [eventId, profile, navigate, fetchData])
 
   const getStatusColor = (status: string): ChipProps['color'] => {
     switch (status) {

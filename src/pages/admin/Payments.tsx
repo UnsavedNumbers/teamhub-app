@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -50,17 +50,7 @@ export default function Payments() {
   const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
 
-  useEffect(() => {
-    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
-      navigate('/portal/unauthorized')
-      return
-    }
-    if (currentOrganization?.id) {
-      fetchPayments()
-    }
-  }, [profile, currentOrganization, navigate, page, rowsPerPage, filter])
-
-  async function fetchPayments() {
+  const fetchPayments = useCallback(async () => {
     if (!currentOrganization?.id) return
 
     setLoading(true)
@@ -135,7 +125,17 @@ export default function Payments() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentOrganization?.id, filter, page, rowsPerPage])
+
+  useEffect(() => {
+    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
+      navigate('/portal/unauthorized')
+      return
+    }
+    if (currentOrganization?.id) {
+      fetchPayments()
+    }
+  }, [profile, currentOrganization, navigate, page, rowsPerPage, filter, fetchPayments])
 
   async function markPaid(paymentId: string) {
     // First get the assignment to get amount_cents

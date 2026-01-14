@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { supabase } from '../../lib/supabase'
@@ -113,8 +113,7 @@ export default function OrganizationOnboarding() {
         navigate('/admin/organization', { replace: true })
         return
       }
-      // Organization exists but needs completion, load existing data
-      loadOrganizationData()
+      // Organization exists but needs completion - handled by separate useEffect
     } else {
       // No organization, proceed with fresh onboarding
       // Pre-fill email from profile if available
@@ -145,7 +144,7 @@ export default function OrganizationOnboarding() {
     return () => clearTimeout(timeoutId)
   }, [loading])
 
-  async function loadOrganizationData() {
+  const loadOrganizationData = useCallback(async () => {
     if (!currentOrganization?.id) {
       setLoading(false)
       return
@@ -172,7 +171,14 @@ export default function OrganizationOnboarding() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentOrganization?.id, setValue])
+
+  // Call loadOrganizationData when organization exists but needs completion
+  useEffect(() => {
+    if (currentOrganization && (!currentOrganization.slug || !currentOrganization.org_type)) {
+      loadOrganizationData()
+    }
+  }, [currentOrganization, loadOrganizationData])
 
   const onStep1Submit = async (data: OrganizationFormData) => {
     // Prevent duplicate submissions

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Grid,
@@ -57,15 +57,41 @@ export default function AdminDashboard() {
   const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
 
-  useEffect(() => {
-    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
-      navigate('/portal/unauthorized')
-      return
-    }
-    fetchDashboardData()
-  }, [profile, currentOrganization, navigate])
+  const fetchRecentActivity = useCallback(async () => {
+    if (!currentOrganization?.id) return
+    
+    // Simplified recent activity - can be enhanced with payment_events table
+    const activities: RecentActivity[] = []
+    
+    // Get recent fee assignments
+    const { data: recentFees } = await supabase
+      .from('fee_assignments')
+      .select('id, created_at, fee:fees(title)')
+      .eq('organization_id', currentOrganization.id)
+      .order('created_at', { ascending: false })
+      .limit(5)
 
-  async function fetchDashboardData() {
+    if (recentFees) {
+      type RecentFeeAssignment = {
+        id: string
+        created_at: string | null
+        fee: { title: string | null } | null
+      }
+
+      ;(recentFees as unknown as RecentFeeAssignment[]).forEach((assignment) => {
+        activities.push({
+          id: assignment.id,
+          type: 'fee_assignment',
+          message: `New fee assignment: ${assignment.fee?.title || 'Fee'}`,
+          timestamp: assignment.created_at || new Date().toISOString(),
+        })
+      })
+    }
+
+    setRecentActivity(activities.slice(0, 5))
+  }, [currentOrganization?.id])
+
+  const fetchDashboardData = useCallback(async () => {
     if (!currentOrganization?.id) {
       setLoading(false)
       return
@@ -145,41 +171,15 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentOrganization?.id, fetchRecentActivity])
 
-  async function fetchRecentActivity() {
-    if (!currentOrganization?.id) return
-    
-    // Simplified recent activity - can be enhanced with payment_events table
-    const activities: RecentActivity[] = []
-    
-    // Get recent fee assignments
-    const { data: recentFees } = await supabase
-      .from('fee_assignments')
-      .select('id, created_at, fee:fees(title)')
-      .eq('organization_id', currentOrganization.id)
-      .order('created_at', { ascending: false })
-      .limit(5)
-
-    if (recentFees) {
-      type RecentFeeAssignment = {
-        id: string
-        created_at: string | null
-        fee: { title: string | null } | null
-      }
-
-      ;(recentFees as unknown as RecentFeeAssignment[]).forEach((assignment) => {
-        activities.push({
-          id: assignment.id,
-          type: 'fee_assignment',
-          message: `New fee assignment: ${assignment.fee?.title || 'Fee'}`,
-          timestamp: assignment.created_at || new Date().toISOString(),
-        })
-      })
+  useEffect(() => {
+    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
+      navigate('/portal/unauthorized')
+      return
     }
-
-    setRecentActivity(activities.slice(0, 5))
-  }
+    fetchDashboardData()
+  }, [profile, currentOrganization, navigate, fetchDashboardData])
 
   if (loading) {
     return <AdminSkeletonTable rows={6} columns={3} />

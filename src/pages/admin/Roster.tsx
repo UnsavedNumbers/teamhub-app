@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -49,19 +49,7 @@ export default function Roster() {
   const { profile } = useAuth()
   const navigate = useNavigate()
 
-  useEffect(() => {
-    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
-      navigate('/portal/unauthorized')
-      return
-    }
-    if (teamId) fetchSeasons()
-  }, [profile, teamId, navigate])
-
-  useEffect(() => {
-    if (selectedSeason) fetchRoster()
-  }, [selectedSeason, teamId])
-
-  async function fetchSeasons() {
+  const fetchSeasons = useCallback(async () => {
     const { data } = await supabase
       .from('seasons')
       .select('id, name')
@@ -74,9 +62,9 @@ export default function Roster() {
       setSelectedSeason(list[0].id)
     }
     setLoading(false)
-  }
+  }, [teamId])
 
-  async function fetchRoster() {
+  const fetchRoster = useCallback(async () => {
     const { data } = await supabase
       .from('team_memberships')
       .select('id, child_id, child:children(first_name, last_name, family:families(name))')
@@ -85,7 +73,19 @@ export default function Roster() {
       .eq('status', 'active')
 
     setRoster((data as unknown as Membership[]) || [])
-  }
+  }, [teamId, selectedSeason])
+
+  useEffect(() => {
+    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
+      navigate('/portal/unauthorized')
+      return
+    }
+    if (teamId) fetchSeasons()
+  }, [profile, teamId, navigate, fetchSeasons])
+
+  useEffect(() => {
+    if (selectedSeason) fetchRoster()
+  }, [selectedSeason, teamId, fetchRoster])
 
   async function removePlayer(membershipId: string) {
     await supabase
