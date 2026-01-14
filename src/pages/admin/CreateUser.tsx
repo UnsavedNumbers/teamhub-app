@@ -19,6 +19,7 @@ import {
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import { getErrorMessage } from '../../utils/errorUtils'
 
 interface UserFormData {
   email: string
@@ -72,8 +73,8 @@ export default function CreateUser() {
       // Reset form and show success
       reset()
       // Could add success state here if needed
-    } catch (err: any) {
-      setError('root', { message: err.message || 'Failed to create user' })
+    } catch (err: unknown) {
+      setError('root', { message: getErrorMessage(err) || 'Failed to create user' })
     }
   }
 

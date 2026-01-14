@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
-import { useOrganization } from '../../contexts/OrganizationContext'
+import { useOrganization, Organization } from '../../contexts/OrganizationContext'
 import OrganizationIdentityStep from '../../components/admin/onboarding/OrganizationIdentityStep'
 import LicenseActivationStep from '../../components/admin/onboarding/LicenseActivationStep'
 import {
@@ -12,6 +12,7 @@ import {
   setSetupOrganizationFlag,
   cleanupStaleFlags,
 } from '../../utils/setupOrganization'
+import { getErrorMessage } from '../../utils/errorUtils'
 
 interface OrganizationFormData {
   name: string
@@ -272,8 +273,14 @@ export default function OrganizationOnboarding() {
         }
 
         if (orgs) {
-          setCurrentOrganization(orgs as any)
-          setOrganizations([orgs as any])
+          const nextOrg: Organization = {
+            id: orgs.id,
+            name: orgs.name,
+            slug: orgs.slug ?? undefined,
+            role: 'org_admin',
+          }
+          setCurrentOrganization(nextOrg)
+          setOrganizations([nextOrg])
         }
       } else {
         // Update existing organization
@@ -302,8 +309,8 @@ export default function OrganizationOnboarding() {
 
       // Move to next step
       setCurrentStep(2)
-    } catch (err: any) {
-      setError(err.message || 'Failed to save organization')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || 'Failed to save organization')
     } finally {
       setCreating(false)
     }

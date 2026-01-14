@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TeamHub | Check Your Email</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#5468FF",
+              "background-light": "#F8FAFC",
+              "background-dark": "#0A0A0A",
+              "charcoal": "#121212",
+            },
+            fontFamily: {
+              display: ["Inter", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0px", // Nike-inspired blocky design
+            },
+          },
+        },
+      };
+    </script>
+<style>
+      .italic-condensed {
+        font-style: italic;
+        letter-spacing: -0.05em;
+        line-height: 0.9;
+      }
+      .stadium-overlay {
+        background: linear-gradient(to right, #0A0A0A 0%, transparent 100%);
+      }
+    </style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-white min-h-screen flex items-stretch">
+<main class="w-full lg:w-[45%] flex flex-col justify-between p-8 lg:p-16 xl:p-24 bg-background-light dark:bg-charcoal z-10">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 bg-primary rounded-sm flex items-center justify-center">
+<span class="material-icons text-white text-xl">sports_volleyball</span>
+</div>
+<span class="text-xl font-black tracking-tighter uppercase dark:text-white">TeamHub</span>
+</div>
+<div class="max-w-md">
+<div class="mb-8">
+<span class="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary text-xs font-bold uppercase tracking-widest mb-6">
+<span class="material-icons text-sm">mail_outline</span>
+                    Verification Sent
+                </span>
+<h1 class="text-6xl lg:text-7xl xl:text-8xl font-black italic uppercase italic-condensed mb-6 dark:text-white">
+                    Check your<br/>Email
+                </h1>
+<p class="text-slate-600 dark:text-slate-400 text-lg leading-relaxed">
+                    We've sent a confirmation link to <span class="font-bold text-slate-900 dark:text-white underline decoration-primary">iverson.gandy@mailinator.com</span>. Please click the link to verify your account.
+                </p>
+</div>
+<div class="border-l-4 border-primary bg-slate-100 dark:bg-zinc-900/50 p-6 mb-10">
+<div class="flex items-start gap-4">
+<span class="material-icons text-primary">info</span>
+<div>
+<h3 class="font-bold uppercase text-sm tracking-wider mb-1 dark:text-white">Organization Setup</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400">After confirming your email, you'll be redirected to complete your organization setup.</p>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-4">
+<a class="inline-block bg-slate-900 dark:bg-white text-white dark:text-black text-center font-black py-5 px-8 uppercase tracking-widest hover:bg-primary dark:hover:bg-primary dark:hover:text-white transition-all duration-300" href="#">
+                    Back to Login
+                </a>
+<p class="text-xs text-slate-500 dark:text-zinc-500 text-center uppercase tracking-tighter">
+                    Didn't receive the email? Check your spam folder or try again in 2 minutes.
+                </p>
+</div>
+</div>
+<footer class="pt-12">
+<p class="text-sm text-slate-500 dark:text-zinc-500">
+                Having trouble? <a class="text-primary font-bold hover:underline" href="#">Contact support</a>
+</p>
+</footer>
+</main>
+<aside class="hidden lg:block lg:flex-1 relative overflow-hidden bg-black">
+<div class="absolute inset-0 z-0">
+<img alt="High-contrast stadium lighting at night" class="w-full h-full object-cover opacity-60 grayscale" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8j09nXAAIZCs8TsFUfhqUdRGrd0Fy0kN5WmdAnGPtc12Z_xDAr-wYqjGF9aaH7JcNy82GO8qULydSUQf_dE1vH8iCLvVXA7Cflctjl9ZSWLwkqxMxsZ61DnpiZUs5UTbmothGuJO_j2sSsROKNZBu02qDUW28vdd_zw_npLegMOoEKk-phBo5pEIQdt8Lq7m56W-Qs_aStU0Y3hs_brlvXn-wFo6pger4H0uiVnunzzR9DnYMJ7N34csYoOZvgFzBcnIxP76gsz4"/>
+<div class="absolute inset-0 stadium-overlay"></div>
+<div class="absolute inset-0 opacity-20 pointer-events-none mix-blend-overlay">
+<img alt="Jersey texture overlay" class="w-full h-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBnGd6NKc8iWgiveXIvL8PIOXFqD6jVVWn3CbHCUOT2cbei2E_6xdoWI13EO00Y2dACrZgvltyjqzCIIwqk8v7cOEGMnDJpNwtEeEoYoBzss4lNXG7wv2z2ANkSMBJ35bHXuQei_jJM5gQPoTKkms0sH1lYDB3gRNoBhpGCWKCSx5TCV88eFkPb-TIHxYKP9u8QHveH75llffQi_72QN6HXSMidCnyrYfXze4MyLIDz-KVUbW2lEmOkXqYYQURp0YTlUnGXx190QXE"/>
+</div>
+</div>
+<div class="absolute bottom-16 right-16 z-10 text-right">
+<div class="text-primary text-9xl font-black italic opacity-20 select-none">TEAMHUB</div>
+<div class="text-white text-xl font-bold tracking-[0.5em] uppercase opacity-40 mt-[-2rem]">Performance Portal</div>
+</div>
+<div class="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[120px] animate-pulse"></div>
+</aside>
+<div class="lg:hidden absolute top-0 right-0 p-4">
+</div>
+
+</body></html>

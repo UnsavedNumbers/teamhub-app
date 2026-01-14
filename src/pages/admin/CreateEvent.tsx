@@ -17,6 +17,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import AdminSkeletonTable from '../../components/admin/AdminSkeletonTable'
+import { getErrorMessage } from '../../utils/errorUtils'
 
 interface Team {
   id: string
@@ -134,8 +135,8 @@ export default function CreateEvent() {
 
       if (error) throw error
       navigate('/admin/events')
-    } catch (err: any) {
-      setError(err.message || 'Failed to create event')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || 'Failed to create event')
     } finally {
       setSaving(false)
     }

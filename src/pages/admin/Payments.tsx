@@ -18,12 +18,21 @@ import {
   IconButton,
   Grid,
 } from '@mui/material'
+import type { ChipProps } from '@mui/material/Chip'
 import { Add as AddIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { adaptFeeAssignmentToTableRow, FeeAssignmentTableRow } from '../../utils/dataAdapters'
 import AdminSkeletonTable from '../../components/admin/AdminSkeletonTable'
+import type { Database } from '../../lib/database.types'
+
+type FeeAssignmentRow = Database['public']['Tables']['fee_assignments']['Row']
+type FeeAssignmentJoinedRow = FeeAssignmentRow & {
+  child: { first_name: string; last_name: string } | null
+  parent: { display_name: string | null } | null
+  fee: { title: string | null } | null
+}
 
 export default function Payments() {
   const [payments, setPayments] = useState<FeeAssignmentTableRow[]>([])
@@ -90,13 +99,13 @@ export default function Payments() {
         return
       }
 
-      // Transform data using adapter
-      const adaptedData = (data || []).map((assignment: any) =>
+      const rows = (data || []) as FeeAssignmentJoinedRow[]
+      const adaptedData = rows.map((assignment) =>
         adaptFeeAssignmentToTableRow(
           assignment,
           assignment.child,
           assignment.parent,
-          assignment.fee
+          assignment.fee?.title ? { title: assignment.fee.title } : null
         )
       )
 
@@ -150,7 +159,7 @@ export default function Payments() {
     fetchPayments()
   }
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string): ChipProps['color'] => {
     switch (status) {
       case 'paid':
         return 'success'
@@ -275,7 +284,7 @@ export default function Payments() {
                     <TableCell>
                       <Chip
                         label={payment.status}
-                        color={getStatusColor(payment.status) as any}
+                        color={getStatusColor(payment.status)}
                         size="small"
                       />
                     </TableCell>

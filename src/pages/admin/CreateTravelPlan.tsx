@@ -17,6 +17,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import AdminSkeletonTable from '../../components/admin/AdminSkeletonTable'
+import { getErrorMessage } from '../../utils/errorUtils'
 
 interface Team {
   id: string
@@ -127,8 +128,8 @@ export default function CreateTravelPlan() {
 
       if (error) throw error
       navigate('/admin/travel')
-    } catch (err: any) {
-      setError(err.message || 'Failed to create travel plan')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || 'Failed to create travel plan')
     } finally {
       setSaving(false)
     }

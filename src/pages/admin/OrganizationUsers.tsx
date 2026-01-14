@@ -1,27 +1,33 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
+  Alert,
   Box,
-  Card,
-  Typography,
   Button,
+  Card,
+  Chip,
+  IconButton,
+  Paper,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
-  TableRow,
   TablePagination,
-  Paper,
-  Chip,
-  IconButton,
+  TableRow,
+  Typography,
 } from '@mui/material'
+import type { ChipProps } from '@mui/material/Chip'
 import { Add as AddIcon, Edit as EditIcon } from '@mui/icons-material'
+import type { Database } from '../../lib/database.types'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { adaptUserToTableRow, UserTableRow } from '../../utils/dataAdapters'
 import AdminSkeletonTable from '../../components/admin/AdminSkeletonTable'
+
+type UserRow = Database['public']['Tables']['users']['Row']
+type UserWithFamily = UserRow & { family: { name: string | null } | null }
 
 export default function OrganizationUsers() {
   const [users, setUsers] = useState<UserTableRow[]>([])
@@ -29,27 +35,30 @@ export default function OrganizationUsers() {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(50)
   const [totalCount, setTotalCount] = useState(0)
+  const [error, setError] = useState<string | null>(null)
 
   const { profile } = useAuth()
   const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
+    if (!profile || (profile.role !== 'admin' && !profile.organizations.some((org) => org.role === 'org_admin'))) {
       navigate('/portal/unauthorized')
       return
     }
     if (currentOrganization?.id) {
       fetchUsers()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile, currentOrganization, navigate, page, rowsPerPage])
 
   async function fetchUsers() {
     if (!currentOrganization?.id) return
 
     setLoading(true)
+    setError(null)
+
     try {
-      // Get total count
       const { count } = await supabase
         .from('users')
         .select('*', { count: 'exact', head: true })
@@ -57,7 +66,6 @@ export default function OrganizationUsers() {
 
       setTotalCount(count || 0)
 
-      // Get paginated data
       const from = page * rowsPerPage
       const to = from + rowsPerPage - 1
 
@@ -69,25 +77,24 @@ export default function OrganizationUsers() {
         .range(from, to)
 
       if (error) {
-        console.error('Error fetching users:', error)
-        setLoading(false)
+        setError(error.message)
         return
       }
 
-      // Transform data using adapter
-      const adaptedData = (data || []).map((user: any) =>
-        adaptUserToTableRow(user, user.family)
+      const rows = (data || []) as UserWithFamily[]
+      const adapted = rows.map((user) =>
+        adaptUserToTableRow(user, user.family?.name ? { name: user.family.name } : null)
       )
-
-      setUsers(adaptedData)
-    } catch (error) {
-      console.error('Error:', error)
+      setUsers(adapted)
+    } catch (err) {
+      console.error('Error:', err)
+      setError('Failed to load users')
     } finally {
       setLoading(false)
     }
   }
 
-  const getRoleColor = (role: string) => {
+  const getRoleColor = (role: string): ChipProps['color'] => {
     switch (role) {
       case 'org_admin':
       case 'admin':
@@ -109,14 +116,16 @@ export default function OrganizationUsers() {
         <Typography variant="h4" sx={{ fontWeight: 600 }}>
           Organization Users
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => navigate('/admin/users/new')}
-        >
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/admin/users/new')}>
           Add User
         </Button>
       </Box>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       <Card>
         <TableContainer component={Paper}>
@@ -135,9 +144,7 @@ export default function OrganizationUsers() {
               {users.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                    <Typography color="textSecondary">
-                      No users found.
-                    </Typography>
+                    <Typography color="textSecondary">No users found.</Typography>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -147,11 +154,7 @@ export default function OrganizationUsers() {
                     <TableCell>{user.email}</TableCell>
                     <TableCell>{user.phone}</TableCell>
                     <TableCell>
-                      <Chip
-                        label={user.role}
-                        color={getRoleColor(user.role) as any}
-                        size="small"
-                      />
+                      <Chip label={user.role} color={getRoleColor(user.role)} size="small" />
                     </TableCell>
                     <TableCell>{user.familyName}</TableCell>
                     <TableCell align="right">

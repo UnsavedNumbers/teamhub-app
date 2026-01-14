@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import {
   Box,
@@ -15,6 +15,11 @@ import {
 import { supabase } from '../../lib/supabase'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import AdminSkeletonTable from '../../components/admin/AdminSkeletonTable'
+import { useLicense } from '../../hooks/useLicense'
+import { LicenseStatusBadge } from '../../components/admin/LicenseStatusBadge'
+import { t } from '../../i18n'
+import { formatDate } from '../../utils/licenseUtils'
+import { getErrorMessage } from '../../utils/errorUtils'
 
 interface OrganizationFormData {
   name: string
@@ -30,6 +35,7 @@ export default function OrganizationSettings() {
   const [success, setSuccess] = useState(false)
 
   const { currentOrganization } = useOrganization()
+  const { summary: licenseSummary, loading: licenseLoading } = useLicense(currentOrganization?.id, { requireOrganization: !!currentOrganization })
 
   const {
     control,
@@ -45,21 +51,17 @@ export default function OrganizationSettings() {
     },
   })
 
-  useEffect(() => {
-    if (currentOrganization?.id) {
-      fetchOrganization()
-    }
-  }, [currentOrganization])
+  const organizationId = currentOrganization?.id ?? null
 
-  async function fetchOrganization() {
-    if (!currentOrganization?.id) return
+  const fetchOrganization = useCallback(async () => {
+    if (!organizationId) return
 
     setLoading(true)
     try {
       const { data, error } = await supabase
         .from('organizations')
         .select('name, slug, contact_email, refund_policy')
-        .eq('id', currentOrganization.id)
+        .eq('id', organizationId)
         .single()
 
       if (error) throw error
@@ -72,15 +74,19 @@ export default function OrganizationSettings() {
           refund_policy: data.refund_policy || '',
         })
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to load organization')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || 'Failed to load organization')
     } finally {
       setLoading(false)
     }
-  }
+  }, [organizationId, reset])
+
+  useEffect(() => {
+    void fetchOrganization()
+  }, [fetchOrganization])
 
   const onSubmit = async (data: OrganizationFormData) => {
-    if (!currentOrganization?.id) return
+    if (!organizationId) return
 
     setSaving(true)
     setError(null)
@@ -95,12 +101,12 @@ export default function OrganizationSettings() {
           contact_email: data.contact_email,
           refund_policy: data.refund_policy,
         })
-        .eq('id', currentOrganization.id)
+        .eq('id', organizationId)
 
       if (error) throw error
       setSuccess(true)
-    } catch (err: any) {
-      setError(err.message || 'Failed to update organization')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || 'Failed to update organization')
     } finally {
       setSaving(false)
     }
@@ -115,6 +121,46 @@ export default function OrganizationSettings() {
       <Typography variant="h4" sx={{ fontWeight: 600, mb: 3 }}>
         Organization Settings
       </Typography>
+
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary">
+                {t('billing.pageTitle')}
+              </Typography>
+              <Typography variant="h6" fontWeight={700}>
+                {licenseSummary?.plan === 'starter'
+                  ? t('license.planStarter')
+                  : licenseSummary?.plan === 'standard'
+                    ? t('license.planStandard')
+                    : licenseSummary?.plan === 'pro'
+                      ? t('license.planPro')
+                      : t('license.planLabel')}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {t('billing.renewalDate')}: {formatDate(licenseSummary?.currentPeriodEnd)}
+              </Typography>
+            </Box>
+            <Box display="flex" alignItems="center" gap={1.5}>
+              <LicenseStatusBadge
+                status={licenseSummary?.status ?? null}
+                currentPeriodEnd={licenseSummary?.currentPeriodEnd}
+                trialEndsAt={licenseSummary?.trialEndsAt}
+                graceEndsAt={licenseSummary?.graceEndsAt}
+                cancelAtPeriodEnd={licenseSummary?.cancelAtPeriodEnd}
+              />
+              <Button
+                variant="outlined"
+                onClick={() => window.location.assign('/admin/organization/billing')}
+                disabled={licenseLoading}
+              >
+                {t('billing.manageBilling')}
+              </Button>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent>

@@ -14,6 +14,7 @@ import {
   Paper,
   Chip,
 } from '@mui/material'
+import type { ChipProps } from '@mui/material/Chip'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useEventParams } from '../../hooks/useRouteParams'
@@ -73,7 +74,7 @@ export default function AttendanceRoster() {
     }
   }
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string): ChipProps['color'] => {
     switch (status) {
       case 'going':
         return 'success'
@@ -138,7 +139,7 @@ export default function AttendanceRoster() {
                       {record.child.first_name} {record.child.last_name}
                     </TableCell>
                     <TableCell>
-                      <Chip label={record.status} color={getStatusColor(record.status) as any} size="small" />
+                      <Chip label={record.status} color={getStatusColor(record.status)} size="small" />
                     </TableCell>
                   </TableRow>
                 ))

@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useOrganization } from '../contexts/OrganizationContext'
+import { useLicense } from '../hooks/useLicense'
 
 type OrgMemberRole = 'parent' | 'coach' | 'org_admin'
 
@@ -18,11 +19,27 @@ export function ProtectedRoute({
   requireOrganization = false 
 }: ProtectedRouteProps) {
   const { user, profile, loading } = useAuth()
-  const { isLoading: orgLoading } = useOrganization()
+  const { isLoading: orgLoading, currentOrganization } = useOrganization()
   const location = useLocation()
+  const isAdminRoute = location.pathname.startsWith('/admin')
+  const { isActive: licenseActive, isPastGracePeriod, loading: licenseLoading } = useLicense(
+    isAdminRoute ? currentOrganization?.id : undefined,
+    { requireOrganization: isAdminRoute }
+  )
 
   // Show loading spinner while auth/org state is loading
   if (loading || orgLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500 mx-auto"></div>
+          <p className="mt-4 text-slate-400">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (isAdminRoute && licenseLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900">
         <div className="text-center">
@@ -94,6 +111,13 @@ export function ProtectedRoute({
     
     if (!hasAllowedRole && !hasLegacyRole) {
       return <Navigate to="/portal/unauthorized" replace />
+    }
+  }
+
+  // License gating for admin routes (platform admins bypass)
+  if (isAdminRoute && !profile.isPlatformAdmin) {
+    if (!licenseActive && isPastGracePeriod) {
+      return <Navigate to="/admin/organization/billing" state={{ from: location }} replace />
     }
   }
 

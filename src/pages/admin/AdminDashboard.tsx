@@ -162,7 +162,13 @@ export default function AdminDashboard() {
       .limit(5)
 
     if (recentFees) {
-      recentFees.forEach((assignment: any) => {
+      type RecentFeeAssignment = {
+        id: string
+        created_at: string | null
+        fee: { title: string | null } | null
+      }
+
+      ;(recentFees as unknown as RecentFeeAssignment[]).forEach((assignment) => {
         activities.push({
           id: assignment.id,
           type: 'fee_assignment',

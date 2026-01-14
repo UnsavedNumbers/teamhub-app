@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { getErrorMessage } from '../../../utils/errorUtils'
 
 interface LicenseActivationStepProps {
   organizationId?: string
@@ -39,8 +40,8 @@ export default function LicenseActivationStep({
       // For now, just complete onboarding
       // In production, this would be handled by a webhook after successful payment
       onComplete()
-    } catch (err: any) {
-      setError(err.message || 'Failed to activate license')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || 'Failed to activate license')
     } finally {
       setLoading(false)
     }

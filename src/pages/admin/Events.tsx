@@ -16,6 +16,7 @@ import {
   TablePagination,
   Paper,
 } from '@mui/material'
+import type { ChipProps } from '@mui/material/Chip'
 import { Add as AddIcon, Event as EventIcon } from '@mui/icons-material'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
@@ -94,7 +95,7 @@ export default function Events() {
     })
   }
 
-  const getTypeColor = (type: string) => {
+  const getTypeColor = (type: string): ChipProps['color'] => {
     switch (type) {
       case 'practice':
         return 'info'
@@ -166,7 +167,7 @@ export default function Events() {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip label={event.type} color={getTypeColor(event.type) as any} size="small" />
+                      <Chip label={event.type} color={getTypeColor(event.type)} size="small" />
                     </TableCell>
                     <TableCell>{event.team.name}</TableCell>
                     <TableCell>{event.location || 'N/A'}</TableCell>

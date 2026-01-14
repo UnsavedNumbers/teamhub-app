@@ -19,6 +19,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import AdminSkeletonTable from '../../components/admin/AdminSkeletonTable'
+import { getErrorMessage } from '../../utils/errorUtils'
 
 interface Team {
   id: string
@@ -129,8 +130,9 @@ export default function CreateFee() {
       .eq('team_id', teamId)
       .eq('status', 'active')
 
-    const members = data as any[]
-    const kids = members?.map((d) => d.child as unknown as Child).filter(Boolean) || []
+    type MembershipRow = { child: Child | null }
+    const members = (data as unknown as MembershipRow[]) || []
+    const kids = members.map((d) => d.child).filter((c): c is Child => !!c)
     setChildren(kids)
   }
 
@@ -182,8 +184,8 @@ export default function CreateFee() {
       }
 
       navigate('/admin/payments')
-    } catch (err: any) {
-      setError(err.message || 'Failed to create fee')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || 'Failed to create fee')
     } finally {
       setSaving(false)
     }

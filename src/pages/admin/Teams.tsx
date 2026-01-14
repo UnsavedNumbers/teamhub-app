@@ -21,6 +21,9 @@ import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { adaptTeamToTableRow, TeamTableRow } from '../../utils/dataAdapters'
 import AdminSkeletonTable from '../../components/admin/AdminSkeletonTable'
+import type { Database } from '../../lib/database.types'
+
+type TeamRow = Database['public']['Tables']['teams']['Row']
 
 export default function Teams() {
   const [teams, setTeams] = useState<TeamTableRow[]>([])
@@ -68,10 +71,8 @@ export default function Teams() {
         return
       }
 
-      // Transform data using adapter (simplified - can enhance with counts)
-      const adaptedData = (data || []).map((team: any) =>
-        adaptTeamToTableRow(team, 0, 0, 0)
-      )
+      const teamRows = (data || []) as TeamRow[]
+      const adaptedData = teamRows.map((team) => adaptTeamToTableRow(team, 0, 0, 0))
 
       setTeams(adaptedData)
     } catch (error) {

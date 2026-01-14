@@ -54,6 +54,10 @@ const AdminTryouts = lazy(() => import('./pages/admin/AdminTryouts'))
 const OrganizationSettings = lazy(() => import('./pages/admin/OrganizationSettings'))
 const OrganizationUsers = lazy(() => import('./pages/admin/OrganizationUsers'))
 const OrganizationOnboarding = lazy(() => import('./pages/admin/OrganizationOnboarding'))
+const OrganizationBilling = lazy(() => import('./pages/admin/OrganizationBilling'))
+const PlanSelection = lazy(() => import('./pages/admin/PlanSelection'))
+const CheckoutSuccess = lazy(() => import('./pages/admin/CheckoutSuccess'))
+const CheckoutCancel = lazy(() => import('./pages/admin/CheckoutCancel'))
 
 function App() {
   return (
@@ -149,6 +153,10 @@ function App() {
             {/* Organization */}
             <Route path="organization" element={<OrganizationSettings />} />
             <Route path="organization/users" element={<OrganizationUsers />} />
+            <Route path="organization/billing" element={<OrganizationBilling />} />
+            <Route path="organization/billing/plan-selection" element={<PlanSelection />} />
+            <Route path="organization/billing/checkout/success" element={<CheckoutSuccess />} />
+            <Route path="organization/billing/checkout/cancel" element={<CheckoutCancel />} />
           </Route>
         </Routes>
       </AuthProvider>

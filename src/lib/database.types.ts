@@ -1138,6 +1138,115 @@ export type Database = {
           },
         ]
       }
+
+      billing_events: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          event_type: string | null
+          id: string
+          organization_id: string | null
+          payload: Json | null
+          processed_at: string | null
+          stripe_event_id: string | null
+          stripe_object_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          event_type?: string | null
+          id?: string
+          organization_id?: string | null
+          payload?: Json | null
+          processed_at?: string | null
+          stripe_event_id?: string | null
+          stripe_object_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          event_type?: string | null
+          id?: string
+          organization_id?: string | null
+          payload?: Json | null
+          processed_at?: string | null
+          stripe_event_id?: string | null
+          stripe_object_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+
+      org_licenses: {
+        Row: {
+          cancel_at_period_end: boolean | null
+          created_at: string | null
+          current_period_end: string | null
+          current_period_start: string | null
+          grace_ends_at: string | null
+          id: string
+          organization_id: string
+          plan: Database["public"]["Enums"]["license_plan"] | null
+          status: Database["public"]["Enums"]["license_status"]
+          stripe_customer_id: string | null
+          stripe_latest_invoice_id: string | null
+          stripe_price_id: string | null
+          stripe_subscription_id: string | null
+          trial_ends_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          cancel_at_period_end?: boolean | null
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          grace_ends_at?: string | null
+          id?: string
+          organization_id: string
+          plan?: Database["public"]["Enums"]["license_plan"] | null
+          status?: Database["public"]["Enums"]["license_status"]
+          stripe_customer_id?: string | null
+          stripe_latest_invoice_id?: string | null
+          stripe_price_id?: string | null
+          stripe_subscription_id?: string | null
+          trial_ends_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          cancel_at_period_end?: boolean | null
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          grace_ends_at?: string | null
+          id?: string
+          organization_id?: string
+          plan?: Database["public"]["Enums"]["license_plan"] | null
+          status?: Database["public"]["Enums"]["license_status"]
+          stripe_customer_id?: string | null
+          stripe_latest_invoice_id?: string | null
+          stripe_price_id?: string | null
+          stripe_subscription_id?: string | null
+          trial_ends_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_licenses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+
       organizations: {
         Row: {
           billing_mode: Database["public"]["Enums"]["billing_mode"] | null
@@ -1145,6 +1254,13 @@ export type Database = {
           created_at: string | null
           currency: string | null
           id: string
+          license_cancel_at_period_end: boolean | null
+          license_current_period_end: string | null
+          license_current_period_start: string | null
+          license_grace_ends_at: string | null
+          license_plan: Database["public"]["Enums"]["license_plan"] | null
+          license_status: Database["public"]["Enums"]["license_status"] | null
+          license_trial_ends_at: string | null
           name: string
           org_type: Database["public"]["Enums"]["org_type"] | null
           payout_account_id: string | null
@@ -1154,6 +1270,9 @@ export type Database = {
           | null
           payouts_enabled: boolean | null
           refund_policy: string | null
+          stripe_customer_id: string | null
+          stripe_price_id: string | null
+          stripe_subscription_id: string | null
           slug: string | null
           updated_at: string | null
         }
@@ -1163,6 +1282,13 @@ export type Database = {
           created_at?: string | null
           currency?: string | null
           id?: string
+          license_cancel_at_period_end?: boolean | null
+          license_current_period_end?: string | null
+          license_current_period_start?: string | null
+          license_grace_ends_at?: string | null
+          license_plan?: Database["public"]["Enums"]["license_plan"] | null
+          license_status?: Database["public"]["Enums"]["license_status"] | null
+          license_trial_ends_at?: string | null
           name: string
           org_type?: Database["public"]["Enums"]["org_type"] | null
           payout_account_id?: string | null
@@ -1172,6 +1298,9 @@ export type Database = {
           | null
           payouts_enabled?: boolean | null
           refund_policy?: string | null
+          stripe_customer_id?: string | null
+          stripe_price_id?: string | null
+          stripe_subscription_id?: string | null
           slug?: string | null
           updated_at?: string | null
         }
@@ -1181,6 +1310,13 @@ export type Database = {
           created_at?: string | null
           currency?: string | null
           id?: string
+          license_cancel_at_period_end?: boolean | null
+          license_current_period_end?: string | null
+          license_current_period_start?: string | null
+          license_grace_ends_at?: string | null
+          license_plan?: Database["public"]["Enums"]["license_plan"] | null
+          license_status?: Database["public"]["Enums"]["license_status"] | null
+          license_trial_ends_at?: string | null
           name?: string
           org_type?: Database["public"]["Enums"]["org_type"] | null
           payout_account_id?: string | null
@@ -1190,6 +1326,9 @@ export type Database = {
           | null
           payouts_enabled?: boolean | null
           refund_policy?: string | null
+          stripe_customer_id?: string | null
+          stripe_price_id?: string | null
+          stripe_subscription_id?: string | null
           slug?: string | null
           updated_at?: string | null
         }
@@ -2357,6 +2496,8 @@ export type Database = {
       | "late"
       | "skipped"
       | "waived"
+      license_plan: "starter" | "standard" | "pro"
+      license_status: "trial" | "active" | "past_due" | "canceled" | "expired"
       membership_status: "active" | "invited" | "removed"
       offline_payment_method: "cash" | "check" | "external_processor" | "other"
       offline_payment_status: "recorded" | "voided"

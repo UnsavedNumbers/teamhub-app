@@ -16,6 +16,8 @@ import {
   MenuItem,
   Select,
 } from '@mui/material'
+import type { ChipProps } from '@mui/material/Chip'
+import type { SelectChangeEvent } from '@mui/material/Select'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import AdminSkeletonTable from '../../components/admin/AdminSkeletonTable'
@@ -29,10 +31,12 @@ interface UniformOrder {
   team: { name: string }
 }
 
+type UniformOrderFilter = 'all' | UniformOrder['status']
+
 export default function UniformOrders() {
   const [orders, setOrders] = useState<UniformOrder[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'pending' | 'ordered' | 'delivered'>('all')
+  const [filter, setFilter] = useState<UniformOrderFilter>('all')
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(50)
   const [totalCount, setTotalCount] = useState(0)
@@ -82,7 +86,7 @@ export default function UniformOrders() {
     fetchOrders()
   }
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: UniformOrder['status']): ChipProps['color'] => {
     switch (status) {
       case 'delivered':
         return 'success'
@@ -105,7 +109,11 @@ export default function UniformOrders() {
         <Typography variant="h4" sx={{ fontWeight: 600 }}>
           Uniform Orders
         </Typography>
-        <Select value={filter} onChange={(e) => setFilter(e.target.value as any)} size="small">
+        <Select
+          value={filter}
+          onChange={(e: SelectChangeEvent) => setFilter(e.target.value as UniformOrderFilter)}
+          size="small"
+        >
           <MenuItem value="all">All</MenuItem>
           <MenuItem value="pending">Pending</MenuItem>
           <MenuItem value="ordered">Ordered</MenuItem>
@@ -143,12 +151,12 @@ export default function UniformOrders() {
                     <TableCell>{order.jersey_size}</TableCell>
                     <TableCell>{order.shorts_size}</TableCell>
                     <TableCell>
-                      <Chip label={order.status} color={getStatusColor(order.status) as any} size="small" />
+                      <Chip label={order.status} color={getStatusColor(order.status)} size="small" />
                     </TableCell>
                     <TableCell align="right">
                       <Select
                         value={order.status}
-                        onChange={(e) => updateStatus(order.id, e.target.value as any)}
+                        onChange={(e: SelectChangeEvent) => updateStatus(order.id, e.target.value as UniformOrder['status'])}
                         size="small"
                       >
                         <MenuItem value="pending">Pending</MenuItem>

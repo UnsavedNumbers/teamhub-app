@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Outlet, useLocation, Link } from 'react-router-dom'
+import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom'
 import {
   Box,
   Drawer,
@@ -35,6 +35,8 @@ import {
 } from '@mui/icons-material'
 import { useAuth } from '../hooks/useAuth'
 import { useOrganization } from '../contexts/OrganizationContext'
+import { useLicense } from '../hooks/useLicense'
+import { LicenseWarningBanner } from '../components/admin/LicenseWarningBanner'
 
 const drawerWidth = 280
 
@@ -60,8 +62,10 @@ export default function AdminLayout() {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
   const { profile } = useAuth()
   const { currentOrganization } = useOrganization()
+  const { summary } = useLicense(currentOrganization?.id)
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
@@ -212,6 +216,15 @@ export default function AdminLayout() {
         }}
       >
         <Toolbar /> {/* Spacer for AppBar */}
+        {!profile?.isPlatformAdmin && summary && ['trial', 'past_due', 'canceled', 'expired'].includes(summary.status || '') && (
+          <LicenseWarningBanner
+            status={summary.status}
+            trialEndsAt={summary.trialEndsAt}
+            graceEndsAt={summary.graceEndsAt}
+            currentPeriodEnd={summary.currentPeriodEnd}
+            onAction={() => navigate('/admin/organization/billing')}
+          />
+        )}
         <Outlet /> {/* Child routes render here */}
       </Box>
     </Box>
