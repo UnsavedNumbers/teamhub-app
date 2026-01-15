@@ -135,3 +135,4 @@ supabase/.temp
 # Docs
 designs/
 docs
+*.md

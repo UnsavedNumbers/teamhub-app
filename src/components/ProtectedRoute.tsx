@@ -22,13 +22,16 @@ export function ProtectedRoute({
   const { isLoading: orgLoading, currentOrganization } = useOrganization()
   const location = useLocation()
   const isAdminRoute = location.pathname.startsWith('/admin')
+  const isPlatformAdmin = profile?.isPlatformAdmin ?? false
+
   const { isActive: licenseActive, isPastGracePeriod, loading: licenseLoading } = useLicense(
-    isAdminRoute ? currentOrganization?.id : undefined,
-    { requireOrganization: isAdminRoute }
+    isAdminRoute && !isPlatformAdmin ? currentOrganization?.id : undefined,
+    { requireOrganization: isAdminRoute && !isPlatformAdmin }
   )
 
-  // Show loading spinner while auth/org state is loading
-  if (loading || orgLoading) {
+  // Always wait for auth loading. Do NOT globally block on orgLoading;
+  // platform admins and admin routes must be able to render without an org selected.
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900">
         <div className="text-center">
@@ -39,7 +42,7 @@ export function ProtectedRoute({
     )
   }
 
-  if (isAdminRoute && licenseLoading) {
+  if (isAdminRoute && !isPlatformAdmin && licenseLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900">
         <div className="text-center">
@@ -76,7 +79,7 @@ export function ProtectedRoute({
   }
 
   // Check if organization is required but user has no orgs
-  if (requireOrganization && profile.organizations.length === 0) {
+  if (requireOrganization && !profile.isPlatformAdmin && profile.organizations.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900">
         <div className="max-w-md text-center p-8">

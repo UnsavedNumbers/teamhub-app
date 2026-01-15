@@ -174,7 +174,7 @@ export default function AdminDashboard() {
   }, [currentOrganization?.id, fetchRecentActivity])
 
   useEffect(() => {
-    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
+    if (!profile || (!profile.isPlatformAdmin && profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
       navigate('/portal/unauthorized')
       return
     }
