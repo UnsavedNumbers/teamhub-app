@@ -25,6 +25,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import AdminSkeletonTable from '../../components/admin/AdminSkeletonTable'
+import { NoOrganizationEmptyState } from '../../components/admin/NoOrganizationEmptyState'
 
 interface DashboardStats {
   totalTeams: number
@@ -183,6 +184,11 @@ export default function AdminDashboard() {
 
   if (loading) {
     return <AdminSkeletonTable rows={6} columns={3} />
+  }
+
+  // Show empty state if no organization
+  if (!currentOrganization?.id) {
+    return <NoOrganizationEmptyState variant="card" />
   }
 
   const statCards = [

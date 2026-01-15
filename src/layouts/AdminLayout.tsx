@@ -13,6 +13,7 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Tooltip,
   useTheme,
   useMediaQuery,
 } from '@mui/material'
@@ -42,19 +43,19 @@ const drawerWidth = 280
 
 // Navigation menu items based on ADMIN_PANEL_STRUCTURE.txt
 const menuItems = [
-  { text: 'Dashboard', icon: <DashboardIcon />, path: '/admin' },
-  { text: 'Organization', icon: <SettingsIcon />, path: '/admin/organization' },
-  { text: 'Teams', icon: <TeamsIcon />, path: '/admin/teams' },
-  { text: 'Families', icon: <FamiliesIcon />, path: '/admin/families' },
-  { text: 'Children', icon: <ChildrenIcon />, path: '/admin/children' },
-  { text: 'Payments', icon: <PaymentsIcon />, path: '/admin/payments' },
-  { text: 'Events', icon: <EventsIcon />, path: '/admin/events' },
-  { text: 'Attendance', icon: <PeopleIcon />, path: '/admin/attendance' },
-  { text: 'Uniforms', icon: <UniformsIcon />, path: '/admin/uniforms' },
-  { text: 'Travel', icon: <TravelIcon />, path: '/admin/travel' },
-  { text: 'Tryouts', icon: <TryoutsIcon />, path: '/admin/tryouts' },
-  { text: 'Messages', icon: <MessagesIcon />, path: '/admin/messages' },
-  { text: 'Reports', icon: <ReportsIcon />, path: '/admin/reports' },
+  { text: 'Dashboard', icon: <DashboardIcon />, path: '/admin', requiresOrg: false },
+  { text: 'Organization', icon: <SettingsIcon />, path: '/admin/organization', requiresOrg: false },
+  { text: 'Teams', icon: <TeamsIcon />, path: '/admin/teams', requiresOrg: true },
+  { text: 'Families', icon: <FamiliesIcon />, path: '/admin/families', requiresOrg: true },
+  { text: 'Children', icon: <ChildrenIcon />, path: '/admin/children', requiresOrg: true },
+  { text: 'Payments', icon: <PaymentsIcon />, path: '/admin/payments', requiresOrg: true },
+  { text: 'Events', icon: <EventsIcon />, path: '/admin/events', requiresOrg: true },
+  { text: 'Attendance', icon: <PeopleIcon />, path: '/admin/attendance', requiresOrg: true },
+  { text: 'Uniforms', icon: <UniformsIcon />, path: '/admin/uniforms', requiresOrg: true },
+  { text: 'Travel', icon: <TravelIcon />, path: '/admin/travel', requiresOrg: true },
+  { text: 'Tryouts', icon: <TryoutsIcon />, path: '/admin/tryouts', requiresOrg: true },
+  { text: 'Messages', icon: <MessagesIcon />, path: '/admin/messages', requiresOrg: true },
+  { text: 'Reports', icon: <ReportsIcon />, path: '/admin/reports', requiresOrg: true },
 ]
 
 export default function AdminLayout() {
@@ -70,6 +71,9 @@ export default function AdminLayout() {
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
   }
+
+  // Determine if user has an organization
+  const hasOrg = !!currentOrganization?.id
 
   const drawer = (
     <Box>
@@ -96,34 +100,58 @@ export default function AdminLayout() {
           const isActive = location.pathname === item.path || 
             (item.path !== '/admin' && location.pathname.startsWith(item.path))
           
-          return (
-            <ListItem key={item.text} disablePadding>
-              <ListItemButton
-                component={Link}
-                to={item.path}
-                selected={isActive}
-                sx={{
-                  '&.Mui-selected': {
-                    backgroundColor: theme.palette.primary.main,
-                    color: theme.palette.primary.contrastText,
-                    '&:hover': {
-                      backgroundColor: theme.palette.primary.dark,
-                    },
-                    '& .MuiListItemIcon-root': {
-                      color: theme.palette.primary.contrastText,
-                    },
+          // Determine if this item should be disabled
+          const isDisabled = item.requiresOrg && !hasOrg
+          
+          const navButton = (
+            <ListItemButton
+              component={isDisabled ? 'div' : Link}
+              to={isDisabled ? undefined : item.path}
+              disabled={isDisabled}
+              selected={isActive && !isDisabled}
+              sx={{
+                '&.Mui-selected': {
+                  backgroundColor: theme.palette.primary.main,
+                  color: theme.palette.primary.contrastText,
+                  '&:hover': {
+                    backgroundColor: theme.palette.primary.dark,
                   },
+                  '& .MuiListItemIcon-root': {
+                    color: theme.palette.primary.contrastText,
+                  },
+                },
+                '&.Mui-disabled': {
+                  opacity: 0.5,
+                  cursor: 'not-allowed',
+                },
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  color: isActive && !isDisabled ? theme.palette.primary.contrastText : 'inherit',
                 }}
               >
-                <ListItemIcon
-                  sx={{
-                    color: isActive ? theme.palette.primary.contrastText : 'inherit',
-                  }}
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText primary={item.text} />
+            </ListItemButton>
+          )
+          
+          return (
+            <ListItem key={item.text} disablePadding>
+              {isDisabled ? (
+                <Tooltip 
+                  title="Create or join an organization first" 
+                  placement="right"
+                  arrow
                 >
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText primary={item.text} />
-              </ListItemButton>
+                  <Box sx={{ width: '100%' }}>
+                    {navButton}
+                  </Box>
+                </Tooltip>
+              ) : (
+                navButton
+              )}
             </ListItem>
           )
         })}

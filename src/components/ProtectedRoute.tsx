@@ -2,6 +2,7 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useOrganization } from '../contexts/OrganizationContext'
 import { useLicense } from '../hooks/useLicense'
+import { NoOrganizationEmptyState } from './admin/NoOrganizationEmptyState'
 
 type OrgMemberRole = 'parent' | 'coach' | 'org_admin'
 
@@ -76,6 +77,28 @@ export function ProtectedRoute({
   const isOnboardingRoute = location.pathname === '/admin/onboarding'
   if (!profile.isPlatformAdmin && profile.requiresOrgSetup && !isOnboardingRoute) {
     return <Navigate to="/admin/onboarding" replace />
+  }
+
+  // Global no-org gate for /admin/* routes
+  // Show empty state when org_admin has no organizations
+  // This prevents pages from rendering skeleton loops when currentOrganization is null
+  // Allow-list: onboarding, billing, and organization routes (user needs these to get started)
+  const adminRouteAllowList = [
+    '/admin/onboarding',
+    '/admin/organization/billing',
+    '/admin/organization',
+  ]
+  const isAllowedAdminRoute = adminRouteAllowList.some(route => 
+    location.pathname === route || location.pathname.startsWith(route + '/')
+  )
+  
+  if (
+    isAdminRoute && 
+    !isPlatformAdmin && 
+    profile.organizations.length === 0 && 
+    !isAllowedAdminRoute
+  ) {
+    return <NoOrganizationEmptyState />
   }
 
   // Check if organization is required but user has no orgs

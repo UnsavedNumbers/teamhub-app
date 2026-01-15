@@ -51,7 +51,10 @@ export default function Payments() {
   const navigate = useNavigate()
 
   const fetchPayments = useCallback(async () => {
-    if (!currentOrganization?.id) return
+    if (!currentOrganization?.id) {
+      setLoading(false)
+      return
+    }
 
     setLoading(true)
 
