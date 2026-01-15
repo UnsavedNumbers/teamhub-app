@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useT, useLocale } from '../i18n/useI18n'
+import type { Locale } from '../i18n'
 
 interface Child {
   id: string
@@ -37,6 +39,8 @@ interface Guardian {
 export default function Settings() {
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
+  const t = useT()
+  const { locale, setLocale } = useLocale()
   
   const [children, setChildren] = useState<Child[]>([])
   const [memberships, setMemberships] = useState<TeamMembership[]>([])
@@ -120,6 +124,12 @@ export default function Settings() {
     )
   }
 
+  // Language options for the switcher
+  const languageOptions: { value: Locale; label: string }[] = [
+    { value: 'en', label: t('portal.settings.language.english') },
+    { value: 'es', label: t('portal.settings.language.spanish') },
+  ]
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-12">
       {/* Header */}
@@ -128,12 +138,12 @@ export default function Settings() {
           <div className="flex items-center gap-4">
             <Link to="/portal/dashboard" className="text-slate-500 hover:text-slate-900 transition-colors font-medium flex items-center gap-1">
               <span className="material-symbols-rounded text-[20px]">arrow_back</span>
-              Dashboard
+              {t('portal.settings.dashboard')}
             </Link>
-            <h1 className="text-lg font-bold">Settings</h1>
+            <h1 className="text-lg font-bold">{t('portal.settings.title')}</h1>
           </div>
           <button onClick={handleLogout} className="text-sm font-medium text-red-600 hover:text-red-700">
-            Log Out
+            {t('portal.settings.logOut')}
           </button>
         </div>
       </header>
@@ -142,26 +152,26 @@ export default function Settings() {
         
         {/* 1. Account */}
         <section>
-          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Account</h2>
+          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">{t('portal.settings.account.title')}</h2>
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden divide-y divide-slate-100">
             <div className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500 mb-0.5">Email</p>
+                <p className="text-sm text-slate-500 mb-0.5">{t('portal.settings.account.email')}</p>
                 <p className="font-medium">{profile?.email}</p>
               </div>
-              <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full font-medium">Email Login</span>
+              <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full font-medium">{t('portal.settings.account.emailLogin')}</span>
             </div>
             <div className="p-4 flex items-center justify-between hover:bg-slate-50 cursor-pointer transition-colors">
               <div>
-                <p className="text-sm text-slate-500 mb-0.5">Password</p>
-                <p className="font-medium">••••••••••••</p>
+                <p className="text-sm text-slate-500 mb-0.5">{t('portal.settings.account.password')}</p>
+                <p className="font-medium">{t('portal.settings.account.passwordPlaceholder')}</p>
               </div>
-              <span className="text-blue-600 text-sm font-medium">Change</span>
+              <span className="text-blue-600 text-sm font-medium">{t('common.change')}</span>
             </div>
             {profile?.phone && (
               <div className="p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-500 mb-0.5">Phone</p>
+                  <p className="text-sm text-slate-500 mb-0.5">{t('portal.settings.account.phone')}</p>
                   <p className="font-medium">{profile.phone}</p>
                 </div>
               </div>
@@ -172,8 +182,8 @@ export default function Settings() {
         {/* 2. Family */}
         <section>
           <div className="flex items-center justify-between mb-3 px-1">
-            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Family</h2>
-            <Link to="/portal/children" className="text-xs font-bold text-blue-600 uppercase tracking-widest hover:text-blue-700">Manage Children</Link>
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">{t('portal.settings.family.title')}</h2>
+            <Link to="/portal/children" className="text-xs font-bold text-blue-600 uppercase tracking-widest hover:text-blue-700">{t('portal.settings.family.manageChildren')}</Link>
           </div>
           
           <div className="space-y-4">
@@ -187,10 +197,10 @@ export default function Settings() {
                     </div>
                     <div>
                       <h3 className="font-bold text-slate-900">{child.first_name} {child.last_name}</h3>
-                      <p className="text-xs text-slate-500">Born {child.birthdate ? new Date(child.birthdate).getFullYear() : 'Unknown'}</p>
+                      <p className="text-xs text-slate-500">{t('portal.settings.family.born')} {child.birthdate ? new Date(child.birthdate).getFullYear() : 'Unknown'}</p>
                     </div>
                   </div>
-                  <button className="text-sm font-medium text-slate-400 hover:text-slate-600">Edit</button>
+                  <button className="text-sm font-medium text-slate-400 hover:text-slate-600">{t('common.edit')}</button>
                 </div>
                 {/* Sports/Teams Read Only */}
                 <div className="p-4 bg-white">
@@ -204,7 +214,7 @@ export default function Settings() {
                        ))}
                     </ul>
                   ) : (
-                    <p className="text-sm text-slate-400 italic">No active team memberships</p>
+                    <p className="text-sm text-slate-400 italic">{t('portal.settings.family.noTeams')}</p>
                   )}
                 </div>
               </div>
@@ -213,20 +223,20 @@ export default function Settings() {
             {/* Guardians */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-                <h3 className="font-bold text-slate-900">Guardians & Permissions</h3>
+                <h3 className="font-bold text-slate-900">{t('portal.settings.family.guardians')}</h3>
                 <button className="text-xs font-bold text-blue-600 uppercase tracking-widest hover:text-blue-700 flex items-center gap-1">
                   <span className="material-symbols-rounded text-[16px]">add</span>
-                  Invite
+                  {t('common.invite')}
                 </button>
               </div>
               <div className="divide-y divide-slate-100">
                 {/* Self */}
                 <div className="p-4 flex items-start justify-between">
                    <div>
-                     <p className="font-medium text-slate-900">You ({profile?.email})</p>
-                     <p className="text-xs text-slate-500 mt-1">Family Admin</p>
+                     <p className="font-medium text-slate-900">{t('portal.settings.family.you')} ({profile?.email})</p>
+                     <p className="text-xs text-slate-500 mt-1">{t('portal.settings.family.familyAdmin')}</p>
                    </div>
-                   <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">Owner</span>
+                   <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">{t('portal.settings.family.owner')}</span>
                 </div>
                 {/* Other Guardians */}
                 {guardians.map(g => (
@@ -234,17 +244,17 @@ export default function Settings() {
                     <div>
                       <p className="font-medium text-slate-900">{g.email}</p>
                       <div className="flex flex-wrap gap-1 mt-2">
-                        <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold uppercase rounded border border-slate-200">View Only</span>
+                        <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold uppercase rounded border border-slate-200">{t('portal.settings.family.viewOnly')}</span>
                         {/* Mock permissions for display */}
-                        <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold uppercase rounded border border-blue-100">RSVP</span>
+                        <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold uppercase rounded border border-blue-100">{t('portal.settings.family.rsvp')}</span>
                       </div>
                     </div>
-                    <button className="text-sm font-medium text-red-600 hover:text-red-700 mt-1">Remove</button>
+                    <button className="text-sm font-medium text-red-600 hover:text-red-700 mt-1">{t('common.remove')}</button>
                   </div>
                 ))}
                 {guardians.length === 0 && (
                   <div className="p-4 text-center text-sm text-slate-500 italic">
-                    No other guardians added.
+                    {t('portal.settings.family.noGuardians')}
                   </div>
                 )}
               </div>
@@ -252,45 +262,90 @@ export default function Settings() {
           </div>
         </section>
 
-        {/* 3. Notifications */}
+        {/* 3. Language */}
         <section>
-          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Notifications</h2>
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden divide-y divide-slate-100">
-            {Object.entries(notifications).map(([key, value]) => (
-              <div key={key} className="p-4 flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-slate-900 capitalize">{key.replace('_', ' ')}</p>
-                </div>
-                <button 
-                  onClick={() => toggleNotification(key as keyof typeof notifications)}
-                  className={`w-12 h-6 rounded-full transition-colors relative ${value ? 'bg-blue-600' : 'bg-slate-200'}`}
-                >
-                  <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-all ${value ? 'left-7' : 'left-1'}`} />
-                </button>
+          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">{t('portal.settings.language.title')}</h2>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="p-4">
+              <p className="text-sm text-slate-500 mb-4">{t('portal.settings.language.description')}</p>
+              <div className="space-y-2">
+                {languageOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setLocale(option.value)}
+                    className={`w-full p-3 rounded-lg border-2 transition-all text-left flex items-center justify-between ${
+                      locale === option.value
+                        ? 'border-blue-600 bg-blue-50'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <span className={`font-medium ${
+                      locale === option.value ? 'text-blue-900' : 'text-slate-900'
+                    }`}>
+                      {option.label}
+                    </span>
+                    {locale === option.value && (
+                      <span className="material-symbols-rounded text-blue-600 text-[20px]">check_circle</span>
+                    )}
+                  </button>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         </section>
 
-        {/* 4. Payments */}
+        {/* 4. Notifications */}
         <section>
-          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Payments</h2>
+          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">{t('portal.settings.notifications.title')}</h2>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden divide-y divide-slate-100">
+            {Object.entries(notifications).map(([key, value]) => {
+              // Map notification keys to translation keys
+              const notificationLabels: Record<string, string> = {
+                schedule_changes: t('portal.settings.notifications.scheduleChanges'),
+                announcements: t('portal.settings.notifications.announcements'),
+                rsvp_reminders: t('portal.settings.notifications.rsvpReminders'),
+                payment_reminders: t('portal.settings.notifications.paymentReminders'),
+                tryout_updates: t('portal.settings.notifications.tryoutUpdates'),
+                emergency_alerts: t('portal.settings.notifications.emergencyAlerts'),
+                quiet_hours: t('portal.settings.notifications.quietHours'),
+              }
+              
+              return (
+                <div key={key} className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-slate-900">{notificationLabels[key] || key}</p>
+                  </div>
+                  <button 
+                    onClick={() => toggleNotification(key as keyof typeof notifications)}
+                    className={`w-12 h-6 rounded-full transition-colors relative ${value ? 'bg-blue-600' : 'bg-slate-200'}`}
+                  >
+                    <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-all ${value ? 'left-7' : 'left-1'}`} />
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+
+        {/* 5. Payments */}
+        <section>
+          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">{t('portal.settings.payments.title')}</h2>
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
              <div className="p-4 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="material-symbols-rounded text-slate-700 text-[32px]">credit_card</span>
                   <div>
-                    <p className="font-medium text-slate-900">•••• 4242</p>
-                    <p className="text-xs text-slate-500">Expires 12/28</p>
+                    <p className="font-medium text-slate-900">{t('portal.settings.payments.cardEnding', { last4: '4242' })}</p>
+                    <p className="text-xs text-slate-500">{t('portal.settings.payments.expires', { date: '12/28' })}</p>
                   </div>
                 </div>
-                <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded font-medium">Default</span>
+                <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded font-medium">{t('portal.settings.payments.default')}</span>
              </div>
              <div className="p-4 text-center">
-               <button className="text-sm font-bold text-blue-600 hover:text-blue-700">+ Add Payment Method</button>
+               <button className="text-sm font-bold text-blue-600 hover:text-blue-700">{t('portal.settings.payments.addPaymentMethod')}</button>
              </div>
              <div className="bg-slate-50 p-4 border-t border-slate-100">
-                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">Billing History</h4>
+                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">{t('portal.settings.payments.billingHistory')}</h4>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-slate-600">Oct 1, 2025 • U12 Fall Registration</span>
@@ -301,29 +356,29 @@ export default function Settings() {
                     <span className="font-medium">$85.00</span>
                   </div>
                 </div>
-                <button className="mt-4 text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-wide">Download All Receipts</button>
+                <button className="mt-4 text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-wide">{t('portal.settings.payments.downloadReceipts')}</button>
              </div>
           </div>
         </section>
 
-        {/* 5. Support & Legal */}
+        {/* 6. Support & Legal */}
         <section className="grid md:grid-cols-2 gap-4">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-4">
-             <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Support</h2>
+             <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">{t('portal.settings.support.title')}</h2>
              <ul className="space-y-3 text-sm">
-               <li><a href="#" className="flex items-center justify-between text-slate-700 hover:text-blue-600">Help Center <span className="material-symbols-rounded text-[20px]">chevron_right</span></a></li>
-               <li><a href="#" className="flex items-center justify-between text-slate-700 hover:text-blue-600">Contact Support <span className="material-symbols-rounded text-[20px]">chevron_right</span></a></li>
-               <li><a href="#" className="flex items-center justify-between text-slate-700 hover:text-blue-600">Report a Problem <span className="material-symbols-rounded text-[20px]">chevron_right</span></a></li>
+               <li><a href="#" className="flex items-center justify-between text-slate-700 hover:text-blue-600">{t('portal.settings.support.helpCenter')} <span className="material-symbols-rounded text-[20px]">chevron_right</span></a></li>
+               <li><a href="#" className="flex items-center justify-between text-slate-700 hover:text-blue-600">{t('portal.settings.support.contactSupport')} <span className="material-symbols-rounded text-[20px]">chevron_right</span></a></li>
+               <li><a href="#" className="flex items-center justify-between text-slate-700 hover:text-blue-600">{t('portal.settings.support.reportProblem')} <span className="material-symbols-rounded text-[20px]">chevron_right</span></a></li>
              </ul>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-4">
-             <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Legal</h2>
+             <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">{t('portal.settings.legal.title')}</h2>
              <ul className="space-y-3 text-sm">
-               <li><a href="#" className="text-slate-500 hover:text-slate-900">Terms of Service</a></li>
-               <li><a href="#" className="text-slate-500 hover:text-slate-900">Privacy Policy</a></li>
-               <li><a href="#" className="text-slate-500 hover:text-slate-900">Refund Policy</a></li>
+               <li><a href="#" className="text-slate-500 hover:text-slate-900">{t('portal.settings.legal.termsOfService')}</a></li>
+               <li><a href="#" className="text-slate-500 hover:text-slate-900">{t('portal.settings.legal.privacyPolicy')}</a></li>
+               <li><a href="#" className="text-slate-500 hover:text-slate-900">{t('portal.settings.legal.refundPolicy')}</a></li>
              </ul>
-             <p className="mt-4 text-xs text-slate-400">Version 2.4.0 (Build 592)</p>
+             <p className="mt-4 text-xs text-slate-400">{t('portal.settings.legal.version', { version: '2.4.0', build: '592' })}</p>
           </div>
         </section>
 
