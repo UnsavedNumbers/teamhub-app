@@ -1,6 +1,7 @@
 import { useState, FormEvent, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { getHostAppContext } from '../utils/host'
 import {
   setSetupOrganizationFlag,
   cleanupStaleFlags,
@@ -37,7 +38,8 @@ export default function Login() {
       setError(error.message)
       setLoading(false)
     } else {
-      navigate('/portal/dashboard')
+      const appContext = getHostAppContext()
+      navigate(appContext === 'platform-admin' ? '/platform-admin' : '/portal/dashboard')
     }
   }
 

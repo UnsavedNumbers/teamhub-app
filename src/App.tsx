@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
 import { ThemeProvider } from '@mui/material/styles'
 import { AuthProvider } from './hooks/useAuth'
@@ -6,6 +6,8 @@ import { OrganizationProvider } from './contexts/OrganizationContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { adminTheme } from './theme/adminTheme'
 import AdminLoadingSpinner from './components/admin/AdminLoadingSpinner'
+import { getHostAppContext } from './utils/host'
+import { useAuth } from './hooks/useAuth'
 
 // Marketing Page
 import Marketing from './pages/Marketing'
@@ -38,6 +40,8 @@ import Messages from './pages/Messages'
 // Admin Layout (Material Dashboard)
 import AdminLayout from './layouts/AdminLayout'
 
+const PlatformAdminDashboard = lazy(() => import('./pages/platformAdmin/PlatformAdminDashboard'))
+
 // Admin Pages - Lazy loaded for code splitting
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
 const CreateUser = lazy(() => import('./pages/admin/CreateUser'))
@@ -61,16 +65,73 @@ const PlanSelection = lazy(() => import('./pages/admin/PlanSelection'))
 const CheckoutSuccess = lazy(() => import('./pages/admin/CheckoutSuccess'))
 const CheckoutCancel = lazy(() => import('./pages/admin/CheckoutCancel'))
 
+function HostHomeRoute() {
+  const appContext = getHostAppContext()
+  if (appContext === 'platform') return <Navigate to="/portal/dashboard" replace />
+  if (appContext === 'platform-admin') return <Navigate to="/platform-admin" replace />
+  return <Marketing />
+}
+
+function PlatformAdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, profile, loading } = useAuth()
+  const location = useLocation()
+
+  if (loading) return <AdminLoadingSpinner />
+  if (!user) return <Navigate to="/portal/login" state={{ from: location }} replace />
+  if (!profile) return <AdminLoadingSpinner />
+  if (!profile.isPlatformAdmin) return <Navigate to="/portal/unauthorized" replace />
+
+  return <>{children}</>
+}
+
+function HostGateLayout() {
+  const appContext = getHostAppContext()
+  const location = useLocation()
+
+  // Only enforce strict separation on the admin subdomain.
+  if (appContext !== 'platform-admin') return <Outlet />
+
+  const path = location.pathname
+  const isPortal = path.startsWith('/portal')
+  const isOrgAdmin = path.startsWith('/admin')
+  const isPlatformAdmin = path.startsWith('/platform-admin')
+
+  // Allow a small set of portal routes on admin.* for authentication flows only.
+  if (isPortal) {
+    const allowlisted = [
+      '/portal/login',
+      '/portal/signup',
+      '/portal/forgot-password',
+      '/portal/reset-password',
+      '/portal/auth/callback',
+      '/portal/confirm-email',
+      '/portal/unauthorized',
+      '/portal/accept-invite',
+    ]
+
+    if (allowlisted.some((p) => path.startsWith(p))) return <Outlet />
+    return <Navigate to="/platform-admin" replace />
+  }
+
+  // Never allow org-admin UI on admin.* (platform admin host).
+  if (isOrgAdmin) return <Navigate to="/platform-admin" replace />
+
+  // Allow platform-admin routes.
+  if (isPlatformAdmin) return <Outlet />
+
+  return <Outlet />
+}
+
 function App() {
   return (
     <OrganizationProvider>
       <AuthProvider>
         <Routes>
           {/* Marketing Landing Page - Public */}
-          <Route path="/" element={<Marketing />} />
+          <Route path="/" element={<HostHomeRoute />} />
 
           {/* Portal Routes - Parents/Coaches */}
-          <Route path="/portal">
+          <Route path="/portal" element={<HostGateLayout />}>
             {/* Public Auth Routes */}
             <Route path="login" element={<Login />} />
             <Route path="signup" element={<Signup />} />
@@ -115,52 +176,79 @@ function App() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
-                <ThemeProvider theme={adminTheme}>
-                  <Suspense fallback={<AdminLoadingSpinner />}>
-                    <AdminLayout />
-                  </Suspense>
-                </ThemeProvider>
-              </ProtectedRoute>
+              <HostGateLayout />
             }
           >
-            {/* Admin Dashboard */}
-            <Route index element={<AdminDashboard />} />
+            <Route
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
+                  <ThemeProvider theme={adminTheme}>
+                    <Suspense fallback={<AdminLoadingSpinner />}>
+                      <AdminLayout />
+                    </Suspense>
+                  </ThemeProvider>
+                </ProtectedRoute>
+              }
+            >
+              {/* Admin Dashboard */}
+              <Route index element={<AdminDashboard />} />
             
-            {/* Teams */}
-            <Route path="teams" element={<Teams />} />
-            <Route path="teams/:id" element={<TeamDetail />} />
-            <Route path="teams/:id/roster" element={<Roster />} />
+              {/* Teams */}
+              <Route path="teams" element={<Teams />} />
+              <Route path="teams/:id" element={<TeamDetail />} />
+              <Route path="teams/:id/roster" element={<Roster />} />
             
-            {/* Events */}
-            <Route path="events" element={<Events />} />
-            <Route path="events/new" element={<CreateEvent />} />
-            <Route path="events/:id/attendance" element={<AttendanceRoster />} />
+              {/* Events */}
+              <Route path="events" element={<Events />} />
+              <Route path="events/new" element={<CreateEvent />} />
+              <Route path="events/:id/attendance" element={<AttendanceRoster />} />
             
-            {/* Payments */}
-            <Route path="payments" element={<Payments />} />
-            <Route path="payments/new" element={<CreateFee />} />
+              {/* Payments */}
+              <Route path="payments" element={<Payments />} />
+              <Route path="payments/new" element={<CreateFee />} />
             
-            {/* Uniforms */}
-            <Route path="uniforms" element={<UniformOrders />} />
+              {/* Uniforms */}
+              <Route path="uniforms" element={<UniformOrders />} />
             
-            {/* Travel */}
-            <Route path="travel" element={<TravelPlans />} />
-            <Route path="travel/new" element={<CreateTravelPlan />} />
+              {/* Travel */}
+              <Route path="travel" element={<TravelPlans />} />
+              <Route path="travel/new" element={<CreateTravelPlan />} />
             
-            {/* Tryouts */}
-            <Route path="tryouts" element={<AdminTryouts />} />
+              {/* Tryouts */}
+              <Route path="tryouts" element={<AdminTryouts />} />
             
-            {/* Users */}
-            <Route path="users/new" element={<CreateUser />} />
+              {/* Users */}
+              <Route path="users/new" element={<CreateUser />} />
             
-            {/* Organization */}
-            <Route path="organization" element={<OrganizationSettings />} />
-            <Route path="organization/users" element={<OrganizationUsers />} />
-            <Route path="organization/billing" element={<OrganizationBilling />} />
-            <Route path="organization/billing/plan-selection" element={<PlanSelection />} />
-            <Route path="organization/billing/checkout/success" element={<CheckoutSuccess />} />
-            <Route path="organization/billing/checkout/cancel" element={<CheckoutCancel />} />
+              {/* Organization */}
+              <Route path="organization" element={<OrganizationSettings />} />
+              <Route path="organization/users" element={<OrganizationUsers />} />
+              <Route path="organization/billing" element={<OrganizationBilling />} />
+              <Route path="organization/billing/plan-selection" element={<PlanSelection />} />
+              <Route path="organization/billing/checkout/success" element={<CheckoutSuccess />} />
+              <Route path="organization/billing/checkout/cancel" element={<CheckoutCancel />} />
+            </Route>
+          </Route>
+
+          {/* Platform Admin Routes - restricted to platform admins */}
+          <Route
+            path="/platform-admin"
+            element={
+              <HostGateLayout />
+            }
+          >
+            <Route
+              index
+              element={
+                <PlatformAdminRoute>
+                  <ThemeProvider theme={adminTheme}>
+                    <Suspense fallback={<AdminLoadingSpinner />}>
+                      <PlatformAdminDashboard />
+                    </Suspense>
+                  </ThemeProvider>
+                </PlatformAdminRoute>
+              }
+            />
           </Route>
         </Routes>
       </AuthProvider>

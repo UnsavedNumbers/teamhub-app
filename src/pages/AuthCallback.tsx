@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { getHostAppContext } from '../utils/host'
 import {
   getSetupOrganizationFlag,
   clearSetupOrganizationFlag,
@@ -37,6 +38,7 @@ export default function AuthCallback() {
       if (data.session) {
         // Session is valid, determine where to redirect
         const userId = data.session.user.id
+        const appContext = getHostAppContext()
 
         // Priority 0: Check database for requires_org_setup flag (most reliable)
         // This handles email confirmation flows where localStorage may be on different device
@@ -47,7 +49,9 @@ export default function AuthCallback() {
             .eq('id', userId)
             .single()
 
-          if (!userError && userData?.requires_org_setup) {
+          // Only run org setup flow on the platform host. The admin subdomain
+          // is reserved for platform admins and should not auto-route into org onboarding.
+          if (appContext !== 'platform-admin' && !userError && userData?.requires_org_setup) {
             // Clear any localStorage flag (since database has it)
             clearSetupOrganizationFlag()
             navigate('/admin/onboarding', { replace: true })
@@ -62,6 +66,10 @@ export default function AuthCallback() {
         // This handles Google OAuth flow where navigation state is lost
         const hasSetupOrgFlag = getSetupOrganizationFlag()
         if (hasSetupOrgFlag) {
+          if (appContext === 'platform-admin') {
+            // Prevent redirect loops if the flag was set on platform but callback happens on admin.
+            clearSetupOrganizationFlag()
+          } else {
           // Set the database flag for this user (for OAuth flow)
           // The trigger should have set it from metadata, but this is a backup
           try {
@@ -83,6 +91,7 @@ export default function AuthCallback() {
           clearSetupOrganizationFlag()
           navigate('/admin/onboarding', { replace: true })
           return
+          }
         }
 
         // Priority 2: Check for pending invite token in sessionStorage
@@ -102,8 +111,12 @@ export default function AuthCallback() {
           }
         }
 
-        // Default: redirect to dashboard
-        navigate('/portal/dashboard', { replace: true })
+        // Default: redirect based on host
+        if (appContext === 'platform-admin') {
+          navigate('/platform-admin', { replace: true })
+        } else {
+          navigate('/portal/dashboard', { replace: true })
+        }
       } else {
         // No session, might be email confirmation
         // Supabase should handle this automatically
