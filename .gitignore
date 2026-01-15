@@ -131,3 +131,7 @@ Desktop.ini
 supabase/tmp
 supabase/.temp
 .supabase.co
+
+# Docs
+designs/
+docs
