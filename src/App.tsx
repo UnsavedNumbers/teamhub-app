@@ -35,6 +35,7 @@ import Settings from './pages/Settings'
 import Uniforms from './pages/Uniforms'
 import Travel from './pages/Travel'
 import Tryouts from './pages/Tryouts'
+import TryoutDetail from './pages/TryoutDetail'
 import Messages from './pages/Messages'
 
 // Admin Layout (Material Dashboard)
@@ -56,7 +57,9 @@ const CreateFee = lazy(() => import('./pages/admin/CreateFee'))
 const UniformOrders = lazy(() => import('./pages/admin/UniformOrders'))
 const TravelPlans = lazy(() => import('./pages/admin/TravelPlans'))
 const CreateTravelPlan = lazy(() => import('./pages/admin/CreateTravelPlan'))
+const EditTravelPlan = lazy(() => import('./pages/admin/EditTravelPlan'))
 const AdminTryouts = lazy(() => import('./pages/admin/AdminTryouts'))
+const AdminTryoutDetail = lazy(() => import('./pages/admin/AdminTryoutDetail'))
 const OrganizationSettings = lazy(() => import('./pages/admin/OrganizationSettings'))
 const OrganizationUsers = lazy(() => import('./pages/admin/OrganizationUsers'))
 const OrganizationOnboarding = lazy(() => import('./pages/admin/OrganizationOnboarding'))
@@ -155,6 +158,7 @@ function App() {
             <Route path="uniforms" element={<ProtectedRoute><Uniforms /></ProtectedRoute>} />
             <Route path="travel" element={<ProtectedRoute><Travel /></ProtectedRoute>} />
             <Route path="tryouts" element={<ProtectedRoute><Tryouts /></ProtectedRoute>} />
+            <Route path="tryouts/:tryoutId" element={<ProtectedRoute><TryoutDetail /></ProtectedRoute>} />
             <Route path="messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
             
             {/* Redirect root portal to dashboard */}
@@ -209,13 +213,16 @@ function App() {
             
               {/* Uniforms */}
               <Route path="uniforms" element={<UniformOrders />} />
+              <Route path="uniforms/:kitId" element={<UniformOrders />} />
             
               {/* Travel */}
               <Route path="travel" element={<TravelPlans />} />
               <Route path="travel/new" element={<CreateTravelPlan />} />
+              <Route path="travel/:id" element={<EditTravelPlan />} />
             
               {/* Tryouts */}
               <Route path="tryouts" element={<AdminTryouts />} />
+              <Route path="tryouts/:tryoutId" element={<AdminTryoutDetail />} />
             
               {/* Users */}
               <Route path="users/new" element={<CreateUser />} />

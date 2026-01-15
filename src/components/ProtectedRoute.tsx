@@ -19,7 +19,7 @@ export function ProtectedRoute({
   requireOrganization = false 
 }: ProtectedRouteProps) {
   const { user, profile, loading } = useAuth()
-  const { isLoading: orgLoading, currentOrganization } = useOrganization()
+  const { isLoading: _orgLoading, currentOrganization } = useOrganization()
   const location = useLocation()
   const isAdminRoute = location.pathname.startsWith('/admin')
   const isPlatformAdmin = profile?.isPlatformAdmin ?? false

@@ -1,14 +1,25 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { supabase } from '../lib/supabase'
 import {
   getSetupOrganizationFlag,
   clearSetupOrganizationFlag,
 } from '../utils/setupOrganization'
 
+interface UserNotification {
+  id: string
+  title: string
+  body: string
+  created_at: string
+}
+
 export default function Dashboard() {
-  const { user, profile, signOut } = useAuth()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
+  const [unread, setUnread] = useState<UserNotification[]>([])
+  // Typed Supabase client lags behind new schema during migrations; use untyped client for new notifications table.
+  const sb = supabase as any
 
   // Safety net: If user landed here with setupOrganization flag, redirect to onboarding
   useEffect(() => {
@@ -17,6 +28,48 @@ export default function Dashboard() {
       navigate('/admin/onboarding', { replace: true })
     }
   }, [navigate])
+
+  const loadNotifications = async () => {
+    const { data } = await sb
+      .from('user_notifications')
+      .select('id, title, body, created_at')
+      .is('read_at', null)
+      .order('created_at', { ascending: false })
+      .limit(3)
+    setUnread((data as unknown as UserNotification[]) || [])
+  }
+
+  useEffect(() => {
+    loadNotifications()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const markAsRead = async (notificationId: string) => {
+    // Optimistic UI: remove immediately
+    setUnread((prev) => prev.filter((n) => n.id !== notificationId))
+
+    const { error } = await sb
+      .from('user_notifications')
+      .update({ read_at: new Date().toISOString() })
+      .eq('id', notificationId)
+
+    // If update fails (RLS/network), reload to ensure UI is correct
+    if (error) await loadNotifications()
+  }
+
+  const markAllAsRead = async () => {
+    const ids = unread.map((n) => n.id)
+    if (ids.length === 0) return
+
+    setUnread([])
+
+    const { error } = await sb
+      .from('user_notifications')
+      .update({ read_at: new Date().toISOString() })
+      .in('id', ids)
+
+    if (error) await loadNotifications()
+  }
 
   // Get greeting based on time of day
   const getGreeting = () => {
@@ -83,7 +136,9 @@ export default function Dashboard() {
           <div className="flex items-center gap-4">
             <button className="size-10 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors relative">
               <span className="material-symbols-outlined text-slate-600 dark:text-slate-300">notifications</span>
-              <span className="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-white dark:border-background-dark"></span>
+              {unread.length > 0 && (
+                <span className="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-white dark:border-background-dark"></span>
+              )}
             </button>
             <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-700 bg-cover bg-center border border-slate-100 dark:border-slate-800">
               {profile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
@@ -121,6 +176,46 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {unread.length > 0 && (
+          <div className="mb-10 bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white">Notifications</h2>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={markAllAsRead}
+                  className="text-xs font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                >
+                  Mark all read
+                </button>
+                <Link to="/portal/uniforms" className="text-xs font-bold text-[#137fec] hover:underline">
+                  View Uniforms
+                </Link>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {unread.map((n) => (
+                <div
+                  key={n.id}
+                  className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-bold text-slate-900 dark:text-white">{n.title}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">{n.body}</p>
+                    </div>
+                    <button
+                      onClick={() => markAsRead(n.id)}
+                      className="text-xs font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white whitespace-nowrap"
+                    >
+                      Mark read
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           {/* Main Content: Priority Actions */}

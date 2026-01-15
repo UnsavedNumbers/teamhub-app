@@ -19,7 +19,7 @@ import {
 } from '@mui/material'
 import type { ChipProps } from '@mui/material/Chip'
 import { Add as AddIcon, Edit as EditIcon } from '@mui/icons-material'
-import type { Database } from '../../lib/database.types'
+import type { Database } from '../../lib/database.types.ts'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'

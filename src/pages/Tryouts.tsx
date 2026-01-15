@@ -2,16 +2,19 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useOrganization } from '../contexts/OrganizationContext'
 
 interface Tryout {
   id: string
   title: string
-  sport: string
   age_group: string
-  tryout_date: string
-  start_time: string
   location: string
   entry_fee: number
+  org_id: string
+  start_at: string | null
+  tryout_date: string | null
+  start_time: string | null
+  type: string | null
 }
 
 interface Registration {
@@ -39,17 +42,21 @@ export default function Tryouts() {
   const [selectedChild, setSelectedChild] = useState('')
 
   const { profile } = useAuth()
+  const { currentOrganization } = useOrganization()
   // const navigate = useNavigate()
 
   const fetchData = useCallback(async () => {
     // Fetch upcoming tryouts
+    if (!currentOrganization) return
+
     const { data: tryoutData } = await supabase
       .from('tryouts')
       .select('*')
-      .gte('tryout_date', new Date().toISOString().split('T')[0])
+      .eq('org_id', currentOrganization.id)
+      .order('start_at', { ascending: true, nullsFirst: false })
       .order('tryout_date', { ascending: true })
 
-    setTryouts((tryoutData as Tryout[]) || [])
+    setTryouts((tryoutData as unknown as Tryout[]) || [])
 
     // Fetch my registrations
     if (profile?.family_id) {
@@ -70,21 +77,23 @@ export default function Tryouts() {
     }
 
     setLoading(false)
-  }, [profile?.family_id])
+  }, [profile?.family_id, currentOrganization])
 
   useEffect(() => {
-    if (profile) fetchData()
-  }, [profile, fetchData])
+    if (profile && currentOrganization) fetchData()
+  }, [profile, currentOrganization, fetchData])
 
   async function handleRegister() {
     if (!selectedTryout || !selectedChild || !profile?.family_id) return
-
-    await supabase.from('tryout_registrations').insert({
-      tryout_id: selectedTryout.id,
-      child_id: selectedChild,
-      family_id: profile.family_id,
-      status: 'registered',
-    } as never)
+    // Use RPC to enforce deadline/capacity atomically and create doc placeholders.
+    const { error } = await supabase.rpc('register_child_for_tryout', {
+      p_tryout_id: selectedTryout.id,
+      p_child_id: selectedChild,
+    })
+    if (error) {
+      alert(error.message)
+      return
+    }
 
     setSelectedTryout(null)
     setSelectedChild('')
@@ -97,6 +106,12 @@ export default function Tryouts() {
 
   function formatTime(time: string) {
     return new Date(`2000-01-01T${time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  }
+
+  function getTryoutDate(tryout: Tryout): string | null {
+    if (tryout.start_at) return tryout.start_at
+    if (tryout.tryout_date) return tryout.tryout_date
+    return null
   }
 
   function isRegistered(tryoutId: string) {
@@ -168,7 +183,10 @@ export default function Tryouts() {
                     <div key={reg.id} className="bg-slate-800 rounded-xl p-4 flex items-center justify-between">
                       <div>
                         <p className="font-bold text-white">{reg.child.first_name} {reg.child.last_name}</p>
-                        <p className="text-sm text-slate-400">{reg.tryout.title} • {formatDate(reg.tryout.tryout_date)}</p>
+                        <p className="text-sm text-slate-400">
+                          {reg.tryout.title}
+                          {reg.tryout.tryout_date ? ` • ${formatDate(reg.tryout.tryout_date)}` : ''}
+                        </p>
                       </div>
                       <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${statusColors[reg.status]}`}>
                         {reg.status.replace('_', ' ')}
@@ -191,6 +209,7 @@ export default function Tryouts() {
               <div className="grid md:grid-cols-2 gap-4">
                 {tryouts.map((tryout) => {
                   const registered = isRegistered(tryout.id)
+                  const dateStr = getTryoutDate(tryout)
                   return (
                     <div key={tryout.id} className="bg-slate-800 rounded-xl overflow-hidden">
                       <div className="h-32 bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center">
@@ -200,27 +219,26 @@ export default function Tryouts() {
                         <div className="flex items-start justify-between mb-3">
                           <div>
                             <span className={`px-2 py-1 text-xs font-bold uppercase rounded ${registered ? 'bg-green-500/20 text-green-400' : 'bg-slate-700 text-slate-400'}`}>
-                              {registered ? 'Registered' : tryout.sport}
+                              {registered ? 'Registered' : (tryout.type ?? 'Tryout')}
                             </span>
                           </div>
                           <div className="text-right">
-                            <p className="font-black text-white">{formatDate(tryout.tryout_date).split(',')[0].toUpperCase()}</p>
-                            <p className="text-xs text-slate-400">{formatTime(tryout.start_time)}</p>
+                            <p className="font-black text-white">
+                              {dateStr ? formatDate(dateStr).split(',')[0].toUpperCase() : 'TBD'}
+                            </p>
+                            <p className="text-xs text-slate-400">{tryout.start_time ? formatTime(tryout.start_time) : ''}</p>
                           </div>
                         </div>
                         <h3 className="text-xl font-black text-white uppercase tracking-tight italic">{tryout.title}</h3>
                         <p className="text-sm text-slate-400 mt-1">{tryout.age_group}</p>
                         <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">📍 {tryout.location}</p>
                         <div className="mt-4">
-                          {registered ? (
-                            <Link to={`/tryouts/${tryout.id}`} className="block w-full text-center py-2.5 border border-slate-600 text-slate-300 font-bold uppercase text-sm rounded-lg hover:bg-slate-700">
-                              View Details
-                            </Link>
-                          ) : (
-                            <button onClick={() => setSelectedTryout(tryout)} className="w-full py-2.5 bg-white text-slate-900 font-bold uppercase text-sm rounded-lg hover:bg-slate-100">
-                              Register Now
-                            </button>
-                          )}
+                          <Link
+                            to={`/portal/tryouts/${tryout.id}`}
+                            className="block w-full text-center py-2.5 border border-slate-600 text-slate-300 font-bold uppercase text-sm rounded-lg hover:bg-slate-700"
+                          >
+                            {registered ? 'View Details' : 'View & Register'}
+                          </Link>
                         </div>
                       </div>
                     </div>
@@ -244,8 +262,12 @@ export default function Tryouts() {
               <div className="grid grid-cols-3 gap-4 mb-6 text-center">
                 <div>
                   <p className="text-xs text-slate-400 uppercase">Date & Time</p>
-                  <p className="font-bold text-white">{formatDate(selectedTryout.tryout_date)}</p>
-                  <p className="text-sm text-slate-400">{formatTime(selectedTryout.start_time)}</p>
+                  <p className="font-bold text-white">
+                    {selectedTryout.tryout_date ? formatDate(selectedTryout.tryout_date) : 'TBD'}
+                  </p>
+                  <p className="text-sm text-slate-400">
+                    {selectedTryout.start_time ? formatTime(selectedTryout.start_time) : ''}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400 uppercase">Location</p>

@@ -25,7 +25,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { adaptFeeAssignmentToTableRow, FeeAssignmentTableRow } from '../../utils/dataAdapters'
 import AdminSkeletonTable from '../../components/admin/AdminSkeletonTable'
-import type { Database } from '../../lib/database.types'
+import type { Database } from '../../lib/database.types.ts'
 
 type FeeAssignmentRow = Database['public']['Tables']['fee_assignments']['Row']
 type FeeAssignmentJoinedRow = FeeAssignmentRow & {

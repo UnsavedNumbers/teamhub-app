@@ -12,6 +12,7 @@ import {
   Grid,
   Alert,
   CircularProgress,
+  Stack,
 } from '@mui/material'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
@@ -34,8 +35,17 @@ interface TravelFormData {
   season_id: string
   title: string
   location: string
+  destination_city: string
+  destination_state: string
   start_date: string
   end_date: string
+  venue_name: string
+  venue_address: string
+  hotel_name: string
+  hotel_address: string
+  hotel_phone: string
+  hotel_confirmation: string
+  maps_url: string
   notes: string
 }
 
@@ -45,6 +55,7 @@ export default function CreateTravelPlan() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [itineraryFile, setItineraryFile] = useState<File | null>(null)
 
   const { profile } = useAuth()
   const { currentOrganization } = useOrganization()
@@ -62,8 +73,17 @@ export default function CreateTravelPlan() {
       season_id: '',
       title: '',
       location: '',
+      destination_city: '',
+      destination_state: '',
       start_date: '',
       end_date: '',
+      venue_name: '',
+      venue_address: '',
+      hotel_name: '',
+      hotel_address: '',
+      hotel_phone: '',
+      hotel_confirmation: '',
+      maps_url: '',
       notes: '',
     },
   })
@@ -113,17 +133,49 @@ export default function CreateTravelPlan() {
     setError(null)
 
     try {
-      const { error } = await supabase.from('travel_plans').insert({
+      // Create draft plan first to get an id (needed for predictable storage object naming).
+      const { data: inserted, error: insertError } = await supabase
+        .from('travel_plans')
+        .insert({
         team_id: data.team_id,
         season_id: data.season_id,
         title: data.title,
         location: data.location,
+        destination_city: data.destination_city || null,
+        destination_state: data.destination_state || null,
         start_date: data.start_date,
         end_date: data.end_date,
+        venue_name: data.venue_name || null,
+        venue_address: data.venue_address || null,
+        hotel_name: data.hotel_name || null,
+        hotel_address: data.hotel_address || null,
+        hotel_phone: data.hotel_phone || null,
+        hotel_confirmation: data.hotel_confirmation || null,
+        maps_url: data.maps_url || null,
         notes: data.notes || null,
+        status: 'draft',
       } as never)
+        .select('id')
+        .single()
 
-      if (error) throw error
+      if (insertError) throw insertError
+
+      // Optional itinerary upload (stored under {org_id}/{team_id}/{plan_id}/{filename})
+      if (itineraryFile && inserted?.id && currentOrganization?.id) {
+        const objectPath = `${currentOrganization.id}/${data.team_id}/${inserted.id}/${itineraryFile.name}`
+        const { error: uploadError } = await supabase.storage.from('travel-itineraries').upload(objectPath, itineraryFile, {
+          upsert: true,
+          contentType: itineraryFile.type || undefined,
+        })
+        if (uploadError) throw uploadError
+
+        const { error: updateError } = await supabase
+          .from('travel_plans')
+          .update({ itinerary_file_path: objectPath } as never)
+          .eq('id', inserted.id)
+        if (updateError) throw updateError
+      }
+
       navigate('/admin/travel')
     } catch (err: unknown) {
       setError(getErrorMessage(err) || 'Failed to create travel plan')
@@ -231,13 +283,28 @@ export default function CreateTravelPlan() {
                   render={({ field }) => (
                     <TextField
                       {...field}
-                      label="Location"
+                      label="Location (city/state or details)"
                       fullWidth
                       required
                       error={!!errors.location}
                       helperText={errors.location?.message}
                     />
                   )}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Controller
+                  name="destination_city"
+                  control={control}
+                  render={({ field }) => <TextField {...field} label="Destination City" fullWidth />}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Controller
+                  name="destination_state"
+                  control={control}
+                  render={({ field }) => <TextField {...field} label="Destination State" fullWidth />}
                 />
               </Grid>
 
@@ -282,6 +349,59 @@ export default function CreateTravelPlan() {
               </Grid>
 
               <Grid item xs={12}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                  Venue
+                </Typography>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Controller name="venue_name" control={control} render={({ field }) => <TextField {...field} label="Venue Name" fullWidth />} />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Controller name="venue_address" control={control} render={({ field }) => <TextField {...field} label="Venue Address" fullWidth />} />
+              </Grid>
+
+              <Grid item xs={12}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                  Hotel
+                </Typography>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Controller name="hotel_name" control={control} render={({ field }) => <TextField {...field} label="Hotel Name" fullWidth />} />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Controller name="hotel_address" control={control} render={({ field }) => <TextField {...field} label="Hotel Address" fullWidth />} />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Controller name="hotel_phone" control={control} render={({ field }) => <TextField {...field} label="Hotel Phone" fullWidth />} />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Controller
+                  name="hotel_confirmation"
+                  control={control}
+                  render={({ field }) => <TextField {...field} label="Hotel Confirmation (optional)" fullWidth />}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <Controller name="maps_url" control={control} render={({ field }) => <TextField {...field} label="Map Link URL (optional)" fullWidth />} />
+              </Grid>
+
+              <Grid item xs={12}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                  Itinerary File
+                </Typography>
+                <Stack spacing={1}>
+                  <Button variant="outlined" component="label">
+                    Choose file
+                    <input type="file" hidden onChange={(e) => setItineraryFile(e.target.files?.[0] ?? null)} />
+                  </Button>
+                  {itineraryFile && (
+                    <Typography variant="body2">Selected: {itineraryFile.name}</Typography>
+                  )}
+                </Stack>
+              </Grid>
+
+              <Grid item xs={12}>
                 <Controller
                   name="notes"
                   control={control}
@@ -307,7 +427,7 @@ export default function CreateTravelPlan() {
                     Creating...
                   </>
                 ) : (
-                  'Create Travel Plan'
+                  'Create Draft Travel Plan'
                 )}
               </Button>
             </Box>

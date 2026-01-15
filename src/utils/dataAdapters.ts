@@ -2,7 +2,7 @@
 // Transform Supabase data types to Material Dashboard component formats
 // This ensures type safety and consistent data formatting
 
-import { Database } from '../lib/database.types'
+import type { Database } from '../lib/database.types.ts'
 
 // Type definitions for Material Dashboard table rows
 export interface MaterialTableRow {

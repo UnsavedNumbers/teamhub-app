@@ -9,19 +9,6 @@ interface Child {
   last_name: string
 }
 
-interface UniformOrder {
-  id: string
-  child_id: string
-  team_id: string
-  season_id: string
-  jersey_size: string
-  shorts_size: string
-  socks_size: string
-  status: 'pending' | 'ordered' | 'delivered'
-  team: { name: string }
-  season: { name: string }
-}
-
 interface Membership {
   team_id: string
   season_id: string
@@ -29,18 +16,56 @@ interface Membership {
   season: { name: string }
 }
 
-const JERSEY_SHORTS_SIZES = ['YXS', 'YS', 'YM', 'YL', 'YXL', 'AS', 'AM', 'AL', 'AXL', 'AXXL']
-const SOCKS_SIZES = ['YS (1-3)', 'YM (4-6)', 'YL (7-9)', 'AS (6-8)', 'AM (8-10)', 'AL (10-12)']
+type UniformSubmissionStatus = 'not_submitted' | 'submitted' | 'locked' | 'fulfilled'
+
+interface UniformKit {
+  id: string
+  team_id: string
+  season_id: string
+  name: string
+  deadline_at: string | null
+  locked_at: string | null
+}
+
+interface UniformKitItem {
+  id: string
+  kit_id: string
+  name: string
+  required: boolean
+  size_options: string[]
+  sort_order: number
+}
+
+interface UniformSubmission {
+  id: string
+  kit_id: string
+  child_id: string
+  status: UniformSubmissionStatus
+  submitted_at: string | null
+  locked_at: string | null
+  fulfilled_at: string | null
+}
+
+interface UniformSubmissionItem {
+  item_id: string
+  size: string
+}
 
 export default function Uniforms() {
+  // Typed Supabase client lags behind new schema during migrations; use untyped client for new uniforms tables/RPC.
+  const sb = supabase as any
+
   const [children, setChildren] = useState<Child[]>([])
-  const [orders, setOrders] = useState<UniformOrder[]>([])
   const [memberships, setMemberships] = useState<Record<string, Membership[]>>({})
+  const [kits, setKits] = useState<UniformKit[]>([])
+  const [kitItemsByKitId, setKitItemsByKitId] = useState<Record<string, UniformKitItem[]>>({})
+  const [submissions, setSubmissions] = useState<UniformSubmission[]>([])
+  const [_submissionItemsBySubmissionId, setSubmissionItemsBySubmissionId] = useState<Record<string, UniformSubmissionItem[]>>({})
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [selectedChild, setSelectedChild] = useState<Child | null>(null)
-  const [selectedMembership, setSelectedMembership] = useState<Membership | null>(null)
-  const [form, setForm] = useState({ jersey_size: '', shorts_size: '', socks_size: '' })
+  const [selectedKit, setSelectedKit] = useState<UniformKit | null>(null)
+  const [formByItemId, setFormByItemId] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
 
   const { profile } = useAuth()
@@ -54,12 +79,6 @@ export default function Uniforms() {
     const kids = (childData as Child[]) || []
     setChildren(kids)
 
-    const { data: orderData } = await supabase
-      .from('uniform_orders')
-      .select('*, team:teams(name), season:seasons(name)')
-
-    setOrders((orderData as unknown as UniformOrder[]) || [])
-
     const membershipMap: Record<string, Membership[]> = {}
     for (const child of kids) {
       const { data: memData } = await supabase
@@ -71,6 +90,69 @@ export default function Uniforms() {
       membershipMap[child.id] = (memData as unknown as Membership[]) || []
     }
     setMemberships(membershipMap)
+
+    // Fetch kits/items/submissions for all memberships in one pass
+    const childIds = kids.map((c) => c.id)
+    const allMemberships = Object.values(membershipMap).flat()
+    const teamIds = Array.from(new Set(allMemberships.map((m) => m.team_id)))
+
+    if (teamIds.length === 0 || childIds.length === 0) {
+      setKits([])
+      setKitItemsByKitId({})
+      setSubmissions([])
+      setSubmissionItemsBySubmissionId({})
+      setLoading(false)
+      return
+    }
+
+    const { data: kitsData } = await sb
+      .from('uniform_kits')
+      .select('id, team_id, season_id, name, deadline_at, locked_at')
+      .in('team_id', teamIds)
+
+    const loadedKits = (kitsData as unknown as UniformKit[]) || []
+    setKits(loadedKits)
+
+    const kitIds = loadedKits.map((k) => k.id)
+    if (kitIds.length === 0) {
+      setKitItemsByKitId({})
+      setSubmissions([])
+      setSubmissionItemsBySubmissionId({})
+      setLoading(false)
+      return
+    }
+
+    const [{ data: kitItemsData }, { data: subsData }] = await Promise.all([
+      sb
+        .from('uniform_kit_items')
+        .select('id, kit_id, name, required, size_options, sort_order')
+        .in('kit_id', kitIds),
+      sb
+        .from('uniform_submissions')
+        .select('id, kit_id, child_id, status, submitted_at, locked_at, fulfilled_at')
+        .in('kit_id', kitIds)
+        .in('child_id', childIds),
+    ])
+
+    const items = (kitItemsData as unknown as UniformKitItem[]) || []
+    const itemsMap: Record<string, UniformKitItem[]> = {}
+    for (const item of items) {
+      const list = itemsMap[item.kit_id] || []
+      list.push({
+        ...item,
+        size_options: Array.isArray(item.size_options) ? item.size_options : [],
+      })
+      itemsMap[item.kit_id] = list
+    }
+    for (const kitId of Object.keys(itemsMap)) {
+      itemsMap[kitId].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.name.localeCompare(b.name))
+    }
+    setKitItemsByKitId(itemsMap)
+
+    const loadedSubs = (subsData as unknown as UniformSubmission[]) || []
+    setSubmissions(loadedSubs)
+    setSubmissionItemsBySubmissionId({})
+
     setLoading(false)
   }, [profile?.family_id])
 
@@ -79,65 +161,87 @@ export default function Uniforms() {
     else setLoading(false)
   }, [profile, fetchData])
 
-  function getExistingOrder(childId: string, teamId: string, seasonId: string) {
-    return orders.find(o => o.child_id === childId && o.team_id === teamId && o.season_id === seasonId)
+  function getKitsForMembership(mem: Membership) {
+    return kits.filter((k) => k.team_id === mem.team_id && k.season_id === mem.season_id)
+  }
+
+  function getSubmission(childId: string, kitId: string) {
+    return submissions.find((s) => s.child_id === childId && s.kit_id === kitId)
   }
 
   async function handleSave() {
-    if (!selectedChild || !selectedMembership || !form.jersey_size || !form.shorts_size || !form.socks_size) return
-    
-    setSaving(true)
-    const existing = getExistingOrder(selectedChild.id, selectedMembership.team_id, selectedMembership.season_id)
+    if (!selectedChild || !selectedKit) return
 
-    if (existing) {
-      await supabase.from('uniform_orders').update({
-        jersey_size: form.jersey_size,
-        shorts_size: form.shorts_size,
-        socks_size: form.socks_size,
-      } as never).eq('id', existing.id)
-    } else {
-      await supabase.from('uniform_orders').insert({
-        child_id: selectedChild.id,
-        team_id: selectedMembership.team_id,
-        season_id: selectedMembership.season_id,
-        jersey_size: form.jersey_size,
-        shorts_size: form.shorts_size,
-        socks_size: form.socks_size,
-        status: 'pending',
-      } as never)
-    }
+    const kitItems = kitItemsByKitId[selectedKit.id] || []
+    const requiredMissing = kitItems.some((it) => it.required && !formByItemId[it.id])
+    if (requiredMissing) return
+    if (selectedKit.locked_at) return
+
+    setSaving(true)
+    const itemsPayload = Object.entries(formByItemId)
+      .filter(([, size]) => !!size && size.trim().length > 0)
+      .map(([item_id, size]) => ({ item_id, size }))
+
+    await sb.rpc('submit_uniform_sizes', {
+      p_kit_id: selectedKit.id,
+      p_child_id: selectedChild.id,
+      p_items: itemsPayload,
+    })
 
     await fetchData()
     setShowModal(false)
     setSelectedChild(null)
-    setSelectedMembership(null)
-    setForm({ jersey_size: '', shorts_size: '', socks_size: '' })
+    setSelectedKit(null)
+    setFormByItemId({})
     setSaving(false)
   }
 
-  function openModal(child: Child, membership: Membership) {
-    const existing = getExistingOrder(child.id, membership.team_id, membership.season_id)
+  async function openModal(child: Child, kit: UniformKit) {
+    const existing = getSubmission(child.id, kit.id)
     setSelectedChild(child)
-    setSelectedMembership(membership)
-    setForm({
-      jersey_size: existing?.jersey_size || '',
-      shorts_size: existing?.shorts_size || '',
-      socks_size: existing?.socks_size || '',
-    })
+    setSelectedKit(kit)
+
+    const kitItems = kitItemsByKitId[kit.id] || []
+
+    if (existing?.id) {
+      const { data } = await sb
+        .from('uniform_submission_items')
+        .select('item_id, size')
+        .eq('submission_id', existing.id)
+
+      const existingItems = (data as unknown as UniformSubmissionItem[]) || []
+      setSubmissionItemsBySubmissionId((prev) => ({ ...prev, [existing.id]: existingItems }))
+      const initial: Record<string, string> = {}
+      for (const it of kitItems) initial[it.id] = ''
+      for (const si of existingItems) initial[si.item_id] = si.size
+      setFormByItemId(initial)
+    } else {
+      const initial: Record<string, string> = {}
+      for (const it of kitItems) initial[it.id] = ''
+      setFormByItemId(initial)
+    }
     setShowModal(true)
   }
 
   // Count pending items
   const pendingCount = children.reduce((acc, child) => {
     const mems = memberships[child.id] || []
-    const pending = mems.filter(m => !getExistingOrder(child.id, m.team_id, m.season_id)).length
+    const pending = mems.reduce((mAcc, m) => {
+      const kitsForMem = getKitsForMembership(m)
+      const missingForMem = kitsForMem.filter((k) => {
+        const s = getSubmission(child.id, k.id)
+        return !s || s.status === 'not_submitted'
+      }).length
+      return mAcc + missingForMem
+    }, 0)
     return acc + pending
   }, 0)
 
-  const statusColors = {
-    pending: 'bg-amber-500/20 text-amber-400',
-    ordered: 'bg-blue-500/20 text-blue-400',
-    delivered: 'bg-green-500/20 text-green-400',
+  const statusColors: Record<UniformSubmissionStatus, string> = {
+    not_submitted: 'bg-slate-700 text-slate-300',
+    submitted: 'bg-amber-500/20 text-amber-400',
+    locked: 'bg-blue-500/20 text-blue-400',
+    fulfilled: 'bg-green-500/20 text-green-400',
   }
 
   return (
@@ -202,9 +306,8 @@ export default function Uniforms() {
                   ) : (
                     <div className="divide-y divide-slate-700/50">
                       {(memberships[child.id] || []).map((mem) => {
-                        const order = getExistingOrder(child.id, mem.team_id, mem.season_id)
-                        {/* const itemsSet = order ? 3 : 0 */}
-                        
+                        const memKits = getKitsForMembership(mem)
+
                         return (
                           <div key={`${mem.team_id}-${mem.season_id}`} className="px-6 py-5 hover:bg-slate-700/30 transition-colors">
                             <div className="flex items-center justify-between mb-4">
@@ -212,70 +315,52 @@ export default function Uniforms() {
                                 <p className="font-bold text-white">{mem.team.name}</p>
                                 <p className="text-sm text-slate-400">{mem.season.name}</p>
                               </div>
-                              {order && (
-                                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${statusColors[order.status]}`}>
-                                  {order.status}
-                                </span>
-                              )}
                             </div>
 
-                            {/* Gear Items */}
-                            <div className="space-y-3">
-                              {/* Jersey */}
-                              <div className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-12 h-12 bg-slate-700/50 rounded-lg flex items-center justify-center text-2xl">👕</div>
-                                  <div>
-                                    <p className="font-bold text-white text-sm uppercase">Official Game Jersey</p>
-                                    <p className="text-xs text-slate-500 uppercase">Dri-FIT Technology</p>
-                                  </div>
-                                </div>
-                                {order?.jersey_size ? (
-                                  <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-bold">{order.jersey_size}</span>
-                                ) : (
-                                  <span className="px-3 py-1 bg-slate-700 text-slate-400 rounded-full text-xs font-bold">Not Set</span>
-                                )}
+                            {memKits.length === 0 ? (
+                              <div className="p-4 bg-slate-900/40 rounded-lg">
+                                <p className="text-slate-400 text-sm">No uniform kits yet.</p>
                               </div>
+                            ) : (
+                              <div className="space-y-4">
+                                {memKits.map((kit) => {
+                                  const submission = getSubmission(child.id, kit.id)
+                                  const status: UniformSubmissionStatus = submission?.status || 'not_submitted'
+                                  const kitItems = kitItemsByKitId[kit.id] || []
+                                  const isLocked = !!kit.locked_at || status === 'locked' || status === 'fulfilled'
 
-                              {/* Shorts */}
-                              <div className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-12 h-12 bg-slate-700/50 rounded-lg flex items-center justify-center text-2xl">🩳</div>
-                                  <div>
-                                    <p className="font-bold text-white text-sm uppercase">Performance Shorts</p>
-                                    <p className="text-xs text-slate-500 uppercase">Lightweight Stretch Mesh</p>
-                                  </div>
-                                </div>
-                                {order?.shorts_size ? (
-                                  <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-bold">{order.shorts_size}</span>
-                                ) : (
-                                  <span className="px-3 py-1 bg-slate-700 text-slate-400 rounded-full text-xs font-bold">Not Set</span>
-                                )}
+                                  return (
+                                    <div key={kit.id} className="p-4 bg-slate-900/40 rounded-lg border border-slate-700/50">
+                                      <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                          <p className="font-black text-white uppercase tracking-tight">{kit.name}</p>
+                                          <p className="text-xs text-slate-500">
+                                            {kit.deadline_at ? `Deadline: ${new Date(kit.deadline_at).toLocaleDateString()}` : 'No deadline set'}
+                                          </p>
+                                        </div>
+                                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${statusColors[status]}`}>
+                                          {status.replace('_', ' ')}
+                                        </span>
+                                      </div>
+
+                                      <div className="mt-3 flex items-center justify-between">
+                                        <p className="text-sm text-slate-300">
+                                          {kitItems.length} item{kitItems.length === 1 ? '' : 's'} {kitItems.some((i) => i.required) ? '(required included)' : ''}
+                                        </p>
+                                        <button
+                                          onClick={() => openModal(child, kit)}
+                                          className="px-5 py-2 bg-white text-slate-900 font-bold text-sm rounded-lg hover:bg-slate-100 transition-colors uppercase tracking-wide disabled:opacity-50"
+                                          disabled={isLocked}
+                                          title={isLocked ? 'This kit is locked' : undefined}
+                                        >
+                                          {submission ? 'View / Edit' : 'Submit Sizes'}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )
+                                })}
                               </div>
-
-                              {/* Socks */}
-                              <div className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-12 h-12 bg-slate-700/50 rounded-lg flex items-center justify-center text-2xl">🧦</div>
-                                  <div>
-                                    <p className="font-bold text-white text-sm uppercase">Squad Crew Socks</p>
-                                    <p className="text-xs text-slate-500 uppercase">Pack of 2 • Zonal Cushioning</p>
-                                  </div>
-                                </div>
-                                {order?.socks_size ? (
-                                  <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-bold">{order.socks_size}</span>
-                                ) : (
-                                  <span className="px-3 py-1 bg-slate-700 text-slate-400 rounded-full text-xs font-bold">Not Set</span>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Action Button */}
-                            <div className="mt-4 flex justify-end">
-                              <button onClick={() => openModal(child, mem)} className="px-6 py-2 bg-white text-slate-900 font-bold text-sm rounded-lg hover:bg-slate-100 transition-colors uppercase tracking-wide">
-                                {order ? 'Edit Sizes' : 'Submit Sizes Now'}
-                              </button>
-                            </div>
+                            )}
                           </div>
                         )
                       })}
@@ -303,48 +388,67 @@ export default function Uniforms() {
       </main>
 
       {/* Size Entry Modal */}
-      {showModal && selectedChild && selectedMembership && (
+      {showModal && selectedChild && selectedKit && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-slate-800 rounded-xl max-w-lg w-full overflow-hidden shadow-2xl">
             <div className="px-6 py-4 border-b border-slate-700/50">
               <h2 className="text-xl font-black text-white uppercase tracking-tight">Submit Sizes</h2>
-              <p className="text-slate-400 text-sm">{selectedChild.first_name} • {selectedMembership.team.name}</p>
+              <p className="text-slate-400 text-sm">
+                {selectedChild.first_name} • {selectedKit.name}
+                {selectedKit.locked_at ? ' • Locked' : ''}
+              </p>
             </div>
 
             <div className="p-6 space-y-5">
-              {/* Jersey */}
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Official Game Jersey</label>
-                <select value={form.jersey_size} onChange={(e) => setForm({ ...form, jersey_size: e.target.value })} className="input-field">
-                  <option value="">Select size...</option>
-                  {JERSEY_SHORTS_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
+              {(kitItemsByKitId[selectedKit.id] || []).map((it) => {
+                const value = formByItemId[it.id] || ''
+                const disabled = !!selectedKit.locked_at
+                const hasOptions = Array.isArray(it.size_options) && it.size_options.length > 0
 
-              {/* Shorts */}
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Performance Shorts</label>
-                <select value={form.shorts_size} onChange={(e) => setForm({ ...form, shorts_size: e.target.value })} className="input-field">
-                  <option value="">Select size...</option>
-                  {JERSEY_SHORTS_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-
-              {/* Socks */}
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Squad Crew Socks</label>
-                <select value={form.socks_size} onChange={(e) => setForm({ ...form, socks_size: e.target.value })} className="input-field">
-                  <option value="">Select size...</option>
-                  {SOCKS_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
+                return (
+                  <div key={it.id}>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">
+                      {it.name} {it.required ? '' : '(optional)'}
+                    </label>
+                    {hasOptions ? (
+                      <select
+                        value={value}
+                        onChange={(e) => setFormByItemId({ ...formByItemId, [it.id]: e.target.value })}
+                        className="input-field"
+                        disabled={disabled}
+                      >
+                        <option value="">{it.required ? 'Select size...' : 'Skip (optional)'}</option>
+                        {it.size_options.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        className="input-field"
+                        value={value}
+                        onChange={(e) => setFormByItemId({ ...formByItemId, [it.id]: e.target.value })}
+                        disabled={disabled}
+                        placeholder={it.required ? 'Enter size...' : 'Optional'}
+                      />
+                    )}
+                  </div>
+                )
+              })}
             </div>
 
             <div className="px-6 py-4 bg-slate-900/50 flex gap-3 justify-end">
               <button onClick={() => setShowModal(false)} className="px-5 py-2 text-slate-400 hover:text-white font-bold uppercase text-sm transition-colors">Cancel</button>
-              <button onClick={handleSave} disabled={saving || !form.jersey_size || !form.shorts_size || !form.socks_size} className="px-6 py-2 bg-white text-slate-900 font-bold uppercase text-sm rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50">
-                {saving ? 'Saving...' : 'Save Sizes'}
-              </button>
+              {!selectedKit.locked_at && (
+                <button
+                  onClick={handleSave}
+                  disabled={saving || (kitItemsByKitId[selectedKit.id] || []).some((it) => it.required && !formByItemId[it.id])}
+                  className="px-6 py-2 bg-white text-slate-900 font-bold uppercase text-sm rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save Sizes'}
+                </button>
+              )}
             </div>
           </div>
         </div>

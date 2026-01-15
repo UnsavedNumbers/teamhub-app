@@ -32,10 +32,10 @@ export default function PaymentSuccess() {
   }, [navigate])
 
   useEffect(() => {
-    if (sessionId) fetchSession()
+    if (sessionId) fetchSession(sessionId)
   }, [sessionId])
 
-  async function fetchSession() {
+  async function fetchSession(id: string) {
     setLoading(true)
     const { data } = await supabase
       .from('checkout_sessions')
@@ -53,7 +53,7 @@ export default function PaymentSuccess() {
           )
         )
       `)
-      .eq('stripe_checkout_session_id', sessionId)
+      .eq('stripe_checkout_session_id', id)
       .maybeSingle()
 
     setSession((data as CheckoutSession | null) ?? null)

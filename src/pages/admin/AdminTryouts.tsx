@@ -17,15 +17,17 @@ import {
 } from '@mui/material'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import AdminSkeletonTable from '../../components/admin/AdminSkeletonTable'
 
 interface Tryout {
   id: string
   title: string
-  sport: string
+  type?: string | null
   age_group: string
   tryout_date: string
   location: string
+  org_id: string
 }
 
 export default function AdminTryouts() {
@@ -36,14 +38,18 @@ export default function AdminTryouts() {
   const [totalCount, setTotalCount] = useState(0)
 
   const { profile } = useAuth()
+  const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
 
   const fetchTryouts = useCallback(async () => {
     setLoading(true)
     try {
+      if (!currentOrganization) return
+
       const { count } = await supabase
         .from('tryouts')
         .select('*', { count: 'exact', head: true })
+        .eq('org_id', currentOrganization.id)
 
       setTotalCount(count || 0)
 
@@ -53,6 +59,7 @@ export default function AdminTryouts() {
       const { data } = await supabase
         .from('tryouts')
         .select('*')
+        .eq('org_id', currentOrganization.id)
         .order('tryout_date', { ascending: false })
         .range(from, to)
 
@@ -62,15 +69,15 @@ export default function AdminTryouts() {
     } finally {
       setLoading(false)
     }
-  }, [page, rowsPerPage])
+  }, [page, rowsPerPage, currentOrganization])
 
   useEffect(() => {
     if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
       navigate('/portal/unauthorized')
       return
     }
-    fetchTryouts()
-  }, [profile, navigate, page, rowsPerPage, fetchTryouts])
+    if (currentOrganization) fetchTryouts()
+  }, [profile, navigate, page, rowsPerPage, fetchTryouts, currentOrganization])
 
   if (loading && tryouts.length === 0) {
     return <AdminSkeletonTable rows={6} columns={5} />
@@ -108,10 +115,15 @@ export default function AdminTryouts() {
               </TableHead>
               <TableBody>
                 {tryouts.map((tryout) => (
-                  <TableRow key={tryout.id} hover>
+                  <TableRow
+                    key={tryout.id}
+                    hover
+                    sx={{ cursor: 'pointer' }}
+                    onClick={() => navigate(`/admin/tryouts/${tryout.id}`)}
+                  >
                     <TableCell>{tryout.title}</TableCell>
                     <TableCell>
-                      <Chip label={tryout.sport} size="small" />
+                      <Chip label={tryout.type ?? 'tryout'} size="small" />
                     </TableCell>
                     <TableCell>{tryout.age_group}</TableCell>
                     <TableCell>{new Date(tryout.tryout_date).toLocaleDateString()}</TableCell>

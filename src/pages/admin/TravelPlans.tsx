@@ -14,6 +14,8 @@ import {
   TableRow,
   TablePagination,
   Paper,
+  Chip,
+  Stack,
 } from '@mui/material'
 import { Add as AddIcon } from '@mui/icons-material'
 import { supabase } from '../../lib/supabase'
@@ -26,6 +28,7 @@ interface TravelPlan {
   location: string
   start_date: string
   end_date: string
+  status: 'draft' | 'published' | 'cancelled'
   team: { name: string }
 }
 
@@ -53,7 +56,7 @@ export default function TravelPlans() {
 
       const { data } = await supabase
         .from('travel_plans')
-        .select('id, title, location, start_date, end_date, team:teams(name)')
+        .select('id, title, location, start_date, end_date, status, team:teams(name)')
         .order('start_date', { ascending: false })
         .range(from, to)
 
@@ -77,6 +80,35 @@ export default function TravelPlans() {
     const startDate = new Date(start)
     const endDate = new Date(end)
     return `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`
+  }
+
+  function statusChip(status: TravelPlan['status']) {
+    switch (status) {
+      case 'draft':
+        return <Chip size="small" label="Draft" />
+      case 'published':
+        return <Chip size="small" color="success" label="Published" />
+      case 'cancelled':
+        return <Chip size="small" color="error" label="Cancelled" />
+      default:
+        return <Chip size="small" label={status} />
+    }
+  }
+
+  async function publishPlan(id: string) {
+    await supabase
+      .from('travel_plans')
+      .update({ status: 'published', published_at: new Date().toISOString(), cancelled_at: null } as never)
+      .eq('id', id)
+    fetchPlans()
+  }
+
+  async function cancelPlan(id: string) {
+    await supabase
+      .from('travel_plans')
+      .update({ status: 'cancelled', cancelled_at: new Date().toISOString() } as never)
+      .eq('id', id)
+    fetchPlans()
   }
 
   if (loading && plans.length === 0) {
@@ -115,18 +147,51 @@ export default function TravelPlans() {
               <TableHead>
                 <TableRow>
                   <TableCell>Title</TableCell>
+                  <TableCell>Status</TableCell>
                   <TableCell>Location</TableCell>
                   <TableCell>Dates</TableCell>
                   <TableCell>Team</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {plans.map((plan) => (
-                  <TableRow key={plan.id} hover>
+                  <TableRow
+                    key={plan.id}
+                    hover
+                    sx={{ cursor: 'pointer' }}
+                    onClick={() => navigate(`/admin/travel/${plan.id}`)}
+                  >
                     <TableCell>{plan.title}</TableCell>
+                    <TableCell>{statusChip(plan.status)}</TableCell>
                     <TableCell>{plan.location}</TableCell>
                     <TableCell>{formatDateRange(plan.start_date, plan.end_date)}</TableCell>
                     <TableCell>{plan.team.name}</TableCell>
+                    <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                      <Stack direction="row" spacing={1} justifyContent="flex-end">
+                        <Button size="small" onClick={() => navigate(`/admin/travel/${plan.id}`)}>
+                          Edit
+                        </Button>
+                        <Button
+                          size="small"
+                          color="success"
+                          variant="contained"
+                          disabled={plan.status === 'published'}
+                          onClick={() => publishPlan(plan.id)}
+                        >
+                          Publish
+                        </Button>
+                        <Button
+                          size="small"
+                          color="error"
+                          variant="contained"
+                          disabled={plan.status === 'cancelled'}
+                          onClick={() => cancelPlan(plan.id)}
+                        >
+                          Cancel
+                        </Button>
+                      </Stack>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

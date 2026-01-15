@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import type { Database } from '../lib/database.types'
+import type { Database } from '../lib/database.types.ts'
 import { createParentCheckoutSession } from '../api/payments'
 
 type FeeAssignmentStatus = Database['public']['Enums']['fee_assignment_status']
@@ -82,7 +82,7 @@ export default function MyPayments() {
           last_name
         )
       `)
-      .eq('parent_id', profile?.id)
+      .eq('parent_id', profile?.id ?? '')
       .order('due_date', { ascending: true })
 
     if (queryError) {
