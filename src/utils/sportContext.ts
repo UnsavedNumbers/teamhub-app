@@ -7,7 +7,8 @@
  */
 
 import type { UserContext } from '../data/fake/userContext'
-import { getTeamDetails, getSports, getTeamsForParent } from '../data/services/teamsService'
+import { getTeamDetails, getTeamsForParent } from '../data/services/teamsService'
+import { getSports } from '../data/services/sportsService'
 import { getEventDetails } from '../data/services/eventsService'
 import { getChildren } from '../data/services/familyService'
 import type { CalendarEvent } from '../types/calendar'
@@ -25,28 +26,54 @@ export interface SportInfo {
  */
 export async function getSportFromTeam(
     context: UserContext,
-    teamId: string
+    teamId: string | null | undefined
 ): Promise<SportInfo | null> {
+    // Validate inputs
+    if (!teamId || typeof teamId !== 'string') {
+        console.warn('[sportContext] Invalid teamId provided to getSportFromTeam:', teamId)
+        return null
+    }
+
+    if (!context || !context.orgId) {
+        console.warn('[sportContext] Invalid context provided to getSportFromTeam')
+        return null
+    }
+
     try {
         const { data: teamDetails, error } = await getTeamDetails(context, teamId)
-        if (error || !teamDetails) {
+
+        if (error) {
+            console.warn('[sportContext] Error getting team details:', error)
+            return null
+        }
+
+        if (!teamDetails) {
+            console.warn('[sportContext] Team not found:', teamId)
             return null
         }
 
         // Team details should include sport
         const sport = (teamDetails as any).sport
+
         if (!sport) {
+            console.warn('[sportContext] Team has no sport data:', teamId)
+            return null
+        }
+
+        // Validate sport has required fields
+        if (!sport.id || !sport.name) {
+            console.warn('[sportContext] Sport missing required fields:', sport)
             return null
         }
 
         return {
             id: sport.id,
             name: sport.name,
-            color: sport.color,
-            icon: sport.icon,
+            color: sport.color || '#137fec',
+            icon: sport.icon || undefined,
         }
     } catch (err) {
-        console.warn('[sportContext] Error getting sport from team:', err)
+        console.error('[sportContext] Error getting sport from team:', err)
         return null
     }
 }
@@ -56,17 +83,40 @@ export async function getSportFromTeam(
  */
 export async function getSportFromEvent(
     context: UserContext,
-    eventId: string
+    eventId: string | null | undefined
 ): Promise<SportInfo | null> {
+    // Validate inputs
+    if (!eventId || typeof eventId !== 'string') {
+        console.warn('[sportContext] Invalid eventId provided to getSportFromEvent:', eventId)
+        return null
+    }
+
+    if (!context || !context.orgId) {
+        console.warn('[sportContext] Invalid context provided to getSportFromEvent')
+        return null
+    }
+
     try {
         const { data: event, error } = await getEventDetails(context, eventId)
-        if (error || !event || !event.team_id) {
+
+        if (error) {
+            console.warn('[sportContext] Error getting event details:', error)
+            return null
+        }
+
+        if (!event) {
+            console.warn('[sportContext] Event not found:', eventId)
+            return null
+        }
+
+        if (!event.team_id) {
+            console.warn('[sportContext] Event has no team_id:', eventId)
             return null
         }
 
         return await getSportFromTeam(context, event.team_id)
     } catch (err) {
-        console.warn('[sportContext] Error getting sport from event:', err)
+        console.error('[sportContext] Error getting sport from event:', err)
         return null
     }
 }
@@ -147,18 +197,26 @@ async function getFirstSportFromOrg(context: UserContext): Promise<SportInfo | n
     try {
         const { data: sports, error } = await getSports(context)
         if (error || !sports || sports.length === 0) {
+            console.warn('[sportContext] No sports available for org:', context.orgId)
             return null
         }
 
         const firstSport = sports[0]
+
+        // Validate sport has required fields
+        if (!firstSport.name) {
+            console.warn('[sportContext] First sport has no name:', firstSport)
+            return null
+        }
+
         return {
             id: firstSport.id,
             name: firstSport.name,
-            color: firstSport.color,
-            icon: firstSport.icon,
+            color: firstSport.color || '#137fec',
+            icon: firstSport.icon || undefined,
         }
     } catch (err) {
-        console.warn('[sportContext] Error getting first sport from org:', err)
+        console.error('[sportContext] Error getting first sport from org:', err)
         return null
     }
 }

@@ -178,76 +178,10 @@ export async function getTeamDetails(
 // Sports Service Functions
 // ============================================================================
 
-/**
- * Get sports for the organization
- *
- * TODO: Replace with Supabase query:
- * ```typescript
- * const { data, error } = await supabase
- *   .from('sports')
- *   .select('*')
- *   .eq('org_id', context.orgId)
- *   .order('name')
- * ```
- */
-export async function getSports(
-    context: UserContext
-): Promise<{ data: FakeSport[]; error: Error | null }> {
-    if (!USE_FAKE_DATA) {
-        return { data: [], error: new Error('Real data not implemented') }
-    }
+// Re-export from sportsService for backwards compatibility
+export { getSports, getPrograms } from './sportsService'
 
-    try {
-        await simulateDelay()
 
-        const sports = getSportsForOrg(context.orgId)
-        return { data: sports, error: null }
-    } catch (err) {
-        return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
-    }
-}
-
-// ============================================================================
-// Programs Service Functions
-// ============================================================================
-
-/**
- * Get programs for the organization
- *
- * TODO: Replace with Supabase query:
- * ```typescript
- * const { data, error } = await supabase
- *   .from('programs')
- *   .select(`
- *     *,
- *     sport:sports(id, name)
- *   `)
- *   .eq('org_id', context.orgId)
- *   .order('name')
- * ```
- */
-export async function getPrograms(
-    context: UserContext,
-    sportId?: string
-): Promise<{ data: FakeProgram[]; error: Error | null }> {
-    if (!USE_FAKE_DATA) {
-        return { data: [], error: new Error('Real data not implemented') }
-    }
-
-    try {
-        await simulateDelay()
-
-        let programs = getProgramsForOrg(context.orgId)
-
-        if (sportId) {
-            programs = programs.filter((p) => p.sport_id === sportId)
-        }
-
-        return { data: programs, error: null }
-    } catch (err) {
-        return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
-    }
-}
 
 // ============================================================================
 // Season Service Functions

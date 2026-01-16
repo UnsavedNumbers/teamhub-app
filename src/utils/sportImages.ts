@@ -9,23 +9,28 @@ import type { SportInfo } from './sportContext'
 
 /**
  * Sport name to image path mapping
+ * All images are WebP format for optimal performance
  */
 const SPORT_IMAGE_MAP: Record<string, { hero: string; card: string }> = {
     Soccer: {
-        hero: '/images/sports/soccer/hero-bg.jpg',
-        card: '/images/sports/soccer/card-bg.jpg',
+        hero: '/images/sports/soccer/hero-bg.webp',
+        card: '/images/sports/soccer/card-bg.webp',
     },
     Basketball: {
-        hero: '/images/sports/basketball/hero-bg.jpg',
-        card: '/images/sports/basketball/card-bg.jpg',
+        hero: '/images/sports/basketball/hero-bg.webp',
+        card: '/images/sports/basketball/card-bg.webp',
     },
     Baseball: {
-        hero: '/images/sports/baseball/hero-bg.jpg',
-        card: '/images/sports/baseball/card-bg.jpg',
+        hero: '/images/sports/baseball/hero-bg.webp',
+        card: '/images/sports/baseball/card-bg.webp',
     },
     Volleyball: {
-        hero: '/images/sports/volleyball/hero-bg.jpg',
-        card: '/images/sports/volleyball/card-bg.jpg',
+        hero: '/images/sports/volleyball/hero-bg.webp',
+        card: '/images/sports/volleyball/card-bg.webp',
+    },
+    Football: {
+        hero: '/images/sports/football/hero-bg.webp',
+        card: '/images/sports/football/card-bg.webp',
     },
 }
 
@@ -33,8 +38,8 @@ const SPORT_IMAGE_MAP: Record<string, { hero: string; card: string }> = {
  * Default sport image paths (fallback)
  */
 const DEFAULT_IMAGE_PATHS = {
-    hero: '/images/sports/default/hero-bg.jpg',
-    card: '/images/sports/default/card-bg.jpg',
+    hero: '/images/sports/default/hero-bg.webp',
+    card: '/images/sports/default/card-bg.webp',
 }
 
 /**
@@ -46,11 +51,15 @@ export function getSportImagePath(
     type: 'hero' | 'card',
     darkMode: boolean = false
 ): string {
-    if (!sportName) {
+    if (!sportName || typeof sportName !== 'string') {
         return DEFAULT_IMAGE_PATHS[type]
     }
 
     const normalizedName = sportName.trim()
+    if (!normalizedName) {
+        return DEFAULT_IMAGE_PATHS[type]
+    }
+
     const sportImages = SPORT_IMAGE_MAP[normalizedName]
 
     if (!sportImages) {
@@ -61,10 +70,14 @@ export function getSportImagePath(
 
     // For dark mode, try dark variant first
     if (darkMode) {
-        const darkPath = basePath.replace(/\.(jpg|jpeg|png|webp)$/i, '-dark.$1')
-        // Note: We'll check if dark variant exists in component, for now return base path
-        // Component will handle fallback to CSS filter if dark image doesn't exist
-        return darkPath
+        try {
+            const darkPath = basePath.replace(/\.(jpg|jpeg|png|webp)$/i, '-dark.$1')
+            // Note: We'll check if dark variant exists in component, for now return base path
+            // Component will handle fallback to CSS filter if dark image doesn't exist
+            return darkPath
+        } catch (err) {
+            return basePath
+        }
     }
 
     return basePath

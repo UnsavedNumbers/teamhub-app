@@ -85,8 +85,8 @@ export function SportCardImage({
                 />
             )}
 
-            {/* Overlay Gradient for Text Readability */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none" />
+            {/* Dark Overlay for Text Readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30 pointer-events-none" />
 
             {/* Content Overlay */}
             {children && (

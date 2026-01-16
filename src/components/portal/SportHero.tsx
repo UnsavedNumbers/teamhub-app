@@ -108,8 +108,8 @@ export function SportHero({ sport, children, className = '', height = '60vh' }: 
                 />
             )}
 
-            {/* Overlay Gradient */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background-light dark:to-background-dark pointer-events-none" />
+            {/* Dark Overlay for Text Readability */}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/50 to-black/70 pointer-events-none" />
 
             {/* Content Overlay */}
             {children && (

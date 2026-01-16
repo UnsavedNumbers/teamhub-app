@@ -8,7 +8,6 @@ import {
 } from '../utils/setupOrganization'
 import {
   getNotifications,
-  getUnreadNotifications,
   markNotificationRead,
   markAllNotificationsRead,
 } from '../data/services/messagesService'
@@ -280,28 +279,28 @@ export default function Dashboard() {
             <div className="max-w-[1200px] mx-auto px-6 pb-12">
               {/* Breadcrumbs & Greeting */}
               <div className="mb-8">
-          <nav className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">
-            <Link to="/portal/dashboard" className="hover:text-[#137fec] transition-colors">Home</Link>
+          <nav className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/60 mb-6">
+            <Link to="/portal/dashboard" className="hover:text-white transition-colors">Home</Link>
             <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span className="text-slate-900 dark:text-white">Parent Portal</span>
+            <span className="text-white">Parent Portal</span>
           </nav>
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
-              <h1 className="text-5xl font-black tracking-tighter text-slate-900 dark:text-white mb-2 leading-none">
+              <h1 className="text-5xl font-black tracking-tighter text-white mb-2 leading-none">
                 {getGreeting()}, {firstName}.
               </h1>
-              <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
+              <p className="text-white/80 text-lg font-light tracking-wide">
                 Elite performance starts with the right logistics.
               </p>
             </div>
             <div className="flex gap-4">
-              <div className="px-6 py-3 border border-slate-200 dark:border-slate-800 rounded-lg flex flex-col">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Season</span>
-                <span className="font-bold text-slate-900 dark:text-white">Spring 2024</span>
+              <div className="px-6 py-3 border border-white/20 rounded-lg flex flex-col bg-black/20 backdrop-blur-sm">
+                <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest">Active Season</span>
+                <span className="font-bold text-white">Spring 2024</span>
               </div>
-              <div className="px-6 py-3 border border-slate-200 dark:border-slate-800 rounded-lg flex flex-col">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Players</span>
-                <span className="font-bold text-slate-900 dark:text-white">2 Active</span>
+              <div className="px-6 py-3 border border-white/20 rounded-lg flex flex-col bg-black/20 backdrop-blur-sm">
+                <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest">Players</span>
+                <span className="font-bold text-white">2 Active</span>
               </div>
             </div>
               </div>
