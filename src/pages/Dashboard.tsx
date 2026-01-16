@@ -19,6 +19,8 @@ import {
   getParentPaymentSummary,
   getUnpaidFeeAssignments,
 } from '../data/services/paymentsService'
+import { getPrimarySportForUser, type SportInfo } from '../utils/sportContext'
+import { SportHero } from '../components/portal/SportHero'
 import type { CalendarEvent } from '../types/calendar'
 
 interface UserNotification {
@@ -43,6 +45,7 @@ export default function Dashboard() {
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([])
   const [eventsLoading, setEventsLoading] = useState(true)
   const [paymentItems, setPaymentItems] = useState<PaymentOverview[]>([])
+  const [primarySport, setPrimarySport] = useState<SportInfo | null>(null)
 
   // Safety net: If user landed here with setupOrganization flag, redirect to onboarding
   useEffect(() => {
@@ -85,6 +88,20 @@ export default function Dashboard() {
     }
 
     loadEvents()
+  }, [context, isReady])
+
+  // Load primary sport
+  useEffect(() => {
+    if (!isReady) return
+
+    const loadSport = async () => {
+      const sport = await getPrimarySportForUser(context)
+      if (sport) {
+        setPrimarySport(sport)
+      }
+    }
+
+    loadSport()
   }, [context, isReady])
 
   // Load payment summary
@@ -256,9 +273,13 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <main className="max-w-[1200px] mx-auto px-6 py-8">
-        {/* Breadcrumbs & Greeting */}
-        <div className="mb-12">
+      <main className="max-w-[1200px] mx-auto">
+        {/* Sport Hero Section */}
+        <div className="px-6 -mx-6 mb-8">
+          <SportHero sport={primarySport} height="60vh">
+            <div className="max-w-[1200px] mx-auto px-6 pb-12">
+              {/* Breadcrumbs & Greeting */}
+              <div className="mb-8">
           <nav className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">
             <Link to="/portal/dashboard" className="hover:text-[#137fec] transition-colors">Home</Link>
             <span className="material-symbols-outlined text-[10px]">chevron_right</span>
@@ -283,10 +304,14 @@ export default function Dashboard() {
                 <span className="font-bold text-slate-900 dark:text-white">2 Active</span>
               </div>
             </div>
-          </div>
+              </div>
+            </div>
+            </div>
+          </SportHero>
         </div>
 
-        {unread.length > 0 && (
+        <div className="px-6">
+          {unread.length > 0 && (
           <div className="mb-10 bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white">Notifications</h2>
@@ -325,8 +350,9 @@ export default function Dashboard() {
             </div>
           </div>
         )}
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 px-6">
           {/* Main Content: Priority Actions */}
           <div className="lg:col-span-8">
             <div className="flex items-center justify-between mb-8 border-b border-slate-100 dark:border-slate-800 pb-4">

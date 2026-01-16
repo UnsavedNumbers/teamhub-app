@@ -2,9 +2,12 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { getEvents } from '../data/services/eventsService'
+import { getPrimarySportFromEvents, getSportFromEvent, type SportInfo } from '../utils/sportContext'
 import PortalLayout from '../components/portal/PortalLayout'
 import PortalHeader from '../components/portal/PortalHeader'
 import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
+import { SportHero } from '../components/portal/SportHero'
+import { SportCardImage } from '../components/portal/SportCardImage'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
@@ -20,7 +23,8 @@ interface DisplayEvent {
   arrival_time: string | null
   location: string | null
   notes: string | null
-  team: { name: string }
+  team: { name: string; id?: string }
+  team_id?: string
 }
 
 export default function Calendar() {
@@ -28,6 +32,8 @@ export default function Calendar() {
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<ViewMode>('agenda')
   const [selectedEvent, setSelectedEvent] = useState<DisplayEvent | null>(null)
+  const [primarySport, setPrimarySport] = useState<SportInfo | null>(null)
+  const [eventSports, setEventSports] = useState<Record<string, SportInfo | null>>({})
 
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
@@ -59,9 +65,26 @@ export default function Calendar() {
         arrival_time: event.arrival_time ?? null,
         location: event.event_location?.venue_name ?? null,
         notes: event.notes ?? null,
-        team: { name: event.team?.name ?? 'Unknown Team' },
+        team: { name: event.team?.name ?? 'Unknown Team', id: event.team?.id },
+        team_id: event.team_id,
       }))
       setEvents(displayEvents)
+      
+      // Load primary sport from events
+      getPrimarySportFromEvents(context, data).then(sport => {
+        if (sport) setPrimarySport(sport)
+      })
+      
+      // Load sports for individual events
+      const sportsMap: Record<string, SportInfo | null> = {}
+      Promise.all(
+        data.map(async (event) => {
+          if (event.team_id) {
+            const sport = await getSportFromEvent(context, event.id)
+            if (sport) sportsMap[event.id] = sport
+          }
+        })
+      ).then(() => setEventSports(sportsMap))
     }
     setLoading(false)
   }, [context])
@@ -107,29 +130,36 @@ export default function Calendar() {
           { label: 'Schedule' },
         ]}
       >
-        <div className="mb-12 flex items-end justify-between">
-          <div>
-            <PageTitle>Schedule</PageTitle>
-            <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
-              View upcoming events and activities.
-            </p>
+        {/* Sport Hero Section */}
+        <div className="-mx-6 mb-8">
+          <SportHero sport={primarySport} height="40vh">
+            <div className="max-w-[1200px] mx-auto px-6 pb-8">
+              <div className="mb-8 flex items-end justify-between">
+                <div>
+                  <PageTitle className="text-white">Schedule</PageTitle>
+                  <p className="text-white/80 text-lg font-light tracking-wide">
+                    View upcoming events and activities.
+                  </p>
+                </div>
+                <div className="flex gap-1 bg-white/10 dark:bg-slate-900/50 border border-white/20 dark:border-slate-700 rounded p-1">
+                  {(['agenda', 'week', 'month'] as ViewMode[]).map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setView(v)}
+                      className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded transition-colors ${
+                        view === v
+                          ? 'bg-[#137fec] text-white'
+                          : 'text-white/80 dark:text-slate-400 hover:text-white dark:hover:text-white'
+                      }`}
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-          <div className="flex gap-1 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded p-1">
-              {(['agenda', 'week', 'month'] as ViewMode[]).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setView(v)}
-                className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded transition-colors ${
-                  view === v
-                    ? 'bg-[#137fec] text-white'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  {v}
-                </button>
-              ))}
-            </div>
-          </div>
+          </SportHero>
+        </div>
 
         {loading ? (
           <div className="flex justify-center py-12">
@@ -153,16 +183,18 @@ export default function Calendar() {
                       onClick={() => setSelectedEvent(event)}
                       className="w-full text-left"
                     >
-                      <Card className={`p-6 border-l-4 ${typeColors[event.type] || 'border-l-slate-300'} hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300`}>
-                      <div className="flex items-center gap-4">
-                        <div className="min-w-[70px]">
-                            <p className="font-black text-slate-900 dark:text-white text-lg">{formatTime(event.start_time)}</p>
+                      <Card className={`p-0 border-l-4 ${typeColors[event.type] || 'border-l-slate-300'} hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300 overflow-hidden`}>
+                        <SportCardImage sport={eventSports[event.id] || null} height="h-32">
+                          <div className="flex items-center gap-4">
+                            <div className="min-w-[70px]">
+                              <p className="font-black text-white text-lg">{formatTime(event.start_time)}</p>
+                            </div>
+                            <div className="flex-1">
+                              <CardTitle className="text-lg mb-1 text-white">{event.title}</CardTitle>
+                              <p className="text-xs font-bold uppercase tracking-widest text-white/80">{event.team.name}</p>
+                            </div>
                           </div>
-                          <div className="flex-1">
-                            <CardTitle className="text-lg mb-1">{event.title}</CardTitle>
-                            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">{event.team.name}</p>
-                        </div>
-                        </div>
+                        </SportCardImage>
                       </Card>
                     </button>
                   ))}

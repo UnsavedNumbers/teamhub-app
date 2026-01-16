@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../hooks/useAuth'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
-import { getEventDetails, updateRSVP, type RSVPStatus } from '../data/services/eventsService'
+import { getEventDetails, updateRSVP } from '../data/services/eventsService'
+import type { RSVPStatus } from '../types/calendar'
 import { getChildren } from '../data/services/familyService'
+import { getSportFromEvent, type SportInfo } from '../utils/sportContext'
 import PortalLayout from '../components/portal/PortalLayout'
 import PortalHeader from '../components/portal/PortalHeader'
 import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
+import { SportHero } from '../components/portal/SportHero'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
@@ -43,8 +45,8 @@ export default function EventDetail() {
   const [attendance, setAttendance] = useState<Record<string, Attendance>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
+  const [eventSport, setEventSport] = useState<SportInfo | null>(null)
 
-  const { profile } = useAuth()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
@@ -68,7 +70,7 @@ export default function EventDetail() {
       start_time: eventData.start_time,
       end_time: eventData.end_time,
       arrival_time: eventData.arrival_time,
-      location: eventData.event_location?.name ?? null,
+      location: eventData.event_location?.venue_name ?? null,
       notes: eventData.notes,
       team: { name: eventData.team?.name ?? 'Team' },
     })
@@ -93,6 +95,12 @@ export default function EventDetail() {
         }
       })
       setAttendance(map)
+    }
+
+    // Load sport for event
+    if (eventId) {
+      const sport = await getSportFromEvent(context, eventId)
+      if (sport) setEventSport(sport)
     }
 
     setLoading(false)
@@ -134,10 +142,11 @@ export default function EventDetail() {
     return new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
   }
 
-  const statusStyles = {
+  const statusStyles: Record<RSVPStatus, string> = {
     going: 'bg-emerald-500 text-white',
-    maybe: 'bg-amber-500 text-white',
+    late: 'bg-amber-500 text-white',
     not_going: 'bg-red-500 text-white',
+    unknown: 'bg-slate-500 text-white',
   }
 
   const statusInactiveStyles = 'bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -167,9 +176,16 @@ export default function EventDetail() {
           { label: event.title },
         ]}
       >
-        <div className="mb-12">
-          <PageTitle>{event.title}</PageTitle>
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">{event.team.name}</p>
+        {/* Sport Hero Section */}
+        <div className="-mx-6 mb-8">
+          <SportHero sport={eventSport} height="50vh">
+            <div className="max-w-[1200px] mx-auto px-6 pb-8">
+              <div className="mb-8">
+                <PageTitle className="text-white">{event.title}</PageTitle>
+                <p className="text-xs font-bold uppercase tracking-widest text-white/80">{event.team.name}</p>
+              </div>
+            </div>
+          </SportHero>
         </div>
 
         <Card className="mb-8 p-8">
@@ -209,7 +225,7 @@ export default function EventDetail() {
         {children.length === 0 ? (
           <Card className="text-center py-12">
             <p className="text-slate-500 dark:text-slate-400 mb-6">No children added.</p>
-            <Button variant="primary" as={Link} to="/portal/children">
+            <Button variant="primary" onClick={() => navigate('/portal/children')}>
               Add
             </Button>
           </Card>
@@ -224,7 +240,7 @@ export default function EventDetail() {
                     {saving === child.id && <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Saving</span>}
                   </div>
                   <div className="flex gap-3">
-                    {(['going', 'maybe', 'not_going'] as const).map((status) => (
+                    {(['going', 'late', 'not_going'] as const).map((status) => (
                       <button
                         key={status}
                         onClick={() => handleRsvp(child.id, status)}
@@ -235,7 +251,7 @@ export default function EventDetail() {
                             : statusInactiveStyles
                         }`}
                       >
-                        {status === 'going' ? 'Going' : status === 'maybe' ? 'Maybe' : 'Not Going'}
+                        {status === 'going' ? 'Going' : status === 'late' ? 'Running Late' : 'Not Going'}
                       </button>
                     ))}
                   </div>

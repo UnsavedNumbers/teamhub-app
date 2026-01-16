@@ -23,7 +23,7 @@ import {
     getEventLocation,
     getUpcomingEvents,
 } from '../fake/fakeEvents'
-import { getChildTeamMemberships } from '../fake/fakeTeams'
+import { getChildTeamMemberships, getTeamWithDetails } from '../fake/fakeTeams'
 import {
     getChildrenForUserId,
     getAssignedTeamsForCoach,
@@ -181,11 +181,29 @@ export async function getEventDetails(
             }
         }
 
+        // Get team details to include sport information
+        const teamDetails = getTeamWithDetails(event.team_id)
+        
         // Attach RSVPs and location
         const eventWithDetails: CalendarEvent = {
             ...event,
             rsvps: getRSVPsForEvent(eventId),
             event_location: getEventLocation(eventId) ?? null,
+            team: teamDetails
+                ? {
+                      id: teamDetails.id,
+                      name: teamDetails.name,
+                      org_id: teamDetails.org_id,
+                      sport: teamDetails.sport
+                          ? {
+                                id: teamDetails.sport.id,
+                                name: teamDetails.sport.name,
+                                color: teamDetails.sport.color,
+                                icon: teamDetails.sport.icon,
+                            }
+                          : undefined,
+                  }
+                : event.team,
         }
 
         return { data: eventWithDetails, error: null }

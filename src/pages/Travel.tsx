@@ -2,13 +2,15 @@ import { useState, useEffect } from 'react'
 import { useUserContext } from '../hooks/useUserContext'
 import { 
   getUpcomingTravelPlansForUser, 
-  formatDateRange,
-  type FakeTravelPlan 
+  formatDateRange
 } from '../data/services/travelService'
+import type { FakeTravelPlan } from '../data/fake/fakeTravel'
 import { getEvents } from '../data/services/eventsService'
+import { getSportFromTeam, type SportInfo } from '../utils/sportContext'
 import PortalLayout from '../components/portal/PortalLayout'
 import PortalHeader from '../components/portal/PortalHeader'
 import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
+import { SportCardImage } from '../components/portal/SportCardImage'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
@@ -68,6 +70,7 @@ export default function Travel() {
   const [eventsLoading, setEventsLoading] = useState(false)
   const [downloadLoading, setDownloadLoading] = useState(false)
   const [downloadError, setDownloadError] = useState<string | null>(null)
+  const [planSports, setPlanSports] = useState<Record<string, SportInfo | null>>({})
 
   const { context, isReady } = useUserContext()
 
@@ -87,6 +90,15 @@ export default function Travel() {
           team: { name: getTeamName(plan.team_id) }
         }))
         setPlans(plansWithTeam)
+        
+        // Load sports for travel plans
+        const sportsMap: Record<string, SportInfo | null> = {}
+        Promise.all(
+          data.map(async (plan) => {
+            const sport = await getSportFromTeam(context, plan.team_id)
+            if (sport) sportsMap[plan.id] = sport
+          })
+        ).then(() => setPlanSports(sportsMap))
       }
       setLoading(false)
     }
@@ -168,51 +180,53 @@ export default function Travel() {
         ) : (
           <div className="space-y-6">
             {plans.map((plan) => (
-              <Card
+              <div
                 key={plan.id}
                 onClick={() => setSelectedPlan(plan)}
                 className="overflow-hidden cursor-pointer hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300"
               >
-                <div className="relative h-48 bg-gradient-to-br from-[#137fec]/20 to-slate-100 dark:to-slate-800 flex items-end p-8">
-                  <div className="relative z-10 w-full">
-                    {plan.status === 'cancelled' ? (
-                      <span className="inline-block px-3 py-1 bg-red-500 text-white text-xs font-bold uppercase tracking-widest rounded mb-3">Cancelled</span>
-                    ) : (
-                      <span className="inline-block px-3 py-1 bg-[#137fec] text-white text-xs font-bold uppercase tracking-widest rounded mb-3">Upcoming Trip</span>
+                <Card className="p-0">
+                  <SportCardImage sport={planSports[plan.id] || null} height="h-48">
+                    <div className="relative z-10 w-full">
+                      {plan.status === 'cancelled' ? (
+                        <span className="inline-block px-3 py-1 bg-red-500 text-white text-xs font-bold uppercase tracking-widest rounded mb-3">Cancelled</span>
+                      ) : (
+                        <span className="inline-block px-3 py-1 bg-[#137fec] text-white text-xs font-bold uppercase tracking-widest rounded mb-3">Upcoming Trip</span>
+                      )}
+                      <CardTitle className="mb-2 text-white">{plan.title}</CardTitle>
+                      <p className="text-xs font-bold uppercase tracking-widest text-white/80">
+                        {plan.location} • {formatDateRange(plan.start_date, plan.end_date)}
+                      </p>
+                    </div>
+                  </SportCardImage>
+
+                  <div className="p-6 grid md:grid-cols-2 gap-4">
+                    {plan.venue_name && (
+                      <div className="flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                        <Icon name="location_on" className="text-slate-400" />
+                        <div>
+                          <p className="font-black text-slate-900 dark:text-white">{plan.venue_name}</p>
+                          {plan.venue_address && <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{plan.venue_address}</p>}
+                        </div>
+                      </div>
                     )}
-                    <CardTitle className="mb-2">{plan.title}</CardTitle>
-                    <p className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                      {plan.location} • {formatDateRange(plan.start_date, plan.end_date)}
-                    </p>
+                    {plan.hotel_name && (
+                      <div className="flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                        <Icon name="hotel" className="text-slate-400" />
+                        <div>
+                          <p className="font-black text-slate-900 dark:text-white">{plan.hotel_name}</p>
+                          {plan.hotel_address && <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{plan.hotel_address}</p>}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
 
-                <div className="p-6 grid md:grid-cols-2 gap-4">
-                  {plan.venue_name && (
-                    <div className="flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-                      <Icon name="location_on" className="text-slate-400" />
-                      <div>
-                        <p className="font-black text-slate-900 dark:text-white">{plan.venue_name}</p>
-                        {plan.venue_address && <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{plan.venue_address}</p>}
-                      </div>
-                    </div>
-                  )}
-                  {plan.hotel_name && (
-                    <div className="flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-                      <Icon name="hotel" className="text-slate-400" />
-                      <div>
-                        <p className="font-black text-slate-900 dark:text-white">{plan.hotel_name}</p>
-                        {plan.hotel_address && <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{plan.hotel_address}</p>}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="px-6 pb-6 flex justify-between items-center border-t border-slate-100 dark:border-slate-800">
-                  <span className="text-xs font-bold uppercase tracking-widest text-slate-400">{plan.team?.name}</span>
-                  <span className="text-[#137fec] text-sm font-bold uppercase tracking-wide">View Details</span>
-                </div>
-              </Card>
+                  <div className="px-6 pb-6 flex justify-between items-center border-t border-slate-100 dark:border-slate-800">
+                    <span className="text-xs font-bold uppercase tracking-widest text-slate-400">{plan.team?.name}</span>
+                    <span className="text-[#137fec] text-sm font-bold uppercase tracking-wide">View Details</span>
+                  </div>
+                </Card>
+              </div>
             ))}
           </div>
         )}
@@ -220,7 +234,8 @@ export default function Travel() {
         {/* Detail Modal */}
         {selectedPlan && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto" onClick={() => setSelectedPlan(null)}>
-            <Card className="max-w-2xl w-full my-8 p-0 overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="max-w-2xl w-full my-8" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+              <Card className="p-0 overflow-hidden">
               <div className="relative h-40 bg-gradient-to-br from-[#137fec]/20 to-slate-100 dark:to-slate-800 flex items-end p-6">
                 <div className="absolute top-4 right-4">
                   <button onClick={() => setSelectedPlan(null)} className="w-8 h-8 bg-white/10 dark:bg-slate-800/50 rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-white/20 dark:hover:bg-slate-700/50">
@@ -358,7 +373,7 @@ export default function Travel() {
                               {new Date(ev.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}{' '}
                               • {formatEventTime(ev.start_time)}–{formatEventTime(ev.end_time)}
                             </p>
-                            {ev.event_location?.name && <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{ev.event_location.name}</p>}
+                            {ev.event_location?.venue_name && <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{ev.event_location.venue_name}</p>}
                           </div>
                         ))}
                       </div>
@@ -375,7 +390,8 @@ export default function Travel() {
                   </div>
                 )}
               </div>
-            </Card>
+              </Card>
+            </div>
           </div>
         )}
       </PortalLayout>
