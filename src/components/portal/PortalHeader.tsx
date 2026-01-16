@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import UserContextDropdown from '../common/UserContextDropdown'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
@@ -80,9 +81,7 @@ export default function PortalHeader({ currentPath }: PortalHeaderProps) {
               <span className="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-white dark:border-background-dark"></span>
             )}
           </button>
-          <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-700 bg-cover bg-center border border-slate-100 dark:border-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold">
-            {profile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
-          </div>
+          <UserContextDropdown />
         </div>
       </div>
     </header>

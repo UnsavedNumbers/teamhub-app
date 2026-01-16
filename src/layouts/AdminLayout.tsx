@@ -6,6 +6,7 @@ import { useLicense } from '../hooks/useLicense'
 import { LicenseWarningBanner } from '../components/admin/LicenseWarningBanner'
 import AdminLoadingSpinner from '../components/admin/AdminLoadingSpinner'
 import { usePlatformAdminTheme } from '../hooks/usePlatformAdminTheme'
+import UserContextDropdown from '../components/common/UserContextDropdown'
 
 // Navigation menu items - converted to Material Symbols
 const menuSections = [
@@ -177,9 +178,7 @@ export default function AdminLayout() {
           <div className="pa-topbar-right">
             {/* User menu */}
             <div className="pa-user-menu">
-              <div className="pa-user-avatar">
-                <span className="material-symbols-outlined">person</span>
-              </div>
+              <UserContextDropdown />
             </div>
           </div>
         </header>

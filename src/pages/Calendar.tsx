@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { getEvents } from '../data/services/eventsService'
 import PortalLayout from '../components/portal/PortalLayout'
@@ -8,7 +8,6 @@ import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typogr
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
-import type { CalendarEvent } from '../types/calendar'
 
 type ViewMode = 'agenda' | 'week' | 'month'
 
@@ -31,13 +30,9 @@ export default function Calendar() {
   const [selectedEvent, setSelectedEvent] = useState<DisplayEvent | null>(null)
 
   const { context, isReady } = useUserContext()
+  const navigate = useNavigate()
 
-  useEffect(() => {
-    if (!isReady) return
-    fetchEvents()
-  }, [context, isReady])
-
-  async function fetchEvents() {
+  const fetchEvents = useCallback(async () => {
     setLoading(true)
     
     const now = new Date()
@@ -62,14 +57,19 @@ export default function Calendar() {
         start_time: event.start_time,
         end_time: event.end_time,
         arrival_time: event.arrival_time ?? null,
-        location: event.event_location?.name ?? null,
+        location: event.event_location?.venue_name ?? null,
         notes: event.notes ?? null,
         team: { name: event.team?.name ?? 'Unknown Team' },
       }))
       setEvents(displayEvents)
     }
     setLoading(false)
-  }
+  }, [context])
+
+  useEffect(() => {
+    if (!isReady) return
+    fetchEvents()
+  }, [isReady, fetchEvents])
 
   function formatDate(dateStr: string) {
     return new Date(dateStr).toLocaleDateString('en-US', {
@@ -113,23 +113,23 @@ export default function Calendar() {
             <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
               View upcoming events and activities.
             </p>
-          </div>
+            </div>
           <div className="flex gap-1 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded p-1">
-            {(['agenda', 'week', 'month'] as ViewMode[]).map((v) => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
+              {(['agenda', 'week', 'month'] as ViewMode[]).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setView(v)}
                 className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded transition-colors ${
                   view === v
                     ? 'bg-[#137fec] text-white'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                {v}
-              </button>
-            ))}
+                  }`}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
         {loading ? (
           <div className="flex justify-center py-12">
@@ -154,14 +154,14 @@ export default function Calendar() {
                       className="w-full text-left"
                     >
                       <Card className={`p-6 border-l-4 ${typeColors[event.type] || 'border-l-slate-300'} hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300`}>
-                        <div className="flex items-center gap-4">
-                          <div className="min-w-[70px]">
+                      <div className="flex items-center gap-4">
+                        <div className="min-w-[70px]">
                             <p className="font-black text-slate-900 dark:text-white text-lg">{formatTime(event.start_time)}</p>
                           </div>
                           <div className="flex-1">
                             <CardTitle className="text-lg mb-1">{event.title}</CardTitle>
                             <p className="text-xs font-bold uppercase tracking-widest text-slate-400">{event.team.name}</p>
-                          </div>
+                        </div>
                         </div>
                       </Card>
                     </button>
@@ -176,10 +176,11 @@ export default function Calendar() {
           </Card>
         )}
 
-        {/* Event Detail Modal */}
-        {selectedEvent && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setSelectedEvent(null)}>
-            <Card className="max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+      {/* Event Detail Modal */}
+      {selectedEvent && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setSelectedEvent(null)}>
+            <div className="max-w-md w-full" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+              <Card className="p-6">
               <div className="flex items-start justify-between mb-6">
                 <div>
                   <CardTitle className="mb-1">{selectedEvent.title}</CardTitle>
@@ -203,25 +204,39 @@ export default function Calendar() {
                   <div className="flex items-center gap-3">
                     <Icon name="schedule" className="text-amber-500" />
                     <p className="font-bold text-slate-900 dark:text-white">Arrive by {formatTime(selectedEvent.arrival_time)}</p>
-                  </div>
-                )}
+                </div>
+              )}
 
-                {selectedEvent.location && (
-                  <div className="flex items-center gap-3">
+              {selectedEvent.location && (
+                <div className="flex items-center gap-3">
                     <Icon name="location_on" className="text-slate-400" />
                     <p className="font-bold text-slate-900 dark:text-white">{selectedEvent.location}</p>
-                  </div>
-                )}
+                </div>
+              )}
 
-                {selectedEvent.notes && (
+              {selectedEvent.notes && (
                   <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
                     <p className="text-sm text-slate-500 dark:text-slate-400">{selectedEvent.notes}</p>
-                  </div>
-                )}
+                </div>
+              )}
+            </div>
+
+              <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    navigate(`/portal/events/${selectedEvent.id}`)
+                    setSelectedEvent(null)
+                  }}
+                  className="w-full"
+                >
+                  View Full Details & RSVP
+                </Button>
               </div>
-            </Card>
-          </div>
-        )}
+              </Card>
+            </div>
+        </div>
+      )}
       </PortalLayout>
     </>
   )

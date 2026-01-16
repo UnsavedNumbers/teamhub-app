@@ -342,7 +342,11 @@ export default function Dashboard() {
                 </div>
               ) : upcomingEvents.length > 0 ? (
                 upcomingEvents.map((event) => (
-                  <div key={event.id} className="group bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300">
+                  <Link 
+                    key={event.id} 
+                    to={`/portal/events/${event.id}`}
+                    className="group bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300 cursor-pointer block"
+                  >
                     <div className="flex flex-col md:flex-row">
                       <div className="md:w-1/3 aspect-[4/3] bg-cover bg-center bg-slate-200 dark:bg-slate-800"></div>
                       <div className="flex-1 p-8 flex flex-col justify-between">
@@ -359,7 +363,7 @@ export default function Dashboard() {
                           </p>
                         </div>
                         <div className="flex flex-wrap gap-3">
-                          <Link to={`/portal/calendar?event=${event.id}`} className="bg-[#137fec] hover:bg-[#137fec]/90 text-white px-8 py-3 rounded font-bold text-sm tracking-wide transition-all active:scale-95 flex items-center gap-2">
+                          <Link to={`/portal/events/${event.id}`} className="bg-[#137fec] hover:bg-[#137fec]/90 text-white px-8 py-3 rounded font-bold text-sm tracking-wide transition-all active:scale-95 flex items-center gap-2">
                             VIEW <span className="material-symbols-outlined text-sm">arrow_forward</span>
                           </Link>
                           {event.event_location?.maps_url && (
@@ -370,7 +374,7 @@ export default function Dashboard() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 ))
               ) : (
                 <div className="bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl p-12 text-center">
