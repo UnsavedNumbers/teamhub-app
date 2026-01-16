@@ -1,10 +1,8 @@
 import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
-import { ThemeProvider } from '@mui/material/styles'
 import { AuthProvider } from './hooks/useAuth'
 import { OrganizationProvider } from './contexts/OrganizationContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
-import { adminTheme } from './theme/adminTheme'
 import AdminLoadingSpinner from './components/admin/AdminLoadingSpinner'
 import { getHostAppContext } from './utils/host'
 import { useAuth } from './hooks/useAuth'
@@ -41,7 +39,21 @@ import Messages from './pages/Messages'
 // Admin Layout (Material Dashboard)
 import AdminLayout from './layouts/AdminLayout'
 
+// Platform Admin Layout
+const PlatformAdminLayout = lazy(() => import('./layouts/PlatformAdminLayout'))
+
+// Platform Admin Pages - Lazy loaded for code splitting
 const PlatformAdminDashboard = lazy(() => import('./pages/platformAdmin/PlatformAdminDashboard'))
+const PlatformOrganizations = lazy(() => import('./pages/platformAdmin/Organizations'))
+const PlatformOrganizationDetail = lazy(() => import('./pages/platformAdmin/OrganizationDetail'))
+const PlatformUsers = lazy(() => import('./pages/platformAdmin/Users'))
+const PlatformUserDetail = lazy(() => import('./pages/platformAdmin/UserDetail'))
+const PlatformStructure = lazy(() => import('./pages/platformAdmin/Structure'))
+const PlatformPayments = lazy(() => import('./pages/platformAdmin/PlatformPayments'))
+const PlatformFees = lazy(() => import('./pages/platformAdmin/Fees'))
+const PlatformAuditLog = lazy(() => import('./pages/platformAdmin/AuditLog'))
+const PlatformFeatureFlags = lazy(() => import('./pages/platformAdmin/FeatureFlags'))
+const PlatformAdmins = lazy(() => import('./pages/platformAdmin/PlatformAdmins'))
 
 // Admin Pages - Lazy loaded for code splitting
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
@@ -186,11 +198,9 @@ function App() {
             <Route
               element={
                 <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
-                  <ThemeProvider theme={adminTheme}>
-                    <Suspense fallback={<AdminLoadingSpinner />}>
-                      <AdminLayout />
-                    </Suspense>
-                  </ThemeProvider>
+                  <Suspense fallback={<AdminLoadingSpinner />}>
+                    <AdminLayout />
+                  </Suspense>
                 </ProtectedRoute>
               }
             >
@@ -245,17 +255,43 @@ function App() {
             }
           >
             <Route
-              index
               element={
                 <PlatformAdminRoute>
-                  <ThemeProvider theme={adminTheme}>
-                    <Suspense fallback={<AdminLoadingSpinner />}>
-                      <PlatformAdminDashboard />
-                    </Suspense>
-                  </ThemeProvider>
+                  <Suspense fallback={<AdminLoadingSpinner />}>
+                    <PlatformAdminLayout />
+                  </Suspense>
                 </PlatformAdminRoute>
               }
-            />
+            >
+              {/* Dashboard */}
+              <Route index element={<PlatformAdminDashboard />} />
+              
+              {/* Organizations */}
+              <Route path="organizations" element={<PlatformOrganizations />} />
+              <Route path="organizations/:id" element={<PlatformOrganizationDetail />} />
+              
+              {/* Users */}
+              <Route path="users" element={<PlatformUsers />} />
+              <Route path="users/:id" element={<PlatformUserDetail />} />
+              
+              {/* Structure */}
+              <Route path="structure" element={<PlatformStructure />} />
+              
+              {/* Payments */}
+              <Route path="payments" element={<PlatformPayments />} />
+              
+              {/* Fees */}
+              <Route path="fees" element={<PlatformFees />} />
+              
+              {/* Audit Log */}
+              <Route path="audit" element={<PlatformAuditLog />} />
+              
+              {/* Feature Flags */}
+              <Route path="feature-flags" element={<PlatformFeatureFlags />} />
+              
+              {/* Platform Admins */}
+              <Route path="admins" element={<PlatformAdmins />} />
+            </Route>
           </Route>
         </Routes>
       </AuthProvider>

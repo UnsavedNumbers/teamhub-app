@@ -40,6 +40,22 @@ export default function AuthCallback() {
         const userId = data.session.user.id
         const appContext = getHostAppContext()
 
+        // Priority -1: Check if user is platform admin
+        try {
+          const { data: adminData } = await supabase
+            .from('platform_admins')
+            .select('user_id')
+            .eq('user_id', userId)
+            .single()
+
+          if (adminData) {
+            navigate('/platform-admin', { replace: true })
+            return
+          }
+        } catch (err) {
+          console.error('Error checking platform admin status:', err)
+        }
+
         // Priority 0: Check database for requires_org_setup flag (most reliable)
         // This handles email confirmation flows where localStorage may be on different device
         try {

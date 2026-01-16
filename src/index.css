@@ -1,6 +1,11 @@
+/* Tailwind - preflight enabled globally, Bootstrap overrides for admin routes */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ============================================================
+   GLOBAL STYLES (apply to all routes)
+   ============================================================ */
 
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -43,7 +48,6 @@ body {
   -webkit-font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased;
   vertical-align: middle;
-  /* Align nicely with text */
 
   /* Default to filled */
   font-variation-settings:
@@ -72,53 +76,57 @@ body {
   vertical-align: middle;
 }
 
-/* Custom Components */
+/* ============================================================
+   PORTAL-ONLY CUSTOM COMPONENTS
+   ============================================================ */
+
 @layer components {
-  .btn-primary {
+  body:not(.md-admin-root) .btn-primary {
     @apply bg-primary-600 hover:bg-primary-700 text-white font-medium py-2.5 px-5 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
-  .btn-secondary {
+  body:not(.md-admin-root) .btn-secondary {
     @apply bg-slate-700 hover:bg-slate-600 text-white font-medium py-2.5 px-5 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
-  .input-field {
+  body:not(.md-admin-root) .input-field {
     @apply w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200;
   }
 
-  .card {
+  /* IMPORTANT: portal-only card style. Admin uses Bootstrap `.card` from Material Dashboard. */
+  body:not(.md-admin-root) .card {
     @apply bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6 shadow-xl;
   }
 
-  .link {
+  body:not(.md-admin-root) .link {
     @apply text-primary-400 hover:text-primary-300 transition-colors duration-200;
   }
 
   /* Role card styles for auth pages */
-  .role-card {
+  body:not(.md-admin-root) .role-card {
     @apply flex flex-col items-center justify-center p-3 border-2 rounded-xl transition-all duration-200 cursor-pointer;
   }
   
-  .role-card:hover {
+  body:not(.md-admin-root) .role-card:hover {
     transform: translateY(-2px);
   }
   
-  .role-card.active {
+  body:not(.md-admin-root) .role-card.active {
     @apply border-primary bg-blue-50 dark:bg-blue-900/20 ring-2 ring-primary/20;
   }
   
-  .role-card.inactive {
+  body:not(.md-admin-root) .role-card.inactive {
     @apply border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800;
   }
 
   /* Auth input for light mode pages */
-  .auth-input {
+  body:not(.md-admin-root) .auth-input {
     @apply block w-full rounded-md border-0 py-2.5 shadow-sm ring-1 ring-inset placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6;
     @apply text-slate-900 dark:text-white dark:bg-slate-800 ring-slate-300 dark:ring-slate-700;
   }
 
   /* Google OAuth button */
-  .btn-google {
+  body:not(.md-admin-root) .btn-google {
     @apply flex items-center justify-center gap-3 w-full py-3 px-4 border border-slate-300 dark:border-slate-600 rounded-lg font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors duration-200;
   }
 }

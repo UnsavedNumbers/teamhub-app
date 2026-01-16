@@ -1,67 +1,33 @@
 import { useState } from 'react'
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom'
-import {
-  Box,
-  Drawer,
-  AppBar,
-  Toolbar,
-  List,
-  Typography,
-  Divider,
-  IconButton,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Tooltip,
-  useTheme,
-  useMediaQuery,
-} from '@mui/material'
-import {
-  Dashboard as DashboardIcon,
-  Groups as TeamsIcon,
-  People as PeopleIcon,
-  FamilyRestroom as FamiliesIcon,
-  ChildCare as ChildrenIcon,
-  Payment as PaymentsIcon,
-  Event as EventsIcon,
-  Checkroom as UniformsIcon,
-  Flight as TravelIcon,
-  EmojiEvents as TryoutsIcon,
-  Message as MessagesIcon,
-  Assessment as ReportsIcon,
-  Settings as SettingsIcon,
-  Menu as MenuIcon,
-  ChevronLeft as ChevronLeftIcon,
-} from '@mui/icons-material'
 import { useAuth } from '../hooks/useAuth'
 import { useOrganization } from '../contexts/OrganizationContext'
 import { useLicense } from '../hooks/useLicense'
 import { LicenseWarningBanner } from '../components/admin/LicenseWarningBanner'
-
-const drawerWidth = 280
+import AdminLoadingSpinner from '../components/admin/AdminLoadingSpinner'
+import { useMaterialDashboardTheme } from '../hooks/useMaterialDashboardTheme'
 
 // Navigation menu items based on ADMIN_PANEL_STRUCTURE.txt
 const menuItems = [
-  { text: 'Dashboard', icon: <DashboardIcon />, path: '/admin', requiresOrg: false },
-  { text: 'Organization', icon: <SettingsIcon />, path: '/admin/organization', requiresOrg: false },
-  { text: 'Teams', icon: <TeamsIcon />, path: '/admin/teams', requiresOrg: true },
-  { text: 'Families', icon: <FamiliesIcon />, path: '/admin/families', requiresOrg: true },
-  { text: 'Children', icon: <ChildrenIcon />, path: '/admin/children', requiresOrg: true },
-  { text: 'Payments', icon: <PaymentsIcon />, path: '/admin/payments', requiresOrg: true },
-  { text: 'Events', icon: <EventsIcon />, path: '/admin/events', requiresOrg: true },
-  { text: 'Attendance', icon: <PeopleIcon />, path: '/admin/attendance', requiresOrg: true },
-  { text: 'Uniforms', icon: <UniformsIcon />, path: '/admin/uniforms', requiresOrg: true },
-  { text: 'Travel', icon: <TravelIcon />, path: '/admin/travel', requiresOrg: true },
-  { text: 'Tryouts', icon: <TryoutsIcon />, path: '/admin/tryouts', requiresOrg: true },
-  { text: 'Messages', icon: <MessagesIcon />, path: '/admin/messages', requiresOrg: true },
-  { text: 'Reports', icon: <ReportsIcon />, path: '/admin/reports', requiresOrg: true },
+  { text: 'Dashboard', icon: 'fas fa-tachometer-alt', path: '/admin', requiresOrg: false },
+  { text: 'Organization', icon: 'fas fa-cog', path: '/admin/organization', requiresOrg: false },
+  { text: 'Teams', icon: 'fas fa-users', path: '/admin/teams', requiresOrg: true },
+  { text: 'Families', icon: 'fas fa-home', path: '/admin/families', requiresOrg: true },
+  { text: 'Children', icon: 'fas fa-child', path: '/admin/children', requiresOrg: true },
+  { text: 'Payments', icon: 'fas fa-credit-card', path: '/admin/payments', requiresOrg: true },
+  { text: 'Events', icon: 'fas fa-calendar-alt', path: '/admin/events', requiresOrg: true },
+  { text: 'Attendance', icon: 'fas fa-user-check', path: '/admin/attendance', requiresOrg: true },
+  { text: 'Uniforms', icon: 'fas fa-tshirt', path: '/admin/uniforms', requiresOrg: true },
+  { text: 'Travel', icon: 'fas fa-plane', path: '/admin/travel', requiresOrg: true },
+  { text: 'Tryouts', icon: 'fas fa-trophy', path: '/admin/tryouts', requiresOrg: true },
+  { text: 'Messages', icon: 'fas fa-envelope', path: '/admin/messages', requiresOrg: true },
+  { text: 'Reports', icon: 'fas fa-chart-bar', path: '/admin/reports', requiresOrg: true },
 ]
 
 export default function AdminLayout() {
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const { loaded: themeLoaded } = useMaterialDashboardTheme()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [sidenavOpen, setSidenavOpen] = useState(true)
   const location = useLocation()
   const navigate = useNavigate()
   const { profile } = useAuth()
@@ -72,189 +38,171 @@ export default function AdminLayout() {
     setMobileOpen(!mobileOpen)
   }
 
+  const handleSidenavToggle = () => {
+    setSidenavOpen(!sidenavOpen)
+    document.body.classList.toggle('g-sidenav-show')
+  }
+
   // Determine if user has an organization
   const hasOrg = !!currentOrganization?.id
 
-  const drawer = (
-    <Box>
-      <Toolbar
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          px: [1],
-        }}
-      >
-        <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 600 }}>
-          Admin Panel
-        </Typography>
-        {isMobile && (
-          <IconButton onClick={handleDrawerToggle}>
-            <ChevronLeftIcon />
-          </IconButton>
-        )}
-      </Toolbar>
-      <Divider />
-      <List>
-        {menuItems.map((item) => {
-          const isActive = location.pathname === item.path || 
-            (item.path !== '/admin' && location.pathname.startsWith(item.path))
-          
-          // Determine if this item should be disabled
-          const isDisabled = item.requiresOrg && !hasOrg
-          
-          const navButton = (
-            <ListItemButton
-              component={isDisabled ? 'div' : Link}
-              to={isDisabled ? undefined : item.path}
-              disabled={isDisabled}
-              selected={isActive && !isDisabled}
-              sx={{
-                '&.Mui-selected': {
-                  backgroundColor: theme.palette.primary.main,
-                  color: theme.palette.primary.contrastText,
-                  '&:hover': {
-                    backgroundColor: theme.palette.primary.dark,
-                  },
-                  '& .MuiListItemIcon-root': {
-                    color: theme.palette.primary.contrastText,
-                  },
-                },
-                '&.Mui-disabled': {
-                  opacity: 0.5,
-                  cursor: 'not-allowed',
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  color: isActive && !isDisabled ? theme.palette.primary.contrastText : 'inherit',
-                }}
-              >
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
-          )
-          
-          return (
-            <ListItem key={item.text} disablePadding>
-              {isDisabled ? (
-                <Tooltip 
-                  title="Create or join an organization first" 
-                  placement="right"
-                  arrow
-                >
-                  <Box sx={{ width: '100%' }}>
-                    {navButton}
-                  </Box>
-                </Tooltip>
-              ) : (
-                navButton
-              )}
-            </ListItem>
-          )
-        })}
-      </List>
-    </Box>
-  )
+  // Avoid a flash of unstyled content while Material Dashboard CSS loads.
+  if (!themeLoaded) {
+    return <AdminLoadingSpinner />
+  }
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      {/* App Bar */}
-      <AppBar
-        position="fixed"
-        sx={{
-          width: { md: `calc(100% - ${drawerWidth}px)` },
-          ml: { md: `${drawerWidth}px` },
-          backgroundColor: '#ffffff',
-          color: theme.palette.text.primary,
-          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-        }}
+    <div className="g-sidenav-show bg-gray-100">
+      {/* Side Navigation */}
+      <aside
+        className={`sidenav navbar navbar-vertical navbar-expand-xs border-0 border-radius-xl my-3 fixed-start ms-3 ${
+          sidenavOpen ? '' : 'sidenav-hidden'
+        }`}
+        id="sidenav-main"
       >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
+        <div className="sidenav-header">
+          <i
+            className="fas fa-times p-3 cursor-pointer text-secondary opacity-5 position-absolute top-0 end-0 d-none d-xl-none"
+            id="iconSidenav"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { md: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {currentOrganization?.name || profile?.display_name || 'Admin'}
-          </Typography>
-          <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
-            <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-              View Main Site
-            </Typography>
-          </Link>
-        </Toolbar>
-      </AppBar>
-
-      {/* Drawer */}
-      <Box
-        component="nav"
-        sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }}
-      >
-        {/* Mobile drawer */}
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true, // Better open performance on mobile.
-          }}
-          sx={{
-            display: { xs: 'block', md: 'none' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-            },
-          }}
-        >
-          {drawer}
-        </Drawer>
-        {/* Desktop drawer */}
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', md: 'block' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-            },
-          }}
-          open
-        >
-          {drawer}
-        </Drawer>
-      </Box>
-
-      {/* Main content */}
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: 3,
-          width: { md: `calc(100% - ${drawerWidth}px)` },
-          backgroundColor: theme.palette.background.default,
-          minHeight: '100vh',
-        }}
-      >
-        <Toolbar /> {/* Spacer for AppBar */}
-        {!profile?.isPlatformAdmin && summary && ['trial', 'past_due', 'canceled', 'expired'].includes(summary.status || '') && (
-          <LicenseWarningBanner
-            status={summary.status}
-            trialEndsAt={summary.trialEndsAt}
-            graceEndsAt={summary.graceEndsAt}
-            currentPeriodEnd={summary.currentPeriodEnd}
-            onAction={() => navigate('/admin/organization/billing')}
           />
-        )}
-        <Outlet /> {/* Child routes render here */}
-      </Box>
-    </Box>
+          <a className="navbar-brand m-0" href="/admin">
+            <span className="ms-1 font-weight-bold">Admin Panel</span>
+          </a>
+        </div>
+        <hr className="horizontal dark mt-0" />
+        <div className="collapse navbar-collapse w-auto" id="sidenav-collapse-main">
+          <ul className="navbar-nav">
+            {menuItems.map((item) => {
+              const isActive =
+                location.pathname === item.path ||
+                (item.path !== '/admin' && location.pathname.startsWith(item.path))
+
+              // Determine if this item should be disabled
+              const isDisabled = item.requiresOrg && !hasOrg
+
+              return (
+                <li key={item.text} className="nav-item">
+                  {isDisabled ? (
+                    <div className="nav-link" style={{ opacity: 0.5, cursor: 'not-allowed' }}>
+                      <div className="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+                        <i className={item.icon} />
+                      </div>
+                      <span className="nav-link-text ms-1">{item.text}</span>
+                    </div>
+                  ) : (
+                    <Link
+                      className={`nav-link ${isActive ? 'active' : ''}`}
+                      to={item.path}
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      <div className="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+                        <i className={item.icon} />
+                      </div>
+                      <span className="nav-link-text ms-1">{item.text}</span>
+                    </Link>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
+        {/* Navbar */}
+        <nav
+          className="navbar navbar-main navbar-expand-lg position-sticky mt-4 top-1 px-0 mx-4 shadow-none border-radius-xl z-index-sticky"
+          id="navbarBlur"
+        >
+          <div className="container-fluid py-1 px-3">
+            <nav aria-label="breadcrumb">
+              <h6 className="font-weight-bolder mb-0">
+                {currentOrganization?.name || profile?.display_name || 'Admin'}
+              </h6>
+            </nav>
+
+            {/* Sidenav toggle button */}
+            <div className="sidenav-toggler sidenav-toggler-inner d-xl-block d-none">
+              <a
+                href="#"
+                className="nav-link text-body p-0"
+                onClick={(e) => {
+                  e.preventDefault()
+                  handleSidenavToggle()
+                }}
+              >
+                <div className="sidenav-toggler-inner">
+                  <i className="sidenav-toggler-line" />
+                  <i className="sidenav-toggler-line" />
+                  <i className="sidenav-toggler-line" />
+                </div>
+              </a>
+            </div>
+
+            {/* Mobile menu toggle */}
+            <div className="collapse navbar-collapse mt-sm-0 mt-2 me-md-0 me-sm-4" id="navbar">
+              <ul className="navbar-nav justify-content-end">
+                <li className="nav-item d-xl-none ps-3 d-flex align-items-center">
+                  <a
+                    className="nav-link text-body p-0"
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      handleDrawerToggle()
+                    }}
+                  >
+                    <div className="sidenav-toggler-inner">
+                      <i className="sidenav-toggler-line" />
+                      <i className="sidenav-toggler-line" />
+                      <i className="sidenav-toggler-line" />
+                    </div>
+                  </a>
+                </li>
+                <li className="nav-item">
+                  <Link className="nav-link text-body p-0" to="/">
+                    <span className="text-sm">View Main Site</span>
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </nav>
+
+        {/* Page Content */}
+        <div className="container-fluid py-4">
+          {!profile?.isPlatformAdmin &&
+            summary &&
+            ['trial', 'past_due', 'canceled', 'expired'].includes(summary.status || '') && (
+              <LicenseWarningBanner
+                status={summary.status}
+                trialEndsAt={summary.trialEndsAt}
+                graceEndsAt={summary.graceEndsAt}
+                currentPeriodEnd={summary.currentPeriodEnd}
+                onAction={() => navigate('/admin/organization/billing')}
+              />
+            )}
+          <Outlet />
+        </div>
+      </main>
+
+      {/* Mobile Sidebar Overlay */}
+      {mobileOpen && (
+        <div
+          className="fixed-plugin"
+          onClick={handleDrawerToggle}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 1030,
+          }}
+        />
+      )}
+    </div>
   )
 }

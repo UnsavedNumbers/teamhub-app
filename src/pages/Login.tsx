@@ -1,6 +1,8 @@
 import { useState, FormEvent, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+
 import { getHostAppContext } from '../utils/host'
 import {
   setSetupOrganizationFlag,
@@ -38,6 +40,21 @@ export default function Login() {
       setError(error.message)
       setLoading(false)
     } else {
+      // Check if user is platform admin directly
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: adminData } = await supabase
+          .from('platform_admins')
+          .select('user_id')
+          .eq('user_id', user.id)
+          .single()
+        
+        if (adminData) {
+          navigate('/platform-admin')
+          return
+        }
+      }
+
       const appContext = getHostAppContext()
       navigate(appContext === 'platform-admin' ? '/platform-admin' : '/portal/dashboard')
     }

@@ -1,0 +1,1676 @@
+/* =====================================================================
+   PLATFORM ADMIN DESIGN SYSTEM
+   Nike + Google Aesthetic: Athletic, Editorial, Clear, Helpful
+   ===================================================================== */
+
+/* =====================================================================
+   0) FONTS (Google Fonts loaded via usePlatformAdminTheme hook)
+   ===================================================================== */
+
+/* Font Family Tokens */
+:root {
+    /* Display / Headers (Nike-like) - Oswald as Futura alternative */
+    --pa-font-display: 'Oswald', 'Impact', sans-serif;
+
+    /* Body / UI (Google-like) */
+    --pa-font-body: 'Inter', 'Roboto', 'Helvetica Neue', Arial, system-ui, sans-serif;
+
+    /* Monospace (data, code, IDs) */
+    --pa-font-mono: 'Roboto Mono', 'SF Mono', 'Menlo', 'Consolas', monospace;
+}
+
+/* =====================================================================
+   1) COLOR TOKENS
+   ===================================================================== */
+
+:root {
+    /* Neutral Ramp */
+    --pa-n0: #FFFFFF;
+    --pa-n25: #FAFAFA;
+    --pa-n50: #F5F6F7;
+    --pa-n100: #E9ECEF;
+    --pa-n200: #D8DDE3;
+    --pa-n300: #C2CAD3;
+    --pa-n500: #7A8794;
+    --pa-n700: #2B343D;
+    --pa-n900: #0B0F14;
+
+    /* Brand Accents */
+    --pa-ink: #0B0F14;
+    --pa-white: #FFFFFF;
+    --pa-volt: #D7FF00;
+    --pa-blue: #1A73E8;
+    --pa-teal: #00B8A9;
+
+    /* Semantic Colors */
+    --pa-success: #1E8E3E;
+    --pa-success-bg: rgba(30, 142, 62, 0.12);
+    --pa-warning: #F9AB00;
+    --pa-warning-bg: rgba(249, 171, 0, 0.12);
+    --pa-danger: #D93025;
+    --pa-danger-bg: rgba(217, 48, 37, 0.12);
+    --pa-info: #1A73E8;
+    --pa-info-bg: rgba(26, 115, 232, 0.12);
+
+    /* Surfaces */
+    --pa-surface: var(--pa-n0);
+    --pa-surface-subtle: var(--pa-n25);
+    --pa-surface-panel: var(--pa-n50);
+    --pa-sidebar-bg: var(--pa-n900);
+    --pa-topbar-bg: var(--pa-n0);
+}
+
+/* =====================================================================
+   2) SPACING TOKENS
+   ===================================================================== */
+
+:root {
+    --pa-space-1: 4px;
+    --pa-space-2: 8px;
+    --pa-space-3: 12px;
+    --pa-space-4: 16px;
+    --pa-space-5: 24px;
+    --pa-space-6: 32px;
+    --pa-space-7: 40px;
+    --pa-space-8: 48px;
+    --pa-space-9: 64px;
+}
+
+/* =====================================================================
+   3) RADIUS TOKENS
+   ===================================================================== */
+
+:root {
+    --pa-radius-xs: 6px;
+    --pa-radius-s: 10px;
+    --pa-radius-m: 14px;
+    --pa-radius-l: 18px;
+    --pa-radius-pill: 999px;
+}
+
+/* =====================================================================
+   4) ELEVATION (SHADOWS)
+   ===================================================================== */
+
+:root {
+    --pa-shadow-0: none;
+    --pa-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+    --pa-shadow-2: 0 6px 18px rgba(0, 0, 0, 0.10);
+    --pa-shadow-3: 0 16px 40px rgba(0, 0, 0, 0.18);
+}
+
+/* =====================================================================
+   5) MOTION TOKENS
+   ===================================================================== */
+
+:root {
+    --pa-motion-fast: 80ms;
+    --pa-motion-normal: 120ms;
+    --pa-motion-slow: 180ms;
+    --pa-ease-out: cubic-bezier(0.0, 0.0, 0.2, 1);
+    --pa-ease-in: cubic-bezier(0.4, 0.0, 1, 1);
+    --pa-ease-standard: cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+/* =====================================================================
+   6) TYPOGRAPHY SCALE
+   ===================================================================== */
+
+:root {
+    /* Display (Oswald) */
+    --pa-text-display-xxl: 600 48px/1 var(--pa-font-display);
+    --pa-text-display-xl: 600 40px/1 var(--pa-font-display);
+    --pa-text-h1: 600 32px/1.125 var(--pa-font-display);
+    --pa-text-h2: 600 24px/1.25 var(--pa-font-display);
+
+    /* Body (Inter) */
+    --pa-text-h3: 700 20px/1.4 var(--pa-font-body);
+    --pa-text-body-l: 400 16px/1.5 var(--pa-font-body);
+    --pa-text-body-m: 400 14px/1.43 var(--pa-font-body);
+    --pa-text-body-s: 400 12px/1.33 var(--pa-font-body);
+    --pa-text-caption: 500 11px/1.27 var(--pa-font-body);
+    --pa-text-overline: 600 11px/1.27 var(--pa-font-body);
+}
+
+/* =====================================================================
+   7) BASE RESET (Scoped to .pa-root)
+   ===================================================================== */
+
+.pa-root {
+    font-family: var(--pa-font-body);
+    font-size: 14px;
+    line-height: 1.43;
+    color: var(--pa-n700);
+    background-color: var(--pa-surface-subtle);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.pa-root *,
+.pa-root *::before,
+.pa-root *::after {
+    box-sizing: border-box;
+}
+
+.pa-root a {
+    color: var(--pa-blue);
+    text-decoration: none;
+    transition: color var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.pa-root a:hover {
+    text-decoration: underline;
+}
+
+.pa-root a:focus-visible {
+    outline: 2px solid var(--pa-blue);
+    outline-offset: 2px;
+}
+
+/* =====================================================================
+   8) TYPOGRAPHY CLASSES
+   ===================================================================== */
+
+.pa-display-xxl {
+    font: var(--pa-text-display-xxl);
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    color: var(--pa-n900);
+}
+
+.pa-display-xl {
+    font: var(--pa-text-display-xl);
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    color: var(--pa-n900);
+}
+
+.pa-h1 {
+    font: var(--pa-text-h1);
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    color: var(--pa-n900);
+}
+
+.pa-h2 {
+    font: var(--pa-text-h2);
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    color: var(--pa-n900);
+}
+
+.pa-h3 {
+    font: var(--pa-text-h3);
+    color: var(--pa-n700);
+}
+
+.pa-body-l {
+    font: var(--pa-text-body-l);
+    color: var(--pa-n700);
+}
+
+.pa-body-m {
+    font: var(--pa-text-body-m);
+    color: var(--pa-n700);
+}
+
+.pa-body-s {
+    font: var(--pa-text-body-s);
+    color: var(--pa-n500);
+}
+
+.pa-caption {
+    font: var(--pa-text-caption);
+    letter-spacing: 0.02em;
+    color: var(--pa-n500);
+}
+
+.pa-overline {
+    font: var(--pa-text-overline);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--pa-n500);
+}
+
+.pa-mono {
+    font-family: var(--pa-font-mono);
+    font-size: 13px;
+}
+
+/* =====================================================================
+   9) LAYOUT: APP SHELL
+   ===================================================================== */
+
+.pa-app {
+    display: flex;
+    min-height: 100vh;
+}
+
+.pa-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-left: 280px;
+    transition: margin-left var(--pa-motion-slow) var(--pa-ease-out);
+}
+
+.pa-content {
+    flex: 1;
+    padding: var(--pa-space-5);
+    max-width: 1440px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+/* =====================================================================
+   10) SIDEBAR
+   ===================================================================== */
+
+.pa-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    background-color: var(--pa-sidebar-bg);
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.pa-sidebar-header {
+    padding: var(--pa-space-4);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pa-sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+    text-decoration: none;
+}
+
+.pa-sidebar-brand:hover {
+    text-decoration: none;
+}
+
+.pa-sidebar-logo {
+    width: 32px;
+    height: 32px;
+    background: var(--pa-volt);
+    border-radius: var(--pa-radius-xs);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pa-sidebar-logo .material-symbols-outlined {
+    font-size: 20px;
+    color: var(--pa-n900);
+}
+
+.pa-sidebar-title {
+    font: var(--pa-text-h2);
+    color: var(--pa-white);
+    letter-spacing: -0.01em;
+}
+
+.pa-sidebar-nav {
+    flex: 1;
+    padding: var(--pa-space-4) 0;
+}
+
+.pa-nav-section {
+    padding: 0 var(--pa-space-4);
+    margin-bottom: var(--pa-space-4);
+}
+
+.pa-nav-label {
+    font: var(--pa-text-overline);
+    color: var(--pa-n300);
+    padding: var(--pa-space-4) var(--pa-space-3) var(--pa-space-2);
+    letter-spacing: 0.08em;
+}
+
+.pa-nav-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.pa-nav-item {
+    margin-bottom: 2px;
+}
+
+.pa-nav-link {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-3);
+    padding: var(--pa-space-3) var(--pa-space-3);
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.82);
+    text-decoration: none;
+    font: var(--pa-text-body-m);
+    font-weight: 500;
+    transition: all var(--pa-motion-normal) var(--pa-ease-out);
+    position: relative;
+}
+
+.pa-nav-link:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.92);
+    text-decoration: none;
+}
+
+.pa-nav-link:focus-visible {
+    outline: 2px solid var(--pa-blue);
+    outline-offset: 2px;
+}
+
+.pa-nav-link.active {
+    background: rgba(215, 255, 0, 0.16);
+    color: var(--pa-white);
+}
+
+.pa-nav-link.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 24px;
+    background: var(--pa-volt);
+    border-radius: 0 2px 2px 0;
+    box-shadow: 0 0 8px rgba(215, 255, 0, 0.4);
+}
+
+.pa-nav-link .material-symbols-outlined {
+    font-size: 20px;
+    opacity: 0.75;
+}
+
+.pa-nav-link:hover .material-symbols-outlined,
+.pa-nav-link.active .material-symbols-outlined {
+    opacity: 1;
+}
+
+.pa-nav-link.active .material-symbols-outlined {
+    color: var(--pa-volt);
+}
+
+.pa-sidebar-footer {
+    padding: var(--pa-space-4);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin-top: auto;
+}
+
+.pa-sidebar-user {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-2);
+}
+
+.pa-sidebar-email {
+    font: var(--pa-text-body-s);
+    color: var(--pa-n300);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* =====================================================================
+   11) TOP BAR
+   ===================================================================== */
+
+.pa-topbar {
+    height: 64px;
+    background: var(--pa-topbar-bg);
+    border-bottom: 1px solid var(--pa-n100);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--pa-space-5);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+.pa-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-3);
+}
+
+.pa-topbar-title {
+    font: var(--pa-text-h3);
+    color: var(--pa-n700);
+    margin: 0;
+}
+
+.pa-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-4);
+}
+
+.pa-search {
+    position: relative;
+    width: 280px;
+}
+
+.pa-search-input {
+    width: 100%;
+    height: 40px;
+    padding: 0 var(--pa-space-4) 0 40px;
+    border: none;
+    border-radius: var(--pa-radius-pill);
+    background: var(--pa-n50);
+    font: var(--pa-text-body-m);
+    color: var(--pa-n700);
+    transition: all var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.pa-search-input::placeholder {
+    color: var(--pa-n500);
+}
+
+.pa-search-input:focus {
+    background: var(--pa-white);
+    outline: 2px solid var(--pa-blue);
+    box-shadow: var(--pa-shadow-1);
+}
+
+.pa-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--pa-n500);
+    pointer-events: none;
+}
+
+.pa-search-icon .material-symbols-outlined {
+    font-size: 20px;
+}
+
+.pa-user-menu {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+    padding: var(--pa-space-2);
+    border-radius: var(--pa-radius-s);
+    cursor: pointer;
+    transition: background var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.pa-user-menu:hover {
+    background: var(--pa-n50);
+}
+
+.pa-user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--pa-n200);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--pa-n500);
+}
+
+.pa-user-avatar .material-symbols-outlined {
+    font-size: 18px;
+}
+
+/* =====================================================================
+   12) BUTTONS
+   ===================================================================== */
+
+.pa-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--pa-space-2);
+    height: 44px;
+    padding: 0 var(--pa-space-5);
+    border: none;
+    border-radius: var(--pa-radius-pill);
+    font: var(--pa-text-body-m);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: all var(--pa-motion-normal) var(--pa-ease-out);
+    text-decoration: none;
+}
+
+.pa-btn:focus-visible {
+    outline: 2px solid var(--pa-blue);
+    outline-offset: 2px;
+}
+
+.pa-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Primary (Nike punch - black) */
+.pa-btn--primary {
+    background: var(--pa-n900);
+    color: var(--pa-white);
+}
+
+.pa-btn--primary:hover:not(:disabled) {
+    background: var(--pa-n700);
+}
+
+.pa-btn--primary:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+/* Alt Primary (Google action - blue) */
+.pa-btn--blue {
+    background: var(--pa-blue);
+    color: var(--pa-white);
+}
+
+.pa-btn--blue:hover:not(:disabled) {
+    background: #1557b0;
+}
+
+/* Accent (Volt) */
+.pa-btn--volt {
+    background: var(--pa-volt);
+    color: var(--pa-n900);
+}
+
+.pa-btn--volt:hover:not(:disabled) {
+    background: #c2e600;
+}
+
+/* Secondary (outline) */
+.pa-btn--secondary {
+    background: transparent;
+    color: var(--pa-n900);
+    border: 1px solid var(--pa-n200);
+}
+
+.pa-btn--secondary:hover:not(:disabled) {
+    background: var(--pa-n50);
+}
+
+/* Ghost */
+.pa-btn--ghost {
+    background: transparent;
+    color: var(--pa-n700);
+}
+
+.pa-btn--ghost:hover:not(:disabled) {
+    background: var(--pa-n50);
+}
+
+/* Danger */
+.pa-btn--danger {
+    background: var(--pa-danger);
+    color: var(--pa-white);
+}
+
+.pa-btn--danger:hover:not(:disabled) {
+    background: #c1291f;
+}
+
+/* Sizes */
+.pa-btn--compact {
+    height: 40px;
+    padding: 0 var(--pa-space-4);
+}
+
+.pa-btn--dense {
+    height: 36px;
+    padding: 0 var(--pa-space-3);
+    font-size: 13px;
+}
+
+.pa-btn .material-symbols-outlined {
+    font-size: 18px;
+}
+
+/* =====================================================================
+   13) CARDS
+   ===================================================================== */
+
+.pa-card {
+    background: var(--pa-surface);
+    border: 1px solid var(--pa-n100);
+    border-radius: var(--pa-radius-m);
+    padding: var(--pa-space-5);
+    transition: box-shadow var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.pa-card:hover {
+    box-shadow: var(--pa-shadow-1);
+}
+
+.pa-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--pa-space-4);
+}
+
+.pa-card-title {
+    font: var(--pa-text-h3);
+    color: var(--pa-n700);
+    margin: 0;
+}
+
+.pa-card-actions {
+    display: flex;
+    gap: var(--pa-space-2);
+}
+
+/* KPI Card */
+.pa-kpi-card {
+    background: var(--pa-surface);
+    border: 1px solid var(--pa-n100);
+    border-radius: var(--pa-radius-m);
+    padding: var(--pa-space-5);
+    cursor: pointer;
+    transition: all var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.pa-kpi-card:hover {
+    box-shadow: var(--pa-shadow-1);
+    border-color: var(--pa-n200);
+}
+
+.pa-kpi-label {
+    font: var(--pa-text-overline);
+    color: var(--pa-n500);
+    margin-bottom: var(--pa-space-2);
+}
+
+.pa-kpi-value {
+    font: var(--pa-text-display-xl);
+    color: var(--pa-n900);
+    margin-bottom: var(--pa-space-1);
+}
+
+.pa-kpi-meta {
+    font: var(--pa-text-body-s);
+    color: var(--pa-n500);
+}
+
+.pa-kpi-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: var(--pa-radius-pill);
+    font: var(--pa-text-caption);
+    font-weight: 600;
+}
+
+.pa-kpi-delta--up {
+    background: var(--pa-success-bg);
+    color: var(--pa-success);
+}
+
+.pa-kpi-delta--down {
+    background: var(--pa-danger-bg);
+    color: var(--pa-danger);
+}
+
+/* =====================================================================
+   14) BADGES
+   ===================================================================== */
+
+.pa-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: var(--pa-radius-pill);
+    font: var(--pa-text-caption);
+    font-weight: 600;
+}
+
+.pa-badge--success {
+    background: var(--pa-success-bg);
+    color: var(--pa-success);
+}
+
+.pa-badge--warning {
+    background: var(--pa-warning-bg);
+    color: var(--pa-warning);
+}
+
+.pa-badge--danger {
+    background: var(--pa-danger-bg);
+    color: var(--pa-danger);
+}
+
+.pa-badge--info {
+    background: var(--pa-info-bg);
+    color: var(--pa-info);
+}
+
+.pa-badge--neutral {
+    background: var(--pa-n100);
+    color: var(--pa-n500);
+}
+
+/* =====================================================================
+   15) FORMS
+   ===================================================================== */
+
+.pa-form-group {
+    margin-bottom: var(--pa-space-4);
+}
+
+.pa-label {
+    display: block;
+    font: var(--pa-text-body-s);
+    font-weight: 500;
+    color: var(--pa-n500);
+    margin-bottom: var(--pa-space-2);
+}
+
+.pa-label--required::after {
+    content: ' *';
+    color: var(--pa-n500);
+}
+
+.pa-input {
+    width: 100%;
+    height: 44px;
+    padding: 0 var(--pa-space-3);
+    border: 1px solid var(--pa-n200);
+    border-radius: var(--pa-radius-s);
+    background: var(--pa-surface);
+    font: var(--pa-text-body-m);
+    color: var(--pa-n900);
+    transition: all var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.pa-input::placeholder {
+    color: var(--pa-n500);
+}
+
+.pa-input:hover {
+    border-color: var(--pa-n300);
+}
+
+.pa-input:focus {
+    border-color: var(--pa-blue);
+    outline: 2px solid rgba(26, 115, 232, 0.25);
+    box-shadow: var(--pa-shadow-1);
+}
+
+.pa-input--error {
+    border-color: var(--pa-danger);
+}
+
+.pa-input--error:focus {
+    outline-color: rgba(217, 48, 37, 0.25);
+}
+
+.pa-helper {
+    font: var(--pa-text-body-s);
+    color: var(--pa-n500);
+    margin-top: var(--pa-space-1);
+}
+
+.pa-helper--error {
+    color: var(--pa-danger);
+}
+
+.pa-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%237A8794' viewBox='0 0 16 16'%3E%3Cpath d='M4.646 5.646a.5.5 0 0 1 .708 0L8 8.293l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+}
+
+.pa-textarea {
+    min-height: 96px;
+    padding: var(--pa-space-3);
+    resize: vertical;
+}
+
+/* Checkbox */
+.pa-checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+    cursor: pointer;
+}
+
+.pa-checkbox-input {
+    width: 18px;
+    height: 18px;
+    border: 1px solid var(--pa-n300);
+    border-radius: 4px;
+    appearance: none;
+    cursor: pointer;
+    transition: all var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.pa-checkbox-input:checked {
+    background: var(--pa-blue);
+    border-color: var(--pa-blue);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.pa-checkbox-input:focus-visible {
+    outline: 2px solid var(--pa-blue);
+    outline-offset: 2px;
+}
+
+/* Toggle / Switch */
+.pa-toggle {
+    position: relative;
+    width: 36px;
+    height: 20px;
+}
+
+.pa-toggle-input {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+.pa-toggle-track {
+    width: 100%;
+    height: 100%;
+    background: var(--pa-n200);
+    border-radius: var(--pa-radius-pill);
+    transition: background var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.pa-toggle-input:checked+.pa-toggle-track {
+    background: var(--pa-blue);
+}
+
+.pa-toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: var(--pa-white);
+    border-radius: 50%;
+    box-shadow: var(--pa-shadow-1);
+    transition: transform var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.pa-toggle-input:checked~.pa-toggle-thumb {
+    transform: translateX(16px);
+}
+
+.pa-toggle-input:focus-visible~.pa-toggle-track {
+    outline: 2px solid var(--pa-blue);
+    outline-offset: 2px;
+}
+
+/* =====================================================================
+   16) TABLES — NIKE + GOOGLE BLEND
+   ===================================================================== */
+
+/* Container Card */
+.pa-table-card {
+    background: var(--pa-surface);
+    border: 1px solid var(--pa-n100);
+    border-radius: var(--pa-radius-m);
+    overflow: hidden;
+    transition: box-shadow var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.pa-table-card:hover {
+    box-shadow: var(--pa-shadow-1);
+}
+
+/* Optional card header above table */
+.pa-table-card-header {
+    padding: var(--pa-space-4) var(--pa-space-5);
+    border-bottom: 1px solid var(--pa-n100);
+}
+
+/* Table wrapper (no padding - table is flush to card edges) */
+.pa-table-wrapper {
+    overflow-x: auto;
+    overflow-y: visible;
+}
+
+/* Base table */
+.pa-table {
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+/* =====================================================================
+   HEADER ROW (Nike: condensed uppercase, Google: clear hierarchy)
+   ===================================================================== */
+
+.pa-table thead {
+    background: var(--pa-n50);
+}
+
+.pa-table thead tr {
+    height: 40px;
+}
+
+.pa-table th {
+    font-family: var(--pa-font-body);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.27;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--pa-n500);
+    text-align: left;
+    padding: var(--pa-space-3) var(--pa-space-4);
+    border-bottom: 1px solid var(--pa-n100);
+    white-space: nowrap;
+    vertical-align: middle;
+    position: relative;
+}
+
+/* First column gets extra left padding */
+.pa-table th:first-child,
+.pa-table td:first-child {
+    padding-left: var(--pa-space-5);
+}
+
+/* Sortable header */
+.pa-table th.pa-sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: background var(--pa-motion-fast) var(--pa-ease-out);
+}
+
+.pa-table th.pa-sortable:hover {
+    background: var(--pa-n100);
+    color: var(--pa-n700);
+}
+
+.pa-table th.pa-sortable:focus-visible {
+    outline: 2px solid var(--pa-blue);
+    outline-offset: -2px;
+}
+
+/* Sort icon */
+.pa-table th .pa-sort-icon {
+    display: inline-block;
+    margin-left: var(--pa-space-1);
+    opacity: 0;
+    transition: opacity var(--pa-motion-normal) var(--pa-ease-out);
+    vertical-align: middle;
+}
+
+.pa-table th.pa-sortable:hover .pa-sort-icon,
+.pa-table th.pa-sorted .pa-sort-icon {
+    opacity: 1;
+}
+
+.pa-table th.pa-sorted {
+    color: var(--pa-blue);
+}
+
+.pa-table th.pa-sorted .pa-sort-icon {
+    color: var(--pa-blue);
+}
+
+/* =====================================================================
+   BODY ROWS (Nike: bold contrast, Google: generous padding)
+   ===================================================================== */
+
+.pa-table tbody tr {
+    height: 52px;
+    background: var(--pa-white);
+    transition: background var(--pa-motion-fast) var(--pa-ease-out);
+    position: relative;
+}
+
+/* Compact mode */
+.pa-table--compact tbody tr {
+    height: 44px;
+}
+
+/* Zebra striping (optional, very subtle) */
+.pa-table--zebra tbody tr:nth-child(even) {
+    background: var(--pa-n25);
+}
+
+/* Hover state */
+.pa-table tbody tr:hover {
+    background: var(--pa-n50);
+}
+
+.pa-table--zebra tbody tr:nth-child(even):hover {
+    background: var(--pa-n50);
+}
+
+/* Clickable rows */
+.pa-table tbody tr.pa-clickable {
+    cursor: pointer;
+}
+
+.pa-table tbody tr.pa-clickable:active {
+    background: var(--pa-n100);
+}
+
+/* Selected row (Google blue tint + Volt accent) */
+.pa-table tbody tr.pa-selected {
+    background: rgba(26, 115, 232, 0.10);
+}
+
+.pa-table tbody tr.pa-selected::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--pa-volt);
+}
+
+/* Focus state for keyboard navigation */
+.pa-table tbody tr:focus-visible {
+    outline: 2px solid var(--pa-blue);
+    outline-offset: -2px;
+    z-index: 1;
+}
+
+/* =====================================================================
+   CELLS
+   ===================================================================== */
+
+.pa-table td {
+    font-family: var(--pa-font-body);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.43;
+    color: var(--pa-n900);
+    padding: var(--pa-space-4);
+    border-bottom: 1px solid var(--pa-n100);
+    vertical-align: middle;
+}
+
+.pa-table--compact td {
+    padding: var(--pa-space-3) var(--pa-space-4);
+}
+
+/* Last row - no bottom border */
+.pa-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Primary entity column (e.g., name) */
+.pa-table td.pa-cell-primary {
+    font-weight: 600;
+    color: var(--pa-n900);
+}
+
+.pa-table td.pa-cell-primary a {
+    color: var(--pa-n900);
+    text-decoration: none;
+    transition: color var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.pa-table td.pa-cell-primary a:hover {
+    color: var(--pa-blue);
+    text-decoration: underline;
+}
+
+/* Secondary text */
+.pa-table td.pa-cell-secondary {
+    color: var(--pa-n700);
+}
+
+/* Metadata / muted text */
+.pa-table td.pa-cell-meta {
+    font-size: 12px;
+    color: var(--pa-n500);
+}
+
+/* Numeric columns - right aligned */
+.pa-table td.pa-cell-numeric {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Avatar in cell */
+.pa-table-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: var(--pa-space-3);
+    vertical-align: middle;
+}
+
+/* Cell with avatar + text */
+.pa-table-cell-with-avatar {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-3);
+}
+
+/* Chips/badges in cells */
+.pa-table td .pa-badge {
+    height: 24px;
+    padding: 2px 8px;
+    font-size: 11px;
+}
+
+/* =====================================================================
+   INLINE ACTIONS (appear on hover)
+   ===================================================================== */
+
+.pa-table-actions {
+    display: flex;
+    gap: var(--pa-space-1);
+    opacity: 0;
+    transition: opacity var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.pa-table tbody tr:hover .pa-table-actions,
+.pa-table tbody tr:focus-within .pa-table-actions {
+    opacity: 1;
+}
+
+.pa-table-action-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    border-radius: var(--pa-radius-s);
+    color: var(--pa-n500);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--pa-motion-fast) var(--pa-ease-out);
+}
+
+.pa-table-action-btn:hover {
+    background: var(--pa-n50);
+    color: var(--pa-n900);
+}
+
+.pa-table-action-btn:focus-visible {
+    outline: 2px solid var(--pa-blue);
+    outline-offset: 2px;
+}
+
+.pa-table-action-btn .material-symbols-outlined {
+    font-size: 18px;
+}
+
+/* =====================================================================
+   CHECKBOX COLUMN
+   ===================================================================== */
+
+.pa-table th.pa-checkbox-col,
+.pa-table td.pa-checkbox-col {
+    width: 48px;
+    padding-left: var(--pa-space-4);
+    padding-right: 0;
+}
+
+.pa-table-checkbox {
+    width: 18px;
+    height: 18px;
+    border: 1px solid var(--pa-n300);
+    border-radius: 4px;
+    appearance: none;
+    cursor: pointer;
+    transition: all var(--pa-motion-normal) var(--pa-ease-out);
+    display: block;
+}
+
+.pa-table-checkbox:checked {
+    background: var(--pa-blue);
+    border-color: var(--pa-blue);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.pa-table-checkbox:focus-visible {
+    outline: 2px solid var(--pa-blue);
+    outline-offset: 2px;
+}
+
+/* =====================================================================
+   EMPTY STATE (inside table card)
+   ===================================================================== */
+
+.pa-table-empty {
+    padding: var(--pa-space-9) var(--pa-space-5);
+    text-align: center;
+}
+
+.pa-table-empty-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto var(--pa-space-4);
+    color: var(--pa-n300);
+}
+
+.pa-table-empty-icon .material-symbols-outlined {
+    font-size: 48px;
+}
+
+.pa-table-empty-title {
+    font: var(--pa-text-h2);
+    color: var(--pa-n900);
+    margin: 0 0 var(--pa-space-2) 0;
+}
+
+.pa-table-empty-text {
+    font: var(--pa-text-body-m);
+    color: var(--pa-n500);
+    margin: 0 0 var(--pa-space-5) 0;
+}
+
+/* =====================================================================
+   PAGINATION FOOTER
+   ===================================================================== */
+
+.pa-table-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--pa-space-3) var(--pa-space-5);
+    border-top: 1px solid var(--pa-n100);
+    background: var(--pa-white);
+}
+
+.pa-table-footer-info {
+    font: var(--pa-text-body-s);
+    color: var(--pa-n500);
+}
+
+.pa-table-pagination {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-3);
+}
+
+.pa-table-pagination-label {
+    font: var(--pa-text-body-s);
+    color: var(--pa-n500);
+    margin-right: var(--pa-space-2);
+}
+
+.pa-table-pagination-select {
+    height: 36px;
+    padding: 0 var(--pa-space-3);
+    padding-right: 32px;
+    border: 1px solid var(--pa-n200);
+    border-radius: var(--pa-radius-s);
+    background: var(--pa-white);
+    font: var(--pa-text-body-m);
+    color: var(--pa-n900);
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%237A8794' viewBox='0 0 16 16'%3E%3Cpath d='M4.646 5.646a.5.5 0 0 1 .708 0L8 8.293l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+}
+
+.pa-table-pagination-select:hover {
+    border-color: var(--pa-n300);
+}
+
+.pa-table-pagination-select:focus {
+    border-color: var(--pa-blue);
+    outline: 2px solid rgba(26, 115, 232, 0.25);
+}
+
+.pa-table-pagination-controls {
+    display: flex;
+    gap: var(--pa-space-1);
+}
+
+.pa-table-pagination-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid var(--pa-n200);
+    background: var(--pa-white);
+    border-radius: var(--pa-radius-s);
+    color: var(--pa-n700);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--pa-motion-fast) var(--pa-ease-out);
+}
+
+.pa-table-pagination-btn:hover:not(:disabled) {
+    background: var(--pa-n50);
+    border-color: var(--pa-n300);
+}
+
+.pa-table-pagination-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.pa-table-pagination-btn:focus-visible {
+    outline: 2px solid var(--pa-blue);
+    outline-offset: 2px;
+}
+
+.pa-table-pagination-btn .material-symbols-outlined {
+    font-size: 18px;
+}
+
+/* =====================================================================
+   17) EMPTY STATES
+   ===================================================================== */
+
+.pa-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--pa-space-9) var(--pa-space-5);
+    text-align: center;
+}
+
+.pa-empty-icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: var(--pa-space-4);
+    color: var(--pa-n300);
+}
+
+.pa-empty-icon .material-symbols-outlined {
+    font-size: 48px;
+}
+
+.pa-empty-title {
+    font: var(--pa-text-h2);
+    color: var(--pa-n900);
+    margin-bottom: var(--pa-space-2);
+}
+
+.pa-empty-text {
+    font: var(--pa-text-body-m);
+    color: var(--pa-n500);
+    margin-bottom: var(--pa-space-5);
+    max-width: 320px;
+}
+
+/* =====================================================================
+   18) PAGE HEADER
+   ===================================================================== */
+
+.pa-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: var(--pa-space-5);
+    gap: var(--pa-space-4);
+}
+
+.pa-page-header-content {
+    flex: 1;
+}
+
+.pa-page-title {
+    font: var(--pa-text-h1);
+    color: var(--pa-n900);
+    margin: 0 0 var(--pa-space-1) 0;
+}
+
+.pa-page-subtitle {
+    font: var(--pa-text-body-m);
+    color: var(--pa-n500);
+    margin: 0;
+}
+
+.pa-page-actions {
+    display: flex;
+    gap: var(--pa-space-3);
+    flex-shrink: 0;
+}
+
+/* =====================================================================
+   19) LOADING STATES
+   ===================================================================== */
+
+.pa-spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--pa-n200);
+    border-top-color: var(--pa-blue);
+    border-radius: 50%;
+    animation: pa-spin 0.8s linear infinite;
+}
+
+@keyframes pa-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.pa-skeleton {
+    background: linear-gradient(90deg, var(--pa-n100) 25%, var(--pa-n50) 50%, var(--pa-n100) 75%);
+    background-size: 200% 100%;
+    animation: pa-shimmer 1.5s infinite;
+    border-radius: var(--pa-radius-xs);
+}
+
+@keyframes pa-shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* =====================================================================
+   20) TOOLTIPS
+   ===================================================================== */
+
+.pa-tooltip {
+    position: absolute;
+    background: var(--pa-n900);
+    color: var(--pa-white);
+    font: var(--pa-text-body-s);
+    padding: var(--pa-space-2) var(--pa-space-3);
+    border-radius: var(--pa-radius-s);
+    white-space: nowrap;
+    z-index: 1000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--pa-motion-fast) var(--pa-ease-out);
+}
+
+.pa-tooltip.visible {
+    opacity: 1;
+}
+
+/* =====================================================================
+   21) UTILITY CLASSES
+   ===================================================================== */
+
+.pa-flex {
+    display: flex;
+}
+
+.pa-flex-col {
+    flex-direction: column;
+}
+
+.pa-items-center {
+    align-items: center;
+}
+
+.pa-justify-between {
+    justify-content: space-between;
+}
+
+.pa-gap-1 {
+    gap: var(--pa-space-1);
+}
+
+.pa-gap-2 {
+    gap: var(--pa-space-2);
+}
+
+.pa-gap-3 {
+    gap: var(--pa-space-3);
+}
+
+.pa-gap-4 {
+    gap: var(--pa-space-4);
+}
+
+.pa-gap-5 {
+    gap: var(--pa-space-5);
+}
+
+.pa-mt-1 {
+    margin-top: var(--pa-space-1);
+}
+
+.pa-mt-2 {
+    margin-top: var(--pa-space-2);
+}
+
+.pa-mt-3 {
+    margin-top: var(--pa-space-3);
+}
+
+.pa-mt-4 {
+    margin-top: var(--pa-space-4);
+}
+
+.pa-mt-5 {
+    margin-top: var(--pa-space-5);
+}
+
+.pa-mb-1 {
+    margin-bottom: var(--pa-space-1);
+}
+
+.pa-mb-2 {
+    margin-bottom: var(--pa-space-2);
+}
+
+.pa-mb-3 {
+    margin-bottom: var(--pa-space-3);
+}
+
+.pa-mb-4 {
+    margin-bottom: var(--pa-space-4);
+}
+
+.pa-mb-5 {
+    margin-bottom: var(--pa-space-5);
+}
+
+.pa-text-center {
+    text-align: center;
+}
+
+.pa-text-right {
+    text-align: right;
+}
+
+.pa-text-muted {
+    color: var(--pa-n500);
+}
+
+.pa-text-success {
+    color: var(--pa-success);
+}
+
+.pa-text-warning {
+    color: var(--pa-warning);
+}
+
+.pa-text-danger {
+    color: var(--pa-danger);
+}
+
+/* =====================================================================
+   22) GRID
+   ===================================================================== */
+
+.pa-grid {
+    display: grid;
+    gap: var(--pa-space-5);
+}
+
+.pa-grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.pa-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.pa-grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 1200px) {
+    .pa-grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+
+    .pa-grid-2,
+    .pa-grid-3,
+    .pa-grid-4 {
+        grid-template-columns: 1fr;
+    }
+
+    .pa-main {
+        margin-left: 0;
+    }
+
+    .pa-sidebar {
+        transform: translateX(-100%);
+        transition: transform var(--pa-motion-slow) var(--pa-ease-out);
+    }
+
+    .pa-sidebar.open {
+        transform: translateX(0);
+    }
+}
+
+/* =====================================================================
+   23) REDUCED MOTION
+   ===================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

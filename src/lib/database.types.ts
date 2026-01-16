@@ -1433,8 +1433,8 @@ export type Database = {
           payout_account_id: string | null
           payout_descriptor: string | null
           payout_onboarding_status:
-            | Database["public"]["Enums"]["payout_onboarding_status"]
-            | null
+          | Database["public"]["Enums"]["payout_onboarding_status"]
+          | null
           payouts_enabled: boolean | null
           refund_policy: string | null
           slug: string | null
@@ -1461,8 +1461,8 @@ export type Database = {
           payout_account_id?: string | null
           payout_descriptor?: string | null
           payout_onboarding_status?:
-            | Database["public"]["Enums"]["payout_onboarding_status"]
-            | null
+          | Database["public"]["Enums"]["payout_onboarding_status"]
+          | null
           payouts_enabled?: boolean | null
           refund_policy?: string | null
           slug?: string | null
@@ -1489,8 +1489,8 @@ export type Database = {
           payout_account_id?: string | null
           payout_descriptor?: string | null
           payout_onboarding_status?:
-            | Database["public"]["Enums"]["payout_onboarding_status"]
-            | null
+          | Database["public"]["Enums"]["payout_onboarding_status"]
+          | null
           payouts_enabled?: boolean | null
           refund_policy?: string | null
           slug?: string | null
@@ -2521,6 +2521,126 @@ export type Database = {
           },
         ]
       }
+      admin_organizations: {
+        Row: {
+          id: string
+          name: string
+          org_type: string | null
+          status: string
+          license_status: string | null
+          license_plan: string | null
+          license_trial_ends_at: string | null
+          license_current_period_end: string | null
+          payout_account_id: string | null
+          payouts_enabled: boolean | null
+          created_at: string | null
+          updated_at: string | null
+          team_count: number
+          sport_count: number
+          user_count: number
+          stripe_connected: boolean
+        }
+      }
+      admin_users: {
+        Row: {
+          id: string
+          email: string | null
+          phone: string | null
+          display_name: string | null
+          created_at: string | null
+          updated_at: string | null
+          organizations: Json
+          roles: string[]
+          is_platform_admin: boolean
+          last_sign_in_at: string | null
+          email_confirmed: boolean
+        }
+      }
+      admin_structure: {
+        Row: {
+          organization_id: string
+          organization_name: string
+          team_id: string | null
+          team_name: string | null
+          season_id: string | null
+          season_name: string | null
+          season_active: boolean | null
+          player_count: number
+        }
+      }
+      admin_payments: {
+        Row: {
+          id: string
+          amount_cents: number
+          currency: string | null
+          stripe_payment_intent_id: string | null
+          status: string
+          created_at: string | null
+          organization_id: string
+          organization_name: string
+          fee_assignment_id: string | null
+          fee_id: string | null
+          fee_title: string | null
+          child_id: string | null
+          child_name: string | null
+          parent_email: string | null
+          parent_name: string | null
+        }
+      }
+      admin_fees_status: {
+        Row: {
+          fee_id: string
+          fee_name: string
+          amount_cents: number
+          currency: string | null
+          due_date: string | null
+          fee_status: string
+          organization_id: string
+          organization_name: string
+          assigned_count: number
+          paid_count: number
+          unpaid_count: number
+          payment_rate_percent: number
+        }
+      }
+      admin_audit_log: {
+        Row: {
+          id: string
+          actor_id: string | null
+          actor_email: string | null
+          actor_name: string | null
+          action: string
+          entity_type: string
+          entity_id: string
+          metadata: Json
+          created_at: string
+        }
+      }
+      admin_platform_health: {
+        Row: {
+          active_organizations: number
+          trial_organizations: number
+          suspended_organizations: number
+          total_users: number
+          platform_admin_count: number
+          successful_payments: number
+          failed_payments: number
+          total_payment_volume_cents: number
+          total_teams: number
+          total_children: number
+        }
+      }
+      admin_feature_flags: {
+        Row: {
+          id: string
+          organization_id: string
+          organization_name: string
+          feature_key: string
+          enabled: boolean
+          created_at: string | null
+          updated_at: string | null
+        }
+      }
     }
     Functions: {
       accept_organization_invite: {
@@ -2624,61 +2744,61 @@ export type Database = {
       billing_mode: "platform_facilitated" | "offline_only"
       charge_status: "pending" | "applied" | "voided"
       charge_type:
-        | "fee_payment"
-        | "late_fee"
-        | "discount"
-        | "scholarship_credit"
-        | "waiver_credit"
-        | "adjustment"
+      | "fee_payment"
+      | "late_fee"
+      | "discount"
+      | "scholarship_credit"
+      | "waiver_credit"
+      | "adjustment"
       checkout_session_status:
-        | "created"
-        | "in_progress"
-        | "succeeded"
-        | "canceled"
-        | "expired"
+      | "created"
+      | "in_progress"
+      | "succeeded"
+      | "canceled"
+      | "expired"
       discount_code_status: "active" | "inactive"
       discount_type: "percent" | "fixed"
       event_type:
-        | "practice"
-        | "game"
-        | "tournament"
-        | "meeting"
-        | "tryout"
-        | "travel"
-        | "pickup_dropoff"
-        | "social"
-        | "blackout"
+      | "practice"
+      | "game"
+      | "tournament"
+      | "meeting"
+      | "tryout"
+      | "travel"
+      | "pickup_dropoff"
+      | "social"
+      | "blackout"
       fee_assignment_status:
-        | "unpaid"
-        | "partial"
-        | "paid"
-        | "refunded"
-        | "waived"
-        | "scholarship_applied"
-        | "offline_recorded"
+      | "unpaid"
+      | "partial"
+      | "paid"
+      | "refunded"
+      | "waived"
+      | "scholarship_applied"
+      | "offline_recorded"
       fee_scope: "team" | "selected_players" | "individual"
       fee_status: "draft" | "published" | "closed" | "archived"
       fee_type:
-        | "registration"
-        | "uniform"
-        | "tournament"
-        | "travel"
-        | "fundraiser"
-        | "misc"
+      | "registration"
+      | "uniform"
+      | "tournament"
+      | "travel"
+      | "fundraiser"
+      | "misc"
       fee_visibility: "all_parents" | "assigned_only"
       installment_frequency: "weekly" | "biweekly" | "monthly"
       installment_schedule_status:
-        | "active"
-        | "completed"
-        | "defaulted"
-        | "canceled"
+      | "active"
+      | "completed"
+      | "defaulted"
+      | "canceled"
       installment_status:
-        | "upcoming"
-        | "due"
-        | "paid"
-        | "late"
-        | "skipped"
-        | "waived"
+      | "upcoming"
+      | "due"
+      | "paid"
+      | "late"
+      | "skipped"
+      | "waived"
       license_plan: "starter" | "standard" | "pro"
       license_status: "trial" | "active" | "past_due" | "canceled" | "expired"
       membership_status: "active" | "invited" | "removed"
@@ -2687,41 +2807,41 @@ export type Database = {
       org_member_role: "parent" | "coach" | "org_admin"
       org_type: "school" | "club" | "league" | "academy" | "aau"
       payment_event_entity_type:
-        | "fee"
-        | "fee_assignment"
-        | "charge"
-        | "checkout_session"
-        | "payment"
-        | "offline_payment"
-        | "refund"
-        | "waiver"
-        | "scholarship_award"
-        | "discount_redemption"
+      | "fee"
+      | "fee_assignment"
+      | "charge"
+      | "checkout_session"
+      | "payment"
+      | "offline_payment"
+      | "refund"
+      | "waiver"
+      | "scholarship_award"
+      | "discount_redemption"
       payment_status: "due" | "paid" | "refunded"
       payment_status_new:
-        | "pending"
-        | "succeeded"
-        | "failed"
-        | "refunded"
-        | "partially_refunded"
+      | "pending"
+      | "succeeded"
+      | "failed"
+      | "refunded"
+      | "partially_refunded"
       payout_onboarding_status: "pending" | "completed" | "restricted"
       scholarship_funding_source:
-        | "org_funded"
-        | "sponsor_funded"
-        | "district_funded"
+      | "org_funded"
+      | "sponsor_funded"
+      | "district_funded"
       scholarship_program_status: "active" | "inactive"
       start_date_rule: "on_publish" | "custom_date"
       tryout_registration_status:
-        | "registered"
-        | "checked_in"
-        | "evaluated"
-        | "offered"
-        | "accepted"
-        | "declined"
-        | "rejected"
-        | "withdrawn"
-        | "waitlisted"
-        | "not_selected"
+      | "registered"
+      | "checked_in"
+      | "evaluated"
+      | "offered"
+      | "accepted"
+      | "declined"
+      | "rejected"
+      | "withdrawn"
+      | "waitlisted"
+      | "not_selected"
       tryout_document_status: "missing" | "uploaded" | "approved" | "rejected"
       tryout_type: "open" | "invitation_only" | "make_up" | "evaluation_clinic"
       uniform_order_status: "pending" | "ordered" | "delivered"
@@ -2739,116 +2859,116 @@ type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+  | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+  ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+    DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+  : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+    DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
-    ? R
-    : never
+  ? R
+  : never
   : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
-      }
-      ? R
-      : never
-    : never
+    DefaultSchema["Views"])
+  ? (DefaultSchema["Tables"] &
+    DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+      Row: infer R
+    }
+  ? R
+  : never
+  : never
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof DefaultSchema["Tables"]
+  | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+  ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+  : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
-    }
-    ? I
-    : never
+    Insert: infer I
+  }
+  ? I
+  : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
-      }
-      ? I
-      : never
-    : never
+  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+    Insert: infer I
+  }
+  ? I
+  : never
+  : never
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof DefaultSchema["Tables"]
+  | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+  ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+  : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
-    }
-    ? U
-    : never
+    Update: infer U
+  }
+  ? U
+  : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
-      }
-      ? U
-      : never
-    : never
+  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+    Update: infer U
+  }
+  ? U
+  : never
+  : never
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof DefaultSchema["Enums"]
+  | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+  ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+  : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
+  ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+  : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof DefaultSchema["CompositeTypes"]
+  | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+  ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+  : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+  ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+  : never
 
 export const Constants = {
   graphql_public: {

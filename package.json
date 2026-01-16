@@ -11,12 +11,13 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.49.0",
     "@emotion/react": "^11.13.0",
     "@emotion/styled": "^11.13.0",
     "@mui/icons-material": "^5.15.0",
     "@mui/material": "^5.15.0",
     "@stripe/stripe-js": "^4.8.0",
+    "@supabase/supabase-js": "^2.49.0",
+    "material-dashboard": "^3.0.9",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.51.0",

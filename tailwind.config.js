@@ -5,6 +5,12 @@ export default {
         "./index.html",
         "./src/**/*.{js,ts,jsx,tsx}",
     ],
+    // Disable Tailwind's preflight (base resets) globally
+    // This prevents conflicts with Bootstrap/Material Dashboard on admin routes
+    // We add preflight manually for portal routes via index.css
+    corePlugins: {
+        preflight: true,
+    },
     theme: {
         extend: {
             colors: {

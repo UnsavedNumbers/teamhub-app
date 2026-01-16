@@ -1,31 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  Grid,
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  Button,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-} from '@mui/material'
-import {
-  Groups as TeamsIcon,
-  People as PeopleIcon,
-  Event as EventsIcon,
-  Payment as PaymentsIcon,
-  Checkroom as UniformsIcon,
-  Add as AddIcon,
-  TrendingUp as TrendingUpIcon,
-} from '@mui/icons-material'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import AdminSkeletonTable from '../../components/admin/AdminSkeletonTable'
 import { NoOrganizationEmptyState } from '../../components/admin/NoOrganizationEmptyState'
+import { AdminCard, AdminStatCard, MdButton } from '../../components/adminMd'
 
 interface DashboardStats {
   totalTeams: number
@@ -195,173 +175,128 @@ export default function AdminDashboard() {
     {
       title: 'Total Teams',
       value: stats.totalTeams,
-      icon: <TeamsIcon />,
-      color: '#3b82f6',
+      icon: <i className="fas fa-users" />,
       action: () => navigate('/admin/teams'),
     },
     {
       title: 'Total Players',
       value: stats.totalPlayers,
-      icon: <PeopleIcon />,
-      color: '#10b981',
+      icon: <i className="fas fa-child" />,
       action: () => navigate('/admin/children'),
     },
     {
       title: 'Active Seasons',
       value: stats.activeSeasons,
-      icon: <TrendingUpIcon />,
-      color: '#8b5cf6',
+      icon: <i className="fas fa-chart-line" />,
       action: () => navigate('/admin/teams'),
     },
     {
       title: 'Outstanding Payments',
       value: `$${(stats.outstandingPayments / 100).toFixed(2)}`,
-      icon: <PaymentsIcon />,
-      color: '#f59e0b',
+      icon: <i className="fas fa-credit-card" />,
       action: () => navigate('/admin/payments'),
     },
     {
       title: 'Upcoming Events',
       value: stats.upcomingEvents,
-      icon: <EventsIcon />,
-      color: '#ef4444',
+      icon: <i className="fas fa-calendar-alt" />,
       action: () => navigate('/admin/events'),
     },
     {
       title: 'Pending Uniforms',
       value: stats.pendingUniformOrders,
-      icon: <UniformsIcon />,
-      color: '#06b6d4',
+      icon: <i className="fas fa-tshirt" />,
       action: () => navigate('/admin/uniforms'),
     },
   ]
 
   return (
-    <Box>
-      <Typography variant="h4" gutterBottom sx={{ mb: 3, fontWeight: 600 }}>
-        Admin Dashboard
-      </Typography>
+    <div className="container-fluid py-4">
+      <div className="row mb-4">
+        <div className="col-12">
+          <h4 className="font-weight-bolder mb-0">Admin Dashboard</h4>
+        </div>
+      </div>
 
-      {/* Quick Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+      <div className="row">
         {statCards.map((card) => (
-          <Grid item xs={12} sm={6} md={4} key={card.title}>
-            <Card
-              sx={{
-                cursor: 'pointer',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: 4,
-                },
-              }}
-              onClick={card.action}
-            >
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Box>
-                    <Typography color="textSecondary" gutterBottom variant="body2">
-                      {card.title}
-                    </Typography>
-                    <Typography variant="h4" sx={{ fontWeight: 600 }}>
-                      {card.value}
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{
-                      backgroundColor: `${card.color}20`,
-                      borderRadius: 2,
-                      p: 1.5,
-                      color: card.color,
-                    }}
-                  >
-                    {card.icon}
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
+          <div key={card.title} className="col-xl-4 col-sm-6 mb-4">
+            <div onClick={card.action} style={{ cursor: 'pointer' }}>
+              <AdminStatCard
+                title={card.title}
+                value={String(card.value)}
+                icon={card.icon}
+                footer={
+                  <span className="text-secondary text-sm">
+                    <i className="fas fa-arrow-right ms-1" /> View details
+                  </span>
+                }
+              />
+            </div>
+          </div>
         ))}
-      </Grid>
+      </div>
 
-      {/* Quick Actions */}
-      <Card sx={{ mb: 4 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
-            Quick Actions
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={3}>
-              <Button
-                variant="contained"
-                fullWidth
-                startIcon={<AddIcon />}
-                onClick={() => navigate('/admin/teams')}
-              >
-                Create Team
-              </Button>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Button
-                variant="contained"
-                fullWidth
-                startIcon={<AddIcon />}
-                onClick={() => navigate('/admin/payments/new')}
-              >
-                Create Fee
-              </Button>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Button
-                variant="contained"
-                fullWidth
-                startIcon={<AddIcon />}
-                onClick={() => navigate('/admin/events/new')}
-              >
-                Create Event
-              </Button>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Button
-                variant="contained"
-                fullWidth
-                startIcon={<AddIcon />}
-                onClick={() => navigate('/admin/users/new')}
-              >
-                Add Player
-              </Button>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
+      <div className="row mb-4">
+        <div className="col-12">
+          <AdminCard title="Quick Actions">
+            <div className="row">
+              <div className="col-12 col-md-3 mb-2">
+                <MdButton variant="primary" fullWidth onClick={() => navigate('/admin/teams')}>
+                  <i className="fas fa-plus me-2" />
+                  Create Team
+                </MdButton>
+              </div>
+              <div className="col-12 col-md-3 mb-2">
+                <MdButton variant="primary" fullWidth onClick={() => navigate('/admin/payments/new')}>
+                  <i className="fas fa-plus me-2" />
+                  Create Fee
+                </MdButton>
+              </div>
+              <div className="col-12 col-md-3 mb-2">
+                <MdButton variant="primary" fullWidth onClick={() => navigate('/admin/events/new')}>
+                  <i className="fas fa-plus me-2" />
+                  Create Event
+                </MdButton>
+              </div>
+              <div className="col-12 col-md-3 mb-2">
+                <MdButton variant="primary" fullWidth onClick={() => navigate('/admin/users/new')}>
+                  <i className="fas fa-plus me-2" />
+                  Add Player
+                </MdButton>
+              </div>
+            </div>
+          </AdminCard>
+        </div>
+      </div>
 
-      {/* Recent Activity */}
-      <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
-            Recent Activity
-          </Typography>
-          {recentActivity.length === 0 ? (
-            <Typography color="textSecondary" sx={{ py: 2 }}>
-              No recent activity
-            </Typography>
-          ) : (
-            <List>
-              {recentActivity.map((activity) => (
-                <ListItem key={activity.id}>
-                  <ListItemIcon>
-                    <PaymentsIcon color="primary" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={activity.message}
-                    secondary={new Date(activity.timestamp).toLocaleString()}
-                  />
-                </ListItem>
-              ))}
-            </List>
-          )}
-        </CardContent>
-      </Card>
-    </Box>
+      <div className="row">
+        <div className="col-12">
+          <AdminCard title="Recent Activity">
+            {recentActivity.length === 0 ? (
+              <p className="text-secondary py-2 mb-0">No recent activity</p>
+            ) : (
+              <ul className="list-group list-group-flush">
+                {recentActivity.map((activity) => (
+                  <li key={activity.id} className="list-group-item px-0">
+                    <div className="d-flex align-items-center">
+                      <div className="icon icon-shape icon-sm bg-gradient-primary text-white border-radius-md me-3">
+                        <i className="fas fa-credit-card" />
+                      </div>
+                      <div className="flex-grow-1">
+                        <h6 className="mb-0 text-sm">{activity.message}</h6>
+                        <p className="text-xs text-secondary mb-0">
+                          {new Date(activity.timestamp).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </AdminCard>
+        </div>
+      </div>
+    </div>
   )
 }
