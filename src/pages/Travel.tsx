@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import PortalLayout from '../components/portal/PortalLayout'
+import PortalHeader from '../components/portal/PortalHeader'
+import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
+import Card from '../components/portal/Card'
+import Button from '../components/portal/Button'
+import Icon from '../components/portal/Icon'
 
 interface TravelPlan {
   id: string
@@ -150,238 +155,245 @@ export default function Travel() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-900">
-      <header className="bg-white dark:bg-slate-800/50 backdrop-blur-sm border-b border-neutral-200 dark:border-slate-700/50 sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16">
-            <Link to="/portal/dashboard" className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors mr-4">← Dashboard</Link>
-            <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Travel</h1>
-          </div>
+    <>
+      <PortalHeader />
+      <PortalLayout
+        breadcrumbs={[
+          { label: 'Home', path: '/portal/dashboard' },
+          { label: 'Travel' },
+        ]}
+      >
+        <div className="mb-12">
+          <PageTitle>Travel</PageTitle>
+          <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
+            View upcoming travel plans and tournament details.
+          </p>
         </div>
-      </header>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
           </div>
         ) : plans.length === 0 ? (
-          <div className="bg-slate-800 rounded-xl text-center py-12 px-6">
-            <span className="text-6xl mb-4 block">✈️</span>
-            <h3 className="text-lg font-bold text-white mb-2">No Upcoming Travel</h3>
-            <p className="text-slate-400">Travel plans will appear here when your team has tournaments.</p>
-          </div>
+          <Card className="text-center py-12">
+            <Icon name="flight" size="text-6xl" className="text-slate-400 mb-4" />
+            <CardTitle className="mb-2">No upcoming travel</CardTitle>
+            <p className="text-slate-500 dark:text-slate-400">Travel plans will appear here when your team has tournaments.</p>
+          </Card>
         ) : (
           <div className="space-y-6">
             {plans.map((plan) => (
-              <div 
-                key={plan.id} 
+              <Card
+                key={plan.id}
                 onClick={() => setSelectedPlan(plan)}
-                className="bg-slate-800 rounded-xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-500/50 transition-all"
+                className="overflow-hidden cursor-pointer hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300"
               >
-                {/* Hero Section */}
-                <div className="relative h-48 bg-gradient-to-br from-blue-600/30 to-slate-900 flex items-end p-6">
-                  <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800')] bg-cover bg-center opacity-30"></div>
-                  <div className="relative z-10">
+                <div className="relative h-48 bg-gradient-to-br from-[#137fec]/20 to-slate-100 dark:to-slate-800 flex items-end p-8">
+                  <div className="relative z-10 w-full">
                     {plan.status === 'cancelled' ? (
-                      <span className="inline-block px-2 py-1 bg-red-600 text-white text-xs font-bold uppercase rounded mb-2">Cancelled</span>
+                      <span className="inline-block px-3 py-1 bg-red-500 text-white text-xs font-bold uppercase tracking-widest rounded mb-3">Cancelled</span>
                     ) : (
-                      <span className="inline-block px-2 py-1 bg-blue-500 text-white text-xs font-bold uppercase rounded mb-2">Upcoming Trip</span>
+                      <span className="inline-block px-3 py-1 bg-[#137fec] text-white text-xs font-bold uppercase tracking-widest rounded mb-3">Upcoming Trip</span>
                     )}
-                    <h2 className="text-3xl md:text-4xl font-black text-white uppercase tracking-tighter italic">{plan.title}</h2>
-                    <p className="text-blue-300 font-bold uppercase tracking-wide text-sm mt-1">
+                    <CardTitle className="mb-2">{plan.title}</CardTitle>
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
                       {plan.location} • {formatDateRange(plan.start_date, plan.end_date)}
                     </p>
                   </div>
                 </div>
 
-                {/* Quick Info */}
                 <div className="p-6 grid md:grid-cols-2 gap-4">
                   {plan.venue_name && (
-                    <div className="flex items-start gap-3 p-4 bg-slate-900/50 rounded-lg">
-                      <span className="text-2xl">📍</span>
+                    <div className="flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                      <Icon name="location_on" className="text-slate-400" />
                       <div>
-                        <p className="font-bold text-white">{plan.venue_name}</p>
-                        {plan.venue_address && <p className="text-sm text-slate-400">{plan.venue_address}</p>}
+                        <p className="font-black text-slate-900 dark:text-white">{plan.venue_name}</p>
+                        {plan.venue_address && <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{plan.venue_address}</p>}
                       </div>
                     </div>
                   )}
                   {plan.hotel_name && (
-                    <div className="flex items-start gap-3 p-4 bg-slate-900/50 rounded-lg">
-                      <span className="text-2xl">🏨</span>
+                    <div className="flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                      <Icon name="hotel" className="text-slate-400" />
                       <div>
-                        <p className="font-bold text-white">{plan.hotel_name}</p>
-                        {plan.hotel_address && <p className="text-sm text-slate-400">{plan.hotel_address}</p>}
+                        <p className="font-black text-slate-900 dark:text-white">{plan.hotel_name}</p>
+                        {plan.hotel_address && <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{plan.hotel_address}</p>}
                       </div>
                     </div>
                   )}
                 </div>
 
-                <div className="px-6 pb-6 flex justify-between items-center">
-                  <span className="text-sm text-slate-400">{plan.team.name}</span>
-                  <span className="text-blue-400 text-sm font-bold">View Details →</span>
+                <div className="px-6 pb-6 flex justify-between items-center border-t border-slate-100 dark:border-slate-800">
+                  <span className="text-xs font-bold uppercase tracking-widest text-slate-400">{plan.team.name}</span>
+                  <span className="text-[#137fec] text-sm font-bold uppercase tracking-wide">View Details</span>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         )}
-      </main>
 
-      {/* Detail Modal */}
-      {selectedPlan && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto" onClick={() => setSelectedPlan(null)}>
-          <div className="bg-slate-800 rounded-xl max-w-2xl w-full my-8 shadow-2xl" onClick={e => e.stopPropagation()}>
-            {/* Header */}
-            <div className="relative h-40 bg-gradient-to-br from-blue-600/30 to-slate-900 flex items-end p-6 rounded-t-xl">
-              <div className="absolute top-4 right-4">
-                <button onClick={() => setSelectedPlan(null)} className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center text-white hover:bg-white/20">✕</button>
-              </div>
-              <div>
-                <h2 className="text-2xl font-black text-white uppercase tracking-tighter">{selectedPlan.title}</h2>
-                <p className="text-blue-300 text-sm font-bold uppercase">{formatDateRange(selectedPlan.start_date, selectedPlan.end_date)}</p>
-              </div>
-            </div>
-
-            <div className="p-6 space-y-6">
-              {/* Venue */}
-              {selectedPlan.venue_name && (
-                <div>
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Venue</h3>
-                  <div className="p-4 bg-slate-900/50 rounded-lg">
-                    <p className="font-bold text-white text-lg">{selectedPlan.venue_name}</p>
-                    {selectedPlan.venue_address && <p className="text-slate-400">{selectedPlan.venue_address}</p>}
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      <a
-                        href={selectedPlan.maps_url || (selectedPlan.venue_address ? googleMapsLink(selectedPlan.venue_address) : '#')}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-4 py-2 bg-blue-600 text-white font-bold text-sm rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        View Maps
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Hotel */}
-              {selectedPlan.hotel_name && (
-                <div>
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Hotel</h3>
-                  <div className="p-4 bg-slate-900/50 rounded-lg">
-                    <p className="font-bold text-white text-lg">{selectedPlan.hotel_name}</p>
-                    {selectedPlan.hotel_address && <p className="text-slate-400 mb-2">{selectedPlan.hotel_address}</p>}
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {selectedPlan.hotel_address && (
-                        <a
-                          href={googleMapsLink(selectedPlan.hotel_address)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="px-4 py-2 bg-blue-600 text-white font-bold text-sm rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                          🗺️ Maps
-                        </a>
-                      )}
-                      {selectedPlan.hotel_phone && (
-                        <a href={`tel:${selectedPlan.hotel_phone}`} className="px-4 py-2 bg-slate-700 text-white font-bold text-sm rounded-lg hover:bg-slate-600 transition-colors">
-                          📞 {selectedPlan.hotel_phone}
-                        </a>
-                      )}
-                      {selectedPlan.hotel_confirmation && (
-                        <span className="px-4 py-2 bg-slate-700 text-slate-300 font-mono text-sm rounded-lg">
-                          Conf: {selectedPlan.hotel_confirmation}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Meeting Locations */}
-              {parseMeetingLocations(selectedPlan.meeting_locations).length > 0 && (
-                <div>
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Meeting Locations</h3>
-                  <div className="space-y-3">
-                    {parseMeetingLocations(selectedPlan.meeting_locations).map((m, idx) => (
-                      <div key={idx} className="p-4 bg-slate-900/50 rounded-lg">
-                        <p className="font-bold text-white">{m.name}</p>
-                        <p className="text-slate-400">{m.address}</p>
-                        {m.time && <p className="text-slate-300 mt-1">Time: {m.time}</p>}
-                        {m.notes && <p className="text-slate-300 mt-2 whitespace-pre-wrap">{m.notes}</p>}
-                        <div className="flex flex-wrap gap-2 mt-3">
-                          <a
-                            href={m.maps_url || googleMapsLink(m.address)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="px-4 py-2 bg-blue-600 text-white font-bold text-sm rounded-lg hover:bg-blue-700 transition-colors"
-                          >
-                            View Maps
-                          </a>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Itinerary Download */}
-              {selectedPlan.itinerary_file_path && (
-                <div>
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Itinerary</h3>
-                  {downloadError && (
-                    <div className="p-3 bg-red-600/20 border border-red-500/30 rounded-lg text-red-200 text-sm mb-2">
-                      {downloadError}
-                    </div>
-                  )}
-                  <button
-                    onClick={downloadItinerary}
-                    disabled={downloadLoading}
-                    className="px-4 py-2 bg-white text-slate-900 font-bold text-sm rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50"
-                  >
-                    {downloadLoading ? 'Preparing download…' : 'Download itinerary'}
+        {/* Detail Modal */}
+        {selectedPlan && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto" onClick={() => setSelectedPlan(null)}>
+            <Card className="max-w-2xl w-full my-8 p-0 overflow-hidden" onClick={e => e.stopPropagation()}>
+              <div className="relative h-40 bg-gradient-to-br from-[#137fec]/20 to-slate-100 dark:to-slate-800 flex items-end p-6">
+                <div className="absolute top-4 right-4">
+                  <button onClick={() => setSelectedPlan(null)} className="w-8 h-8 bg-white/10 dark:bg-slate-800/50 rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-white/20 dark:hover:bg-slate-700/50">
+                    <Icon name="close" />
                   </button>
                 </div>
-              )}
-
-              {/* Schedule */}
-              <div>
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Schedule</h3>
-                <div className="p-4 bg-slate-900/50 rounded-lg">
-                  {eventsLoading ? (
-                    <p className="text-slate-400">Loading schedule…</p>
-                  ) : tripEvents.length === 0 ? (
-                    <p className="text-slate-400">No events scheduled during these dates.</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {tripEvents.map((ev) => (
-                        <div key={ev.id} className="border-b border-slate-700/50 pb-3 last:border-b-0 last:pb-0">
-                          <p className="text-white font-bold">{ev.title}</p>
-                          <p className="text-slate-400 text-sm">
-                            {new Date(ev.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}{' '}
-                            • {formatEventTime(ev.start_time)}–{formatEventTime(ev.end_time)}
-                          </p>
-                          {ev.location && <p className="text-slate-400 text-sm">{ev.location}</p>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                <div>
+                  <CardTitle className="mb-1">{selectedPlan.title}</CardTitle>
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">{formatDateRange(selectedPlan.start_date, selectedPlan.end_date)}</p>
                 </div>
               </div>
 
-              {/* Notes */}
-              {selectedPlan.notes && (
-                <div>
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Notes</h3>
-                  <div className="p-4 bg-slate-900/50 rounded-lg">
-                    <p className="text-slate-300 whitespace-pre-wrap">{selectedPlan.notes}</p>
+              <div className="p-6 space-y-6">
+                {selectedPlan.venue_name && (
+                  <div>
+                    <SectionHeader className="mb-4">Venue</SectionHeader>
+                    <Card className="p-4">
+                      <CardTitle className="text-lg mb-2">{selectedPlan.venue_name}</CardTitle>
+                      {selectedPlan.venue_address && <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-3">{selectedPlan.venue_address}</p>}
+                      <div className="flex flex-wrap gap-2">
+                        <a
+                          href={selectedPlan.maps_url || (selectedPlan.venue_address ? googleMapsLink(selectedPlan.venue_address) : '#')}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-2"
+                        >
+                          <Button variant="primary" className="text-sm px-6 py-2">
+                            <Icon name="map" size="text-sm" className="mr-2" />
+                            View Maps
+                          </Button>
+                        </a>
+                      </div>
+                    </Card>
                   </div>
-                </div>
-              )}
+                )}
 
-            </div>
+                {selectedPlan.hotel_name && (
+                  <div>
+                    <SectionHeader className="mb-4">Hotel</SectionHeader>
+                    <Card className="p-4">
+                      <CardTitle className="text-lg mb-2">{selectedPlan.hotel_name}</CardTitle>
+                      {selectedPlan.hotel_address && <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-3">{selectedPlan.hotel_address}</p>}
+                      <div className="flex flex-wrap gap-2">
+                        {selectedPlan.hotel_address && (
+                          <a
+                            href={googleMapsLink(selectedPlan.hotel_address)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-2"
+                          >
+                            <Button variant="primary" className="text-sm px-6 py-2">
+                              <Icon name="map" size="text-sm" className="mr-2" />
+                              Maps
+                            </Button>
+                          </a>
+                        )}
+                        {selectedPlan.hotel_phone && (
+                          <a href={`tel:${selectedPlan.hotel_phone}`}>
+                            <Button variant="secondary" className="text-sm px-6 py-2">
+                              <Icon name="phone" size="text-sm" className="mr-2" />
+                              {selectedPlan.hotel_phone}
+                            </Button>
+                          </a>
+                        )}
+                        {selectedPlan.hotel_confirmation && (
+                          <span className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono text-sm rounded font-bold">
+                            Conf: {selectedPlan.hotel_confirmation}
+                          </span>
+                        )}
+                      </div>
+                    </Card>
+                  </div>
+                )}
+
+                {parseMeetingLocations(selectedPlan.meeting_locations).length > 0 && (
+                  <div>
+                    <SectionHeader className="mb-4">Meeting Locations</SectionHeader>
+                    <div className="space-y-3">
+                      {parseMeetingLocations(selectedPlan.meeting_locations).map((m, idx) => (
+                        <Card key={idx} className="p-4">
+                          <CardTitle className="text-lg mb-2">{m.name}</CardTitle>
+                          <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-2">{m.address}</p>
+                          {m.time && <p className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-2">Time: {m.time}</p>}
+                          {m.notes && <p className="text-sm text-slate-500 dark:text-slate-400 whitespace-pre-wrap mb-3">{m.notes}</p>}
+                          <div className="flex flex-wrap gap-2">
+                            <a
+                              href={m.maps_url || googleMapsLink(m.address)}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              <Button variant="primary" className="text-sm px-6 py-2">
+                                <Icon name="map" size="text-sm" className="mr-2" />
+                                View Maps
+                              </Button>
+                            </a>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedPlan.itinerary_file_path && (
+                  <div>
+                    <SectionHeader className="mb-4">Itinerary</SectionHeader>
+                    {downloadError && (
+                      <Card className="mb-4 border-red-500/50 bg-red-50 dark:bg-red-950/20 p-3">
+                        <p className="text-red-600 dark:text-red-400 text-sm font-bold">{downloadError}</p>
+                      </Card>
+                    )}
+                    <Button
+                      variant="primary"
+                      onClick={downloadItinerary}
+                      disabled={downloadLoading}
+                      className="text-sm px-6 py-2"
+                    >
+                      {downloadLoading ? 'Preparing download' : 'Download itinerary'}
+                    </Button>
+                  </div>
+                )}
+
+                <div>
+                  <SectionHeader className="mb-4">Schedule</SectionHeader>
+                  <Card className="p-4">
+                    {eventsLoading ? (
+                      <p className="text-slate-500 dark:text-slate-400">Loading schedule</p>
+                    ) : tripEvents.length === 0 ? (
+                      <p className="text-slate-500 dark:text-slate-400">No events scheduled during these dates.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {tripEvents.map((ev) => (
+                          <div key={ev.id} className="border-b border-slate-200 dark:border-slate-700 pb-3 last:border-b-0 last:pb-0">
+                            <CardTitle className="text-lg mb-1">{ev.title}</CardTitle>
+                            <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
+                              {new Date(ev.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}{' '}
+                              • {formatEventTime(ev.start_time)}–{formatEventTime(ev.end_time)}
+                            </p>
+                            {ev.location && <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{ev.location}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </Card>
+                </div>
+
+                {selectedPlan.notes && (
+                  <div>
+                    <SectionHeader className="mb-4">Notes</SectionHeader>
+                    <Card className="p-4">
+                      <p className="text-sm text-slate-500 dark:text-slate-400 whitespace-pre-wrap">{selectedPlan.notes}</p>
+                    </Card>
+                  </div>
+                )}
+              </div>
+            </Card>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </PortalLayout>
+    </>
   )
 }

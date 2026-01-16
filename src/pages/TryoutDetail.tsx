@@ -3,6 +3,12 @@ import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useOrganization } from '../contexts/OrganizationContext'
+import PortalLayout from '../components/portal/PortalLayout'
+import PortalHeader from '../components/portal/PortalHeader'
+import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
+import Card from '../components/portal/Card'
+import Button from '../components/portal/Button'
+import Icon from '../components/portal/Icon'
 
 type TryoutRow = {
   id: string
@@ -124,7 +130,6 @@ export default function TryoutDetail() {
 
     setTryout(tryoutData as unknown as TryoutRow)
 
-    // children (parent only)
     if (profile.family_id) {
       const { data: childData } = await supabase
         .from('children')
@@ -142,7 +147,6 @@ export default function TryoutDetail() {
       const regs = (regData as unknown as RegistrationRow[]) || []
       setRegistrations(regs)
 
-      // Required docs + docs for the first registration (or selected child)
       const { data: reqDocData } = await (supabase as any)
         .from('tryout_required_documents')
         .select('id, tryout_id, key, label, description, required')
@@ -184,7 +188,6 @@ export default function TryoutDetail() {
       if (error) throw error
       const registrationId = data as string
 
-      // Load docs for the new/updated registration
       const { data: regDocData } = await (supabase as any)
         .from('tryout_registration_documents')
         .select(
@@ -216,7 +219,6 @@ export default function TryoutDetail() {
 
     setUploadingDocId(requiredDoc.id)
     try {
-      // DB-first: set expected storage_path so Storage RLS can authorize the upload
       const { error: preError } = await (supabase as any)
         .from('tryout_registration_documents')
         .update({
@@ -272,81 +274,90 @@ export default function TryoutDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white dark:bg-slate-900">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <div className="animate-pulse h-6 w-48 bg-slate-200 dark:bg-slate-800 rounded mb-4" />
-          <div className="animate-pulse h-24 bg-slate-200 dark:bg-slate-800 rounded" />
-        </div>
-      </div>
+      <>
+        <PortalHeader />
+        <PortalLayout>
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+          </div>
+        </PortalLayout>
+      </>
     )
   }
 
   if (!tryout) {
     return (
-      <div className="min-h-screen bg-white dark:bg-slate-900">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <Link to="/portal/tryouts" className="text-slate-500 hover:text-slate-700 dark:hover:text-white">
-            ← Back to Tryouts
-          </Link>
-          <h1 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">Tryout not found</h1>
-        </div>
-      </div>
+      <>
+        <PortalHeader />
+        <PortalLayout
+          breadcrumbs={[
+            { label: 'Home', path: '/portal/dashboard' },
+            { label: 'Tryouts', path: '/portal/tryouts' },
+            { label: 'Not found' },
+          ]}
+        >
+          <CardTitle>Tryout not found</CardTitle>
+        </PortalLayout>
+      </>
     )
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-900">
-      <header className="bg-white dark:bg-slate-800/50 border-b border-neutral-200 dark:border-slate-700/50 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16">
-            <Link to="/portal/tryouts" className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors mr-4">
-              ← Tryouts
-            </Link>
-            <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-              {tryout.name ?? tryout.title}
-            </h1>
-          </div>
+    <>
+      <PortalHeader />
+      <PortalLayout
+        breadcrumbs={[
+          { label: 'Home', path: '/portal/dashboard' },
+          { label: 'Tryouts', path: '/portal/tryouts' },
+          { label: tryout.name ?? tryout.title },
+        ]}
+      >
+        <div className="mb-12">
+          <PageTitle>{tryout.name ?? tryout.title}</PageTitle>
         </div>
-      </header>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        <div className="bg-slate-800 rounded-xl p-5">
+        <Card className="mb-8 p-8">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div>
-              <p className="text-slate-300 font-bold">When</p>
-              <p className="text-white">{start ? formatDateTime(start) : 'TBD'}</p>
-              <p className="text-slate-400 text-sm">{tryout.location}</p>
-              {tryout.notes && <p className="text-slate-300 mt-3 whitespace-pre-wrap">{tryout.notes}</p>}
+            <div className="flex-1">
+              <SectionHeader className="mb-2">When</SectionHeader>
+              <p className="font-black text-slate-900 dark:text-white text-lg mb-2">{start ? formatDateTime(start) : 'TBD'}</p>
+              <div className="flex items-center gap-2 text-sm font-bold text-slate-500 dark:text-slate-400 mb-4">
+                <Icon name="location_on" size="text-sm" />
+                {tryout.location}
+              </div>
+              {tryout.notes && (
+                <p className="text-sm text-slate-500 dark:text-slate-400 whitespace-pre-wrap">{tryout.notes}</p>
+              )}
             </div>
-            <div className="text-sm text-slate-300">
-              <p>
+            <div className="text-sm">
+              <p className="font-bold text-slate-900 dark:text-white mb-1">
                 <span className="text-slate-400">Type:</span> {tryout.type}
               </p>
               {cap !== null && (
-                <p>
+                <p className="font-bold text-slate-900 dark:text-white">
                   <span className="text-slate-400">Capacity:</span> {cap}
                 </p>
               )}
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-slate-800 rounded-xl p-5">
-          <h2 className="text-white font-black uppercase tracking-tight mb-4">Registration</h2>
+        <Card className="mb-8 p-8">
+          <SectionHeader className="mb-6">Registration</SectionHeader>
 
           {!profile?.family_id ? (
-            <p className="text-slate-300">Only parent accounts can register a child for tryouts.</p>
+            <p className="text-slate-500 dark:text-slate-400">Only parent accounts can register a child for tryouts.</p>
           ) : (
             <>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">
+              <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
                 Select athlete
               </label>
               <select
                 value={selectedChildId}
                 onChange={(e) => setSelectedChildId(e.target.value)}
-                className="input-field mb-4"
+                className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white mb-4"
               >
-                <option value="">Choose athlete...</option>
+                <option value="">Choose athlete</option>
                 {children.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.first_name} {c.last_name}
@@ -355,34 +366,27 @@ export default function TryoutDetail() {
               </select>
 
               {selectedChildId && !selectedRegistration ? (
-                <button
-                  onClick={handleRegister}
-                  disabled={registering}
-                  className="px-6 py-2 bg-white text-slate-900 font-bold uppercase text-sm rounded-lg hover:bg-slate-100 disabled:opacity-60"
-                >
-                  {registering ? 'Registering...' : 'Register'}
-                </button>
+                <Button variant="primary" onClick={handleRegister} disabled={registering}>
+                  {registering ? 'Registering' : 'Register'}
+                </Button>
               ) : selectedRegistration ? (
-                <div className="text-slate-300">
-                  <p>
-                    Status:{' '}
-                    <span className="text-white font-bold">
-                      {selectedRegistration.status.replace('_', ' ')}
-                    </span>
+                <div className="text-slate-500 dark:text-slate-400">
+                  <p className="font-bold text-slate-900 dark:text-white mb-1">
+                    Status: <span className="uppercase">{selectedRegistration.status.replace('_', ' ')}</span>
                   </p>
                 </div>
               ) : (
-                <p className="text-slate-400 text-sm">Select an athlete to register or view status.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Select an athlete to register or view status.</p>
               )}
             </>
           )}
-        </div>
+        </Card>
 
         {selectedRegistration && (
-          <div className="bg-slate-800 rounded-xl p-5">
-            <h2 className="text-white font-black uppercase tracking-tight mb-4">Required Documents</h2>
+          <Card className="p-8">
+            <SectionHeader className="mb-6">Required Documents</SectionHeader>
             {requiredDocs.length === 0 ? (
-              <p className="text-slate-300">No documents required.</p>
+              <p className="text-slate-500 dark:text-slate-400">No documents required.</p>
             ) : (
               <div className="space-y-4">
                 {requiredDocs.map((rd) => {
@@ -390,32 +394,29 @@ export default function TryoutDetail() {
                   const status = d?.status ?? 'missing'
                   const uploading = uploadingDocId === rd.id
                   return (
-                    <div key={rd.id} className="border border-slate-700/50 rounded-lg p-4">
-                      <div className="flex items-start justify-between gap-3">
+                    <Card key={rd.id} className="p-4 border border-slate-200 dark:border-slate-700">
+                      <div className="flex items-start justify-between gap-3 mb-3">
                         <div>
-                          <p className="text-white font-bold">
+                          <CardTitle className="text-lg mb-1">
                             {rd.label}{' '}
-                            {rd.required && <span className="text-xs text-red-300">(required)</span>}
-                          </p>
-                          {rd.description && <p className="text-slate-400 text-sm">{rd.description}</p>}
-                          <p className="text-xs text-slate-500 mt-1">Status: {status}</p>
+                            {rd.required && <span className="text-xs font-bold text-red-500">(required)</span>}
+                          </CardTitle>
+                          {rd.description && <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-2">{rd.description}</p>}
+                          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Status: {status}</p>
                           {d?.file_name && (
-                            <p className="text-xs text-slate-400 mt-1">
+                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1">
                               File: {d.file_name} {d.uploaded_at ? `• uploaded ${formatDateTime(d.uploaded_at)}` : ''}
                             </p>
                           )}
                         </div>
                         {d?.storage_path && status === 'uploaded' && (
-                          <button
-                            onClick={() => handleDownload(d)}
-                            className="px-3 py-2 border border-slate-600 text-slate-200 rounded-lg hover:bg-slate-700 text-sm"
-                          >
+                          <Button variant="secondary" onClick={() => handleDownload(d)} className="text-sm px-4 py-2">
                             Download
-                          </button>
+                          </Button>
                         )}
                       </div>
 
-                      <div className="mt-3">
+                      <div>
                         <input
                           type="file"
                           disabled={uploading || !d}
@@ -424,24 +425,23 @@ export default function TryoutDetail() {
                             if (file) void handleUpload(rd, file)
                             e.currentTarget.value = ''
                           }}
-                          className="block w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-white file:text-slate-900 hover:file:bg-slate-100 disabled:opacity-60"
+                          className="block w-full text-sm text-slate-600 dark:text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-bold file:bg-white file:text-slate-900 hover:file:bg-slate-100 dark:file:bg-slate-800 dark:file:text-white disabled:opacity-60"
                         />
-                        {uploading && <p className="text-xs text-slate-400 mt-2">Uploading...</p>}
+                        {uploading && <p className="text-xs font-bold text-slate-400 mt-2 uppercase tracking-widest">Uploading</p>}
                         {!d && (
-                          <p className="text-xs text-amber-300 mt-2">
+                          <p className="text-xs font-bold text-amber-500 dark:text-amber-400 mt-2">
                             Document row not created yet. Try refreshing or re-registering.
                           </p>
                         )}
                       </div>
-                    </div>
+                    </Card>
                   )
                 })}
               </div>
             )}
-          </div>
+          </Card>
         )}
-      </main>
-    </div>
+      </PortalLayout>
+    </>
   )
 }
-

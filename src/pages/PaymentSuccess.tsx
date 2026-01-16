@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import PortalLayout from '../components/portal/PortalLayout'
+import PortalHeader from '../components/portal/PortalHeader'
+import { PageTitle, SectionHeader } from '../components/portal/Typography'
+import Card from '../components/portal/Card'
+import Button from '../components/portal/Button'
+import Icon from '../components/portal/Icon'
 
 interface SessionItem {
   amount_cents: number
@@ -61,44 +67,74 @@ export default function PaymentSuccess() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white flex items-center">
-      <div className="max-w-3xl mx-auto px-4 py-16 space-y-4">
-        <h1 className="text-3xl font-bold">Payment successful</h1>
-        <p className="text-slate-300">Thank you! Your payment has been received.</p>
-        {sessionId && <p className="text-sm text-slate-400">Stripe session: {sessionId}</p>}
-        {loading && <p className="text-slate-400">Loading receipt…</p>}
-        {session && (
-          <div className="card bg-slate-800/60 border border-slate-700/60 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-400">Receipt total</span>
-              <span className="text-xl font-semibold">${((session.total_cents ?? 0) / 100).toFixed(2)}</span>
+    <>
+      <PortalHeader />
+      <PortalLayout
+        breadcrumbs={[
+          { label: 'Home', path: '/portal/dashboard' },
+          { label: 'Payments', path: '/portal/payments' },
+          { label: 'Payment received' },
+        ]}
+      >
+        <div className="max-w-2xl mx-auto">
+          <div className="mb-12 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full mb-6">
+              <Icon name="check_circle" size="text-4xl" className="text-emerald-500 dark:text-emerald-400" />
             </div>
-            <div className="space-y-1">
-              {session.items?.map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between text-sm text-slate-300">
-                  <span>
-                    {item.fee_assignment?.fee?.title || 'Fee'}
-                    {item.fee_assignment?.child && (
-                      <span className="text-slate-500"> — {item.fee_assignment.child.first_name} {item.fee_assignment.child.last_name}</span>
-                    )}
-                  </span>
-                  <span>${((item.amount_cents ?? 0) / 100).toFixed(2)}</span>
-                </div>
-              ))}
-            </div>
-            {session.payments?.[0] && (
-              <div className="text-sm text-slate-400">
-                Paid at: {session.payments[0].paid_at ? new Date(session.payments[0].paid_at).toLocaleString() : 'Pending'}
-              </div>
-            )}
+            <PageTitle>Payment received</PageTitle>
+            <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide mt-2">
+              Payment processed successfully.
+            </p>
           </div>
-        )}
-        <div className="flex items-center gap-4">
-          <Link to="/portal/payments" className="btn-primary">Return to payments</Link>
-          <Link to="/portal/dashboard" className="text-slate-300 hover:text-white">Go to dashboard</Link>
+
+          {loading && (
+            <Card className="text-center py-12 mb-6">
+              <p className="text-slate-500 dark:text-slate-400">Loading receipt</p>
+            </Card>
+          )}
+
+          {session && (
+            <Card className="p-8 mb-8">
+              <SectionHeader className="mb-6">Receipt</SectionHeader>
+              <div className="flex items-center justify-between mb-6 pb-6 border-b border-slate-200 dark:border-slate-700">
+                <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Total</span>
+                <span className="text-2xl font-black text-slate-900 dark:text-white">${((session.total_cents ?? 0) / 100).toFixed(2)}</span>
+              </div>
+              <div className="space-y-3 mb-6">
+                {session.items?.map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between text-sm font-bold">
+                    <span className="text-slate-700 dark:text-slate-300">
+                      {item.fee_assignment?.fee?.title || 'Fee'}
+                      {item.fee_assignment?.child && (
+                        <span className="text-slate-400"> — {item.fee_assignment.child.first_name} {item.fee_assignment.child.last_name}</span>
+                      )}
+                    </span>
+                    <span className="text-slate-900 dark:text-white">${((item.amount_cents ?? 0) / 100).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+              {session.payments?.[0] && (
+                <div className="text-xs font-bold uppercase tracking-widest text-slate-400 pt-6 border-t border-slate-200 dark:border-slate-700">
+                  Paid at: {session.payments[0].paid_at ? new Date(session.payments[0].paid_at).toLocaleString() : 'Pending'}
+                </div>
+              )}
+            </Card>
+          )}
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Button variant="primary" as={Link} to="/portal/payments">
+              Return to payments
+            </Button>
+            <Link to="/portal/dashboard" className="text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+              Go to dashboard
+            </Link>
+          </div>
+
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400 text-center mt-6">
+            Redirecting to payments
+          </p>
         </div>
-        <p className="text-xs text-slate-500">You will be redirected to your payments in a few seconds.</p>
-      </div>
-    </div>
+      </PortalLayout>
+    </>
   )
 }

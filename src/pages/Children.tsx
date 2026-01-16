@@ -1,7 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import PortalLayout from '../components/portal/PortalLayout'
+import PortalHeader from '../components/portal/PortalHeader'
+import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
+import Card from '../components/portal/Card'
+import Button from '../components/portal/Button'
+import Icon from '../components/portal/Icon'
 
 interface Child {
   id: string
@@ -75,118 +80,128 @@ export default function Children() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900">
-      <header className="bg-slate-800/50 backdrop-blur-sm border-b border-slate-700/50 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <Link to="/portal/dashboard" className="text-slate-400 hover:text-white transition-colors">← Dashboard</Link>
-              <h1 className="text-xl font-bold text-white">My Children</h1>
-            </div>
-            <button onClick={() => setShowModal(true)} className="btn-primary">+ Add Child</button>
+    <>
+      <PortalHeader />
+      <PortalLayout
+        breadcrumbs={[
+          { label: 'Home', path: '/portal/dashboard' },
+          { label: 'Teams' },
+        ]}
+      >
+        <div className="mb-12 flex items-end justify-between">
+          <div>
+            <PageTitle>Teams</PageTitle>
+            <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
+              Manage your children's team memberships.
+            </p>
           </div>
+          <Button variant="primary" onClick={() => setShowModal(true)}>
+            Add
+          </Button>
         </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {!profile?.family_id ? (
-          <div className="card text-center py-12">
-            <p className="text-slate-400">Your account is not linked to a family yet. Contact your administrator.</p>
-          </div>
+          <Card className="text-center py-12">
+            <p className="text-slate-500 dark:text-slate-400">Account not linked to a family. Contact your administrator.</p>
+          </Card>
         ) : loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
           </div>
         ) : children.length === 0 ? (
-          <div className="card text-center py-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-700/50 rounded-full mb-4">
-              <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-              </svg>
+          <Card className="text-center py-12">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full mb-4">
+              <Icon name="group" size="text-4xl" className="text-slate-400" />
             </div>
-            <h3 className="text-lg font-medium text-white mb-2">No children added</h3>
-            <p className="text-slate-400 mb-6">Add your children to register them for teams.</p>
-            <button onClick={() => setShowModal(true)} className="btn-primary">Add Child</button>
-          </div>
+            <CardTitle className="mb-2">No children added</CardTitle>
+            <p className="text-slate-500 dark:text-slate-400 mb-6">Add children to register them for teams.</p>
+            <Button variant="primary" onClick={() => setShowModal(true)}>
+              Add
+            </Button>
+          </Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {children.map((child) => (
-              <div key={child.id} className="card">
+              <Card key={child.id} className="p-6 hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-primary-600/20 rounded-full flex items-center justify-center">
-                    <span className="text-lg font-bold text-primary-400">{child.first_name[0]}</span>
+                  <div className="w-12 h-12 bg-[#137fec]/20 rounded-full flex items-center justify-center">
+                    <span className="text-lg font-black text-[#137fec]">{child.first_name[0]}</span>
                   </div>
                   <div>
-                    <h3 className="font-medium text-white">{child.first_name} {child.last_name}</h3>
+                    <CardTitle className="text-lg mb-1">{child.first_name} {child.last_name}</CardTitle>
                     {child.birthdate && (
-                      <p className="text-sm text-slate-400">Age: {calculateAge(child.birthdate)}</p>
+                      <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
+                        Age {calculateAge(child.birthdate)}
+                      </p>
                     )}
                   </div>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         )}
-      </main>
 
-      {/* Add Child Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="card max-w-md w-full">
-            <h2 className="text-xl font-semibold text-white mb-4">Add Child</h2>
-            
-            {error && (
-              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
-                {error}
-              </div>
-            )}
+        {/* Add Child Modal */}
+        {showModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
+            <Card className="max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+              <CardTitle className="mb-6">Add</CardTitle>
+              
+              {error && (
+                <Card className="mb-4 border-red-500/50 bg-red-50 dark:bg-red-950/20 p-3">
+                  <p className="text-red-600 dark:text-red-400 text-sm font-bold">{error}</p>
+                </Card>
+              )}
 
-            <div className="space-y-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">First Name</label>
-                <input
-                  type="text"
-                  value={form.first_name}
-                  onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-                  className="input-field"
-                  placeholder="First name"
-                  autoFocus
-                />
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">First Name</label>
+                  <input
+                    type="text"
+                    value={form.first_name}
+                    onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+                    className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                    placeholder="First name"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Last Name</label>
+                  <input
+                    type="text"
+                    value={form.last_name}
+                    onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+                    className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                    placeholder="Last name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Birthdate</label>
+                  <input
+                    type="date"
+                    value={form.birthdate}
+                    onChange={(e) => setForm({ ...form, birthdate: e.target.value })}
+                    className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">Last Name</label>
-                <input
-                  type="text"
-                  value={form.last_name}
-                  onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-                  className="input-field"
-                  placeholder="Last name"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">Birthdate (optional)</label>
-                <input
-                  type="date"
-                  value={form.birthdate}
-                  onChange={(e) => setForm({ ...form, birthdate: e.target.value })}
-                  className="input-field"
-                />
-              </div>
-            </div>
 
-            <div className="flex gap-3 justify-end">
-              <button onClick={() => setShowModal(false)} className="btn-secondary">Cancel</button>
-              <button 
-                onClick={handleSave} 
-                disabled={saving || !form.first_name.trim() || !form.last_name.trim()} 
-                className="btn-primary"
-              >
-                {saving ? 'Saving...' : 'Add Child'}
-              </button>
-            </div>
+              <div className="flex gap-3 justify-end">
+                <Button variant="secondary" onClick={() => setShowModal(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleSave}
+                  disabled={saving || !form.first_name.trim() || !form.last_name.trim()}
+                >
+                  {saving ? 'Saving' : 'Save'}
+                </Button>
+              </div>
+            </Card>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </PortalLayout>
+    </>
   )
 }

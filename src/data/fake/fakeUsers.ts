@@ -1,0 +1,644 @@
+/**
+ * Fake Users Data Module
+ *
+ * Provides fake data for users, profiles, families, and children.
+ * All data is scoped to Organization A and demo users.
+ */
+
+import { DEMO_USER_IDS, DEMO_ORG_A_ID, DEMO_ORG_B_ID } from '../config'
+import type { OrgMemberRole } from '../../contexts/OrganizationContext'
+
+// ============================================================================
+// Types
+// ============================================================================
+
+export interface FakeUser {
+    id: string
+    email: string
+    phone: string | null
+    display_name: string
+    created_at: string
+    updated_at: string
+}
+
+export interface FakeFamily {
+    id: string
+    name: string
+    created_by_user_id: string
+    org_id: string
+    created_at: string
+    updated_at: string
+}
+
+export interface FakeChild {
+    id: string
+    family_id: string
+    first_name: string
+    last_name: string
+    date_of_birth: string
+    gender: 'male' | 'female' | 'other' | null
+    jersey_number: string | null
+    medical_notes: string | null
+    allergies: string | null
+    emergency_contact_name: string | null
+    emergency_contact_phone: string | null
+    created_at: string
+    updated_at: string
+}
+
+export interface FakeFamilyMember {
+    id: string
+    family_id: string
+    user_id: string
+    role: 'owner' | 'guardian' | 'view_only'
+    permissions: string[]
+    created_at: string
+}
+
+export interface FakeOrganizationMember {
+    id: string
+    org_id: string
+    user_id: string
+    roles: OrgMemberRole[]
+    status: 'active' | 'invited' | 'suspended'
+    created_at: string
+    updated_at: string
+}
+
+// ============================================================================
+// Demo User IDs (stable references)
+// ============================================================================
+
+const PARENT_ONLY_ID = DEMO_USER_IDS['parent-only@example.com']
+const COACH_ONLY_ID = DEMO_USER_IDS['coach-only@example.com']
+const ADMIN_ONLY_ID = DEMO_USER_IDS['admin-only@example.com']
+const PARENT_ADMIN_ID = DEMO_USER_IDS['parent-admin@example.com']
+const PARENT_COACH_ID = DEMO_USER_IDS['parent-coach@example.com']
+
+// ============================================================================
+// Generated IDs (stable for relationships)
+// ============================================================================
+
+// Families
+export const FAMILY_JOHNSON_ID = 'family-johnson-001'
+export const FAMILY_SMITH_ID = 'family-smith-002'
+export const FAMILY_WILLIAMS_ID = 'family-williams-003'
+export const FAMILY_CHEN_ID = 'family-chen-004'
+export const FAMILY_RODRIGUEZ_ID = 'family-rodriguez-005'
+export const FAMILY_PATEL_ID = 'family-patel-006'
+
+// Children
+export const CHILD_EMMA_JOHNSON_ID = 'child-emma-johnson-001'
+export const CHILD_LIAM_JOHNSON_ID = 'child-liam-johnson-002'
+export const CHILD_OLIVIA_SMITH_ID = 'child-olivia-smith-003'
+export const CHILD_NOAH_SMITH_ID = 'child-noah-smith-004'
+export const CHILD_AVA_WILLIAMS_ID = 'child-ava-williams-005'
+export const CHILD_ETHAN_WILLIAMS_ID = 'child-ethan-williams-006'
+export const CHILD_SOPHIA_CHEN_ID = 'child-sophia-chen-007'
+export const CHILD_MASON_RODRIGUEZ_ID = 'child-mason-rodriguez-008'
+export const CHILD_ISABELLA_RODRIGUEZ_ID = 'child-isabella-rodriguez-009'
+export const CHILD_AIDEN_PATEL_ID = 'child-aiden-patel-010'
+
+// Additional users (not demo login users)
+export const USER_SARAH_JOHNSON_ID = 'user-sarah-johnson-001'
+export const USER_MIKE_SMITH_ID = 'user-mike-smith-002'
+export const USER_COACH_MARTINEZ_ID = 'user-coach-martinez-003'
+export const USER_COACH_THOMPSON_ID = 'user-coach-thompson-004'
+
+// ============================================================================
+// Fake Users Data
+// ============================================================================
+
+export const fakeUsers: FakeUser[] = [
+    // Demo login users
+    {
+        id: PARENT_ONLY_ID,
+        email: 'parent-only@example.com',
+        phone: '+1 (555) 123-4567',
+        display_name: 'Jennifer Johnson',
+        created_at: '2024-01-15T10:00:00Z',
+        updated_at: '2024-01-15T10:00:00Z',
+    },
+    {
+        id: COACH_ONLY_ID,
+        email: 'coach-only@example.com',
+        phone: '+1 (555) 234-5678',
+        display_name: 'Coach Michael Davis',
+        created_at: '2024-01-10T09:00:00Z',
+        updated_at: '2024-01-10T09:00:00Z',
+    },
+    {
+        id: ADMIN_ONLY_ID,
+        email: 'admin-only@example.com',
+        phone: '+1 (555) 345-6789',
+        display_name: 'Admin Sarah Wilson',
+        created_at: '2023-12-01T08:00:00Z',
+        updated_at: '2023-12-01T08:00:00Z',
+    },
+    {
+        id: PARENT_ADMIN_ID,
+        email: 'parent-admin@example.com',
+        phone: '+1 (555) 456-7890',
+        display_name: 'Robert Chen',
+        created_at: '2023-11-15T10:00:00Z',
+        updated_at: '2023-11-15T10:00:00Z',
+    },
+    {
+        id: PARENT_COACH_ID,
+        email: 'parent-coach@example.com',
+        phone: '+1 (555) 567-8901',
+        display_name: 'Maria Rodriguez',
+        created_at: '2024-02-01T11:00:00Z',
+        updated_at: '2024-02-01T11:00:00Z',
+    },
+    // Additional users in system
+    {
+        id: USER_SARAH_JOHNSON_ID,
+        email: 'sarah.johnson@email.com',
+        phone: '+1 (555) 111-2222',
+        display_name: 'Sarah Johnson',
+        created_at: '2024-01-15T10:30:00Z',
+        updated_at: '2024-01-15T10:30:00Z',
+    },
+    {
+        id: USER_MIKE_SMITH_ID,
+        email: 'mike.smith@email.com',
+        phone: '+1 (555) 333-4444',
+        display_name: 'Mike Smith',
+        created_at: '2024-02-10T14:00:00Z',
+        updated_at: '2024-02-10T14:00:00Z',
+    },
+    {
+        id: USER_COACH_MARTINEZ_ID,
+        email: 'coach.martinez@email.com',
+        phone: '+1 (555) 555-6666',
+        display_name: 'Coach Alex Martinez',
+        created_at: '2023-09-01T09:00:00Z',
+        updated_at: '2023-09-01T09:00:00Z',
+    },
+    {
+        id: USER_COACH_THOMPSON_ID,
+        email: 'coach.thompson@email.com',
+        phone: '+1 (555) 777-8888',
+        display_name: 'Coach Emily Thompson',
+        created_at: '2023-10-15T10:00:00Z',
+        updated_at: '2023-10-15T10:00:00Z',
+    },
+]
+
+// ============================================================================
+// Fake Families Data
+// ============================================================================
+
+export const fakeFamilies: FakeFamily[] = [
+    {
+        id: FAMILY_JOHNSON_ID,
+        name: 'Johnson Family',
+        created_by_user_id: PARENT_ONLY_ID,
+        org_id: DEMO_ORG_A_ID,
+        created_at: '2024-01-15T10:00:00Z',
+        updated_at: '2024-01-15T10:00:00Z',
+    },
+    {
+        id: FAMILY_SMITH_ID,
+        name: 'Smith Family',
+        created_by_user_id: USER_MIKE_SMITH_ID,
+        org_id: DEMO_ORG_A_ID,
+        created_at: '2024-02-10T14:00:00Z',
+        updated_at: '2024-02-10T14:00:00Z',
+    },
+    {
+        id: FAMILY_WILLIAMS_ID,
+        name: 'Williams Family',
+        created_by_user_id: PARENT_ADMIN_ID, // Parent-admin has a different family too
+        org_id: DEMO_ORG_A_ID,
+        created_at: '2024-01-20T11:00:00Z',
+        updated_at: '2024-01-20T11:00:00Z',
+    },
+    {
+        id: FAMILY_CHEN_ID,
+        name: 'Chen Family',
+        created_by_user_id: PARENT_ADMIN_ID,
+        org_id: DEMO_ORG_A_ID,
+        created_at: '2023-11-15T10:00:00Z',
+        updated_at: '2023-11-15T10:00:00Z',
+    },
+    {
+        id: FAMILY_RODRIGUEZ_ID,
+        name: 'Rodriguez Family',
+        created_by_user_id: PARENT_COACH_ID,
+        org_id: DEMO_ORG_A_ID,
+        created_at: '2024-02-01T11:00:00Z',
+        updated_at: '2024-02-01T11:00:00Z',
+    },
+    {
+        id: FAMILY_PATEL_ID,
+        name: 'Patel Family',
+        created_by_user_id: 'user-other-parent-001', // Another parent in system
+        org_id: DEMO_ORG_A_ID,
+        created_at: '2024-03-01T09:00:00Z',
+        updated_at: '2024-03-01T09:00:00Z',
+    },
+]
+
+// ============================================================================
+// Fake Children Data
+// ============================================================================
+
+export const fakeChildren: FakeChild[] = [
+    // Johnson Family (parent-only@example.com)
+    {
+        id: CHILD_EMMA_JOHNSON_ID,
+        family_id: FAMILY_JOHNSON_ID,
+        first_name: 'Emma',
+        last_name: 'Johnson',
+        date_of_birth: '2014-03-15',
+        gender: 'female',
+        jersey_number: '7',
+        medical_notes: null,
+        allergies: 'Peanuts',
+        emergency_contact_name: 'Jennifer Johnson',
+        emergency_contact_phone: '+1 (555) 123-4567',
+        created_at: '2024-01-15T10:00:00Z',
+        updated_at: '2024-01-15T10:00:00Z',
+    },
+    {
+        id: CHILD_LIAM_JOHNSON_ID,
+        family_id: FAMILY_JOHNSON_ID,
+        first_name: 'Liam',
+        last_name: 'Johnson',
+        date_of_birth: '2016-08-22',
+        gender: 'male',
+        jersey_number: '12',
+        medical_notes: 'Asthma - carries inhaler',
+        allergies: null,
+        emergency_contact_name: 'Jennifer Johnson',
+        emergency_contact_phone: '+1 (555) 123-4567',
+        created_at: '2024-01-15T10:00:00Z',
+        updated_at: '2024-01-15T10:00:00Z',
+    },
+    // Smith Family
+    {
+        id: CHILD_OLIVIA_SMITH_ID,
+        family_id: FAMILY_SMITH_ID,
+        first_name: 'Olivia',
+        last_name: 'Smith',
+        date_of_birth: '2013-11-08',
+        gender: 'female',
+        jersey_number: '23',
+        medical_notes: null,
+        allergies: null,
+        emergency_contact_name: 'Mike Smith',
+        emergency_contact_phone: '+1 (555) 333-4444',
+        created_at: '2024-02-10T14:00:00Z',
+        updated_at: '2024-02-10T14:00:00Z',
+    },
+    {
+        id: CHILD_NOAH_SMITH_ID,
+        family_id: FAMILY_SMITH_ID,
+        first_name: 'Noah',
+        last_name: 'Smith',
+        date_of_birth: '2015-05-17',
+        gender: 'male',
+        jersey_number: '8',
+        medical_notes: null,
+        allergies: 'Shellfish',
+        emergency_contact_name: 'Mike Smith',
+        emergency_contact_phone: '+1 (555) 333-4444',
+        created_at: '2024-02-10T14:00:00Z',
+        updated_at: '2024-02-10T14:00:00Z',
+    },
+    // Williams Family (parent-admin additional family)
+    {
+        id: CHILD_AVA_WILLIAMS_ID,
+        family_id: FAMILY_WILLIAMS_ID,
+        first_name: 'Ava',
+        last_name: 'Williams',
+        date_of_birth: '2014-07-30',
+        gender: 'female',
+        jersey_number: '15',
+        medical_notes: null,
+        allergies: null,
+        emergency_contact_name: 'Robert Chen',
+        emergency_contact_phone: '+1 (555) 456-7890',
+        created_at: '2024-01-20T11:00:00Z',
+        updated_at: '2024-01-20T11:00:00Z',
+    },
+    {
+        id: CHILD_ETHAN_WILLIAMS_ID,
+        family_id: FAMILY_WILLIAMS_ID,
+        first_name: 'Ethan',
+        last_name: 'Williams',
+        date_of_birth: '2017-01-12',
+        gender: 'male',
+        jersey_number: '3',
+        medical_notes: null,
+        allergies: 'Dairy',
+        emergency_contact_name: 'Robert Chen',
+        emergency_contact_phone: '+1 (555) 456-7890',
+        created_at: '2024-01-20T11:00:00Z',
+        updated_at: '2024-01-20T11:00:00Z',
+    },
+    // Chen Family (parent-admin@example.com - primary family)
+    {
+        id: CHILD_SOPHIA_CHEN_ID,
+        family_id: FAMILY_CHEN_ID,
+        first_name: 'Sophia',
+        last_name: 'Chen',
+        date_of_birth: '2015-09-25',
+        gender: 'female',
+        jersey_number: '10',
+        medical_notes: null,
+        allergies: null,
+        emergency_contact_name: 'Robert Chen',
+        emergency_contact_phone: '+1 (555) 456-7890',
+        created_at: '2023-11-15T10:00:00Z',
+        updated_at: '2023-11-15T10:00:00Z',
+    },
+    // Rodriguez Family (parent-coach@example.com)
+    {
+        id: CHILD_MASON_RODRIGUEZ_ID,
+        family_id: FAMILY_RODRIGUEZ_ID,
+        first_name: 'Mason',
+        last_name: 'Rodriguez',
+        date_of_birth: '2014-12-03',
+        gender: 'male',
+        jersey_number: '22',
+        medical_notes: null,
+        allergies: null,
+        emergency_contact_name: 'Maria Rodriguez',
+        emergency_contact_phone: '+1 (555) 567-8901',
+        created_at: '2024-02-01T11:00:00Z',
+        updated_at: '2024-02-01T11:00:00Z',
+    },
+    {
+        id: CHILD_ISABELLA_RODRIGUEZ_ID,
+        family_id: FAMILY_RODRIGUEZ_ID,
+        first_name: 'Isabella',
+        last_name: 'Rodriguez',
+        date_of_birth: '2016-04-18',
+        gender: 'female',
+        jersey_number: '17',
+        medical_notes: null,
+        allergies: null,
+        emergency_contact_name: 'Maria Rodriguez',
+        emergency_contact_phone: '+1 (555) 567-8901',
+        created_at: '2024-02-01T11:00:00Z',
+        updated_at: '2024-02-01T11:00:00Z',
+    },
+    // Patel Family (another parent)
+    {
+        id: CHILD_AIDEN_PATEL_ID,
+        family_id: FAMILY_PATEL_ID,
+        first_name: 'Aiden',
+        last_name: 'Patel',
+        date_of_birth: '2015-02-14',
+        gender: 'male',
+        jersey_number: '5',
+        medical_notes: null,
+        allergies: 'Tree nuts',
+        emergency_contact_name: 'Priya Patel',
+        emergency_contact_phone: '+1 (555) 999-0000',
+        created_at: '2024-03-01T09:00:00Z',
+        updated_at: '2024-03-01T09:00:00Z',
+    },
+]
+
+// ============================================================================
+// Fake Family Members Data
+// ============================================================================
+
+export const fakeFamilyMembers: FakeFamilyMember[] = [
+    // Johnson Family
+    {
+        id: 'fm-johnson-001',
+        family_id: FAMILY_JOHNSON_ID,
+        user_id: PARENT_ONLY_ID,
+        role: 'owner',
+        permissions: ['rsvp', 'payments', 'edit_children'],
+        created_at: '2024-01-15T10:00:00Z',
+    },
+    {
+        id: 'fm-johnson-002',
+        family_id: FAMILY_JOHNSON_ID,
+        user_id: USER_SARAH_JOHNSON_ID,
+        role: 'guardian',
+        permissions: ['rsvp', 'payments'],
+        created_at: '2024-01-15T10:30:00Z',
+    },
+    // Smith Family
+    {
+        id: 'fm-smith-001',
+        family_id: FAMILY_SMITH_ID,
+        user_id: USER_MIKE_SMITH_ID,
+        role: 'owner',
+        permissions: ['rsvp', 'payments', 'edit_children'],
+        created_at: '2024-02-10T14:00:00Z',
+    },
+    // Chen Family
+    {
+        id: 'fm-chen-001',
+        family_id: FAMILY_CHEN_ID,
+        user_id: PARENT_ADMIN_ID,
+        role: 'owner',
+        permissions: ['rsvp', 'payments', 'edit_children'],
+        created_at: '2023-11-15T10:00:00Z',
+    },
+    // Williams Family (parent-admin as guardian of another family)
+    {
+        id: 'fm-williams-001',
+        family_id: FAMILY_WILLIAMS_ID,
+        user_id: PARENT_ADMIN_ID,
+        role: 'guardian',
+        permissions: ['rsvp'],
+        created_at: '2024-01-20T11:00:00Z',
+    },
+    // Rodriguez Family
+    {
+        id: 'fm-rodriguez-001',
+        family_id: FAMILY_RODRIGUEZ_ID,
+        user_id: PARENT_COACH_ID,
+        role: 'owner',
+        permissions: ['rsvp', 'payments', 'edit_children'],
+        created_at: '2024-02-01T11:00:00Z',
+    },
+    // Patel Family
+    {
+        id: 'fm-patel-001',
+        family_id: FAMILY_PATEL_ID,
+        user_id: 'user-other-parent-001',
+        role: 'owner',
+        permissions: ['rsvp', 'payments', 'edit_children'],
+        created_at: '2024-03-01T09:00:00Z',
+    },
+]
+
+// ============================================================================
+// Fake Organization Members Data
+// ============================================================================
+
+export const fakeOrganizationMembers: FakeOrganizationMember[] = [
+    // Organization A - Demo users
+    {
+        id: 'om-001',
+        org_id: DEMO_ORG_A_ID,
+        user_id: PARENT_ONLY_ID,
+        roles: ['parent'],
+        status: 'active',
+        created_at: '2024-01-15T10:00:00Z',
+        updated_at: '2024-01-15T10:00:00Z',
+    },
+    {
+        id: 'om-002',
+        org_id: DEMO_ORG_A_ID,
+        user_id: COACH_ONLY_ID,
+        roles: ['coach'],
+        status: 'active',
+        created_at: '2024-01-10T09:00:00Z',
+        updated_at: '2024-01-10T09:00:00Z',
+    },
+    {
+        id: 'om-003',
+        org_id: DEMO_ORG_A_ID,
+        user_id: ADMIN_ONLY_ID,
+        roles: ['org_admin'],
+        status: 'active',
+        created_at: '2023-12-01T08:00:00Z',
+        updated_at: '2023-12-01T08:00:00Z',
+    },
+    {
+        id: 'om-004',
+        org_id: DEMO_ORG_A_ID,
+        user_id: PARENT_ADMIN_ID,
+        roles: ['parent', 'org_admin'],
+        status: 'active',
+        created_at: '2023-11-15T10:00:00Z',
+        updated_at: '2023-11-15T10:00:00Z',
+    },
+    {
+        id: 'om-005',
+        org_id: DEMO_ORG_A_ID,
+        user_id: PARENT_COACH_ID,
+        roles: ['parent', 'coach'],
+        status: 'active',
+        created_at: '2024-02-01T11:00:00Z',
+        updated_at: '2024-02-01T11:00:00Z',
+    },
+    // Organization A - Other users
+    {
+        id: 'om-006',
+        org_id: DEMO_ORG_A_ID,
+        user_id: USER_MIKE_SMITH_ID,
+        roles: ['parent'],
+        status: 'active',
+        created_at: '2024-02-10T14:00:00Z',
+        updated_at: '2024-02-10T14:00:00Z',
+    },
+    {
+        id: 'om-007',
+        org_id: DEMO_ORG_A_ID,
+        user_id: USER_COACH_MARTINEZ_ID,
+        roles: ['coach'],
+        status: 'active',
+        created_at: '2023-09-01T09:00:00Z',
+        updated_at: '2023-09-01T09:00:00Z',
+    },
+    {
+        id: 'om-008',
+        org_id: DEMO_ORG_A_ID,
+        user_id: USER_COACH_THOMPSON_ID,
+        roles: ['coach'],
+        status: 'active',
+        created_at: '2023-10-15T10:00:00Z',
+        updated_at: '2023-10-15T10:00:00Z',
+    },
+    // Organization B - Multi-org parent
+    {
+        id: 'om-009',
+        org_id: DEMO_ORG_B_ID,
+        user_id: PARENT_ONLY_ID,
+        roles: ['parent'],
+        status: 'active',
+        created_at: '2024-03-01T09:00:00Z',
+        updated_at: '2024-03-01T09:00:00Z',
+    },
+]
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+export function getUserById(userId: string): FakeUser | undefined {
+    return fakeUsers.find((u) => u.id === userId)
+}
+
+export function getUserByEmail(email: string): FakeUser | undefined {
+    return fakeUsers.find((u) => u.email.toLowerCase() === email.toLowerCase())
+}
+
+export function getFamiliesForUser(userId: string): FakeFamily[] {
+    const membershipFamilyIds = fakeFamilyMembers
+        .filter((fm) => fm.user_id === userId)
+        .map((fm) => fm.family_id)
+    return fakeFamilies.filter((f) => membershipFamilyIds.includes(f.id))
+}
+
+export function getChildrenForUser(userId: string): FakeChild[] {
+    const familyIds = getFamiliesForUser(userId).map((f) => f.id)
+    return fakeChildren.filter((c) => familyIds.includes(c.family_id))
+}
+
+export function getChildrenForFamily(familyId: string): FakeChild[] {
+    return fakeChildren.filter((c) => c.family_id === familyId)
+}
+
+export function getChildById(childId: string): FakeChild | undefined {
+    return fakeChildren.find((c) => c.id === childId)
+}
+
+export function getFamilyById(familyId: string): FakeFamily | undefined {
+    return fakeFamilies.find((f) => f.id === familyId)
+}
+
+export function getFamilyMembersForFamily(familyId: string): FakeFamilyMember[] {
+    return fakeFamilyMembers.filter((fm) => fm.family_id === familyId)
+}
+
+export function getOrganizationMembersForOrg(orgId: string): FakeOrganizationMember[] {
+    return fakeOrganizationMembers.filter((om) => om.org_id === orgId)
+}
+
+export function getOrganizationMembershipForUser(
+    userId: string,
+    orgId: string
+): FakeOrganizationMember | undefined {
+    return fakeOrganizationMembers.find((om) => om.user_id === userId && om.org_id === orgId)
+}
+
+export function getUserRolesInOrg(userId: string, orgId: string): OrgMemberRole[] {
+    const membership = getOrganizationMembershipForUser(userId, orgId)
+    return membership?.roles ?? []
+}
+
+export function getAllChildIds(): string[] {
+    return fakeChildren.map((c) => c.id)
+}
+
+export function getChildIdsForUser(userId: string): string[] {
+    return getChildrenForUser(userId).map((c) => c.id)
+}
+
+export function getFamilyIdsForUser(userId: string): string[] {
+    return getFamiliesForUser(userId).map((f) => f.id)
+}
+
+/**
+ * Get child with family and team info (for display)
+ */
+export function getChildWithDetails(childId: string): (FakeChild & { family?: FakeFamily }) | undefined {
+    const child = getChildById(childId)
+    if (!child) return undefined
+
+    const family = getFamilyById(child.family_id)
+    return { ...child, family }
+}

@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import type { Database } from '../lib/database.types.ts'
 import { createParentCheckoutSession } from '../api/payments'
+import PortalLayout from '../components/portal/PortalLayout'
+import PortalHeader from '../components/portal/PortalHeader'
+import { PageTitle, SectionHeader } from '../components/portal/Typography'
+import Card from '../components/portal/Card'
+import Button from '../components/portal/Button'
+import Icon from '../components/portal/Icon'
 
 type FeeAssignmentStatus = Database['public']['Enums']['fee_assignment_status']
 
@@ -175,115 +180,121 @@ export default function MyPayments() {
   }
 
   const renderStatus = (status: FeeAssignmentStatus) => {
-    const base = 'px-2 py-1 rounded text-xs font-semibold'
+    const base = 'px-2 py-1 rounded text-xs font-bold uppercase tracking-widest'
     switch (status) {
       case 'paid':
-        return <span className={`${base} bg-emerald-500/10 text-emerald-300`}>{statusLabels[status]}</span>
+        return <span className={`${base} bg-emerald-500/10 text-emerald-500 dark:text-emerald-400`}>{statusLabels[status]}</span>
       case 'partial':
-        return <span className={`${base} bg-amber-500/10 text-amber-300`}>{statusLabels[status]}</span>
+        return <span className={`${base} bg-amber-500/10 text-amber-500 dark:text-amber-400`}>{statusLabels[status]}</span>
       case 'unpaid':
-        return <span className={`${base} bg-rose-500/10 text-rose-300`}>{statusLabels[status]}</span>
+        return <span className={`${base} bg-red-500/10 text-red-500 dark:text-red-400`}>{statusLabels[status]}</span>
       default:
-        return <span className={`${base} bg-slate-500/10 text-slate-200`}>{statusLabels[status]}</span>
+        return <span className={`${base} bg-slate-500/10 text-slate-500 dark:text-slate-400`}>{statusLabels[status]}</span>
     }
   }
 
   return (
-    <div className="min-h-screen bg-slate-900">
-      <header className="bg-slate-800/50 backdrop-blur-sm border-b border-slate-700/50 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16">
-            <Link to="/portal/dashboard" className="text-slate-400 hover:text-white transition-colors mr-4">← Dashboard</Link>
-            <h1 className="text-xl font-bold text-white">My Payments</h1>
-          </div>
+    <>
+      <PortalHeader />
+      <PortalLayout
+        breadcrumbs={[
+          { label: 'Home', path: '/portal/dashboard' },
+          { label: 'Payments' },
+        ]}
+      >
+        <div className="mb-12">
+          <PageTitle>Payments</PageTitle>
+          <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
+            Select fees to pay or filter to find a specific fee.
+          </p>
         </div>
-      </header>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {error && (
-          <div className="card border border-rose-700/40 bg-rose-950/40 text-rose-100">
-            {error}
-          </div>
+          <Card className="mb-6 border-red-500/50 bg-red-50 dark:bg-red-950/20 p-4">
+            <p className="text-red-600 dark:text-red-400 text-sm font-bold">{error}</p>
+          </Card>
         )}
 
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-sm text-slate-400">Select fees to pay or filter to find a specific fee.</p>
-          </div>
-          <div className="flex flex-wrap gap-3 items-center">
-            <select
-              className="input bg-slate-800/60 border-slate-700 text-sm"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as FeeAssignmentStatus | 'all')}
-            >
-              <option value="all">All statuses</option>
-              <option value="unpaid">Unpaid</option>
-              <option value="partial">Partial</option>
-              <option value="paid">Paid</option>
-              <option value="waived">Waived</option>
-              <option value="refunded">Refunded</option>
-            </select>
-            <select
-              className="input bg-slate-800/60 border-slate-700 text-sm"
-              value={childFilter}
-              onChange={(e) => setChildFilter(e.target.value)}
-            >
-              <option value="all">All children</option>
-              {childOptions.map(([id, name]) => (
-                <option key={id} value={id}>{name}</option>
-              ))}
-            </select>
-            <select
-              className="input bg-slate-800/60 border-slate-700 text-sm"
-              value={teamFilter}
-              onChange={(e) => setTeamFilter(e.target.value)}
-            >
-              <option value="all">All teams</option>
-              {teamOptions.map((name) => (
-                <option key={name} value={name}>{name}</option>
-              ))}
-            </select>
-            <button
-              className="btn-secondary text-sm"
-              onClick={toggleSelectAll}
-            >
-              {selectedIds.length === unpaidAssignments.length && unpaidAssignments.length > 0 ? 'Clear Selection' : 'Select All Due'}
-            </button>
+        <div className="mb-8">
+          <SectionHeader className="mb-4">Filters</SectionHeader>
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-wrap gap-3 items-center">
+              <select
+                className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white font-medium"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as FeeAssignmentStatus | 'all')}
+              >
+                <option value="all">All statuses</option>
+                <option value="unpaid">Unpaid</option>
+                <option value="partial">Partial</option>
+                <option value="paid">Paid</option>
+                <option value="waived">Waived</option>
+                <option value="refunded">Refunded</option>
+              </select>
+              <select
+                className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white font-medium"
+                value={childFilter}
+                onChange={(e) => setChildFilter(e.target.value)}
+              >
+                <option value="all">All children</option>
+                {childOptions.map(([id, name]) => (
+                  <option key={id} value={id}>{name}</option>
+                ))}
+              </select>
+              <select
+                className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white font-medium"
+                value={teamFilter}
+                onChange={(e) => setTeamFilter(e.target.value)}
+              >
+                <option value="all">All teams</option>
+                {teamOptions.map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+              <Button variant="secondary" onClick={toggleSelectAll} className="text-sm px-6 py-2">
+                {selectedIds.length === unpaidAssignments.length && unpaidAssignments.length > 0 ? 'Clear Selection' : 'Select All Due'}
+              </Button>
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-3">
-            <input
-              className="input bg-slate-800/60 border-slate-700 text-sm"
-              placeholder="Discount code"
-              value={discountCode}
-              onChange={(e) => setDiscountCode(e.target.value)}
-            />
-            <button className="btn-secondary text-sm" onClick={handleApplyDiscount}>Apply</button>
-            {appliedDiscount && (
-              <span className="text-emerald-300 text-sm">Applied: {appliedDiscount}</span>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="text-xs text-slate-400">Selected total</p>
-              <p className="text-lg font-semibold text-white">${(selectedTotal / 100).toFixed(2)}</p>
+        <div className="mb-8">
+          <SectionHeader className="mb-4">Checkout</SectionHeader>
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-3">
+              <input
+                className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                placeholder="Discount code"
+                value={discountCode}
+                onChange={(e) => setDiscountCode(e.target.value)}
+              />
+              <Button variant="secondary" onClick={handleApplyDiscount} className="text-sm px-6 py-2">
+                Apply
+              </Button>
+              {appliedDiscount && (
+                <span className="text-emerald-500 dark:text-emerald-400 text-sm font-bold">Applied: {appliedDiscount}</span>
+              )}
             </div>
-            <button
-              className="btn-primary"
-              disabled={creatingCheckout || loading || (selectedAssignments.length === 0 && unpaidAssignments.length === 0)}
-              onClick={handlePayNow}
-            >
-              {creatingCheckout ? 'Starting checkout…' : 'Pay Now'}
-            </button>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">Selected total</p>
+                <p className="text-lg font-black text-slate-900 dark:text-white">${(selectedTotal / 100).toFixed(2)}</p>
+              </div>
+              <Button
+                variant="primary"
+                disabled={creatingCheckout || loading || (selectedAssignments.length === 0 && unpaidAssignments.length === 0)}
+                onClick={handlePayNow}
+              >
+                {creatingCheckout ? 'Starting checkout' : 'Pay'}
+              </Button>
+            </div>
           </div>
         </div>
 
         {checkoutError && (
-          <div className="card border border-rose-700/40 bg-rose-950/40 text-rose-100">
-            {checkoutError}
-          </div>
+          <Card className="mb-6 border-red-500/50 bg-red-50 dark:bg-red-950/20 p-4">
+            <p className="text-red-600 dark:text-red-400 text-sm font-bold">{checkoutError}</p>
+          </Card>
         )}
 
         {loading ? (
@@ -291,67 +302,77 @@ export default function MyPayments() {
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
           </div>
         ) : filteredAssignments.length === 0 ? (
-          <div className="card text-center py-12">
-            <p className="text-slate-400">No fees found.</p>
-          </div>
+          <Card className="text-center py-12">
+            <p className="text-slate-500 dark:text-slate-400">No fees found.</p>
+          </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredAssignments.map((a) => {
-              const isSelected = selectedIds.includes(a.id)
-              const dueDate = a.due_date || a.fee?.due_date
-              const isOverdue = dueDate ? new Date(dueDate) < new Date() && ['unpaid', 'partial'].includes(a.status) : false
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              {filteredAssignments.map((a) => {
+                const isSelected = selectedIds.includes(a.id)
+                const dueDate = a.due_date || a.fee?.due_date
+                const isOverdue = dueDate ? new Date(dueDate) < new Date() && ['unpaid', 'partial'].includes(a.status) : false
 
-              return (
-                <div
-                  key={a.id}
-                  className={`card border ${isSelected ? 'border-primary-500' : 'border-slate-800'} bg-slate-800/40`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleSelected(a.id)}
-                          className="h-4 w-4 rounded border-slate-600 text-primary-500"
-                        />
-                        <p className="font-semibold text-white">{a.fee?.title || 'Fee'}</p>
-                        {renderStatus(a.status)}
-                      </div>
-                      <p className="text-sm text-slate-400">{a.child ? `${a.child.first_name} ${a.child.last_name}` : 'Child'}</p>
-                      <p className="text-xs text-slate-500">{a.fee?.season?.team?.name || 'Team not set'}</p>
-                      {a.fee?.description && <p className="text-sm text-slate-300 line-clamp-2">{a.fee.description}</p>}
-                      {dueDate && (
-                        <p className={`text-xs ${isOverdue ? 'text-rose-300' : 'text-slate-400'}`}>
-                          Due {new Date(dueDate).toLocaleDateString()}
+                return (
+                  <Card
+                    key={a.id}
+                    className={`p-6 hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300 ${
+                      isSelected ? 'ring-2 ring-[#137fec]' : ''
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-2 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelected(a.id)}
+                            className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-[#137fec] focus:ring-[#137fec]"
+                          />
+                          <p className="font-black text-slate-900 dark:text-white text-lg uppercase">{a.fee?.title || 'Fee'}</p>
+                          {renderStatus(a.status)}
+                        </div>
+                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                          {a.child ? `${a.child.first_name} ${a.child.last_name}` : 'Child'}
                         </p>
-                      )}
+                        <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                          {a.fee?.season?.team?.name || 'Team not set'}
+                        </p>
+                        {a.fee?.description && (
+                          <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">{a.fee.description}</p>
+                        )}
+                        {dueDate && (
+                          <p className={`text-xs font-bold uppercase tracking-widest ${isOverdue ? 'text-red-500 dark:text-red-400' : 'text-slate-400'}`}>
+                            Due {new Date(dueDate).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right space-y-1">
+                        <p className="text-2xl font-black text-slate-900 dark:text-white">${((a.balance_cents ?? 0) / 100).toFixed(2)}</p>
+                        {a.paid_cents_total > 0 && (
+                          <p className="text-xs font-bold text-emerald-500 dark:text-emerald-400">Paid ${(a.paid_cents_total / 100).toFixed(2)}</p>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-right space-y-1">
-                      <p className="text-2xl font-bold text-white">${((a.balance_cents ?? 0) / 100).toFixed(2)}</p>
-                      {a.paid_cents_total > 0 && (
-                        <p className="text-xs text-emerald-300">Paid ${(a.paid_cents_total / 100).toFixed(2)}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
+                  </Card>
+                )
+              })}
+            </div>
 
-        <div className="card bg-slate-800/60 border border-slate-700/60">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-slate-400">Total due (all unpaid/partial)</p>
-              <p className="text-xl font-semibold text-white">${(totalDue / 100).toFixed(2)}</p>
-            </div>
-            <div className="text-sm text-slate-400">
-              {unpaidAssignments.length} open {unpaidAssignments.length === 1 ? 'fee' : 'fees'}
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
+            <Card className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Total due</p>
+                  <p className="text-xl font-black text-slate-900 dark:text-white">${(totalDue / 100).toFixed(2)}</p>
+                </div>
+                <div className="text-sm font-bold text-slate-500 dark:text-slate-400">
+                  {unpaidAssignments.length} open {unpaidAssignments.length === 1 ? 'fee' : 'fees'}
+                </div>
+              </div>
+            </Card>
+          </>
+        )}
+      </PortalLayout>
+    </>
   )
 }

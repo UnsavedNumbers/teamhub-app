@@ -2,6 +2,12 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import PortalLayout from '../components/portal/PortalLayout'
+import PortalHeader from '../components/portal/PortalHeader'
+import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
+import Card from '../components/portal/Card'
+import Button from '../components/portal/Button'
+import Icon from '../components/portal/Icon'
 
 interface Child {
   id: string
@@ -52,7 +58,6 @@ interface UniformSubmissionItem {
 }
 
 export default function Uniforms() {
-  // Typed Supabase client lags behind new schema during migrations; use untyped client for new uniforms tables/RPC.
   const sb = supabase as any
 
   const [children, setChildren] = useState<Child[]>([])
@@ -91,7 +96,6 @@ export default function Uniforms() {
     }
     setMemberships(membershipMap)
 
-    // Fetch kits/items/submissions for all memberships in one pass
     const childIds = kids.map((c) => c.id)
     const allMemberships = Object.values(membershipMap).flat()
     const teamIds = Array.from(new Set(allMemberships.map((m) => m.team_id)))
@@ -223,7 +227,6 @@ export default function Uniforms() {
     setShowModal(true)
   }
 
-  // Count pending items
   const pendingCount = children.reduce((acc, child) => {
     const mems = memberships[child.id] || []
     const pending = mems.reduce((mAcc, m) => {
@@ -238,65 +241,64 @@ export default function Uniforms() {
   }, 0)
 
   const statusColors: Record<UniformSubmissionStatus, string> = {
-    not_submitted: 'bg-slate-700 text-slate-300',
-    submitted: 'bg-amber-500/20 text-amber-400',
-    locked: 'bg-blue-500/20 text-blue-400',
-    fulfilled: 'bg-green-500/20 text-green-400',
+    not_submitted: 'bg-slate-500/10 text-slate-500 dark:text-slate-400',
+    submitted: 'bg-amber-500/10 text-amber-500 dark:text-amber-400',
+    locked: 'bg-[#137fec]/10 text-[#137fec]',
+    fulfilled: 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400',
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-900">
-      <header className="bg-white dark:bg-slate-800/50 backdrop-blur-sm border-b border-neutral-200 dark:border-slate-700/50 sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16">
-            <Link to="/portal/dashboard" className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors mr-4">← Dashboard</Link>
-            <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Uniforms</h1>
-          </div>
+    <>
+      <PortalHeader />
+      <PortalLayout
+        breadcrumbs={[
+          { label: 'Home', path: '/portal/dashboard' },
+          { label: 'Uniforms' },
+        ]}
+      >
+        <div className="mb-12">
+          <PageTitle>Uniforms</PageTitle>
+          <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
+            Submit uniform sizes for your athletes.
+          </p>
         </div>
-      </header>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
           </div>
         ) : children.length === 0 ? (
-          <div className="bg-slate-800 rounded-xl text-center py-12 px-6">
-            <p className="text-slate-400 mb-4">Add children first to manage uniforms.</p>
-            <Link to="/portal/children" className="btn-primary">Add Children</Link>
-          </div>
+          <Card className="text-center py-12">
+            <p className="text-slate-500 dark:text-slate-400 mb-6">Add children first to manage uniforms.</p>
+            <Button variant="primary" as={Link} to="/portal/children">
+              Add
+            </Button>
+          </Card>
         ) : (
           <>
-            {/* Hero Action Card */}
             {pendingCount > 0 && (
-              <div className="mb-8 rounded-xl overflow-hidden shadow-2xl border-l-[12px] border-red-600 bg-gradient-to-br from-slate-800 to-slate-900">
-                <div className="flex flex-col md:flex-row">
-                  <div className="w-full md:w-1/2 h-48 md:h-auto bg-gradient-to-br from-primary-600/30 to-slate-800 flex items-center justify-center">
-                    <div className="text-center">
-                      <span className="text-6xl">👕</span>
-                    </div>
-                  </div>
-                  <div className="flex-1 p-8">
-                    <p className="text-red-500 text-xs font-black tracking-[0.2em] uppercase mb-2">Action Required</p>
-                    <h1 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tighter mb-3">SIZES NEEDED</h1>
-                    <p className="text-slate-400 mb-6">Please submit your athlete's measurements to ensure on-time production and delivery for the season.</p>
-                    <div className="flex items-center gap-2 text-amber-400 text-sm mb-4">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span className="font-bold uppercase">{pendingCount} item{pendingCount > 1 ? 's' : ''} pending</span>
+              <Card className="mb-8 border-l-4 border-red-500 bg-red-50 dark:bg-red-950/20 p-8">
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                  <div className="flex-1">
+                    <SectionHeader className="text-red-500 mb-2">Action Required</SectionHeader>
+                    <CardTitle className="mb-3">Sizes needed</CardTitle>
+                    <p className="text-slate-600 dark:text-slate-300 mb-4">
+                      Submit measurements to ensure on-time production and delivery.
+                    </p>
+                    <div className="flex items-center gap-2 text-amber-500 dark:text-amber-400 text-sm font-bold uppercase tracking-widest">
+                      <Icon name="schedule" size="text-sm" />
+                      <span>{pendingCount} item{pendingCount > 1 ? 's' : ''} pending</span>
                     </div>
                   </div>
                 </div>
-              </div>
+              </Card>
             )}
 
-            {/* Children & Teams */}
             <div className="space-y-6">
               {children.map((child) => (
-                <div key={child.id} className="bg-slate-800 rounded-xl overflow-hidden">
-                  <div className="px-6 py-4 border-b border-slate-700/50">
-                    <h2 className="text-lg font-black text-white uppercase tracking-tight">{child.first_name} {child.last_name}</h2>
+                <Card key={child.id} className="overflow-hidden">
+                  <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                    <CardTitle className="text-lg">{child.first_name} {child.last_name}</CardTitle>
                   </div>
                   
                   {(memberships[child.id] || []).length === 0 ? (
@@ -304,21 +306,21 @@ export default function Uniforms() {
                       <p className="text-slate-400 text-sm">Not on any teams yet.</p>
                     </div>
                   ) : (
-                    <div className="divide-y divide-slate-700/50">
+                    <div className="divide-y divide-slate-100 dark:divide-slate-800">
                       {(memberships[child.id] || []).map((mem) => {
                         const memKits = getKitsForMembership(mem)
 
                         return (
-                          <div key={`${mem.team_id}-${mem.season_id}`} className="px-6 py-5 hover:bg-slate-700/30 transition-colors">
+                          <div key={`${mem.team_id}-${mem.season_id}`} className="px-6 py-5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                             <div className="flex items-center justify-between mb-4">
                               <div>
-                                <p className="font-bold text-white">{mem.team.name}</p>
-                                <p className="text-sm text-slate-400">{mem.season.name}</p>
+                                <p className="font-black text-slate-900 dark:text-white">{mem.team.name}</p>
+                                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">{mem.season.name}</p>
                               </div>
                             </div>
 
                             {memKits.length === 0 ? (
-                              <div className="p-4 bg-slate-900/40 rounded-lg">
+                              <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
                                 <p className="text-slate-400 text-sm">No uniform kits yet.</p>
                               </div>
                             ) : (
@@ -330,33 +332,34 @@ export default function Uniforms() {
                                   const isLocked = !!kit.locked_at || status === 'locked' || status === 'fulfilled'
 
                                   return (
-                                    <div key={kit.id} className="p-4 bg-slate-900/40 rounded-lg border border-slate-700/50">
-                                      <div className="flex items-start justify-between gap-3">
+                                    <Card key={kit.id} className="p-4">
+                                      <div className="flex items-start justify-between gap-3 mb-3">
                                         <div>
-                                          <p className="font-black text-white uppercase tracking-tight">{kit.name}</p>
-                                          <p className="text-xs text-slate-500">
+                                          <CardTitle className="text-lg mb-1">{kit.name}</CardTitle>
+                                          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                                             {kit.deadline_at ? `Deadline: ${new Date(kit.deadline_at).toLocaleDateString()}` : 'No deadline set'}
                                           </p>
                                         </div>
-                                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${statusColors[status]}`}>
+                                        <span className={`px-3 py-1 rounded text-xs font-bold uppercase tracking-widest ${statusColors[status]}`}>
                                           {status.replace('_', ' ')}
                                         </span>
                                       </div>
 
-                                      <div className="mt-3 flex items-center justify-between">
-                                        <p className="text-sm text-slate-300">
+                                      <div className="flex items-center justify-between">
+                                        <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
                                           {kitItems.length} item{kitItems.length === 1 ? '' : 's'} {kitItems.some((i) => i.required) ? '(required included)' : ''}
                                         </p>
-                                        <button
+                                        <Button
+                                          variant="secondary"
                                           onClick={() => openModal(child, kit)}
-                                          className="px-5 py-2 bg-white text-slate-900 font-bold text-sm rounded-lg hover:bg-slate-100 transition-colors uppercase tracking-wide disabled:opacity-50"
                                           disabled={isLocked}
+                                          className="text-sm px-6 py-2"
                                           title={isLocked ? 'This kit is locked' : undefined}
                                         >
                                           {submission ? 'View / Edit' : 'Submit Sizes'}
-                                        </button>
+                                        </Button>
                                       </div>
-                                    </div>
+                                    </Card>
                                   )
                                 })}
                               </div>
@@ -366,93 +369,96 @@ export default function Uniforms() {
                       })}
                     </div>
                   )}
-                </div>
+                </Card>
               ))}
             </div>
 
-            {/* Sizing Help Footer */}
-            <div className="mt-10 p-6 bg-slate-800 rounded-xl border-t-4 border-primary-500 flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <span className="text-4xl">❓</span>
-                <div>
-                  <h3 className="font-black text-white uppercase tracking-tight">Need Sizing Help?</h3>
-                  <p className="text-sm text-slate-400">View our youth fit guide for accurate measurements.</p>
+            <Card className="mt-10 p-6 border-t-4 border-[#137fec]">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <Icon name="help" size="text-4xl" className="text-slate-400" />
+                  <div>
+                    <CardTitle className="text-lg mb-1">Need sizing help</CardTitle>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">View our youth fit guide for accurate measurements.</p>
+                  </div>
                 </div>
+                <Button variant="secondary" className="border-2">
+                  Open Fit Guide
+                </Button>
               </div>
-              <button className="px-6 py-3 border-2 border-white text-white font-bold uppercase tracking-wide text-sm hover:bg-white hover:text-slate-900 transition-colors rounded-lg">
-                Open Fit Guide
-              </button>
-            </div>
+            </Card>
           </>
         )}
-      </main>
 
-      {/* Size Entry Modal */}
-      {showModal && selectedChild && selectedKit && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl max-w-lg w-full overflow-hidden shadow-2xl">
-            <div className="px-6 py-4 border-b border-slate-700/50">
-              <h2 className="text-xl font-black text-white uppercase tracking-tight">Submit Sizes</h2>
-              <p className="text-slate-400 text-sm">
-                {selectedChild.first_name} • {selectedKit.name}
-                {selectedKit.locked_at ? ' • Locked' : ''}
-              </p>
-            </div>
+        {/* Size Entry Modal */}
+        {showModal && selectedChild && selectedKit && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
+            <Card className="max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
+              <div className="mb-6">
+                <CardTitle className="mb-1">Submit Sizes</CardTitle>
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                  {selectedChild.first_name} • {selectedKit.name}
+                  {selectedKit.locked_at ? ' • Locked' : ''}
+                </p>
+              </div>
 
-            <div className="p-6 space-y-5">
-              {(kitItemsByKitId[selectedKit.id] || []).map((it) => {
-                const value = formByItemId[it.id] || ''
-                const disabled = !!selectedKit.locked_at
-                const hasOptions = Array.isArray(it.size_options) && it.size_options.length > 0
+              <div className="space-y-5 mb-6">
+                {(kitItemsByKitId[selectedKit.id] || []).map((it) => {
+                  const value = formByItemId[it.id] || ''
+                  const disabled = !!selectedKit.locked_at
+                  const hasOptions = Array.isArray(it.size_options) && it.size_options.length > 0
 
-                return (
-                  <div key={it.id}>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">
-                      {it.name} {it.required ? '' : '(optional)'}
-                    </label>
-                    {hasOptions ? (
-                      <select
-                        value={value}
-                        onChange={(e) => setFormByItemId({ ...formByItemId, [it.id]: e.target.value })}
-                        className="input-field"
-                        disabled={disabled}
-                      >
-                        <option value="">{it.required ? 'Select size...' : 'Skip (optional)'}</option>
-                        {it.size_options.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        className="input-field"
-                        value={value}
-                        onChange={(e) => setFormByItemId({ ...formByItemId, [it.id]: e.target.value })}
-                        disabled={disabled}
-                        placeholder={it.required ? 'Enter size...' : 'Optional'}
-                      />
-                    )}
-                  </div>
-                )
-              })}
-            </div>
+                  return (
+                    <div key={it.id}>
+                      <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                        {it.name} {it.required ? '' : '(optional)'}
+                      </label>
+                      {hasOptions ? (
+                        <select
+                          value={value}
+                          onChange={(e) => setFormByItemId({ ...formByItemId, [it.id]: e.target.value })}
+                          className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white"
+                          disabled={disabled}
+                        >
+                          <option value="">{it.required ? 'Select size' : 'Skip (optional)'}</option>
+                          {it.size_options.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                          value={value}
+                          onChange={(e) => setFormByItemId({ ...formByItemId, [it.id]: e.target.value })}
+                          disabled={disabled}
+                          placeholder={it.required ? 'Enter size' : 'Optional'}
+                        />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
 
-            <div className="px-6 py-4 bg-slate-900/50 flex gap-3 justify-end">
-              <button onClick={() => setShowModal(false)} className="px-5 py-2 text-slate-400 hover:text-white font-bold uppercase text-sm transition-colors">Cancel</button>
-              {!selectedKit.locked_at && (
-                <button
-                  onClick={handleSave}
-                  disabled={saving || (kitItemsByKitId[selectedKit.id] || []).some((it) => it.required && !formByItemId[it.id])}
-                  className="px-6 py-2 bg-white text-slate-900 font-bold uppercase text-sm rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50"
-                >
-                  {saving ? 'Saving...' : 'Save Sizes'}
-                </button>
-              )}
-            </div>
+              <div className="flex gap-3 justify-end">
+                <Button variant="secondary" onClick={() => setShowModal(false)}>
+                  Cancel
+                </Button>
+                {!selectedKit.locked_at && (
+                  <Button
+                    variant="primary"
+                    onClick={handleSave}
+                    disabled={saving || (kitItemsByKitId[selectedKit.id] || []).some((it) => it.required && !formByItemId[it.id])}
+                  >
+                    {saving ? 'Saving' : 'Save'}
+                  </Button>
+                )}
+              </div>
+            </Card>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </PortalLayout>
+    </>
   )
 }

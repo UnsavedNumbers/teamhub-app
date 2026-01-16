@@ -2,6 +2,12 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import PortalLayout from '../components/portal/PortalLayout'
+import PortalHeader from '../components/portal/PortalHeader'
+import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
+import Card from '../components/portal/Card'
+import Button from '../components/portal/Button'
+import Icon from '../components/portal/Icon'
 
 interface Event {
   id: string
@@ -54,7 +60,6 @@ export default function EventDetail() {
   const fetchData = useCallback(async () => {
     setLoading(true)
     
-    // Fetch event
     const { data: eventData } = await supabase
       .from('events')
       .select('id, title, type, start_time, end_time, arrival_time, location, notes, team:teams(name)')
@@ -62,12 +67,11 @@ export default function EventDetail() {
       .single()
 
     if (!eventData) {
-      navigate('/calendar')
+      navigate('/portal/calendar')
       return
     }
     setEvent(eventData as unknown as Event)
 
-    // Fetch user's children
     if (profile?.family_id) {
       const { data: childData } = await supabase
         .from('children')
@@ -85,7 +89,6 @@ export default function EventDetail() {
   }, [eventId, profile, fetchData])
 
   useEffect(() => {
-    // Subscribe to realtime attendance updates
     if (!eventId) return
     
     const channel = supabase
@@ -129,115 +132,116 @@ export default function EventDetail() {
   }
 
   const statusStyles = {
-    going: 'bg-green-600 text-white',
-    late: 'bg-amber-600 text-white',
-    not_going: 'bg-red-600 text-white',
+    going: 'bg-emerald-500 text-white',
+    late: 'bg-amber-500 text-white',
+    not_going: 'bg-red-500 text-white',
   }
+
+  const statusInactiveStyles = 'bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
-      </div>
+      <>
+        <PortalHeader />
+        <PortalLayout>
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+          </div>
+        </PortalLayout>
+      </>
     )
   }
 
   if (!event) return null
 
   return (
-    <div className="min-h-screen bg-slate-900">
-      <header className="bg-slate-800/50 backdrop-blur-sm border-b border-slate-700/50 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16">
-            <Link to="/portal/calendar" className="text-slate-400 hover:text-white transition-colors mr-4">← Calendar</Link>
-            <h1 className="text-xl font-bold text-white">{event.title}</h1>
-          </div>
+    <>
+      <PortalHeader />
+      <PortalLayout
+        breadcrumbs={[
+          { label: 'Home', path: '/portal/dashboard' },
+          { label: 'Schedule', path: '/portal/calendar' },
+          { label: event.title },
+        ]}
+      >
+        <div className="mb-12">
+          <PageTitle>{event.title}</PageTitle>
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">{event.team.name}</p>
         </div>
-      </header>
 
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Event Details */}
-        <div className="card mb-6">
-          <p className="text-sm text-slate-400 mb-1">{event.team.name}</p>
-          <h2 className="text-2xl font-bold text-white mb-4">{event.title}</h2>
-          
-          <div className="space-y-3">
+        <Card className="mb-8 p-8">
+          <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
+              <Icon name="event" className="text-slate-400" />
               <div>
-                <p className="text-white">{formatDate(event.start_time)}</p>
-                <p className="text-sm text-slate-400">{formatTime(event.start_time)} - {formatTime(event.end_time)}</p>
+                <p className="font-black text-slate-900 dark:text-white">{formatDate(event.start_time)}</p>
+                <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{formatTime(event.start_time)} - {formatTime(event.end_time)}</p>
               </div>
             </div>
 
             {event.arrival_time && (
-              <div className="flex items-center gap-3 text-amber-400">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p>Arrive by {formatTime(event.arrival_time)}</p>
+              <div className="flex items-center gap-3">
+                <Icon name="schedule" className="text-amber-500" />
+                <p className="font-black text-slate-900 dark:text-white">Arrive by {formatTime(event.arrival_time)}</p>
               </div>
             )}
 
             {event.location && (
               <div className="flex items-center gap-3">
-                <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                </svg>
-                <p className="text-white">{event.location}</p>
+                <Icon name="location_on" className="text-slate-400" />
+                <p className="font-black text-slate-900 dark:text-white">{event.location}</p>
               </div>
             )}
 
             {event.notes && (
-              <div className="pt-3 border-t border-slate-700 mt-3">
-                <p className="text-slate-400">{event.notes}</p>
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-700 mt-4">
+                <p className="text-sm text-slate-500 dark:text-slate-400">{event.notes}</p>
               </div>
             )}
           </div>
-        </div>
+        </Card>
 
-        {/* RSVP Section */}
-        <h3 className="text-lg font-semibold text-white mb-4">RSVP</h3>
+        <SectionHeader className="mb-6">RSVP</SectionHeader>
         
         {children.length === 0 ? (
-          <div className="card text-center py-8">
-            <p className="text-slate-400 mb-4">You haven't added any children yet.</p>
-            <Link to="/portal/children" className="btn-primary">Add Child</Link>
-          </div>
+          <Card className="text-center py-12">
+            <p className="text-slate-500 dark:text-slate-400 mb-6">No children added.</p>
+            <Button variant="primary" as={Link} to="/portal/children">
+              Add
+            </Button>
+          </Card>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {children.map((child) => {
               const att = attendance[child.id]
               return (
-                <div key={child.id} className="card">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="font-medium text-white">{child.first_name} {child.last_name}</p>
-                    {saving === child.id && <span className="text-sm text-slate-400">Saving...</span>}
+                <Card key={child.id} className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <CardTitle className="text-lg">{child.first_name} {child.last_name}</CardTitle>
+                    {saving === child.id && <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Saving</span>}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-3">
                     {(['going', 'late', 'not_going'] as const).map((status) => (
                       <button
                         key={status}
                         onClick={() => handleRsvp(child.id, status)}
                         disabled={saving === child.id}
-                        className={`flex-1 py-2 px-3 rounded-lg font-medium text-sm transition-colors ${
+                        className={`flex-1 py-3 px-4 rounded font-bold text-sm uppercase tracking-wide transition-colors ${
                           att?.status === status
                             ? statusStyles[status]
-                            : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                            : statusInactiveStyles
                         }`}
                       >
-                        {status === 'going' ? '✓ Going' : status === 'late' ? '⏰ Late' : '✗ Not Going'}
+                        {status === 'going' ? 'Going' : status === 'late' ? 'Late' : 'Not Going'}
                       </button>
                     ))}
                   </div>
-                </div>
+                </Card>
               )
             })}
           </div>
         )}
-      </main>
-    </div>
+      </PortalLayout>
+    </>
   )
 }

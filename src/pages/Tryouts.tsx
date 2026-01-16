@@ -3,6 +3,12 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useOrganization } from '../contexts/OrganizationContext'
+import PortalLayout from '../components/portal/PortalLayout'
+import PortalHeader from '../components/portal/PortalHeader'
+import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
+import Card from '../components/portal/Card'
+import Button from '../components/portal/Button'
+import Icon from '../components/portal/Icon'
 
 interface Tryout {
   id: string
@@ -43,10 +49,8 @@ export default function Tryouts() {
 
   const { profile } = useAuth()
   const { currentOrganization } = useOrganization()
-  // const navigate = useNavigate()
 
   const fetchData = useCallback(async () => {
-    // Fetch upcoming tryouts
     if (!currentOrganization) return
 
     const { data: tryoutData } = await supabase
@@ -58,7 +62,6 @@ export default function Tryouts() {
 
     setTryouts((tryoutData as unknown as Tryout[]) || [])
 
-    // Fetch my registrations
     if (profile?.family_id) {
       const { data: regData } = await supabase
         .from('tryout_registrations')
@@ -67,7 +70,6 @@ export default function Tryouts() {
 
       setRegistrations((regData as unknown as Registration[]) || [])
 
-      // Fetch children
       const { data: childData } = await supabase
         .from('children')
         .select('id, first_name, last_name')
@@ -85,7 +87,6 @@ export default function Tryouts() {
 
   async function handleRegister() {
     if (!selectedTryout || !selectedChild || !profile?.family_id) return
-    // Use RPC to enforce deadline/capacity atomically and create doc placeholders.
     const { error } = await supabase.rpc('register_child_for_tryout', {
       p_tryout_id: selectedTryout.id,
       p_child_id: selectedChild,
@@ -119,185 +120,193 @@ export default function Tryouts() {
   }
 
   const statusColors: Record<string, string> = {
-    registered: 'bg-blue-500/20 text-blue-400',
-    checked_in: 'bg-amber-500/20 text-amber-400',
-    evaluated: 'bg-purple-500/20 text-purple-400',
-    offered: 'bg-green-500/20 text-green-400',
-    accepted: 'bg-green-600/20 text-green-300',
-    declined: 'bg-slate-500/20 text-slate-400',
-    rejected: 'bg-red-500/20 text-red-400',
+    registered: 'bg-[#137fec]/10 text-[#137fec]',
+    checked_in: 'bg-amber-500/10 text-amber-500 dark:text-amber-400',
+    evaluated: 'bg-purple-500/10 text-purple-500 dark:text-purple-400',
+    offered: 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400',
+    accepted: 'bg-emerald-600/10 text-emerald-600 dark:text-emerald-300',
+    declined: 'bg-slate-500/10 text-slate-500 dark:text-slate-400',
+    rejected: 'bg-red-500/10 text-red-500 dark:text-red-400',
   }
 
-  // Separate registrations with offers
   const offeredRegs = registrations.filter(r => r.status === 'offered')
   const otherRegs = registrations.filter(r => r.status !== 'offered')
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-900">
-      <header className="bg-white dark:bg-slate-800/50 border-b border-neutral-200 dark:border-slate-700/50 sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16">
-            <Link to="/portal/dashboard" className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors mr-4">← Dashboard</Link>
-            <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Tryouts</h1>
-          </div>
+    <>
+      <PortalHeader />
+      <PortalLayout
+        breadcrumbs={[
+          { label: 'Home', path: '/portal/dashboard' },
+          { label: 'Tryouts' },
+        ]}
+      >
+        <div className="mb-12">
+          <PageTitle>Tryouts</PageTitle>
+          <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
+            View and register for upcoming tryouts.
+          </p>
         </div>
-      </header>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
           </div>
         ) : (
           <>
-            {/* Offers Banner */}
             {offeredRegs.length > 0 && (
-              <div className="mb-8">
+              <Card className="mb-8 border-l-4 border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 p-8">
                 {offeredRegs.map((reg) => (
-                  <div key={reg.id} className="bg-gradient-to-r from-green-900/50 to-slate-900 rounded-xl p-8 text-center border border-green-500/30">
-                    <span className="text-green-400 text-xs font-black tracking-[0.2em] uppercase">Elite Prospect Division</span>
-                    <h2 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter mt-2">OFFER RECEIVED</h2>
+                  <div key={reg.id} className="text-center">
+                    <SectionHeader className="text-emerald-500 mb-2">Offer Received</SectionHeader>
+                    <CardTitle className="mb-4">OFFER RECEIVED</CardTitle>
                     {reg.offer_deadline && (
-                      <p className="text-slate-400 mt-4 uppercase text-sm tracking-wide">Decision Deadline: {formatDate(reg.offer_deadline)}</p>
+                      <p className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-6">
+                        Decision Deadline: {formatDate(reg.offer_deadline)}
+                      </p>
                     )}
-                    <div className="flex gap-4 justify-center mt-6">
-                      <button className="px-8 py-3 bg-green-600 text-white font-bold uppercase rounded-lg hover:bg-green-700 transition-colors">
+                    <div className="flex gap-4 justify-center">
+                      <Button variant="primary" className="bg-emerald-500 hover:bg-emerald-600">
                         Accept Offer
-                      </button>
-                      <button className="px-8 py-3 bg-slate-700 text-white font-bold uppercase rounded-lg hover:bg-slate-600 transition-colors">
+                      </Button>
+                      <Button variant="secondary">
                         Decline
-                      </button>
+                      </Button>
                     </div>
-                    <p className="text-xs text-slate-500 mt-4">🎉 Congratulations! You are in the top 5% of this year's tryout class.</p>
                   </div>
                 ))}
-              </div>
+              </Card>
             )}
 
-            {/* My Registrations */}
             {otherRegs.length > 0 && (
               <div className="mb-8">
-                <h2 className="text-lg font-black text-white uppercase tracking-tight mb-4">My Registrations</h2>
+                <SectionHeader className="mb-6">My Registrations</SectionHeader>
                 <div className="space-y-3">
                   {otherRegs.map((reg) => (
-                    <div key={reg.id} className="bg-slate-800 rounded-xl p-4 flex items-center justify-between">
+                    <Card key={reg.id} className="p-6 flex items-center justify-between">
                       <div>
-                        <p className="font-bold text-white">{reg.child.first_name} {reg.child.last_name}</p>
-                        <p className="text-sm text-slate-400">
+                        <CardTitle className="text-lg mb-1">{reg.child.first_name} {reg.child.last_name}</CardTitle>
+                        <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
                           {reg.tryout.title}
                           {reg.tryout.tryout_date ? ` • ${formatDate(reg.tryout.tryout_date)}` : ''}
                         </p>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${statusColors[reg.status]}`}>
+                      <span className={`px-3 py-1 rounded text-xs font-bold uppercase tracking-widest ${statusColors[reg.status]}`}>
                         {reg.status.replace('_', ' ')}
                       </span>
-                    </div>
+                    </Card>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Upcoming Tryouts */}
-            <h2 className="text-lg font-black text-white uppercase tracking-tight mb-4">Upcoming Tryouts</h2>
+            <SectionHeader className="mb-6">Upcoming Tryouts</SectionHeader>
             {tryouts.length === 0 ? (
-              <div className="bg-slate-800 rounded-xl text-center py-12 px-6">
-                <span className="text-6xl mb-4 block">🏆</span>
-                <h3 className="text-lg font-bold text-white mb-2">No Upcoming Tryouts</h3>
-                <p className="text-slate-400">Check back soon for new opportunities.</p>
-              </div>
+              <Card className="text-center py-12">
+                <Icon name="sports_soccer" size="text-6xl" className="text-slate-400 mb-4" />
+                <CardTitle className="mb-2">No upcoming tryouts</CardTitle>
+                <p className="text-slate-500 dark:text-slate-400">Check back soon for new opportunities.</p>
+              </Card>
             ) : (
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid md:grid-cols-2 gap-6">
                 {tryouts.map((tryout) => {
                   const registered = isRegistered(tryout.id)
                   const dateStr = getTryoutDate(tryout)
                   return (
-                    <div key={tryout.id} className="bg-slate-800 rounded-xl overflow-hidden">
-                      <div className="h-32 bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center">
-                        <span className="text-5xl">⚽</span>
+                    <Card key={tryout.id} className="overflow-hidden hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300">
+                      <div className="h-32 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center">
+                        <Icon name="sports_soccer" size="text-5xl" className="text-slate-400" />
                       </div>
-                      <div className="p-5">
-                        <div className="flex items-start justify-between mb-3">
+                      <div className="p-6">
+                        <div className="flex items-start justify-between mb-4">
                           <div>
-                            <span className={`px-2 py-1 text-xs font-bold uppercase rounded ${registered ? 'bg-green-500/20 text-green-400' : 'bg-slate-700 text-slate-400'}`}>
+                            <span className={`px-3 py-1 text-xs font-bold uppercase tracking-widest rounded ${registered ? 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
                               {registered ? 'Registered' : (tryout.type ?? 'Tryout')}
                             </span>
                           </div>
                           <div className="text-right">
-                            <p className="font-black text-white">
+                            <p className="font-black text-slate-900 dark:text-white">
                               {dateStr ? formatDate(dateStr).split(',')[0].toUpperCase() : 'TBD'}
                             </p>
-                            <p className="text-xs text-slate-400">{tryout.start_time ? formatTime(tryout.start_time) : ''}</p>
+                            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">{tryout.start_time ? formatTime(tryout.start_time) : ''}</p>
                           </div>
                         </div>
-                        <h3 className="text-xl font-black text-white uppercase tracking-tight italic">{tryout.title}</h3>
-                        <p className="text-sm text-slate-400 mt-1">{tryout.age_group}</p>
-                        <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">📍 {tryout.location}</p>
-                        <div className="mt-4">
-                          <Link
-                            to={`/portal/tryouts/${tryout.id}`}
-                            className="block w-full text-center py-2.5 border border-slate-600 text-slate-300 font-bold uppercase text-sm rounded-lg hover:bg-slate-700"
-                          >
-                            {registered ? 'View Details' : 'View & Register'}
-                          </Link>
+                        <CardTitle className="mb-2">{tryout.title}</CardTitle>
+                        <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-2">{tryout.age_group}</p>
+                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">
+                          <Icon name="location_on" size="text-sm" />
+                          {tryout.location}
                         </div>
+                        <Button
+                          variant="secondary"
+                          as={Link}
+                          to={`/portal/tryouts/${tryout.id}`}
+                          className="w-full text-center"
+                        >
+                          {registered ? 'View Details' : 'View & Register'}
+                        </Button>
                       </div>
-                    </div>
+                    </Card>
                   )
                 })}
               </div>
             )}
           </>
         )}
-      </main>
 
-      {/* Registration Modal */}
-      {selectedTryout && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl max-w-lg w-full shadow-2xl">
-            <div className="px-6 py-4 border-b border-slate-700/50">
-              <h2 className="text-xl font-black text-white uppercase">Register for Tryout</h2>
-              <p className="text-slate-400 text-sm">{selectedTryout.title}</p>
-            </div>
-            <div className="p-6">
+        {/* Registration Modal */}
+        {selectedTryout && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setSelectedTryout(null)}>
+            <Card className="max-w-lg w-full p-6" onClick={e => e.stopPropagation()}>
+              <CardTitle className="mb-2">Register for Tryout</CardTitle>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">{selectedTryout.title}</p>
               <div className="grid grid-cols-3 gap-4 mb-6 text-center">
                 <div>
-                  <p className="text-xs text-slate-400 uppercase">Date & Time</p>
-                  <p className="font-bold text-white">
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Date & Time</p>
+                  <p className="font-black text-slate-900 dark:text-white">
                     {selectedTryout.tryout_date ? formatDate(selectedTryout.tryout_date) : 'TBD'}
                   </p>
-                  <p className="text-sm text-slate-400">
+                  <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
                     {selectedTryout.start_time ? formatTime(selectedTryout.start_time) : ''}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400 uppercase">Location</p>
-                  <p className="font-bold text-white">{selectedTryout.location}</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Location</p>
+                  <p className="font-black text-slate-900 dark:text-white">{selectedTryout.location}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400 uppercase">Entry Fee</p>
-                  <p className="font-bold text-white">{selectedTryout.entry_fee ? `$${(selectedTryout.entry_fee / 100).toFixed(2)}` : 'Free'}</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Entry Fee</p>
+                  <p className="font-black text-slate-900 dark:text-white">{selectedTryout.entry_fee ? `$${(selectedTryout.entry_fee / 100).toFixed(2)}` : 'Free'}</p>
                 </div>
               </div>
 
               <div className="mb-6">
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Select Athlete</label>
-                <select value={selectedChild} onChange={(e) => setSelectedChild(e.target.value)} className="input-field">
-                  <option value="">Choose athlete...</option>
+                <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Select Athlete</label>
+                <select
+                  value={selectedChild}
+                  onChange={(e) => setSelectedChild(e.target.value)}
+                  className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white"
+                >
+                  <option value="">Choose athlete</option>
                   {children.filter(c => !registrations.some(r => r.child_id === c.id && r.tryout_id === selectedTryout.id)).map((c) => (
                     <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>
                   ))}
                 </select>
               </div>
-            </div>
-            <div className="px-6 py-4 bg-slate-900/50 flex gap-3 justify-end">
-              <button onClick={() => setSelectedTryout(null)} className="px-5 py-2 text-slate-400 hover:text-white font-bold uppercase text-sm">Cancel</button>
-              <button onClick={handleRegister} disabled={!selectedChild} className="px-6 py-2 bg-white text-slate-900 font-bold uppercase text-sm rounded-lg hover:bg-slate-100 disabled:opacity-50">
-                Begin Registration
-              </button>
-            </div>
+
+              <div className="flex gap-3 justify-end">
+                <Button variant="secondary" onClick={() => setSelectedTryout(null)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" onClick={handleRegister} disabled={!selectedChild}>
+                  Register
+                </Button>
+              </div>
+            </Card>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </PortalLayout>
+    </>
   )
 }
+
