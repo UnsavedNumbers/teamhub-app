@@ -51,7 +51,7 @@ const PlatformUserDetail = lazy(() => import('./pages/platformAdmin/UserDetail')
 const PlatformStructure = lazy(() => import('./pages/platformAdmin/Structure'))
 const PlatformPayments = lazy(() => import('./pages/platformAdmin/PlatformPayments'))
 const PlatformFees = lazy(() => import('./pages/platformAdmin/Fees'))
-const PlatformAuditLog = lazy(() => import('./pages/platformAdmin/AuditLog'))
+const PlatformEventLog = lazy(() => import('./pages/platformAdmin/EventLog'))
 const PlatformFeatureFlags = lazy(() => import('./pages/platformAdmin/FeatureFlags'))
 const PlatformAdmins = lazy(() => import('./pages/platformAdmin/PlatformAdmins'))
 
@@ -283,8 +283,8 @@ function App() {
               {/* Fees */}
               <Route path="fees" element={<PlatformFees />} />
               
-              {/* Audit Log */}
-              <Route path="audit" element={<PlatformAuditLog />} />
+              {/* Event Log */}
+              <Route path="audit" element={<PlatformEventLog />} />
               
               {/* Feature Flags */}
               <Route path="feature-flags" element={<PlatformFeatureFlags />} />

@@ -732,11 +732,12 @@ export default function FeatureFlags() {
           value={environmentFilter}
           onChange={(e) => setEnvironmentFilter(e.target.value as FeatureFlagEnvironment)}
           style={{ minWidth: '150px' }}
-        >
-          <option value="dev">Dev</option>
-          <option value="staging">Staging</option>
-          <option value="prod">Prod</option>
-        </Select>
+          options={[
+            { value: 'dev', label: 'Dev' },
+            { value: 'staging', label: 'Staging' },
+            { value: 'prod', label: 'Prod' },
+          ]}
+        />
         {activeTab === 'flags' && (
           <>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
@@ -842,11 +843,12 @@ export default function FeatureFlags() {
                   value={newFlag.value_type}
                   onChange={(e) => setNewFlag({ ...newFlag, value_type: e.target.value as FeatureFlagValueType })}
                   disabled={dialogLoading}
-                >
-                  <option value="boolean">Boolean</option>
-                  <option value="integer">Integer</option>
-                  <option value="double">Double</option>
-                </Select>
+                  options={[
+                    { value: 'boolean', label: 'Boolean' },
+                    { value: 'integer', label: 'Integer' },
+                    { value: 'double', label: 'Double' },
+                  ]}
+                />
               </div>
               <div className="pa-form-group">
                 <label className="pa-label">Description</label>
@@ -865,11 +867,12 @@ export default function FeatureFlags() {
                   value={newFlag.environment}
                   onChange={(e) => setNewFlag({ ...newFlag, environment: e.target.value as FeatureFlagEnvironment })}
                   disabled={dialogLoading}
-                >
-                  <option value="dev">Dev</option>
-                  <option value="staging">Staging</option>
-                  <option value="prod">Prod</option>
-                </Select>
+                  options={[
+                    { value: 'dev', label: 'Dev' },
+                    { value: 'staging', label: 'Staging' },
+                    { value: 'prod', label: 'Prod' },
+                  ]}
+                />
               </div>
               {dialogError && (
                 <div
@@ -943,11 +946,12 @@ export default function FeatureFlags() {
                 value={defaultValue.boolean !== undefined ? String(defaultValue.boolean) : ''}
                 onChange={(e) => setDefaultValue({ boolean: e.target.value === 'true' })}
                 disabled={dialogLoading}
-              >
-                <option value="">Select...</option>
-                <option value="true">True</option>
-                <option value="false">False</option>
-              </Select>
+                options={[
+                  { value: '', label: 'Select...' },
+                  { value: 'true', label: 'True' },
+                  { value: 'false', label: 'False' },
+                ]}
+              />
             </div>
           )}
           {editDefaultDialog.flag.value_type === 'integer' && (
@@ -1033,11 +1037,12 @@ export default function FeatureFlags() {
                 value={orgValue.boolean !== undefined ? String(orgValue.boolean) : ''}
                 onChange={(e) => setOrgValue({ boolean: e.target.value === 'true' })}
                 disabled={dialogLoading}
-              >
-                <option value="">Select...</option>
-                <option value="true">True</option>
-                <option value="false">False</option>
-              </Select>
+                options={[
+                  { value: '', label: 'Select...' },
+                  { value: 'true', label: 'True' },
+                  { value: 'false', label: 'False' },
+                ]}
+              />
             </div>
           )}
           {orgOverrideDialog.flag.value_type === 'integer' && (
@@ -1120,11 +1125,12 @@ export default function FeatureFlags() {
                 value={userValue.boolean !== undefined ? String(userValue.boolean) : ''}
                 onChange={(e) => setUserValue({ boolean: e.target.value === 'true' })}
                 disabled={dialogLoading}
-              >
-                <option value="">Select...</option>
-                <option value="true">True</option>
-                <option value="false">False</option>
-              </Select>
+                options={[
+                  { value: '', label: 'Select...' },
+                  { value: 'true', label: 'True' },
+                  { value: 'false', label: 'False' },
+                ]}
+              />
             </div>
           )}
           {userOverrideDialog.flag.value_type === 'integer' && (

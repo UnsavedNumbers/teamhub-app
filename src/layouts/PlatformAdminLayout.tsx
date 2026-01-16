@@ -50,7 +50,7 @@ const navSections: NavSection[] = [
   {
     label: 'Compliance',
     items: [
-      { text: 'Audit Log', icon: 'history', path: '/platform-admin/audit', requiredAction: 'view_audit_log' },
+      { text: 'Event Log', icon: 'history', path: '/platform-admin/audit', requiredAction: 'view_audit_log' },
       { text: 'Feature Flags', icon: 'flag', path: '/platform-admin/feature-flags', requiredAction: 'view_feature_flags' },
     ],
   },
