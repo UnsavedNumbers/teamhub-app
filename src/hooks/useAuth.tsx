@@ -125,13 +125,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       interface OrgRpcResult {
         organization_id: string
         org_name: string
-        role: OrgMemberRole
+        roles: OrgMemberRole[] // NEW: roles array from updated RPC
       }
       
       const organizations: Organization[] = (orgData as OrgRpcResult[] | null)?.map((org) => ({
         id: org.organization_id,
         name: org.org_name,
-        role: org.role,
+        roles: org.roles,
+        // Compatibility getter for deprecated 'role' property
+        get role(): OrgMemberRole {
+          return this.roles[0] ?? 'parent'
+        },
       })) ?? []
 
       const userProfile: UserProfile = {
@@ -288,14 +292,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   // UX-only role helpers (actual authorization is done by RLS)
+  // Updated to support multi-role per org
   function hasRole(orgId: string, role: OrgMemberRole): boolean {
     if (profile?.isPlatformAdmin) return true
-    return profile?.organizations.some(o => o.id === orgId && o.role === role) ?? false
+    return profile?.organizations.some(o => o.id === orgId && o.roles.includes(role)) ?? false
   }
 
   function hasAnyRole(role: OrgMemberRole): boolean {
     if (profile?.isPlatformAdmin) return true
-    return profile?.organizations.some(o => o.role === role) ?? false
+    return profile?.organizations.some(o => o.roles.includes(role)) ?? false
   }
 
   function isOrgAdmin(orgId?: string): boolean {

@@ -3,8 +3,8 @@ import { useAuth } from '../hooks/useAuth'
 import { useOrganization } from '../contexts/OrganizationContext'
 import { useLicense } from '../hooks/useLicense'
 import { NoOrganizationEmptyState } from './admin/NoOrganizationEmptyState'
-
-type OrgMemberRole = 'parent' | 'coach' | 'org_admin'
+import { hasAnyRole } from '@/utils/roleHelpers'
+import type { OrgMemberRole } from '@/contexts/OrganizationContext'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -133,9 +133,9 @@ export function ProtectedRoute({
       role === 'admin' ? 'org_admin' : role
     ) as OrgMemberRole[]
     
-    // Check if user has any of the allowed roles in any organization
+    // Check if user has any of the allowed roles in any organization (using multi-role support)
     const hasAllowedRole = profile.organizations.some(org => 
-      normalizedRoles.includes(org.role as OrgMemberRole)
+      hasAnyRole(org, normalizedRoles)
     )
     
     // Also check legacy role for backward compatibility

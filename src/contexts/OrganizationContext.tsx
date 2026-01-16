@@ -1,11 +1,17 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
+import { supabase } from '@/lib/supabase'
+
+export type OrgMemberRole = 'parent' | 'coach' | 'org_admin'
 
 export interface Organization {
   id: string
   name: string
-  role: 'parent' | 'coach' | 'org_admin'
+  roles: OrgMemberRole[] // NEW: Array of roles user has in this org
   slug?: string
   org_type?: 'school' | 'club' | 'league' | 'academy' | 'aau' | null
+  
+  /** @deprecated Use roles array instead. Returns roles[0] or 'parent'. Will be removed in v2.0. */
+  get role(): OrgMemberRole
 }
 
 interface OrganizationContextType {
@@ -25,6 +31,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   const [organizations, setOrganizationsState] = useState<Organization[]>([])
   const [currentOrganization, setCurrentOrganizationState] = useState<Organization | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [userId, setUserId] = useState<string | null>(null)
 
   // Auto-select current org when organizations change
   useEffect(() => {
@@ -69,6 +76,64 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       setCurrentOrganization(org)
     }
   }, [organizations, setCurrentOrganization])
+
+  // Set up realtime subscription for organization_members changes
+  useEffect(() => {
+    if (!userId) return
+
+    let refreshTimeout: NodeJS.Timeout | null = null
+
+    const handleRoleChange = () => {
+      // Debounce: wait 500ms after last change before refreshing
+      if (refreshTimeout) clearTimeout(refreshTimeout)
+
+      refreshTimeout = setTimeout(async () => {
+        // Fetch updated organizations from RPC
+        const { data } = await supabase.rpc('get_user_organizations', { check_user_id: userId })
+        if (data) {
+          const updatedOrgs: Organization[] = data.map((org: { organization_id: string; org_name: string; roles: OrgMemberRole[] }) => ({
+            id: org.organization_id,
+            name: org.org_name,
+            roles: org.roles,
+            get role() {
+              return this.roles[0] ?? 'parent'
+            },
+          }))
+          setOrganizationsState(updatedOrgs)
+        }
+        refreshTimeout = null
+      }, 500)
+    }
+
+    // Subscribe to organization_members changes for current user
+    const channel = supabase
+      .channel('org_members_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'organization_members',
+        filter: `user_id=eq.${userId}`,
+      }, handleRoleChange)
+      .subscribe()
+
+    return () => {
+      if (refreshTimeout) clearTimeout(refreshTimeout)
+      supabase.removeChannel(channel)
+    }
+  }, [userId])
+
+  // Get user ID from auth session
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserId(session?.user?.id ?? null)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserId(session?.user?.id ?? null)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   const value: OrganizationContextType = {
     currentOrganization,

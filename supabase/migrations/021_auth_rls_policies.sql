@@ -140,11 +140,10 @@ CREATE POLICY "Coaches can view org users v2" ON users
     EXISTS (
       SELECT 1 FROM organization_members om
       WHERE om.user_id = users.id
-      AND EXISTS (
-        SELECT 1 FROM organization_members my_om
-        WHERE my_om.user_id = auth.uid()
-        AND my_om.organization_id = om.organization_id
-        AND my_om.role IN ('coach', 'org_admin')
+      AND user_has_any_org_roles(
+        auth.uid(),
+        om.organization_id,
+        ARRAY['coach','org_admin']::org_member_role[]
       )
     )
   );

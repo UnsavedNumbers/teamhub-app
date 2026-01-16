@@ -50,6 +50,20 @@ export type OrganizationEventType =
   | 'ORG_STRIPE_CONNECTED'
   | 'ORG_STRIPE_DISCONNECTED'
   | 'ORG_LICENSE_UPDATED'
+  // Multi-role events
+  | 'ROLE_ADDED'
+  | 'ROLE_REMOVED'
+  | 'ORG_JOINED'
+  | 'ORG_LEFT'
+  // Parent onboarding events
+  | 'PARENT_INVITED'
+  | 'PARENT_ATTACHED'
+  | 'JOIN_LINK_CREATED'
+  | 'JOIN_REQUEST_SUBMITTED'
+  | 'JOIN_REQUEST_APPROVED'
+  | 'JOIN_REQUEST_DENIED'
+  | 'CHILD_CLAIM_TOKEN_CREATED'
+  | 'CHILD_CLAIMED'
 
 export type UserEventType =
   | 'USER_CREATED'
