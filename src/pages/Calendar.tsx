@@ -5,7 +5,7 @@ import { getEvents } from '../data/services/eventsService'
 import { getPrimarySportFromEvents, getSportFromEvent, type SportInfo } from '../utils/sportContext'
 import PortalLayout from '../components/portal/PortalLayout'
 import PortalHeader from '../components/portal/PortalHeader'
-import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
+import { PageTitle, CardTitle } from '../components/portal/Typography'
 import { SportHero } from '../components/portal/SportHero'
 import { SportCardImage } from '../components/portal/SportCardImage'
 import Card from '../components/portal/Card'
@@ -114,13 +114,6 @@ export default function Calendar() {
     travel: 'border-l-cyan-500',
   }
 
-  const groupedEvents = events.reduce((acc, event) => {
-    const date = new Date(event.start_time).toDateString()
-    if (!acc[date]) acc[date] = []
-    acc[date].push(event)
-    return acc
-  }, {} as Record<string, DisplayEvent[]>)
-
   return (
     <>
       <PortalHeader />
@@ -172,32 +165,25 @@ export default function Calendar() {
             <p className="text-slate-500 dark:text-slate-400">Check back later for scheduled activities.</p>
           </Card>
         ) : view === 'agenda' ? (
-          <div className="space-y-8">
-            {Object.entries(groupedEvents).map(([date, dayEvents]) => (
-              <div key={date}>
-                <SectionHeader className="mb-4">{formatDate(dayEvents[0].start_time)}</SectionHeader>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {dayEvents.map((event) => (
-                    <button
-                      key={event.id}
-                      onClick={() => setSelectedEvent(event)}
-                      className="w-full text-left"
-                    >
-                      <Card className={`p-0 border-l-0 ${typeColors[event.type] || 'border-slate-300'} hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300 overflow-hidden h-full`}>
-                        <SportCardImage sport={eventSports[event.id] || null} height="aspect-[4/3] h-auto">
-                          <div className="flex flex-col justify-end h-full">
-                            <div className={`inline-block px-2 py-1 mb-2 text-xs font-black uppercase tracking-wider text-white border-l-4 ${typeColors[event.type] || 'border-l-slate-300'}`}>
-                              {formatTime(event.start_time)}
-                            </div>
-                            <CardTitle className="text-lg mb-1 text-white">{event.title}</CardTitle>
-                            <p className="text-xs font-bold uppercase tracking-widest text-white/80">{event.team.name}</p>
-                          </div>
-                        </SportCardImage>
-                      </Card>
-                    </button>
-                  ))}
-                </div>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {events.map((event) => (
+              <button
+                key={event.id}
+                onClick={() => setSelectedEvent(event)}
+                className="w-full text-left"
+              >
+                <Card className={`p-0 border-l-0 ${typeColors[event.type] || 'border-slate-300'} hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300 overflow-hidden h-full`}>
+                  <SportCardImage sport={eventSports[event.id] || null} height="aspect-[4/3] h-auto">
+                    <div className="flex flex-col justify-end h-full">
+                      <div className={`inline-block px-2 py-1 mb-2 text-xs font-black uppercase tracking-wider text-white border-l-4 ${typeColors[event.type] || 'border-l-slate-300'}`}>
+                        {new Date(event.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} • {formatTime(event.start_time)}
+                      </div>
+                      <CardTitle className="text-lg mb-1 text-white">{event.title}</CardTitle>
+                      <p className="text-xs font-bold uppercase tracking-widest text-white/80">{event.team.name}</p>
+                    </div>
+                  </SportCardImage>
+                </Card>
+              </button>
             ))}
           </div>
         ) : (

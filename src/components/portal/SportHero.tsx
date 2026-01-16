@@ -32,43 +32,26 @@ export function SportHero({
 }: SportHeroProps) {
     const [imageLoaded, setImageLoaded] = useState(false)
     const [imageError, setImageError] = useState(false)
-    const [darkMode, setDarkMode] = useState(false)
     const [selectedImagePath, setSelectedImagePath] = useState<string>('')
     const imgRef = useRef<HTMLImageElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
 
-    // Detect dark mode
-    useEffect(() => {
-        const checkDarkMode = () => {
-            setDarkMode(document.documentElement.classList.contains('dark'))
-        }
-
-        checkDarkMode()
-        const observer = new MutationObserver(checkDarkMode)
-        observer.observe(document.documentElement, {
-            attributes: true,
-            attributeFilter: ['class'],
-        })
-
-        return () => observer.disconnect()
-    }, [])
-
-    // Select random image path (or force default)
+    // Select random image path (or force default) - always use same image regardless of theme
     useEffect(() => {
         const sportName = sport?.name || null
         
         let path: string
         if (forceDefault) {
             // Dashboard always uses default images
-            path = getDefaultImagePath('hero', darkMode)
+            path = getDefaultImagePath('hero', false)
         } else {
             // Other pages use random sport-specific images
-            path = getRandomSportImagePath(sportName, 'hero', darkMode)
+            path = getRandomSportImagePath(sportName, 'hero', false)
         }
         
         setSelectedImagePath(path)
         setImageLoaded(false) // Reset loaded state when path changes
-    }, [sport?.name, forceDefault, darkMode])
+    }, [sport?.name, forceDefault])
 
     // Lazy load with Intersection Observer
     useEffect(() => {

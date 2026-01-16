@@ -18,8 +18,9 @@ import {
   getParentPaymentSummary,
   getUnpaidFeeAssignments,
 } from '../data/services/paymentsService'
-import { getPrimarySportForUser, type SportInfo } from '../utils/sportContext'
+import { getPrimarySportForUser, getSportFromEvent, type SportInfo } from '../utils/sportContext'
 import { SportHero } from '../components/portal/SportHero'
+import { SportCardImage } from '../components/portal/SportCardImage'
 import type { CalendarEvent } from '../types/calendar'
 
 interface UserNotification {
@@ -45,6 +46,7 @@ export default function Dashboard() {
   const [eventsLoading, setEventsLoading] = useState(true)
   const [paymentItems, setPaymentItems] = useState<PaymentOverview[]>([])
   const [primarySport, setPrimarySport] = useState<SportInfo | null>(null)
+  const [eventSports, setEventSports] = useState<Record<string, SportInfo | null>>({})
 
   // Safety net: If user landed here with setupOrganization flag, redirect to onboarding
   useEffect(() => {
@@ -82,6 +84,18 @@ export default function Dashboard() {
       const { data, error } = await getUpcomingEventsForUser(context, 3)
       if (!error) {
         setUpcomingEvents(data)
+
+        // Load sports for events
+        const sportsMap: Record<string, SportInfo | null> = {}
+        await Promise.all(
+          data.map(async (event) => {
+            if (event.team_id) {
+              const sport = await getSportFromEvent(context, event.id)
+              if (sport) sportsMap[event.id] = sport
+            }
+          })
+        )
+        setEventSports(sportsMap)
       }
       setEventsLoading(false)
     }
@@ -372,8 +386,14 @@ export default function Dashboard() {
                     to={`/portal/events/${event.id}`}
                     className="group bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300 cursor-pointer block"
                   >
-                    <div className="flex flex-col md:flex-row">
-                      <div className="md:w-1/3 aspect-[4/3] bg-cover bg-center bg-slate-200 dark:bg-slate-800"></div>
+                    <div className="flex flex-col md:flex-row h-full">
+                      <div className="md:w-1/3">
+                        <SportCardImage 
+                          sport={eventSports[event.id] || null} 
+                          className="h-full rounded-none"
+                          height="h-full min-h-[200px]"
+                        />
+                      </div>
                       <div className="flex-1 p-8 flex flex-col justify-between">
                         <div>
                           <div className="flex items-center gap-2 mb-3">
