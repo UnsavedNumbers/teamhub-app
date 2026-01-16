@@ -48,7 +48,10 @@ export default function OrganizationSettings() {
   const organizationId = currentOrganization?.id ?? null
 
   const fetchOrganization = useCallback(async () => {
-    if (!organizationId) return
+    if (!organizationId) {
+      setLoading(false)
+      return
+    }
 
     setLoading(true)
     try {

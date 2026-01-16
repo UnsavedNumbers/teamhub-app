@@ -28,7 +28,10 @@ export default function Teams() {
   const navigate = useNavigate()
 
   const fetchTeams = useCallback(async () => {
-    if (!currentOrganization?.id) return
+    if (!currentOrganization?.id) {
+      setLoading(false)
+      return
+    }
 
     setLoading(true)
     try {

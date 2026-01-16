@@ -34,10 +34,10 @@ export function ProtectedRoute({
   // platform admins and admin routes must be able to render without an org selected.
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900">
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500 mx-auto"></div>
-          <p className="mt-4 text-slate-400">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-slate-900 dark:border-white mx-auto"></div>
+          <p className="mt-4 text-slate-600 dark:text-slate-400">Loading...</p>
         </div>
       </div>
     )
@@ -45,10 +45,10 @@ export function ProtectedRoute({
 
   if (isAdminRoute && !isPlatformAdmin && licenseLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900">
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500 mx-auto"></div>
-          <p className="mt-4 text-slate-400">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-slate-900 dark:border-white mx-auto"></div>
+          <p className="mt-4 text-slate-600 dark:text-slate-400">Loading...</p>
         </div>
       </div>
     )
@@ -62,10 +62,10 @@ export function ProtectedRoute({
   // Wait for profile to load
   if (!profile) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900">
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500 mx-auto"></div>
-          <p className="mt-4 text-slate-400">Loading profile...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-slate-900 dark:border-white mx-auto"></div>
+          <p className="mt-4 text-slate-600 dark:text-slate-400">Loading profile...</p>
         </div>
       </div>
     )
@@ -104,13 +104,13 @@ export function ProtectedRoute({
   // Check if organization is required but user has no orgs
   if (requireOrganization && !profile.isPlatformAdmin && profile.organizations.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900">
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-900">
         <div className="max-w-md text-center p-8">
-          <span className="material-symbols-rounded text-6xl text-slate-500 mb-4 block">
+          <span className="material-symbols-rounded text-6xl text-slate-400 dark:text-slate-500 mb-4 block">
             group_off
           </span>
-          <h2 className="text-xl font-semibold text-white mb-2">No Organization</h2>
-          <p className="text-slate-400 mb-6">
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">No Organization</h2>
+          <p className="text-slate-600 dark:text-slate-400 mb-6">
             You need to join an organization to access this page. 
             Contact your team administrator for an invite.
           </p>

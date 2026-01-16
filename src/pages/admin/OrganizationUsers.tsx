@@ -32,7 +32,10 @@ export default function OrganizationUsers() {
   }, [currentOrganization, page, rowsPerPage])
 
   async function fetchUsers() {
-    if (!currentOrganization?.id) return
+    if (!currentOrganization?.id) {
+      setLoading(false)
+      return
+    }
     setLoading(true); setError(null)
     try {
       const { count } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('org_id', currentOrganization.id)
