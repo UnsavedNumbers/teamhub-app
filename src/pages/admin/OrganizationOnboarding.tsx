@@ -100,7 +100,13 @@ export default function OrganizationOnboarding() {
         const { error: memberError } = await supabase.from('organization_members').insert({ organization_id: orgId, user_id: profile.id, role: 'org_admin' })
         if (memberError) { await supabase.from('organizations').delete().eq('id', orgId); throw memberError }
 
-        const nextOrg: Organization = { id: newOrg.id, name: newOrg.name, slug: newOrg.slug ?? undefined, role: 'org_admin' }
+        const nextOrg: Organization = { 
+          id: newOrg.id, 
+          name: newOrg.name, 
+          slug: newOrg.slug ?? undefined, 
+          roles: ['org_admin'],
+          get role() { return this.roles[0] ?? 'parent' }
+        }
         setCurrentOrganization(nextOrg); setOrganizations([nextOrg])
       } else {
         const { error: updateError } = await supabase.from('organizations').update({ name: data.name, slug: data.slug, org_type: data.org_type || undefined, contact_email: data.contact_email }).eq('id', orgId)
