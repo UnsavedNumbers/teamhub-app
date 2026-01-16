@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
 import ThemeToggle from './ThemeToggle'
+import { useTheme } from '../../hooks/useTheme'
 
 interface UserNotification {
   id: string
@@ -19,10 +20,24 @@ interface PortalHeaderProps {
 export default function PortalHeader({ currentPath }: PortalHeaderProps) {
   const { user, profile } = useAuth()
   const location = useLocation()
+  const { resolvedTheme } = useTheme()
   const [unread, setUnread] = useState<UserNotification[]>([])
+  const [logoError, setLogoError] = useState(false)
   const sb = supabase as any
 
   const activePath = currentPath || location.pathname
+  
+  // Determine which logo to show based on resolved theme
+  // Light mode: logo-light.png
+  // Dark mode: logo-dark.png
+  const logoSrc = resolvedTheme === 'dark' 
+    ? '/images/logo-dark.png' 
+    : '/images/logo-light.png'
+  
+  // Reset logo error when theme changes
+  useEffect(() => {
+    setLogoError(false)
+  }, [resolvedTheme])
 
   useEffect(() => {
     const loadNotifications = async () => {
@@ -49,12 +64,28 @@ export default function PortalHeader({ currentPath }: PortalHeaderProps) {
       <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <Link to="/portal/dashboard" className="flex items-center gap-2 group cursor-pointer">
-            <div className="size-8 bg-[#137fec] rounded flex items-center justify-center text-white">
-              <span className="material-symbols-outlined text-xl">bolt</span>
-            </div>
-            <span className="font-bold text-xl tracking-tight uppercase">
-              Athletic<span className="text-[#137fec]">Portal</span>
-            </span>
+            {!logoError ? (
+              <img 
+                key={logoSrc}
+                src={logoSrc} 
+                alt="AthleticPortal" 
+                className="h-8 w-auto transition-opacity duration-200"
+                onError={() => {
+                  console.error('Failed to load logo:', logoSrc)
+                  setLogoError(true)
+                }}
+              />
+            ) : (
+              // Fallback to icon-based logo if image fails to load
+              <>
+                <div className="size-8 bg-[#137fec] rounded flex items-center justify-center text-white">
+                  <span className="material-symbols-outlined text-xl">bolt</span>
+                </div>
+                <span className="font-bold text-xl tracking-tight uppercase">
+                  Athletic<span className="text-[#137fec]">Portal</span>
+                </span>
+              </>
+            )}
           </Link>
           <nav className="hidden md:flex items-center gap-8">
             {navItems.map((item) => {

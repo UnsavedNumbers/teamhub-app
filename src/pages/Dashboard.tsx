@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useUserContext } from '../hooks/useUserContext'
+import { useTheme } from '../hooks/useTheme'
 import {
   getSetupOrganizationFlag,
   clearSetupOrganizationFlag,
@@ -41,12 +42,26 @@ export default function Dashboard() {
   const { user, profile } = useAuth()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
+  const { resolvedTheme } = useTheme()
   const [unread, setUnread] = useState<UserNotification[]>([])
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([])
   const [eventsLoading, setEventsLoading] = useState(true)
   const [paymentItems, setPaymentItems] = useState<PaymentOverview[]>([])
   const [primarySport, setPrimarySport] = useState<SportInfo | null>(null)
   const [eventSports, setEventSports] = useState<Record<string, SportInfo | null>>({})
+  const [logoError, setLogoError] = useState(false)
+
+  // Determine which logo to show based on resolved theme
+  // Light mode: logo-light.png
+  // Dark mode: logo-dark.png
+  const logoSrc = resolvedTheme === 'dark' 
+    ? '/images/logo-dark.png' 
+    : '/images/logo-light.png'
+  
+  // Reset logo error when theme changes
+  useEffect(() => {
+    setLogoError(false)
+  }, [resolvedTheme])
 
   // Safety net: If user landed here with setupOrganization flag, redirect to onboarding
   useEffect(() => {
@@ -61,9 +76,11 @@ export default function Dashboard() {
     if (!isReady) return
 
     const loadNotifications = async () => {
-      const { data, error } = await getUnreadNotifications(context)
-      if (!error) {
-        setUnread(data.slice(0, 3).map(n => ({
+      const { data, error } = await getNotifications(context, 3)
+      if (!error && data) {
+        // Filter to only unread notifications
+        const unreadData = data.filter((n: any) => !n.read_at)
+        setUnread(unreadData.slice(0, 3).map((n: any) => ({
           id: n.id,
           title: n.title,
           body: n.body,
@@ -168,13 +185,16 @@ export default function Dashboard() {
     
     // If update fails, reload to ensure UI is correct
     if (!success || error) {
-      const { data } = await getUnreadNotifications(context)
-      setUnread(data.slice(0, 3).map(n => ({
-        id: n.id,
-        title: n.title,
-        body: n.body,
-        created_at: n.created_at,
-      })))
+      const { data } = await getNotifications(context, 3)
+      if (data) {
+        const unreadData = data.filter((n: any) => !n.read_at)
+        setUnread(unreadData.slice(0, 3).map((n: any) => ({
+          id: n.id,
+          title: n.title,
+          body: n.body,
+          created_at: n.created_at,
+        })))
+      }
     }
   }
 
@@ -186,13 +206,16 @@ export default function Dashboard() {
     const { success, error } = await markAllNotificationsRead(context)
 
     if (!success || error) {
-      const { data } = await getUnreadNotifications(context)
-      setUnread(data.slice(0, 3).map(n => ({
-        id: n.id,
-        title: n.title,
-        body: n.body,
-        created_at: n.created_at,
-      })))
+      const { data } = await getNotifications(context, 3)
+      if (data) {
+        const unreadData = data.filter((n: any) => !n.read_at)
+        setUnread(unreadData.slice(0, 3).map((n: any) => ({
+          id: n.id,
+          title: n.title,
+          body: n.body,
+          created_at: n.created_at,
+        })))
+      }
     }
   }
 
@@ -238,12 +261,28 @@ export default function Dashboard() {
         <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
             <Link to="/portal/dashboard" className="flex items-center gap-2 group cursor-pointer">
-              <div className="size-8 bg-[#137fec] rounded flex items-center justify-center text-white">
-                <span className="material-symbols-outlined text-xl">bolt</span>
-              </div>
-              <span className="font-bold text-xl tracking-tight uppercase">
-                Athletic<span className="text-[#137fec]">Portal</span>
-              </span>
+              {!logoError ? (
+                <img 
+                  key={logoSrc}
+                  src={logoSrc} 
+                  alt="AthleticPortal" 
+                  className="h-8 w-auto transition-opacity duration-200"
+                  onError={() => {
+                    console.error('Failed to load logo:', logoSrc)
+                    setLogoError(true)
+                  }}
+                />
+              ) : (
+                // Fallback to icon-based logo if image fails to load
+                <>
+                  <div className="size-8 bg-[#137fec] rounded flex items-center justify-center text-white">
+                    <span className="material-symbols-outlined text-xl">bolt</span>
+                  </div>
+                  <span className="font-bold text-xl tracking-tight uppercase">
+                    Athletic<span className="text-[#137fec]">Portal</span>
+                  </span>
+                </>
+              )}
             </Link>
             <nav className="hidden md:flex items-center gap-8">
               <Link 

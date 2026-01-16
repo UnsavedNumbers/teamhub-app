@@ -35,9 +35,19 @@ export function SportCardImage({
     // Select random image path (always use same image regardless of theme)
     useEffect(() => {
         const sportName = sport?.name || null
+        // If sport is not yet known, do NOT load a default image.
+        // This prevents a \"default then swap\" double-load.
+        if (!sportName) {
+            setSelectedImagePath('')
+            setImageLoaded(false)
+            setImageError(false)
+            return
+        }
+
         const path = getRandomSportImagePath(sportName, 'card', false)
         setSelectedImagePath(path)
         setImageLoaded(false) // Reset loaded state when path changes
+        setImageError(false)
     }, [sport?.name])
 
     const sportName = sport?.name || null

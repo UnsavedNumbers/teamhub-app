@@ -40,17 +40,22 @@ export function SportHero({
     useEffect(() => {
         const sportName = sport?.name || null
         
-        let path: string
-        if (forceDefault) {
-            // Dashboard always uses default images
-            path = getDefaultImagePath('hero', false)
-        } else {
-            // Other pages use random sport-specific images
-            path = getRandomSportImagePath(sportName, 'hero', false)
+        // If we are not forcing default and sport is not yet known, do NOT load any image.
+        // This prevents a \"default then swap\" double-load.
+        if (!forceDefault && !sportName) {
+            setSelectedImagePath('')
+            setImageLoaded(false)
+            setImageError(false)
+            return
         }
-        
+
+        const path = forceDefault
+            ? getDefaultImagePath('hero', false)
+            : getRandomSportImagePath(sportName, 'hero', false)
+
         setSelectedImagePath(path)
         setImageLoaded(false) // Reset loaded state when path changes
+        setImageError(false)
     }, [sport?.name, forceDefault])
 
     // Lazy load with Intersection Observer
