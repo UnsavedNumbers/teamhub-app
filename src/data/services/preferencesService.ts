@@ -1,0 +1,195 @@
+/**
+ * Preferences Service
+ * 
+ * Provides CRUD operations for user preferences stored in users.preferences JSONB column.
+ * Handles both authenticated (Supabase) and demo (localStorage) modes.
+ */
+
+import { USE_FAKE_DATA } from '../config'
+import { supabase } from '../../lib/supabase'
+
+// ============================================================================
+// Types
+// ============================================================================
+
+export interface UserPreferences {
+  theme?: 'light' | 'dark' | 'system'
+  language?: string
+  notifications?: Record<string, boolean>
+  [key: string]: unknown // Allow other preferences
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Get user preferences from Supabase
+ */
+export async function getUserPreferences(
+  userId: string
+): Promise<{ data: UserPreferences | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    // Demo mode: return empty preferences (use localStorage)
+    return { data: null, error: null }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('preferences')
+      .eq('id', userId)
+      .single()
+
+    if (error) {
+      // PGRST116 = "No rows returned"
+      if (error.code === 'PGRST116') {
+        return { data: null, error: null } // User doesn't exist, return null
+      }
+      throw error
+    }
+
+    // Parse preferences JSONB (default to empty object)
+    const preferences = (data?.preferences as UserPreferences) || {}
+    return { data: preferences, error: null }
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error('Unknown error'),
+    }
+  }
+}
+
+/**
+ * Update a single user preference
+ */
+export async function updateUserPreference(
+  userId: string,
+  key: string,
+  value: unknown
+): Promise<{ data: UserPreferences | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    // Demo mode: no-op (preferences stored in localStorage)
+    return { data: null, error: null }
+  }
+
+  try {
+    // First, get current preferences
+    const { data: currentData, error: fetchError } = await getUserPreferences(userId)
+    
+    if (fetchError) {
+      throw fetchError
+    }
+
+    // Merge new preference into existing preferences
+    const updatedPreferences: UserPreferences = {
+      ...(currentData || {}),
+      [key]: value,
+    }
+
+    // Update in Supabase
+    const { data, error } = await supabase
+      .from('users')
+      .update({ preferences: updatedPreferences })
+      .eq('id', userId)
+      .select('preferences')
+      .single()
+
+    if (error) throw error
+
+    const preferences = (data?.preferences as UserPreferences) || {}
+    return { data: preferences, error: null }
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error('Unknown error'),
+    }
+  }
+}
+
+/**
+ * Update multiple user preferences at once
+ */
+export async function updateUserPreferences(
+  userId: string,
+  preferences: Partial<UserPreferences>
+): Promise<{ data: UserPreferences | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    // Demo mode: no-op
+    return { data: null, error: null }
+  }
+
+  try {
+    // Get current preferences
+    const { data: currentData, error: fetchError } = await getUserPreferences(userId)
+    
+    if (fetchError) {
+      throw fetchError
+    }
+
+    // Merge new preferences
+    const updatedPreferences: UserPreferences = {
+      ...(currentData || {}),
+      ...preferences,
+    }
+
+    // Update in Supabase
+    const { data, error } = await supabase
+      .from('users')
+      .update({ preferences: updatedPreferences })
+      .eq('id', userId)
+      .select('preferences')
+      .single()
+
+    if (error) throw error
+
+    const prefs = (data?.preferences as UserPreferences) || {}
+    return { data: prefs, error: null }
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error('Unknown error'),
+    }
+  }
+}
+
+/**
+ * Clear a specific preference (set to null/undefined)
+ */
+export async function clearUserPreference(
+  userId: string,
+  key: string
+): Promise<{ data: UserPreferences | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    return { data: null, error: null }
+  }
+
+  try {
+    const { data: currentData, error: fetchError } = await getUserPreferences(userId)
+    
+    if (fetchError) {
+      throw fetchError
+    }
+
+    // Remove key from preferences
+    const updatedPreferences = { ...(currentData || {}) }
+    delete updatedPreferences[key]
+
+    const { data, error } = await supabase
+      .from('users')
+      .update({ preferences: updatedPreferences })
+      .eq('id', userId)
+      .select('preferences')
+      .single()
+
+    if (error) throw error
+
+    const prefs = (data?.preferences as UserPreferences) || {}
+    return { data: prefs, error: null }
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error('Unknown error'),
+    }
+  }
+}

@@ -7,7 +7,11 @@
 
 import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { SportImageSkeleton } from './SportImageSkeleton'
-import { getSportImagePath, getSportGradientFallback, getSportImageAlt } from '../../utils/sportImages'
+import { 
+    getRandomSportImagePath, 
+    getSportGradientFallback, 
+    getSportImageAlt 
+} from '../../utils/sportImages'
 import type { SportInfo } from '../../utils/sportContext'
 
 interface SportCardImageProps {
@@ -26,6 +30,7 @@ export function SportCardImage({
     const [imageLoaded, setImageLoaded] = useState(false)
     const [imageError, setImageError] = useState(false)
     const [darkMode, setDarkMode] = useState(false)
+    const [selectedImagePath, setSelectedImagePath] = useState<string>('')
     const imgRef = useRef<HTMLImageElement>(null)
 
     // Detect dark mode
@@ -44,15 +49,16 @@ export function SportCardImage({
         return () => observer.disconnect()
     }, [])
 
+    // Select random image path
+    useEffect(() => {
+        const sportName = sport?.name || null
+        const path = getRandomSportImagePath(sportName, 'card', darkMode)
+        setSelectedImagePath(path)
+        setImageLoaded(false) // Reset loaded state when path changes
+    }, [sport?.name, darkMode])
+
     const sportName = sport?.name || null
     const sportColor = sport?.color || null
-
-    // Get image paths
-    const cardPath = getSportImagePath(sportName, 'card', darkMode)
-    const darkCardPath = darkMode ? getSportImagePath(sportName, 'card', true) : null
-
-    // Try dark variant first, fallback to regular
-    const imageSrc = darkMode && darkCardPath ? darkCardPath : cardPath
 
     // Fallback gradient
     const gradientFallback = getSportGradientFallback(sportColor)
@@ -60,15 +66,15 @@ export function SportCardImage({
     return (
         <div className={`relative rounded-xl overflow-hidden ${height} ${className}`}>
             {/* Background Image */}
-            {!imageError ? (
+            {!imageError && selectedImagePath ? (
                 <>
                     <img
                         ref={imgRef}
-                        src={imageSrc}
+                        src={selectedImagePath}
                         alt={getSportImageAlt(sportName, 'card')}
                         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
                             imageLoaded ? 'opacity-100' : 'opacity-0'
-                        } ${darkMode && !darkCardPath ? 'dark:brightness-[0.7] dark:contrast-110' : ''}`}
+                        }`}
                         onLoad={() => setImageLoaded(true)}
                         onError={() => setImageError(true)}
                         loading="lazy"

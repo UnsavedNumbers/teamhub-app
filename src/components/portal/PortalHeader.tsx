@@ -3,6 +3,7 @@ import UserContextDropdown from '../common/UserContextDropdown'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
+import ThemeToggle from './ThemeToggle'
 
 interface UserNotification {
   id: string
@@ -75,6 +76,7 @@ export default function PortalHeader({ currentPath }: PortalHeaderProps) {
           </nav>
         </div>
         <div className="flex items-center gap-4">
+          <ThemeToggle variant="icon-only" />
           <button className="size-10 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors relative">
             <span className="material-symbols-outlined text-slate-600 dark:text-slate-300">notifications</span>
             {unread.length > 0 && (

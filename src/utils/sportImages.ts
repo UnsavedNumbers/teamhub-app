@@ -43,6 +43,91 @@ const DEFAULT_IMAGE_PATHS = {
 }
 
 /**
+ * Sport image variant configuration
+ * Defines how many numbered variants exist for each sport
+ * Example: Soccer card: 3 means card-bg.webp, card-bg2.webp, card-bg3.webp exist
+ */
+const SPORT_IMAGE_VARIANTS: Record<string, { hero: number; card: number }> = {
+    Soccer: { hero: 1, card: 1 },
+    Basketball: { hero: 1, card: 1 },
+    Baseball: { hero: 1, card: 1 },
+    Volleyball: { hero: 1, card: 1 },
+    Football: { hero: 1, card: 1 },
+}
+
+/**
+ * Get a random sport image path with variant support
+ * Randomly selects from available numbered variants (e.g., card-bg2.webp)
+ */
+export function getRandomSportImagePath(
+    sportName: string | null | undefined,
+    type: 'hero' | 'card',
+    darkMode: boolean = false
+): string {
+    if (!sportName || typeof sportName !== 'string') {
+        return DEFAULT_IMAGE_PATHS[type]
+    }
+
+    const normalizedName = sportName.trim()
+    if (!normalizedName) {
+        return DEFAULT_IMAGE_PATHS[type]
+    }
+
+    const sportImages = SPORT_IMAGE_MAP[normalizedName]
+    const variants = SPORT_IMAGE_VARIANTS[normalizedName]
+
+    if (!sportImages) {
+        return DEFAULT_IMAGE_PATHS[type]
+    }
+
+    const basePath = sportImages[type]
+
+    // Determine random variant number
+    const maxVariants = variants?.[type] || 1
+    const variantNumber = Math.floor(Math.random() * maxVariants) + 1
+
+    // If variant is 1, use base path without number suffix
+    let imagePath = basePath
+    if (variantNumber > 1) {
+        // Insert number before file extension: hero-bg.webp -> hero-bg2.webp
+        imagePath = basePath.replace(/\.webp$/i, `${variantNumber}.webp`)
+    }
+
+    // Handle dark mode variants
+    if (darkMode) {
+        try {
+            const darkPath = imagePath.replace(/\.webp$/i, '-dark.webp')
+            return darkPath
+        } catch (err) {
+            return imagePath
+        }
+    }
+
+    return imagePath
+}
+
+/**
+ * Get default image path (no sport-specific selection)
+ * Used for Dashboard to always show default images
+ */
+export function getDefaultImagePath(
+    type: 'hero' | 'card',
+    darkMode: boolean = false
+): string {
+    const basePath = DEFAULT_IMAGE_PATHS[type]
+
+    if (darkMode) {
+        try {
+            return basePath.replace(/\.webp$/i, '-dark.webp')
+        } catch (err) {
+            return basePath
+        }
+    }
+
+    return basePath
+}
+
+/**
  * Get image path for a sport and image type
  * Returns the sport-specific path, or default if sport not found
  */

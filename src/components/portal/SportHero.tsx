@@ -7,7 +7,12 @@
 
 import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { SportImageSkeleton } from './SportImageSkeleton'
-import { getSportImagePath, getSportGradientFallback, getSportImageAlt } from '../../utils/sportImages'
+import { 
+    getRandomSportImagePath, 
+    getDefaultImagePath, 
+    getSportGradientFallback, 
+    getSportImageAlt 
+} from '../../utils/sportImages'
 import type { SportInfo } from '../../utils/sportContext'
 
 interface SportHeroProps {
@@ -15,12 +20,20 @@ interface SportHeroProps {
     children?: ReactNode
     className?: string
     height?: string
+    forceDefault?: boolean
 }
 
-export function SportHero({ sport, children, className = '', height = '60vh' }: SportHeroProps) {
+export function SportHero({ 
+    sport, 
+    children, 
+    className = '', 
+    height = '60vh',
+    forceDefault = false
+}: SportHeroProps) {
     const [imageLoaded, setImageLoaded] = useState(false)
     const [imageError, setImageError] = useState(false)
     const [darkMode, setDarkMode] = useState(false)
+    const [selectedImagePath, setSelectedImagePath] = useState<string>('')
     const imgRef = useRef<HTMLImageElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
 
@@ -39,6 +52,23 @@ export function SportHero({ sport, children, className = '', height = '60vh' }: 
 
         return () => observer.disconnect()
     }, [])
+
+    // Select random image path (or force default)
+    useEffect(() => {
+        const sportName = sport?.name || null
+        
+        let path: string
+        if (forceDefault) {
+            // Dashboard always uses default images
+            path = getDefaultImagePath('hero', darkMode)
+        } else {
+            // Other pages use random sport-specific images
+            path = getRandomSportImagePath(sportName, 'hero', darkMode)
+        }
+        
+        setSelectedImagePath(path)
+        setImageLoaded(false) // Reset loaded state when path changes
+    }, [sport?.name, forceDefault, darkMode])
 
     // Lazy load with Intersection Observer
     useEffect(() => {
@@ -68,13 +98,6 @@ export function SportHero({ sport, children, className = '', height = '60vh' }: 
     const sportName = sport?.name || null
     const sportColor = sport?.color || null
 
-    // Get image paths
-    const heroPath = getSportImagePath(sportName, 'hero', darkMode)
-    const darkHeroPath = darkMode ? getSportImagePath(sportName, 'hero', true) : null
-
-    // Try dark variant first, fallback to regular
-    const imageSrc = darkMode && darkHeroPath ? darkHeroPath : heroPath
-
     // Fallback gradient
     const gradientFallback = getSportGradientFallback(sportColor)
 
@@ -85,15 +108,15 @@ export function SportHero({ sport, children, className = '', height = '60vh' }: 
             style={{ height }}
         >
             {/* Background Image */}
-            {!imageError ? (
+            {!imageError && selectedImagePath ? (
                 <>
                     <img
                         ref={imgRef}
-                        src={imageSrc}
+                        src={selectedImagePath}
                         alt={getSportImageAlt(sportName, 'hero')}
                         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
                             imageLoaded ? 'opacity-100' : 'opacity-0'
-                        } ${darkMode && !darkHeroPath ? 'dark:brightness-[0.7] dark:contrast-110' : ''}`}
+                        }`}
                         onLoad={() => setImageLoaded(true)}
                         onError={() => setImageError(true)}
                         loading="lazy"

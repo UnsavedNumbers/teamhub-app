@@ -176,23 +176,21 @@ export default function Calendar() {
             {Object.entries(groupedEvents).map(([date, dayEvents]) => (
               <div key={date}>
                 <SectionHeader className="mb-4">{formatDate(dayEvents[0].start_time)}</SectionHeader>
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {dayEvents.map((event) => (
                     <button
                       key={event.id}
                       onClick={() => setSelectedEvent(event)}
                       className="w-full text-left"
                     >
-                      <Card className={`p-0 border-l-4 ${typeColors[event.type] || 'border-l-slate-300'} hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300 overflow-hidden`}>
-                        <SportCardImage sport={eventSports[event.id] || null} height="h-32">
-                          <div className="flex items-center gap-4">
-                            <div className="min-w-[70px]">
-                              <p className="font-black text-white text-lg">{formatTime(event.start_time)}</p>
+                      <Card className={`p-0 border-l-0 ${typeColors[event.type] || 'border-slate-300'} hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300 overflow-hidden h-full`}>
+                        <SportCardImage sport={eventSports[event.id] || null} height="aspect-[4/3] h-auto">
+                          <div className="flex flex-col justify-end h-full">
+                            <div className={`inline-block px-2 py-1 mb-2 text-xs font-black uppercase tracking-wider text-white border-l-4 ${typeColors[event.type] || 'border-l-slate-300'}`}>
+                              {formatTime(event.start_time)}
                             </div>
-                            <div className="flex-1">
-                              <CardTitle className="text-lg mb-1 text-white">{event.title}</CardTitle>
-                              <p className="text-xs font-bold uppercase tracking-widest text-white/80">{event.team.name}</p>
-                            </div>
+                            <CardTitle className="text-lg mb-1 text-white">{event.title}</CardTitle>
+                            <p className="text-xs font-bold uppercase tracking-widest text-white/80">{event.team.name}</p>
                           </div>
                         </SportCardImage>
                       </Card>

@@ -275,7 +275,7 @@ export default function Dashboard() {
       <main className="max-w-[1200px] mx-auto">
         {/* Sport Hero Section */}
         <div className="px-6 -mx-6 mb-8">
-          <SportHero sport={primarySport} height="60vh">
+          <SportHero sport={primarySport} height="60vh" forceDefault={true}>
             <div className="max-w-[1200px] mx-auto px-6 pb-12">
               {/* Breadcrumbs & Greeting */}
               <div className="mb-8">

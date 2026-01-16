@@ -12,6 +12,7 @@ import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typogr
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
+import { ThemeSelector } from '../components/portal/ThemeToggle'
 
 interface Child {
   id: string
@@ -217,6 +218,17 @@ export default function Settings() {
                 </div>
               </Card>
             </div>
+          </section>
+
+          {/* Theme */}
+          <section>
+            <SectionHeader className="mb-4">Theme</SectionHeader>
+            <Card className="p-6">
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                Choose your preferred color theme. Changes apply immediately.
+              </p>
+              <ThemeSelector />
+            </Card>
           </section>
 
           {/* Language */}

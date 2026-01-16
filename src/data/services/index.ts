@@ -28,5 +28,8 @@ export * from './messagesService'
 // Family/Children Services
 export * from './familyService'
 
+// Preferences Services
+export * from './preferencesService'
+
 // Re-export types from fake data that services use
 export type { UserContext, PermissionSet } from '../fake/userContext'
