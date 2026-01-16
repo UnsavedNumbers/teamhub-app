@@ -298,7 +298,7 @@ export async function getPayments(
  * Get payments for a specific fee assignment
  */
 export async function getPaymentsForFeeAssignment(
-    context: UserContext,
+    _context: UserContext,
     assignmentId: string
 ): Promise<{ data: FakePayment[]; error: Error | null }> {
     if (!USE_FAKE_DATA) {

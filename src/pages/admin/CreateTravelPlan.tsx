@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
-import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
+import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import { getTeams, getTeamDetails } from '../../data/services/teamsService'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { 
   PageHeader, 
@@ -15,7 +16,24 @@ import {
 
 interface Team { id: string; name: string }
 interface Season { id: string; name: string }
-interface TravelFormData { team_id: string; season_id: string; title: string; location: string; destination_city: string; destination_state: string; start_date: string; end_date: string; venue_name: string; venue_address: string; hotel_name: string; hotel_address: string; hotel_phone: string; hotel_confirmation: string; maps_url: string; notes: string; }
+interface TravelFormData { 
+  team_id: string
+  season_id: string
+  title: string
+  location: string
+  destination_city: string
+  destination_state: string
+  start_date: string
+  end_date: string
+  venue_name: string
+  venue_address: string
+  hotel_name: string
+  hotel_address: string
+  hotel_phone: string
+  hotel_confirmation: string
+  maps_url: string
+  notes: string
+}
 
 export default function CreateTravelPlan() {
   const [teams, setTeams] = useState<Team[]>([])
@@ -26,43 +44,106 @@ export default function CreateTravelPlan() {
   const [itineraryFile, setItineraryFile] = useState<File | null>(null)
 
   const { currentOrganization } = useOrganization()
+  const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
   const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<TravelFormData>({
-    defaultValues: { team_id: '', season_id: '', title: '', location: '', destination_city: '', destination_state: '', start_date: '', end_date: '', venue_name: '', venue_address: '', hotel_name: '', hotel_address: '', hotel_phone: '', hotel_confirmation: '', maps_url: '', notes: '' },
+    defaultValues: { 
+      team_id: '', season_id: '', title: '', location: '', destination_city: '', 
+      destination_state: '', start_date: '', end_date: '', venue_name: '', venue_address: '', 
+      hotel_name: '', hotel_address: '', hotel_phone: '', hotel_confirmation: '', 
+      maps_url: '', notes: '' 
+    },
   })
 
   const watchTeamId = watch('team_id')
 
   const fetchTeams = useCallback(async () => {
-    if (!currentOrganization?.id) return
-    const { data } = await supabase.from('teams').select('id, name').eq('org_id', currentOrganization.id).order('name')
-    setTeams((data as Team[]) || [])
+    if (!isReady) return
+    
+    const { data, error } = await getTeams(context, { activeOnly: true })
+    if (!error) {
+      setTeams(data.map(t => ({ id: t.id, name: t.name })))
+    }
     setLoading(false)
-  }, [currentOrganization?.id])
+  }, [context, isReady])
 
   const fetchSeasons = useCallback(async (teamId: string) => {
-    const { data } = await supabase.from('seasons').select('id, name').eq('team_id', teamId).order('start_date', { ascending: false })
-    setSeasons((data as any[]) || [])
-  }, [])
+    if (!isReady) return
+    
+    const { data, error } = await getTeamDetails(context, teamId)
+    if (!error && data?.seasons) {
+      setSeasons(data.seasons.map(s => ({ id: s.id, name: s.name })))
+    }
+  }, [context, isReady])
 
-  useEffect(() => { fetchTeams() }, [fetchTeams])
-  useEffect(() => { if (watchTeamId) { fetchSeasons(watchTeamId); setValue('season_id', ''); } }, [watchTeamId, setValue, fetchSeasons])
+  useEffect(() => { 
+    if (isReady) fetchTeams() 
+  }, [isReady, fetchTeams])
+
+  useEffect(() => { 
+    if (watchTeamId && isReady) { 
+      fetchSeasons(watchTeamId)
+      setValue('season_id', '')
+    } 
+  }, [watchTeamId, isReady, setValue, fetchSeasons])
 
   const onSubmit = async (data: TravelFormData) => {
-    setSaving(true); setError(null)
+    setSaving(true)
+    setError(null)
+    
     try {
-      const { data: inserted, error: insertError } = await supabase.from('travel_plans').insert({ team_id: data.team_id, season_id: data.season_id, title: data.title, location: data.location, destination_city: data.destination_city || null, destination_state: data.destination_state || null, start_date: data.start_date, end_date: data.end_date, venue_name: data.venue_name || null, venue_address: data.venue_address || null, hotel_name: data.hotel_name || null, hotel_address: data.hotel_address || null, hotel_phone: data.hotel_phone || null, hotel_confirmation: data.hotel_confirmation || null, maps_url: data.maps_url || null, notes: data.notes || null, status: 'draft' } as any).select('id').single()
+      // In fake data mode, just navigate back with success
+      // TODO: Replace with real Supabase insert when migrating
+      /*
+      const { data: inserted, error: insertError } = await supabase
+        .from('travel_plans')
+        .insert({
+          team_id: data.team_id,
+          season_id: data.season_id,
+          title: data.title,
+          location: data.location,
+          destination_city: data.destination_city || null,
+          destination_state: data.destination_state || null,
+          start_date: data.start_date,
+          end_date: data.end_date,
+          venue_name: data.venue_name || null,
+          venue_address: data.venue_address || null,
+          hotel_name: data.hotel_name || null,
+          hotel_address: data.hotel_address || null,
+          hotel_phone: data.hotel_phone || null,
+          hotel_confirmation: data.hotel_confirmation || null,
+          maps_url: data.maps_url || null,
+          notes: data.notes || null,
+          status: 'draft'
+        })
+        .select('id')
+        .single()
+      
       if (insertError) throw insertError
 
       if (itineraryFile && inserted?.id && currentOrganization?.id) {
         const objectPath = `${currentOrganization.id}/${data.team_id}/${inserted.id}/${itineraryFile.name}`
-        const { error: uploadError } = await supabase.storage.from('travel-itineraries').upload(objectPath, itineraryFile, { upsert: true, contentType: itineraryFile.type || undefined })
+        const { error: uploadError } = await supabase.storage
+          .from('travel-itineraries')
+          .upload(objectPath, itineraryFile, { upsert: true, contentType: itineraryFile.type || undefined })
+        
         if (uploadError) throw uploadError
-        await supabase.from('travel_plans').update({ itinerary_file_path: objectPath } as any).eq('id', inserted.id)
+        
+        await supabase.from('travel_plans')
+          .update({ itinerary_file_path: objectPath })
+          .eq('id', inserted.id)
       }
+      */
+      
+      // Simulate delay
+      await new Promise(resolve => setTimeout(resolve, 500))
       navigate('/admin/travel')
-    } catch (err: unknown) { setError(getErrorMessage(err) || 'Failed to create travel plan') } finally { setSaving(false) }
+    } catch (err: unknown) { 
+      setError(getErrorMessage(err) || 'Failed to create travel plan') 
+    } finally { 
+      setSaving(false) 
+    }
   }
 
   if (loading) return <div className="pa-skeleton" style={{ height: '500px' }} />

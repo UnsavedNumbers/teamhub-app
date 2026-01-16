@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useUserContext } from '../hooks/useUserContext'
+import { getEventDetails, updateRSVP, type RSVPStatus } from '../data/services/eventsService'
+import { getChildren } from '../data/services/familyService'
 import PortalLayout from '../components/portal/PortalLayout'
 import PortalHeader from '../components/portal/PortalHeader'
 import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
@@ -30,7 +32,7 @@ interface Child {
 interface Attendance {
   id: string
   child_id: string
-  status: 'going' | 'late' | 'not_going'
+  status: RSVPStatus
   note: string | null
 }
 
@@ -43,81 +45,82 @@ export default function EventDetail() {
   const [saving, setSaving] = useState<string | null>(null)
 
   const { profile } = useAuth()
+  const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
-  const fetchAttendance = useCallback(async () => {
-    const { data } = await supabase
-      .from('attendance')
-      .select('id, child_id, status, note')
-      .eq('event_id', eventId || '')
-
-    const map: Record<string, Attendance> = {}
-    const list = data as unknown as Attendance[]
-    list?.forEach((a) => { map[a.child_id] = a })
-    setAttendance(map)
-  }, [eventId])
-
   const fetchData = useCallback(async () => {
+    if (!isReady || !eventId) return
+    
     setLoading(true)
     
-    const { data: eventData } = await supabase
-      .from('events')
-      .select('id, title, type, start_time, end_time, arrival_time, location, notes, team:teams(name)')
-      .eq('id', eventId || '')
-      .single()
+    // Fetch event details
+    const { data: eventData, error: eventError } = await getEventDetails(context, eventId)
 
-    if (!eventData) {
+    if (eventError || !eventData) {
       navigate('/portal/calendar')
       return
     }
-    setEvent(eventData as unknown as Event)
 
-    if (profile?.family_id) {
-      const { data: childData } = await supabase
-        .from('children')
-        .select('id, first_name, last_name')
-        .eq('family_id', profile.family_id)
-      setChildren(childData || [])
+    setEvent({
+      id: eventData.id,
+      title: eventData.title,
+      type: eventData.type,
+      start_time: eventData.start_time,
+      end_time: eventData.end_time,
+      arrival_time: eventData.arrival_time,
+      location: eventData.event_location?.name ?? null,
+      notes: eventData.notes,
+      team: { name: eventData.team?.name ?? 'Team' },
+    })
+
+    // Fetch children
+    const { data: childData } = await getChildren(context)
+    setChildren(childData.map(c => ({
+      id: c.id,
+      first_name: c.first_name,
+      last_name: c.last_name,
+    })))
+
+    // Fetch RSVPs
+    if (eventData.rsvps) {
+      const map: Record<string, Attendance> = {}
+      eventData.rsvps.forEach((rsvp) => {
+        map[rsvp.child_id] = {
+          id: rsvp.id,
+          child_id: rsvp.child_id,
+          status: rsvp.status,
+          note: rsvp.note,
+        }
+      })
+      setAttendance(map)
     }
 
-    await fetchAttendance()
     setLoading(false)
-  }, [eventId, profile?.family_id, navigate, fetchAttendance])
+  }, [eventId, context, isReady, navigate])
 
   useEffect(() => {
-    if (eventId) fetchData()
-  }, [eventId, profile, fetchData])
+    if (eventId && isReady) fetchData()
+  }, [eventId, isReady, fetchData])
 
-  useEffect(() => {
+  async function handleRsvp(childId: string, status: RSVPStatus) {
     if (!eventId) return
     
-    const channel = supabase
-      .channel(`attendance-${eventId}`)
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'attendance', filter: `event_id=eq.${eventId || ''}` },
-        () => fetchAttendance()
-      )
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
-  }, [eventId, fetchAttendance])
-
-  async function handleRsvp(childId: string, status: 'going' | 'late' | 'not_going') {
     setSaving(childId)
     
-    const existing = attendance[childId]
+    const { data, error } = await updateRSVP(context, eventId, childId, status)
     
-    if (existing) {
-      await supabase.from('attendance').update({ status } as never).eq('id', existing.id)
-    } else {
-      await supabase.from('attendance').insert({
-        event_id: eventId || '',
-        child_id: childId,
-        status,
-      } as never)
+    if (!error && data) {
+      setAttendance(prev => ({
+        ...prev,
+        [childId]: {
+          id: data.id,
+          child_id: data.child_id,
+          status: data.status,
+          note: data.note,
+        }
+      }))
     }
     
-    await fetchAttendance()
     setSaving(null)
   }
 
@@ -133,7 +136,7 @@ export default function EventDetail() {
 
   const statusStyles = {
     going: 'bg-emerald-500 text-white',
-    late: 'bg-amber-500 text-white',
+    maybe: 'bg-amber-500 text-white',
     not_going: 'bg-red-500 text-white',
   }
 
@@ -195,7 +198,7 @@ export default function EventDetail() {
 
             {event.notes && (
               <div className="pt-4 border-t border-slate-200 dark:border-slate-700 mt-4">
-                <p className="text-sm text-slate-500 dark:text-slate-400">{event.notes}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 whitespace-pre-wrap">{event.notes}</p>
               </div>
             )}
           </div>
@@ -221,7 +224,7 @@ export default function EventDetail() {
                     {saving === child.id && <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Saving</span>}
                   </div>
                   <div className="flex gap-3">
-                    {(['going', 'late', 'not_going'] as const).map((status) => (
+                    {(['going', 'maybe', 'not_going'] as const).map((status) => (
                       <button
                         key={status}
                         onClick={() => handleRsvp(child.id, status)}
@@ -232,7 +235,7 @@ export default function EventDetail() {
                             : statusInactiveStyles
                         }`}
                       >
-                        {status === 'going' ? 'Going' : status === 'late' ? 'Late' : 'Not Going'}
+                        {status === 'going' ? 'Going' : status === 'maybe' ? 'Maybe' : 'Not Going'}
                       </button>
                     ))}
                   </div>

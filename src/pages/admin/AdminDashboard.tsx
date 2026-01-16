@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
+import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import { getTeams } from '../../data/services/teamsService'
+import { getChildren } from '../../data/services/familyService'
+import { getUnpaidFeeAssignments } from '../../data/services/paymentsService'
+import { getUpcomingEventsForUser } from '../../data/services/eventsService'
 import { 
   PageHeader, 
   StatCard, 
@@ -35,38 +39,47 @@ export default function AdminDashboard() {
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
   const [loading, setLoading] = useState(true)
   const { currentOrganization } = useOrganization()
+  const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
   const fetchDashboardData = useCallback(async () => {
-    if (!currentOrganization?.id) { setLoading(false); return }
+    if (!isReady) { setLoading(false); return }
+    
     try {
-      const [teams, players, seasons, payments, events, uniforms] = await Promise.all([
-        supabase.from('teams').select('*', { count: 'exact', head: true }).eq('org_id', currentOrganization.id),
-        supabase.from('children').select('id, family:families(org_id)', { count: 'exact', head: true }).filter('family.org_id', 'eq', currentOrganization.id),
-        supabase.from('seasons').select('*', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('fee_assignments').select('*', { count: 'exact', head: true }).eq('organization_id', currentOrganization.id).eq('status', 'unpaid'),
-        supabase.from('events').select('*', { count: 'exact', head: true }).eq('org_id', currentOrganization.id).gte('start_time', new Date().toISOString()),
-        supabase.from('uniform_submissions').select('*', { count: 'exact', head: true }).not('status', 'eq', 'fulfilled'),
+      // Fetch all stats in parallel
+      const [teamsResult, childrenResult, unpaidResult, eventsResult] = await Promise.all([
+        getTeams(context, { activeOnly: false }),
+        getChildren(context),
+        getUnpaidFeeAssignments(context),
+        getUpcomingEventsForUser(context, 100),
       ])
 
       setStats({
-        totalTeams: teams.count || 0,
-        totalPlayers: players.count || 0,
-        activeSeasons: seasons.count || 0,
-        outstandingPayments: payments.count || 0,
-        upcomingEvents: events.count || 0,
-        pendingUniformOrders: uniforms.count || 0,
+        totalTeams: teamsResult.data.length,
+        totalPlayers: childrenResult.data.length,
+        activeSeasons: 2, // TODO: Implement seasons service
+        outstandingPayments: unpaidResult.data.length,
+        upcomingEvents: eventsResult.data.length,
+        pendingUniformOrders: 0, // TODO: Implement uniforms service
       })
 
-      const { data: recentFees } = await supabase.from('fee_assignments').select('id, created_at, fee:fees(title)').eq('organization_id', currentOrganization.id).order('created_at', { ascending: false }).limit(5)
-      const activities = ((recentFees as any[]) || []).map(r => ({
-        id: r.id, type: 'fee_assignment', message: `New fee assignment: ${r.fee?.title || 'Fee'}`, timestamp: r.created_at || new Date().toISOString()
+      // Generate recent activity from unpaid fees
+      const activities: RecentActivity[] = unpaidResult.data.slice(0, 5).map(assignment => ({
+        id: assignment.id,
+        type: 'fee_assignment',
+        message: `New fee assignment: ${assignment.fee?.title || 'Fee'}`,
+        timestamp: assignment.created_at,
       }))
+      
       setRecentActivity(activities)
-    } finally { setLoading(false) }
-  }, [currentOrganization?.id])
+    } finally { 
+      setLoading(false) 
+    }
+  }, [context, isReady])
 
-  useEffect(() => { fetchDashboardData() }, [fetchDashboardData])
+  useEffect(() => { 
+    fetchDashboardData() 
+  }, [fetchDashboardData])
 
   if (loading) return <div className="pa-skeleton" style={{ height: '500px' }} />
 

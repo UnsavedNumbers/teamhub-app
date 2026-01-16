@@ -1,113 +1,66 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
-import { useAuth } from '../../hooks/useAuth'
+import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import { getTryouts } from '../../data/services/tryoutsService'
+import type { Tryout } from '../../data/services/tryoutsService'
 import { 
   PageHeader, 
   Card, 
-  Badge, 
+  Button, 
   PlatformDataTable, 
-  EmptyState, 
+  Badge,
   type ColumnConfig 
 } from '../../components/platformAdmin'
-
-interface Tryout {
-  id: string
-  title: string
-  type?: string | null
-  age_group: string
-  tryout_date: string
-  location: string
-  org_id: string
-}
 
 export default function AdminTryouts() {
   const [tryouts, setTryouts] = useState<Tryout[]>([])
   const [loading, setLoading] = useState(true)
-  const [page, setPage] = useState(0)
-  const [rowsPerPage, setRowsPerPage] = useState(50)
-  const [totalCount, setTotalCount] = useState(0)
-
-  const { profile } = useAuth()
+  const { context, isReady } = useUserContext()
   const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
 
   const fetchTryouts = useCallback(async () => {
+    if (!isReady || !currentOrganization) return
     setLoading(true)
-    try {
-      if (!currentOrganization) return
-
-      const { count } = await supabase
-        .from('tryouts')
-        .select('*', { count: 'exact', head: true })
-        .eq('org_id', currentOrganization.id)
-
-      setTotalCount(count || 0)
-
-      const from = page * rowsPerPage
-      const to = from + rowsPerPage - 1
-
-      const { data } = await supabase
-        .from('tryouts')
-        .select('*')
-        .eq('org_id', currentOrganization.id)
-        .order('tryout_date', { ascending: false })
-        .range(from, to)
-
-      setTryouts((data as Tryout[]) || [])
-    } catch (error) {
-      console.error('Error:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [page, rowsPerPage, currentOrganization])
+    const { data } = await getTryouts(context, currentOrganization.id)
+    setTryouts(data)
+    setLoading(false)
+  }, [context, isReady, currentOrganization])
 
   useEffect(() => {
-    if (currentOrganization) fetchTryouts()
-  }, [fetchTryouts, currentOrganization])
+    if (isReady && currentOrganization) fetchTryouts()
+  }, [isReady, currentOrganization, fetchTryouts])
 
   const columns: ColumnConfig<Tryout>[] = [
-    { id: 'title', label: 'Title' },
-    { 
-      id: 'type', 
-      label: 'Sport',
-      render: (row) => <Badge variant="neutral">{String(row.type ?? 'tryout').toUpperCase()}</Badge>
-    },
+    { id: 'title', label: 'Title', render: (row) => <span className="pa-body-m" style={{fontWeight:600}}>{row.title}</span> },
+    { id: 'tryout_date', label: 'Date', render: (row) => row.tryout_date ? new Date(row.tryout_date).toLocaleDateString() : 'TBD' },
     { id: 'age_group', label: 'Age Group' },
+    { id: 'status', label: 'Status', render: (row) => <Badge variant={row.status === 'open' ? 'success' : 'neutral'}>{row.status.toUpperCase()}</Badge> },
     { 
-      id: 'date', 
-      label: 'Date',
-      render: (row) => new Date(row.tryout_date).toLocaleDateString()
-    },
-    { id: 'location', label: 'Location' }
+      id: 'actions', 
+      label: 'Actions', 
+      align: 'right',
+      render: (row) => (
+        <Button variant="ghost" size="small" onClick={(e) => { e.stopPropagation(); navigate(`/admin/tryouts/${row.id}`) }}>
+          <span className="material-symbols-outlined">visibility</span>
+        </Button>
+      )
+    }
   ]
 
   return (
     <div className="pa-root">
-      <PageHeader title="Tryouts" />
-
-      {tryouts.length === 0 && !loading ? (
-        <Card>
-          <EmptyState
-            icon="emoji_events"
-            title="NO TRYOUTS FOUND"
-            description="Tryouts will appear here when created by the platform admin."
-          />
-        </Card>
-      ) : (
-        <PlatformDataTable
-          columns={columns}
-          rows={tryouts}
-          loading={loading}
-          totalCount={totalCount}
-          page={page}
-          rowsPerPage={rowsPerPage}
-          onPageChange={setPage}
-          onRowsPerPageChange={setRowsPerPage}
-          onRowClick={(row) => navigate(`/admin/tryouts/${row.id}`)}
-        />
-      )}
+      <PageHeader 
+        title="Tryouts" 
+        actions={<Button onClick={() => navigate('/admin/tryouts/new')}><span className="material-symbols-outlined">add</span>Create Tryout</Button>}
+      />
+      <PlatformDataTable
+        columns={columns}
+        rows={tryouts}
+        loading={loading}
+        onRowClick={(row) => navigate(`/admin/tryouts/${row.id}`)}
+      />
     </div>
   )
 }

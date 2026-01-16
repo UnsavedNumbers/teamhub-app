@@ -1,83 +1,133 @@
-import { useEffect, useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
-import { useOrganization } from '../../contexts/OrganizationContext'
-import { adaptUserToTableRow, UserTableRow } from '../../utils/dataAdapters'
+import { useUserContext } from '../../hooks/useUserContext'
+import { getOrganizationUsers } from '../../data/services/usersService'
 import { 
   PageHeader, 
   Card, 
-  Badge, 
-  PlatformDataTable, 
   Button, 
+  PlatformDataTable, 
+  Badge,
   type ColumnConfig 
 } from '../../components/platformAdmin'
 
+interface OrgUser {
+  id: string
+  email: string
+  display_name: string | null
+  phone: string | null
+  roles: string[]
+  created_at: string
+}
+
 export default function OrganizationUsers() {
-  const [users, setUsers] = useState<UserTableRow[]>([])
+  const [users, setUsers] = useState<OrgUser[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)
-  const [rowsPerPage, setRowsPerPage] = useState(50)
-  const [totalCount, setTotalCount] = useState(0)
-  const [error, setError] = useState<string | null>(null)
+  const [rowsPerPage, setRowsPerPage] = useState(25)
 
   const { profile } = useAuth()
-  const { currentOrganization } = useOrganization()
+  const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
+  const fetchUsers = useCallback(async () => {
+    if (!isReady) return
+    
+    setLoading(true)
+    const { data, error } = await getOrganizationUsers(context)
+    
+    if (!error) {
+      setUsers(data)
+    }
+    setLoading(false)
+  }, [context, isReady])
+
   useEffect(() => {
-    if (currentOrganization?.id) {
-      fetchUsers()
-    }
-  }, [currentOrganization, page, rowsPerPage])
+    if (isReady) fetchUsers()
+  }, [isReady, fetchUsers])
 
-  async function fetchUsers() {
-    if (!currentOrganization?.id) {
-      setLoading(false)
-      return
+  const columns: ColumnConfig<OrgUser>[] = [
+    { 
+      id: 'email', 
+      label: 'Email',
+      render: (row) => (
+        <div>
+          <div className="pa-body-m" style={{ fontWeight: 600 }}>{row.email}</div>
+          {row.display_name && (
+            <div className="pa-body-s pa-text-muted">{row.display_name}</div>
+          )}
+        </div>
+      )
+    },
+    { 
+      id: 'phone', 
+      label: 'Phone',
+      render: (row) => row.phone || '—'
+    },
+    { 
+      id: 'roles', 
+      label: 'Roles',
+      render: (row) => (
+        <div className="pa-flex pa-gap-2">
+          {row.roles.map(role => (
+            <Badge 
+              key={role} 
+              variant={role === 'admin' ? 'primary' : role === 'coach' ? 'info' : 'neutral'}
+            >
+              {role.toUpperCase()}
+            </Badge>
+          ))}
+        </div>
+      )
+    },
+    { 
+      id: 'created_at', 
+      label: 'Joined',
+      render: (row) => new Date(row.created_at).toLocaleDateString()
+    },
+    { 
+      id: 'actions', 
+      label: 'Actions', 
+      align: 'right',
+      render: (row) => (
+        <Button 
+          variant="ghost" 
+          size="small"
+          onClick={(e) => { 
+            e.stopPropagation()
+            // TODO: Implement edit user
+          }}
+        >
+          <span className="material-symbols-outlined">edit</span>
+        </Button>
+      )
     }
-    setLoading(true); setError(null)
-    try {
-      const { count } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('org_id', currentOrganization.id)
-      setTotalCount(count || 0)
-      const from = page * rowsPerPage
-      const to = from + rowsPerPage - 1
-      const { data, error } = await supabase.from('users').select('*, family:families(name)').eq('org_id', currentOrganization.id).order('created_at', { ascending: false }).range(from, to)
-      if (error) { setError(error.message); return }
-      const rows = (data || []) as any[]
-      setUsers(rows.map(user => adaptUserToTableRow(user, user.family?.name ? { name: user.family.name } : null)))
-    } catch (err) { setError('Failed to load users') } finally { setLoading(false) }
-  }
-
-  const getRoleVariant = (role: string): 'danger' | 'warning' | 'neutral' => {
-    switch (role) {
-      case 'org_admin': case 'admin': return 'danger'
-      case 'coach': return 'warning'
-      default: return 'neutral'
-    }
-  }
-
-  const columns: ColumnConfig<UserTableRow>[] = [
-    { id: 'name', label: 'Name' },
-    { id: 'email', label: 'Email' },
-    { id: 'phone', label: 'Phone' },
-    { id: 'role', label: 'Role', render: (row) => <Badge variant={getRoleVariant(row.role)}>{row.role.toUpperCase()}</Badge> },
-    { id: 'familyName', label: 'Family' },
-    { id: 'actions', label: 'Actions', align: 'right', render: (row) => (
-      <button className="pa-btn pa-btn--ghost pa-btn--dense" onClick={(e) => { e.stopPropagation(); /* edit logic */ }}>
-        <span className="material-symbols-outlined">edit</span>
-      </button>
-    )}
   ]
 
   return (
     <div className="pa-root">
       <PageHeader 
         title="Organization Users" 
-        actions={<Button onClick={() => navigate('/admin/users/new')}><span className="material-symbols-outlined">add</span>Add User</Button>} 
+        actions={
+          <Button onClick={() => navigate('/admin/users/new')}>
+            <span className="material-symbols-outlined">add</span>
+            Add User
+          </Button>
+        }
       />
-      {error && <div className="pa-card pa-mb-4" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
-      <PlatformDataTable columns={columns} rows={users} loading={loading} totalCount={totalCount} page={page} rowsPerPage={rowsPerPage} onPageChange={setPage} onRowsPerPageChange={setRowsPerPage} />
+
+      <PlatformDataTable
+        columns={columns}
+        rows={users}
+        loading={loading}
+        totalCount={users.length}
+        page={page}
+        rowsPerPage={rowsPerPage}
+        onPageChange={setPage}
+        onRowsPerPageChange={setRowsPerPage}
+        emptyMessage="No users found. Create your first user to get started."
+      />
     </div>
   )
 }

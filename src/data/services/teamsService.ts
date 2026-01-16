@@ -12,12 +12,6 @@ import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext, PermissionSet } from '../fake/userContext'
 import { calculatePermissions } from '../fake/userContext'
 import {
-    fakeTeams,
-    fakeSeasons,
-    fakeSports,
-    fakePrograms,
-    fakeTeamMembers,
-    fakeCoachAssignments,
     getTeamById,
     getTeamsForOrg,
     getActiveTeamsForOrg,
@@ -273,7 +267,7 @@ export async function getPrograms(
  * ```
  */
 export async function getActiveSeason(
-    context: UserContext,
+    _context: UserContext,
     teamId: string
 ): Promise<{ data: FakeSeason | null; error: Error | null }> {
     if (!USE_FAKE_DATA) {
@@ -364,7 +358,7 @@ export async function getTeamRoster(
  * ```
  */
 export async function getTeamCoaches(
-    context: UserContext,
+    _context: UserContext,
     teamId: string,
     seasonId: string
 ): Promise<{ data: FakeCoachAssignment[]; error: Error | null }> {

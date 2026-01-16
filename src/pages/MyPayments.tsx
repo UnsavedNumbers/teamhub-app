@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import type { Database } from '../lib/database.types.ts'
+import { useUserContext } from '../hooks/useUserContext'
+import { getFeeAssignmentsForUser, formatCurrency } from '../data/services/paymentsService'
 import { createParentCheckoutSession } from '../api/payments'
 import PortalLayout from '../components/portal/PortalLayout'
 import PortalHeader from '../components/portal/PortalHeader'
@@ -10,7 +10,7 @@ import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 
-type FeeAssignmentStatus = Database['public']['Enums']['fee_assignment_status']
+type FeeAssignmentStatus = 'unpaid' | 'partial' | 'paid' | 'waived' | 'overdue'
 
 interface FeeAssignment {
   id: string
@@ -34,10 +34,8 @@ const statusLabels: Record<FeeAssignmentStatus, string> = {
   unpaid: 'Unpaid',
   partial: 'Partial',
   paid: 'Paid',
-  refunded: 'Refunded',
   waived: 'Waived',
-  scholarship_applied: 'Scholarship',
-  offline_recorded: 'Recorded',
+  overdue: 'Overdue',
 }
 
 export default function MyPayments() {
@@ -54,48 +52,83 @@ export default function MyPayments() {
   const [creatingCheckout, setCreatingCheckout] = useState(false)
 
   const { profile } = useAuth()
+  const { context, isReady } = useUserContext()
 
   useEffect(() => {
-    if (profile?.id) fetchAssignments()
-  }, [profile?.id])
+    if (!isReady) return
+    fetchAssignments()
+  }, [context, isReady])
 
   async function fetchAssignments() {
     setLoading(true)
     setError(null)
-    const { data, error: queryError } = await supabase
-      .from('fee_assignments')
-      .select(`
-        id,
-        amount_cents,
-        balance_cents,
-        paid_cents_total,
-        due_date,
-        status,
-        fee:fees (
-          id,
-          title,
-          description,
-          due_date,
-          fee_type,
-          season:seasons (
-            team:teams ( id, name )
-          )
-        ),
-        child:children (
-          id,
-          first_name,
-          last_name
-        )
-      `)
-      .eq('parent_id', profile?.id ?? '')
-      .order('due_date', { ascending: true })
+    
+    const { data, error: queryError } = await getFeeAssignmentsForUser(context)
 
     if (queryError) {
       setError(queryError.message)
     } else {
-      setAssignments((data as unknown as FeeAssignment[]) || [])
+      // Transform service data to component format
+      const transformed: FeeAssignment[] = data.map(fa => ({
+        id: fa.id,
+        amount_cents: fa.amount_due_cents,
+        balance_cents: fa.amount_due_cents - fa.amount_paid_cents,
+        paid_cents_total: fa.amount_paid_cents,
+        due_date: fa.due_date,
+        status: fa.status as FeeAssignmentStatus,
+        fee: fa.fee ? {
+          id: fa.fee.id,
+          title: fa.fee.title,
+          description: fa.fee.description ?? null,
+          due_date: fa.fee.due_date,
+          fee_type: fa.fee.fee_type,
+          season: fa.fee.team_id ? { 
+            team: { 
+              id: fa.fee.team_id, 
+              name: getTeamName(fa.fee.team_id) 
+            } 
+          } : null,
+        } : null,
+        child: fa.child_id ? {
+          id: fa.child_id,
+          first_name: getChildFirstName(fa.child_id),
+          last_name: getChildLastName(fa.child_id),
+        } : null,
+      }))
+      setAssignments(transformed)
     }
     setLoading(false)
+  }
+
+  // Helper functions to get names (in real implementation, these come from joined data)
+  const getTeamName = (teamId: string): string => {
+    const teamNames: Record<string, string> = {
+      'team-u10-soccer-001': 'U10 Lightning',
+      'team-u12-soccer-002': 'U12 Thunder',
+      'team-u10-basketball-003': 'U10 Hawks',
+      'team-u12-basketball-004': 'U12 Eagles',
+    }
+    return teamNames[teamId] ?? 'Team'
+  }
+
+  const getChildFirstName = (childId: string): string => {
+    const names: Record<string, string> = {
+      'child-emma-001': 'Emma',
+      'child-liam-002': 'Liam',
+      'child-sophia-003': 'Sophia',
+      'child-jackson-004': 'Jackson',
+    }
+    return names[childId] ?? 'Child'
+  }
+
+  const getChildLastName = (childId: string): string => {
+    const names: Record<string, string> = {
+      'child-emma-001': 'Johnson',
+      'child-liam-002': 'Williams',
+      'child-sophia-003': 'Brown',
+      'child-jackson-004': 'Davis',
+    }
+    return names[childId] ?? ''
   }
 
   const filteredAssignments = useMemo(() => {
@@ -109,7 +142,7 @@ export default function MyPayments() {
   }, [assignments, statusFilter, childFilter, teamFilter])
 
   const selectedAssignments = filteredAssignments.filter((a) => selectedIds.includes(a.id))
-  const unpaidAssignments = filteredAssignments.filter((a) => ['unpaid', 'partial'].includes(a.status))
+  const unpaidAssignments = filteredAssignments.filter((a) => ['unpaid', 'partial', 'overdue'].includes(a.status))
 
   const totalDue = unpaidAssignments.reduce((sum, a) => sum + (a.balance_cents ?? 0), 0)
   const selectedTotal = (selectedAssignments.length > 0 ? selectedAssignments : unpaidAssignments).reduce(
@@ -187,9 +220,10 @@ export default function MyPayments() {
       case 'partial':
         return <span className={`${base} bg-amber-500/10 text-amber-500 dark:text-amber-400`}>{statusLabels[status]}</span>
       case 'unpaid':
+      case 'overdue':
         return <span className={`${base} bg-red-500/10 text-red-500 dark:text-red-400`}>{statusLabels[status]}</span>
       default:
-        return <span className={`${base} bg-slate-500/10 text-slate-500 dark:text-slate-400`}>{statusLabels[status]}</span>
+        return <span className={`${base} bg-slate-500/10 text-slate-500 dark:text-slate-400`}>{statusLabels[status] ?? status}</span>
     }
   }
 
@@ -229,7 +263,7 @@ export default function MyPayments() {
                 <option value="partial">Partial</option>
                 <option value="paid">Paid</option>
                 <option value="waived">Waived</option>
-                <option value="refunded">Refunded</option>
+                <option value="overdue">Overdue</option>
               </select>
               <select
                 className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white font-medium"

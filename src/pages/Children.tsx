@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useUserContext } from '../hooks/useUserContext'
+import { getChildren } from '../data/services/familyService'
 import PortalLayout from '../components/portal/PortalLayout'
 import PortalHeader from '../components/portal/PortalHeader'
 import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
@@ -12,7 +13,7 @@ interface Child {
   id: string
   first_name: string
   last_name: string
-  birthdate: string | null
+  date_of_birth: string | null
 }
 
 export default function Children() {
@@ -24,49 +25,51 @@ export default function Children() {
   const [error, setError] = useState<string | null>(null)
 
   const { profile } = useAuth()
+  const { context, isReady } = useUserContext()
 
   const fetchChildren = useCallback(async () => {
-    if (!profile?.family_id) {
-      setLoading(false)
-      return
-    }
+    if (!isReady) return
+    
     setLoading(true)
-    const { data, error } = await supabase
-      .from('children')
-      .select('*')
-      .eq('family_id', profile.family_id)
-      .order('first_name')
+    const { data, error } = await getChildren(context)
 
-    if (!error) setChildren((data as Child[]) || [])
+    if (!error) {
+      setChildren(data.map(child => ({
+        id: child.id,
+        first_name: child.first_name,
+        last_name: child.last_name,
+        date_of_birth: child.date_of_birth,
+      })))
+    }
     setLoading(false)
-  }, [profile?.family_id])
+  }, [context, isReady])
 
   useEffect(() => {
-    if (profile?.family_id) fetchChildren()
+    if (isReady) fetchChildren()
     else setLoading(false)
-  }, [profile, fetchChildren])
+  }, [isReady, fetchChildren])
 
   async function handleSave() {
-    if (!form.first_name.trim() || !form.last_name.trim() || !profile?.family_id) return
+    if (!form.first_name.trim() || !form.last_name.trim()) return
     
     setSaving(true)
     setError(null)
 
-    const { error } = await supabase.from('children').insert({
-      family_id: profile.family_id,
+    // In fake data mode, just add locally
+    const newChild: Child = {
+      id: `child-new-${Date.now()}`,
       first_name: form.first_name.trim(),
       last_name: form.last_name.trim(),
-      birthdate: form.birthdate || null,
-    } as never)
-
-    if (error) {
-      setError(error.message)
-    } else {
-      setForm({ first_name: '', last_name: '', birthdate: '' })
-      setShowModal(false)
-      fetchChildren()
+      date_of_birth: form.birthdate || null,
     }
+
+    setChildren(prev => [...prev, newChild])
+    setForm({ first_name: '', last_name: '', birthdate: '' })
+    setShowModal(false)
     setSaving(false)
+    
+    // TODO: Replace with real Supabase insert when migrating
+    // const { error } = await supabase.from('children').insert({ ... })
   }
 
   function calculateAge(birthdate: string | null) {
@@ -100,11 +103,7 @@ export default function Children() {
           </Button>
         </div>
 
-        {!profile?.family_id ? (
-          <Card className="text-center py-12">
-            <p className="text-slate-500 dark:text-slate-400">Account not linked to a family. Contact your administrator.</p>
-          </Card>
-        ) : loading ? (
+        {loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
           </div>
@@ -129,9 +128,9 @@ export default function Children() {
                   </div>
                   <div>
                     <CardTitle className="text-lg mb-1">{child.first_name} {child.last_name}</CardTitle>
-                    {child.birthdate && (
+                    {child.date_of_birth && (
                       <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
-                        Age {calculateAge(child.birthdate)}
+                        Age {calculateAge(child.date_of_birth)}
                       </p>
                     )}
                   </div>

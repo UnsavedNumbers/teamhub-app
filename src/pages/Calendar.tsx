@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
-import { useAuth } from '../hooks/useAuth'
+import { useUserContext } from '../hooks/useUserContext'
+import { getEvents } from '../data/services/eventsService'
 import PortalLayout from '../components/portal/PortalLayout'
 import PortalHeader from '../components/portal/PortalHeader'
 import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
+import type { CalendarEvent } from '../types/calendar'
 
-interface Event {
+type ViewMode = 'agenda' | 'week' | 'month'
+
+interface DisplayEvent {
   id: string
   title: string
   type: string
@@ -21,29 +24,50 @@ interface Event {
   team: { name: string }
 }
 
-type ViewMode = 'agenda' | 'week' | 'month'
-
 export default function Calendar() {
-  const [events, setEvents] = useState<Event[]>([])
+  const [events, setEvents] = useState<DisplayEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<ViewMode>('agenda')
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+  const [selectedEvent, setSelectedEvent] = useState<DisplayEvent | null>(null)
 
-  const { profile } = useAuth()
+  const { context, isReady } = useUserContext()
 
   useEffect(() => {
+    if (!isReady) return
     fetchEvents()
-  }, [profile])
+  }, [context, isReady])
 
   async function fetchEvents() {
-    const { data } = await supabase
-      .from('events')
-      .select('id, title, type, start_time, end_time, arrival_time, location, notes, team:teams(name)')
-      .order('start_time', { ascending: true })
-      .gte('start_time', new Date().toISOString())
-      .limit(50)
+    setLoading(true)
+    
+    const now = new Date()
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+    
+    const { data, error } = await getEvents(context, {
+      startDate: now,
+      endDate: thirtyDaysFromNow,
+      includeCancelled: false,
+      limit: 50,
+    })
 
-    setEvents((data as unknown as Event[]) || [])
+    if (error) {
+      console.error('Error fetching events:', error)
+      setEvents([])
+    } else {
+      // Transform CalendarEvent to DisplayEvent format
+      const displayEvents: DisplayEvent[] = data.map(event => ({
+        id: event.id,
+        title: event.title,
+        type: event.type,
+        start_time: event.start_time,
+        end_time: event.end_time,
+        arrival_time: event.arrival_time ?? null,
+        location: event.event_location?.name ?? null,
+        notes: event.notes ?? null,
+        team: { name: event.team?.name ?? 'Unknown Team' },
+      }))
+      setEvents(displayEvents)
+    }
     setLoading(false)
   }
 
@@ -64,6 +88,7 @@ export default function Calendar() {
     game: 'border-l-emerald-500',
     tournament: 'border-l-amber-500',
     meeting: 'border-l-purple-500',
+    travel: 'border-l-cyan-500',
   }
 
   const groupedEvents = events.reduce((acc, event) => {
@@ -71,7 +96,7 @@ export default function Calendar() {
     if (!acc[date]) acc[date] = []
     acc[date].push(event)
     return acc
-  }, {} as Record<string, Event[]>)
+  }, {} as Record<string, DisplayEvent[]>)
 
   return (
     <>

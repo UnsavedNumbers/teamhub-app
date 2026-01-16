@@ -1,11 +1,25 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { supabase } from '../lib/supabase'
+import { useUserContext } from '../hooks/useUserContext'
 import {
   getSetupOrganizationFlag,
   clearSetupOrganizationFlag,
 } from '../utils/setupOrganization'
+import {
+  getNotifications,
+  getUnreadNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+} from '../data/services/messagesService'
+import {
+  getUpcomingEventsForUser,
+} from '../data/services/eventsService'
+import {
+  getParentPaymentSummary,
+  getUnpaidFeeAssignments,
+} from '../data/services/paymentsService'
+import type { CalendarEvent } from '../types/calendar'
 
 interface UserNotification {
   id: string
@@ -14,12 +28,21 @@ interface UserNotification {
   created_at: string
 }
 
+interface PaymentOverview {
+  title: string
+  subtitle: string
+  status: 'paid' | 'due' | 'pending'
+  amount?: string
+}
+
 export default function Dashboard() {
   const { user, profile } = useAuth()
+  const { context, isReady } = useUserContext()
   const navigate = useNavigate()
   const [unread, setUnread] = useState<UserNotification[]>([])
-  // Typed Supabase client lags behind new schema during migrations; use untyped client for new notifications table.
-  const sb = supabase as any
+  const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([])
+  const [eventsLoading, setEventsLoading] = useState(true)
+  const [paymentItems, setPaymentItems] = useState<PaymentOverview[]>([])
 
   // Safety net: If user landed here with setupOrganization flag, redirect to onboarding
   useEffect(() => {
@@ -29,46 +52,118 @@ export default function Dashboard() {
     }
   }, [navigate])
 
-  const loadNotifications = async () => {
-    const { data } = await sb
-      .from('user_notifications')
-      .select('id, title, body, created_at')
-      .is('read_at', null)
-      .order('created_at', { ascending: false })
-      .limit(3)
-    setUnread((data as unknown as UserNotification[]) || [])
-  }
-
+  // Load notifications
   useEffect(() => {
+    if (!isReady) return
+
+    const loadNotifications = async () => {
+      const { data, error } = await getUnreadNotifications(context)
+      if (!error) {
+        setUnread(data.slice(0, 3).map(n => ({
+          id: n.id,
+          title: n.title,
+          body: n.body,
+          created_at: n.created_at,
+        })))
+      }
+    }
+
     loadNotifications()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [context, isReady])
+
+  // Load upcoming events
+  useEffect(() => {
+    if (!isReady) return
+
+    const loadEvents = async () => {
+      setEventsLoading(true)
+      const { data, error } = await getUpcomingEventsForUser(context, 3)
+      if (!error) {
+        setUpcomingEvents(data)
+      }
+      setEventsLoading(false)
+    }
+
+    loadEvents()
+  }, [context, isReady])
+
+  // Load payment summary
+  useEffect(() => {
+    if (!isReady) return
+
+    const loadPayments = async () => {
+      const { data: unpaid } = await getUnpaidFeeAssignments(context)
+      
+      const items: PaymentOverview[] = []
+      
+      // Add unpaid items
+      unpaid.slice(0, 2).forEach(assignment => {
+        items.push({
+          title: assignment.fee?.title ?? 'Fee',
+          subtitle: 'Due soon',
+          status: 'due',
+          amount: `$${((assignment.amount_due_cents - assignment.amount_paid_cents) / 100).toFixed(2)}`,
+        })
+      })
+
+      // Add a sample paid item for display
+      if (items.length < 3) {
+        items.push({
+          title: 'Spring Registration',
+          subtitle: 'Varsity Soccer',
+          status: 'paid',
+        })
+      }
+
+      // Add upcoming pending item
+      if (items.length < 3) {
+        items.push({
+          title: 'Uniform Package',
+          subtitle: 'Upcoming May 1',
+          status: 'pending',
+        })
+      }
+
+      setPaymentItems(items)
+    }
+
+    loadPayments()
+  }, [context, isReady])
 
   const markAsRead = async (notificationId: string) => {
     // Optimistic UI: remove immediately
     setUnread((prev) => prev.filter((n) => n.id !== notificationId))
 
-    const { error } = await sb
-      .from('user_notifications')
-      .update({ read_at: new Date().toISOString() })
-      .eq('id', notificationId)
-
-    // If update fails (RLS/network), reload to ensure UI is correct
-    if (error) await loadNotifications()
+    const { success, error } = await markNotificationRead(context, notificationId)
+    
+    // If update fails, reload to ensure UI is correct
+    if (!success || error) {
+      const { data } = await getUnreadNotifications(context)
+      setUnread(data.slice(0, 3).map(n => ({
+        id: n.id,
+        title: n.title,
+        body: n.body,
+        created_at: n.created_at,
+      })))
+    }
   }
 
   const markAllAsRead = async () => {
-    const ids = unread.map((n) => n.id)
-    if (ids.length === 0) return
+    if (unread.length === 0) return
 
     setUnread([])
 
-    const { error } = await sb
-      .from('user_notifications')
-      .update({ read_at: new Date().toISOString() })
-      .in('id', ids)
+    const { success, error } = await markAllNotificationsRead(context)
 
-    if (error) await loadNotifications()
+    if (!success || error) {
+      const { data } = await getUnreadNotifications(context)
+      setUnread(data.slice(0, 3).map(n => ({
+        id: n.id,
+        title: n.title,
+        body: n.body,
+        created_at: n.created_at,
+      })))
+    }
   }
 
   // Get greeting based on time of day
@@ -82,6 +177,20 @@ export default function Dashboard() {
   // Get user's display name
   const displayName = profile?.display_name || user?.email?.split('@')[0] || 'PARENT'
   const firstName = displayName.split(' ')[0].toUpperCase()
+
+  // Format event time
+  const formatEventTime = (event: CalendarEvent) => {
+    const start = new Date(event.start_time)
+    const now = new Date()
+    const isToday = start.toDateString() === now.toDateString()
+    const isTomorrow = start.toDateString() === new Date(now.getTime() + 86400000).toDateString()
+    
+    const time = start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    
+    if (isToday) return `Live Now • ${event.event_location?.name ?? 'TBD'}`
+    if (isTomorrow) return `Tomorrow • ${time}`
+    return `${start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} • ${time}`
+  }
 
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-slate-100 antialiased relative">
@@ -140,7 +249,7 @@ export default function Dashboard() {
                 <span className="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-white dark:border-background-dark"></span>
               )}
             </button>
-            <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-700 bg-cover bg-center border border-slate-100 dark:border-slate-800">
+            <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-700 bg-cover bg-center border border-slate-100 dark:border-slate-800 flex items-center justify-center text-sm font-bold">
               {profile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
             </div>
           </div>
@@ -227,75 +336,54 @@ export default function Dashboard() {
               </Link>
             </div>
             <div className="space-y-6">
-              {/* Event Card 1 - Example */}
-              <div className="group bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300">
-                <div className="flex flex-col md:flex-row">
-                  <div className="md:w-1/3 aspect-[4/3] bg-cover bg-center bg-slate-200 dark:bg-slate-800"></div>
-                  <div className="flex-1 p-8 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-2 h-2 rounded-full bg-[#137fec]"></div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-[#137fec]">Live Now • Field 4</span>
+              {eventsLoading ? (
+                <div className="bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl p-12 text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white mx-auto"></div>
+                </div>
+              ) : upcomingEvents.length > 0 ? (
+                upcomingEvents.map((event) => (
+                  <div key={event.id} className="group bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300">
+                    <div className="flex flex-col md:flex-row">
+                      <div className="md:w-1/3 aspect-[4/3] bg-cover bg-center bg-slate-200 dark:bg-slate-800"></div>
+                      <div className="flex-1 p-8 flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className={`w-2 h-2 rounded-full ${event.type === 'practice' ? 'bg-[#137fec]' : 'bg-orange-500'}`}></div>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{formatEventTime(event)}</span>
+                          </div>
+                          <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2 leading-tight uppercase">
+                            {event.title}
+                          </h3>
+                          <p className="text-slate-500 dark:text-slate-400 font-light mb-6">
+                            {event.notes ?? `${event.type.charAt(0).toUpperCase() + event.type.slice(1)} event`}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-3">
+                          <Link to={`/portal/calendar?event=${event.id}`} className="bg-[#137fec] hover:bg-[#137fec]/90 text-white px-8 py-3 rounded font-bold text-sm tracking-wide transition-all active:scale-95 flex items-center gap-2">
+                            VIEW <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                          </Link>
+                          {event.event_location?.maps_url && (
+                            <a href={event.event_location.maps_url} target="_blank" rel="noopener noreferrer" className="border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 px-8 py-3 rounded font-bold text-sm tracking-wide transition-all text-slate-900 dark:text-white flex items-center gap-2">
+                              LOCATION <span className="material-symbols-outlined text-sm">location_on</span>
+                            </a>
+                          )}
+                        </div>
                       </div>
-                      <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2 leading-tight uppercase">
-                        Varsity Soccer Practice
-                      </h3>
-                      <p className="text-slate-500 dark:text-slate-400 font-light mb-6">
-                        Equipment Check: Shin guards, water bottle, and alternate jersey required.
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-3">
-                      <button className="bg-[#137fec] hover:bg-[#137fec]/90 text-white px-8 py-3 rounded font-bold text-sm tracking-wide transition-all active:scale-95 flex items-center gap-2">
-                        CHECK IN <span className="material-symbols-outlined text-sm">login</span>
-                      </button>
-                      <button className="border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 px-8 py-3 rounded font-bold text-sm tracking-wide transition-all text-slate-900 dark:text-white flex items-center gap-2">
-                        LOCATION <span className="material-symbols-outlined text-sm">location_on</span>
-                      </button>
                     </div>
                   </div>
-                </div>
-              </div>
-
-              {/* Event Card 2 - Example */}
-              <div className="group bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300">
-                <div className="flex flex-col md:flex-row">
-                  <div className="md:w-1/3 aspect-[4/3] bg-cover bg-center bg-slate-200 dark:bg-slate-800 grayscale group-hover:grayscale-0 transition-all duration-500"></div>
-                  <div className="flex-1 p-8 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tomorrow • 10:00 AM</span>
-                      </div>
-                      <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2 leading-tight uppercase">
-                        U12 Basketball Playoffs
-                      </h3>
-                      <p className="text-slate-500 dark:text-slate-400 font-light mb-6">
-                        Arrive 30 minutes early for warm-ups at South Gymnasium.
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-3">
-                      <button className="bg-slate-900 dark:bg-white dark:text-slate-900 text-white px-8 py-3 rounded font-bold text-sm tracking-wide transition-all active:scale-95 flex items-center gap-2">
-                        RSVP NOW <span className="material-symbols-outlined text-sm">event_available</span>
-                      </button>
-                      <button className="border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 px-8 py-3 rounded font-bold text-sm tracking-wide transition-all text-slate-900 dark:text-white">
-                        VIEW DETAILS
-                      </button>
-                    </div>
+                ))
+              ) : (
+                <div className="bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl p-12 text-center">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full mb-4">
+                    <span className="material-symbols-outlined text-slate-400 text-4xl">event</span>
                   </div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">No upcoming events</h3>
+                  <p className="text-slate-500 dark:text-slate-400 mb-6">Check back later for scheduled activities.</p>
+                  <Link to="/portal/calendar" className="inline-block bg-[#137fec] hover:bg-[#137fec]/90 text-white px-6 py-3 rounded font-bold text-sm tracking-wide transition-all">
+                    View Calendar
+                  </Link>
                 </div>
-              </div>
-
-              {/* Empty State */}
-              <div className="bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl p-12 text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full mb-4">
-                  <span className="material-symbols-outlined text-slate-400 text-4xl">event</span>
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">No upcoming events</h3>
-                <p className="text-slate-500 dark:text-slate-400 mb-6">Check back later for scheduled activities.</p>
-                <Link to="/portal/calendar" className="inline-block bg-[#137fec] hover:bg-[#137fec]/90 text-white px-6 py-3 rounded font-bold text-sm tracking-wide transition-all">
-                  View Calendar
-                </Link>
-              </div>
+              )}
             </div>
           </div>
 
@@ -307,40 +395,35 @@ export default function Dashboard() {
                 Financial Overview
               </h2>
               <div className="space-y-4">
-                <div className="flex items-center justify-between group py-2">
-                  <div className="flex items-center gap-3">
-                    <div className="size-2 rounded-full bg-emerald-500"></div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-900 dark:text-white">Spring Registration</p>
-                      <p className="text-[10px] text-slate-400 uppercase font-black">Varsity Soccer</p>
+                {paymentItems.map((item, idx) => (
+                  <div key={idx}>
+                    <div className="flex items-center justify-between group py-2">
+                      <div className="flex items-center gap-3">
+                        <div className={`size-2 rounded-full ${
+                          item.status === 'paid' ? 'bg-emerald-500' :
+                          item.status === 'due' ? 'bg-[#137fec] animate-pulse' :
+                          'bg-slate-300'
+                        }`}></div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-900 dark:text-white">{item.title}</p>
+                          <p className="text-[10px] text-slate-400 uppercase font-black">{item.subtitle}</p>
+                        </div>
+                      </div>
+                      {item.status === 'paid' ? (
+                        <span className="text-xs font-bold text-emerald-500">PAID</span>
+                      ) : item.status === 'due' ? (
+                        <Link to="/portal/payments" className="text-xs font-bold text-[#137fec] underline">
+                          PAY {item.amount}
+                        </Link>
+                      ) : (
+                        <span className="text-xs font-bold text-slate-400">PENDING</span>
+                      )}
                     </div>
+                    {idx < paymentItems.length - 1 && (
+                      <div className="h-px bg-slate-50 dark:bg-slate-800 w-full"></div>
+                    )}
                   </div>
-                  <span className="text-xs font-bold text-emerald-500">PAID</span>
-                </div>
-                <div className="h-px bg-slate-50 dark:bg-slate-800 w-full"></div>
-                <div className="flex items-center justify-between group py-2">
-                  <div className="flex items-center gap-3">
-                    <div className="size-2 rounded-full bg-[#137fec] animate-pulse"></div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-900 dark:text-white">Tournament Fees</p>
-                      <p className="text-[10px] text-slate-400 uppercase font-black">Basketball</p>
-                    </div>
-                  </div>
-                  <Link to="/portal/payments" className="text-xs font-bold text-[#137fec] underline">
-                    PAY $45.00
-                  </Link>
-                </div>
-                <div className="h-px bg-slate-50 dark:bg-slate-800 w-full"></div>
-                <div className="flex items-center justify-between group py-2">
-                  <div className="flex items-center gap-3">
-                    <div className="size-2 rounded-full bg-slate-300"></div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-900 dark:text-white">Uniform Package</p>
-                      <p className="text-[10px] text-slate-400 uppercase font-black">Upcoming May 1</p>
-                    </div>
-                  </div>
-                  <span className="text-xs font-bold text-slate-400">PENDING</span>
-                </div>
+                ))}
               </div>
             </div>
 

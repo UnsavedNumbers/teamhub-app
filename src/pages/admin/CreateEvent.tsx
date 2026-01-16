@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
-import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
+import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import { getTeams, getTeamDetails } from '../../data/services/teamsService'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { 
   PageHeader, 
@@ -36,45 +37,83 @@ export default function CreateEvent() {
   const [error, setError] = useState<string | null>(null)
 
   const { currentOrganization } = useOrganization()
+  const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
   const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<EventFormData>({
-    defaultValues: { title: '', type: 'practice', team_id: '', season_id: '', start_time: '', end_time: '', arrival_time: '', location: '', notes: '' },
+    defaultValues: { 
+      title: '', type: 'practice', team_id: '', season_id: '', 
+      start_time: '', end_time: '', arrival_time: '', location: '', notes: '' 
+    },
   })
 
   const watchTeamId = watch('team_id')
 
   const fetchTeams = useCallback(async () => {
-    if (!currentOrganization?.id) return
-    const { data } = await supabase.from('teams').select('id, name').eq('org_id', currentOrganization.id).order('name')
-    setTeams((data as Team[]) || [])
+    if (!isReady) return
+    
+    const { data, error } = await getTeams(context, { activeOnly: true })
+    if (!error) {
+      setTeams(data.map(t => ({ id: t.id, name: t.name })))
+    }
     setLoading(false)
-  }, [currentOrganization?.id])
+  }, [context, isReady])
 
   const fetchSeasons = useCallback(async (teamId: string) => {
-    const { data } = await supabase.from('seasons').select('id, name, team_id').eq('team_id', teamId).order('start_date', { ascending: false })
-    const seasonsData = (data as any[]) || []
-    setSeasons(seasonsData)
-    if (seasonsData.length > 0) setValue('season_id', seasonsData[0].id)
-  }, [setValue])
+    if (!isReady) return
+    
+    const { data, error } = await getTeamDetails(context, teamId)
+    if (!error && data?.seasons) {
+      const seasonList = data.seasons.map(s => ({ 
+        id: s.id, 
+        name: s.name, 
+        team_id: teamId 
+      }))
+      setSeasons(seasonList)
+      if (seasonList.length > 0) setValue('season_id', seasonList[0].id)
+    }
+  }, [context, isReady, setValue])
 
-  useEffect(() => { fetchTeams() }, [fetchTeams])
-  useEffect(() => { if (watchTeamId) fetchSeasons(watchTeamId) }, [watchTeamId, fetchSeasons])
+  useEffect(() => { 
+    if (isReady) fetchTeams() 
+  }, [isReady, fetchTeams])
+
+  useEffect(() => { 
+    if (watchTeamId && isReady) fetchSeasons(watchTeamId) 
+  }, [watchTeamId, isReady, fetchSeasons])
 
   const onSubmit = async (data: EventFormData) => {
-    setSaving(true); setError(null)
+    setSaving(true)
+    setError(null)
+    
     try {
+      // In fake data mode, just navigate back with success
+      // TODO: Replace with real Supabase insert when migrating
+      /*
       const { error: insertError } = await supabase.from('events').insert({
-        title: data.title, type: data.type, team_id: data.team_id, season_id: data.season_id,
+        title: data.title,
+        type: data.type,
+        team_id: data.team_id,
+        season_id: data.season_id,
         start_time: new Date(data.start_time).toISOString(),
         end_time: data.end_time ? new Date(data.end_time).toISOString() : null,
         arrival_time: data.arrival_time ? new Date(data.arrival_time).toISOString() : null,
-        location: data.location, notes: data.notes,
+        location: data.location,
+        notes: data.notes,
         org_id: currentOrganization?.id
-      } as never)
+      })
+      
       if (insertError) throw insertError
+      */
+      
+      // Simulate delay
+      await new Promise(resolve => setTimeout(resolve, 500))
       navigate('/admin/events')
-    } catch (err: unknown) { setError(getErrorMessage(err) || 'Failed to create event') } finally { setSaving(false) }
+    } catch (err: unknown) { 
+      setError(getErrorMessage(err) || 'Failed to create event') 
+    } finally { 
+      setSaving(false) 
+    }
   }
 
   if (loading) return <div className="pa-skeleton" style={{ height: '500px' }} />

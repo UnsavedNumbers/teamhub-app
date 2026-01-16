@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useUserContext } from '../hooks/useUserContext'
+import { getAnnouncements, type FakeAnnouncement } from '../data/services/messagesService'
+import { getTeamsForParent, getTeams } from '../data/services/teamsService'
 import PortalLayout from '../components/portal/PortalLayout'
 import PortalHeader from '../components/portal/PortalHeader'
 import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
@@ -14,7 +16,7 @@ interface Team {
   name: string
 }
 
-interface Announcement {
+interface DisplayAnnouncement {
   id: string
   title: string
   content: string
@@ -38,7 +40,7 @@ export default function Messages() {
   const [teams, setTeams] = useState<Team[]>([])
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('announcements')
-  const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [announcements, setAnnouncements] = useState<DisplayAnnouncement[]>([])
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
@@ -46,70 +48,68 @@ export default function Messages() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { user, profile } = useAuth()
+  const { context, isReady } = useUserContext()
 
   const fetchTeams = useCallback(async () => {
-    if (profile?.role === 'parent' && profile.family_id) {
-      const { data } = await supabase
-        .from('team_memberships')
-        .select('team:teams(id, name)')
-        .eq('status', 'active')
-      
-      const uniqueTeams = new Map()
-      data?.forEach((d: { team: Team }) => {
-        if (d.team) uniqueTeams.set(d.team.id, d.team)
-      })
-      setTeams(Array.from(uniqueTeams.values()))
+    if (!isReady) return
+
+    // Use the service to get teams based on user role
+    const isParent = context.roles.includes('parent') && !context.roles.includes('org_admin')
+    
+    if (isParent) {
+      const { data, error } = await getTeamsForParent(context)
+      if (!error) {
+        setTeams(data.map(t => ({ id: t.id, name: t.name })))
+      }
     } else {
-      const { data } = await supabase.from('teams').select('id, name')
-      setTeams((data as Team[]) || [])
+      const { data, error } = await getTeams(context, { activeOnly: true })
+      if (!error) {
+        setTeams(data.map(t => ({ id: t.id, name: t.name })))
+      }
     }
     setLoading(false)
-  }, [profile?.role, profile?.family_id])
+  }, [context, isReady])
 
   const fetchAnnouncements = useCallback(async () => {
-    const { data } = await supabase
-      .from('announcements')
-      .select('*, author:users(email, role), team:teams(name)')
-      .eq('team_id', selectedTeam || '')
-      .order('created_at', { ascending: false })
-      .limit(20)
+    if (!isReady || !selectedTeam) return
 
-    setAnnouncements((data as unknown as Announcement[]) || [])
-  }, [selectedTeam])
+    const { data, error } = await getAnnouncements(context, { teamId: selectedTeam, includeOrgWide: true })
+    
+    if (!error) {
+      // Transform to display format
+      const displayAnnouncements: DisplayAnnouncement[] = data.map(ann => ({
+        id: ann.id,
+        title: ann.title,
+        content: ann.body,
+        priority: ann.type === 'emergency' ? 'urgent' : 'normal',
+        created_at: ann.sent_at ?? ann.created_at,
+        author: { 
+          email: '', 
+          role: ann.audience === 'team' ? 'coach' : 'admin' 
+        },
+        team: { name: getTeamName(ann.team_id) },
+      }))
+      setAnnouncements(displayAnnouncements)
+    }
+  }, [context, isReady, selectedTeam])
 
-  const fetchMessages = useCallback(async () => {
-    const { data } = await supabase
-      .from('messages')
-      .select('*, author:users(email, role)')
-      .eq('team_id', selectedTeam || '')
-      .order('created_at', { ascending: true })
-      .limit(100)
-
-    setMessages((data as unknown as Message[]) || [])
-  }, [selectedTeam])
+  // Helper to get team name
+  const getTeamName = (teamId: string | null): string => {
+    if (!teamId) return 'Organization'
+    const team = teams.find(t => t.id === teamId)
+    return team?.name ?? 'Team'
+  }
 
   useEffect(() => {
     fetchTeams()
-  }, [profile, fetchTeams])
+  }, [fetchTeams])
 
   useEffect(() => {
     if (selectedTeam && tab === 'announcements') fetchAnnouncements()
-    if (selectedTeam && tab === 'chat') fetchMessages()
-  }, [selectedTeam, tab, fetchAnnouncements, fetchMessages])
-
-  useEffect(() => {
-    if (!selectedTeam || tab !== 'chat') return
-
-    const channel = supabase
-      .channel(`messages-${selectedTeam}`)
-      .on('postgres_changes', 
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `team_id=eq.${selectedTeam}` },
-        () => fetchMessages()
-      )
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
-  }, [selectedTeam, tab, fetchMessages])
+    // Note: Chat functionality requires real-time Supabase subscription
+    // For fake data, we'll show a placeholder
+    if (selectedTeam && tab === 'chat') setMessages([])
+  }, [selectedTeam, tab, fetchAnnouncements])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -119,12 +119,15 @@ export default function Messages() {
     if (!newMessage.trim() || !selectedTeam || !user) return
     
     setSending(true)
-    await supabase.from('messages').insert({
-      team_id: selectedTeam,
-      author_id: user.id,
+    // In fake data mode, just add the message locally
+    const newMsg: Message = {
+      id: `msg-${Date.now()}`,
       content: newMessage.trim(),
-    } as never)
-
+      created_at: new Date().toISOString(),
+      author_id: user.id,
+      author: { email: user.email ?? '', role: 'parent' },
+    }
+    setMessages(prev => [...prev, newMsg])
     setNewMessage('')
     setSending(false)
   }
@@ -266,13 +269,19 @@ export default function Messages() {
                               </div>
                               <span className="text-xs font-bold uppercase tracking-widest text-slate-400">{formatDate(ann.created_at)}</span>
                             </div>
-                            <p className="text-slate-600 dark:text-slate-300">{ann.content}</p>
+                            <p className="text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{ann.content}</p>
                           </Card>
                         ))
                       )}
                     </div>
                   ) : (
                     <div className="max-w-2xl mx-auto space-y-4">
+                      {messages.length === 0 && (
+                        <Card className="text-center py-8 mb-4">
+                          <Icon name="chat" size="text-4xl" className="text-slate-300 mb-2" />
+                          <p className="text-slate-500 dark:text-slate-400 text-sm">Start a conversation with your team</p>
+                        </Card>
+                      )}
                       {messages.map((msg) => {
                         const isMe = msg.author_id === user?.id
                         return (

@@ -33,11 +33,11 @@ export const USER_CONTEXT_TIMEOUT_MS = 5000
  * - Test role-based access control
  */
 export const DEMO_USER_IDS: Record<string, string> = {
-    'parent-only@example.com': 'demo-parent-only-id',
-    'coach-only@example.com': 'demo-coach-only-id',
-    'admin-only@example.com': 'demo-admin-only-id',
-    'parent-admin@example.com': 'demo-parent-admin-id',
-    'parent-coach@example.com': 'demo-parent-coach-id',
+    'parent-only@example.com': '8f116968-e0f4-406a-a8c2-a663d1b57ec1',
+    'coach-only@example.com': '0392f59a-d35a-47ca-8803-021f122ffc80',
+    'admin-only@example.com': 'aca2bee1-5ced-47c1-9894-2b054104949e',
+    'parent-admin@example.com': '27efad60-95d9-4f40-8506-b6fe3bcb9abb',
+    'parent-coach@example.com': '65a74f13-37c9-4831-9691-ec62963e193e',
 } as const
 
 // Reverse mapping: ID to email (computed at runtime)
@@ -56,7 +56,7 @@ export const DEMO_USER_EMAILS: Record<string, string> = Object.fromEntries(
  * All demo data belongs to Organization A.
  * Secondary organizations exist for multi-org testing.
  */
-export const DEMO_ORG_A_ID = 'org-a-demo-id'
+export const DEMO_ORG_A_ID = 'e3e7645e-b951-407b-a2b9-5205bdea2fa1'
 export const DEMO_ORG_B_ID = 'org-b-demo-id' // Secondary org for multi-org testing
 export const DEMO_ORG_C_ID = 'org-c-demo-id' // Tertiary org
 

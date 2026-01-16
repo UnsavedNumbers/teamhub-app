@@ -1,45 +1,20 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
-import { useAuth } from '../hooks/useAuth'
+import { useUserContext } from '../hooks/useUserContext'
+import { 
+  getUpcomingTravelPlansForUser, 
+  formatDateRange,
+  type FakeTravelPlan 
+} from '../data/services/travelService'
+import { getEvents } from '../data/services/eventsService'
 import PortalLayout from '../components/portal/PortalLayout'
 import PortalHeader from '../components/portal/PortalHeader'
 import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
+import type { CalendarEvent } from '../types/calendar'
 
-interface TravelPlan {
-  id: string
-  team_id: string
-  season_id: string
-  title: string
-  location: string
-  destination_city: string | null
-  destination_state: string | null
-  venue_name: string | null
-  venue_address: string | null
-  start_date: string
-  end_date: string
-  hotel_name: string | null
-  hotel_address: string | null
-  hotel_phone: string | null
-  hotel_confirmation: string | null
-  maps_url: string | null
-  notes: string | null
-  itinerary_file_path: string | null
-  meeting_locations: unknown | null
-  status: 'draft' | 'published' | 'cancelled'
-  team: { name: string }
-}
-
-interface TripEvent {
-  id: string
-  title: string
-  type: string
-  start_time: string
-  end_time: string
-  location: string | null
-}
+type TravelPlan = FakeTravelPlan & { team?: { name: string } }
 
 interface MeetingLocation {
   name: string
@@ -72,64 +47,80 @@ function googleMapsLink(query: string) {
   return `https://www.google.com/maps/search/?api=1&query=${q}`
 }
 
+// Helper to get team name from team_id
+const getTeamName = (teamId: string): string => {
+  const teamNames: Record<string, string> = {
+    'team-u10-soccer-001': 'U10 Lightning',
+    'team-u12-soccer-002': 'U12 Thunder',
+    'team-u10-basketball-003': 'U10 Hawks',
+    'team-u12-basketball-004': 'U12 Eagles',
+    'team-u14-soccer-elite-005': 'U14 Elite Storm',
+    'team-u16-soccer-elite-006': 'U16 Elite Hurricanes',
+  }
+  return teamNames[teamId] ?? 'Unknown Team'
+}
+
 export default function Travel() {
   const [plans, setPlans] = useState<TravelPlan[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedPlan, setSelectedPlan] = useState<TravelPlan | null>(null)
-  const [tripEvents, setTripEvents] = useState<TripEvent[]>([])
+  const [tripEvents, setTripEvents] = useState<CalendarEvent[]>([])
   const [eventsLoading, setEventsLoading] = useState(false)
   const [downloadLoading, setDownloadLoading] = useState(false)
   const [downloadError, setDownloadError] = useState<string | null>(null)
 
-  const { profile } = useAuth()
+  const { context, isReady } = useUserContext()
 
   useEffect(() => {
-    if (profile) fetchPlans()
-  }, [profile])
+    if (!isReady) return
 
-  async function fetchPlans() {
-    const { data } = await supabase
-      .from('travel_plans')
-      .select(
-        'id, team_id, season_id, title, location, destination_city, destination_state, venue_name, venue_address, start_date, end_date, hotel_name, hotel_address, hotel_phone, hotel_confirmation, maps_url, notes, itinerary_file_path, meeting_locations, status, team:teams(name)'
-      )
-      .order('start_date', { ascending: true })
-      .gte('start_date', new Date().toISOString().split('T')[0])
-      .in('status', ['published', 'cancelled'])
+    async function fetchPlans() {
+      const { data, error } = await getUpcomingTravelPlansForUser(context)
+      
+      if (error) {
+        console.error('Error fetching travel plans:', error)
+        setPlans([])
+      } else {
+        // Transform data to include team name
+        const plansWithTeam = data.map(plan => ({
+          ...plan,
+          team: { name: getTeamName(plan.team_id) }
+        }))
+        setPlans(plansWithTeam)
+      }
+      setLoading(false)
+    }
 
-    setPlans((data as unknown as TravelPlan[]) || [])
-    setLoading(false)
-  }
+    fetchPlans()
+  }, [context, isReady])
 
   useEffect(() => {
-    if (!selectedPlan) return
+    if (!selectedPlan || !isReady) return
+
     ;(async () => {
       setEventsLoading(true)
       try {
-        const startIso = `${selectedPlan.start_date}T00:00:00.000Z`
-        const endIso = `${selectedPlan.end_date}T23:59:59.999Z`
-        const { data } = await supabase
-          .from('events')
-          .select('id, title, type, start_time, end_time, location')
-          .eq('team_id', selectedPlan.team_id)
-          .eq('season_id', selectedPlan.season_id)
-          .gte('start_time', startIso)
-          .lte('start_time', endIso)
-          .order('start_time', { ascending: true })
+        const startDate = new Date(selectedPlan.start_date)
+        const endDate = new Date(selectedPlan.end_date)
+        endDate.setHours(23, 59, 59, 999)
 
-        setTripEvents((data as unknown as TripEvent[]) || [])
+        const { data, error } = await getEvents(context, {
+          startDate,
+          endDate,
+          teamId: selectedPlan.team_id,
+        })
+
+        if (error) {
+          console.error('Error fetching events:', error)
+          setTripEvents([])
+        } else {
+          setTripEvents(data)
+        }
       } finally {
         setEventsLoading(false)
       }
     })()
-  }, [selectedPlan])
-
-  function formatDateRange(start: string, end: string) {
-    const startDate = new Date(start)
-    const endDate = new Date(end)
-    const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
-    return `${startDate.toLocaleDateString('en-US', options)} - ${endDate.toLocaleDateString('en-US', { ...options, year: 'numeric' })}`
-  }
+  }, [selectedPlan, context, isReady])
 
   function formatEventTime(dateStr: string) {
     return new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
@@ -140,15 +131,9 @@ export default function Travel() {
     setDownloadError(null)
     setDownloadLoading(true)
     try {
-      const { data, error } = await supabase.functions.invoke('travel-itinerary-signed-url', {
-        body: { itinerary_file_path: selectedPlan.itinerary_file_path },
-      })
-      if (error) throw error
-      const url = (data as { signed_url?: string } | null)?.signed_url
-      if (!url) throw new Error('Could not create download link')
-      window.open(url, '_blank', 'noopener,noreferrer')
-    } catch (err: unknown) {
-      setDownloadError(err instanceof Error ? err.message : 'Failed to download itinerary')
+      // For fake data, just show a message
+      // In real implementation, this would call a Supabase function
+      setDownloadError('Itinerary download not available in demo mode')
     } finally {
       setDownloadLoading(false)
     }
@@ -224,7 +209,7 @@ export default function Travel() {
                 </div>
 
                 <div className="px-6 pb-6 flex justify-between items-center border-t border-slate-100 dark:border-slate-800">
-                  <span className="text-xs font-bold uppercase tracking-widest text-slate-400">{plan.team.name}</span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-slate-400">{plan.team?.name}</span>
                   <span className="text-[#137fec] text-sm font-bold uppercase tracking-wide">View Details</span>
                 </div>
               </Card>
@@ -373,7 +358,7 @@ export default function Travel() {
                               {new Date(ev.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}{' '}
                               • {formatEventTime(ev.start_time)}–{formatEventTime(ev.end_time)}
                             </p>
-                            {ev.location && <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{ev.location}</p>}
+                            {ev.event_location?.name && <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{ev.event_location.name}</p>}
                           </div>
                         ))}
                       </div>

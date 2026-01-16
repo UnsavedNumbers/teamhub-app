@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
+import { useUserContext } from '../../hooks/useUserContext'
 import { useTeamParams } from '../../hooks/useRouteParams'
+import { getTeamDetails, getTeamRoster } from '../../data/services/teamsService'
 import { 
   PageHeader, 
   Card, 
@@ -20,9 +21,8 @@ interface Season {
 interface Membership {
   id: string
   child_id: string
-  child: { first_name: string; last_name: string; family: { name: string } }
-  child_name: string // Added for data table
-  family_name: string // Added for data table
+  child_name: string
+  family_name: string
 }
 
 export default function Roster() {
@@ -34,52 +34,86 @@ export default function Roster() {
   const [showAddModal, setShowAddModal] = useState(false)
 
   const { profile } = useAuth()
+  const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
   const fetchRoster = useCallback(async (seasonId: string) => {
-    const { data } = await supabase
-      .from('team_memberships')
-      .select('id, child_id, child:children(first_name, last_name, family:families(name))')
-      .eq('team_id', teamId)
-      .eq('season_id', seasonId)
-      .eq('status', 'active')
+    if (!teamId || !isReady) return
 
-    const rows = (data as any[]) || []
-    setRoster(rows.map(m => ({
-      ...m,
-      child_name: `${m.child.first_name} ${m.child.last_name}`,
-      family_name: m.child.family?.name || 'N/A'
-    })))
-  }, [teamId])
+    const { data, error } = await getTeamRoster(context, teamId, seasonId)
+    
+    if (error) {
+      console.error('Error fetching roster:', error)
+      setRoster([])
+      return
+    }
+
+    // Transform to display format
+    const displayRoster: Membership[] = data.map(member => ({
+      id: member.id,
+      child_id: member.child_id,
+      child_name: getChildName(member.child_id),
+      family_name: getFamilyName(member.child_id),
+    }))
+
+    setRoster(displayRoster)
+  }, [teamId, context, isReady])
 
   const fetchSeasons = useCallback(async () => {
-    const { data } = await supabase
-      .from('seasons')
-      .select('id, name')
-      .eq('team_id', teamId)
-      .order('start_date', { ascending: false })
+    if (!teamId || !isReady) return
 
-    const list = data as unknown as Season[]
-    if (list && list.length > 0) {
-      setSeasons(list)
-      setSelectedSeason(list[0].id)
-      fetchRoster(list[0].id)
+    const { data, error } = await getTeamDetails(context, teamId)
+
+    if (error || !data) {
+      setLoading(false)
+      return
+    }
+
+    if (data.seasons && data.seasons.length > 0) {
+      const seasonList = data.seasons.map(s => ({
+        id: s.id,
+        name: s.name,
+      }))
+      setSeasons(seasonList)
+      setSelectedSeason(seasonList[0].id)
+      fetchRoster(seasonList[0].id)
     }
     setLoading(false)
-  }, [teamId, fetchRoster])
+  }, [teamId, context, isReady, fetchRoster])
 
   useEffect(() => {
-    if (teamId) fetchSeasons()
-  }, [teamId, fetchSeasons])
+    if (teamId && isReady) fetchSeasons()
+  }, [teamId, isReady, fetchSeasons])
+
+  // Helper functions to get names (in real implementation, comes from joined data)
+  const getChildName = (childId: string): string => {
+    const names: Record<string, string> = {
+      'child-emma-001': 'Emma Johnson',
+      'child-liam-002': 'Liam Williams',
+      'child-sophia-003': 'Sophia Brown',
+      'child-jackson-004': 'Jackson Davis',
+    }
+    return names[childId] ?? 'Player'
+  }
+
+  const getFamilyName = (childId: string): string => {
+    const families: Record<string, string> = {
+      'child-emma-001': 'Johnson Family',
+      'child-liam-002': 'Williams Family',
+      'child-sophia-003': 'Brown Family',
+      'child-jackson-004': 'Davis Family',
+    }
+    return families[childId] ?? 'Family'
+  }
 
   async function removePlayer(membershipId: string) {
     if (!window.confirm('Are you sure you want to remove this player from the roster?')) return
     
-    await supabase
-      .from('team_memberships')
-      .update({ status: 'inactive' } as never)
-      .eq('id', membershipId)
-    fetchRoster(selectedSeason)
+    // In fake data mode, just remove locally
+    setRoster(prev => prev.filter(m => m.id !== membershipId))
+
+    // TODO: Replace with real Supabase update when migrating
+    // await supabase.from('team_memberships').update({ status: 'inactive' }).eq('id', membershipId)
   }
 
   const columns: ColumnConfig<Membership>[] = [

@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useUserContext } from '../hooks/useUserContext'
+import { getTeamDetails } from '../data/services/teamsService'
+import { getChildren } from '../data/services/familyService'
 import PortalLayout from '../components/portal/PortalLayout'
 import PortalHeader from '../components/portal/PortalHeader'
 import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
@@ -39,28 +41,44 @@ export default function JoinTeam() {
   const [error, setError] = useState<string | null>(null)
 
   const { profile } = useAuth()
+  const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
   const fetchChildren = useCallback(async () => {
-    if (!profile?.family_id) return
-    const { data } = await supabase
-      .from('children')
-      .select('id, first_name, last_name')
-      .eq('family_id', profile.family_id)
-    setChildren((data as Child[]) || [])
-  }, [profile?.family_id])
+    if (!isReady) return
+    
+    const { data } = await getChildren(context)
+    setChildren(data.map(c => ({
+      id: c.id,
+      first_name: c.first_name,
+      last_name: c.last_name,
+    })))
+  }, [context, isReady])
 
   const handleLookup = useCallback(async () => {
-    if (!inviteCode.trim()) return
+    if (!inviteCode.trim() || !isReady) return
     
     setLoading(true)
     setError(null)
 
-    const { data: teamData, error: teamError } = await supabase
-      .from('teams')
-      .select('id, name')
-      .eq('invite_code', inviteCode.toUpperCase().trim())
-      .single()
+    // In fake data mode, simulate team lookup by invite code
+    // For demo, we'll use a simple mapping
+    const teamMapping: Record<string, string> = {
+      'LIGHTNING': 'team-u10-soccer-001',
+      'THUNDER': 'team-u12-soccer-002',
+      'HAWKS': 'team-u10-basketball-003',
+      'EAGLES': 'team-u12-basketball-004',
+    }
+
+    const teamId = teamMapping[inviteCode.toUpperCase().trim()]
+    
+    if (!teamId) {
+      setError('Invalid invite code. Please check and try again.')
+      setLoading(false)
+      return
+    }
+
+    const { data: teamData, error: teamError } = await getTeamDetails(context, teamId)
 
     if (teamError || !teamData) {
       setError('Invalid invite code. Please check and try again.')
@@ -68,33 +86,35 @@ export default function JoinTeam() {
       return
     }
 
-    setTeam(teamData as Team)
+    setTeam({
+      id: teamData.id,
+      name: teamData.name,
+    })
 
-    const { data: seasonData } = await supabase
-      .from('seasons')
-      .select('id, name')
-      .eq('team_id', (teamData as Team).id)
-      .order('start_date', { ascending: false })
-
-    const seasons = (seasonData as Season[] | null) || []
-    setSeasons(seasons)
-    if (seasons.length > 0) {
-      setSelectedSeason(seasons[0].id)
+    if (teamData.seasons) {
+      const seasonList = teamData.seasons.map(s => ({
+        id: s.id,
+        name: s.name,
+      }))
+      setSeasons(seasonList)
+      if (seasonList.length > 0) {
+        setSelectedSeason(seasonList[0].id)
+      }
     }
     
     setStep('select')
     setLoading(false)
-  }, [inviteCode])
+  }, [inviteCode, context, isReady])
 
   useEffect(() => {
-    if (profile?.family_id) fetchChildren()
-  }, [profile, fetchChildren])
+    if (isReady) fetchChildren()
+  }, [isReady, fetchChildren])
 
   useEffect(() => {
-    if (searchParams.get('code')) {
+    if (searchParams.get('code') && isReady) {
       handleLookup()
     }
-  }, [searchParams, handleLookup])
+  }, [searchParams, isReady, handleLookup])
 
   async function handleJoin() {
     if (!selectedChild || !selectedSeason || !team) return
@@ -102,33 +122,14 @@ export default function JoinTeam() {
     setJoining(true)
     setError(null)
 
-    const { data: existing } = await supabase
-      .from('team_memberships')
-      .select('id')
-      .eq('child_id', selectedChild)
-      .eq('team_id', team.id)
-      .eq('season_id', selectedSeason)
-      .single()
-
-    if (existing) {
-      setError('This child is already on this team.')
-      setJoining(false)
-      return
-    }
-
-    const { error } = await supabase.from('team_memberships').insert({
-      child_id: selectedChild,
-      team_id: team.id,
-      season_id: selectedSeason,
-      status: 'active',
-    } as never)
-
-    if (error) {
-      setError(error.message)
-    } else {
+    // In fake data mode, just show success
+    // TODO: Replace with real Supabase insert when migrating
+    // Check for existing membership and insert new one
+    
+    setTimeout(() => {
       setStep('success')
-    }
-    setJoining(false)
+      setJoining(false)
+    }, 500)
   }
 
   return (
@@ -168,6 +169,9 @@ export default function JoinTeam() {
                     maxLength={8}
                     autoFocus
                   />
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 text-center">
+                    Try: LIGHTNING, THUNDER, HAWKS, or EAGLES
+                  </p>
                 </div>
                 <Button variant="primary" onClick={handleLookup} disabled={loading || !inviteCode.trim()} className="w-full">
                   {loading ? 'Looking up' : 'Find Team'}

@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
-import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
+import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import { getTeams, getTeamDetails, getTeamRoster } from '../../data/services/teamsService'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { 
   PageHeader, 
@@ -16,7 +17,15 @@ import {
 interface Team { id: string; name: string }
 interface Season { id: string; name: string }
 interface Child { id: string; first_name: string; last_name: string }
-interface FeeFormData { team_id: string; season_id: string; child_id: string; amount: string; description: string; due_date: string; applyToAll: boolean; }
+interface FeeFormData { 
+  team_id: string
+  season_id: string
+  child_id: string
+  amount: string
+  description: string
+  due_date: string
+  applyToAll: boolean
+}
 
 export default function CreateFee() {
   const [teams, setTeams] = useState<Team[]>([])
@@ -27,51 +36,148 @@ export default function CreateFee() {
   const [error, setError] = useState<string | null>(null)
 
   const { currentOrganization } = useOrganization()
+  const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
   const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<FeeFormData>({
-    defaultValues: { team_id: '', season_id: '', child_id: '', amount: '', description: '', due_date: '', applyToAll: false },
+    defaultValues: { 
+      team_id: '', season_id: '', child_id: '', amount: '', 
+      description: '', due_date: '', applyToAll: false 
+    },
   })
 
   const watchTeamId = watch('team_id')
+  const watchSeasonId = watch('season_id')
   const watchApplyToAll = watch('applyToAll')
 
   const fetchTeams = useCallback(async () => {
-    if (!currentOrganization?.id) return
-    const { data } = await supabase.from('teams').select('id, name').eq('org_id', currentOrganization.id).order('name')
-    setTeams((data as Team[]) || [])
+    if (!isReady) return
+    
+    const { data, error } = await getTeams(context, { activeOnly: true })
+    if (!error) {
+      setTeams(data.map(t => ({ id: t.id, name: t.name })))
+    }
     setLoading(false)
-  }, [currentOrganization?.id])
+  }, [context, isReady])
 
   const fetchSeasons = useCallback(async (teamId: string) => {
-    const { data } = await supabase.from('seasons').select('id, name').eq('team_id', teamId).order('start_date', { ascending: false })
-    setSeasons((data as any[]) || [])
-  }, [])
+    if (!isReady) return
+    
+    const { data, error } = await getTeamDetails(context, teamId)
+    if (!error && data?.seasons) {
+      setSeasons(data.seasons.map(s => ({ id: s.id, name: s.name })))
+    }
+  }, [context, isReady])
 
-  const fetchChildren = useCallback(async (teamId: string) => {
-    const { data } = await supabase.from('team_memberships').select('child:children(id, first_name, last_name)').eq('team_id', teamId).eq('status', 'active')
-    setChildren(((data as any[]) || []).map(m => m.child))
-  }, [])
+  const fetchChildren = useCallback(async (teamId: string, seasonId: string) => {
+    if (!isReady) return
+    
+    const { data, error } = await getTeamRoster(context, teamId, seasonId)
+    if (!error) {
+      // Transform roster to children list
+      const childList: Child[] = data.map(member => ({
+        id: member.child_id,
+        first_name: getChildFirstName(member.child_id),
+        last_name: getChildLastName(member.child_id),
+      }))
+      setChildren(childList)
+    }
+  }, [context, isReady])
 
-  useEffect(() => { fetchTeams() }, [fetchTeams])
-  useEffect(() => { if (watchTeamId) { fetchSeasons(watchTeamId); fetchChildren(watchTeamId); setValue('season_id', ''); setValue('child_id', ''); } }, [watchTeamId, setValue, fetchSeasons, fetchChildren])
+  // Helper functions to get child names (in real implementation, comes from joined data)
+  const getChildFirstName = (childId: string): string => {
+    const names: Record<string, string> = {
+      'child-emma-001': 'Emma',
+      'child-liam-002': 'Liam',
+      'child-sophia-003': 'Sophia',
+      'child-jackson-004': 'Jackson',
+    }
+    return names[childId] ?? 'Child'
+  }
+
+  const getChildLastName = (childId: string): string => {
+    const names: Record<string, string> = {
+      'child-emma-001': 'Johnson',
+      'child-liam-002': 'Williams',
+      'child-sophia-003': 'Brown',
+      'child-jackson-004': 'Davis',
+    }
+    return names[childId] ?? ''
+  }
+
+  useEffect(() => { 
+    if (isReady) fetchTeams() 
+  }, [isReady, fetchTeams])
+
+  useEffect(() => { 
+    if (watchTeamId && isReady) { 
+      fetchSeasons(watchTeamId)
+      setValue('season_id', '')
+      setValue('child_id', '')
+      setChildren([])
+    } 
+  }, [watchTeamId, isReady, setValue, fetchSeasons])
+
+  useEffect(() => {
+    if (watchTeamId && watchSeasonId && isReady) {
+      fetchChildren(watchTeamId, watchSeasonId)
+    }
+  }, [watchTeamId, watchSeasonId, isReady, fetchChildren])
 
   const onSubmit = async (data: FeeFormData) => {
     if (!data.team_id || !data.season_id || !data.amount) return
-    setSaving(true); setError(null)
+    
+    setSaving(true)
+    setError(null)
+    
     const amountCents = Math.round(parseFloat(data.amount) * 100)
+    
     try {
+      // In fake data mode, just navigate back with success
+      // TODO: Replace with real Supabase insert when migrating
+      /*
       if (data.applyToAll) {
-        const inserts = children.map(child => ({ organization_id: currentOrganization?.id, child_id: child.id, amount_cents: amountCents, balance_cents: amountCents, paid_cents_total: 0, status: 'unpaid', due_date: data.due_date || null }))
-        const { error } = await supabase.from('fee_assignments').insert(inserts as any)
+        const inserts = children.map(child => ({
+          organization_id: currentOrganization?.id,
+          child_id: child.id,
+          amount_cents: amountCents,
+          balance_cents: amountCents,
+          paid_cents_total: 0,
+          status: 'unpaid',
+          due_date: data.due_date || null
+        }))
+        
+        const { error } = await supabase.from('fee_assignments').insert(inserts)
         if (error) throw error
       } else {
-        if (!data.child_id) { setError('Select a child or apply to all'); setSaving(false); return }
-        const { error } = await supabase.from('fee_assignments').insert({ organization_id: currentOrganization?.id, child_id: data.child_id, amount_cents: amountCents, balance_cents: amountCents, paid_cents_total: 0, status: 'unpaid', due_date: data.due_date || null } as any)
+        if (!data.child_id) {
+          setError('Select a child or apply to all')
+          setSaving(false)
+          return
+        }
+        
+        const { error } = await supabase.from('fee_assignments').insert({
+          organization_id: currentOrganization?.id,
+          child_id: data.child_id,
+          amount_cents: amountCents,
+          balance_cents: amountCents,
+          paid_cents_total: 0,
+          status: 'unpaid',
+          due_date: data.due_date || null
+        })
+        
         if (error) throw error
       }
+      */
+      
+      // Simulate delay
+      await new Promise(resolve => setTimeout(resolve, 500))
       navigate('/admin/payments')
-    } catch (err: unknown) { setError(getErrorMessage(err) || 'Failed to create fee') } finally { setSaving(false) }
+    } catch (err: unknown) { 
+      setError(getErrorMessage(err) || 'Failed to create fee') 
+    } finally { 
+      setSaving(false) 
+    }
   }
 
   if (loading) return <div className="pa-skeleton" style={{ height: '500px' }} />
@@ -99,7 +205,7 @@ export default function CreateFee() {
 
           {!watchApplyToAll && (
             <div className="pa-mb-4">
-              <Controller name="child_id" control={control} rules={{ required: !watchApplyToAll }} render={({ field }) => <Select {...field} label="Player" options={children.map(c => ({value:c.id, label:`${c.first_name} ${c.last_name}`}))} required disabled={!watchTeamId} />} />
+              <Controller name="child_id" control={control} rules={{ required: !watchApplyToAll }} render={({ field }) => <Select {...field} label="Player" options={children.map(c => ({value:c.id, label:`${c.first_name} ${c.last_name}`}))} required disabled={!watchSeasonId} />} />
             </div>
           )}
 

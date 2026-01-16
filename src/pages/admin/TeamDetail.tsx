@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
+import { useUserContext } from '../../hooks/useUserContext'
 import { useTeamParams } from '../../hooks/useRouteParams'
+import { getTeamDetails } from '../../data/services/teamsService'
 import { 
   PageHeader, 
   Card, 
@@ -27,27 +28,65 @@ export default function TeamDetail() {
   const [activeTab, setActiveTab] = useState('overview')
 
   const { profile } = useAuth()
+  const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
   const fetchTeamAndSeasons = useCallback(async () => {
-    if (!teamId) return
+    if (!teamId || !isReady) return
+    
     setLoading(true)
-    const { data: teamData } = await supabase.from('teams').select('*').eq('id', teamId).single()
-    const { data: seasonsData } = await supabase.from('seasons').select('*').eq('team_id', teamId).order('start_date', { ascending: false })
-    if (teamData) setTeam(teamData as Team)
-    if (seasonsData) setSeasons(seasonsData as Season[])
-    setLoading(false)
-  }, [teamId])
+    const { data: teamData, error: teamError } = await getTeamDetails(context, teamId)
+    
+    if (teamError || !teamData) {
+      setLoading(false)
+      return
+    }
 
-  useEffect(() => { fetchTeamAndSeasons() }, [fetchTeamAndSeasons])
+    setTeam({
+      id: teamData.id,
+      name: teamData.name,
+    })
+
+    // Transform seasons from fake data
+    if (teamData.seasons) {
+      setSeasons(teamData.seasons.map(s => ({
+        id: s.id,
+        name: s.name,
+        start_date: s.start_date,
+        end_date: s.end_date,
+        is_active: s.is_active,
+      })))
+    }
+
+    setLoading(false)
+  }, [teamId, context, isReady])
+
+  useEffect(() => { 
+    fetchTeamAndSeasons() 
+  }, [fetchTeamAndSeasons])
 
   const handleCreateSeason = async () => {
     if (!seasonForm.name.trim() || !teamId) return
-    setCreating(true); setError(null)
-    const { error } = await supabase.from('seasons').insert({ team_id: teamId, name: seasonForm.name.trim(), start_date: seasonForm.start_date, end_date: seasonForm.end_date } as never)
-    if (error) setError(error.message)
-    else { setSeasonForm({ name: '', start_date: '', end_date: '' }); setShowSeasonModal(false); fetchTeamAndSeasons(); }
+    
+    setCreating(true)
+    setError(null)
+
+    // In fake data mode, just add locally
+    const newSeason: Season = {
+      id: `season-new-${Date.now()}`,
+      name: seasonForm.name.trim(),
+      start_date: seasonForm.start_date,
+      end_date: seasonForm.end_date,
+      is_active: false,
+    }
+
+    setSeasons(prev => [newSeason, ...prev])
+    setSeasonForm({ name: '', start_date: '', end_date: '' })
+    setShowSeasonModal(false)
     setCreating(false)
+
+    // TODO: Replace with real Supabase insert when migrating
+    // const { error } = await supabase.from('seasons').insert({ ... })
   }
 
   if (loading) return <div className="pa-skeleton" style={{ height: '400px' }} />

@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useUserContext } from '../hooks/useUserContext'
+import { getChildren } from '../data/services/familyService'
+import { getTeamsForParent } from '../data/services/teamsService'
 import { useT, useLocale } from '../i18n/useI18n'
 import type { Locale } from '../i18n'
 import PortalLayout from '../components/portal/PortalLayout'
@@ -15,42 +17,23 @@ interface Child {
   id: string
   first_name: string
   last_name: string
-  birthdate: string | null
+  date_of_birth: string | null
 }
 
-interface TeamMembership {
-  child_id: string
-  team: {
-    name: string
-    sport: string
-    program: string
-  }
-  season: {
-    name: string
-  }
-}
-
-interface Guardian {
+interface Team {
   id: string
-  email: string
-  first_name?: string
-  permissions: {
-    view_only?: boolean
-    rsvp?: boolean
-    pay?: boolean
-    admin?: boolean
-  }
+  name: string
 }
 
 export default function Settings() {
   const { profile, signOut } = useAuth()
+  const { context, isReady } = useUserContext()
   const navigate = useNavigate()
   const t = useT()
   const { locale, setLocale } = useLocale()
   
   const [children, setChildren] = useState<Child[]>([])
-  const [memberships, setMemberships] = useState<TeamMembership[]>([])
-  const [guardians, setGuardians] = useState<Guardian[]>([])
+  const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
 
   const [notifications, setNotifications] = useState({
@@ -64,53 +47,36 @@ export default function Settings() {
   })
 
   const fetchData = useCallback(async () => {
+    if (!isReady) return
+    
     setLoading(true)
     
-    const { data: kids } = await supabase
-      .from('children')
-      .select('*')
-      .eq('family_id', profile?.family_id || '')
-      .order('first_name')
-    
-    setChildren(kids || [])
+    // Fetch children
+    const { data: childrenData } = await getChildren(context)
+    setChildren(childrenData.map(c => ({
+      id: c.id,
+      first_name: c.first_name,
+      last_name: c.last_name,
+      date_of_birth: c.date_of_birth,
+    })))
 
-    if (kids && kids.length > 0) {
-      const childrenData = kids as unknown as Child[]
-      const { data: mems } = await supabase
-        .from('team_memberships')
-        .select('child_id, team:teams(name, sport, program), season:seasons(name)')
-        .in('child_id', childrenData.map(k => k.id))
-        .eq('status', 'active')
-      
-      setMemberships((mems as unknown as TeamMembership[]) || [])
-    }
-
-    if (profile?.family_id) {
-       const { data: famUsers } = await supabase
-        .from('users')
-        .select('id, email, permissions')
-        .eq('family_id', profile.family_id!)
-        .neq('id', profile.id)
-      
-      setGuardians((famUsers as unknown as Guardian[]) || [])
-    }
+    // Fetch teams
+    const { data: teamsData } = await getTeamsForParent(context)
+    setTeams(teamsData.map(t => ({
+      id: t.id,
+      name: t.name,
+    })))
 
     setLoading(false)
-  }, [profile?.family_id, profile?.id])
+  }, [context, isReady])
 
   useEffect(() => {
-    if (profile) fetchData()
-  }, [profile, fetchData])
+    if (isReady) fetchData()
+  }, [isReady, fetchData])
 
   async function handleLogout() {
     await signOut()
     navigate('/portal/login')
-  }
-
-  function getChildTeams(childId: string) {
-    return memberships
-      .filter(m => m.child_id === childId)
-      .map(m => `${m.team.sport} > ${m.team.program} > ${m.team.name} (${m.season.name})`)
   }
 
   function toggleNotification(key: keyof typeof notifications) {
@@ -206,19 +172,19 @@ export default function Settings() {
                       <div>
                         <CardTitle className="text-lg mb-1">{child.first_name} {child.last_name}</CardTitle>
                         <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
-                          {t('portal.settings.family.born')} {child.birthdate ? new Date(child.birthdate).getFullYear() : 'Unknown'}
+                          {t('portal.settings.family.born')} {child.date_of_birth ? new Date(child.date_of_birth).getFullYear() : 'Unknown'}
                         </p>
                       </div>
                     </div>
                     <button className="text-sm font-bold text-slate-400 hover:text-slate-900 dark:hover:text-white">{t('common.edit')}</button>
                   </div>
                   <div className="p-6 bg-white dark:bg-slate-900/50">
-                    {getChildTeams(child.id).length > 0 ? (
+                    {teams.length > 0 ? (
                       <ul className="space-y-2">
-                         {getChildTeams(child.id).map((teamStr, i) => (
-                           <li key={i} className="flex items-start gap-2 text-sm font-bold text-slate-700 dark:text-slate-300">
+                         {teams.map((team) => (
+                           <li key={team.id} className="flex items-start gap-2 text-sm font-bold text-slate-700 dark:text-slate-300">
                              <span className="text-slate-400 mt-0.5">•</span>
-                             {teamStr}
+                             {team.name}
                            </li>
                          ))}
                       </ul>
@@ -245,23 +211,9 @@ export default function Settings() {
                      </div>
                      <span className="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold uppercase tracking-widest rounded">{t('portal.settings.family.owner')}</span>
                   </div>
-                  {guardians.map(g => (
-                    <div key={g.id} className="p-6 flex items-start justify-between">
-                      <div>
-                        <p className="font-black text-slate-900 dark:text-white">{g.email}</p>
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold uppercase rounded border border-slate-200 dark:border-slate-700">{t('portal.settings.family.viewOnly')}</span>
-                          <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold uppercase rounded border border-blue-100 dark:border-blue-800">{t('portal.settings.family.rsvp')}</span>
-                        </div>
-                      </div>
-                      <button className="text-sm font-bold text-red-600 hover:text-red-700 mt-1">{t('common.remove')}</button>
-                    </div>
-                  ))}
-                  {guardians.length === 0 && (
-                    <div className="p-6 text-center text-sm text-slate-400">
-                      {t('portal.settings.family.noGuardians')}
-                    </div>
-                  )}
+                  <div className="p-6 text-center text-sm text-slate-400">
+                    {t('portal.settings.family.noGuardians')}
+                  </div>
                 </div>
               </Card>
             </div>
@@ -326,40 +278,6 @@ export default function Settings() {
                   </div>
                 )
               })}
-            </Card>
-          </section>
-
-          {/* Payments */}
-          <section>
-            <SectionHeader className="mb-4">{t('portal.settings.payments.title')}</SectionHeader>
-            <Card className="overflow-hidden">
-               <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Icon name="credit_card" size="text-3xl" className="text-slate-600 dark:text-slate-400" />
-                    <div>
-                      <p className="font-black text-slate-900 dark:text-white">{t('portal.settings.payments.cardEnding', { last4: '4242' })}</p>
-                      <p className="text-xs font-bold uppercase tracking-widest text-slate-400">{t('portal.settings.payments.expires', { date: '12/28' })}</p>
-                    </div>
-                  </div>
-                  <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-3 py-1 rounded-full font-bold uppercase tracking-widest">{t('portal.settings.payments.default')}</span>
-               </div>
-               <div className="p-6 text-center">
-                 <button className="text-sm font-bold text-[#137fec] hover:underline">{t('portal.settings.payments.addPaymentMethod')}</button>
-               </div>
-               <div className="bg-slate-50 dark:bg-slate-800/50 p-6 border-t border-slate-100 dark:border-slate-800">
-                  <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">{t('portal.settings.payments.billingHistory')}</h4>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center text-sm font-bold">
-                      <span className="text-slate-600 dark:text-slate-400">Oct 1, 2025 • U12 Fall Registration</span>
-                      <span className="text-slate-900 dark:text-white">$150.00</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm font-bold">
-                      <span className="text-slate-600 dark:text-slate-400">Sep 15, 2025 • Uniform Kit</span>
-                      <span className="text-slate-900 dark:text-white">$85.00</span>
-                    </div>
-                  </div>
-                  <button className="mt-4 text-xs font-bold text-slate-400 hover:text-slate-900 dark:hover:text-white uppercase tracking-widest">{t('portal.settings.payments.downloadReceipts')}</button>
-               </div>
             </Card>
           </section>
 

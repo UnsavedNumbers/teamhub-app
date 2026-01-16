@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
+import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
-import { adaptTeamToTableRow, TeamTableRow } from '../../utils/dataAdapters'
-import type { Database } from '../../lib/database.types.ts'
+import { getTeams } from '../../data/services/teamsService'
 import { 
   PageHeader, 
   Card, 
@@ -13,10 +12,14 @@ import {
   Input 
 } from '../../components/platformAdmin'
 
-type TeamRow = Database['public']['Tables']['teams']['Row']
+interface TeamDisplay {
+  id: string
+  name: string
+  playerCount: number
+}
 
 export default function Teams() {
-  const [teams, setTeams] = useState<TeamTableRow[]>([])
+  const [teams, setTeams] = useState<TeamDisplay[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newTeamName, setNewTeamName] = useState('')
@@ -25,61 +28,62 @@ export default function Teams() {
   
   const { profile } = useAuth()
   const { currentOrganization } = useOrganization()
+  const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
   const fetchTeams = useCallback(async () => {
-    if (!currentOrganization?.id) {
-      setLoading(false)
-      return
-    }
+    if (!isReady) return
 
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('teams')
-        .select('*')
-        .eq('org_id', currentOrganization.id)
-        .order('name', { ascending: true })
+      const { data, error } = await getTeams(context, { activeOnly: false })
 
       if (error) {
         console.error('Error fetching teams:', error)
         return
       }
 
-      const teamRows = (data || []) as TeamRow[]
-      setTeams(teamRows.map((team) => adaptTeamToTableRow(team, 0, 0, 0)))
+      // Transform to display format
+      const teamDisplay: TeamDisplay[] = data.map(team => ({
+        id: team.id,
+        name: team.name,
+        playerCount: 0, // TODO: Get actual player count from roster
+      }))
+      
+      setTeams(teamDisplay)
     } catch (err) {
       console.error('Error:', err)
     } finally {
       setLoading(false)
     }
-  }, [currentOrganization?.id])
+  }, [context, isReady])
 
   useEffect(() => {
-    if (currentOrganization?.id) {
+    if (isReady) {
       fetchTeams()
     }
-  }, [currentOrganization, fetchTeams])
+  }, [isReady, fetchTeams])
 
   async function handleCreateTeam() {
-    if (!newTeamName.trim() || !currentOrganization?.id) return
+    if (!newTeamName.trim()) return
 
     setCreating(true)
     setError(null)
 
-    const { error } = await supabase.from('teams').insert({
+    // In fake data mode, just add locally
+    const newTeam: TeamDisplay = {
+      id: `team-new-${Date.now()}`,
       name: newTeamName.trim(),
-      org_id: currentOrganization.id,
-    } as never)
-
-    if (error) {
-      setError(error.message)
-    } else {
-      setNewTeamName('')
-      setShowCreateModal(false)
-      fetchTeams()
+      playerCount: 0,
     }
+
+    setTeams(prev => [...prev, newTeam])
+    setNewTeamName('')
+    setShowCreateModal(false)
     setCreating(false)
+
+    // TODO: Replace with real Supabase insert when migrating
+    // const { error } = await supabase.from('teams').insert({ ... })
   }
 
   if (loading && teams.length === 0) {

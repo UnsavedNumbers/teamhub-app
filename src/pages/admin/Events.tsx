@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
-import { useAuth } from '../../hooks/useAuth'
+import { useUserContext } from '../../hooks/useUserContext'
+import { getEvents } from '../../data/services/eventsService'
 import { 
   PageHeader, 
   Card, 
@@ -29,22 +29,55 @@ export default function Events() {
   const [rowsPerPage, setRowsPerPage] = useState(50)
   const [totalCount, setTotalCount] = useState(0)
 
-  const { profile } = useAuth()
+  const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
   const fetchEvents = useCallback(async () => {
+    if (!isReady) return
+    
     setLoading(true)
     try {
-      const { count } = await supabase.from('events').select('*', { count: 'exact', head: true }).gte('start_time', new Date().toISOString())
-      setTotalCount(count || 0)
-      const from = page * rowsPerPage
-      const to = from + rowsPerPage - 1
-      const { data } = await supabase.from('events').select('id, title, type, start_time, end_time, location, team:teams(name)').order('start_time', { ascending: true }).gte('start_time', new Date().toISOString()).range(from, to)
-      setEvents((data as any[]) || [])
-    } finally { setLoading(false) }
-  }, [page, rowsPerPage])
+      const now = new Date()
+      const sixtyDaysFromNow = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000)
+      
+      const { data, error } = await getEvents(context, {
+        startDate: now,
+        endDate: sixtyDaysFromNow,
+        includeCancelled: false,
+      })
+      
+      if (error) {
+        console.error('Error fetching events:', error)
+        setEvents([])
+        setTotalCount(0)
+        return
+      }
 
-  useEffect(() => { fetchEvents() }, [fetchEvents])
+      // Transform to display format
+      const displayEvents: Event[] = data.map(event => ({
+        id: event.id,
+        title: event.title,
+        type: event.type,
+        start_time: event.start_time,
+        end_time: event.end_time,
+        location: event.event_location?.name ?? null,
+        team: { name: event.team?.name ?? 'Unknown Team' },
+      }))
+
+      setTotalCount(displayEvents.length)
+      
+      // Client-side pagination
+      const from = page * rowsPerPage
+      const to = from + rowsPerPage
+      setEvents(displayEvents.slice(from, to))
+    } finally { 
+      setLoading(false) 
+    }
+  }, [context, isReady, page, rowsPerPage])
+
+  useEffect(() => { 
+    fetchEvents() 
+  }, [fetchEvents])
 
   const getTypeVariant = (type: string): 'info' | 'success' | 'warning' | 'neutral' => {
     switch (type) {
