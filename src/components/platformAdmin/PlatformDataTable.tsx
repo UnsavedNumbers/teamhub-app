@@ -1,18 +1,4 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
-  TableSortLabel,
-  Paper,
-  Card,
-  Typography,
-  Box,
-  Skeleton,
-} from '@mui/material'
+import { ReactNode } from 'react'
 
 /**
  * Column configuration for PlatformDataTable
@@ -23,7 +9,7 @@ export interface ColumnConfig<T> {
   sortable?: boolean
   align?: 'left' | 'center' | 'right'
   minWidth?: number
-  render?: (row: T) => React.ReactNode
+  render?: (row: T) => ReactNode
 }
 
 interface PlatformDataTableProps<T extends { id: string }> {
@@ -49,7 +35,7 @@ export default function PlatformDataTable<T extends { id: string }>({
   columns,
   rows,
   loading = false,
-  emptyMessage = 'No data found.',
+  emptyMessage = 'No data available',
   page,
   rowsPerPage,
   totalCount,
@@ -60,124 +46,157 @@ export default function PlatformDataTable<T extends { id: string }>({
   order = 'asc',
   onSort,
 }: PlatformDataTableProps<T>) {
+  const totalPages = Math.ceil(totalCount / rowsPerPage)
+  const startRow = page * rowsPerPage + 1
+  const endRow = Math.min((page + 1) * rowsPerPage, totalCount)
+
   const handleSort = (columnId: string) => {
     if (onSort) {
       onSort(columnId)
     }
   }
 
-  // Render loading skeleton
-  if (loading && rows.length === 0) {
+  if (loading) {
     return (
-      <Card>
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                {columns.map((column) => (
-                  <TableCell 
-                    key={String(column.id)} 
-                    align={column.align || 'left'}
-                    sx={{ minWidth: column.minWidth }}
-                  >
-                    {column.label}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {Array.from({ length: 5 }).map((_, rowIdx) => (
-                <TableRow key={`skeleton-${rowIdx}`}>
-                  {columns.map((column) => (
-                    <TableCell key={`skeleton-${rowIdx}-${String(column.id)}`}>
-                      <Skeleton variant="text" width="80%" />
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Card>
+      <div className="pa-card">
+        <div style={{ padding: 'var(--pa-space-8)', textAlign: 'center' }}>
+          <div className="pa-skeleton" style={{ width: '100%', height: '300px' }} />
+        </div>
+      </div>
     )
   }
 
-  // Render empty state
-  if (!loading && rows.length === 0) {
+  if (rows.length === 0) {
     return (
-      <Card>
-        <Box sx={{ p: 4, textAlign: 'center' }}>
-          <Typography color="textSecondary">
-            {emptyMessage}
-          </Typography>
-        </Box>
-      </Card>
+      <div className="pa-card">
+        <div className="pa-empty">
+          <div className="pa-empty-icon">
+            <span className="material-symbols-outlined">inbox</span>
+          </div>
+          <h3 className="pa-empty-title">NO DATA</h3>
+          <p className="pa-empty-text">{emptyMessage}</p>
+        </div>
+      </div>
     )
   }
 
   return (
-    <Card>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
+    <div className="pa-card" style={{ padding: 0, overflow: 'hidden' }}>
+      {/* Table */}
+      <div style={{ overflowX: 'auto' }}>
+        <table className="pa-table" style={{ width: '100%' }}>
+          <thead>
+            <tr>
               {columns.map((column) => (
-                <TableCell 
-                  key={String(column.id)} 
-                  align={column.align || 'left'}
-                  sx={{ minWidth: column.minWidth }}
+                <th
+                  key={String(column.id)}
+                  className={`${column.sortable && onSort ? 'pa-sortable' : ''} ${
+                    orderBy === column.id ? 'pa-sorted' : ''
+                  }`}
+                  style={{
+                    textAlign: column.align || 'left',
+                    minWidth: column.minWidth,
+                    cursor: column.sortable && onSort ? 'pointer' : 'default',
+                  }}
+                  onClick={() => column.sortable && onSort && handleSort(String(column.id))}
                 >
-                  {column.sortable && onSort ? (
-                    <TableSortLabel
-                      active={orderBy === column.id}
-                      direction={orderBy === column.id ? order : 'asc'}
-                      onClick={() => handleSort(String(column.id))}
-                    >
-                      {column.label}
-                    </TableSortLabel>
-                  ) : (
-                    column.label
-                  )}
-                </TableCell>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}>
+                    <span>{column.label}</span>
+                    {column.sortable && onSort && (
+                      <span
+                        className="material-symbols-outlined pa-sort-icon"
+                        style={{ fontSize: '16px' }}
+                      >
+                        {orderBy === column.id
+                          ? order === 'asc'
+                            ? 'arrow_upward'
+                            : 'arrow_downward'
+                          : 'unfold_more'}
+                      </span>
+                    )}
+                  </div>
+                </th>
               ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
+            </tr>
+          </thead>
+          <tbody>
             {rows.map((row) => (
-              <TableRow 
-                key={row.id} 
-                hover
+              <tr
+                key={row.id}
+                className={onRowClick ? 'pa-clickable' : ''}
                 onClick={() => onRowClick?.(row)}
-                sx={{ cursor: onRowClick ? 'pointer' : 'default' }}
+                style={{ cursor: onRowClick ? 'pointer' : 'default' }}
               >
-                {columns.map((column) => {
-                  const value = column.render 
-                    ? column.render(row)
-                    : (row as Record<string, unknown>)[String(column.id)]
-                  
-                  return (
-                    <TableCell 
-                      key={`${row.id}-${String(column.id)}`} 
-                      align={column.align || 'left'}
-                    >
-                      {value === null || value === undefined ? '—' : String(value)}
-                    </TableCell>
-                  )
-                })}
-              </TableRow>
+                {columns.map((column) => (
+                  <td
+                    key={String(column.id)}
+                    style={{ textAlign: column.align || 'left' }}
+                  >
+                    {column.render
+                      ? column.render(row)
+                      : String(row[column.id as keyof T] ?? '—')}
+                  </td>
+                ))}
+              </tr>
             ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <TablePagination
-        component="div"
-        count={totalCount}
-        page={page}
-        onPageChange={(_, newPage) => onPageChange(newPage)}
-        rowsPerPage={rowsPerPage}
-        onRowsPerPageChange={(e) => onRowsPerPageChange(parseInt(e.target.value, 10))}
-        rowsPerPageOptions={[25, 50, 100]}
-      />
-    </Card>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: 'var(--pa-space-4)',
+          borderTop: '1px solid var(--pa-n100)',
+          background: 'var(--pa-n25)',
+        }}
+      >
+        {/* Rows per page */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)' }}>
+          <span className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
+            Rows per page:
+          </span>
+          <select
+            className="pa-input pa-select"
+            value={rowsPerPage}
+            onChange={(e) => onRowsPerPageChange(Number(e.target.value))}
+            style={{ width: 'auto', height: '36px', padding: '0 var(--pa-space-3)' }}
+          >
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+        </div>
+
+        {/* Page info */}
+        <span className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
+          {startRow}–{endRow} of {totalCount}
+        </span>
+
+        {/* Page controls */}
+        <div style={{ display: 'flex', gap: 'var(--pa-space-2)' }}>
+          <button
+            className="pa-btn pa-btn--ghost pa-btn--dense"
+            onClick={() => onPageChange(page - 1)}
+            disabled={page === 0}
+            aria-label="Previous page"
+          >
+            <span className="material-symbols-outlined">chevron_left</span>
+          </button>
+          <button
+            className="pa-btn pa-btn--ghost pa-btn--dense"
+            onClick={() => onPageChange(page + 1)}
+            disabled={page >= totalPages - 1}
+            aria-label="Next page"
+          >
+            <span className="material-symbols-outlined">chevron_right</span>
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }

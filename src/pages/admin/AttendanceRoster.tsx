@@ -1,29 +1,21 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Chip,
-} from '@mui/material'
-import type { ChipProps } from '@mui/material/Chip'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useEventParams } from '../../hooks/useRouteParams'
-import AdminSkeletonTable from '../../components/admin/AdminSkeletonTable'
+import { 
+  PageHeader, 
+  Card, 
+  Badge, 
+  PlatformDataTable, 
+  type ColumnConfig 
+} from '../../components/platformAdmin'
 
 interface Attendance {
   id: string
   status: 'going' | 'late' | 'not_going'
   child: { first_name: string; last_name: string }
+  child_name: string // Added for data table
 }
 
 interface Event {
@@ -58,7 +50,11 @@ export default function AttendanceRoster() {
         .select('id, status, child:children(first_name, last_name)')
         .eq('event_id', eventId)
 
-      setAttendance((attendanceData as unknown as Attendance[]) || [])
+      const rows = (attendanceData as any[]) || []
+      setAttendance(rows.map(a => ({
+        ...a,
+        child_name: `${a.child.first_name} ${a.child.last_name}`
+      })))
     } catch (error) {
       console.error('Error:', error)
     } finally {
@@ -67,87 +63,79 @@ export default function AttendanceRoster() {
   }, [eventId])
 
   useEffect(() => {
-    if (!profile || (profile.role !== 'admin' && profile.role !== 'coach' && !profile.organizations.some(org => org.role === 'org_admin' || org.role === 'coach'))) {
-      navigate('/portal/unauthorized')
-      return
-    }
     if (eventId) fetchData()
-  }, [eventId, profile, navigate, fetchData])
+  }, [eventId, fetchData])
 
-  const getStatusColor = (status: string): ChipProps['color'] => {
+  const getStatusVariant = (status: string): 'success' | 'warning' | 'danger' | 'neutral' => {
     switch (status) {
-      case 'going':
-        return 'success'
-      case 'late':
-        return 'warning'
-      case 'not_going':
-        return 'error'
-      default:
-        return 'default'
+      case 'going': return 'success'
+      case 'late': return 'warning'
+      case 'not_going': return 'danger'
+      default: return 'neutral'
     }
   }
 
+  const columns: ColumnConfig<Attendance>[] = [
+    { id: 'child_name', label: 'Player' },
+    { 
+      id: 'status', 
+      label: 'Status',
+      render: (row) => (
+        <Badge variant={getStatusVariant(row.status)}>
+          {row.status.replace('_', ' ').toUpperCase()}
+        </Badge>
+      )
+    }
+  ]
+
   if (loading) {
-    return <AdminSkeletonTable rows={6} columns={3} />
+    return (
+      <div className="pa-flex pa-flex-col pa-gap-4">
+        <div className="pa-skeleton" style={{ height: '40px', width: '300px' }} />
+        <div className="pa-skeleton" style={{ height: '100px' }} />
+        <div className="pa-skeleton" style={{ height: '300px' }} />
+      </div>
+    )
   }
 
   if (!event) {
     return (
-      <Box>
-        <Typography variant="h5">Event not found</Typography>
-      </Box>
+      <div className="pa-root">
+        <PageHeader title="Event Not Found" />
+      </div>
     )
   }
 
   return (
-    <Box>
-      <Typography variant="h4" sx={{ fontWeight: 600, mb: 3 }}>
-        Attendance: {event.title}
-      </Typography>
+    <div className="pa-root">
+      <PageHeader title={`Attendance: ${event.title}`} />
 
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Typography variant="body1">
-            <strong>Team:</strong> {event.team.name}
-          </Typography>
-          <Typography variant="body1">
-            <strong>Date:</strong> {new Date(event.start_time).toLocaleDateString()}
-          </Typography>
-        </CardContent>
+      <Card className="pa-mb-5">
+        <div className="pa-grid pa-grid-2">
+          <div>
+            <div className="pa-text-overline pa-mb-1">TEAM</div>
+            <div className="pa-body-m" style={{ fontWeight: 600 }}>{event.team.name}</div>
+          </div>
+          <div>
+            <div className="pa-text-overline pa-mb-1">DATE</div>
+            <div className="pa-body-m" style={{ fontWeight: 600 }}>
+              {new Date(event.start_time).toLocaleDateString()}
+            </div>
+          </div>
+        </div>
       </Card>
 
-      <Card>
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Player</TableCell>
-                <TableCell>Status</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {attendance.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={2} align="center" sx={{ py: 4 }}>
-                    <Typography color="textSecondary">No attendance records</Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                attendance.map((record) => (
-                  <TableRow key={record.id}>
-                    <TableCell>
-                      {record.child.first_name} {record.child.last_name}
-                    </TableCell>
-                    <TableCell>
-                      <Chip label={record.status} color={getStatusColor(record.status)} size="small" />
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Card>
-    </Box>
+      <PlatformDataTable
+        columns={columns}
+        rows={attendance}
+        loading={loading}
+        totalCount={attendance.length}
+        page={0}
+        rowsPerPage={200}
+        onPageChange={() => {}}
+        onRowsPerPageChange={() => {}}
+        emptyMessage="No attendance records found for this event."
+      />
+    </div>
   )
 }

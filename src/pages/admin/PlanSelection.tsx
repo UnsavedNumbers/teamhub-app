@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Alert, Box, Button, Card, CardContent, CircularProgress, Grid, Stack, Typography } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useLicense } from '../../hooks/useLicense'
@@ -7,6 +6,11 @@ import { createCheckoutSession } from '../../api/billing'
 import { LicensePlan } from '../../utils/licenseUtils'
 import { t } from '../../i18n'
 import { getErrorMessage } from '../../utils/errorUtils'
+import { 
+  PageHeader, 
+  Card, 
+  Button 
+} from '../../components/platformAdmin'
 
 interface PlanCard {
   id: LicensePlan
@@ -17,47 +21,9 @@ interface PlanCard {
 }
 
 const planCards: PlanCard[] = [
-  {
-    id: 'starter',
-    name: t('plans.starter.name'),
-    price: t('plans.starter.price'),
-    description: t('plans.starter.description'),
-    features: [
-      t('plans.features.scheduling'),
-      t('plans.features.rosters'),
-      t('plans.features.messaging'),
-    ],
-  },
-  {
-    id: 'standard',
-    name: t('plans.standard.name'),
-    price: t('plans.standard.price'),
-    description: t('plans.standard.description'),
-    features: [
-      t('plans.features.scheduling'),
-      t('plans.features.rosters'),
-      t('plans.features.messaging'),
-      t('plans.features.payments'),
-      t('plans.features.uniforms'),
-    ],
-  },
-  {
-    id: 'pro',
-    name: t('plans.pro.name'),
-    price: t('plans.pro.price'),
-    description: t('plans.pro.description'),
-    features: [
-      t('plans.features.scheduling'),
-      t('plans.features.rosters'),
-      t('plans.features.messaging'),
-      t('plans.features.payments'),
-      t('plans.features.uniforms'),
-      t('plans.features.travel'),
-      t('plans.features.tryouts'),
-      t('plans.features.reporting'),
-      t('plans.features.support'),
-    ],
-  },
+  { id: 'starter', name: t('plans.starter.name'), price: t('plans.starter.price'), description: t('plans.starter.description'), features: [t('plans.features.scheduling'), t('plans.features.rosters'), t('plans.features.messaging')] },
+  { id: 'standard', name: t('plans.standard.name'), price: t('plans.standard.price'), description: t('plans.standard.description'), features: [t('plans.features.scheduling'), t('plans.features.rosters'), t('plans.features.messaging'), t('plans.features.payments'), t('plans.features.uniforms')] },
+  { id: 'pro', name: t('plans.pro.name'), price: t('plans.pro.price'), description: t('plans.pro.description'), features: [t('plans.features.scheduling'), t('plans.features.rosters'), t('plans.features.messaging'), t('plans.features.payments'), t('plans.features.uniforms'), t('plans.features.travel'), t('plans.features.tryouts'), t('plans.features.reporting'), t('plans.features.support')] },
 ]
 
 export default function PlanSelection() {
@@ -70,82 +36,69 @@ export default function PlanSelection() {
   const [error, setError] = useState<string | null>(null)
 
   if (!orgId) {
-    return <Alert severity="error">{t('errors.missingOrganization')}</Alert>
+    return (
+      <div className="pa-root">
+        <div className="pa-card pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>
+          {t('errors.missingOrganization')}
+        </div>
+      </div>
+    )
   }
 
   async function handleSelect(plan: LicensePlan) {
     if (!orgId) return
-    setError(null)
-    setLoadingPlan(plan)
+    setError(null); setLoadingPlan(plan)
     try {
       const { checkout_session_url } = await createCheckoutSession({
-        organizationId: orgId,
-        requestedPlan: plan,
-        successUrl: `${window.location.origin}/admin/organization/billing/checkout/success`,
-        cancelUrl: `${window.location.origin}/admin/organization/billing/checkout/cancel`,
+        organizationId: orgId, requestedPlan: plan, successUrl: `${window.location.origin}/admin/organization/billing/checkout/success`, cancelUrl: `${window.location.origin}/admin/organization/billing/checkout/cancel`,
       })
-
-      if (checkout_session_url) {
-        window.location.href = checkout_session_url
-      }
+      if (checkout_session_url) window.location.href = checkout_session_url
     } catch (err: unknown) {
       setError(getErrorMessage(err) || t('billing.errorCreatingSession'))
-    } finally {
-      setLoadingPlan(null)
-    }
+    } finally { setLoadingPlan(null) }
   }
 
   return (
-    <Box>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-        <Typography variant="h4" fontWeight={700}>{t('billing.planSelectionTitle')}</Typography>
-        <Button variant="text" onClick={() => navigate('/admin/organization/billing')}>
-          {t('common.goBack')}
-        </Button>
-      </Stack>
+    <div className="pa-root">
+      <PageHeader 
+        title={t('billing.planSelectionTitle')} 
+        actions={<Button variant="secondary" onClick={() => navigate('/admin/organization/billing')}>{t('common.goBack')}</Button>} 
+      />
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
-      )}
+      {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
 
-      <Grid container spacing={3}>
+      <div className="pa-grid pa-grid-3 pa-gap-6">
         {planCards.map(plan => {
           const isCurrent = licensePlan === plan.id
           return (
-            <Grid item xs={12} md={4} key={plan.id}>
-              <Card
-                variant={isCurrent ? 'elevation' : 'outlined'}
-                sx={{ borderColor: isCurrent ? 'primary.main' : undefined }}
+            <Card key={plan.id} style={{ borderColor: isCurrent ? 'var(--pa-n900)' : 'transparent', borderWidth: isCurrent ? '2px' : '1px' }}>
+              <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
+                <h3 className="pa-h3">{plan.name.toUpperCase()}</h3>
+                {isCurrent && <div className="pa-badge pa-badge--neutral">CURRENT</div>}
+              </div>
+              <div className="pa-h1 pa-mb-4" style={{ fontWeight: 900 }}>{plan.price}</div>
+              <div className="pa-body-m pa-text-muted pa-mb-6">{plan.description}</div>
+              <div className="pa-flex pa-flex-col pa-gap-2 pa-mb-8">
+                {plan.features.map(f => (
+                  <div key={f} className="pa-body-s pa-flex pa-items-center pa-gap-2">
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--pa-success)' }}>check_circle</span>
+                    {f}
+                  </div>
+                ))}
+              </div>
+              <Button 
+                style={{ width: '100%' }} 
+                variant={isCurrent ? 'secondary' : 'primary'} 
+                onClick={() => handleSelect(plan.id)} 
+                disabled={!!loadingPlan} 
+                loading={loadingPlan === plan.id}
               >
-                <CardContent>
-                  <Stack spacing={1.5}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                      <Typography variant="h6" fontWeight={700}>{plan.name}</Typography>
-                      {isCurrent && (
-                        <Button size="small" disabled>{t('billing.currentPlan')}</Button>
-                      )}
-                    </Stack>
-                    <Typography variant="h4" fontWeight={800}>{plan.price}</Typography>
-                    <Typography variant="body2" color="text.secondary">{plan.description}</Typography>
-                    <Stack spacing={0.5}>
-                      {plan.features.map(feature => (
-                        <Typography key={feature} variant="body2">- {feature}</Typography>
-                      ))}
-                    </Stack>
-                    <Button
-                      variant={isCurrent ? 'outlined' : 'contained'}
-                      onClick={() => handleSelect(plan.id)}
-                      disabled={!!loadingPlan}
-                    >
-                      {loadingPlan === plan.id ? <CircularProgress size={18} /> : t('billing.continueToCheckout')}
-                    </Button>
-                  </Stack>
-                </CardContent>
-              </Card>
-            </Grid>
+                {isCurrent ? 'SELECTED' : t('billing.continueToCheckout')}
+              </Button>
+            </Card>
           )
         })}
-      </Grid>
-    </Box>
+      </div>
+    </div>
   )
 }

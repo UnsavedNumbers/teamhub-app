@@ -1,31 +1,16 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Button,
-  TextField,
-  MenuItem,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-} from '@mui/material'
-import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useTeamParams } from '../../hooks/useRouteParams'
-import AdminSkeletonTable from '../../components/admin/AdminSkeletonTable'
+import { 
+  PageHeader, 
+  Card, 
+  Button, 
+  Select, 
+  PlatformDataTable, 
+  type ColumnConfig 
+} from '../../components/platformAdmin'
 
 interface Season {
   id: string
@@ -36,6 +21,8 @@ interface Membership {
   id: string
   child_id: string
   child: { first_name: string; last_name: string; family: { name: string } }
+  child_name: string // Added for data table
+  family_name: string // Added for data table
 }
 
 export default function Roster() {
@@ -49,6 +36,22 @@ export default function Roster() {
   const { profile } = useAuth()
   const navigate = useNavigate()
 
+  const fetchRoster = useCallback(async (seasonId: string) => {
+    const { data } = await supabase
+      .from('team_memberships')
+      .select('id, child_id, child:children(first_name, last_name, family:families(name))')
+      .eq('team_id', teamId)
+      .eq('season_id', seasonId)
+      .eq('status', 'active')
+
+    const rows = (data as any[]) || []
+    setRoster(rows.map(m => ({
+      ...m,
+      child_name: `${m.child.first_name} ${m.child.last_name}`,
+      family_name: m.child.family?.name || 'N/A'
+    })))
+  }, [teamId])
+
   const fetchSeasons = useCallback(async () => {
     const { data } = await supabase
       .from('seasons')
@@ -60,122 +63,104 @@ export default function Roster() {
     if (list && list.length > 0) {
       setSeasons(list)
       setSelectedSeason(list[0].id)
+      fetchRoster(list[0].id)
     }
     setLoading(false)
-  }, [teamId])
-
-  const fetchRoster = useCallback(async () => {
-    const { data } = await supabase
-      .from('team_memberships')
-      .select('id, child_id, child:children(first_name, last_name, family:families(name))')
-      .eq('team_id', teamId)
-      .eq('season_id', selectedSeason)
-      .eq('status', 'active')
-
-    setRoster((data as unknown as Membership[]) || [])
-  }, [teamId, selectedSeason])
+  }, [teamId, fetchRoster])
 
   useEffect(() => {
-    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
-      navigate('/portal/unauthorized')
-      return
-    }
     if (teamId) fetchSeasons()
-  }, [profile, teamId, navigate, fetchSeasons])
-
-  useEffect(() => {
-    if (selectedSeason) fetchRoster()
-  }, [selectedSeason, teamId, fetchRoster])
+  }, [teamId, fetchSeasons])
 
   async function removePlayer(membershipId: string) {
+    if (!window.confirm('Are you sure you want to remove this player from the roster?')) return
+    
     await supabase
       .from('team_memberships')
       .update({ status: 'inactive' } as never)
       .eq('id', membershipId)
-    fetchRoster()
+    fetchRoster(selectedSeason)
   }
 
-  if (loading) {
-    return <AdminSkeletonTable rows={6} columns={4} />
-  }
+  const columns: ColumnConfig<Membership>[] = [
+    { id: 'child_name', label: 'Player' },
+    { id: 'family_name', label: 'Family' },
+    { 
+      id: 'actions', 
+      label: 'Actions', 
+      align: 'right',
+      render: (row) => (
+        <button 
+          className="pa-btn pa-btn--ghost pa-btn--dense" 
+          onClick={(e) => { e.stopPropagation(); removePlayer(row.id); }}
+          style={{ color: 'var(--pa-n900)' }}
+        >
+          <span className="material-symbols-outlined">delete</span>
+        </button>
+      )
+    }
+  ]
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 600 }}>
-          Team Roster
-        </Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setShowAddModal(true)}>
-          Add Player
-        </Button>
-      </Box>
+    <div>
+      <PageHeader 
+        title="Team Roster" 
+        actions={
+          <Button onClick={() => setShowAddModal(true)}>
+            <span className="material-symbols-outlined">add</span>
+            Add Player
+          </Button>
+        }
+      />
 
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <TextField
-            select
-            label="Season"
-            value={selectedSeason}
-            onChange={(e) => setSelectedSeason(e.target.value)}
-            fullWidth
+      <Card className="pa-mb-4">
+        <Select 
+          label="Season"
+          value={selectedSeason}
+          onChange={(e) => {
+            setSelectedSeason(e.target.value)
+            fetchRoster(e.target.value)
+          }}
+          options={seasons.map(s => ({ value: s.id, label: s.name }))}
+        />
+      </Card>
+
+      <PlatformDataTable
+        columns={columns}
+        rows={roster}
+        loading={loading}
+        totalCount={roster.length}
+        page={0}
+        rowsPerPage={100}
+        onPageChange={() => {}}
+        onRowsPerPageChange={() => {}}
+        emptyMessage="No players on roster for this season."
+      />
+
+      {/* Basic modal replacement */}
+      {showAddModal && (
+        <div 
+          style={{ 
+            position: 'fixed', inset: 0, 
+            background: 'rgba(11,15,20,0.5)', 
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000 
+          }}
+          onClick={() => setShowAddModal(false)}
+        >
+          <div 
+            className="pa-card" 
+            style={{ width: '100%', maxWidth: '450px', padding: 'var(--pa-space-5)' }}
+            onClick={e => e.stopPropagation()}
           >
-            {seasons.map((s) => (
-              <MenuItem key={s.id} value={s.id}>
-                {s.name}
-              </MenuItem>
-            ))}
-          </TextField>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Player</TableCell>
-                <TableCell>Family</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {roster.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={3} align="center" sx={{ py: 4 }}>
-                    <Typography color="textSecondary">No players on roster</Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                roster.map((member) => (
-                  <TableRow key={member.id}>
-                    <TableCell>
-                      {member.child.first_name} {member.child.last_name}
-                    </TableCell>
-                    <TableCell>{member.child.family?.name || 'N/A'}</TableCell>
-                    <TableCell align="right">
-                      <IconButton size="small" color="error" onClick={() => removePlayer(member.id)}>
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Card>
-
-      <Dialog open={showAddModal} onClose={() => setShowAddModal(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Player to Roster</DialogTitle>
-        <DialogContent>
-          <Typography color="textSecondary">
-            Player selection functionality would be implemented here.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowAddModal(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+            <h2 className="pa-h2 pa-mb-4">ADD PLAYER</h2>
+            <p className="pa-body-m pa-mb-5">Player selection logic would be implemented here.</p>
+            <div className="pa-flex pa-justify-end">
+              <Button onClick={() => setShowAddModal(false)}>Close</Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

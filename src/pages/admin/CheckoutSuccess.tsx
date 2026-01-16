@@ -1,7 +1,11 @@
 import { useEffect } from 'react'
-import { Alert, Box, Button, Stack, Typography } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import { t } from '../../i18n'
+import { 
+  PageHeader, 
+  Card, 
+  Button 
+} from '../../components/platformAdmin'
 
 export default function CheckoutSuccess() {
   const navigate = useNavigate()
@@ -12,17 +16,21 @@ export default function CheckoutSuccess() {
   }, [navigate])
 
   return (
-    <Box sx={{ maxWidth: 520 }}>
-      <Alert severity="success" sx={{ mb: 3 }}>
-        <Typography variant="h6" fontWeight={700}>{t('billing.checkoutSuccessTitle')}</Typography>
-        <Typography variant="body2">{t('billing.checkoutSuccessBody')}</Typography>
-      </Alert>
-      <Stack spacing={2}>
-        <Typography variant="body2" color="text.secondary">{t('checkout.redirecting')}</Typography>
-        <Button variant="contained" onClick={() => navigate('/admin/organization/billing')}>
-          {t('checkout.returnToBilling')}
-        </Button>
-      </Stack>
-    </Box>
+    <div className="pa-root">
+      <PageHeader title={t('billing.checkoutSuccessTitle').toUpperCase()} />
+      <Card style={{ maxWidth: '600px' }}>
+        <div className="pa-flex pa-items-center pa-gap-4 pa-mb-6 pa-text-success">
+          <span className="material-symbols-outlined" style={{ fontSize: '48px' }}>check_circle</span>
+          <div>
+            <h3 className="pa-h3 pa-mb-1">{t('billing.checkoutSuccessTitle')}</h3>
+            <p className="pa-body-m">{t('billing.checkoutSuccessBody')}</p>
+          </div>
+        </div>
+        <div className="pa-flex pa-flex-col pa-gap-4">
+          <p className="pa-body-s pa-text-muted">{t('checkout.redirecting')}</p>
+          <Button onClick={() => navigate('/admin/organization/billing')}>{t('checkout.returnToBilling')}</Button>
+        </div>
+      </Card>
+    </div>
   )
 }

@@ -1,34 +1,20 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Button,
-  TextField,
-  MenuItem,
-  Grid,
-  Alert,
-  CircularProgress,
-} from '@mui/material'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
-import AdminSkeletonTable from '../../components/admin/AdminSkeletonTable'
 import { getErrorMessage } from '../../utils/errorUtils'
+import { 
+  PageHeader, 
+  Card, 
+  Button, 
+  Input, 
+  Select 
+} from '../../components/platformAdmin'
 
-interface Team {
-  id: string
-  name: string
-}
-
-interface Season {
-  id: string
-  name: string
-  team_id: string
-}
+interface Team { id: string; name: string }
+interface Season { id: string; name: string; team_id: string }
 
 interface EventFormData {
   title: string
@@ -49,316 +35,88 @@ export default function CreateEvent() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { profile } = useAuth()
   const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
 
-  const {
-    control,
-    handleSubmit,
-    watch,
-    setValue,
-    formState: { errors },
-  } = useForm<EventFormData>({
-    defaultValues: {
-      title: '',
-      type: 'practice',
-      team_id: '',
-      season_id: '',
-      start_time: '',
-      end_time: '',
-      arrival_time: '',
-      location: '',
-      notes: '',
-    },
+  const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<EventFormData>({
+    defaultValues: { title: '', type: 'practice', team_id: '', season_id: '', start_time: '', end_time: '', arrival_time: '', location: '', notes: '' },
   })
 
   const watchTeamId = watch('team_id')
 
   const fetchTeams = useCallback(async () => {
     if (!currentOrganization?.id) return
-    const { data } = await supabase
-      .from('teams')
-      .select('id, name')
-      .eq('org_id', currentOrganization.id)
-      .order('name')
+    const { data } = await supabase.from('teams').select('id, name').eq('org_id', currentOrganization.id).order('name')
     setTeams((data as Team[]) || [])
     setLoading(false)
   }, [currentOrganization?.id])
 
   const fetchSeasons = useCallback(async (teamId: string) => {
-    const { data } = await supabase
-      .from('seasons')
-      .select('id, name, team_id')
-      .eq('team_id', teamId)
-      .order('start_date', { ascending: false })
-    const seasonsData = data as unknown as Season[]
-    setSeasons(seasonsData || [])
-    if (seasonsData && seasonsData.length > 0) {
-      setValue('season_id', seasonsData[0].id)
-    }
+    const { data } = await supabase.from('seasons').select('id, name, team_id').eq('team_id', teamId).order('start_date', { ascending: false })
+    const seasonsData = (data as any[]) || []
+    setSeasons(seasonsData)
+    if (seasonsData.length > 0) setValue('season_id', seasonsData[0].id)
   }, [setValue])
 
-  useEffect(() => {
-    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
-      navigate('/portal/unauthorized')
-      return
-    }
-    if (currentOrganization?.id) {
-      fetchTeams()
-    }
-  }, [profile, currentOrganization, navigate, fetchTeams])
-
-  useEffect(() => {
-    if (watchTeamId) {
-      fetchSeasons(watchTeamId)
-      setValue('season_id', '')
-    }
-  }, [watchTeamId, setValue, fetchSeasons])
+  useEffect(() => { fetchTeams() }, [fetchTeams])
+  useEffect(() => { if (watchTeamId) fetchSeasons(watchTeamId) }, [watchTeamId, fetchSeasons])
 
   const onSubmit = async (data: EventFormData) => {
-    setSaving(true)
-    setError(null)
-
+    setSaving(true); setError(null)
     try {
-      const { error } = await supabase.from('events').insert({
-        title: data.title,
-        type: data.type,
-        team_id: data.team_id,
-        season_id: data.season_id,
-        start_time: data.start_time,
-        end_time: data.end_time,
-        arrival_time: data.arrival_time || null,
-        location: data.location || null,
-        notes: data.notes || null,
+      const { error: insertError } = await supabase.from('events').insert({
+        title: data.title, type: data.type, team_id: data.team_id, season_id: data.season_id,
+        start_time: new Date(data.start_time).toISOString(),
+        end_time: data.end_time ? new Date(data.end_time).toISOString() : null,
+        arrival_time: data.arrival_time ? new Date(data.arrival_time).toISOString() : null,
+        location: data.location, notes: data.notes,
+        org_id: currentOrganization?.id
       } as never)
-
-      if (error) throw error
+      if (insertError) throw insertError
       navigate('/admin/events')
-    } catch (err: unknown) {
-      setError(getErrorMessage(err) || 'Failed to create event')
-    } finally {
-      setSaving(false)
-    }
+    } catch (err: unknown) { setError(getErrorMessage(err) || 'Failed to create event') } finally { setSaving(false) }
   }
 
-  if (loading) {
-    return <AdminSkeletonTable rows={6} columns={2} />
-  }
+  if (loading) return <div className="pa-skeleton" style={{ height: '500px' }} />
 
   return (
-    <Box>
-      <Typography variant="h4" sx={{ fontWeight: 600, mb: 3 }}>
-        Create Event
-      </Typography>
-
+    <div className="pa-root">
+      <PageHeader title="Create Event" />
       <Card>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)}>
-            {error && (
-              <Alert severity="error" sx={{ mb: 3 }}>
-                {error}
-              </Alert>
-            )}
+        <form onSubmit={handleSubmit(onSubmit)}>
+          {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
+          
+          <div className="pa-grid pa-grid-2 pa-mb-4 pa-gap-4">
+            <Controller name="title" control={control} rules={{ required: 'Title is required' }} render={({ field }) => <Input {...field} label="Event Title" required error={!!errors.title} helperText={errors.title?.message} />} />
+            <Controller name="type" control={control} render={({ field }) => <Select {...field} label="Event Type" options={[{value:'practice', label:'Practice'}, {value:'game', label:'Game'}, {value:'tournament', label:'Tournament'}, {value:'meeting', label:'Meeting'}]} />} />
+          </div>
 
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="team_id"
-                  control={control}
-                  rules={{ required: 'Team is required' }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      select
-                      label="Team"
-                      fullWidth
-                      required
-                      error={!!errors.team_id}
-                      helperText={errors.team_id?.message}
-                    >
-                      <MenuItem value="">Select team...</MenuItem>
-                      {teams.map((t) => (
-                        <MenuItem key={t.id} value={t.id}>
-                          {t.name}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  )}
-                />
-              </Grid>
+          <div className="pa-grid pa-grid-2 pa-mb-4 pa-gap-4">
+            <Controller name="team_id" control={control} rules={{ required: 'Team is required' }} render={({ field }) => <Select {...field} label="Team" options={teams.map(t => ({value:t.id, label:t.name}))} required error={!!errors.team_id} />} />
+            <Controller name="season_id" control={control} rules={{ required: 'Season is required' }} render={({ field }) => <Select {...field} label="Season" options={seasons.map(s => ({value:s.id, label:s.name}))} required disabled={!watchTeamId} />} />
+          </div>
 
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="season_id"
-                  control={control}
-                  rules={{ required: 'Season is required' }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      select
-                      label="Season"
-                      fullWidth
-                      required
-                      disabled={!watchTeamId}
-                      error={!!errors.season_id}
-                      helperText={errors.season_id?.message}
-                    >
-                      <MenuItem value="">Select season...</MenuItem>
-                      {seasons.map((s) => (
-                        <MenuItem key={s.id} value={s.id}>
-                          {s.name}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  )}
-                />
-              </Grid>
+          <div className="pa-grid pa-grid-3 pa-mb-4 pa-gap-4">
+            <Controller name="start_time" control={control} rules={{ required: 'Start time is required' }} render={({ field }) => <Input {...field} label="Start Time" type="datetime-local" required />} />
+            <Controller name="end_time" control={control} render={({ field }) => <Input {...field} label="End Time" type="datetime-local" />} />
+            <Controller name="arrival_time" control={control} render={({ field }) => <Input {...field} label="Arrival Time" type="datetime-local" />} />
+          </div>
 
-              <Grid item xs={12}>
-                <Controller
-                  name="title"
-                  control={control}
-                  rules={{ required: 'Event title is required', minLength: { value: 3, message: 'Title must be at least 3 characters' } }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Event Title"
-                      fullWidth
-                      required
-                      placeholder="e.g. Practice @ Main Field"
-                      error={!!errors.title}
-                      helperText={errors.title?.message}
-                    />
-                  )}
-                />
-              </Grid>
+          <div className="pa-mb-4">
+            <Controller name="location" control={control} render={({ field }) => <Input {...field} label="Location" placeholder="e.g. Field 1, Central Park" />} />
+          </div>
 
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="type"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      select
-                      label="Type"
-                      fullWidth
-                    >
-                      <MenuItem value="practice">Practice</MenuItem>
-                      <MenuItem value="game">Game</MenuItem>
-                      <MenuItem value="tournament">Tournament</MenuItem>
-                      <MenuItem value="meeting">Meeting</MenuItem>
-                    </TextField>
-                  )}
-                />
-              </Grid>
+          <div className="pa-mb-6">
+            <Controller name="notes" control={control} render={({ field }) => <textarea className="pa-input pa-textarea" {...field} placeholder="Notes..." style={{ minHeight: '100px' }} />} />
+            <div className="pa-label pa-mt-1">Notes</div>
+          </div>
 
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="location"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Location"
-                      fullWidth
-                      placeholder="Address or venue name"
-                    />
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="start_time"
-                  control={control}
-                  rules={{ required: 'Start time is required' }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Start Time"
-                      type="datetime-local"
-                      fullWidth
-                      required
-                      InputLabelProps={{ shrink: true }}
-                      error={!!errors.start_time}
-                      helperText={errors.start_time?.message}
-                    />
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="end_time"
-                  control={control}
-                  rules={{ required: 'End time is required' }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="End Time"
-                      type="datetime-local"
-                      fullWidth
-                      required
-                      InputLabelProps={{ shrink: true }}
-                      error={!!errors.end_time}
-                      helperText={errors.end_time?.message}
-                    />
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="arrival_time"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Arrival Time (optional)"
-                      type="datetime-local"
-                      fullWidth
-                      InputLabelProps={{ shrink: true }}
-                    />
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12}>
-                <Controller
-                  name="notes"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Notes"
-                      fullWidth
-                      multiline
-                      rows={3}
-                      placeholder="Additional details..."
-                    />
-                  )}
-                />
-              </Grid>
-            </Grid>
-
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 4 }}>
-              <Button onClick={() => navigate('/admin/events')}>Cancel</Button>
-              <Button type="submit" variant="contained" disabled={saving}>
-                {saving ? (
-                  <>
-                    <CircularProgress size={20} sx={{ mr: 1 }} />
-                    Creating...
-                  </>
-                ) : (
-                  'Create Event'
-                )}
-              </Button>
-            </Box>
-          </form>
-        </CardContent>
+          <div className="pa-flex pa-justify-end pa-gap-3">
+            <Button variant="secondary" onClick={() => navigate(-1)}>Cancel</Button>
+            <Button type="submit" loading={saving}>Create Event</Button>
+          </div>
+        </form>
       </Card>
-    </Box>
+    </div>
   )
 }

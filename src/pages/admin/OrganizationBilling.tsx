@@ -1,16 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  CircularProgress,
-  Divider,
-  Grid,
-  Stack,
-  Typography,
-} from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useLicense } from '../../hooks/useLicense'
@@ -20,6 +8,12 @@ import { createCustomerPortalSession, getBillingHistory, BillingEvent } from '..
 import { LicenseStatusBadge } from '../../components/admin/LicenseStatusBadge'
 import { LicenseWarningBanner } from '../../components/admin/LicenseWarningBanner'
 import { getErrorMessage } from '../../utils/errorUtils'
+import { 
+  PageHeader, 
+  Card, 
+  Button, 
+  StatCard 
+} from '../../components/platformAdmin'
 
 export default function OrganizationBilling() {
   const navigate = useNavigate()
@@ -42,22 +36,16 @@ export default function OrganizationBilling() {
   }, [])
 
   useEffect(() => {
-    if (orgId) {
-      loadHistory(orgId)
-    }
+    if (orgId) loadHistory(orgId)
   }, [orgId, loadHistory])
 
   const currentPlanLabel = useMemo(() => {
-    if (!summary?.plan) return t('license.planLabel')
+    if (!summary?.plan) return t('license.planLabel').toUpperCase()
     switch (summary.plan) {
-      case 'starter':
-        return t('license.planStarter')
-      case 'standard':
-        return t('license.planStandard')
-      case 'pro':
-        return t('license.planPro')
-      default:
-        return t('license.planLabel')
+      case 'starter': return t('license.planStarter')
+      case 'standard': return t('license.planStandard')
+      case 'pro': return t('license.planPro')
+      default: return t('license.planLabel').toUpperCase()
     }
   }, [summary?.plan])
 
@@ -69,9 +57,7 @@ export default function OrganizationBilling() {
         organizationId: orgId,
         returnUrl: `${window.location.origin}/admin/organization/billing`,
       })
-      if (portal_url) {
-        window.location.href = portal_url
-      }
+      if (portal_url) window.location.href = portal_url
     } catch (err: unknown) {
       setHistoryError(getErrorMessage(err) || t('billing.errorCreatingPortal'))
     } finally {
@@ -79,151 +65,125 @@ export default function OrganizationBilling() {
     }
   }
 
-  function goToPlanSelection() {
-    navigate('/admin/organization/billing/plan-selection')
-  }
-
   if (!orgId) {
     return (
-      <Alert severity="error">{t('errors.missingOrganization')}</Alert>
+      <div className="pa-root">
+        <div className="pa-card pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>
+          {t('errors.missingOrganization')}
+        </div>
+      </div>
     )
   }
 
   return (
-    <Box>
-      <Typography variant="h4" sx={{ fontWeight: 700, mb: 3 }}>
-        {t('billing.pageTitle')}
-      </Typography>
+    <div className="pa-root">
+      <PageHeader title={t('billing.pageTitle')} />
 
-      {!isActive && !loading && summary && (
-        <LicenseWarningBanner
-          status={summary.status}
-          trialEndsAt={summary.trialEndsAt}
-          graceEndsAt={summary.graceEndsAt}
-          currentPeriodEnd={summary.currentPeriodEnd}
-          onAction={() => navigate('/admin/organization/billing')}
-        />
+      {summary && (
+        <LicenseWarningBanner summary={summary} />
       )}
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+        <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>
+          {error}
+        </div>
       )}
 
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
-          <Card>
-            <CardContent>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-                <Typography variant="h6" fontWeight={700}>{t('billing.statusSectionTitle')}</Typography>
-                <LicenseStatusBadge
-                  status={summary?.status ?? null}
-                  currentPeriodEnd={summary?.currentPeriodEnd}
-                  trialEndsAt={summary?.trialEndsAt}
-                  graceEndsAt={summary?.graceEndsAt}
-                  cancelAtPeriodEnd={summary?.cancelAtPeriodEnd}
-                />
-              </Stack>
+      <div className="pa-grid pa-grid-12 pa-gap-6">
+        <div className="pa-col-8">
+          <Card className="pa-mb-6">
+            <div className="pa-flex pa-justify-between pa-items-center pa-mb-6">
+              <h3 className="pa-h3">{t('billing.statusSectionTitle').toUpperCase()}</h3>
+              <LicenseStatusBadge status={summary?.status ?? 'unknown'} />
+            </div>
 
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">{t('license.planLabel')}</Typography>
-                  <Typography variant="h6" fontWeight={700}>{currentPlanLabel}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">{t('billing.renewalDate')}</Typography>
-                  <Typography variant="body1">{formatDate(summary?.currentPeriodEnd)}</Typography>
-                </Grid>
-                {summary?.trialEndsAt && (
-                  <Grid item xs={12} sm={6}>
-                    <Typography variant="subtitle2" color="text.secondary">{t('billing.trialEnds')}</Typography>
-                    <Typography variant="body1">{formatDate(summary.trialEndsAt)}</Typography>
-                  </Grid>
-                )}
-                {summary?.graceEndsAt && (
-                  <Grid item xs={12} sm={6}>
-                    <Typography variant="subtitle2" color="text.secondary">{t('billing.graceEnds')}</Typography>
-                    <Typography variant="body1">{formatDate(summary.graceEndsAt)}</Typography>
-                  </Grid>
-                )}
-              </Grid>
-
-              <Divider sx={{ my: 3 }} />
-
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                <Button variant="contained" onClick={goToPlanSelection} disabled={loading}>
-                  {t('billing.changePlan')}
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={handleOpenPortal}
-                  disabled={portalLoading}
-                >
-                  {portalLoading ? <CircularProgress size={18} /> : t('billing.portalCta')}
-                </Button>
-                <Button variant="text" onClick={() => refresh()} disabled={loading}>
-                  {loading ? <CircularProgress size={18} /> : t('common.retry')}
-                </Button>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>{t('billing.detailsSectionTitle')}</Typography>
-              <Stack spacing={1}>
-                <DetailRow label={t('license.statusLabel')} value={summary?.status ? t(`license.status.${summary.status}` as const) : '-'} />
-                <DetailRow label={t('license.planLabel')} value={currentPlanLabel} />
-                <DetailRow label={t('billing.renewalDate')} value={formatDate(summary?.currentPeriodEnd)} />
-                {summary?.trialEndsAt && (
-                  <DetailRow label={t('billing.trialEnds')} value={formatDate(summary.trialEndsAt)} />
-                )}
-                {summary?.graceEndsAt && (
-                  <DetailRow label={t('billing.graceEnds')} value={formatDate(summary.graceEndsAt)} />
-                )}
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-                <Typography variant="h6" fontWeight={700}>{t('billing.viewBillingHistory')}</Typography>
-                {loading && <CircularProgress size={18} />}
-              </Stack>
-
-              {historyError && (
-                <Alert severity="error" sx={{ mb: 2 }}>{historyError}</Alert>
+            <div className="pa-grid pa-grid-2 pa-gap-6 pa-mb-6">
+              <div>
+                <div className="pa-text-overline pa-mb-1">{t('license.planLabel')}</div>
+                <div className="pa-h4">{currentPlanLabel}</div>
+              </div>
+              <div>
+                <div className="pa-text-overline pa-mb-1">{t('billing.renewalDate')}</div>
+                <div className="pa-body-m">{formatDate(summary?.currentPeriodEnd)}</div>
+              </div>
+              {summary?.trialEndsAt && (
+                <div>
+                  <div className="pa-text-overline pa-mb-1">{t('billing.trialEnds')}</div>
+                  <div className="pa-body-m">{formatDate(summary.trialEndsAt)}</div>
+                </div>
               )}
-
-              {history.length === 0 && !historyError ? (
-                <Typography variant="body2" color="text.secondary">{t('billing.billingHistoryEmpty')}</Typography>
-              ) : (
-                <Stack spacing={1.5}>
-                  {history.map(event => (
-                    <Stack key={event.id} direction="row" justifyContent="space-between" alignItems="center">
-                      <Typography variant="body2" fontWeight={600}>{event.event_type}</Typography>
-                      <Typography variant="body2" color="text.secondary">{formatDate(event.created_at)}</Typography>
-                    </Stack>
-                  ))}
-                </Stack>
+              {summary?.graceEndsAt && (
+                <div>
+                  <div className="pa-text-overline pa-mb-1">{t('billing.graceEnds')}</div>
+                  <div className="pa-body-m">{formatDate(summary.graceEndsAt)}</div>
+                </div>
               )}
-            </CardContent>
+            </div>
+
+            <div className="pa-divider pa-mb-6" />
+
+            <div className="pa-flex pa-gap-3 pa-flex-wrap">
+              <Button onClick={() => navigate('/admin/organization/billing/plan-selection')} disabled={loading}>
+                {t('billing.changePlan')}
+              </Button>
+              <Button variant="secondary" onClick={handleOpenPortal} loading={portalLoading}>
+                {t('billing.portalCta')}
+              </Button>
+              <Button variant="secondary" onClick={() => refresh()} disabled={loading} loading={loading}>
+                {t('common.retry')}
+              </Button>
+            </div>
           </Card>
-        </Grid>
-      </Grid>
-    </Box>
+
+          <Card>
+            <div className="pa-flex pa-justify-between pa-items-center pa-mb-6">
+              <h3 className="pa-h3">{t('billing.viewBillingHistory').toUpperCase()}</h3>
+              {loading && <div className="pa-skeleton" style={{ width: '24px', height: '24px' }} />}
+            </div>
+
+            {historyError && (
+              <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>
+                {historyError}
+              </div>
+            )}
+
+            {history.length === 0 && !historyError ? (
+              <div className="pa-body-m pa-text-muted">{t('billing.billingHistoryEmpty')}</div>
+            ) : (
+              <div className="pa-flex pa-flex-col pa-gap-3">
+                {history.map(event => (
+                  <div key={event.id} className="pa-flex pa-justify-between pa-items-center pa-py-2" style={{ borderBottom: '1px solid var(--pa-n100)' }}>
+                    <div className="pa-body-m" style={{ fontWeight: 600 }}>{event.event_type.replace(/_/g, ' ').toUpperCase()}</div>
+                    <div className="pa-body-s pa-text-muted">{formatDate(event.created_at)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
+
+        <div className="pa-col-4">
+          <Card>
+            <h3 className="pa-h3 pa-mb-6">{t('billing.detailsSectionTitle').toUpperCase()}</h3>
+            <div className="pa-flex pa-flex-col pa-gap-4">
+              <DetailRow label={t('license.statusLabel')} value={summary?.status ? t(`license.status.${summary.status}` as const) : '-'} />
+              <DetailRow label={t('license.planLabel')} value={currentPlanLabel} />
+              <DetailRow label={t('billing.renewalDate')} value={formatDate(summary?.currentPeriodEnd)} />
+              {summary?.trialEndsAt && <DetailRow label={t('billing.trialEnds')} value={formatDate(summary.trialEndsAt)} />}
+              {summary?.graceEndsAt && <DetailRow label={t('billing.graceEnds')} value={formatDate(summary.graceEndsAt)} />}
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
   )
 }
 
 function DetailRow({ label, value }: { label: string; value: string | null | undefined }) {
   return (
-    <Stack direction="row" justifyContent="space-between">
-      <Typography variant="body2" color="text.secondary">{label}</Typography>
-      <Typography variant="body2" fontWeight={600}>{value || '-'}</Typography>
-    </Stack>
+    <div className="pa-flex pa-justify-between">
+      <div className="pa-body-s pa-text-muted">{label}</div>
+      <div className="pa-body-s" style={{ fontWeight: 600 }}>{value || '-'}</div>
+    </div>
   )
 }

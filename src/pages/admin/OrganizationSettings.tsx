@@ -1,25 +1,19 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useForm, Controller } from 'react-hook-form'
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Button,
-  TextField,
-  Grid,
-  Alert,
-  CircularProgress,
-  Divider,
-} from '@mui/material'
 import { supabase } from '../../lib/supabase'
 import { useOrganization } from '../../contexts/OrganizationContext'
-import AdminSkeletonTable from '../../components/admin/AdminSkeletonTable'
 import { useLicense } from '../../hooks/useLicense'
 import { LicenseStatusBadge } from '../../components/admin/LicenseStatusBadge'
 import { t } from '../../i18n'
 import { formatDate } from '../../utils/licenseUtils'
 import { getErrorMessage } from '../../utils/errorUtils'
+import { 
+  PageHeader, 
+  Card, 
+  Button, 
+  Input, 
+  Toast 
+} from '../../components/platformAdmin'
 
 interface OrganizationFormData {
   name: string
@@ -113,170 +107,146 @@ export default function OrganizationSettings() {
   }
 
   if (loading) {
-    return <AdminSkeletonTable rows={6} columns={2} />
+    return (
+      <div className="pa-flex pa-flex-col pa-gap-4">
+        <div className="pa-skeleton" style={{ height: '40px', width: '300px' }} />
+        <div className="pa-skeleton" style={{ height: '100px' }} />
+        <div className="pa-skeleton" style={{ height: '400px' }} />
+      </div>
+    )
   }
 
   return (
-    <Box>
-      <Typography variant="h4" sx={{ fontWeight: 600, mb: 3 }}>
-        Organization Settings
-      </Typography>
+    <div className="pa-root">
+      <PageHeader title="Organization Settings" />
 
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
-            <Box>
-              <Typography variant="subtitle2" color="text.secondary">
-                {t('billing.pageTitle')}
-              </Typography>
-              <Typography variant="h6" fontWeight={700}>
-                {licenseSummary?.plan === 'starter'
-                  ? t('license.planStarter')
-                  : licenseSummary?.plan === 'standard'
-                    ? t('license.planStandard')
-                    : licenseSummary?.plan === 'pro'
-                      ? t('license.planPro')
-                      : t('license.planLabel')}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {t('billing.renewalDate')}: {formatDate(licenseSummary?.currentPeriodEnd)}
-              </Typography>
-            </Box>
-            <Box display="flex" alignItems="center" gap={1.5}>
-              <LicenseStatusBadge
-                status={licenseSummary?.status ?? null}
-                currentPeriodEnd={licenseSummary?.currentPeriodEnd}
-                trialEndsAt={licenseSummary?.trialEndsAt}
-                graceEndsAt={licenseSummary?.graceEndsAt}
-                cancelAtPeriodEnd={licenseSummary?.cancelAtPeriodEnd}
-              />
-              <Button
-                variant="outlined"
-                onClick={() => window.location.assign('/admin/organization/billing')}
-                disabled={licenseLoading}
-              >
-                {t('billing.manageBilling')}
-              </Button>
-            </Box>
-          </Box>
-        </CardContent>
+      {/* Subscription Summary Card */}
+      <Card className="pa-mb-5">
+        <div className="pa-flex pa-items-center pa-justify-between pa-flex-wrap pa-gap-4">
+          <div>
+            <div className="pa-text-overline pa-mb-1">{t('billing.pageTitle')}</div>
+            <h3 className="pa-h3 pa-mb-1">
+              {licenseSummary?.plan === 'starter'
+                ? t('license.planStarter')
+                : licenseSummary?.plan === 'standard'
+                  ? t('license.planStandard')
+                  : licenseSummary?.plan === 'pro'
+                    ? t('license.planPro')
+                    : t('license.planLabel').toUpperCase()}
+            </h3>
+            <div className="pa-body-s pa-text-muted">
+              {t('billing.renewalDate')}: {formatDate(licenseSummary?.currentPeriodEnd)}
+            </div>
+          </div>
+          <div className="pa-flex pa-items-center pa-gap-3">
+            <LicenseStatusBadge status={licenseSummary?.status || 'unknown'} />
+            <Button
+              variant="secondary"
+              onClick={() => window.location.assign('/admin/organization/billing')}
+              disabled={licenseLoading}
+            >
+              {t('billing.manageBilling')}
+            </Button>
+          </div>
+        </div>
       </Card>
 
       <Card>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)}>
-            {error && (
-              <Alert severity="error" sx={{ mb: 3 }}>
-                {error}
-              </Alert>
-            )}
-            {success && (
-              <Alert severity="success" sx={{ mb: 3 }}>
-                Organization settings updated successfully!
-              </Alert>
-            )}
+        <form onSubmit={handleSubmit(onSubmit)}>
+          {error && (
+            <div className="pa-card pa-mb-4" style={{ background: 'var(--pa-danger-bg)', border: 'none', color: 'var(--pa-n900)' }}>
+              {error}
+            </div>
+          )}
+          {success && (
+            <div className="pa-card pa-mb-4" style={{ background: 'var(--pa-success-bg)', border: 'none', color: 'var(--pa-n900)' }}>
+              Organization settings updated successfully!
+            </div>
+          )}
 
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="name"
-                  control={control}
-                  rules={{ required: 'Organization name is required' }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Organization Name"
-                      fullWidth
-                      required
-                      error={!!errors.name}
-                      helperText={errors.name?.message}
-                    />
-                  )}
+          <div className="pa-grid pa-grid-2 pa-mb-4">
+            <Controller
+              name="name"
+              control={control}
+              rules={{ required: 'Organization name is required' }}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  label="Organization Name"
+                  required
+                  error={!!errors.name}
+                  helperText={errors.name?.message}
                 />
-              </Grid>
+              )}
+            />
 
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="slug"
-                  control={control}
-                  rules={{
-                    required: 'Slug is required',
-                    pattern: {
-                      value: /^[a-z0-9-]+$/,
-                      message: 'Slug must contain only lowercase letters, numbers, and hyphens',
-                    },
-                  }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Slug"
-                      fullWidth
-                      required
-                      error={!!errors.slug}
-                      helperText={errors.slug?.message || 'Used in URLs (e.g., your-org-name)'}
-                    />
-                  )}
+            <Controller
+              name="slug"
+              control={control}
+              rules={{
+                required: 'Slug is required',
+                pattern: {
+                  value: /^[a-z0-9-]+$/,
+                  message: 'Slug must contain only lowercase letters, numbers, and hyphens',
+                },
+              }}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  label="Slug"
+                  required
+                  error={!!errors.slug}
+                  helperText={errors.slug?.message || 'Used in URLs (e.g., your-org-name)'}
                 />
-              </Grid>
+              )}
+            />
+          </div>
 
-              <Grid item xs={12}>
-                <Controller
-                  name="contact_email"
-                  control={control}
-                  rules={{
-                    pattern: {
-                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: 'Invalid email address',
-                    },
-                  }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Contact Email"
-                      type="email"
-                      fullWidth
-                      error={!!errors.contact_email}
-                      helperText={errors.contact_email?.message}
-                    />
-                  )}
+          <div className="pa-mb-4">
+            <Controller
+              name="contact_email"
+              control={control}
+              rules={{
+                pattern: {
+                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                  message: 'Invalid email address',
+                },
+              }}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  label="Contact Email"
+                  type="email"
+                  error={!!errors.contact_email}
+                  helperText={errors.contact_email?.message}
                 />
-              </Grid>
+              )}
+            />
+          </div>
 
-              <Grid item xs={12}>
-                <Controller
-                  name="refund_policy"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Refund Policy"
-                      fullWidth
-                      multiline
-                      rows={4}
-                      placeholder="Enter your organization's refund policy..."
-                    />
-                  )}
+          <div className="pa-mb-6">
+            <Controller
+              name="refund_policy"
+              control={control}
+              render={({ field }) => (
+                <textarea
+                  className="pa-input pa-textarea"
+                  {...field}
+                  placeholder="Enter your organization's refund policy..."
+                  style={{ minHeight: '120px' }}
                 />
-              </Grid>
-            </Grid>
+              )}
+            />
+            <div className="pa-label pa-mt-1">Refund Policy</div>
+          </div>
 
-            <Divider sx={{ my: 3 }} />
-
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-              <Button type="submit" variant="contained" disabled={saving}>
-                {saving ? (
-                  <>
-                    <CircularProgress size={20} sx={{ mr: 1 }} />
-                    Saving...
-                  </>
-                ) : (
-                  'Save Settings'
-                )}
-              </Button>
-            </Box>
-          </form>
-        </CardContent>
+          <div className="pa-flex pa-justify-end">
+            <Button type="submit" disabled={saving} loading={saving}>
+              Save Settings
+            </Button>
+          </div>
+        </form>
       </Card>
-    </Box>
+    </div>
   )
 }

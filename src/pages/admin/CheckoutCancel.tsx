@@ -1,24 +1,30 @@
-import { Box, Button, Stack, Typography } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import { t } from '../../i18n'
+import { 
+  PageHeader, 
+  Card, 
+  Button 
+} from '../../components/platformAdmin'
 
 export default function CheckoutCancel() {
   const navigate = useNavigate()
 
   return (
-    <Box sx={{ maxWidth: 520 }}>
-      <Stack spacing={2}>
-        <Typography variant="h5" fontWeight={700}>{t('billing.checkoutCancelTitle')}</Typography>
-        <Typography variant="body2" color="text.secondary">{t('billing.checkoutCancelBody')}</Typography>
-        <Stack direction="row" spacing={2}>
-          <Button variant="contained" onClick={() => navigate('/admin/organization/billing')}>
-            {t('checkout.returnToBilling')}
-          </Button>
-          <Button variant="text" onClick={() => navigate('/admin/organization/billing/plan-selection')}>
-            {t('billing.continueToCheckout')}
-          </Button>
-        </Stack>
-      </Stack>
-    </Box>
+    <div className="pa-root">
+      <PageHeader title={t('billing.checkoutCancelTitle').toUpperCase()} />
+      <Card style={{ maxWidth: '600px' }}>
+        <div className="pa-flex pa-items-center pa-gap-4 pa-mb-6 pa-text-muted">
+          <span className="material-symbols-outlined" style={{ fontSize: '48px' }}>cancel</span>
+          <div>
+            <h3 className="pa-h3 pa-mb-1">{t('billing.checkoutCancelTitle')}</h3>
+            <p className="pa-body-m">{t('billing.checkoutCancelBody')}</p>
+          </div>
+        </div>
+        <div className="pa-flex pa-gap-3">
+          <Button onClick={() => navigate('/admin/organization/billing')}>{t('checkout.returnToBilling')}</Button>
+          <Button variant="secondary" onClick={() => navigate('/admin/organization/billing/plan-selection')}>{t('billing.planSelectionTitle')}</Button>
+        </div>
+      </Card>
+    </div>
   )
 }

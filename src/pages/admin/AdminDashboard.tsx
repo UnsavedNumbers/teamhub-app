@@ -3,9 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
-import AdminSkeletonTable from '../../components/admin/AdminSkeletonTable'
-import { NoOrganizationEmptyState } from '../../components/admin/NoOrganizationEmptyState'
-import { AdminCard, AdminStatCard, MdButton } from '../../components/adminMd'
+import { 
+  PageHeader, 
+  StatCard, 
+  Card, 
+  Button, 
+  Badge 
+} from '../../components/platformAdmin'
 
 interface DashboardStats {
   totalTeams: number
@@ -25,276 +29,106 @@ interface RecentActivity {
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats>({
-    totalTeams: 0,
-    totalPlayers: 0,
-    activeSeasons: 0,
-    outstandingPayments: 0,
-    upcomingEvents: 0,
-    pendingUniformOrders: 0,
+    totalTeams: 0, totalPlayers: 0, activeSeasons: 0, 
+    outstandingPayments: 0, upcomingEvents: 0, pendingUniformOrders: 0,
   })
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
   const [loading, setLoading] = useState(true)
-  const { profile } = useAuth()
   const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
 
-  const fetchRecentActivity = useCallback(async () => {
-    if (!currentOrganization?.id) return
-    
-    // Simplified recent activity - can be enhanced with payment_events table
-    const activities: RecentActivity[] = []
-    
-    // Get recent fee assignments
-    const { data: recentFees } = await supabase
-      .from('fee_assignments')
-      .select('id, created_at, fee:fees(title)')
-      .eq('organization_id', currentOrganization.id)
-      .order('created_at', { ascending: false })
-      .limit(5)
-
-    if (recentFees) {
-      type RecentFeeAssignment = {
-        id: string
-        created_at: string | null
-        fee: { title: string | null } | null
-      }
-
-      ;(recentFees as unknown as RecentFeeAssignment[]).forEach((assignment) => {
-        activities.push({
-          id: assignment.id,
-          type: 'fee_assignment',
-          message: `New fee assignment: ${assignment.fee?.title || 'Fee'}`,
-          timestamp: assignment.created_at || new Date().toISOString(),
-        })
-      })
-    }
-
-    setRecentActivity(activities.slice(0, 5))
-  }, [currentOrganization?.id])
-
   const fetchDashboardData = useCallback(async () => {
-    if (!currentOrganization?.id) {
-      setLoading(false)
-      return
-    }
-
+    if (!currentOrganization?.id) { setLoading(false); return }
     try {
-      // Fetch all stats in parallel
-      const [
-        teamsResult,
-        playersResult,
-        seasonsResult,
-        paymentsResult,
-        eventsResult,
-        uniformsResult,
-      ] = await Promise.all([
-        // Total Teams
-        supabase
-          .from('teams')
-          .select('*', { count: 'exact', head: true })
-          .eq('org_id', currentOrganization.id),
-        
-        // Total Players (children via families)
-        supabase
-          .from('children')
-          .select('id, family:families(org_id)', { count: 'exact', head: true })
-          .eq('family.org_id', currentOrganization.id),
-        
-        // Active Seasons
-        supabase
-          .from('seasons')
-          .select('*', { count: 'exact', head: true })
-          .eq('organization_id', currentOrganization.id)
-          .eq('is_active', true),
-        
-        // Outstanding Payments (using new payments schema)
-        supabase
-          .from('fee_assignments')
-          .select('balance_cents')
-          .eq('organization_id', currentOrganization.id)
-          .in('status', ['unpaid', 'partial']),
-        
-        // Upcoming Events (next 7 days)
-        supabase
-          .from('events')
-          .select('*', { count: 'exact', head: true })
-          .gte('start_time', new Date().toISOString())
-          .lte('start_time', new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()),
-        
-        // Pending Uniform Orders
-        supabase
-          .from('uniform_orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'pending'),
+      const [teams, players, seasons, payments, events, uniforms] = await Promise.all([
+        supabase.from('teams').select('*', { count: 'exact', head: true }).eq('org_id', currentOrganization.id),
+        supabase.from('children').select('id, family:families(org_id)', { count: 'exact', head: true }).filter('family.org_id', 'eq', currentOrganization.id),
+        supabase.from('seasons').select('*', { count: 'exact', head: true }).eq('is_active', true),
+        supabase.from('fee_assignments').select('*', { count: 'exact', head: true }).eq('organization_id', currentOrganization.id).eq('status', 'unpaid'),
+        supabase.from('events').select('*', { count: 'exact', head: true }).eq('org_id', currentOrganization.id).gte('start_time', new Date().toISOString()),
+        supabase.from('uniform_submissions').select('*', { count: 'exact', head: true }).not('status', 'eq', 'fulfilled'),
       ])
 
-      // Calculate outstanding payments total
-      let outstandingTotal = 0
-      if (paymentsResult.data) {
-        outstandingTotal = paymentsResult.data.reduce((sum: number, assignment: { balance_cents: number | null }) => {
-          return sum + (assignment.balance_cents || 0)
-        }, 0)
-      }
-
       setStats({
-        totalTeams: teamsResult.count || 0,
-        totalPlayers: playersResult.count || 0,
-        activeSeasons: seasonsResult.count || 0,
-        outstandingPayments: outstandingTotal,
-        upcomingEvents: eventsResult.count || 0,
-        pendingUniformOrders: uniformsResult.count || 0,
+        totalTeams: teams.count || 0,
+        totalPlayers: players.count || 0,
+        activeSeasons: seasons.count || 0,
+        outstandingPayments: payments.count || 0,
+        upcomingEvents: events.count || 0,
+        pendingUniformOrders: uniforms.count || 0,
       })
 
-      // Fetch recent activity (simplified - can be enhanced with payment_events table)
-      await fetchRecentActivity()
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [currentOrganization?.id, fetchRecentActivity])
+      const { data: recentFees } = await supabase.from('fee_assignments').select('id, created_at, fee:fees(title)').eq('organization_id', currentOrganization.id).order('created_at', { ascending: false }).limit(5)
+      const activities = ((recentFees as any[]) || []).map(r => ({
+        id: r.id, type: 'fee_assignment', message: `New fee assignment: ${r.fee?.title || 'Fee'}`, timestamp: r.created_at || new Date().toISOString()
+      }))
+      setRecentActivity(activities)
+    } finally { setLoading(false) }
+  }, [currentOrganization?.id])
 
-  useEffect(() => {
-    if (!profile || (!profile.isPlatformAdmin && profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
-      navigate('/portal/unauthorized')
-      return
-    }
-    fetchDashboardData()
-  }, [profile, currentOrganization, navigate, fetchDashboardData])
+  useEffect(() => { fetchDashboardData() }, [fetchDashboardData])
 
-  if (loading) {
-    return <AdminSkeletonTable rows={6} columns={3} />
-  }
-
-  // Show empty state if no organization
-  if (!currentOrganization?.id) {
-    return <NoOrganizationEmptyState variant="card" />
-  }
-
-  const statCards = [
-    {
-      title: 'Total Teams',
-      value: stats.totalTeams,
-      icon: <i className="fas fa-users" />,
-      action: () => navigate('/admin/teams'),
-    },
-    {
-      title: 'Total Players',
-      value: stats.totalPlayers,
-      icon: <i className="fas fa-child" />,
-      action: () => navigate('/admin/children'),
-    },
-    {
-      title: 'Active Seasons',
-      value: stats.activeSeasons,
-      icon: <i className="fas fa-chart-line" />,
-      action: () => navigate('/admin/teams'),
-    },
-    {
-      title: 'Outstanding Payments',
-      value: `$${(stats.outstandingPayments / 100).toFixed(2)}`,
-      icon: <i className="fas fa-credit-card" />,
-      action: () => navigate('/admin/payments'),
-    },
-    {
-      title: 'Upcoming Events',
-      value: stats.upcomingEvents,
-      icon: <i className="fas fa-calendar-alt" />,
-      action: () => navigate('/admin/events'),
-    },
-    {
-      title: 'Pending Uniforms',
-      value: stats.pendingUniformOrders,
-      icon: <i className="fas fa-tshirt" />,
-      action: () => navigate('/admin/uniforms'),
-    },
-  ]
+  if (loading) return <div className="pa-skeleton" style={{ height: '500px' }} />
 
   return (
-    <div className="container-fluid py-4">
-      <div className="row mb-4">
-        <div className="col-12">
-          <h4 className="font-weight-bolder mb-0">Admin Dashboard</h4>
-        </div>
+    <div className="pa-root">
+      <PageHeader 
+        title="DASHBOARD" 
+        subtitle={currentOrganization?.name?.toUpperCase()} 
+        actions={<Button variant="secondary" onClick={() => fetchDashboardData()}>Refresh</Button>} 
+      />
+
+      <div className="pa-grid pa-grid-3 pa-gap-4 pa-mb-8">
+        <StatCard title="TOTAL TEAMS" value={stats.totalTeams} icon="groups" onClick={() => navigate('/admin/teams')} />
+        <StatCard title="TOTAL PLAYERS" value={stats.totalPlayers} icon="person" onClick={() => navigate('/admin/roster')} />
+        <StatCard title="ACTIVE SEASONS" value={stats.activeSeasons} icon="calendar_today" />
+        <StatCard title="UNPAID FEES" value={stats.outstandingPayments} icon="payments" onClick={() => navigate('/admin/payments')} variant="danger" />
+        <StatCard title="UPCOMING EVENTS" value={stats.upcomingEvents} icon="event" onClick={() => navigate('/admin/events')} />
+        <StatCard title="UNIFORM ORDERS" value={stats.pendingUniformOrders} icon="checkroom" onClick={() => navigate('/admin/uniforms')} />
       </div>
 
-      <div className="row">
-        {statCards.map((card) => (
-          <div key={card.title} className="col-xl-4 col-sm-6 mb-4">
-            <div onClick={card.action} style={{ cursor: 'pointer' }}>
-              <AdminStatCard
-                title={card.title}
-                value={String(card.value)}
-                icon={card.icon}
-                footer={
-                  <span className="text-secondary text-sm">
-                    <i className="fas fa-arrow-right ms-1" /> View details
-                  </span>
-                }
-              />
+      <div className="pa-grid pa-grid-12 pa-gap-6">
+        <div className="pa-col-8">
+          <Card>
+            <h3 className="pa-h3 pa-mb-6">QUICK ACTIONS</h3>
+            <div className="pa-grid pa-grid-3 pa-gap-3">
+              <Button style={{ height: 'auto', padding: 'var(--pa-space-4)', flexDirection: 'column', gap: '8px' }} onClick={() => navigate('/admin/events/new')}>
+                <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>add_circle</span>
+                New Event
+              </Button>
+              <Button style={{ height: 'auto', padding: 'var(--pa-space-4)', flexDirection: 'column', gap: '8px' }} variant="secondary" onClick={() => navigate('/admin/users/new')}>
+                <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>person_add</span>
+                Add User
+              </Button>
+              <Button style={{ height: 'auto', padding: 'var(--pa-space-4)', flexDirection: 'column', gap: '8px' }} variant="secondary" onClick={() => navigate('/admin/fees/new')}>
+                <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>request_quote</span>
+                Assign Fee
+              </Button>
             </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="row mb-4">
-        <div className="col-12">
-          <AdminCard title="Quick Actions">
-            <div className="row">
-              <div className="col-12 col-md-3 mb-2">
-                <MdButton variant="primary" fullWidth onClick={() => navigate('/admin/teams')}>
-                  <i className="fas fa-plus me-2" />
-                  Create Team
-                </MdButton>
-              </div>
-              <div className="col-12 col-md-3 mb-2">
-                <MdButton variant="primary" fullWidth onClick={() => navigate('/admin/payments/new')}>
-                  <i className="fas fa-plus me-2" />
-                  Create Fee
-                </MdButton>
-              </div>
-              <div className="col-12 col-md-3 mb-2">
-                <MdButton variant="primary" fullWidth onClick={() => navigate('/admin/events/new')}>
-                  <i className="fas fa-plus me-2" />
-                  Create Event
-                </MdButton>
-              </div>
-              <div className="col-12 col-md-3 mb-2">
-                <MdButton variant="primary" fullWidth onClick={() => navigate('/admin/users/new')}>
-                  <i className="fas fa-plus me-2" />
-                  Add Player
-                </MdButton>
-              </div>
-            </div>
-          </AdminCard>
+          </Card>
         </div>
-      </div>
 
-      <div className="row">
-        <div className="col-12">
-          <AdminCard title="Recent Activity">
+        <div className="pa-col-4">
+          <Card>
+            <h3 className="pa-h3 pa-mb-6">RECENT ACTIVITY</h3>
             {recentActivity.length === 0 ? (
-              <p className="text-secondary py-2 mb-0">No recent activity</p>
+              <div className="pa-body-m pa-text-muted">No recent activity</div>
             ) : (
-              <ul className="list-group list-group-flush">
-                {recentActivity.map((activity) => (
-                  <li key={activity.id} className="list-group-item px-0">
-                    <div className="d-flex align-items-center">
-                      <div className="icon icon-shape icon-sm bg-gradient-primary text-white border-radius-md me-3">
-                        <i className="fas fa-credit-card" />
-                      </div>
-                      <div className="flex-grow-1">
-                        <h6 className="mb-0 text-sm">{activity.message}</h6>
-                        <p className="text-xs text-secondary mb-0">
-                          {new Date(activity.timestamp).toLocaleString()}
-                        </p>
-                      </div>
+              <div className="pa-flex pa-flex-col pa-gap-4">
+                {recentActivity.map(a => (
+                  <div key={a.id} className="pa-flex pa-gap-3 pa-items-start">
+                    <div className="pa-badge pa-badge--neutral pa-p-2" style={{ borderRadius: '50%' }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>notifications</span>
                     </div>
-                  </li>
+                    <div>
+                      <div className="pa-body-s" style={{ fontWeight: 600 }}>{a.message}</div>
+                      <div className="pa-text-overline pa-text-muted">{new Date(a.timestamp).toLocaleDateString()}</div>
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
-          </AdminCard>
+          </Card>
         </div>
       </div>
     </div>

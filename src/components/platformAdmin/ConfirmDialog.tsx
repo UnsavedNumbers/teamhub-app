@@ -1,15 +1,4 @@
-import { useState } from 'react'
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  TextField,
-  Typography,
-  Alert,
-  CircularProgress,
-} from '@mui/material'
+import { ReactNode } from 'react'
 
 interface ConfirmDialogProps {
   open: boolean
@@ -17,103 +6,152 @@ interface ConfirmDialogProps {
   description: string
   confirmLabel?: string
   cancelLabel?: string
-  variant?: 'warning' | 'danger' | 'info'
+  variant?: 'info' | 'warning' | 'danger'
   requireReason?: boolean
-  reasonLabel?: string
-  reasonPlaceholder?: string
   loading?: boolean
   error?: string | null
-  onConfirm: (reason: string) => void | Promise<void>
+  onConfirm: (reason: string) => void
   onCancel: () => void
 }
 
-/**
- * Confirmation dialog with required reason input for sensitive actions
- */
-export default function ConfirmDialog({
+export function ConfirmDialog({
   open,
   title,
   description,
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
-  variant = 'warning',
-  requireReason = true,
-  reasonLabel = 'Reason',
-  reasonPlaceholder = 'Please provide a reason for this action...',
+  variant = 'info',
+  requireReason = false,
   loading = false,
   error = null,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  const [reason, setReason] = useState('')
-  
-  const handleConfirm = async () => {
-    if (requireReason && !reason.trim()) {
-      return // Don't submit without reason
+  const [reason, setReason] = React.useState('')
+
+  React.useEffect(() => {
+    if (!open) {
+      setReason('')
     }
-    await onConfirm(reason.trim())
+  }, [open])
+
+  if (!open) return null
+
+  const handleConfirm = () => {
+    if (requireReason && !reason.trim()) return
+    onConfirm(reason)
   }
-  
-  const handleCancel = () => {
-    setReason('')
-    onCancel()
-  }
-  
-  const getConfirmColor = () => {
+
+  const getVariantColor = () => {
     switch (variant) {
-      case 'danger':
-        return 'error'
-      case 'warning':
-        return 'warning'
-      default:
-        return 'primary'
+      case 'danger': return 'var(--pa-n900)'
+      case 'warning': return 'var(--pa-n700)'
+      default: return 'var(--pa-n900)'
     }
   }
-  
-  const canConfirm = !loading && (!requireReason || reason.trim().length > 0)
 
   return (
-    <Dialog open={open} onClose={handleCancel} maxWidth="sm" fullWidth>
-      <DialogTitle>{title}</DialogTitle>
-      <DialogContent>
-        <Typography sx={{ mb: 2 }}>{description}</Typography>
-        
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-        
-        {requireReason && (
-          <TextField
-            fullWidth
-            label={reasonLabel}
-            placeholder={reasonPlaceholder}
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            multiline
-            rows={3}
-            required
-            disabled={loading}
-            error={reason.trim().length === 0}
-            helperText={reason.trim().length === 0 ? 'Reason is required' : ''}
-          />
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={handleCancel} disabled={loading}>
-          {cancelLabel}
-        </Button>
-        <Button 
-          onClick={handleConfirm} 
-          color={getConfirmColor()}
-          variant="contained"
-          disabled={!canConfirm}
-          startIcon={loading ? <CircularProgress size={16} /> : null}
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onCancel}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(11, 15, 20, 0.5)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {/* Dialog */}
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="pa-card"
+          style={{
+            width: '100%',
+            maxWidth: '500px',
+            margin: 'var(--pa-space-4)',
+            padding: 0,
+          }}
         >
-          {confirmLabel}
-        </Button>
-      </DialogActions>
-    </Dialog>
+          {/* Header */}
+          <div style={{ padding: 'var(--pa-space-5)', borderBottom: '1px solid var(--pa-n100)' }}>
+            <h2 className="pa-h2" style={{ margin: 0, color: getVariantColor() }}>
+              {title}
+            </h2>
+          </div>
+
+          {/* Content */}
+          <div style={{ padding: 'var(--pa-space-5)' }}>
+            <p className="pa-body-m" style={{ margin: '0 0 var(--pa-space-4) 0', color: 'var(--pa-n700)' }}>
+              {description}
+            </p>
+
+            {requireReason && (
+              <div className="pa-form-group">
+                <label className="pa-label">Reason (required)</label>
+                <textarea
+                  className="pa-input pa-textarea"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="Enter a reason for this action..."
+                  disabled={loading}
+                  style={{ minHeight: '80px' }}
+                />
+              </div>
+            )}
+
+            {error && (
+              <div
+                className="pa-card"
+                style={{
+                  padding: 'var(--pa-space-3)',
+                  background: 'var(--pa-danger-bg)',
+                  border: '1px solid var(--pa-n800)',
+                  marginTop: 'var(--pa-space-3)',
+                }}
+              >
+                <span className="pa-body-s" style={{ color: 'var(--pa-n900)' }}>
+                  {error}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div
+            style={{
+              padding: 'var(--pa-space-4) var(--pa-space-5)',
+              borderTop: '1px solid var(--pa-n100)',
+              display: 'flex',
+              gap: 'var(--pa-space-3)',
+              justifyContent: 'flex-end',
+            }}
+          >
+            <button
+              className="pa-btn pa-btn--secondary"
+              onClick={onCancel}
+              disabled={loading}
+            >
+              {cancelLabel}
+            </button>
+            <button
+              className={`pa-btn ${variant === 'danger' ? 'pa-btn--danger' : 'pa-btn--primary'}`}
+              onClick={handleConfirm}
+              disabled={loading || (requireReason && !reason.trim())}
+            >
+              {loading ? 'Processing...' : confirmLabel}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
   )
 }
+
+export default ConfirmDialog
+
+// Need React import for useState
+import React from 'react'

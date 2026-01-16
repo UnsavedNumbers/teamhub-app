@@ -1,24 +1,16 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
-  Paper,
-  Chip,
-} from '@mui/material'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
-import AdminSkeletonTable from '../../components/admin/AdminSkeletonTable'
+import { 
+  PageHeader, 
+  Card, 
+  Badge, 
+  PlatformDataTable, 
+  EmptyState, 
+  type ColumnConfig 
+} from '../../components/platformAdmin'
 
 interface Tryout {
   id: string
@@ -72,81 +64,50 @@ export default function AdminTryouts() {
   }, [page, rowsPerPage, currentOrganization])
 
   useEffect(() => {
-    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
-      navigate('/portal/unauthorized')
-      return
-    }
     if (currentOrganization) fetchTryouts()
-  }, [profile, navigate, page, rowsPerPage, fetchTryouts, currentOrganization])
+  }, [fetchTryouts, currentOrganization])
 
-  if (loading && tryouts.length === 0) {
-    return <AdminSkeletonTable rows={6} columns={5} />
-  }
+  const columns: ColumnConfig<Tryout>[] = [
+    { id: 'title', label: 'Title' },
+    { 
+      id: 'type', 
+      label: 'Sport',
+      render: (row) => <Badge variant="neutral">{String(row.type ?? 'tryout').toUpperCase()}</Badge>
+    },
+    { id: 'age_group', label: 'Age Group' },
+    { 
+      id: 'date', 
+      label: 'Date',
+      render: (row) => new Date(row.tryout_date).toLocaleDateString()
+    },
+    { id: 'location', label: 'Location' }
+  ]
 
   return (
-    <Box>
-      <Typography variant="h4" sx={{ fontWeight: 600, mb: 3 }}>
-        Tryouts
-      </Typography>
+    <div className="pa-root">
+      <PageHeader title="Tryouts" />
 
-      {tryouts.length === 0 ? (
+      {tryouts.length === 0 && !loading ? (
         <Card>
-          <CardContent sx={{ textAlign: 'center', py: 8 }}>
-            <Typography variant="h6" gutterBottom>
-              No tryouts
-            </Typography>
-            <Typography color="textSecondary">
-              Tryouts will appear here when created.
-            </Typography>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Title</TableCell>
-                  <TableCell>Sport</TableCell>
-                  <TableCell>Age Group</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Location</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {tryouts.map((tryout) => (
-                  <TableRow
-                    key={tryout.id}
-                    hover
-                    sx={{ cursor: 'pointer' }}
-                    onClick={() => navigate(`/admin/tryouts/${tryout.id}`)}
-                  >
-                    <TableCell>{tryout.title}</TableCell>
-                    <TableCell>
-                      <Chip label={tryout.type ?? 'tryout'} size="small" />
-                    </TableCell>
-                    <TableCell>{tryout.age_group}</TableCell>
-                    <TableCell>{new Date(tryout.tryout_date).toLocaleDateString()}</TableCell>
-                    <TableCell>{tryout.location}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          <TablePagination
-            component="div"
-            count={totalCount}
-            page={page}
-            onPageChange={(_, newPage) => setPage(newPage)}
-            rowsPerPage={rowsPerPage}
-            onRowsPerPageChange={(e) => {
-              setRowsPerPage(parseInt(e.target.value, 10))
-              setPage(0)
-            }}
-            rowsPerPageOptions={[25, 50, 100]}
+          <EmptyState
+            icon="emoji_events"
+            title="NO TRYOUTS FOUND"
+            description="Tryouts will appear here when created by the platform admin."
           />
         </Card>
+      ) : (
+        <PlatformDataTable
+          columns={columns}
+          rows={tryouts}
+          loading={loading}
+          totalCount={totalCount}
+          page={page}
+          rowsPerPage={rowsPerPage}
+          onPageChange={setPage}
+          onRowsPerPageChange={setRowsPerPage}
+          onRowClick={(row) => navigate(`/admin/tryouts/${row.id}`)}
+        />
       )}
-    </Box>
+    </div>
   )
 }

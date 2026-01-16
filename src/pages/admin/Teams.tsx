@@ -1,27 +1,17 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Button,
-  Grid,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Alert,
-  CircularProgress,
-} from '@mui/material'
-import { Add as AddIcon, Groups as TeamsIcon } from '@mui/icons-material'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { adaptTeamToTableRow, TeamTableRow } from '../../utils/dataAdapters'
-import AdminSkeletonTable from '../../components/admin/AdminSkeletonTable'
 import type { Database } from '../../lib/database.types.ts'
+import { 
+  PageHeader, 
+  Card, 
+  EmptyState, 
+  Button, 
+  Input 
+} from '../../components/platformAdmin'
 
 type TeamRow = Database['public']['Tables']['teams']['Row']
 
@@ -32,9 +22,7 @@ export default function Teams() {
   const [newTeamName, setNewTeamName] = useState('')
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [page] = useState(0)
-  const [rowsPerPage] = useState(50)
-
+  
   const { profile } = useAuth()
   const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
@@ -44,43 +32,31 @@ export default function Teams() {
 
     setLoading(true)
     try {
-      // Get paginated data
-      const from = page * rowsPerPage
-      const to = from + rowsPerPage - 1
-
       const { data, error } = await supabase
         .from('teams')
         .select('*')
         .eq('org_id', currentOrganization.id)
         .order('name', { ascending: true })
-        .range(from, to)
 
       if (error) {
         console.error('Error fetching teams:', error)
-        setLoading(false)
         return
       }
 
       const teamRows = (data || []) as TeamRow[]
-      const adaptedData = teamRows.map((team) => adaptTeamToTableRow(team, 0, 0, 0))
-
-      setTeams(adaptedData)
-    } catch (error) {
-      console.error('Error:', error)
+      setTeams(teamRows.map((team) => adaptTeamToTableRow(team, 0, 0, 0)))
+    } catch (err) {
+      console.error('Error:', err)
     } finally {
       setLoading(false)
     }
-  }, [currentOrganization?.id, page, rowsPerPage])
+  }, [currentOrganization?.id])
 
   useEffect(() => {
-    if (!profile || (profile.role !== 'admin' && !profile.organizations.some(org => org.role === 'org_admin'))) {
-      navigate('/portal/unauthorized')
-      return
-    }
     if (currentOrganization?.id) {
       fetchTeams()
     }
-  }, [profile, currentOrganization, navigate, page, rowsPerPage, fetchTeams])
+  }, [currentOrganization, fetchTeams])
 
   async function handleCreateTeam() {
     if (!newTeamName.trim() || !currentOrganization?.id) return
@@ -104,120 +80,110 @@ export default function Teams() {
   }
 
   if (loading && teams.length === 0) {
-    return <AdminSkeletonTable rows={6} columns={3} />
+    return (
+      <div className="pa-flex pa-flex-col pa-gap-4">
+        <div className="pa-skeleton" style={{ height: '40px', width: '200px' }} />
+        <div className="pa-grid pa-grid-3">
+          {[1,2,3,4,5,6].map(i => <div key={i} className="pa-skeleton" style={{ height: '120px' }} />)}
+        </div>
+      </div>
+    )
   }
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 600 }}>
-          Teams
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setShowCreateModal(true)}
-        >
-          New Team
-        </Button>
-      </Box>
+    <div>
+      <PageHeader 
+        title="Teams" 
+        actions={
+          <Button onClick={() => setShowCreateModal(true)}>
+            <span className="material-symbols-outlined">add</span>
+            New Team
+          </Button>
+        }
+      />
 
       {teams.length === 0 ? (
         <Card>
-          <CardContent sx={{ textAlign: 'center', py: 8 }}>
-            <Box sx={{ mb: 2 }}>
-              <TeamsIcon sx={{ fontSize: 64, color: 'text.secondary' }} />
-            </Box>
-            <Typography variant="h6" gutterBottom>
-              No teams yet
-            </Typography>
-            <Typography color="textSecondary" sx={{ mb: 3 }}>
-              Create your first team to get started.
-            </Typography>
-            <Button variant="contained" onClick={() => setShowCreateModal(true)}>
-              Create Team
-            </Button>
-          </CardContent>
+          <EmptyState
+            icon="groups"
+            title="NO TEAMS YET"
+            description="Create your first team to start managing rosters and schedules."
+            action={
+              <Button onClick={() => setShowCreateModal(true)}>
+                Create Team
+              </Button>
+            }
+          />
         </Card>
       ) : (
-        <Grid container spacing={3}>
+        <div className="pa-grid pa-grid-3">
           {teams.map((team) => (
-            <Grid item xs={12} sm={6} md={4} key={team.id}>
-              <Card
-                sx={{
-                  cursor: 'pointer',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: 4,
-                  },
-                }}
-                onClick={() => navigate(`/admin/teams/${team.id}`)}
-              >
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Box
-                      sx={{
-                        backgroundColor: 'primary.main',
-                        borderRadius: 2,
-                        p: 1.5,
-                        color: 'white',
-                      }}
-                    >
-                      <TeamsIcon />
-                    </Box>
-                    <Box sx={{ flexGrow: 1 }}>
-                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                        {team.name}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        {team.playerCount} players
-                      </Typography>
-                    </Box>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
+            <Card 
+              key={team.id}
+              onClick={() => navigate(`/admin/teams/${team.id}`)}
+              className="pa-clickable"
+            >
+              <div className="pa-flex pa-items-center pa-gap-4">
+                <div 
+                  style={{ 
+                    background: 'var(--pa-n900)', 
+                    color: 'var(--pa-white)',
+                    padding: 'var(--pa-space-3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <span className="material-symbols-outlined">groups</span>
+                </div>
+                <div>
+                  <h3 className="pa-h3 pa-mb-1">{team.name}</h3>
+                  <div className="pa-body-s pa-text-muted">{team.playerCount} players</div>
+                </div>
+              </div>
+            </Card>
           ))}
-        </Grid>
+        </div>
       )}
 
-      {/* Create Team Dialog */}
-      <Dialog open={showCreateModal} onClose={() => setShowCreateModal(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Create Team</DialogTitle>
-        <DialogContent>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Team Name"
-            fullWidth
-            variant="outlined"
-            value={newTeamName}
-            onChange={(e) => setNewTeamName(e.target.value)}
-            placeholder="e.g. U12 Lightning"
-            onKeyPress={(e) => {
-              if (e.key === 'Enter' && newTeamName.trim()) {
-                handleCreateTeam()
-              }
-            }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowCreateModal(false)}>Cancel</Button>
-          <Button
-            onClick={handleCreateTeam}
-            disabled={creating || !newTeamName.trim()}
-            variant="contained"
+      {/* Basic Create Modal */}
+      {showCreateModal && (
+        <div 
+          style={{ 
+            position: 'fixed', inset: 0, 
+            background: 'rgba(11,15,20,0.5)', 
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000 
+          }}
+          onClick={() => setShowCreateModal(false)}
+        >
+          <div 
+            className="pa-card" 
+            style={{ width: '100%', maxWidth: '450px', padding: 'var(--pa-space-5)' }}
+            onClick={e => e.stopPropagation()}
           >
-            {creating ? <CircularProgress size={20} /> : 'Create Team'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+            <h2 className="pa-h2 pa-mb-4">CREATE TEAM</h2>
+            {error && (
+              <div className="pa-card pa-mb-4" style={{ background: 'var(--pa-danger-bg)', border: 'none', color: 'var(--pa-n900)' }}>
+                {error}
+              </div>
+            )}
+            <Input 
+              label="Team Name"
+              placeholder="e.g. U12 Lightning"
+              value={newTeamName}
+              onChange={e => setNewTeamName(e.target.value)}
+              autoFocus
+            />
+            <div className="pa-flex pa-gap-3 pa-mt-5 pa-justify-end">
+              <Button variant="secondary" onClick={() => setShowCreateModal(false)}>Cancel</Button>
+              <Button onClick={handleCreateTeam} disabled={creating || !newTeamName.trim()} loading={creating}>
+                Create Team
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

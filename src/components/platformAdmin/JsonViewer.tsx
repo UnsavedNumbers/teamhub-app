@@ -1,113 +1,77 @@
 import { useState } from 'react'
-import {
-  Box,
-  Typography,
-  IconButton,
-  Collapse,
-  Paper,
-} from '@mui/material'
-import { 
-  ExpandMore as ExpandMoreIcon, 
-  ExpandLess as ExpandLessIcon,
-  ContentCopy as CopyIcon,
-} from '@mui/icons-material'
 
 interface JsonViewerProps {
-  data: Record<string, unknown> | null | undefined
+  data: unknown
   title?: string
-  defaultExpanded?: boolean
-  maxHeight?: number
 }
 
-/**
- * Collapsible JSON viewer for audit log metadata
- */
-export default function JsonViewer({
-  data,
-  title = 'Metadata',
-  defaultExpanded = false,
-  maxHeight = 200,
-}: JsonViewerProps) {
-  const [expanded, setExpanded] = useState(defaultExpanded)
-  const [copied, setCopied] = useState(false)
-  
-  if (!data || Object.keys(data).length === 0) {
-    return (
-      <Typography variant="body2" color="textSecondary">
-        No metadata
-      </Typography>
-    )
-  }
-  
+export function JsonViewer({ data, title = 'JSON Data' }: JsonViewerProps) {
+  const [isExpanded, setIsExpanded] = useState(false)
+
   const jsonString = JSON.stringify(data, null, 2)
-  
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(jsonString)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-  
+
   return (
-    <Box>
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+    <div className="pa-card" style={{ padding: 0, overflow: 'hidden' }}>
+      {/* Header */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: 'var(--pa-space-4)',
+          background: 'var(--pa-n50)',
+          border: 'none',
+          borderBottom: '1px solid var(--pa-n100)',
           cursor: 'pointer',
-          gap: 1,
+          transition: 'background var(--pa-motion-normal) var(--pa-ease-out)',
         }}
-        onClick={() => setExpanded(!expanded)}
+        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--pa-n100)')}
+        onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--pa-n50)')}
       >
-        <Typography variant="body2" fontWeight={500}>
+        <span className="pa-body-m" style={{ fontWeight: 600, color: 'var(--pa-n900)' }}>
           {title}
-        </Typography>
-        {expanded ? (
-          <ExpandLessIcon fontSize="small" />
-        ) : (
-          <ExpandMoreIcon fontSize="small" />
-        )}
-        <Typography variant="caption" color="textSecondary">
-          ({Object.keys(data).length} keys)
-        </Typography>
-      </Box>
-      
-      <Collapse in={expanded}>
-        <Paper 
-          variant="outlined" 
-          sx={{ 
-            mt: 1, 
-            p: 1.5,
-            maxHeight,
-            overflow: 'auto',
-            position: 'relative',
+        </span>
+        <span
+          className="material-symbols-outlined"
+          style={{
+            fontSize: '20px',
+            color: 'var(--pa-n700)',
+            transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform var(--pa-motion-normal) var(--pa-ease-out)',
           }}
         >
-          <IconButton
-            size="small"
-            onClick={handleCopy}
-            sx={{ 
-              position: 'absolute', 
-              top: 4, 
-              right: 4,
-            }}
-            title={copied ? 'Copied!' : 'Copy JSON'}
-          >
-            <CopyIcon fontSize="small" />
-          </IconButton>
-          <Box
-            component="pre"
-            sx={{
+          expand_more
+        </span>
+      </button>
+
+      {/* Content */}
+      {isExpanded && (
+        <div
+          style={{
+            padding: 'var(--pa-space-4)',
+            maxHeight: '400px',
+            overflow: 'auto',
+          }}
+        >
+          <pre
+            style={{
               margin: 0,
-              fontSize: '0.75rem',
-              fontFamily: 'monospace',
+              fontFamily: 'var(--pa-font-mono)',
+              fontSize: '12px',
+              lineHeight: '1.5',
+              color: 'var(--pa-n900)',
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-word',
             }}
           >
             {jsonString}
-          </Box>
-        </Paper>
-      </Collapse>
-    </Box>
+          </pre>
+        </div>
+      )}
+    </div>
   )
 }
+
+export default JsonViewer

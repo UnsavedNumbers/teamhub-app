@@ -1,67 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Grid,
-  TextField,
-  Button,
-  Divider,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-} from '@mui/material'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import type { Database } from '../../lib/database.types'
+import { 
+  PageHeader, 
+  Card, 
+  Button, 
+  Input, 
+  Select, 
+  Badge, 
+  PlatformDataTable, 
+  type ColumnConfig 
+} from '../../components/platformAdmin'
 
-type TryoutRow = {
-  id: string
-  org_id: string
-  title: string
-  name: string | null
-  type: string
-  start_at: string | null
-  tryout_date: string | null
-  location: string
-}
-
-type TryoutCriteriaRow = {
-  id: string
-  tryout_id: string
-  name: string
-  description: string | null
-  sort_order: number
-  min_score: number
-  max_score: number
-}
-
-type RequiredDocRow = {
-  id: string
-  tryout_id: string
-  key: string
-  label: string
-  description: string | null
-  required: boolean
-}
-
-type RegistrationRow = {
-  id: string
-  child_id: string
-  status: string
-  created_at: string
-  child?: { first_name: string; last_name: string }
-}
-
+type TryoutRow = { id: string; org_id: string; title: string; name: string | null; type: string; start_at: string | null; tryout_date: string | null; location: string }
+type TryoutCriteriaRow = { id: string; tryout_id: string; name: string; description: string | null; sort_order: number; min_score: number; max_score: number }
+type RequiredDocRow = { id: string; tryout_id: string; key: string; label: string; description: string | null; required: boolean }
+type RegistrationRow = { id: string; child_id: string; status: string; created_at: string; child?: { first_name: string; last_name: string }; child_name: string }
 type TeamRow = { id: string; name: string }
 type SeasonRow = { id: string; name: string; team_id: string }
 
@@ -89,10 +46,7 @@ export default function AdminTryoutDetail() {
   const [newDocRequired, setNewDocRequired] = useState(true)
 
   const [selectedRegistrationId, setSelectedRegistrationId] = useState<string>('')
-  const selectedRegistration = useMemo(
-    () => registrations.find(r => r.id === selectedRegistrationId) ?? null,
-    [registrations, selectedRegistrationId]
-  )
+  const selectedRegistration = useMemo(() => registrations.find(r => r.id === selectedRegistrationId) ?? null, [registrations, selectedRegistrationId])
 
   const [scoreDraft, setScoreDraft] = useState<Record<string, { score: string; notes: string }>>({})
 
@@ -102,478 +56,146 @@ export default function AdminTryoutDetail() {
   const [seasons, setSeasons] = useState<SeasonRow[]>([])
 
   const fetchAll = useCallback(async () => {
-    if (!tryoutId || !profile || !currentOrganization) return
-
-    // enforce admin/org_admin access at UX layer (RLS is real security)
-    const isOrgAdmin = profile.role === 'admin' || profile.organizations.some(o => o.id === currentOrganization.id && o.role === 'org_admin')
-    if (!isOrgAdmin) {
-      navigate('/portal/unauthorized')
-      return
-    }
-
+    if (!tryoutId || !currentOrganization) return
     setLoading(true)
+    const { data: tryoutData } = await supabase.from('tryouts').select('*').eq('id', tryoutId).single()
+    if (tryoutData) setTryout(tryoutData as any)
 
-    const { data: tryoutData, error: tryoutError } = await supabase
-      .from('tryouts')
-      .select('*')
-      .eq('id', tryoutId)
-      .eq('org_id', currentOrganization.id)
-      .single()
+    const { data: criteriaData } = await (supabase as any).from('tryout_criteria').select('*').eq('tryout_id', tryoutId).order('sort_order', { ascending: true })
+    setCriteria(criteriaData || [])
 
-    if (tryoutError) {
-      console.error(tryoutError)
-      setLoading(false)
-      return
-    }
+    const { data: docData } = await (supabase as any).from('tryout_required_documents').select('*').eq('tryout_id', tryoutId).order('created_at', { ascending: true })
+    setRequiredDocs(docData || [])
 
-    setTryout(tryoutData as unknown as TryoutRow)
+    const { data: regData } = await supabase.from('tryout_registrations').select('id, child_id, status, created_at, child:children(first_name, last_name)').eq('tryout_id', tryoutId).order('created_at', { ascending: false })
+    const rows = (regData as any[]) || []
+    setRegistrations(rows.map(r => ({ ...r, child_name: r.child ? `${r.child.first_name} ${r.child.last_name}` : r.child_id })))
 
-    const { data: criteriaData } = await (supabase as any)
-      .from('tryout_criteria')
-      .select('id, tryout_id, name, description, sort_order, min_score, max_score')
-      .eq('tryout_id', tryoutId)
-      .order('sort_order', { ascending: true })
-
-    setCriteria((criteriaData as TryoutCriteriaRow[]) || [])
-
-    const { data: docData } = await (supabase as any)
-      .from('tryout_required_documents')
-      .select('id, tryout_id, key, label, description, required')
-      .eq('tryout_id', tryoutId)
-      .order('created_at', { ascending: true })
-
-    setRequiredDocs((docData as RequiredDocRow[]) || [])
-
-    const { data: regData } = await supabase
-      .from('tryout_registrations')
-      .select('id, child_id, status, created_at, child:children(first_name, last_name)')
-      .eq('tryout_id', tryoutId)
-      .order('created_at', { ascending: false })
-
-    setRegistrations((regData as unknown as RegistrationRow[]) || [])
-
-    const { data: teamData } = await supabase
-      .from('teams')
-      .select('id, name')
-      .eq('org_id', currentOrganization.id)
-      .order('name', { ascending: true })
-
-    setTeams((teamData as TeamRow[]) || [])
-
+    const { data: teamData } = await supabase.from('teams').select('id, name').eq('org_id', currentOrganization.id).order('name', { ascending: true })
+    setTeams(teamData || [])
     setLoading(false)
-  }, [tryoutId, profile, currentOrganization, navigate])
+  }, [tryoutId, currentOrganization])
+
+  useEffect(() => { fetchAll() }, [fetchAll])
 
   useEffect(() => {
-    fetchAll()
-  }, [fetchAll])
-
-  useEffect(() => {
-    async function loadSeasons() {
-      if (!convertTeamId) {
-        setSeasons([])
-        return
-      }
-      const { data } = await supabase
-        .from('seasons')
-        .select('id, name, team_id')
-        .eq('team_id', convertTeamId)
-        .order('start_date', { ascending: false })
-
-      setSeasons((data as SeasonRow[]) || [])
-    }
-    void loadSeasons()
+    if (!convertTeamId) { setSeasons([]); return; }
+    supabase.from('seasons').select('id, name').eq('team_id', convertTeamId).order('start_date', { ascending: false }).then(({ data }) => setSeasons(data || []))
   }, [convertTeamId])
 
-  async function addCriterion() {
+  const addCriterion = async () => {
     if (!tryoutId || !newCriterionName.trim()) return
-    const { error } = await (supabase as any).from('tryout_criteria').insert({
-      tryout_id: tryoutId,
-      name: newCriterionName.trim(),
-      description: newCriterionDesc.trim() || null,
-      sort_order: criteria.length,
-      min_score: 1,
-      max_score: 10,
-    })
-    if (error) {
-      alert(error.message)
-      return
-    }
-    setNewCriterionName('')
-    setNewCriterionDesc('')
-    await fetchAll()
+    await (supabase as any).from('tryout_criteria').insert({ tryout_id: tryoutId, name: newCriterionName.trim(), description: newCriterionDesc.trim() || null, sort_order: criteria.length, min_score: 1, max_score: 10 })
+    setNewCriterionName(''); setNewCriterionDesc(''); fetchAll()
   }
 
-  async function addRequiredDoc() {
+  const addRequiredDoc = async () => {
     if (!tryoutId || !newDocKey.trim() || !newDocLabel.trim()) return
-    const key = newDocKey.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_')
-    const { error } = await (supabase as any).from('tryout_required_documents').insert({
-      tryout_id: tryoutId,
-      key,
-      label: newDocLabel.trim(),
-      required: newDocRequired,
-    })
-    if (error) {
-      alert(error.message)
-      return
-    }
-    setNewDocKey('')
-    setNewDocLabel('')
-    setNewDocRequired(true)
-    await fetchAll()
+    await (supabase as any).from('tryout_required_documents').insert({ tryout_id: tryoutId, key: newDocKey.trim().toLowerCase(), label: newDocLabel.trim(), required: newDocRequired })
+    setNewDocKey(''); setNewDocLabel(''); fetchAll()
   }
 
-  async function updateRegistrationStatus(
-    registrationId: string,
-    status: Database['public']['Enums']['tryout_registration_status']
-  ) {
-    const { error } = await supabase
-      .from('tryout_registrations')
-      .update({ status })
-      .eq('id', registrationId)
-    if (error) alert(error.message)
-    await fetchAll()
+  const updateRegistrationStatus = async (id: string, status: string) => {
+    await supabase.from('tryout_registrations').update({ status } as any).eq('id', id)
+    fetchAll()
   }
 
-  async function loadScoresForRegistration(registrationId: string) {
-    // pull existing scores for this coach so they can edit
-    if (!profile?.id) return
-    const { data, error } = await (supabase as any)
-      .from('tryout_scores')
-      .select('criteria_id, score, notes')
-      .eq('registration_id', registrationId)
-      .eq('coach_id', profile.id)
-
-    if (error) {
-      console.error(error)
-      return
-    }
+  const loadScoresForRegistration = async (registrationId: string) => {
+    const { data } = await (supabase as any).from('tryout_scores').select('criteria_id, score, notes').eq('registration_id', registrationId).eq('coach_id', profile?.id)
     const next: Record<string, { score: string; notes: string }> = {}
-    ;(data as any[] | null)?.forEach((row) => {
-      if (!row.criteria_id) return
-      next[row.criteria_id] = { score: String(row.score ?? ''), notes: String(row.notes ?? '') }
-    })
+    ;(data as any[])?.forEach(row => { if (row.criteria_id) next[row.criteria_id] = { score: String(row.score ?? ''), notes: String(row.notes ?? '') } })
     setScoreDraft(next)
   }
 
-  async function saveScores() {
+  const saveScores = async () => {
     if (!selectedRegistration || !profile?.id) return
-
     for (const c of criteria) {
-      const d = scoreDraft[c.id]
-      if (!d) continue
-      const scoreNum = Number(d.score)
-      if (!Number.isFinite(scoreNum)) continue
-
-      const { error } = await (supabase as any)
-        .from('tryout_scores')
-        .upsert(
-          {
-            registration_id: selectedRegistration.id,
-            criteria_id: c.id,
-            coach_id: profile.id,
-            score: scoreNum,
-            notes: d.notes || null,
-            category: c.name, // legacy compatibility
-          },
-          { onConflict: 'registration_id,criteria_id,coach_id' }
-        )
-
-      if (error) {
-        alert(error.message)
-        return
-      }
+      const d = scoreDraft[c.id]; if (!d) continue
+      await (supabase as any).from('tryout_scores').upsert({ registration_id: selectedRegistration.id, criteria_id: c.id, coach_id: profile.id, score: Number(d.score), notes: d.notes || null, category: c.name }, { onConflict: 'registration_id,criteria_id,coach_id' })
     }
-
     alert('Scores saved')
   }
 
-  async function convertToTeamMember() {
+  const convertToTeamMember = async () => {
     if (!selectedRegistration || !convertTeamId || !convertSeasonId) return
-    const { error } = await supabase.rpc('convert_accepted_tryout_registration_to_team_member', {
-      p_registration_id: selectedRegistration.id,
-      p_team_id: convertTeamId,
-      p_season_id: convertSeasonId,
-    })
-    if (error) {
-      alert(error.message)
-      return
-    }
-    alert('Converted to team member')
+    const { error } = await supabase.rpc('convert_accepted_tryout_registration_to_team_member', { p_registration_id: selectedRegistration.id, p_team_id: convertTeamId, p_season_id: convertSeasonId })
+    if (error) alert(error.message); else alert('Converted to team member')
   }
 
-  if (loading) {
-    return (
-      <Box>
-        <Typography variant="h5" sx={{ fontWeight: 600 }}>
-          Loading tryout…
-        </Typography>
-      </Box>
-    )
-  }
+  if (loading) return <div className="pa-skeleton" style={{ height: '500px' }} />
+  if (!tryout) return <PageHeader title="Tryout not found" />
 
-  if (!tryout) {
-    return (
-      <Box>
-        <Typography variant="h5" sx={{ fontWeight: 600 }}>
-          Tryout not found
-        </Typography>
-      </Box>
-    )
-  }
+  const regColumns: ColumnConfig<RegistrationRow>[] = [
+    { id: 'child_name', label: 'Athlete' },
+    { id: 'status', label: 'Status', render: (row) => <Badge variant="neutral">{row.status.toUpperCase()}</Badge> },
+    { id: 'actions', label: 'Actions', align: 'right', render: (row) => (
+      <div className="pa-flex pa-gap-2 pa-justify-end">
+        <Button variant="secondary" onClick={(e) => { e.stopPropagation(); updateRegistrationStatus(row.id, 'checked_in') }}>Check-in</Button>
+        <Button variant="secondary" onClick={(e) => { e.stopPropagation(); updateRegistrationStatus(row.id, 'offered') }}>Offer</Button>
+      </div>
+    )}
+  ]
 
   return (
-    <Box>
-      <Typography variant="h4" sx={{ fontWeight: 700, mb: 2 }}>
-        {tryout.name ?? tryout.title}
-      </Typography>
-      <Typography color="text.secondary" sx={{ mb: 3 }}>
-        {tryout.start_at ? formatDateTime(tryout.start_at) : tryout.tryout_date ? new Date(tryout.tryout_date).toLocaleDateString() : 'TBD'} • {tryout.location}
-      </Typography>
+    <div className="pa-root">
+      <PageHeader title={tryout.name ?? tryout.title} subtitle={`${tryout.start_at ? formatDateTime(tryout.start_at) : 'TBD'} • ${tryout.location}`} />
 
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={5}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
-                Evaluation Criteria
-              </Typography>
-
-              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                <TextField
-                  label="Name"
-                  value={newCriterionName}
-                  onChange={(e) => setNewCriterionName(e.target.value)}
-                  size="small"
-                  fullWidth
-                />
-                <Button variant="contained" onClick={addCriterion}>
-                  Add
-                </Button>
-              </Box>
-              <TextField
-                label="Description (optional)"
-                value={newCriterionDesc}
-                onChange={(e) => setNewCriterionDesc(e.target.value)}
-                size="small"
-                fullWidth
-                multiline
-                minRows={2}
-              />
-
-              <Divider sx={{ my: 2 }} />
-
-              {criteria.length === 0 ? (
-                <Typography color="text.secondary">No criteria yet.</Typography>
-              ) : (
-                criteria.map((c) => (
-                  <Box key={c.id} sx={{ mb: 1 }}>
-                    <Typography sx={{ fontWeight: 600 }}>{c.name}</Typography>
-                    {c.description && <Typography color="text.secondary" variant="body2">{c.description}</Typography>}
-                  </Box>
-                ))
-              )}
-            </CardContent>
+      <div className="pa-grid pa-grid-12 pa-gap-6">
+        <div className="pa-col-5">
+          <Card className="pa-mb-6">
+            <h3 className="pa-h3 pa-mb-4">EVALUATION CRITERIA</h3>
+            <div className="pa-flex pa-flex-col pa-gap-3">
+              <Input label="Name" value={newCriterionName} onChange={e => setNewCriterionName(e.target.value)} />
+              <textarea className="pa-input pa-textarea" placeholder="Description (optional)" value={newCriterionDesc} onChange={e => setNewCriterionDesc(e.target.value)} />
+              <Button onClick={addCriterion}>Add Criterion</Button>
+            </div>
+            <div className="pa-mt-5 pa-flex pa-flex-col pa-gap-3">
+              {criteria.map(c => <div key={c.id} className="pa-card pa-mb-0" style={{ padding: 'var(--pa-space-3)' }}><strong>{c.name}</strong><div className="pa-body-s pa-text-muted">{c.description}</div></div>)}
+            </div>
           </Card>
 
-          <Card sx={{ mt: 3 }}>
-            <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
-                Required Documents
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                <TextField
-                  label="Key"
-                  value={newDocKey}
-                  onChange={(e) => setNewDocKey(e.target.value)}
-                  size="small"
-                  sx={{ flex: 1 }}
-                />
-                <TextField
-                  label="Label"
-                  value={newDocLabel}
-                  onChange={(e) => setNewDocLabel(e.target.value)}
-                  size="small"
-                  sx={{ flex: 1 }}
-                />
-                <FormControl size="small" sx={{ minWidth: 120 }}>
-                  <InputLabel>Required</InputLabel>
-                  <Select
-                    label="Required"
-                    value={newDocRequired ? 'yes' : 'no'}
-                    onChange={(e) => setNewDocRequired(e.target.value === 'yes')}
-                  >
-                    <MenuItem value="yes">Yes</MenuItem>
-                    <MenuItem value="no">No</MenuItem>
-                  </Select>
-                </FormControl>
-                <Button variant="contained" onClick={addRequiredDoc}>
-                  Add
-                </Button>
-              </Box>
-
-              {requiredDocs.length === 0 ? (
-                <Typography color="text.secondary">No required documents.</Typography>
-              ) : (
-                requiredDocs.map((d) => (
-                  <Box key={d.id} sx={{ mb: 1 }}>
-                    <Typography sx={{ fontWeight: 600 }}>{d.label} {d.required ? '(required)' : '(optional)'}</Typography>
-                    <Typography color="text.secondary" variant="body2">key: {d.key}</Typography>
-                  </Box>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} md={7}>
           <Card>
-            <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
-                Registrations
-              </Typography>
-              {registrations.length === 0 ? (
-                <Typography color="text.secondary">No registrations yet.</Typography>
-              ) : (
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Athlete</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell>Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {registrations.map((r) => (
-                      <TableRow
-                        key={r.id}
-                        hover
-                        selected={r.id === selectedRegistrationId}
-                        onClick={() => {
-                          setSelectedRegistrationId(r.id)
-                          void loadScoresForRegistration(r.id)
-                        }}
-                        sx={{ cursor: 'pointer' }}
-                      >
-                        <TableCell>{r.child ? `${r.child.first_name} ${r.child.last_name}` : r.child_id}</TableCell>
-                        <TableCell>{r.status}</TableCell>
-                        <TableCell>
-                          <Button size="small" onClick={(e) => { e.stopPropagation(); void updateRegistrationStatus(r.id, 'checked_in') }}>
-                            Check-in
-                          </Button>
-                          <Button size="small" onClick={(e) => { e.stopPropagation(); void updateRegistrationStatus(r.id, 'offered') }}>
-                            Offer
-                          </Button>
-                          <Button size="small" color="warning" onClick={(e) => { e.stopPropagation(); void updateRegistrationStatus(r.id, 'waitlisted') }}>
-                            Waitlist
-                          </Button>
-                          <Button size="small" color="error" onClick={(e) => { e.stopPropagation(); void updateRegistrationStatus(r.id, 'not_selected') }}>
-                            Not selected
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
+            <h3 className="pa-h3 pa-mb-4">REQUIRED DOCUMENTS</h3>
+            <div className="pa-flex pa-flex-col pa-gap-3 pa-mb-4">
+              <Input label="Key" value={newDocKey} onChange={e => setNewDocKey(e.target.value)} />
+              <Input label="Label" value={newDocLabel} onChange={e => setNewDocLabel(e.target.value)} />
+              <Select label="Required" value={newDocRequired ? 'yes' : 'no'} onChange={e => setNewDocRequired(e.target.value === 'yes')} options={[{value: 'yes', label: 'Yes'}, {value: 'no', label: 'No'}]} />
+              <Button onClick={addRequiredDoc}>Add Document</Button>
+            </div>
+            {requiredDocs.map(d => <div key={d.id} className="pa-body-m pa-mb-2">• {d.label} {d.required && '(Required)'}</div>)}
+          </Card>
+        </div>
+
+        <div className="pa-col-7">
+          <Card className="pa-mb-6">
+            <h3 className="pa-h3 pa-mb-4">REGISTRATIONS</h3>
+            <PlatformDataTable columns={regColumns} rows={registrations} loading={loading} page={0} rowsPerPage={100} totalCount={registrations.length} onPageChange={() => {}} onRowsPerPageChange={() => {}} onRowClick={r => { setSelectedRegistrationId(r.id); loadScoresForRegistration(r.id); }} />
           </Card>
 
           {selectedRegistration && (
-            <Card sx={{ mt: 3 }}>
-              <CardContent>
-                <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
-                  Evaluation (selected athlete)
-                </Typography>
-
-                {criteria.length === 0 ? (
-                  <Typography color="text.secondary">Add criteria to enable scoring.</Typography>
-                ) : (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {criteria.map((c) => (
-                      <Grid key={c.id} container spacing={2} alignItems="center">
-                        <Grid item xs={12} sm={4}>
-                          <Typography sx={{ fontWeight: 600 }}>{c.name}</Typography>
-                          {c.description && <Typography color="text.secondary" variant="body2">{c.description}</Typography>}
-                        </Grid>
-                        <Grid item xs={12} sm={2}>
-                          <TextField
-                            label="Score"
-                            size="small"
-                            value={scoreDraft[c.id]?.score ?? ''}
-                            onChange={(e) =>
-                              setScoreDraft((prev) => ({
-                                ...prev,
-                                [c.id]: { score: e.target.value, notes: prev[c.id]?.notes ?? '' },
-                              }))
-                            }
-                          />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                          <TextField
-                            label="Notes"
-                            size="small"
-                            fullWidth
-                            value={scoreDraft[c.id]?.notes ?? ''}
-                            onChange={(e) =>
-                              setScoreDraft((prev) => ({
-                                ...prev,
-                                [c.id]: { score: prev[c.id]?.score ?? '', notes: e.target.value },
-                              }))
-                            }
-                          />
-                        </Grid>
-                      </Grid>
-                    ))}
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <Button variant="contained" onClick={saveScores}>
-                        Save scores
-                      </Button>
-                    </Box>
-                  </Box>
-                )}
-
-                <Divider sx={{ my: 3 }} />
-
-                <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
-                  Convert to Team Member
-                </Typography>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Team</InputLabel>
-                      <Select label="Team" value={convertTeamId} onChange={(e) => { setConvertTeamId(e.target.value); setConvertSeasonId('') }}>
-                        {teams.map((t) => (
-                          <MenuItem key={t.id} value={t.id}>
-                            {t.name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth size="small" disabled={!convertTeamId}>
-                      <InputLabel>Season</InputLabel>
-                      <Select label="Season" value={convertSeasonId} onChange={(e) => setConvertSeasonId(e.target.value)}>
-                        {seasons.map((s) => (
-                          <MenuItem key={s.id} value={s.id}>
-                            {s.name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                </Grid>
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-                  <Button variant="contained" disabled={!convertTeamId || !convertSeasonId} onClick={convertToTeamMember}>
-                    Convert
-                  </Button>
-                </Box>
-              </CardContent>
+            <Card>
+              <h3 className="pa-h3 pa-mb-4">EVALUATION: {selectedRegistration.child_name}</h3>
+              <div className="pa-flex pa-flex-col pa-gap-4 pa-mb-6">
+                {criteria.map(c => (
+                  <div key={c.id} className="pa-grid pa-grid-12 pa-gap-3 pa-items-center">
+                    <div className="pa-col-4"><strong>{c.name}</strong></div>
+                    <div className="pa-col-2"><Input placeholder="Score" value={scoreDraft[c.id]?.score || ''} onChange={e => setScoreDraft({ ...scoreDraft, [c.id]: { score: e.target.value, notes: scoreDraft[c.id]?.notes || '' } })} /></div>
+                    <div className="pa-col-6"><Input placeholder="Notes" value={scoreDraft[c.id]?.notes || ''} onChange={e => setScoreDraft({ ...scoreDraft, [c.id]: { score: scoreDraft[c.id]?.score || '', notes: e.target.value } })} /></div>
+                  </div>
+                ))}
+                <div className="pa-flex pa-justify-end"><Button onClick={saveScores}>Save Scores</Button></div>
+              </div>
+              <div className="pa-divider pa-my-6" />
+              <h3 className="pa-h3 pa-mb-4">CONVERT TO TEAM MEMBER</h3>
+              <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+                <Select label="Team" value={convertTeamId} onChange={e => setConvertTeamId(e.target.value)} options={teams.map(t => ({ value: t.id, label: t.name }))} />
+                <Select label="Season" value={convertSeasonId} onChange={e => setConvertSeasonId(e.target.value)} options={seasons.map(s => ({ value: s.id, label: s.name }))} />
+              </div>
+              <div className="pa-flex pa-justify-end"><Button onClick={convertToTeamMember} disabled={!convertTeamId || !convertSeasonId}>Convert</Button></div>
             </Card>
           )}
-        </Grid>
-      </Grid>
-    </Box>
+        </div>
+      </div>
+    </div>
   )
 }
-
