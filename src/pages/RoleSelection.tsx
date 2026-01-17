@@ -85,13 +85,12 @@ export function RoleSelection() {
     if (org) {
       setCurrentOrganization(org)
       
-      // Navigate based on primary role
-      const primaryRole = getPrimaryRole(org)
-      if (primaryRole === 'org_admin') {
+      // Navigate based on selected role
+      // Admins and coaches always go to admin section
+      if (card.role === 'org_admin' || card.role === 'coach') {
         navigate('/admin/dashboard')
-      } else if (primaryRole === 'coach') {
-        navigate('/portal/dashboard')
       } else {
+        // Parents go to portal dashboard
         navigate('/portal/dashboard')
       }
     }

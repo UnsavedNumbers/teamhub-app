@@ -37,6 +37,7 @@ import Tryouts from './pages/Tryouts'
 import TryoutDetail from './pages/TryoutDetail'
 import Messages from './pages/Messages'
 import AnnouncementDetail from './pages/AnnouncementDetail'
+import { RoleSelection } from './pages/RoleSelection'
 
 // Admin Layout (Material Dashboard)
 import AdminLayout from './layouts/AdminLayout'
@@ -169,6 +170,7 @@ function App() {
             <Route path="unauthorized" element={<Unauthorized />} />
 
             {/* Protected Portal Routes */}
+            <Route path="role-selection" element={<ProtectedRoute><RoleSelection /></ProtectedRoute>} />
             <Route path="dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="children" element={<ProtectedRoute><Children /></ProtectedRoute>} />

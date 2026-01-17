@@ -9,6 +9,7 @@ import {
   setSetupOrganizationFlag,
   cleanupStaleFlags,
 } from '../utils/setupOrganization'
+import { getLoginRedirect } from '../utils/loginRedirect'
 
 type RoleType = 'parent' | 'coach' | 'admin'
 
@@ -42,9 +43,11 @@ export default function Login() {
       setError(error.message)
       setLoading(false)
     } else {
-      // Check if user is platform admin directly
+      // Wait for profile to load to get organizations
+      // We need to check roles to determine redirect
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
+        // Check if user is platform admin
         const { data: adminData } = await supabase
           .from('platform_admins')
           .select('user_id')
@@ -55,10 +58,33 @@ export default function Login() {
           navigate('/platform-admin')
           return
         }
-      }
 
-      const appContext = getHostAppContext()
-      navigate(appContext === 'platform-admin' ? '/platform-admin' : '/portal/dashboard')
+        // Fetch user's organizations to determine redirect
+        try {
+          const { data: orgData } = await supabase.rpc('get_user_organizations', {
+            check_user_id: user.id
+          })
+
+          // Map to Organization format
+          const organizations = (orgData || []).map((org: any) => ({
+            id: org.organization_id,
+            name: org.org_name,
+            roles: org.roles || [],
+          }))
+
+          // Determine redirect based on roles
+          const redirectTo = getLoginRedirect(false, organizations)
+          navigate(redirectTo)
+        } catch (err) {
+          // Fallback to default redirect if org fetch fails
+          console.error('Error fetching organizations:', err)
+          const appContext = getHostAppContext()
+          navigate(appContext === 'platform-admin' ? '/platform-admin' : '/portal/dashboard')
+        }
+      } else {
+        // No user, should not happen but fallback
+        navigate('/portal/dashboard')
+      }
     }
   }
 

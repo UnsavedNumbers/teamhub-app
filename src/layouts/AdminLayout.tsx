@@ -6,7 +6,6 @@ import { useLicense } from '../hooks/useLicense'
 import { LicenseWarningBanner } from '../components/admin/LicenseWarningBanner'
 import AdminLoadingSpinner from '../components/admin/AdminLoadingSpinner'
 import { usePlatformAdminTheme } from '../hooks/usePlatformAdminTheme'
-import GlobalNav from '../components/common/GlobalNav'
 
 // Navigation menu items - converted to Material Symbols
 const menuSections = [
@@ -161,9 +160,6 @@ export default function AdminLayout() {
 
       {/* Main */}
       <div className="pa-main">
-        {/* Global Navigation */}
-        <GlobalNav variant="admin" />
-
         {/* License Warning Banner */}
         {summary && <LicenseWarningBanner summary={summary} />}
 

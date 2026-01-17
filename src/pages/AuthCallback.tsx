@@ -7,6 +7,7 @@ import {
   clearSetupOrganizationFlag,
   cleanupStaleFlags,
 } from '../utils/setupOrganization'
+import { getLoginRedirect } from '../utils/loginRedirect'
 
 export default function AuthCallback() {
   const [searchParams] = useSearchParams()
@@ -41,6 +42,7 @@ export default function AuthCallback() {
         const appContext = getHostAppContext()
 
         // Priority -1: Check if user is platform admin
+        let isPlatformAdmin = false
         try {
           const { data: adminData } = await supabase
             .from('platform_admins')
@@ -49,6 +51,7 @@ export default function AuthCallback() {
             .single()
 
           if (adminData) {
+            isPlatformAdmin = true
             navigate('/platform-admin', { replace: true })
             return
           }
@@ -127,11 +130,31 @@ export default function AuthCallback() {
           }
         }
 
-        // Default: redirect based on host
-        if (appContext === 'platform-admin') {
-          navigate('/platform-admin', { replace: true })
-        } else {
-          navigate('/portal/dashboard', { replace: true })
+        // Default: redirect based on user roles
+        // Fetch user's organizations to determine redirect
+        try {
+          const { data: orgData } = await supabase.rpc('get_user_organizations', {
+            check_user_id: userId
+          })
+
+          // Map to Organization format
+          const organizations = (orgData || []).map((org: any) => ({
+            id: org.organization_id,
+            name: org.org_name,
+            roles: org.roles || [],
+          }))
+
+          // Determine redirect based on roles
+          const finalRedirect = getLoginRedirect(isPlatformAdmin, organizations)
+          navigate(finalRedirect, { replace: true })
+        } catch (err) {
+          // Fallback to host-based redirect if org fetch fails
+          console.error('Error fetching organizations for redirect:', err)
+          if (appContext === 'platform-admin') {
+            navigate('/platform-admin', { replace: true })
+          } else {
+            navigate('/portal/dashboard', { replace: true })
+          }
         }
       } else {
         // No session, might be email confirmation
