@@ -10,6 +10,7 @@ import { SportHero } from '../components/portal/SportHero'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
+import { useT } from '../i18n/useI18n'
 
 interface Event {
   id: string
@@ -38,6 +39,7 @@ interface Attendance {
 
 export default function EventDetail() {
   const { eventId } = useParams<{ eventId: string }>()
+  const t = useT()
   const [event, setEvent] = useState<Event | null>(null)
   const [children, setChildren] = useState<Child[]>([])
   const [attendance, setAttendance] = useState<Record<string, Attendance>>({})
@@ -230,9 +232,9 @@ export default function EventDetail() {
         
         {children.length === 0 ? (
           <Card className="text-center py-12">
-            <p className="text-slate-500 dark:text-slate-400 mb-6">No children added.</p>
+            <p className="text-slate-500 dark:text-slate-400 mb-6">{t('portal.events.noChildren')}</p>
             <Button variant="primary" onClick={() => navigate('/portal/children')}>
-              Add
+              {t('portal.events.add')}
             </Button>
           </Card>
         ) : (

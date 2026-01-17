@@ -1,0 +1,206 @@
+import { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { 
+    PageHeader, 
+    Card, 
+    Button, 
+    Badge, 
+    PlatformDataTable, 
+    ConfirmDialog,
+    ErrorState
+} from '../../components/platformAdmin'
+import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
+import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
+import { useUserContext } from '../../hooks/useUserContext'
+import { 
+    getFamilyDetails, 
+    deleteFamily, 
+    deleteChild 
+} from '../../data/services/familyService'
+import { useT } from '../../i18n/useI18n'
+import type { FamilyWithDetails, Child, FamilyMember } from '../../types/family'
+
+export default function FamilyDetail() {
+    const navigate = useNavigate()
+    const { id } = useParams<{ id: string }>()
+    const { context, isReady } = useUserContext()
+    const t = useT()
+    
+    const [family, setFamily] = useState<FamilyWithDetails | null>(null)
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<Error | null>(null)
+    
+    // Delete Dialog States
+    const [deleteFamilyOpen, setDeleteFamilyOpen] = useState(false)
+    const [childToDelete, setChildToDelete] = useState<string | null>(null)
+
+    const fetchDetail = async () => {
+        if (!id || !isReady) return
+        setLoading(true)
+        const { data, error } = await getFamilyDetails(context, id)
+        if (error) setError(error)
+        else setFamily(data)
+        setLoading(false)
+    }
+
+    useEffect(() => {
+        fetchDetail()
+    }, [id, context, isReady])
+
+    const handleDeleteFamily = async () => {
+        if (!family || !isReady) return
+        const { error } = await deleteFamily(context, family.id)
+        if (error) {
+            alert('Failed to delete family: ' + error.message) 
+            return
+        }
+        navigate('/admin/families')
+    }
+
+    const handleDeleteChild = async () => {
+        if (!childToDelete || !isReady) return
+        const { error } = await deleteChild(context, childToDelete)
+        if (error) {
+            alert(t('admin.families.errorDeleteChild') + ': ' + error.message)
+        } else {
+            await fetchDetail() 
+        }
+        setChildToDelete(null)
+    }
+
+    // Children Columns
+    const childColumns: ColumnConfig<Child>[] = [
+        {
+            key: 'first_name',
+            header: 'Name',
+            render: (c) => (
+                <div className="pa-flex pa-flex-col">
+                    <span className="pa-text-primary" style={{ fontWeight: 600 }}>{c?.first_name} {c?.last_name}</span>
+                    {c?.date_of_birth && (
+                        <span className="pa-text-xs pa-text-muted">DOB: {new Date(c.date_of_birth).toLocaleDateString()}</span>
+                    )}
+                </div>
+            )
+        },
+        {
+            key: 'gender',
+            header: 'Gender',
+            render: (c) => <span className="pa-capitalize">{c?.gender || '-'}</span>
+        },
+        {
+            key: 'id',
+            header: 'Actions',
+            align: 'right',
+            render: (c) => c?.id ? (
+                <div className="pa-flex pa-gap-2 pa-justify-end" onClick={(e) => e.stopPropagation()}>
+                     <button 
+                        className="pa-btn-icon pa-text-danger"
+                        onClick={() => setChildToDelete(c.id)}
+                        title={t('admin.families.deleteChild')}
+                     >
+                        <span className="material-symbols-outlined">delete</span>
+                     </button>
+                </div>
+            ) : null
+        }
+    ]
+
+    // Members Columns
+    const memberColumns: ColumnConfig<FamilyMember>[] = [
+        {
+            key: 'user_id',
+            header: 'User ID', 
+            render: (m) => <span className="pa-font-mono pa-text-xs">{m?.user_id ? `${m.user_id.substring(0,8)}...` : '-'}</span>
+        },
+        {
+            key: 'role',
+            header: 'Role',
+            render: (m) => <Badge variant={m?.role === 'owner' ? 'primary' : 'neutral'}>{m?.role || 'Unknown'}</Badge>
+        },
+         {
+            key: 'created_at',
+            header: 'Joined',
+            render: (m) => m?.created_at ? new Date(m.created_at).toLocaleDateString() : '-'
+        }
+    ]
+
+    if (!isReady) return <AdminLoadingSpinner />
+    if (loading) return <div className="pa-loader" />
+    if (error) return <ErrorState title="Error Loading Family" message={error.message} onRetry={fetchDetail} />
+    if (!family) return <ErrorState title="Not Found" message="Family not found." />
+
+    return (
+        <div className="pa-root">
+            <PageHeader 
+                title={family.name?.toUpperCase() || 'FAMILY'} 
+                breadcrumbs={[
+                    { label: 'Families', to: '/admin/families' },
+                    { label: family.name || 'Detail', to: '#' }
+                ]}
+                actions={
+                    <Button variant="danger" onClick={() => setDeleteFamilyOpen(true)}>
+                        Delete Family
+                    </Button>
+                }
+            />
+
+            <div className="pa-grid pa-grid-12 pa-gap-6">
+                
+                {/* Children Section */}
+                <div className="pa-col-8">
+                    <Card>
+                        <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
+                            <h3 className="pa-h3">{t('admin.families.children')}</h3>
+                            <Button size="small" variant="secondary" onClick={() => navigate(`/admin/families/${family.id}/children/new`)}>
+                                <span className="material-symbols-outlined">add</span>
+                                {t('admin.families.addChild')}
+                            </Button>
+                        </div>
+                        <PlatformDataTable
+                            data={family.children || []}
+                            columns={childColumns}
+                            disablePagination
+                            emptyStateMessage={t('admin.families.noChildren')}
+                        />
+                    </Card>
+                </div>
+
+                {/* Members Section */}
+                <div className="pa-col-4">
+                    <Card>
+                        <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
+                            <h3 className="pa-h3">Guardians</h3>
+                        </div>
+                         <PlatformDataTable
+                            data={family.members || []}
+                            columns={memberColumns}
+                            disablePagination
+                            emptyStateMessage="No guardians found."
+                        />
+                    </Card>
+                </div>
+            </div>
+
+            {/* Dialogs */}
+            <ConfirmDialog
+                open={deleteFamilyOpen}
+                title="Delete Family?"
+                message="This will remove the family and all associated data. This action cannot be undone."
+                confirmLabel="Delete"
+                isDestructive
+                onConfirm={handleDeleteFamily}
+                onCancel={() => setDeleteFamilyOpen(false)}
+            />
+
+            <ConfirmDialog
+                open={!!childToDelete}
+                title={t('admin.families.removeChildTitle')}
+                message={t('admin.families.removeChildMessage')}
+                confirmLabel="Remove"
+                isDestructive
+                onConfirm={handleDeleteChild}
+                onCancel={() => setChildToDelete(null)}
+            />
+        </div>
+    )
+}

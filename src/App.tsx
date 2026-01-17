@@ -76,6 +76,7 @@ const Roster = lazy(() => import('./pages/admin/Roster'))
 const Events = lazy(() => import('./pages/admin/Events'))
 const CreateEvent = lazy(() => import('./pages/admin/CreateEvent'))
 const AttendanceRoster = lazy(() => import('./pages/admin/AttendanceRoster'))
+const AdminAttendance = lazy(() => import('./pages/admin/AdminAttendance'))
 const Payments = lazy(() => import('./pages/admin/Payments'))
 const CreateFee = lazy(() => import('./pages/admin/CreateFee'))
 const UniformOrders = lazy(() => import('./pages/admin/UniformOrders'))
@@ -91,6 +92,11 @@ const OrganizationBilling = lazy(() => import('./pages/admin/OrganizationBilling
 const PlanSelection = lazy(() => import('./pages/admin/PlanSelection'))
 const CheckoutSuccess = lazy(() => import('./pages/admin/CheckoutSuccess'))
 const CheckoutCancel = lazy(() => import('./pages/admin/CheckoutCancel'))
+const AdminFamilies = lazy(() => import('./pages/admin/AdminFamilies'))
+const CreateFamily = lazy(() => import('./pages/admin/CreateFamily'))
+const FamilyDetail = lazy(() => import('./pages/admin/FamilyDetail'))
+const CreateChild = lazy(() => import('./pages/admin/CreateChild'))
+const AdminChildren = lazy(() => import('./pages/admin/AdminChildren'))
 
 function HostHomeRoute() {
   const appContext = getHostAppContext()
@@ -229,11 +235,23 @@ function App() {
               <Route path="teams" element={<Teams />} />
               <Route path="teams/:id" element={<TeamDetail />} />
               <Route path="teams/:id/roster" element={<Roster />} />
+
+              {/* Families */}
+              <Route path="families" element={<AdminFamilies />} />
+              <Route path="families/new" element={<CreateFamily />} />
+              <Route path="families/:id" element={<FamilyDetail />} />
+              <Route path="families/:familyId/children/new" element={<CreateChild />} />
+              <Route path="children" element={<AdminChildren />} />
+            
+              {/* Events */}
             
               {/* Events */}
               <Route path="events" element={<Events />} />
               <Route path="events/new" element={<CreateEvent />} />
               <Route path="events/:id/attendance" element={<AttendanceRoster />} />
+
+              {/* Attendance */}
+              <Route path="attendance" element={<AdminAttendance />} />
             
               {/* Payments */}
               <Route path="payments" element={<Payments />} />

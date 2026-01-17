@@ -170,7 +170,7 @@ export const en = {
             },
             family: {
                 title: 'Family',
-                manageChildren: 'Manage Children',
+                manageChildren: 'Manage Athletes',
                 born: 'Born',
                 noTeams: 'No active team memberships',
                 guardians: 'Guardians & Permissions',
@@ -241,7 +241,7 @@ export const en = {
         },
         filters: {
             title: 'Filters',
-            allChildren: 'All Children',
+            allChildren: 'All Athletes',
             allTeams: 'All Teams',
             allTypes: 'All Event Types',
             showCancelled: 'Show Cancelled Events',
@@ -288,12 +288,40 @@ export const en = {
         },
     },
     admin: {
+        children: {
+            title: 'ALL ATHLETES',
+            errorLoading: 'Error loading athletes',
+            emptyTitle: 'No athletes found',
+            emptyMessage: 'Athletes are added via Families.',
+        },
+        createChild: {
+            title: 'ADD ATHLETE',
+            addChild: 'Add Athlete',
+            adding: 'Adding...',
+            errorCreate: 'Failed to create athlete',
+        },
+        families: {
+            children: 'Athletes',
+            addChild: 'Add Athlete',
+            deleteChild: 'Delete Athlete',
+            noChildren: 'No athletes added yet.',
+            removeChildTitle: 'Remove Athlete?',
+            removeChildMessage: 'Are you sure you want to remove this athlete from the family?',
+            errorDeleteChild: 'Failed to delete athlete',
+        },
+        navigation: {
+            children: 'Athletes',
+        },
         events: {
             create: 'Create Event',
             edit: 'Edit Event',
             delete: 'Delete Event',
             cancel: 'Cancel Event',
             uncancel: 'Restore Event',
+            rsvpType: {
+                general: 'General RSVP (Head Count)',
+                athlete: 'Athlete RSVP (Per Athlete)',
+            },
             recurring: {
                 title: 'Recurring Event',
                 enabled: 'Make this a recurring event',
@@ -335,6 +363,41 @@ export const en = {
                 recurringEndRequired: 'Specify end date or number of occurrences',
             },
         },
+    },
+    portal: {
+        children: {
+            title: 'Athletes',
+            noChildren: 'No athletes added',
+            addChildren: 'Add athletes to register them for teams.',
+            add: 'Add',
+        },
+        events: {
+            noChildren: 'No athletes added.',
+            add: 'Add',
+        },
+        uniforms: {
+            addChildrenFirst: 'Add athletes first to manage uniforms.',
+            add: 'Add',
+        },
+        joinTeam: {
+            addChildFirst: 'Add an athlete first.',
+            selectChild: 'Select Athlete',
+            chooseChild: 'Choose an athlete',
+            add: 'Add',
+            success: 'Your athlete has been added to',
+        },
+        navigation: {
+            myChildren: 'My Athletes',
+            yourChildrenTeams: 'Your athletes\' teams',
+        },
+    },
+    errors: {
+        eventIdAndChildIdRequired: 'Event ID and Athlete ID are required',
+        childNotEligible: 'Athlete is not eligible for this event',
+        cannotUpdateRsvp: 'Unauthorized: Cannot update RSVP for this athlete',
+        selectChildOrApplyToAll: 'Select an athlete or apply to all',
+        unknownAthlete: 'Unknown Athlete',
+        athlete: 'Athlete',
     },
 }
 
@@ -495,7 +558,7 @@ export const es: typeof en = {
             },
             family: {
                 title: 'Familia',
-                manageChildren: 'Administrar Niños',
+                manageChildren: 'Administrar Atletas',
                 born: 'Nacido',
                 noTeams: 'Sin membresías de equipo activas',
                 guardians: 'Tutores y Permisos',
@@ -566,7 +629,7 @@ export const es: typeof en = {
         },
         filters: {
             title: 'Filtros',
-            allChildren: 'Todos los Niños',
+            allChildren: 'Todos los Atletas',
             allTeams: 'Todos los Equipos',
             allTypes: 'Todos los Tipos de Eventos',
             showCancelled: 'Mostrar Eventos Cancelados',
@@ -613,12 +676,40 @@ export const es: typeof en = {
         },
     },
     admin: {
+        children: {
+            title: 'TODOS LOS ATLETAS',
+            errorLoading: 'Error al cargar atletas',
+            emptyTitle: 'No se encontraron atletas',
+            emptyMessage: 'Los atletas se agregan a través de Familias.',
+        },
+        createChild: {
+            title: 'AGREGAR ATLETA',
+            addChild: 'Agregar Atleta',
+            adding: 'Agregando...',
+            errorCreate: 'Error al crear atleta',
+        },
+        families: {
+            children: 'Atletas',
+            addChild: 'Agregar Atleta',
+            deleteChild: 'Eliminar Atleta',
+            noChildren: 'Aún no se han agregado atletas.',
+            removeChildTitle: '¿Eliminar Atleta?',
+            removeChildMessage: '¿Está seguro de que desea eliminar este atleta de la familia?',
+            errorDeleteChild: 'Error al eliminar atleta',
+        },
+        navigation: {
+            children: 'Atletas',
+        },
         events: {
             create: 'Crear Evento',
             edit: 'Editar Evento',
             delete: 'Eliminar Evento',
             cancel: 'Cancelar Evento',
             uncancel: 'Restaurar Evento',
+            rsvpType: {
+                general: 'RSVP General (Recuento)',
+                athlete: 'RSVP de Atleta (Por Atleta)',
+            },
             recurring: {
                 title: 'Evento Recurrente',
                 enabled: 'Hacer este un evento recurrente',
@@ -660,6 +751,41 @@ export const es: typeof en = {
                 recurringEndRequired: 'Especifique fecha de finalización o número de ocurrencias',
             },
         },
+    },
+    portal: {
+        children: {
+            title: 'Atletas',
+            noChildren: 'No se han agregado atletas',
+            addChildren: 'Agregue atletas para registrarlos en equipos.',
+            add: 'Agregar',
+        },
+        events: {
+            noChildren: 'No se han agregado atletas.',
+            add: 'Agregar',
+        },
+        uniforms: {
+            addChildrenFirst: 'Agregue atletas primero para gestionar uniformes.',
+            add: 'Agregar',
+        },
+        joinTeam: {
+            addChildFirst: 'Agregue un atleta primero.',
+            selectChild: 'Seleccionar Atleta',
+            chooseChild: 'Elija un atleta',
+            add: 'Agregar',
+            success: 'Su atleta ha sido agregado a',
+        },
+        navigation: {
+            myChildren: 'Mis Atletas',
+            yourChildrenTeams: 'Equipos de sus atletas',
+        },
+    },
+    errors: {
+        eventIdAndChildIdRequired: 'Se requieren ID de Evento e ID de Atleta',
+        childNotEligible: 'El atleta no es elegible para este evento',
+        cannotUpdateRsvp: 'No autorizado: No se puede actualizar RSVP para este atleta',
+        selectChildOrApplyToAll: 'Seleccione un atleta o aplique a todos',
+        unknownAthlete: 'Atleta Desconocido',
+        athlete: 'Atleta',
     },
 }
 

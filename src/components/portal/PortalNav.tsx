@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import MegaMenu, { type NavGroup } from '../common/MegaMenu'
 import ThemeToggle from './ThemeToggle'
@@ -6,218 +6,25 @@ import UserContextDropdown from '../common/UserContextDropdown'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useTheme } from '../../hooks/useTheme'
+import { useT } from '../../i18n/useI18n'
 
 // ============================================================================
 // ORGANIZATION ADMIN MENU STRUCTURE
 // Design goal: Run the entire organization without spreadsheets.
 // ============================================================================
-const orgAdminNavSections: { label: string; route?: string; groups: NavGroup[] }[] = [
-  {
-    label: 'Dashboard',
-    route: '/admin',
-    groups: [
-      {
-        label: '',
-        items: [
-          { text: 'Admin Dashboard', icon: 'dashboard', path: '/admin', description: 'Organization overview' },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'Organization',
-    route: '/admin/organization',
-    groups: [
-      {
-        label: 'Configuration',
-        items: [
-          { text: 'Organization Settings', icon: 'settings', path: '/admin/organization', description: 'Organization info' },
-          { text: 'Users', icon: 'admin_panel_settings', path: '/admin/organization/users', description: 'Access and roles' },
-          { text: 'Billing', icon: 'credit_card', path: '/admin/organization/billing', description: 'Plan and billing' },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'Operations',
-    route: '/admin/teams',
-    groups: [
-      {
-        label: 'Core',
-        items: [
-          { text: 'Teams', icon: 'groups', path: '/admin/teams', description: 'Teams and rosters' },
-          { text: 'Events', icon: 'event', path: '/admin/events', description: 'Schedule and calendar' },
-          { text: 'Payments', icon: 'receipt_long', path: '/admin/payments', description: 'Fees and collections' },
-        ],
-      },
-      {
-        label: 'Programs',
-        items: [
-          { text: 'Tryouts', icon: 'emoji_events', path: '/admin/tryouts', description: 'Registration and evaluation' },
-          { text: 'Travel', icon: 'flight', path: '/admin/travel', description: 'Trip planning' },
-          { text: 'Uniforms', icon: 'checkroom', path: '/admin/uniforms', description: 'Kits and gear' },
-        ],
-      },
-    ],
-  },
-]
+
 
 // ============================================================================
 // COACH MENU STRUCTURE
 // Design goal: Help me run practices, games, and rosters efficiently.
 // ============================================================================
-const coachNavSections: { label: string; route?: string; groups: NavGroup[] }[] = [
-  {
-    label: 'Dashboard',
-    route: '/portal/dashboard',
-    groups: [
-      {
-        label: '',
-        items: [
-          { text: 'Dashboard', icon: 'dashboard', path: '/portal/dashboard', description: 'Today\'s overview' },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'Teams',
-    route: '/portal/children',
-    groups: [
-      {
-        label: 'Teams',
-        items: [
-          { text: 'Teams', icon: 'groups', path: '/portal/children', description: 'Teams and roster access' },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'Schedule',
-    route: '/portal/calendar',
-    groups: [
-      {
-        label: 'Schedule',
-        items: [
-          { text: 'Calendar', icon: 'calendar_month', path: '/portal/calendar', description: 'View schedule' },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'Attendance',
-    route: '/portal/calendar',
-    groups: [
-      {
-        label: 'Tracking',
-        items: [
-          { text: 'Take Attendance', icon: 'how_to_reg', path: '/portal/calendar', description: 'Use events to manage attendance', disabled: true },
-          { text: 'Attendance History', icon: 'history', path: '/portal/calendar', description: 'Use events to review attendance', disabled: true },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'More',
-    groups: [
-      {
-        label: 'Additional',
-        items: [
-          { text: 'Tryouts', icon: 'emoji_events', path: '/portal/tryouts', description: 'Tryout sessions' },
-          { text: 'Travel', icon: 'flight', path: '/portal/travel', description: 'Trip details' },
-          { text: 'Messages', icon: 'mail', path: '/portal/messages', description: 'Communications' },
-          { text: 'Settings', icon: 'settings', path: '/portal/settings', description: 'Preferences' },
-        ],
-      },
-    ],
-  },
-]
+
 
 // ============================================================================
 // PARENT MENU STRUCTURE
 // Design goal: Tell me where my kid needs to be, what I owe, and what I need to do.
 // ============================================================================
-const parentNavSections: { label: string; route?: string; groups: NavGroup[] }[] = [
-  {
-    label: 'Dashboard',
-    route: '/portal/dashboard',
-    groups: [
-      {
-        label: '',
-        items: [
-          { text: 'Dashboard', icon: 'dashboard', path: '/portal/dashboard', description: 'Daily overview' },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'Schedule',
-    route: '/portal/calendar',
-    groups: [
-      {
-        label: 'Schedule',
-        items: [
-          { text: 'Schedule', icon: 'calendar_month', path: '/portal/calendar', description: 'View all events' },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'Travel',
-    route: '/portal/travel',
-    groups: [
-      {
-        label: 'Travel',
-        items: [
-          { text: 'Travel', icon: 'flight', path: '/portal/travel', description: 'Trip information' },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'Messages',
-    route: '/portal/messages',
-    groups: [
-      {
-        label: 'Messages',
-        items: [
-          { text: 'Messages', icon: 'mail', path: '/portal/messages', description: 'Announcements and chat' },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'Payments',
-    route: '/portal/payments',
-    groups: [
-      {
-        label: 'Payments',
-        items: [
-          { text: 'Fees Due', icon: 'receipt_long', path: '/portal/payments', description: 'Outstanding fees' },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'More',
-    groups: [
-      {
-        label: 'Programs',
-        items: [
-          { text: 'My Teams', icon: 'groups', path: '/portal/children', description: 'Your children\'s teams' },
-          { text: 'Join a Team', icon: 'group_add', path: '/portal/join', description: 'Enter an invite code' },
-          { text: 'Tryouts', icon: 'emoji_events', path: '/portal/tryouts', description: 'Tryout sessions' },
-        ],
-      },
-      {
-        label: 'Additional',
-        items: [
-          { text: 'Uniforms', icon: 'checkroom', path: '/portal/uniforms', description: 'Uniform orders' },
-          { text: 'Settings', icon: 'settings', path: '/portal/settings', description: 'Preferences' },
-        ],
-      },
-    ],
-  },
-]
+
 
 type PortalRole = 'org_admin' | 'coach' | 'parent'
 
@@ -244,7 +51,212 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
   const { profile, hasAnyRole, isOrgAdmin } = useAuth()
   const { currentOrganization } = useOrganization()
   const { resolvedTheme } = useTheme()
+  const t = useT()
   const location = useLocation()
+
+  // ============================================================================
+  // NAVIGATION STRUCTURES (Memoized with t support)
+  // ============================================================================
+  
+  const orgAdminNavSections = useMemo(() => [
+    {
+      label: 'Dashboard',
+      route: '/admin',
+      groups: [
+        {
+          label: '',
+          items: [
+            { text: 'Admin Dashboard', icon: 'dashboard', path: '/admin', description: 'Organization overview' },
+          ],
+        },
+      ],
+    },
+    {
+      label: 'Organization',
+      route: '/admin/organization',
+      groups: [
+        {
+          label: 'Configuration',
+          items: [
+            { text: 'Organization Settings', icon: 'settings', path: '/admin/organization', description: 'Organization info' },
+            { text: 'Users', icon: 'admin_panel_settings', path: '/admin/organization/users', description: 'Access and roles' },
+            { text: 'Billing', icon: 'credit_card', path: '/admin/organization/billing', description: 'Plan and billing' },
+          ],
+        },
+      ],
+    },
+    {
+      label: 'Operations',
+      route: '/admin/teams',
+      groups: [
+        {
+          label: 'Core',
+          items: [
+            { text: 'Teams', icon: 'groups', path: '/admin/teams', description: 'Teams and rosters' },
+            { text: 'Events', icon: 'event', path: '/admin/events', description: 'Schedule and calendar' },
+            { text: 'Payments', icon: 'receipt_long', path: '/admin/payments', description: 'Fees and collections' },
+          ],
+        },
+        {
+          label: 'Programs',
+          items: [
+            { text: 'Tryouts', icon: 'emoji_events', path: '/admin/tryouts', description: 'Registration and evaluation' },
+            { text: 'Travel', icon: 'flight', path: '/admin/travel', description: 'Trip planning' },
+            { text: 'Uniforms', icon: 'checkroom', path: '/admin/uniforms', description: 'Kits and gear' },
+          ],
+        },
+      ],
+    },
+  ], [t])
+
+  const coachNavSections = useMemo(() => [
+    {
+      label: 'Dashboard',
+      route: '/portal/dashboard',
+      groups: [
+        {
+          label: '',
+          items: [
+            { text: 'Dashboard', icon: 'dashboard', path: '/portal/dashboard', description: 'Today\'s overview' },
+          ],
+        },
+      ],
+    },
+    {
+      label: 'Teams',
+      route: '/portal/children',
+      groups: [
+        {
+          label: 'Teams',
+          items: [
+            { text: 'Teams', icon: 'groups', path: '/portal/children', description: 'Teams and roster access' },
+          ],
+        },
+      ],
+    },
+    {
+      label: 'Schedule',
+      route: '/portal/calendar',
+      groups: [
+        {
+          label: 'Schedule',
+          items: [
+            { text: 'Calendar', icon: 'calendar_month', path: '/portal/calendar', description: 'View schedule' },
+          ],
+        },
+      ],
+    },
+    {
+      label: 'Attendance',
+      route: '/portal/calendar',
+      groups: [
+        {
+          label: 'Tracking',
+          items: [
+            { text: 'Take Attendance', icon: 'how_to_reg', path: '/portal/calendar', description: 'Use events to manage attendance', disabled: true },
+            { text: 'Attendance History', icon: 'history', path: '/portal/calendar', description: 'Use events to review attendance', disabled: true },
+          ],
+        },
+      ],
+    },
+    {
+      label: 'More',
+      groups: [
+        {
+          label: 'Additional',
+          items: [
+            { text: 'Tryouts', icon: 'emoji_events', path: '/portal/tryouts', description: 'Tryout sessions' },
+            { text: 'Travel', icon: 'flight', path: '/portal/travel', description: 'Trip details' },
+            { text: 'Messages', icon: 'mail', path: '/portal/messages', description: 'Communications' },
+            { text: 'Settings', icon: 'settings', path: '/portal/settings', description: 'Preferences' },
+          ],
+        },
+      ],
+    },
+  ], [t])
+
+  const parentNavSections = useMemo(() => [
+    {
+      label: 'Dashboard',
+      route: '/portal/dashboard',
+      groups: [
+        {
+          label: '',
+          items: [
+            { text: 'Dashboard', icon: 'dashboard', path: '/portal/dashboard', description: 'Daily overview' },
+          ],
+        },
+      ],
+    },
+    {
+      label: 'Schedule',
+      route: '/portal/calendar',
+      groups: [
+        {
+          label: 'Schedule',
+          items: [
+            { text: 'Schedule', icon: 'calendar_month', path: '/portal/calendar', description: 'View all events' },
+          ],
+        },
+      ],
+    },
+    {
+      label: 'Travel',
+      route: '/portal/travel',
+      groups: [
+        {
+          label: 'Travel',
+          items: [
+            { text: 'Travel', icon: 'flight', path: '/portal/travel', description: 'Trip information' },
+          ],
+        },
+      ],
+    },
+    {
+      label: 'Messages',
+      route: '/portal/messages',
+      groups: [
+        {
+          label: 'Messages',
+          items: [
+            { text: 'Messages', icon: 'mail', path: '/portal/messages', description: 'Announcements and chat' },
+          ],
+        },
+      ],
+    },
+    {
+      label: 'Payments',
+      route: '/portal/payments',
+      groups: [
+        {
+          label: 'Payments',
+          items: [
+            { text: 'Fees Due', icon: 'receipt_long', path: '/portal/payments', description: 'Outstanding fees' },
+          ],
+        },
+      ],
+    },
+    {
+      label: 'More',
+      groups: [
+        {
+          label: 'Programs',
+          items: [
+            { text: 'My Teams', icon: 'groups', path: '/portal/children', description: t('portal.navigation.yourChildrenTeams') },
+            { text: 'Join a Team', icon: 'group_add', path: '/portal/join', description: 'Enter an invite code' },
+            { text: 'Tryouts', icon: 'emoji_events', path: '/portal/tryouts', description: 'Tryout sessions' },
+          ],
+        },
+        {
+          label: 'Additional',
+          items: [
+            { text: 'Uniforms', icon: 'checkroom', path: '/portal/uniforms', description: 'Uniform orders' },
+            { text: 'Settings', icon: 'settings', path: '/portal/settings', description: 'Preferences' },
+          ],
+        },
+      ],
+    },
+  ], [t])
   
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)

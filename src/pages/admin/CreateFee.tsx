@@ -4,6 +4,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { useAuth } from '../../hooks/useAuth'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import { useT } from '../../i18n/useI18n'
 import { getTeams, getTeamDetails, getTeamRoster } from '../../data/services/teamsService'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { 
@@ -36,6 +37,7 @@ export default function CreateFee() {
   const [error, setError] = useState<string | null>(null)
 
   const { currentOrganization } = useOrganization()
+  const t = useT()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
@@ -151,7 +153,7 @@ export default function CreateFee() {
         if (error) throw error
       } else {
         if (!data.child_id) {
-          setError('Select a child or apply to all')
+          setError(t('errors.selectChildOrApplyToAll'))
           setSaving(false)
           return
         }

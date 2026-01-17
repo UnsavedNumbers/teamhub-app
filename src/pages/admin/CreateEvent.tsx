@@ -5,6 +5,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { useAuth } from '../../hooks/useAuth'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import { useT } from '../../i18n/useI18n'
 import { getTeams, getTeamDetails } from '../../data/services/teamsService'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { supabase } from '../../lib/supabase'
@@ -36,6 +37,7 @@ export default function CreateEvent() {
   const [showRecurring, setShowRecurring] = useState(false)
 
   const { currentOrganization } = useOrganization()
+  const t = useT()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
@@ -270,13 +272,13 @@ export default function CreateEvent() {
                          control={control} 
                          rules={{ required: watchRSVPEnabled ? 'RSVP type is required' : false }}
                          render={({ field }) => (
-                           <Select 
-                             {...field} 
-                             label="RSVP Type" 
-                             options={[
-                               {value: 'general', label: 'General RSVP (Head Count)'},
-                               {value: 'athlete', label: 'Athlete RSVP (Per Child)'}
-                             ]} 
+                          <Select 
+                            {...field} 
+                            label="RSVP Type" 
+                            options={[
+                              {value: 'general', label: t('admin.events.rsvpType.general')},
+                              {value: 'athlete', label: t('admin.events.rsvpType.athlete')}
+                            ]}
                              required
                              error={!!errors.rsvp_type}
                              helperText={errors.rsvp_type?.message}

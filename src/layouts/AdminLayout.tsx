@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useOrganization } from '../contexts/OrganizationContext'
@@ -6,46 +6,11 @@ import { useLicense } from '../hooks/useLicense'
 import { LicenseWarningBanner } from '../components/admin/LicenseWarningBanner'
 import AdminLoadingSpinner from '../components/admin/AdminLoadingSpinner'
 import { usePlatformAdminTheme } from '../hooks/usePlatformAdminTheme'
-
-// Navigation menu items - converted to Material Symbols
-const menuSections = [
-  {
-    label: 'Overview',
-    items: [
-      { text: 'Dashboard', icon: 'dashboard', path: '/admin', requiresOrg: false },
-      { text: 'Organization', icon: 'business', path: '/admin/organization', requiresOrg: false },
-    ],
-  },
-  {
-    label: 'Management',
-    items: [
-      { text: 'Teams', icon: 'groups', path: '/admin/teams', requiresOrg: true },
-      { text: 'Families', icon: 'home', path: '/admin/families', requiresOrg: true },
-      { text: 'Children', icon: 'child_care', path: '/admin/children', requiresOrg: true },
-    ],
-  },
-  {
-    label: 'Operations',
-    items: [
-      { text: 'Payments', icon: 'credit_card', path: '/admin/payments', requiresOrg: true },
-      { text: 'Events', icon: 'event', path: '/admin/events', requiresOrg: true },
-      { text: 'Attendance', icon: 'how_to_reg', path: '/admin/attendance', requiresOrg: true },
-      { text: 'Uniforms', icon: 'checkroom', path: '/admin/uniforms', requiresOrg: true },
-      { text: 'Travel', icon: 'flight', path: '/admin/travel', requiresOrg: true },
-      { text: 'Tryouts', icon: 'emoji_events', path: '/admin/tryouts', requiresOrg: true },
-    ],
-  },
-  {
-    label: 'Communication',
-    items: [
-      { text: 'Messages', icon: 'mail', path: '/admin/messages', requiresOrg: true },
-      { text: 'Reports', icon: 'bar_chart', path: '/admin/reports', requiresOrg: true },
-    ],
-  },
-]
+import { useT } from '../i18n/useI18n'
 
 export default function AdminLayout() {
   const { loaded: themeLoaded } = usePlatformAdminTheme()
+  const t = useT()
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
@@ -54,6 +19,45 @@ export default function AdminLayout() {
   const { summary } = useLicense(currentOrganization?.id)
 
   const hasOrg = !!currentOrganization?.id
+
+  // Navigation menu items - converted to Material Symbols
+  const menuSections = useMemo(() => [
+    {
+      label: 'Overview',
+      items: [
+        { text: 'Dashboard', icon: 'dashboard', path: '/admin', requiresOrg: false },
+        { text: 'Organization', icon: 'business', path: '/admin/organization', requiresOrg: false },
+      ],
+    },
+    {
+      label: 'Management',
+      items: [
+        { text: 'Teams', icon: 'groups', path: '/admin/teams', requiresOrg: true },
+        { text: 'Families', icon: 'home', path: '/admin/families', requiresOrg: true },
+        { text: t('admin.navigation.children'), icon: 'child_care', path: '/admin/children', requiresOrg: true },
+      ],
+    },
+    {
+      label: 'Operations',
+      items: [
+        { text: 'Payments', icon: 'credit_card', path: '/admin/payments', requiresOrg: true },
+        { text: 'Events', icon: 'event', path: '/admin/events', requiresOrg: true },
+        { text: 'Attendance', icon: 'how_to_reg', path: '/admin/attendance', requiresOrg: true },
+        { text: 'Uniforms', icon: 'checkroom', path: '/admin/uniforms', requiresOrg: true },
+        { text: 'Travel', icon: 'flight', path: '/admin/travel', requiresOrg: true },
+        { text: 'Tryouts', icon: 'emoji_events', path: '/admin/tryouts', requiresOrg: true },
+      ],
+    },
+    {
+      label: 'Communication',
+      items: [
+        { text: 'Messages', icon: 'mail', path: '/admin/messages', requiresOrg: true },
+        { text: 'Reports', icon: 'bar_chart', path: '/admin/reports', requiresOrg: true },
+      ],
+    },
+  ], [t])
+
+
 
   const handleSignOut = async () => {
     await signOut()

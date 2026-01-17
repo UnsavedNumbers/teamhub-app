@@ -32,13 +32,13 @@ interface PlatformDataTableProps<T extends { id: string }> {
  * Reusable data table with server-side pagination for platform admin pages
  */
 export default function PlatformDataTable<T extends { id: string }>({
-  columns,
-  rows,
+  columns = [],
+  rows = [],
   loading = false,
   emptyMessage = 'No data available',
-  page,
-  rowsPerPage,
-  totalCount,
+  page = 0,
+  rowsPerPage = 10,
+  totalCount = 0,
   onPageChange,
   onRowsPerPageChange,
   onRowClick,
@@ -46,8 +46,12 @@ export default function PlatformDataTable<T extends { id: string }>({
   order = 'asc',
   onSort,
 }: PlatformDataTableProps<T>) {
+  // Defensive guard against null (if default didn't catch it due to explicit null pass)
+  const safeRows = rows || []
+  const safeColumns = columns || []
+
   const totalPages = Math.ceil(totalCount / rowsPerPage)
-  const startRow = page * rowsPerPage + 1
+  const startRow = totalCount === 0 ? 0 : page * rowsPerPage + 1
   const endRow = Math.min((page + 1) * rowsPerPage, totalCount)
 
   const handleSort = (columnId: string) => {
@@ -66,7 +70,7 @@ export default function PlatformDataTable<T extends { id: string }>({
     )
   }
 
-  if (rows.length === 0) {
+  if (safeRows.length === 0) {
     return (
       <div className="pa-card">
         <div className="pa-empty">
@@ -87,7 +91,7 @@ export default function PlatformDataTable<T extends { id: string }>({
         <table className="pa-table" style={{ width: '100%' }}>
           <thead>
             <tr>
-              {columns.map((column) => (
+              {safeColumns.map((column) => (
                 <th
                   key={String(column.id)}
                   className={`${column.sortable && onSort ? 'pa-sortable' : ''} ${
@@ -120,14 +124,14 @@ export default function PlatformDataTable<T extends { id: string }>({
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
+            {safeRows.map((row) => (
               <tr
                 key={row.id}
                 className={onRowClick ? 'pa-clickable' : ''}
                 onClick={() => onRowClick?.(row)}
                 style={{ cursor: onRowClick ? 'pointer' : 'default' }}
               >
-                {columns.map((column) => (
+                {safeColumns.map((column) => (
                   <td
                     key={String(column.id)}
                     style={{ textAlign: column.align || 'left' }}

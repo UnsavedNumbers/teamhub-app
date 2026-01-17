@@ -9,6 +9,7 @@ import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typogr
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
+import { useT } from '../i18n/useI18n'
 
 interface Child {
   id: string
@@ -17,6 +18,7 @@ interface Child {
 }
 
 export default function Uniforms() {
+  const t = useT()
   const [children, setChildren] = useState<Child[]>([])
   const [kits, setKits] = useState<UniformKit[]>([])
   const [loading, setLoading] = useState(true)
@@ -72,9 +74,9 @@ export default function Uniforms() {
           </div>
         ) : children.length === 0 ? (
           <Card className="text-center py-12">
-            <p className="text-slate-500 dark:text-slate-400 mb-6">Add children first to manage uniforms.</p>
+            <p className="text-slate-500 dark:text-slate-400 mb-6">{t('portal.uniforms.addChildrenFirst')}</p>
             <Button variant="primary" as={Link} to="/portal/children">
-              Add
+              {t('portal.uniforms.add')}
             </Button>
           </Card>
         ) : kits.length === 0 ? (

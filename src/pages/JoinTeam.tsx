@@ -9,6 +9,7 @@ import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typogr
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
+import { useT } from '../i18n/useI18n'
 
 interface Team {
   id: string
@@ -27,6 +28,7 @@ interface Season {
 }
 
 export default function JoinTeam() {
+  const t = useT()
   const [searchParams] = useSearchParams()
   const [inviteCode, setInviteCode] = useState(searchParams.get('code') || '')
   const [team, setTeam] = useState<Team | null>(null)
@@ -185,22 +187,22 @@ export default function JoinTeam() {
 
                 {children.length === 0 ? (
                   <div className="text-center py-4">
-                    <p className="text-slate-500 dark:text-slate-400 mb-6">Add a child first.</p>
+                    <p className="text-slate-500 dark:text-slate-400 mb-6">{t('portal.joinTeam.addChildFirst')}</p>
                     <Button variant="primary" as={Link} to="/portal/children">
-                      Add
+                      {t('portal.joinTeam.add')}
                     </Button>
                   </div>
                 ) : (
                   <>
                     <div className="space-y-4 mb-6">
                       <div>
-                        <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Select Child</label>
+                        <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">{t('portal.joinTeam.selectChild')}</label>
                         <select
                           value={selectedChild}
                           onChange={(e) => setSelectedChild(e.target.value)}
                           className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white"
                         >
-                          <option value="">Choose a child</option>
+                          <option value="">{t('portal.joinTeam.chooseChild')}</option>
                           {children.map((c) => (
                             <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>
                           ))}
@@ -241,7 +243,7 @@ export default function JoinTeam() {
                   <Icon name="check_circle" size="text-4xl" className="text-emerald-500 dark:text-emerald-400" />
                 </div>
                 <CardTitle className="mb-2">Team joined</CardTitle>
-                <p className="text-slate-500 dark:text-slate-400 mb-6">Your child has been added to {team?.name}.</p>
+                <p className="text-slate-500 dark:text-slate-400 mb-6">{t('portal.joinTeam.success')} {team?.name}.</p>
                 <Button variant="primary" onClick={() => navigate('/portal/dashboard')}>
                   Go to Dashboard
                 </Button>

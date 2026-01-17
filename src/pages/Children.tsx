@@ -7,6 +7,7 @@ import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typogr
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
+import { useT } from '../i18n/useI18n'
 
 interface Child {
   id: string
@@ -16,6 +17,7 @@ interface Child {
 }
 
 export default function Children() {
+  const t = useT()
   const [children, setChildren] = useState<Child[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -109,10 +111,10 @@ export default function Children() {
             <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full mb-4">
               <Icon name="group" size="text-4xl" className="text-slate-400" />
             </div>
-            <CardTitle className="mb-2">No children added</CardTitle>
-            <p className="text-slate-500 dark:text-slate-400 mb-6">Add children to register them for teams.</p>
+            <CardTitle className="mb-2">{t('portal.children.noChildren')}</CardTitle>
+            <p className="text-slate-500 dark:text-slate-400 mb-6">{t('portal.children.addChildren')}</p>
             <Button variant="primary" onClick={() => setShowModal(true)}>
-              Add
+              {t('portal.children.add')}
             </Button>
           </Card>
         ) : (

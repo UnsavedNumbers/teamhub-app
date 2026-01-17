@@ -6,6 +6,7 @@
  */
 
 import { supabase } from '../../lib/supabase'
+import { t } from '../../i18n'
 import type { UserContext } from '../fake/userContext'
 import type { 
   EventRSVPConfig, 
@@ -229,7 +230,7 @@ export async function setAthleteRSVP(
     if (!eventId || !childId) {
       return {
         data: null,
-        error: new Error('Event ID and Child ID are required')
+        error: new Error(t('errors.eventIdAndChildIdRequired'))
       }
     }
 

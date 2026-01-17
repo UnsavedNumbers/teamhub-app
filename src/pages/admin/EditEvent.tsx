@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import { useT } from '../../i18n/useI18n'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { supabase } from '../../lib/supabase'
 import { 
@@ -405,11 +406,11 @@ export default function EditEvent() {
                          render={({ field }) => (
                            <Select 
                              {...field} 
-                             label="RSVP Type" 
-                             options={[
-                               {value: 'general', label: 'General RSVP (Head Count)'},
-                               {value: 'athlete', label: 'Athlete RSVP (Per Child)'}
-                             ]} 
+                            label="RSVP Type" 
+                            options={[
+                              {value: 'general', label: t('admin.events.rsvpType.general')},
+                              {value: 'athlete', label: t('admin.events.rsvpType.athlete')}
+                            ]}
                              required
                              error={!!errors.rsvp_type}
                              helperText={errors.rsvp_type?.message}

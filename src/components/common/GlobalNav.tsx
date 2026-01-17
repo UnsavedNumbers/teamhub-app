@@ -1,37 +1,49 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import MegaMenu, { type NavGroup } from './MegaMenu'
 import ThemeSwitcher from './ThemeSwitcher'
 import UserContextDropdown from './UserContextDropdown'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import { useT } from '../../i18n/useI18n'
 
-// Navigation configuration for Organization Admin
-const adminNavSections: { label: string; groups: NavGroup[] }[] = [
-  {
-    label: 'Overview',
-    groups: [
-      {
-        label: '',
-        items: [
-          { text: 'Dashboard', icon: 'dashboard', path: '/admin', description: 'Organization overview' },
-          { text: 'Organization', icon: 'business', path: '/admin/organization', description: 'Settings & billing' },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'Management',
-    groups: [
-      {
-        label: 'Teams & People',
-        items: [
-          { text: 'Teams', icon: 'groups', path: '/admin/teams', description: 'Manage teams & rosters' },
-          { text: 'Families', icon: 'home', path: '/admin/families', description: 'Family management' },
-          { text: 'Children', icon: 'child_care', path: '/admin/children', description: 'Player registry' },
-        ],
-      },
-    ],
-  },
+export default function GlobalNav({ variant }: GlobalNavProps) {
+  const { currentOrganization } = useOrganization()
+  const t = useT()
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const isAdmin = variant === 'admin'
+  const hasOrg = !!currentOrganization?.id
+
+  // Navigation configuration for Organization Admin
+  const adminNavSections: { label: string; groups: NavGroup[] }[] = useMemo(() => [
+    {
+      label: 'Overview',
+      groups: [
+        {
+          label: '',
+          items: [
+            { text: 'Dashboard', icon: 'dashboard', path: '/admin', description: 'Organization overview' },
+            { text: 'Organization', icon: 'business', path: '/admin/organization', description: 'Settings & billing' },
+          ],
+        },
+      ],
+    },
+    {
+      label: 'Management',
+      groups: [
+        {
+          label: 'Teams & People',
+          items: [
+            { text: 'Teams', icon: 'groups', path: '/admin/teams', description: 'Manage teams & rosters' },
+            { text: 'Families', icon: 'home', path: '/admin/families', description: 'Family management' },
+            { text: t('admin.navigation.children'), icon: 'child_care', path: '/admin/children', description: 'Player registry' },
+          ],
+        },
+      ],
+    },
   {
     label: 'Operations',
     groups: [
@@ -127,33 +139,74 @@ const platformAdminNavSections: { label: string; groups: NavGroup[] }[] = [
         ],
       },
     ],
-  },
-]
+    },
+  ], [t])
 
-interface GlobalNavProps {
-  variant: 'admin' | 'platform-admin'
-}
-
-/**
- * GlobalNav - Main navigation bar with mega-menu functionality
- * 
- * Features:
- * - Translucent glass-style background with backdrop blur
- * - Mega-menu dropdowns for navigation sections
- * - Theme switcher, notifications, and user context
- * - Fully accessible with keyboard navigation and ARIA roles
- * - Responsive with mobile hamburger menu
- */
-export default function GlobalNav({ variant }: GlobalNavProps) {
-  const { currentOrganization } = useOrganization()
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  // Navigation configuration for Platform Admin
+  const platformAdminNavSections: { label: string; groups: NavGroup[] }[] = [
+    {
+      label: 'Overview',
+      groups: [
+        {
+          label: '',
+          items: [
+            { text: 'Dashboard', icon: 'dashboard', path: '/platform-admin', description: 'Platform metrics' },
+          ],
+        },
+      ],
+    },
+    {
+      label: 'Organizations',
+      groups: [
+        {
+          label: '',
+          items: [
+            { text: 'Organizations', icon: 'apartment', path: '/platform-admin/organizations', description: 'All organizations' },
+          ],
+        },
+      ],
+    },
+    {
+      label: 'Users',
+      groups: [
+        {
+          label: '',
+          items: [
+            { text: 'Users', icon: 'group', path: '/platform-admin/users', description: 'All platform users' },
+            { text: 'Platform Admins', icon: 'admin_panel_settings', path: '/platform-admin/admins', description: 'Admin management' },
+          ],
+        },
+      ],
+    },
+    {
+      label: 'Finance',
+      groups: [
+        {
+          label: '',
+          items: [
+            { text: 'Payments', icon: 'credit_card', path: '/platform-admin/payments', description: 'Payment transactions' },
+            { text: 'Fees', icon: 'receipt_long', path: '/platform-admin/fees', description: 'Fee schedules' },
+          ],
+        },
+      ],
+    },
+    {
+      label: 'System',
+      groups: [
+        {
+          label: '',
+          items: [
+            { text: 'Event Log', icon: 'history', path: '/platform-admin/audit', description: 'Audit trail' },
+            { text: 'Feature Flags', icon: 'flag', path: '/platform-admin/feature-flags', description: 'Feature toggles' },
+            { text: 'Structure', icon: 'account_tree', path: '/platform-admin/structure', description: 'Data model' },
+          ],
+        },
+      ],
+    },
+  ]
 
   const isAdmin = variant === 'admin'
   const navSections = isAdmin ? adminNavSections : platformAdminNavSections
-  const hasOrg = !!currentOrganization?.id
 
   // Filter nav items based on org requirement (admin variant only)
   const getFilteredGroups = useCallback((groups: NavGroup[]): NavGroup[] => {

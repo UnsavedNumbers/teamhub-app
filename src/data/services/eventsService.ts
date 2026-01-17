@@ -10,6 +10,7 @@
 
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
+import { t } from '../../i18n'
 import type { UserContext, PermissionSet } from '../fake/userContext'
 import { calculatePermissions, filterEventsByRole } from '../fake/userContext'
 import type { CalendarEvent, EventRSVP, EventLocation, RSVPStatus } from '../../types/calendar'
@@ -477,7 +478,7 @@ export async function updateRSVP(
         // Check permissions - parents can only update their own children's RSVPs
         const permissions = buildPermissions(context)
         if (!permissions.canViewAllOrgData && !permissions.ownedChildIds.includes(childId)) {
-            return { data: null, error: new Error('Unauthorized: Cannot update RSVP for this child') }
+            return { data: null, error: new Error(t('errors.cannotUpdateRsvp')) }
         }
 
         // In fake data mode, we simulate the update by returning the updated RSVP
