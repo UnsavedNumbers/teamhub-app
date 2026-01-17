@@ -1,151 +1,221 @@
+
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
-import { getEvents } from '../data/services/eventsService'
-import { getPrimarySportFromEvents, getSportFromEvent, type SportInfo } from '../utils/sportContext'
+import { getEvents, updateRSVP } from '../data/services/eventsService'
+import { getChildren } from '../data/services/familyService'
+import { 
+    CalendarEvent, 
+    CalendarViewMode, 
+    CalendarFilters, 
+    formatEventDate, 
+    formatEventTimeRange, 
+    formatEventLocation,
+    getEventLocationMapsUrl,
+    RSVPStatus 
+} from '../types/calendar'
 import PortalLayout from '../components/portal/PortalLayout'
-import PortalHeader from '../components/portal/PortalHeader'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
 import { SportHero } from '../components/portal/SportHero'
-import { SportCardImage } from '../components/portal/SportCardImage'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
+import CalendarGrid from '../components/calendar/CalendarGrid'
+import EventFilters from '../components/calendar/EventFilters'
+import RSVPButton from '../components/calendar/RSVPButton'
+import { getSportFromEvent, type SportInfo } from '../utils/sportContext'
+import { useI18n } from '../i18n/useI18n'
 
-type ViewMode = 'agenda' | 'week' | 'month'
-
-interface DisplayEvent {
-  id: string
-  title: string
-  type: string
-  start_time: string
-  end_time: string
-  arrival_time: string | null
-  location: string | null
-  notes: string | null
-  team: { name: string; id?: string }
-  team_id?: string
+// Default filters
+const defaultFilters: CalendarFilters = {
+    childIds: [],
+    teamIds: [],
+    eventTypes: [],
+    startDate: new Date(),
+    endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+    showCancelled: false
 }
 
 export default function Calendar() {
-  const [events, setEvents] = useState<DisplayEvent[]>([])
-  const [loading, setLoading] = useState(true)
-  const [view, setView] = useState<ViewMode>('agenda')
-  const [selectedEvent, setSelectedEvent] = useState<DisplayEvent | null>(null)
-  const [primarySport, setPrimarySport] = useState<SportInfo | null>(null)
-  const [eventSports, setEventSports] = useState<Record<string, SportInfo | null>>({})
+  // I18n hook - will throw if I18nProvider is missing (correct behavior)
+  const { t } = useI18n()
+  
+  // Safe translation helper with fallbacks
+  // Wraps the t() function to handle missing keys gracefully
+  const safeT = (key: string, fallback: string = key): string => {
+    try {
+      const result = t(key as any, undefined)
+      // If translation returns the key itself (not found), use fallback
+      return result && result !== key ? result : fallback
+    } catch (error) {
+      // If translation throws, use fallback
+      console.warn(`Translation failed for key: ${key}`, error)
+      return fallback
+    }
+  }
 
+  const [events, setEvents] = useState<CalendarEvent[]>([])
+  const [filters, setFilters] = useState<CalendarFilters>(defaultFilters)
+  const [viewMode, setViewMode] = useState<CalendarViewMode>('agenda')
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [currentDate, setCurrentDate] = useState(new Date())
+  const [children, setChildren] = useState<any[]>([])
+  const [eventSports, setEventSports] = useState<Record<string, SportInfo | null>>({}) 
+  
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
-  const fetchEvents = useCallback(async () => {
+  const fetchData = useCallback(async () => {
+    if (!isReady) return
     setLoading(true)
     
-    const now = new Date()
-    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+    // Determine date range based on view
+    let start = new Date(currentDate)
+    let end = new Date(currentDate)
     
+    if (viewMode === 'month') {
+        start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
+        end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
+    } else {
+        // Agenda view gets next 30 days starting from current date
+        start = new Date(currentDate)
+        end = new Date(currentDate.getTime() + 30 * 24 * 60 * 60 * 1000)
+    }
+    
+    // Fetch user children for RSVP matching
+    const { data: childrenData } = await getChildren(context)
+    setChildren(childrenData)
+
     const { data, error } = await getEvents(context, {
-      startDate: now,
-      endDate: thirtyDaysFromNow,
-      includeCancelled: false,
-      limit: 50,
+      startDate: start,
+      endDate: end,
+      includeCancelled: filters.showCancelled,
+      // Pass other filters to service
     })
 
     if (error) {
       console.error('Error fetching events:', error)
       setEvents([])
     } else {
-      // Transform CalendarEvent to DisplayEvent format
-      const displayEvents: DisplayEvent[] = data.map(event => ({
-        id: event.id,
-        title: event.title,
-        type: event.type,
-        start_time: event.start_time,
-        end_time: event.end_time,
-        arrival_time: event.arrival_time ?? null,
-        location: event.event_location?.venue_name ?? null,
-        notes: event.notes ?? null,
-        team: { name: event.team?.name ?? 'Unknown Team', id: event.team?.id },
-        team_id: event.team_id,
-      }))
-      setEvents(displayEvents)
-      
-      // Load primary sport from events
-      getPrimarySportFromEvents(context, data).then(sport => {
-        if (sport) setPrimarySport(sport)
-      })
-      
-      // Load sports for individual events
-      const sportsMap: Record<string, SportInfo | null> = {}
-      Promise.all(
-        data.map(async (event) => {
-          if (event.team_id) {
-            const sport = await getSportFromEvent(context, event.id)
-            if (sport) sportsMap[event.id] = sport
-          }
-        })
-      ).then(() => setEventSports(sportsMap))
+        // filter in memory for event types if service doesn't support it yet
+        let filtered = data
+        if (filters.eventTypes.length > 0) {
+            filtered = filtered.filter(e => filters.eventTypes.includes(e.type))
+        }
+        setEvents(filtered)
+        
+        // Load sports for events
+        const sportsMap: Record<string, SportInfo | null> = {}
+        await Promise.all(
+          filtered.map(async (event) => {
+            if (event.id) {
+              const sport = await getSportFromEvent(context,event.id)
+              if (sport) sportsMap[event.id] = sport
+            }
+          })
+        )
+        setEventSports(sportsMap)
     }
     setLoading(false)
-  }, [context])
+  }, [context, isReady, currentDate, viewMode, filters])
 
   useEffect(() => {
-    if (!isReady) return
-    fetchEvents()
-  }, [isReady, fetchEvents])
+    fetchData()
+  }, [fetchData])
 
-  function formatDate(dateStr: string) {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      weekday: 'long', month: 'long', day: 'numeric'
-    })
+  const handleRSVPChange = async (eventId: string, childId: string, newStatus: RSVPStatus) => {
+      // Optimistic update
+      setEvents(prev => prev.map(e => {
+            if (e.id !== eventId) return e
+            const newRSVPs = e.rsvps ? [...e.rsvps] : []
+            const idx = newRSVPs.findIndex(r => r.child_id === childId)
+            const mockRSVP = { 
+                id: 'temp', 
+                event_id: eventId, 
+                child_id: childId, 
+                status: newStatus, 
+                responded_at: new Date().toISOString(), 
+                responded_by_user_id: context.userId, 
+                note: null, 
+                created_at: new Date().toISOString(), 
+                updated_at: new Date().toISOString() 
+            }
+            
+            if (idx >= 0) {
+                newRSVPs[idx] = { ...newRSVPs[idx], status: newStatus }
+            } else {
+                newRSVPs.push(mockRSVP)
+            }
+            return { ...e, rsvps: newRSVPs }
+      }))
+
+      // Update selected event if open
+      if (selectedEvent && selectedEvent.id === eventId) {
+          setSelectedEvent(prev => {
+              if(!prev) return null
+              const newRSVPs = prev.rsvps ? [...prev.rsvps] : []
+              const idx = newRSVPs.findIndex(r => r.child_id === childId)
+              if (idx >= 0) {
+                  newRSVPs[idx] = { ...newRSVPs[idx], status: newStatus }
+              } else {
+                  // If adding new RSVP
+                  newRSVPs.push({ 
+                    id: 'temp', 
+                    event_id: eventId, 
+                    child_id: childId, 
+                    status: newStatus, 
+                    responded_at: new Date().toISOString(), 
+                    responded_by_user_id: context.userId, 
+                    note: null, 
+                    created_at: new Date().toISOString(), 
+                    updated_at: new Date().toISOString() 
+                })
+              }
+              return { ...prev, rsvps: newRSVPs }
+          })
+      }
+
+      await updateRSVP(context, eventId, childId, newStatus)
   }
 
-  function formatTime(dateStr: string) {
-    return new Date(dateStr).toLocaleTimeString('en-US', {
-      hour: 'numeric', minute: '2-digit'
-    })
-  }
+  // Calculate sport info from events or defaulting
+  const sportInfo: SportInfo | null = events.length > 0 && events[0].team?.sport 
+    ? { name: events[0].team.sport.name, color: events[0].team.sport.color || '#3b82f6', icon: events[0].team.sport.icon || 'sports_soccer' } 
+    : { name: 'Sports', color: '#3b82f6', icon: 'sports_soccer' }
 
-  const typeColors: Record<string, string> = {
-    practice: 'border-l-[#137fec]',
-    game: 'border-l-emerald-500',
-    tournament: 'border-l-amber-500',
-    meeting: 'border-l-purple-500',
-    travel: 'border-l-cyan-500',
-  }
+  const mapUrl = selectedEvent ? getEventLocationMapsUrl(selectedEvent.event_location) : null
 
   return (
-    <>
-      <PortalHeader />
       <PortalLayout
         breadcrumbs={[
           { label: 'Home', path: '/portal/dashboard' },
-          { label: 'Schedule' },
+          { label: safeT('calendar.title', 'Calendar') },
         ]}
       >
         {/* Sport Hero Section */}
         <div className="-mx-6 mb-8">
-          <SportHero sport={primarySport} height="40vh">
+          <SportHero sport={sportInfo} height="35vh">
             <div className="max-w-[1200px] mx-auto px-6 pb-8">
               <div className="mb-8 flex items-end justify-between">
                 <div>
-                  <PageTitle className="text-white">Schedule</PageTitle>
+                  <PageTitle className="text-white">{safeT('calendar.title', 'Calendar')}</PageTitle>
                   <p className="text-white/80 text-lg font-light tracking-wide">
-                    View upcoming events and activities.
+                    {currentDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
                   </p>
                 </div>
-                <div className="flex gap-1 bg-white/10 dark:bg-slate-900/50 border border-white/20 dark:border-slate-700 rounded p-1">
-                  {(['agenda', 'week', 'month'] as ViewMode[]).map((v) => (
+                <div className="flex gap-1 bg-white/10 dark:bg-slate-900/50 border border-white/20 dark:border-slate-700 rounded p-1 backdrop-blur-sm">
+                  {(['agenda', 'week', 'month'] as CalendarViewMode[]).map((v) => (
                     <button
                       key={v}
-                      onClick={() => setView(v)}
+                      onClick={() => setViewMode(v)}
                       className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded transition-colors ${
-                        view === v
+                        viewMode === v
                           ? 'bg-[#137fec] text-white'
                           : 'text-white/80 dark:text-slate-400 hover:text-white dark:hover:text-white'
                       }`}
                     >
-                      {v}
+                      {safeT(`calendar.views.${v}`, v)}
                     </button>
                   ))}
                 </div>
@@ -154,106 +224,156 @@ export default function Calendar() {
           </SportHero>
         </div>
 
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
-          </div>
-        ) : events.length === 0 ? (
-          <Card className="text-center py-12">
-            <Icon name="event" size="text-4xl" className="text-slate-400 mb-4" />
-            <CardTitle className="mb-2">No events scheduled</CardTitle>
-            <p className="text-slate-500 dark:text-slate-400">Check back later for scheduled activities.</p>
-          </Card>
-        ) : view === 'agenda' ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {events.map((event) => (
-              <button
-                key={event.id}
-                onClick={() => setSelectedEvent(event)}
-                className="w-full text-left"
-              >
-                <Card className={`p-0 border-l-0 ${typeColors[event.type] || 'border-slate-300'} hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300 overflow-hidden h-full`}>
-                  <SportCardImage sport={eventSports[event.id] || null} height="aspect-[4/3] h-auto">
-                    <div className="flex flex-col justify-end h-full">
-                      <div className={`inline-block px-2 py-1 mb-2 text-xs font-black uppercase tracking-wider text-white border-l-4 ${typeColors[event.type] || 'border-l-slate-300'}`}>
-                        {new Date(event.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} • {formatTime(event.start_time)}
-                      </div>
-                      <CardTitle className="text-lg mb-1 text-white">{event.title}</CardTitle>
-                      <p className="text-xs font-bold uppercase tracking-widest text-white/80">{event.team.name}</p>
-                    </div>
-                  </SportCardImage>
-                </Card>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <Card className="text-center py-12">
-            <p className="text-slate-500 dark:text-slate-400">{view.charAt(0).toUpperCase() + view.slice(1)} view coming soon.</p>
-          </Card>
-        )}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="lg:col-span-1">
+                 <EventFilters filters={filters} onFiltersChange={setFilters} />
+                 
+                 {/* Mini Calendar Navigation could go here too */}
+                 <Card className="p-4">
+                     <div className="flex items-center justify-between mb-2">
+                         <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="p-1 hover:bg-slate-100 rounded">
+                             <Icon name="chevron_left" />
+                         </button>
+                         <span className="font-bold text-slate-700">
+                             {currentDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric'})}
+                         </span>
+                         <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="p-1 hover:bg-slate-100 rounded">
+                             <Icon name="chevron_right" />
+                         </button>
+                     </div>
+                     <button onClick={() => setCurrentDate(new Date())} className="w-full text-xs font-bold text-[#137fec] text-center py-1">
+                         Jump to Today
+                     </button>
+                 </Card>
+            </div>
+
+            <div className="lg:col-span-3">
+                {loading ? (
+                <div className="flex justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+                </div>
+                ) : (
+                    <CalendarGrid 
+                        events={events}
+                        eventSports={eventSports}
+                        viewMode={viewMode}
+                        currentDate={currentDate}
+                        onEventClick={setSelectedEvent}
+                        onDateChange={setCurrentDate}
+                    />
+                )}
+            </div>
+        </div>
 
       {/* Event Detail Modal */}
       {selectedEvent && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setSelectedEvent(null)}>
-            <div className="max-w-md w-full" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-              <Card className="p-6">
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <CardTitle className="mb-1">{selectedEvent.title}</CardTitle>
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400">{selectedEvent.team.name}</p>
-                </div>
-                <button onClick={() => setSelectedEvent(null)} className="text-slate-400 hover:text-slate-900 dark:hover:text-white">
-                  <Icon name="close" />
-                </button>
-              </div>
+            <div className="max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+              <Card className="p-0 overflow-hidden">
+                <div className={`h-2 w-full ${selectedEvent.is_cancelled ? 'bg-red-500' : 'bg-[#137fec]'}`} />
+                <div className="p-6">
+                    <div className="flex items-start justify-between mb-6">
+                        <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            {selectedEvent.is_cancelled && <span className="text-xs font-black text-red-600 bg-red-100 px-1.5 py-0.5 rounded">{safeT('calendar.event.cancelled', 'Cancelled').toUpperCase()}</span>}
+                             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{safeT(`calendar.eventTypes.${selectedEvent.type}`, selectedEvent.type)}</span>
+                        </div>
+                        <CardTitle className="mb-1 text-2xl">{selectedEvent.title}</CardTitle>
+                        <p className="text-xs font-bold uppercase tracking-widest text-[#137fec]">{selectedEvent.team?.name}</p>
+                        </div>
+                        <button onClick={() => setSelectedEvent(null)} className="text-slate-400 hover:text-slate-900 dark:hover:text-white p-2 hover:bg-slate-100 rounded-full transition-colors">
+                        <Icon name="close" />
+                        </button>
+                    </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Icon name="event" className="text-slate-400" />
-                  <div>
-                    <p className="font-bold text-slate-900 dark:text-white">{formatDate(selectedEvent.start_time)}</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">{formatTime(selectedEvent.start_time)} - {formatTime(selectedEvent.end_time)}</p>
-                  </div>
-                </div>
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                                <Icon name="event" className="text-slate-500" />
+                            </div>
+                            <div>
+                                <p className="font-bold text-slate-900 dark:text-white">{formatEventDate(selectedEvent.start_time, selectedEvent.timezone)}</p>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">{formatEventTimeRange(selectedEvent.start_time, selectedEvent.end_time, selectedEvent.timezone)}</p>
+                            </div>
+                        </div>
 
-                {selectedEvent.arrival_time && (
-                  <div className="flex items-center gap-3">
-                    <Icon name="schedule" className="text-amber-500" />
-                    <p className="font-bold text-slate-900 dark:text-white">Arrive by {formatTime(selectedEvent.arrival_time)}</p>
-                </div>
-              )}
+                        {selectedEvent.arrival_time && (
+                        <div className="flex items-center gap-3">
+                             <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center shrink-0">
+                                <Icon name="schedule" className="text-amber-500" />
+                             </div>
+                            <p className="font-bold text-slate-900 dark:text-white">
+                                {safeT('calendar.event.arriveBy', 'Arrive by {{time}}').replace('{{time}}', new Date(selectedEvent.arrival_time).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }))}
+                            </p>
+                        </div>
+                        )}
 
-              {selectedEvent.location && (
-                <div className="flex items-center gap-3">
-                    <Icon name="location_on" className="text-slate-400" />
-                    <p className="font-bold text-slate-900 dark:text-white">{selectedEvent.location}</p>
-                </div>
-              )}
+                        {(selectedEvent.event_location?.venue_name || selectedEvent.location) && (
+                        <div className="flex items-start gap-3">
+                             <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                                <Icon name="location_on" className="text-slate-500" />
+                             </div>
+                            <div className="flex-1">
+                                <p className="font-bold text-slate-900 dark:text-white text-sm">{selectedEvent.event_location?.venue_name || selectedEvent.location}</p>
+                                <p className="text-xs text-slate-500">{formatEventLocation(selectedEvent.event_location)}</p>
+                                {mapUrl && (
+                                    <a href={mapUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-[#137fec] hover:underline flex items-center gap-1 mt-1">
+                                        {safeT('calendar.event.getDirections', 'Get Directions')} <Icon name="open_in_new" size="text-[10px]" />
+                                    </a>
+                                )}
+                            </div>
+                        </div>
+                        )}
 
-              {selectedEvent.notes && (
-                  <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-                    <p className="text-sm text-slate-500 dark:text-slate-400">{selectedEvent.notes}</p>
-                </div>
-              )}
-            </div>
+                        {selectedEvent.notes && (
+                            <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+                                <p className="text-sm text-slate-500 dark:text-slate-400 whitespace-pre-wrap">{selectedEvent.notes}</p>
+                            </div>
+                        )}
 
-              <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    navigate(`/portal/events/${selectedEvent.id}`)
-                    setSelectedEvent(null)
-                  }}
-                  className="w-full"
-                >
-                  View Full Details & RSVP
-                </Button>
-              </div>
+                         {/* RSVP Section */}
+                        <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+                            <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white mb-3">{safeT('calendar.rsvp.yourResponse', 'Your Response')}</h4>
+                            {children.length === 0 ? (
+                                <p className="text-sm text-slate-500 italic">No children connected to account.</p>
+                            ) : (
+                                <div className="space-y-3">
+                                    {children.map(child => {
+                                        const rsvp = selectedEvent.rsvps?.find(r => r.child_id === child.id)
+                                        return (
+                                            <RSVPButton 
+                                                key={child.id}
+                                                eventId={selectedEvent.id}
+                                                childId={child.id}
+                                                childName={child.first_name}
+                                                currentStatus={rsvp?.status || 'unknown'}
+                                                onStatusChange={(s) => handleRSVPChange(selectedEvent.id, child.id, s)}
+                                                disabled={selectedEvent.is_cancelled}
+                                            />
+                                        )
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+                        <Button
+                            variant="secondary"
+                            onClick={() => {
+                                navigate(`/portal/events/${selectedEvent.id}`)
+                                setSelectedEvent(null)
+                            }}
+                            className="w-full"
+                        >
+                        {safeT('common.viewDetails', 'View Details')}
+                        </Button>
+                    </div>
+                </div>
               </Card>
             </div>
         </div>
       )}
       </PortalLayout>
-    </>
   )
 }

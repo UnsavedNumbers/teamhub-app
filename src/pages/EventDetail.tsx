@@ -167,8 +167,6 @@ export default function EventDetail() {
   if (!event) return null
 
   return (
-    <>
-      <PortalHeader />
       <PortalLayout
         breadcrumbs={[
           { label: 'Home', path: '/portal/dashboard' },
@@ -261,6 +259,5 @@ export default function EventDetail() {
           </div>
         )}
       </PortalLayout>
-    </>
   )
 }

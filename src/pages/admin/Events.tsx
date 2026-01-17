@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
@@ -38,12 +39,13 @@ export default function Events() {
     setLoading(true)
     try {
       const now = new Date()
+      // Show fewer days or more? Let's keep 60 days for upcoming
       const sixtyDaysFromNow = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000)
       
       const { data, error } = await getEvents(context, {
         startDate: now,
         endDate: sixtyDaysFromNow,
-        includeCancelled: false,
+        includeCancelled: true, // Show cancelled events in admin too
       })
       
       if (error) {
@@ -56,11 +58,11 @@ export default function Events() {
       // Transform to display format
       const displayEvents: Event[] = data.map(event => ({
         id: event.id,
-        title: event.title,
+        title: event.title + (event.is_cancelled ? ' (CANCELLED)' : ''),
         type: event.type,
         start_time: event.start_time,
         end_time: event.end_time,
-        location: event.event_location?.name ?? null,
+        location: event.event_location?.venue_name || event.location || (event.event_location?.is_tbd ? 'TBD' : null),
         team: { name: event.team?.name ?? 'Unknown Team' },
       }))
 
@@ -79,11 +81,13 @@ export default function Events() {
     fetchEvents() 
   }, [fetchEvents])
 
-  const getTypeVariant = (type: string): 'info' | 'success' | 'warning' | 'neutral' => {
+  const getTypeVariant = (type: string): 'info' | 'success' | 'warning' | 'neutral' | 'error' => {
     switch (type) {
       case 'practice': return 'info'
       case 'game': return 'success'
       case 'tournament': return 'warning'
+      case 'tryout': return 'warning'
+      case 'blackout': return 'neutral'
       default: return 'neutral'
     }
   }

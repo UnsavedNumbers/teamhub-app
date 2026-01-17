@@ -68,10 +68,10 @@ typings/
 .yarn-integrity
 
 # dotenv environment variables files
-.env
+#.env
 .env.test
-.env.production
-.env.local
+#.env.production
+#.env.local
 .env.development.local
 .env.test.local
 .env.production.local

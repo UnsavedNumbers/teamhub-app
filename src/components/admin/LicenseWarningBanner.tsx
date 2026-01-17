@@ -1,4 +1,4 @@
-import type { LicenseSummary } from '../hooks/useLicense'
+import type { LicenseSummary } from '../../utils/licenseUtils'
 
 interface LicenseWarningBannerProps {
   summary: LicenseSummary

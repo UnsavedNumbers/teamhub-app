@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
-import { joinTeamFunction } from '../data/services/teamsService' // assuming this exists or similar
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import PortalLayout from '../components/portal/PortalLayout'

@@ -32,13 +32,15 @@ export default function UserContextDropdown() {
 
   const handleLogout = async () => {
     await signOut()
-    navigate('/login')
+    navigate('/portal/login')
   }
 
   const handleSwitchOrg = (orgId: string) => {
     switchOrganization(orgId)
     setIsOpen(false)
-    window.location.reload()
+    // Avoid full page reload (keeps SPA routing + avoids \"blue screen\" on bad paths)
+    // Navigate to a known-good portal route after switching org.
+    navigate('/portal/dashboard')
   }
 
   const initials = profile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'
@@ -50,10 +52,10 @@ export default function UserContextDropdown() {
   
   // Role-based links configuration
   const roleLinks = [
-    { role: 'parent', label: 'My Children', path: '/children', icon: 'family_restroom' as const },
-    { role: 'parent', label: 'Payment History', path: '/payments/history', icon: 'receipt_long' as const },
-    { role: 'coach', label: 'My Teams', path: '/teams', icon: 'sports_soccer' as const },
-    { role: 'org_admin', label: 'Organization Settings', path: '/org/settings', icon: 'admin_panel_settings' as const },
+    { role: 'parent', label: 'My Children', path: '/portal/children', icon: 'family_restroom' as const },
+    { role: 'parent', label: 'Payments', path: '/portal/payments', icon: 'receipt_long' as const },
+    { role: 'coach', label: 'Teams', path: '/portal/children', icon: 'sports_soccer' as const },
+    { role: 'org_admin', label: 'Organization Settings', path: '/admin/organization', icon: 'admin_panel_settings' as const },
   ]
 
   // Filter links based on current roles
@@ -134,7 +136,7 @@ export default function UserContextDropdown() {
                 {/* 3. Personal Settings */}
                 <div className="py-1 border-b border-slate-100 dark:border-slate-800">
                      <Link 
-                        to="/settings"
+                        to="/portal/settings"
                         onClick={() => setIsOpen(false)}
                         className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                     >
@@ -162,7 +164,7 @@ export default function UserContextDropdown() {
 
                 {/* 5. Support */}
                 <div className="py-1 border-b border-slate-100 dark:border-slate-800">
-                    <Link to="/help" onClick={() => setIsOpen(false)} className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
+                    <Link to="/portal/settings" onClick={() => setIsOpen(false)} className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
                         <span className="material-symbols-outlined mr-3 text-lg text-slate-400">help</span>
                         Help & Support
                     </Link>

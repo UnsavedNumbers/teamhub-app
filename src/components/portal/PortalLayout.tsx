@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import PortalHeader from './PortalHeader'
 
 interface Breadcrumb {
   label: string
@@ -8,9 +9,14 @@ interface Breadcrumb {
 interface PortalLayoutProps {
   children: React.ReactNode
   breadcrumbs?: Breadcrumb[]
+  /**
+   * Override the auto-detected role for navigation display.
+   * If not provided, the role is determined from the user's organization memberships.
+   */
+  forceRole?: 'org_admin' | 'coach' | 'parent'
 }
 
-export default function PortalLayout({ children, breadcrumbs }: PortalLayoutProps) {
+export default function PortalLayout({ children, breadcrumbs, forceRole }: PortalLayoutProps) {
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-slate-100 antialiased relative">
       {/* Background Field Markings (Grid) */}
@@ -21,6 +27,9 @@ export default function PortalLayout({ children, breadcrumbs }: PortalLayoutProp
           backgroundSize: '100px 100px',
         }}
       />
+
+      {/* Portal Nav with Mega Menu */}
+      <PortalHeader forceRole={forceRole} />
 
       <main className="max-w-[1200px] mx-auto px-6 py-8">
         {/* Breadcrumbs */}

@@ -302,6 +302,16 @@ export function getAllDemoUserOwnership(): UserDataOwnership[] {
         .filter((o): o is UserDataOwnership => o !== null)
 }
 
+// ============================================================================
+// Re-exports for convenience
+// ============================================================================
+
+/**
+ * Re-export getChildTeamMemberships from fakeTeams
+ * This maintains backwards compatibility with code expecting it from relationships.ts
+ */
+export { getChildTeamMemberships }
+
 // Run validation on module load (development only)
 if (import.meta.env?.DEV) {
     const result = validateAllRelationships()

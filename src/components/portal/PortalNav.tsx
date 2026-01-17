@@ -14,92 +14,48 @@ import { useTheme } from '../../hooks/useTheme'
 const orgAdminNavSections: { label: string; route?: string; groups: NavGroup[] }[] = [
   {
     label: 'Dashboard',
-    route: '/portal/org',
+    route: '/admin',
     groups: [
       {
         label: '',
         items: [
-          { text: 'Organization Health', icon: 'monitoring', path: '/portal/org', description: 'Active teams, unpaid fees, alerts' },
+          { text: 'Admin Dashboard', icon: 'dashboard', path: '/admin', description: 'Organization overview' },
         ],
       },
     ],
   },
   {
     label: 'Organization',
-    route: '/portal/org/settings',
+    route: '/admin/organization',
     groups: [
       {
         label: 'Configuration',
         items: [
-          { text: 'Organization Settings', icon: 'settings', path: '/portal/org/settings', description: 'Basic organization info' },
-          { text: 'Sports & Programs', icon: 'sports_soccer', path: '/portal/org/programs', description: 'Manage sports offerings' },
-          { text: 'Seasons', icon: 'event_note', path: '/portal/org/seasons', description: 'Season configuration' },
-          { text: 'Integrations', icon: 'extension', path: '/portal/org/integrations', description: 'Third-party connections' },
-          { text: 'Feature Availability', icon: 'toggle_on', path: '/portal/org/features', description: 'View enabled features' },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'People',
-    route: '/portal/org/people',
-    groups: [
-      {
-        label: 'Manage People',
-        items: [
-          { text: 'Parents', icon: 'family_restroom', path: '/portal/org/parents', description: 'Parent management' },
-          { text: 'Players', icon: 'child_care', path: '/portal/org/players', description: 'Player registry' },
-          { text: 'Coaches', icon: 'sports', path: '/portal/org/coaches', description: 'Coach management' },
-          { text: 'Users & Roles', icon: 'admin_panel_settings', path: '/portal/org/users', description: 'Access control' },
+          { text: 'Organization Settings', icon: 'settings', path: '/admin/organization', description: 'Organization info' },
+          { text: 'Users', icon: 'admin_panel_settings', path: '/admin/organization/users', description: 'Access and roles' },
+          { text: 'Billing', icon: 'credit_card', path: '/admin/organization/billing', description: 'Plan and billing' },
         ],
       },
     ],
   },
   {
     label: 'Operations',
-    route: '/portal/org/operations',
+    route: '/admin/teams',
     groups: [
       {
-        label: 'Day-to-Day',
+        label: 'Core',
         items: [
-          { text: 'Teams', icon: 'groups', path: '/portal/org/teams', description: 'Team management' },
-          { text: 'Schedule', icon: 'calendar_month', path: '/portal/org/schedule', description: 'Organization calendar' },
-          { text: 'Tryouts', icon: 'emoji_events', path: '/portal/org/tryouts', description: 'Registration & evaluation' },
+          { text: 'Teams', icon: 'groups', path: '/admin/teams', description: 'Teams and rosters' },
+          { text: 'Events', icon: 'event', path: '/admin/events', description: 'Schedule and calendar' },
+          { text: 'Payments', icon: 'receipt_long', path: '/admin/payments', description: 'Fees and collections' },
         ],
       },
       {
-        label: 'Logistics',
+        label: 'Programs',
         items: [
-          { text: 'Travel', icon: 'flight', path: '/portal/org/travel', description: 'Trip planning' },
-          { text: 'Uniforms', icon: 'checkroom', path: '/portal/org/uniforms', description: 'Kit & gear orders' },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'Finance',
-    route: '/portal/org/payments',
-    groups: [
-      {
-        label: 'Money Management',
-        items: [
-          { text: 'Fees', icon: 'receipt_long', path: '/portal/org/fees', description: 'Fee structures' },
-          { text: 'Payments', icon: 'credit_card', path: '/portal/org/payments', description: 'Payment tracking' },
-          { text: 'Offline Payments', icon: 'payments', path: '/portal/org/offline-payments', description: 'Cash & check tracking' },
-          { text: 'Reports', icon: 'bar_chart', path: '/portal/org/finance-reports', description: 'Financial reports' },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'More',
-    groups: [
-      {
-        label: 'Oversight',
-        items: [
-          { text: 'Communications', icon: 'mail', path: '/portal/org/communications', description: 'Announcements & messages' },
-          { text: 'Reports & Exports', icon: 'download', path: '/portal/org/reports', description: 'Data exports' },
-          { text: 'Audit Log', icon: 'history', path: '/portal/org/audit', description: 'Activity history' },
+          { text: 'Tryouts', icon: 'emoji_events', path: '/admin/tryouts', description: 'Registration and evaluation' },
+          { text: 'Travel', icon: 'flight', path: '/admin/travel', description: 'Trip planning' },
+          { text: 'Uniforms', icon: 'checkroom', path: '/admin/uniforms', description: 'Kits and gear' },
         ],
       },
     ],
@@ -113,54 +69,49 @@ const orgAdminNavSections: { label: string; route?: string; groups: NavGroup[] }
 const coachNavSections: { label: string; route?: string; groups: NavGroup[] }[] = [
   {
     label: 'Dashboard',
-    route: '/portal/coach',
+    route: '/portal/dashboard',
     groups: [
       {
         label: '',
         items: [
-          { text: 'Coach Overview', icon: 'dashboard', path: '/portal/coach', description: 'Today\'s events & alerts' },
+          { text: 'Dashboard', icon: 'dashboard', path: '/portal/dashboard', description: 'Today\'s overview' },
         ],
       },
     ],
   },
   {
     label: 'Teams',
-    route: '/portal/teams',
+    route: '/portal/children',
     groups: [
       {
-        label: 'Team Operations',
+        label: 'Teams',
         items: [
-          { text: 'My Teams', icon: 'groups', path: '/portal/teams', description: 'Your assigned teams' },
-          { text: 'Rosters', icon: 'list_alt', path: '/portal/teams/rosters', description: 'Player lists' },
-          { text: 'Player Info', icon: 'person', path: '/portal/teams/players', description: 'Player details' },
-          { text: 'Uniform Status', icon: 'checkroom', path: '/portal/teams/uniforms', description: 'Kit assignments' },
+          { text: 'Teams', icon: 'groups', path: '/portal/children', description: 'Teams and roster access' },
         ],
       },
     ],
   },
   {
     label: 'Schedule',
-    route: '/portal/schedule',
+    route: '/portal/calendar',
     groups: [
       {
-        label: 'Calendar',
+        label: 'Schedule',
         items: [
           { text: 'Calendar', icon: 'calendar_month', path: '/portal/calendar', description: 'View schedule' },
-          { text: 'Create Event', icon: 'add_circle', path: '/portal/schedule/new', description: 'Add practice or game' },
-          { text: 'Manage Events', icon: 'edit_calendar', path: '/portal/schedule/manage', description: 'Edit existing events' },
         ],
       },
     ],
   },
   {
     label: 'Attendance',
-    route: '/portal/attendance',
+    route: '/portal/calendar',
     groups: [
       {
         label: 'Tracking',
         items: [
-          { text: 'Take Attendance', icon: 'how_to_reg', path: '/portal/attendance/take', description: 'Record attendance' },
-          { text: 'Attendance History', icon: 'history', path: '/portal/attendance/history', description: 'Past records' },
+          { text: 'Take Attendance', icon: 'how_to_reg', path: '/portal/calendar', description: 'Use events to manage attendance', disabled: true },
+          { text: 'Attendance History', icon: 'history', path: '/portal/calendar', description: 'Use events to review attendance', disabled: true },
         ],
       },
     ],
@@ -174,7 +125,7 @@ const coachNavSections: { label: string; route?: string; groups: NavGroup[] }[] 
           { text: 'Tryouts', icon: 'emoji_events', path: '/portal/tryouts', description: 'Tryout sessions' },
           { text: 'Travel', icon: 'flight', path: '/portal/travel', description: 'Trip details' },
           { text: 'Messages', icon: 'mail', path: '/portal/messages', description: 'Communications' },
-          { text: 'Documents', icon: 'folder', path: '/portal/documents', description: 'Team documents' },
+          { text: 'Settings', icon: 'settings', path: '/portal/settings', description: 'Preferences' },
         ],
       },
     ],
@@ -188,19 +139,19 @@ const coachNavSections: { label: string; route?: string; groups: NavGroup[] }[] 
 const parentNavSections: { label: string; route?: string; groups: NavGroup[] }[] = [
   {
     label: 'Dashboard',
-    route: '/portal/parent',
+    route: '/portal/dashboard',
     groups: [
       {
         label: '',
         items: [
-          { text: 'Family Dashboard', icon: 'dashboard', path: '/portal/dashboard', description: 'Daily overview' },
+          { text: 'Dashboard', icon: 'dashboard', path: '/portal/dashboard', description: 'Daily overview' },
         ],
       },
     ],
   },
   {
     label: 'Schedule',
-    route: '/portal/schedule',
+    route: '/portal/calendar',
     groups: [
       {
         label: 'Calendar',
@@ -214,15 +165,14 @@ const parentNavSections: { label: string; route?: string; groups: NavGroup[] }[]
   },
   {
     label: 'Teams',
-    route: '/portal/teams',
+    route: '/portal/children',
     groups: [
       {
-        label: 'Team Info',
+        label: 'Teams',
         items: [
           { text: 'My Teams', icon: 'groups', path: '/portal/children', description: 'Your children\'s teams' },
-          { text: 'Rosters', icon: 'list_alt', path: '/portal/teams/rosters', description: 'Team rosters' },
-          { text: 'Coaches', icon: 'sports', path: '/portal/teams/coaches', description: 'Coach contacts' },
-          { text: 'Team Info', icon: 'info', path: '/portal/teams/info', description: 'Team details' },
+          { text: 'Join a Team', icon: 'group_add', path: '/portal/join', description: 'Enter an invite code' },
+          { text: 'Tryouts', icon: 'emoji_events', path: '/portal/tryouts', description: 'Tryout sessions' },
         ],
       },
     ],
@@ -235,8 +185,6 @@ const parentNavSections: { label: string; route?: string; groups: NavGroup[] }[]
         label: 'Payments',
         items: [
           { text: 'Fees Due', icon: 'receipt_long', path: '/portal/payments', description: 'Outstanding fees' },
-          { text: 'Payment History', icon: 'history', path: '/portal/payments/history', description: 'Past payments' },
-          { text: 'Receipts', icon: 'description', path: '/portal/payments/receipts', description: 'Download receipts' },
         ],
       },
     ],
@@ -250,7 +198,7 @@ const parentNavSections: { label: string; route?: string; groups: NavGroup[] }[]
           { text: 'Uniforms', icon: 'checkroom', path: '/portal/uniforms', description: 'Uniform orders' },
           { text: 'Travel', icon: 'flight', path: '/portal/travel', description: 'Trip information' },
           { text: 'Messages', icon: 'mail', path: '/portal/messages', description: 'Announcements' },
-          { text: 'Documents', icon: 'folder', path: '/portal/documents', description: 'Forms & files' },
+          { text: 'Settings', icon: 'settings', path: '/portal/settings', description: 'Preferences' },
         ],
       },
     ],
@@ -442,6 +390,24 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
             const isOpen = openMenuId === menuId
             const isWide = section.groups.length > 1 || 
                           section.groups.some(g => g.items.length > 3)
+
+            const isDirectLink = section.groups.length === 1 && 
+                                section.groups[0].items.length === 1 && 
+                                section.groups[0].items[0].text === section.label &&
+                                section.route
+
+            if (isDirectLink) {
+              return (
+                <li key={section.label} className="gn-nav-item">
+                  <Link
+                    to={section.route!}
+                    className="gn-nav-trigger"
+                  >
+                    {section.label}
+                  </Link>
+                </li>
+              )
+            }
 
             return (
               <li 

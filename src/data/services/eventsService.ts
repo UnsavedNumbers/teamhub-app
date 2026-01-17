@@ -9,26 +9,22 @@
  */
 
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
+import { supabase } from '../../lib/supabase'
 import type { UserContext, PermissionSet } from '../fake/userContext'
 import { calculatePermissions, filterEventsByRole } from '../fake/userContext'
-import {
-    fakeEvents,
-    fakeEventRSVPs,
-    fakeEventLocations,
-    getEventById,
-    getEventsForTeam,
-    getEventsInDateRange,
-    getRSVPsForEvent,
-    getChildRSVPForEvent,
-    getEventLocation,
-    getUpcomingEvents,
-} from '../fake/fakeEvents'
-import { getChildTeamMemberships, getTeamWithDetails } from '../fake/fakeTeams'
-import {
-    getChildrenForUserId,
-    getAssignedTeamsForCoach,
-} from '../fake/relationships'
 import type { CalendarEvent, EventRSVP, EventLocation, RSVPStatus } from '../../types/calendar'
+import {
+    getEventById as getFakeEventById,
+    getEventsForTeam as getFakeEventsForTeam,
+    getEventsForSeason as getFakeEventsForSeason,
+    getUpcomingEvents as getFakeUpcomingEvents,
+    getEventsInDateRange as getFakeEventsInDateRange,
+    getEventLocation as getFakeEventLocation,
+    getRSVPsForEvent as getFakeRSVPsForEvent,
+    getChildRSVPForEvent as getFakeChildRSVPForEvent,
+    getAllEvents as getFakeAllEvents,
+} from '../fake/fakeEvents'
+import { getChildrenForUserId, getAssignedTeamsForCoach, getTeamsForUserChildren, getChildTeamMemberships } from '../fake/relationships'
 
 // ============================================================================
 // Helper Functions
@@ -63,22 +59,22 @@ export interface EventsQueryParams {
 }
 
 /**
- * Get events for the current user based on their permissions
+ * Get events for the current user based on their permissions (enforced by RLS)
  *
  * TODO: Replace with Supabase query:
  * ```typescript
- * const { data, error } = await supabase
+ * let query = supabase
  *   .from('events')
  *   .select(`
  *     *,
  *     team:teams(id, name, org_id),
  *     season:seasons(id, name),
  *     event_location:event_locations(*),
- *     rsvps:event_rsvps(*)
+ *     rsvps:event_rsvps(*),
+ *     recurring_pattern:recurring_event_patterns(*)
  *   `)
- *   .gte('start_time', startDate)
- *   .lte('start_time', endDate)
  *   .order('start_time', { ascending: true })
+ * // Apply filters...
  * ```
  */
 export async function getEvents(
@@ -86,53 +82,117 @@ export async function getEvents(
     params: EventsQueryParams = {}
 ): Promise<{ data: CalendarEvent[]; error: Error | null }> {
     if (!USE_FAKE_DATA) {
-        // TODO: Implement real Supabase query
-        return { data: [], error: new Error('Real data not implemented') }
+        try {
+            let query = supabase
+                .from('events')
+                .select(`
+                    *,
+                    team:teams(id, name, org_id),
+                    season:seasons(id, name),
+                    event_location:event_locations(*),
+                    rsvps:event_rsvps(*),
+                    recurring_pattern:recurring_event_patterns(*)
+                `)
+                .order('start_time', { ascending: true })
+
+            // Apply filters
+            if (params.startDate) {
+                query = query.gte('start_time', params.startDate.toISOString())
+            }
+
+            if (params.endDate) {
+                query = query.lte('start_time', params.endDate.toISOString())
+            }
+
+            if (params.teamId) {
+                query = query.eq('team_id', params.teamId)
+            }
+
+            if (params.seasonId) {
+                query = query.eq('season_id', params.seasonId)
+            }
+
+            if (!params.includeCancelled) {
+                query = query.eq('is_cancelled', false)
+            }
+
+            if (params.limit) {
+                query = query.limit(params.limit)
+            }
+
+            const { data, error } = await query
+
+            if (error) throw error
+
+            return { data: data as unknown as CalendarEvent[], error: null }
+        } catch (err) {
+            console.error('getEvents error:', err)
+            return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        }
     }
 
     try {
         await simulateDelay()
 
         const permissions = buildPermissions(context)
-        let events = [...fakeEvents]
+        const childTeamMemberships = getChildTeamMemberships()
 
-        // Filter by date range if provided
+        // Get all fake events
+        let events: CalendarEvent[]
+
         if (params.startDate && params.endDate) {
-            events = events.filter((e) => {
-                const eventDate = new Date(e.start_time)
-                return eventDate >= params.startDate! && eventDate <= params.endDate!
-            })
+            events = getFakeEventsInDateRange(params.startDate, params.endDate)
+        } else if (params.teamId) {
+            events = getFakeEventsForTeam(params.teamId)
+        } else if (params.seasonId) {
+            events = getFakeEventsForSeason(params.seasonId)
+        } else {
+            events = getFakeAllEvents()
         }
 
-        // Filter by team if provided
-        if (params.teamId) {
-            events = events.filter((e) => e.team_id === params.teamId)
-        }
-
-        // Filter by season if provided
-        if (params.seasonId) {
-            events = events.filter((e) => e.season_id === params.seasonId)
-        }
-
-        // Filter cancelled events unless explicitly included
+        // Apply filters
         if (!params.includeCancelled) {
             events = events.filter((e) => !e.is_cancelled)
         }
 
-        // Apply role-based filtering
-        const childTeamMemberships = getChildTeamMemberships()
+        // Debug logging in development
+        if (import.meta.env?.DEV) {
+            console.log('[eventsService] Before role filtering:', {
+                totalEvents: events.length,
+                permissions: {
+                    canViewAllOrgData: permissions.canViewAllOrgData,
+                    canViewAssignedTeams: permissions.canViewAssignedTeams,
+                    canViewOwnChildrenData: permissions.canViewOwnChildrenData,
+                    assignedTeamIds: permissions.assignedTeamIds,
+                    ownedChildIds: permissions.ownedChildIds,
+                },
+                childTeamMemberships: childTeamMemberships.length,
+                orgId: context.orgId,
+            })
+        }
+
+        // Filter by role-based permissions
         events = filterEventsByRole(events, permissions, childTeamMemberships, context.orgId)
+
+        // Debug logging in development
+        if (import.meta.env?.DEV) {
+            console.log('[eventsService] After role filtering:', {
+                filteredEvents: events.length,
+                eventIds: events.map((e) => e.id),
+            })
+        }
 
         // Sort by start time
         events.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
 
         // Apply limit
-        if (params.limit && params.limit > 0) {
+        if (params.limit) {
             events = events.slice(0, params.limit)
         }
 
         return { data: events, error: null }
     } catch (err) {
+        console.error('getEvents error:', err)
         return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
     }
 }
@@ -149,7 +209,8 @@ export async function getEvents(
  *     team:teams(id, name, org_id),
  *     season:seasons(id, name),
  *     event_location:event_locations(*),
- *     rsvps:event_rsvps(*, child:children(id, first_name, last_name))
+ *     rsvps:event_rsvps(*, child:children(id, first_name, last_name)),
+ *     recurring_pattern:recurring_event_patterns(*)
  *   `)
  *   .eq('id', eventId)
  *   .single()
@@ -160,54 +221,49 @@ export async function getEventDetails(
     eventId: string
 ): Promise<{ data: CalendarEvent | null; error: Error | null }> {
     if (!USE_FAKE_DATA) {
-        return { data: null, error: new Error('Real data not implemented') }
+        try {
+            const { data, error } = await supabase
+                .from('events')
+                .select(`
+                    *,
+                    team:teams(id, name, org_id),
+                    season:seasons(id, name),
+                    event_location:event_locations(*),
+                    rsvps:event_rsvps(*, child:children(id, first_name, last_name)),
+                    recurring_pattern:recurring_event_patterns(*)
+                `)
+                .eq('id', eventId)
+                .single()
+
+            if (error) throw error
+
+            return { data: data as unknown as CalendarEvent, error: null }
+        } catch (err) {
+            console.error('getEventDetails error:', err)
+            return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        }
     }
 
     try {
         await simulateDelay()
 
-        const event = getEventById(eventId)
+        const event = getFakeEventById(eventId)
         if (!event) {
             return { data: null, error: null }
         }
 
-        // Check access permission
+        // Check if user has access to this event
         const permissions = buildPermissions(context)
-        if (!permissions.canViewAllOrgData) {
-            const childTeamMemberships = getChildTeamMemberships()
-            const filtered = filterEventsByRole([event], permissions, childTeamMemberships, context.orgId)
-            if (filtered.length === 0) {
-                return { data: null, error: new Error('Access denied') }
-            }
+        const childTeamMemberships = getChildTeamMemberships()
+        const filtered = filterEventsByRole([event], permissions, childTeamMemberships, context.orgId)
+
+        if (filtered.length === 0) {
+            return { data: null, error: null }
         }
 
-        // Get team details to include sport information
-        const teamDetails = getTeamWithDetails(event.team_id)
-        
-        // Attach RSVPs and location
-        const eventWithDetails: CalendarEvent = {
-            ...event,
-            rsvps: getRSVPsForEvent(eventId),
-            event_location: getEventLocation(eventId) ?? null,
-            team: teamDetails
-                ? {
-                      id: teamDetails.id,
-                      name: teamDetails.name,
-                      org_id: teamDetails.org_id,
-                      sport: teamDetails.sport
-                          ? {
-                                id: teamDetails.sport.id,
-                                name: teamDetails.sport.name,
-                                color: teamDetails.sport.color,
-                                icon: teamDetails.sport.icon,
-                            }
-                          : undefined,
-                  }
-                : event.team,
-        }
-
-        return { data: eventWithDetails, error: null }
+        return { data: filtered[0], error: null }
     } catch (err) {
+        console.error('getEventDetails error:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
     }
 }
@@ -253,20 +309,33 @@ export async function getEventRSVPs(
     eventId: string
 ): Promise<{ data: EventRSVP[]; error: Error | null }> {
     if (!USE_FAKE_DATA) {
-        return { data: [], error: new Error('Real data not implemented') }
+        try {
+            const { data, error } = await supabase
+                .from('event_rsvps')
+                .select(`
+                    *,
+                    child:children(id, first_name, last_name)
+                `)
+                .eq('event_id', eventId)
+
+            if (error) throw error
+
+            return { data: data as EventRSVP[], error: null }
+        } catch (err) {
+            return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        }
     }
 
     try {
         await simulateDelay()
 
-        const rsvps = getRSVPsForEvent(eventId)
+        const rsvps = getFakeRSVPsForEvent(eventId)
 
-        // Filter by user's children if not admin
+        // Filter by permissions - parents only see their children's RSVPs
         const permissions = buildPermissions(context)
-        if (!permissions.canViewAllOrgData && !permissions.canViewAssignedTeams) {
-            const childIds = getChildrenForUserId(context.userId)
+        if (!permissions.canViewAllOrgData && permissions.canViewOwnChildrenData) {
             return {
-                data: rsvps.filter((r) => childIds.includes(r.child_id)),
+                data: rsvps.filter((r) => permissions.ownedChildIds.includes(r.child_id)),
                 error: null,
             }
         }
@@ -279,6 +348,16 @@ export async function getEventRSVPs(
 
 /**
  * Get RSVP status for a specific child and event
+ *
+ * TODO: Replace with Supabase query:
+ * ```typescript
+ * const { data, error } = await supabase
+ *   .from('event_rsvps')
+ *   .select('*')
+ *   .eq('event_id', eventId)
+ *   .eq('child_id', childId)
+ *   .maybeSingle()
+ * ```
  */
 export async function getChildEventRSVP(
     context: UserContext,
@@ -286,13 +365,32 @@ export async function getChildEventRSVP(
     childId: string
 ): Promise<{ data: EventRSVP | null; error: Error | null }> {
     if (!USE_FAKE_DATA) {
-        return { data: null, error: new Error('Real data not implemented') }
+        try {
+            const { data, error } = await supabase
+                .from('event_rsvps')
+                .select('*')
+                .eq('event_id', eventId)
+                .eq('child_id', childId)
+                .maybeSingle()
+
+            if (error) throw error
+
+            return { data: data as EventRSVP | null, error: null }
+        } catch (err) {
+            return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        }
     }
 
     try {
         await simulateDelay()
 
-        const rsvp = getChildRSVPForEvent(eventId, childId)
+        // Check permissions - parents can only see their own children's RSVPs
+        const permissions = buildPermissions(context)
+        if (!permissions.canViewAllOrgData && !permissions.ownedChildIds.includes(childId)) {
+            return { data: null, error: null }
+        }
+
+        const rsvp = getFakeChildRSVPForEvent(eventId, childId)
         return { data: rsvp ?? null, error: null }
     } catch (err) {
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
@@ -302,7 +400,7 @@ export async function getChildEventRSVP(
 /**
  * Update RSVP for a child
  *
- * TODO: Replace with Supabase upsert:
+ * TODO: Replace with Supabase query:
  * ```typescript
  * const { data, error } = await supabase
  *   .from('event_rsvps')
@@ -310,10 +408,10 @@ export async function getChildEventRSVP(
  *     event_id: eventId,
  *     child_id: childId,
  *     status: status,
- *     note: note,
+ *     note: note ?? null,
  *     responded_at: new Date().toISOString(),
  *     responded_by_user_id: context.userId
- *   })
+ *   }, { onConflict: 'event_id,child_id' })
  *   .select()
  *   .single()
  * ```
@@ -326,37 +424,66 @@ export async function updateRSVP(
     note?: string
 ): Promise<{ data: EventRSVP | null; error: Error | null }> {
     if (!USE_FAKE_DATA) {
-        return { data: null, error: new Error('Real data not implemented') }
+        try {
+            const { data, error } = await supabase
+                .from('event_rsvps')
+                .upsert({
+                    event_id: eventId,
+                    child_id: childId,
+                    status: status,
+                    note: note ?? null,
+                    responded_at: new Date().toISOString(),
+                    responded_by_user_id: context.userId
+                }, { onConflict: 'event_id,child_id' })
+                .select()
+                .single()
+
+            if (error) throw error
+
+            return { data: data as EventRSVP, error: null }
+        } catch (err) {
+            console.error('updateRSVP error:', err)
+            return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        }
     }
 
     try {
         await simulateDelay()
 
-        // Verify user has access to this child
-        const childIds = getChildrenForUserId(context.userId)
+        // Check permissions - parents can only update their own children's RSVPs
         const permissions = buildPermissions(context)
-
-        if (!permissions.canViewAllOrgData && !childIds.includes(childId)) {
-            return { data: null, error: new Error('Access denied: Cannot update RSVP for this child') }
+        if (!permissions.canViewAllOrgData && !permissions.ownedChildIds.includes(childId)) {
+            return { data: null, error: new Error('Unauthorized: Cannot update RSVP for this child') }
         }
 
-        // Find or create RSVP (in fake data, we just return the updated version)
-        const existingRsvp = getChildRSVPForEvent(eventId, childId)
-        const updatedRsvp: EventRSVP = {
-            id: existingRsvp?.id ?? `rsvp-new-${Date.now()}`,
-            event_id: eventId,
-            child_id: childId,
-            status,
-            responded_at: new Date().toISOString(),
-            responded_by_user_id: context.userId,
-            note: note ?? null,
-            created_at: existingRsvp?.created_at ?? new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            child: existingRsvp?.child,
-        }
+        // In fake data mode, we simulate the update by returning the updated RSVP
+        // The fake data module doesn't have a mutation function, so we return what would be updated
+        const existing = getFakeChildRSVPForEvent(eventId, childId)
+        const updated: EventRSVP = existing
+            ? {
+                  ...existing,
+                  status,
+                  note: note ?? null,
+                  responded_at: new Date().toISOString(),
+                  responded_by_user_id: context.userId,
+                  updated_at: new Date().toISOString(),
+              }
+            : {
+                  id: `rsvp-${eventId}-${childId}`,
+                  event_id: eventId,
+                  child_id: childId,
+                  status,
+                  note: note ?? null,
+                  responded_at: new Date().toISOString(),
+                  responded_by_user_id: context.userId,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                  child: undefined,
+              }
 
-        return { data: updatedRsvp, error: null }
+        return { data: updated, error: null }
     } catch (err) {
+        console.error('updateRSVP error:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
     }
 }
@@ -374,20 +501,32 @@ export async function updateRSVP(
  *   .from('event_locations')
  *   .select('*')
  *   .eq('event_id', eventId)
- *   .single()
+ *   .maybeSingle()
  * ```
  */
 export async function getLocationForEvent(
     eventId: string
 ): Promise<{ data: EventLocation | null; error: Error | null }> {
     if (!USE_FAKE_DATA) {
-        return { data: null, error: new Error('Real data not implemented') }
+        try {
+            const { data, error } = await supabase
+                .from('event_locations')
+                .select('*')
+                .eq('event_id', eventId)
+                .maybeSingle()
+
+            if (error) throw error
+
+            return { data: data as EventLocation | null, error: null }
+        } catch (err) {
+            return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        }
     }
 
     try {
         await simulateDelay()
 
-        const location = getEventLocation(eventId)
+        const location = getFakeEventLocation(eventId)
         return { data: location ?? null, error: null }
     } catch (err) {
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }

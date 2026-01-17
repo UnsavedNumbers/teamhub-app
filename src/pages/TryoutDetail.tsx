@@ -8,7 +8,6 @@ import PortalHeader from '../components/portal/PortalHeader'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
-import Icon from '../components/portal/Icon'
 
 export default function TryoutDetail() {
   const { tryoutId } = useParams<{ tryoutId: string }>()
@@ -59,8 +58,6 @@ export default function TryoutDetail() {
   }
 
   return (
-    <>
-      <PortalHeader />
       <PortalLayout
         breadcrumbs={[
           { label: 'Home', path: '/portal/dashboard' },
@@ -102,6 +99,5 @@ export default function TryoutDetail() {
           </div>
         </Card>
       </PortalLayout>
-    </>
   )
 }

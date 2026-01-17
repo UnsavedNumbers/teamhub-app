@@ -1,7 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import PortalLayout from '../components/portal/PortalLayout'
-import PortalHeader from '../components/portal/PortalHeader'
 import { PageTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
@@ -16,8 +15,6 @@ export default function PaymentCancel() {
   }, [navigate])
 
   return (
-    <>
-      <PortalHeader />
       <PortalLayout
         breadcrumbs={[
           { label: 'Home', path: '/portal/dashboard' },
@@ -50,6 +47,5 @@ export default function PaymentCancel() {
           </p>
         </div>
       </PortalLayout>
-    </>
   )
 }

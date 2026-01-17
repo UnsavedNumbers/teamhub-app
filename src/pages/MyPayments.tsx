@@ -4,7 +4,6 @@ import { useUserContext } from '../hooks/useUserContext'
 import { getFeeAssignmentsForUser, formatCurrency } from '../data/services/paymentsService'
 import { createParentCheckoutSession } from '../api/payments'
 import PortalLayout from '../components/portal/PortalLayout'
-import PortalHeader from '../components/portal/PortalHeader'
 import { PageTitle, SectionHeader } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
@@ -228,8 +227,6 @@ export default function MyPayments() {
   }
 
   return (
-    <>
-      <PortalHeader />
       <PortalLayout
         breadcrumbs={[
           { label: 'Home', path: '/portal/dashboard' },
@@ -407,6 +404,5 @@ export default function MyPayments() {
           </>
         )}
       </PortalLayout>
-    </>
   )
 }

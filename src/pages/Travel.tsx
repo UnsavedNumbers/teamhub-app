@@ -8,7 +8,6 @@ import type { FakeTravelPlan } from '../data/fake/fakeTravel'
 import { getEvents } from '../data/services/eventsService'
 import { getSportFromTeam, type SportInfo } from '../utils/sportContext'
 import PortalLayout from '../components/portal/PortalLayout'
-import PortalHeader from '../components/portal/PortalHeader'
 import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
 import { SportCardImage } from '../components/portal/SportCardImage'
 import Card from '../components/portal/Card'
@@ -152,8 +151,6 @@ export default function Travel() {
   }
 
   return (
-    <>
-      <PortalHeader />
       <PortalLayout
         breadcrumbs={[
           { label: 'Home', path: '/portal/dashboard' },
@@ -395,6 +392,5 @@ export default function Travel() {
           </div>
         )}
       </PortalLayout>
-    </>
   )
 }

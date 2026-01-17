@@ -103,8 +103,6 @@ export default function Settings() {
   ]
 
   return (
-    <>
-      <PortalHeader />
       <PortalLayout
         breadcrumbs={[
           { label: 'Home', path: '/portal/dashboard' },
@@ -315,6 +313,5 @@ export default function Settings() {
           </section>
         </div>
       </PortalLayout>
-    </>
   )
 }

@@ -175,6 +175,9 @@ function App() {
             
             {/* Redirect root portal to dashboard */}
             <Route index element={<Navigate to="/portal/dashboard" replace />} />
+
+            {/* Catch-all to prevent blank/\"blue\" screens on unknown portal routes */}
+            <Route path="*" element={<Navigate to="/portal/dashboard" replace />} />
           </Route>
 
           {/* Organization Onboarding - Standalone route outside AdminLayout */}

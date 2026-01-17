@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useUserContext } from '../hooks/useUserContext'
-import { useTheme } from '../hooks/useTheme'
 import {
   getSetupOrganizationFlag,
   clearSetupOrganizationFlag,
@@ -22,6 +21,7 @@ import {
 import { getPrimarySportForUser, getSportFromEvent, type SportInfo } from '../utils/sportContext'
 import { SportHero } from '../components/portal/SportHero'
 import { SportCardImage } from '../components/portal/SportCardImage'
+import PortalHeader from '../components/portal/PortalHeader'
 import type { CalendarEvent } from '../types/calendar'
 
 interface UserNotification {
@@ -42,26 +42,12 @@ export default function Dashboard() {
   const { user, profile } = useAuth()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
-  const { resolvedTheme } = useTheme()
   const [unread, setUnread] = useState<UserNotification[]>([])
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([])
   const [eventsLoading, setEventsLoading] = useState(true)
   const [paymentItems, setPaymentItems] = useState<PaymentOverview[]>([])
   const [primarySport, setPrimarySport] = useState<SportInfo | null>(null)
   const [eventSports, setEventSports] = useState<Record<string, SportInfo | null>>({})
-  const [logoError, setLogoError] = useState(false)
-
-  // Determine which logo to show based on resolved theme
-  // Light mode: logo-light.png
-  // Dark mode: logo-dark.png
-  const logoSrc = resolvedTheme === 'dark' 
-    ? '/images/logo-dark.png' 
-    : '/images/logo-light.png'
-  
-  // Reset logo error when theme changes
-  useEffect(() => {
-    setLogoError(false)
-  }, [resolvedTheme])
 
   // Safety net: If user landed here with setupOrganization flag, redirect to onboarding
   useEffect(() => {
@@ -256,74 +242,8 @@ export default function Dashboard() {
         }}
       />
 
-      {/* Top Navigation */}
-      <header className="border-b border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link to="/portal/dashboard" className="flex items-center gap-2 group cursor-pointer">
-              {!logoError ? (
-                <img 
-                  key={logoSrc}
-                  src={logoSrc} 
-                  alt="AthleticPortal" 
-                  className="h-8 w-auto transition-opacity duration-200"
-                  onError={() => {
-                    console.error('Failed to load logo:', logoSrc)
-                    setLogoError(true)
-                  }}
-                />
-              ) : (
-                // Fallback to icon-based logo if image fails to load
-                <>
-                  <div className="size-8 bg-[#137fec] rounded flex items-center justify-center text-white">
-                    <span className="material-symbols-outlined text-xl">bolt</span>
-                  </div>
-                  <span className="font-bold text-xl tracking-tight uppercase">
-                    Athletic<span className="text-[#137fec]">Portal</span>
-                  </span>
-                </>
-              )}
-            </Link>
-            <nav className="hidden md:flex items-center gap-8">
-              <Link 
-                to="/portal/dashboard" 
-                className="text-sm font-semibold border-b-2 border-[#137fec] pb-5 mt-5 text-slate-900 dark:text-white"
-              >
-                Dashboard
-              </Link>
-              <Link 
-                to="/portal/calendar" 
-                className="text-sm font-medium text-slate-500 hover:text-[#137fec] transition-colors pb-5 mt-5 border-b-2 border-transparent"
-              >
-                Schedule
-              </Link>
-              <Link 
-                to="/portal/children" 
-                className="text-sm font-medium text-slate-500 hover:text-[#137fec] transition-colors pb-5 mt-5 border-b-2 border-transparent"
-              >
-                Teams
-              </Link>
-              <Link 
-                to="/portal/payments" 
-                className="text-sm font-medium text-slate-500 hover:text-[#137fec] transition-colors pb-5 mt-5 border-b-2 border-transparent"
-              >
-                Payments
-              </Link>
-            </nav>
-          </div>
-          <div className="flex items-center gap-4">
-            <button className="size-10 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors relative">
-              <span className="material-symbols-outlined text-slate-600 dark:text-slate-300">notifications</span>
-              {unread.length > 0 && (
-                <span className="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-white dark:border-background-dark"></span>
-              )}
-            </button>
-            <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-700 bg-cover bg-center border border-slate-100 dark:border-slate-800 flex items-center justify-center text-sm font-bold">
-              {profile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* Portal Nav with Mega Menu */}
+      <PortalHeader />
 
       <main className="max-w-[1200px] mx-auto">
         {/* Sport Hero Section */}
