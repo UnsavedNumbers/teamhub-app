@@ -2,8 +2,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
-import { getEvents, updateRSVP } from '../data/services/eventsService'
-import { getChildren } from '../data/services/familyService'
+import { 
+  getEvents, 
+  updateRSVP, 
+  getChildren, 
+  isGeneralRSVP, 
+  isAthleteRSVP 
+} from '../data/services'
 import { 
     CalendarEvent, 
     CalendarViewMode, 
@@ -12,7 +17,7 @@ import {
     formatEventTimeRange, 
     formatEventLocation,
     getEventLocationMapsUrl,
-    RSVPStatus 
+    RSVPStatus
 } from '../types/calendar'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
@@ -23,6 +28,7 @@ import Icon from '../components/portal/Icon'
 import CalendarGrid from '../components/calendar/CalendarGrid'
 import EventFilters from '../components/calendar/EventFilters'
 import RSVPButton from '../components/calendar/RSVPButton'
+import GeneralRSVPForm from '../components/calendar/GeneralRSVPForm'
 import { getSportFromEvent, type SportInfo } from '../utils/sportContext'
 import { useI18n } from '../i18n/useI18n'
 
@@ -44,6 +50,8 @@ export default function Calendar() {
   // Wraps the t() function to handle missing keys gracefully
   const safeT = (key: string, fallback: string = key): string => {
     try {
+      // Type assertion needed because t() expects specific keys, but we want to handle dynamic keys
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = t(key as any, undefined)
       // If translation returns the key itself (not found), use fallback
       return result && result !== key ? result : fallback
@@ -60,7 +68,7 @@ export default function Calendar() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [loading, setLoading] = useState(true)
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [children, setChildren] = useState<any[]>([])
+  const [children, setChildren] = useState<Array<{ id: string; first_name: string; last_name: string }>>([])
   const [eventSports, setEventSports] = useState<Record<string, SportInfo | null>>({}) 
   
   const { context, isReady } = useUserContext()
@@ -125,6 +133,12 @@ export default function Calendar() {
   }, [fetchData])
 
   const handleRSVPChange = async (eventId: string, childId: string, newStatus: RSVPStatus) => {
+      // Guard: Ensure context is ready and has userId
+      if (!isReady || !context?.userId) {
+        console.error('Cannot update RSVP: context not ready')
+        return
+      }
+
       // Optimistic update
       setEvents(prev => prev.map(e => {
             if (e.id !== eventId) return e
@@ -180,11 +194,11 @@ export default function Calendar() {
   }
 
   // Calculate sport info from events or defaulting
-  const sportInfo: SportInfo | null = events.length > 0 && events[0].team?.sport 
-    ? { name: events[0].team.sport.name, color: events[0].team.sport.color || '#3b82f6', icon: events[0].team.sport.icon || 'sports_soccer' } 
-    : { name: 'Sports', color: '#3b82f6', icon: 'sports_soccer' }
+  const sportInfo: SportInfo | null = events.length > 0
+    ? { id: '', name: 'Sports', color: '#3b82f6', icon: 'sports_soccer' }
+    : { id: '', name: 'Sports', color: '#3b82f6', icon: 'sports_soccer' }
 
-  const mapUrl = selectedEvent ? getEventLocationMapsUrl(selectedEvent.event_location) : null
+  const mapUrl = selectedEvent?.event_location ? getEventLocationMapsUrl(selectedEvent.event_location) : null
 
   return (
       <PortalLayout
@@ -315,7 +329,7 @@ export default function Calendar() {
                              </div>
                             <div className="flex-1">
                                 <p className="font-bold text-slate-900 dark:text-white text-sm">{selectedEvent.event_location?.venue_name || selectedEvent.location}</p>
-                                <p className="text-xs text-slate-500">{formatEventLocation(selectedEvent.event_location)}</p>
+                                <p className="text-xs text-slate-500">{selectedEvent.event_location ? formatEventLocation(selectedEvent.event_location) : ''}</p>
                                 {mapUrl && (
                                     <a href={mapUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-[#137fec] hover:underline flex items-center gap-1 mt-1">
                                         {safeT('calendar.event.getDirections', 'Get Directions')} <Icon name="open_in_new" size="text-[10px]" />
@@ -331,30 +345,42 @@ export default function Calendar() {
                             </div>
                         )}
 
-                         {/* RSVP Section */}
-                        <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-                            <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white mb-3">{safeT('calendar.rsvp.yourResponse', 'Your Response')}</h4>
-                            {children.length === 0 ? (
-                                <p className="text-sm text-slate-500 italic">No children connected to account.</p>
-                            ) : (
-                                <div className="space-y-3">
-                                    {children.map(child => {
-                                        const rsvp = selectedEvent.rsvps?.find(r => r.child_id === child.id)
-                                        return (
-                                            <RSVPButton 
-                                                key={child.id}
-                                                eventId={selectedEvent.id}
-                                                childId={child.id}
-                                                childName={child.first_name}
-                                                currentStatus={rsvp?.status || 'unknown'}
-                                                onStatusChange={(s) => handleRSVPChange(selectedEvent.id, child.id, s)}
-                                                disabled={selectedEvent.is_cancelled}
-                                            />
-                                        )
-                                    })}
-                                </div>
-                            )}
-                        </div>
+                         {/* RSVP Section - Only show if RSVP is enabled */}
+                        {selectedEvent.rsvp_config?.enabled && isReady && context?.userId && (
+                            <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+                                <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white mb-3">{safeT('calendar.rsvp.yourResponse', 'Your Response')}</h4>
+                                
+                                {isGeneralRSVP(selectedEvent) ? (
+                                    <GeneralRSVPForm 
+                                        eventId={selectedEvent.id}
+                                        userId={context.userId}
+                                        currentRSVP={selectedEvent.general_rsvps?.find(r => r.user_id === context.userId) || null}
+                                        disabled={selectedEvent.is_cancelled || false}
+                                    />
+                                ) : isAthleteRSVP(selectedEvent) ? (
+                                    children.length === 0 ? (
+                                        <p className="text-sm text-slate-500 italic">No children connected to account.</p>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {children.map(child => {
+                                                const rsvp = selectedEvent.rsvps?.find(r => r.child_id === child.id)
+                                                return (
+                                                    <RSVPButton 
+                                                        key={child.id}
+                                                        eventId={selectedEvent.id}
+                                                        childId={child.id}
+                                                        childName={child.first_name}
+                                                        currentStatus={rsvp?.status || 'unknown'}
+                                                        onStatusChange={(s) => handleRSVPChange(selectedEvent.id, child.id, s)}
+                                                        disabled={selectedEvent.is_cancelled || false}
+                                                    />
+                                                )
+                                            })}
+                                        </div>
+                                    )
+                                ) : null}
+                            </div>
+                        )}
                     </div>
 
                     <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">

@@ -154,25 +154,33 @@ const parentNavSections: { label: string; route?: string; groups: NavGroup[] }[]
     route: '/portal/calendar',
     groups: [
       {
-        label: 'Calendar',
+        label: 'Schedule',
         items: [
-          { text: 'Calendar', icon: 'calendar_month', path: '/portal/calendar', description: 'View all events' },
-          { text: 'Upcoming Events', icon: 'event', path: '/portal/calendar?view=upcoming', description: 'What\'s next' },
-          { text: 'Past Events', icon: 'history', path: '/portal/calendar?view=past', description: 'Event history' },
+          { text: 'Schedule', icon: 'calendar_month', path: '/portal/calendar', description: 'View all events' },
         ],
       },
     ],
   },
   {
-    label: 'Teams',
-    route: '/portal/children',
+    label: 'Travel',
+    route: '/portal/travel',
     groups: [
       {
-        label: 'Teams',
+        label: 'Travel',
         items: [
-          { text: 'My Teams', icon: 'groups', path: '/portal/children', description: 'Your children\'s teams' },
-          { text: 'Join a Team', icon: 'group_add', path: '/portal/join', description: 'Enter an invite code' },
-          { text: 'Tryouts', icon: 'emoji_events', path: '/portal/tryouts', description: 'Tryout sessions' },
+          { text: 'Travel', icon: 'flight', path: '/portal/travel', description: 'Trip information' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Messages',
+    route: '/portal/messages',
+    groups: [
+      {
+        label: 'Messages',
+        items: [
+          { text: 'Messages', icon: 'mail', path: '/portal/messages', description: 'Announcements and chat' },
         ],
       },
     ],
@@ -193,11 +201,17 @@ const parentNavSections: { label: string; route?: string; groups: NavGroup[] }[]
     label: 'More',
     groups: [
       {
+        label: 'Programs',
+        items: [
+          { text: 'My Teams', icon: 'groups', path: '/portal/children', description: 'Your children\'s teams' },
+          { text: 'Join a Team', icon: 'group_add', path: '/portal/join', description: 'Enter an invite code' },
+          { text: 'Tryouts', icon: 'emoji_events', path: '/portal/tryouts', description: 'Tryout sessions' },
+        ],
+      },
+      {
         label: 'Additional',
         items: [
           { text: 'Uniforms', icon: 'checkroom', path: '/portal/uniforms', description: 'Uniform orders' },
-          { text: 'Travel', icon: 'flight', path: '/portal/travel', description: 'Trip information' },
-          { text: 'Messages', icon: 'mail', path: '/portal/messages', description: 'Announcements' },
           { text: 'Settings', icon: 'settings', path: '/portal/settings', description: 'Preferences' },
         ],
       },

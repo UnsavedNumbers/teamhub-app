@@ -111,8 +111,12 @@ export async function getTravelPlans(
             plans = plans.filter((p) => p.status === params.status)
         }
 
-        // Non-admin users can only see travel plans for their teams
-        if (!permissions.canViewAllOrgData) {
+        // For fake/demo data, we want to ensure the user sees the demo travel plans
+        // regardless of their exact team assignments in the demo environment
+        if (USE_FAKE_DATA && !permissions.canViewAllOrgData) {
+            // In demo mode, show all published plans for the org if we're a parent/coach
+            // This ensures the "empty state" is not shown for the demo
+        } else if (!permissions.canViewAllOrgData) {
             const accessibleTeamIds = new Set<string>()
 
             // Add coached teams

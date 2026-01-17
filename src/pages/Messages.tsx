@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useUserContext } from '../hooks/useUserContext'
 import { 
@@ -42,63 +42,101 @@ export default function Messages() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { user, profile } = useAuth()
   const { context, isReady } = useUserContext()
+  const [searchParams] = useSearchParams()
+  const hasInitializedTeamRef = useRef(false)
 
-  const canCreateAnnouncements = context.roles.includes('admin') || context.roles.includes('coach') || context.roles.includes('org_admin') || profile?.isPlatformAdmin
+  // Parse query parameter on mount to restore team selection
+  useEffect(() => {
+    if (!hasInitializedTeamRef.current) {
+      const teamParam = searchParams.get('team')
+      if (teamParam && !selectedTeam) {
+        setSelectedTeam(teamParam)
+      }
+      hasInitializedTeamRef.current = true
+    }
+  }, [searchParams, selectedTeam])
+
+  // Safe computation: only check roles when context is ready
+  // Valid roles: 'parent', 'coach', 'org_admin'
+  const canCreateAnnouncements = isReady && (
+    context.roles.includes('coach') || 
+    context.roles.includes('org_admin') || 
+    profile?.isPlatformAdmin === true
+  )
 
   const fetchTeams = useCallback(async () => {
     if (!isReady) return
 
     // Use the service to get teams based on user role
-    const isParent = context.roles.includes('parent') && !context.roles.includes('org_admin')
+    // Safe access: isReady guarantees context.roles is an array
+    const isParent = context.roles?.includes('parent') && !context.roles?.includes('org_admin')
     
     // Admin/Coach can see all teams sometimes, or just their teams.
     // For now, logic from before:
     if (isParent) {
       const { data, error } = await getTeamsForParent(context)
-      if (!error) {
+      if (!error && data) {
         setTeams(data.map(t => ({ id: t.id, name: t.name })))
-        // Auto-select first team if none selected
-        if (!selectedTeam && data.length > 0) {
-           setSelectedTeam(data[0].id)
-        }
+        // Auto-select first team if none selected (use functional form to avoid dependency)
+        setSelectedTeam(prev => {
+          if (!prev && data.length > 0) {
+            return data[0].id
+          }
+          return prev
+        })
       }
     } else {
       const { data, error } = await getTeams(context, { activeOnly: true })
-      if (!error) {
+      if (!error && data) {
         setTeams(data.map(t => ({ id: t.id, name: t.name })))
-        if (!selectedTeam && data.length > 0) {
-            setSelectedTeam(data[0].id)
-        }
+        // Auto-select first team if none selected (use functional form to avoid dependency)
+        setSelectedTeam(prev => {
+          if (!prev && data.length > 0) {
+            return data[0].id
+          }
+          return prev
+        })
       }
     }
     setLoading(false)
-  }, [context, isReady, selectedTeam])
+  }, [context, isReady])
 
   const fetchAnnouncementsData = useCallback(async () => {
     if (!isReady || !selectedTeam) return
 
     const { data, error } = await getAnnouncements(context, { teamId: selectedTeam, includeOrgWide: true })
     
-    if (!error) {
-      // Cast locally to handle potential type diffs if any, but structure should match
-      setAnnouncements(data as Announcement[])
+    if (!error && data) {
+      // Ensure all announcements have required properties with safe defaults
+      const safeAnnouncements = (data as Announcement[]).map(ann => ({
+        ...ann,
+        priority: ann.priority || 'normal' as const,
+        title: ann.title || '',
+        content: ann.content || '',
+        created_at: ann.created_at || new Date().toISOString(),
+        updated_at: ann.updated_at || new Date().toISOString(),
+      }))
+      setAnnouncements(safeAnnouncements)
+    } else {
+      setAnnouncements([])
     }
   }, [context, isReady, selectedTeam])
 
   const fetchMessagesData = useCallback(async () => {
     if (!isReady || !selectedTeam) return
     const { data, error } = await getMessages(selectedTeam)
-    if (!error) {
-      setMessages(data)
+    if (!error && data) {
+      // Ensure all messages have required properties with safe defaults
+      const safeMessages = data.map(msg => ({
+        ...msg,
+        content: msg.content || '',
+        created_at: msg.created_at || new Date().toISOString(),
+      }))
+      setMessages(safeMessages)
+    } else {
+      setMessages([])
     }
   }, [isReady, selectedTeam])
-
-  // Helper to get team name
-  const getTeamName = (teamId: string | null): string => {
-    if (!teamId) return 'Organization'
-    const team = teams.find(t => t.id === teamId)
-    return team?.name ?? 'Team'
-  }
 
   useEffect(() => {
     fetchTeams()
@@ -176,13 +214,16 @@ export default function Messages() {
     { icon: 'location_on', text: 'Where are you?' }
   ]
   
-  if (loading) return (
+  // Show loading state if context is not ready or initial data is loading
+  if (!isReady || loading) {
+    return (
       <PortalLayout>
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
         </div>
       </PortalLayout>
-  )
+    )
+  }
 
   return (
     <>
@@ -276,29 +317,39 @@ export default function Messages() {
                           <p className="text-slate-500 dark:text-slate-400">No announcements yet.</p>
                         </Card>
                       ) : (
-                        announcements.map((ann) => (
-                          <Card
+                        announcements.map((ann) => {
+                          // Safe access: ensure priority exists and is a string
+                          const priority = (ann.priority || 'normal').toLowerCase()
+                          const detailUrl = `/portal/messages/${ann.id}${selectedTeam ? `?team=${selectedTeam}` : ''}`
+                          return (
+                          <Link
                             key={ann.id}
-                            className={`p-6 border-l-4 ${
-                              ann.priority.toLowerCase() === 'urgent' ? 'border-red-500' : 'border-[#137fec]'
-                            }`}
+                            to={detailUrl}
+                            className="block"
                           >
-                            <div className="flex items-start justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <span className={`px-2 py-0.5 text-xs font-bold uppercase tracking-widest rounded ${
-                                  (ann.author?.role || 'admin') === 'coach'
-                                    ? 'bg-[#137fec]/10 text-[#137fec]'
-                                    : 'bg-purple-500/10 text-purple-500 dark:text-purple-400'
-                                }`}>
-                                  {ann.author?.role || 'Admin'}
-                                </span>
-                                <CardTitle className="text-lg">{ann.title}</CardTitle>
+                            <Card
+                              className={`p-6 border-l-4 transition-all hover:shadow-2xl hover:shadow-[#137fec]/5 cursor-pointer ${
+                                priority === 'urgent' ? 'border-red-500' : 'border-[#137fec]'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className={`px-2 py-0.5 text-xs font-bold uppercase tracking-widest rounded ${
+                                    (ann.author?.role || 'admin') === 'coach'
+                                      ? 'bg-[#137fec]/10 text-[#137fec]'
+                                      : 'bg-purple-500/10 text-purple-500 dark:text-purple-400'
+                                  }`}>
+                                    {ann.author?.role || 'Admin'}
+                                  </span>
+                                  <CardTitle className="text-lg">{ann.title}</CardTitle>
+                                </div>
+                                <span className="text-xs font-bold uppercase tracking-widest text-slate-400">{formatDate(ann.created_at)}</span>
                               </div>
-                              <span className="text-xs font-bold uppercase tracking-widest text-slate-400">{formatDate(ann.created_at)}</span>
-                            </div>
-                            <p className="text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{ann.content}</p>
-                          </Card>
-                        ))
+                              <p className="text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{ann.content}</p>
+                            </Card>
+                          </Link>
+                          )
+                        })
                       )}
                     </div>
                   ) : (
@@ -310,8 +361,10 @@ export default function Messages() {
                         </Card>
                       )}
                       {messages.map((msg) => {
-                        const isMe = msg.author_id === user?.id
+                        // Safe access: guard against undefined user and author
+                        const isMe = user?.id && msg.author_id === user.id
                         const role = msg.author?.role || 'parent'
+                        const authorEmail = msg.author?.email || ''
                         return (
                           <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-xs md:max-w-md rounded-xl px-4 py-2 shadow-sm ${
@@ -323,7 +376,7 @@ export default function Messages() {
                                 <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${
                                     role === 'coach' ? 'text-[#137fec]' : 'text-slate-400'
                                 }`}>
-                                  {role === 'coach' ? 'Coach' : (msg.author?.email?.split('@')[0] || 'User')}
+                                  {role === 'coach' ? 'Coach' : (authorEmail ? authorEmail.split('@')[0] : 'User')}
                                 </p>
                               )}
                               <p className="font-bold whitespace-pre-wrap leading-tight">{msg.content}</p>

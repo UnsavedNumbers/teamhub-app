@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getEvents } from '../../data/services/eventsService'
+import { getRSVPSummary } from '../../data/services/rsvpService'
 import { 
   PageHeader, 
   Card, 
@@ -21,6 +22,8 @@ interface Event {
   end_time: string
   location: string | null
   team: { name: string }
+  rsvp_config?: { enabled: boolean; type: string | null }
+  rsvp_summary?: string
 }
 
 export default function Events() {
@@ -55,15 +58,38 @@ export default function Events() {
         return
       }
 
-      // Transform to display format
-      const displayEvents: Event[] = data.map(event => ({
-        id: event.id,
-        title: event.title + (event.is_cancelled ? ' (CANCELLED)' : ''),
-        type: event.type,
-        start_time: event.start_time,
-        end_time: event.end_time,
-        location: event.event_location?.venue_name || event.location || (event.event_location?.is_tbd ? 'TBD' : null),
-        team: { name: event.team?.name ?? 'Unknown Team' },
+      // Transform to display format and fetch RSVP summaries with safe defaults
+      const displayEvents: Event[] = await Promise.all((data || []).map(async (event) => {
+        let rsvpSummary = ''
+        const rsvpConfig = event.rsvp_config || { enabled: false, type: null }
+        
+        if (rsvpConfig.enabled && isReady && context) {
+          try {
+            const { data: summary, error: summaryError } = await getRSVPSummary(context, event.id)
+            if (!summaryError && summary) {
+              if (summary.general) {
+                rsvpSummary = `Going: ${summary.general.going_count || 0}, Not: ${summary.general.not_going_count || 0}, Maybe: ${summary.general.maybe_count || 0}`
+              } else if (summary.athlete) {
+                rsvpSummary = `Going: ${summary.athlete.going_count || 0}, Late: ${summary.athlete.late_count || 0}, Not: ${summary.athlete.not_going_count || 0}, Unknown: ${summary.athlete.unknown_count || 0}`
+              }
+            }
+          } catch (err) {
+            console.warn('Failed to fetch RSVP summary:', err)
+            // Continue with empty summary
+          }
+        }
+        
+        return {
+          id: event.id || '',
+          title: (event.title || 'Untitled Event') + (event.is_cancelled ? ' (CANCELLED)' : ''),
+          type: event.type || 'practice',
+          start_time: event.start_time || new Date().toISOString(),
+          end_time: event.end_time || new Date().toISOString(),
+          location: event.event_location?.venue_name || event.location || (event.event_location?.is_tbd ? 'TBD' : null),
+          team: { name: event.team?.name ?? 'Unknown Team' },
+          rsvp_config: rsvpConfig,
+          rsvp_summary: rsvpSummary,
+        }
       }))
 
       setTotalCount(displayEvents.length)
@@ -98,7 +124,20 @@ export default function Events() {
     { id: 'title', label: 'Title' },
     { id: 'type', label: 'Type', render: (row) => <Badge variant={getTypeVariant(row.type)}>{row.type.toUpperCase()}</Badge> },
     { id: 'team_name', label: 'Team', render: (row) => row.team?.name },
-    { id: 'location', label: 'Location', render: (row) => row.location || '—' }
+    { id: 'location', label: 'Location', render: (row) => row.location || '—' },
+    { 
+      id: 'rsvp', 
+      label: 'RSVP', 
+      render: (row) => {
+        if (!row.rsvp_config?.enabled) return '—'
+        return (
+          <div className="text-xs">
+            <div className="font-bold">{row.rsvp_config.type?.toUpperCase() || 'N/A'}</div>
+            {row.rsvp_summary && <div className="text-slate-500">{row.rsvp_summary}</div>}
+          </div>
+        )
+      }
+    }
   ]
 
   return (

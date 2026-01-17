@@ -10,7 +10,7 @@ import { supabase } from '../../lib/supabase'
 import type { UserContext } from '../fake/userContext'
 import {
     fakeNotifications,
-    getAnnouncementById,
+    getAnnouncementById as getFakeAnnouncementById,
     getAnnouncementsForOrg,
     getPinnedAnnouncementsForOrg,
     getAnnouncementsForTeam,
@@ -157,6 +157,70 @@ export async function getAnnouncements(
     } catch (err) {
         console.error('Error fetching announcements:', err)
         return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+    }
+}
+
+export async function getAnnouncementById(
+    context: UserContext,
+    announcementId: string
+): Promise<{ data: Announcement | null; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+        const announcement = getFakeAnnouncementById(announcementId)
+        return { data: announcement as Announcement | null, error: null }
+    }
+
+    try {
+        // Query announcement with author and team info
+        const { data, error } = await supabase
+            .from('announcements')
+            .select(`
+                *,
+                author:users(email),
+                team:teams(name, org_id)
+            `)
+            .eq('id', announcementId)
+            .single()
+
+        if (error) throw error
+
+        // Provide safe defaults for author and team
+        if (!data.author) {
+            data.author = { email: '', role: 'parent' }
+        }
+        if (!data.team && data.team_id) {
+            data.team = { name: 'Team' }
+        }
+
+        // Fetch author role from organization_members
+        if (data && data.team?.org_id) {
+            const { data: memberData } = await supabase
+                .from('organization_members')
+                .select('role')
+                .eq('organization_id', data.team.org_id)
+                .eq('user_id', data.author_id)
+                .single()
+
+            if (data.author) {
+                data.author.role = memberData?.role || 'parent'
+            } else {
+                data.author = { email: data.author?.email || '', role: memberData?.role || 'parent' }
+            }
+        } else if (data && !data.author.role) {
+            // If no team/org context, default role
+            data.author.role = 'parent'
+        }
+
+        return { data: data as Announcement, error: null }
+    } catch (err) {
+        // Check error type for better handling
+        const error = err instanceof Error ? err : new Error('Unknown error')
+        if (error.message?.includes('No rows') || (err as any)?.code === 'PGRST116') {
+            // 404 - announcement not found
+            return { data: null, error: new Error('Announcement not found') }
+        }
+        console.error('Error fetching announcement:', err)
+        return { data: null, error }
     }
 }
 

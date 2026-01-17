@@ -35,6 +35,7 @@ import Travel from './pages/Travel'
 import Tryouts from './pages/Tryouts'
 import TryoutDetail from './pages/TryoutDetail'
 import Messages from './pages/Messages'
+import AnnouncementDetail from './pages/AnnouncementDetail'
 
 // Admin Layout (Material Dashboard)
 import AdminLayout from './layouts/AdminLayout'
@@ -172,6 +173,7 @@ function App() {
             <Route path="tryouts" element={<ProtectedRoute><Tryouts /></ProtectedRoute>} />
             <Route path="tryouts/:tryoutId" element={<ProtectedRoute><TryoutDetail /></ProtectedRoute>} />
             <Route path="messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+            <Route path="messages/:announcementId" element={<ProtectedRoute><AnnouncementDetail /></ProtectedRoute>} />
             
             {/* Redirect root portal to dashboard */}
             <Route index element={<Navigate to="/portal/dashboard" replace />} />

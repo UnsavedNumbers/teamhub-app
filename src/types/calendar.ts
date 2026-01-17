@@ -23,6 +23,10 @@ export type EventType =
 
 export type RSVPStatus = 'going' | 'late' | 'not_going' | 'unknown'
 
+export type RSVPType = 'none' | 'general' | 'athlete'
+
+export type GeneralRSVPStatus = 'going' | 'not_going' | 'maybe'
+
 export type RecurrenceFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly'
 
 export type AttendanceStatus = 'going' | 'late' | 'not_going'
@@ -67,6 +71,8 @@ export interface CalendarEvent {
     }
     event_location?: EventLocation | null
     rsvps?: EventRSVP[]
+    rsvp_config?: EventRSVPConfig
+    general_rsvps?: GeneralRSVP[]
     recurring_pattern?: RecurringEventPattern | null
     change_history?: EventChangeHistory[]
 }
@@ -107,6 +113,22 @@ export interface EventRSVP {
         first_name: string
         last_name: string
     }
+}
+
+export interface EventRSVPConfig {
+    enabled: boolean
+    type: RSVPType | null
+}
+
+export interface GeneralRSVP {
+    id: string
+    event_id: string
+    user_id: string
+    status: GeneralRSVPStatus
+    note: string | null
+    responded_at: string | null
+    created_at: string
+    updated_at: string
 }
 
 export interface RecurringEventPattern {
@@ -184,6 +206,8 @@ export interface EventFormData {
     external_link: string
     location: EventLocationFormData
     recurring: RecurringEventFormData | null
+    rsvp_enabled: boolean
+    rsvp_type: RSVPType | null
 }
 
 export interface EventLocationFormData {
@@ -215,12 +239,23 @@ export type RecurringEditMode = 'this_only' | 'this_and_future' | 'all'
 // ============================================================================
 
 export interface RSVPSummary {
-    total_children: number
-    going_count: number
-    late_count: number
-    not_going_count: number
-    unknown_count: number
-    response_rate: number
+    // For general RSVP
+    general?: {
+        going_count: number
+        not_going_count: number
+        maybe_count: number
+        total_responses: number
+        total_eligible: number
+    }
+    // For athlete RSVP
+    athlete?: {
+        going_count: number
+        late_count: number
+        not_going_count: number
+        unknown_count: number
+        total_children: number
+        response_rate: number
+    }
 }
 
 export interface EventConflict {

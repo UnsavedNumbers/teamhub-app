@@ -90,7 +90,8 @@ export async function getEvents(
                     team:teams(id, name, org_id),
                     season:seasons(id, name),
                     event_location:event_locations(*),
-                    rsvps:event_rsvps(*),
+                    rsvps:event_rsvps(*, child:children(id, first_name, last_name)),
+                    general_rsvps:event_general_rsvps(*),
                     recurring_pattern:recurring_event_patterns(*)
                 `)
                 .order('start_time', { ascending: true })
@@ -124,7 +125,21 @@ export async function getEvents(
 
             if (error) throw error
 
-            return { data: data as unknown as CalendarEvent[], error: null }
+            // Transform RSVP config for each event with safe defaults
+            if (data && Array.isArray(data)) {
+                data.forEach((event: any) => {
+                    // Ensure rsvp_config always exists with safe defaults
+                    event.rsvp_config = {
+                        enabled: event.rsvp_enabled ?? false,
+                        type: (event.rsvp_enabled && event.rsvp_type) ? (event.rsvp_type as 'general' | 'athlete') : null
+                    }
+                    // Ensure arrays exist even if empty
+                    if (!event.rsvps) event.rsvps = []
+                    if (!event.general_rsvps) event.general_rsvps = []
+                })
+            }
+
+            return { data: (data || []) as unknown as CalendarEvent[], error: null }
         } catch (err) {
             console.error('getEvents error:', err)
             return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
@@ -230,10 +245,19 @@ export async function getEventDetails(
                     season:seasons(id, name),
                     event_location:event_locations(*),
                     rsvps:event_rsvps(*, child:children(id, first_name, last_name)),
+                    general_rsvps:event_general_rsvps(*),
                     recurring_pattern:recurring_event_patterns(*)
                 `)
                 .eq('id', eventId)
                 .single()
+            
+            // Transform RSVP config
+            if (data) {
+                (data as any).rsvp_config = {
+                    enabled: data.rsvp_enabled ?? false,
+                    type: data.rsvp_type as 'none' | 'general' | 'athlete' | null
+                }
+            }
 
             if (error) throw error
 

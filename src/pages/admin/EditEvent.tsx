@@ -1,11 +1,8 @@
-
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
-import { useAuth } from '../../hooks/useAuth'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
-import { getTeams, getTeamDetails } from '../../data/services/teamsService'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { supabase } from '../../lib/supabase'
 import { 
@@ -20,13 +17,13 @@ import {
     EventFormData, 
     EVENT_TYPE_LABELS, 
     EventType,
-    DAYS_OF_WEEK
 } from '../../types/calendar'
 
 interface Team { id: string; name: string }
 interface Season { id: string; name: string; team_id: string }
 
-export default function CreateEvent() {
+export default function EditEvent() {
+  const { eventId } = useParams<{ eventId: string }>()
   const [teams, setTeams] = useState<Team[]>([])
   const [seasons, setSeasons] = useState<Season[]>([])
   const [loading, setLoading] = useState(true)
@@ -34,6 +31,7 @@ export default function CreateEvent() {
   const [error, setError] = useState<string | null>(null)
   const [showLocationDetails, setShowLocationDetails] = useState(false)
   const [showRecurring, setShowRecurring] = useState(false)
+  const [hasExistingRSVPs, setHasExistingRSVPs] = useState(false)
 
   const { currentOrganization } = useOrganization()
   const { context, isReady } = useUserContext()
@@ -80,13 +78,100 @@ export default function CreateEvent() {
   })
 
   const watchTeamId = watch('team_id')
-  const watchRecurEnabled = watch('recurring.enabled')
   const watchRSVPEnabled = watch('rsvp_enabled')
+  const watchRSVPType = watch('rsvp_type')
+
+  const fetchEvent = useCallback(async () => {
+    if (!isReady || !eventId) return
+    
+    setLoading(true)
+    try {
+      const { data: event, error: eventError } = await supabase
+        .from('events')
+        .select(`
+          *,
+          event_location:event_locations(*)
+        `)
+        .eq('id', eventId)
+        .single()
+
+      if (eventError) throw eventError
+      if (!event) throw new Error('Event not found')
+
+      // Check for existing RSVPs with safe error handling
+      let generalCount = 0
+      let athleteCount = 0
+      
+      try {
+        const { count: genCount } = await supabase
+          .from('event_general_rsvps')
+          .select('*', { count: 'exact', head: true })
+          .eq('event_id', eventId)
+        generalCount = genCount ?? 0
+      } catch (err) {
+        console.warn('Error checking general RSVPs:', err)
+      }
+
+      try {
+        const { count: athCount } = await supabase
+          .from('event_rsvps')
+          .select('*', { count: 'exact', head: true })
+          .eq('event_id', eventId)
+        athleteCount = athCount ?? 0
+      } catch (err) {
+        console.warn('Error checking athlete RSVPs:', err)
+      }
+
+      setHasExistingRSVPs(generalCount > 0 || athleteCount > 0)
+
+      // Populate form with safe defaults
+      const startDate = event.start_time ? new Date(event.start_time) : new Date()
+      const endDate = event.end_time ? new Date(event.end_time) : new Date()
+      
+      setValue('title', event.title || '')
+      setValue('type', event.type || 'practice')
+      setValue('team_id', event.team_id || '')
+      setValue('season_id', event.season_id || '')
+      setValue('start_time', new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000).toISOString().slice(0, 16))
+      setValue('end_time', new Date(endDate.getTime() - endDate.getTimezoneOffset() * 60000).toISOString().slice(0, 16))
+      setValue('arrival_time', event.arrival_time ? new Date(new Date(event.arrival_time).getTime() - new Date(event.arrival_time).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '')
+      setValue('timezone', event.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone)
+      setValue('notes', event.notes || '')
+      setValue('uniform_notes', event.uniform_notes || '')
+      setValue('equipment_notes', event.equipment_notes || '')
+      setValue('weather_dependent', event.weather_dependent ?? false)
+      setValue('external_link', event.external_link || '')
+      setValue('rsvp_enabled', event.rsvp_enabled ?? false)
+      setValue('rsvp_type', (event.rsvp_enabled && event.rsvp_type) ? event.rsvp_type : null)
+
+      if (event.event_location) {
+        setValue('location.venue_name', event.event_location.venue_name || '')
+        setValue('location.address_line1', event.event_location.address_line1 || '')
+        setValue('location.address_line2', event.event_location.address_line2 || '')
+        setValue('location.city', event.event_location.city || '')
+        setValue('location.state', event.event_location.state || '')
+        setValue('location.postal_code', event.event_location.postal_code || '')
+        setValue('location.is_tbd', event.event_location.is_tbd || false)
+        setValue('location.is_virtual', event.event_location.is_virtual || false)
+        setValue('location.virtual_link', event.event_location.virtual_link || '')
+        setShowLocationDetails(true)
+      }
+
+      // Fetch teams and seasons
+      await fetchTeams()
+      if (event.team_id) {
+        await fetchSeasons(event.team_id)
+      }
+    } catch (err) {
+      setError(getErrorMessage(err) || 'Failed to load event')
+    } finally {
+      setLoading(false)
+    }
+  }, [isReady, eventId, setValue])
 
   const fetchTeams = useCallback(async () => {
     if (!isReady) return
     
-    // Using Supabase directly for Admin pages to ensure real data access if service is mocked
     const { data, error } = await supabase
         .from('teams')
         .select('id, name')
@@ -96,10 +181,7 @@ export default function CreateEvent() {
     
     if (!error && data) {
       setTeams(data)
-    } else if (error) {
-       console.error(error)
     }
-    setLoading(false)
   }, [context, isReady])
 
   const fetchSeasons = useCallback(async (teamId: string) => {
@@ -114,49 +196,110 @@ export default function CreateEvent() {
 
     if (!error && data) {
       setSeasons(data)
-      if (data.length > 0) setValue('season_id', data[0].id)
     }
-  }, [context, isReady, setValue])
+  }, [isReady])
 
   useEffect(() => { 
-    if (isReady) fetchTeams() 
-  }, [isReady, fetchTeams])
+    if (isReady) fetchEvent() 
+  }, [isReady, fetchEvent])
 
   useEffect(() => { 
     if (watchTeamId && isReady) fetchSeasons(watchTeamId) 
   }, [watchTeamId, isReady, fetchSeasons])
 
   const onSubmit = async (data: EventFormData) => {
+    if (!eventId) return
+    
     setSaving(true)
     setError(null)
     
     try {
-      // 1. Insert Event
-      const { data: eventData, error: insertError } = await supabase.from('events').insert({
-        title: data.title,
-        type: data.type,
-        team_id: data.team_id,
-        season_id: data.season_id,
-        start_time: new Date(data.start_time).toISOString(),
-        end_time: data.end_time ? new Date(data.end_time).toISOString() : null,
-        arrival_time: data.arrival_time ? new Date(data.arrival_time).toISOString() : null,
-        timezone: data.timezone,
-        notes: data.notes,
-        uniform_notes: data.uniform_notes,
-        equipment_notes: data.equipment_notes,
-        weather_dependent: data.weather_dependent,
-        external_link: data.external_link,
-        rsvp_enabled: data.rsvp_enabled,
-        rsvp_type: data.rsvp_enabled ? data.rsvp_type : null,
-        created_by_user_id: context.userId
-      }).select().single()
-      
-      if (insertError) throw insertError
-      if (!eventData) throw new Error('No data returned')
+      // Check if RSVP type is changing and warn
+      if (hasExistingRSVPs && data.rsvp_enabled) {
+        const { data: currentEvent, error: currentEventError } = await supabase
+          .from('events')
+          .select('rsvp_type')
+          .eq('id', eventId)
+          .single()
 
-      // 2. Insert Location
-      const locationData = {
-          event_id: eventData.id,
+        if (!currentEventError && currentEvent?.rsvp_type && currentEvent.rsvp_type !== data.rsvp_type) {
+          const confirmChange = window.confirm(
+            'Changing RSVP type will delete existing RSVP responses. Are you sure?'
+          )
+          if (!confirmChange) {
+            setSaving(false)
+            return
+          }
+        }
+      }
+
+      // Use stored procedure for safe RSVP config update
+      if (data.rsvp_enabled !== undefined) {
+        const { data: configResult, error: configError } = await supabase
+          .rpc('update_event_rsvp_config', {
+            p_event_id: eventId,
+            p_rsvp_enabled: data.rsvp_enabled ?? false,
+            p_rsvp_type: data.rsvp_type || null,
+            p_clear_existing: true // User confirmed if needed
+          })
+
+        if (configError) {
+          const configData = (configResult as { error?: string; has_data?: boolean }) || {}
+          if (configData?.error && configData?.has_data) {
+            setError('Cannot change RSVP type: existing RSVPs found. Please clear them first.')
+            setSaving(false)
+            return
+          }
+          throw configError
+        }
+      }
+
+      // Update event
+      const { error: updateError } = await supabase
+        .from('events')
+        .update({
+          title: data.title,
+          type: data.type,
+          team_id: data.team_id,
+          season_id: data.season_id,
+          start_time: new Date(data.start_time).toISOString(),
+          end_time: data.end_time ? new Date(data.end_time).toISOString() : null,
+          arrival_time: data.arrival_time ? new Date(data.arrival_time).toISOString() : null,
+          timezone: data.timezone,
+          notes: data.notes,
+          uniform_notes: data.uniform_notes,
+          equipment_notes: data.equipment_notes,
+          weather_dependent: data.weather_dependent,
+          external_link: data.external_link,
+        })
+        .eq('id', eventId)
+
+      if (updateError) throw updateError
+
+      // Update location
+      const { data: locationData } = await supabase
+        .from('event_locations')
+        .select('id')
+        .eq('event_id', eventId)
+        .single()
+
+      if (locationData) {
+        await supabase
+          .from('event_locations')
+          .update({
+            venue_name: data.location.venue_name || null,
+            address_line1: data.location.address_line1 || null,
+            city: data.location.city || null,
+            state: data.location.state || null,
+            postal_code: data.location.postal_code || null,
+            is_tbd: data.location.is_tbd,
+            is_virtual: data.location.is_virtual,
+            virtual_link: data.location.virtual_link || null
+          })
+          .eq('id', locationData.id)
+      } else {
+        await supabase.from('event_locations').insert({
+          event_id: eventId,
           venue_name: data.location.venue_name || null,
           address_line1: data.location.address_line1 || null,
           city: data.location.city || null,
@@ -165,27 +308,12 @@ export default function CreateEvent() {
           is_tbd: data.location.is_tbd,
           is_virtual: data.location.is_virtual,
           virtual_link: data.location.virtual_link || null
-      }
-      
-      const { error: locError } = await supabase.from('event_locations').insert(locationData)
-      if (locError) console.error('Location save error', locError) // Don't block flow
-
-      // 3. Handle Recurring
-      if (data.recurring?.enabled) {
-          const recurData = {
-              parent_event_id: eventData.id,
-              frequency: data.recurring.frequency,
-              days_of_week: data.recurring.days_of_week.length > 0 ? data.recurring.days_of_week : [new Date(data.start_time).getDay()],
-              end_date: data.recurring.end_date || null,
-              max_occurrences: data.recurring.max_occurrences ? parseInt(data.recurring.max_occurrences) : null
-          }
-           const { error: recurError } = await supabase.from('recurring_event_patterns').insert(recurData)
-           if (recurError) throw recurError
+        })
       }
 
       navigate('/admin/events')
     } catch (err: unknown) { 
-      setError(getErrorMessage(err) || 'Failed to create event') 
+      setError(getErrorMessage(err) || 'Failed to update event') 
     } finally { 
       setSaving(false) 
     }
@@ -200,10 +328,15 @@ export default function CreateEvent() {
 
   return (
     <div className="pa-root">
-      <PageHeader title="Create Event" />
+      <PageHeader title="Edit Event" />
       <Card>
         <form onSubmit={handleSubmit(onSubmit)}>
           {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
+          {hasExistingRSVPs && watchRSVPEnabled && (
+            <div className="pa-card pa-mb-4 pa-text-warning" style={{ background: 'var(--pa-warning-bg)', border: 'none' }}>
+              Warning: This event has existing RSVP responses. Changing RSVP type will delete them.
+            </div>
+          )}
           
           <div className="pa-grid pa-grid-2 pa-mb-4 pa-gap-4">
             <Controller name="title" control={control} rules={{ required: 'Title is required' }} render={({ field }) => <Input {...field} label="Event Title" required error={!!errors.title} helperText={errors.title?.message} />} />
@@ -287,22 +420,6 @@ export default function CreateEvent() {
               )}
            </div>
 
-           <div className="pa-mb-4 pa-border pa-border-divider pa-rounded pa-p-4">
-              <div className="pa-flex pa-items-center pa-justify-between pa-mb-4">
-                 <div className="pa-font-bold">Recurring Event?</div>
-                 <Controller name="recurring.enabled" control={control} render={({ field: { value, onChange } }) => (
-                     <Checkbox checked={!!value} onChange={(e) => { onChange(e.target.checked); setShowRecurring(e.target.checked); }} label="Enable" />
-                 )} />
-              </div>
-              
-              {showRecurring && (
-                  <div className="pa-space-y-4">
-                       <Controller name="recurring.frequency" control={control} render={({ field }) => <Select {...field} label="Frequency" options={[{value:'weekly', label:'Weekly'}]} />} />
-                       <Controller name="recurring.end_date" control={control} render={({ field }) => <Input {...field} label="Recurs Until" type="date" />} />
-                  </div>
-              )}
-           </div>
-
           <div className="pa-grid pa-grid-2 pa-mb-6 pa-gap-4">
             <Controller name="notes" control={control} render={({ field }) => <textarea className="pa-input pa-textarea" {...field} placeholder="General Notes..." style={{ minHeight: '80px' }} />} />
             <div className="pa-space-y-2">
@@ -313,7 +430,7 @@ export default function CreateEvent() {
 
           <div className="pa-flex pa-justify-end pa-gap-3">
             <Button variant="secondary" onClick={() => navigate(-1)}>Cancel</Button>
-            <Button type="submit" loading={saving}>Create Event</Button>
+            <Button type="submit" loading={saving}>Update Event</Button>
           </div>
         </form>
       </Card>
