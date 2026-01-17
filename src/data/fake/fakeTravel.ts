@@ -52,7 +52,7 @@ export interface FakeTravelPlan {
 export interface MeetingLocation {
     name: string
     address: string
-    time: string
+    time?: string  // Made optional to match calendar.ts
     notes: string | null
     maps_url: string | null
 }

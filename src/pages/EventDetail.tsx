@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { getEventDetails, updateRSVP, getChildren } from '../data/services'
 import type { RSVPStatus } from '../types/calendar'
@@ -48,6 +48,7 @@ export default function EventDetail() {
 
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const fetchData = useCallback(async () => {
     if (!isReady || !eventId) return
@@ -58,7 +59,12 @@ export default function EventDetail() {
     const { data: eventData, error: eventError } = await getEventDetails(context, eventId)
 
     if (eventError || !eventData) {
-      navigate('/portal/calendar')
+      // Preserve query params when redirecting back to calendar
+      const searchParams = new URLSearchParams(location.search)
+      const returnPath = searchParams.toString() 
+        ? `/portal/calendar?${searchParams.toString()}` 
+        : '/portal/calendar'
+      navigate(returnPath)
       return
     }
 
@@ -103,7 +109,7 @@ export default function EventDetail() {
     }
 
     setLoading(false)
-  }, [eventId, context, isReady, navigate])
+  }, [eventId, context, isReady, navigate, location])
 
   useEffect(() => {
     if (eventId && isReady) fetchData()
@@ -165,11 +171,18 @@ export default function EventDetail() {
 
   if (!event) return null
 
+  const searchParams = new URLSearchParams(location.search)
+  
   return (
       <PortalLayout
         breadcrumbs={[
           { label: 'Home', path: '/portal/dashboard' },
-          { label: 'Schedule', path: '/portal/calendar' },
+          { 
+            label: 'Calendar', 
+            path: searchParams.toString() 
+              ? `/portal/calendar?${searchParams.toString()}` 
+              : '/portal/calendar' 
+          },
           { label: event.title },
         ]}
       >

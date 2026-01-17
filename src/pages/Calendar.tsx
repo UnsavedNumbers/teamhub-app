@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { 
   getEvents, 
@@ -13,6 +13,7 @@ import {
     CalendarEvent, 
     CalendarViewMode, 
     CalendarFilters, 
+    EventType,
     formatEventDate, 
     formatEventTimeRange, 
     formatEventLocation,
@@ -73,6 +74,7 @@ export default function Calendar() {
   
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   const fetchData = useCallback(async () => {
     if (!isReady) return
@@ -127,6 +129,39 @@ export default function Calendar() {
     }
     setLoading(false)
   }, [context, isReady, currentDate, viewMode, filters])
+
+  // Restore state from query params on mount
+  useEffect(() => {
+    const viewParam = searchParams.get('view')
+    const dateParam = searchParams.get('date')
+    const teamsParam = searchParams.get('teams')
+    const childrenParam = searchParams.get('children')
+    const typesParam = searchParams.get('types')
+    
+    if (viewParam && ['agenda', 'week', 'month'].includes(viewParam)) {
+      setViewMode(viewParam as CalendarViewMode)
+    }
+    
+    if (dateParam) {
+      const parsedDate = new Date(dateParam)
+      if (!isNaN(parsedDate.getTime())) {
+        setCurrentDate(parsedDate)
+      }
+    }
+    
+    if (teamsParam || childrenParam || typesParam) {
+      setFilters(prev => ({
+        ...prev,
+        teamIds: teamsParam ? teamsParam.split(',').filter(Boolean) : prev.teamIds,
+        childIds: childrenParam ? childrenParam.split(',').filter(Boolean) : prev.childIds,
+        eventTypes: typesParam ? typesParam.split(',').filter(Boolean).filter((t): t is EventType => {
+          const validTypes: EventType[] = ['practice', 'game', 'tournament', 'meeting', 'tryout', 'travel', 'pickup_dropoff', 'social', 'blackout']
+          return validTypes.includes(t as EventType)
+        }) : prev.eventTypes,
+      }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Only run on mount - intentionally excluding searchParams to avoid re-running on every param change
 
   useEffect(() => {
     fetchData()
@@ -387,7 +422,13 @@ export default function Calendar() {
                         <Button
                             variant="secondary"
                             onClick={() => {
-                                navigate(`/portal/events/${selectedEvent.id}`)
+                                const params = new URLSearchParams()
+                                params.set('view', viewMode)
+                                params.set('date', currentDate.toISOString().split('T')[0])
+                                if (filters.teamIds.length > 0) params.set('teams', filters.teamIds.join(','))
+                                if (filters.childIds.length > 0) params.set('children', filters.childIds.join(','))
+                                if (filters.eventTypes.length > 0) params.set('types', filters.eventTypes.join(','))
+                                navigate(`/portal/calendar/events/${selectedEvent.id}?${params.toString()}`)
                                 setSelectedEvent(null)
                             }}
                             className="w-full"

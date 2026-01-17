@@ -163,8 +163,8 @@ function App() {
             <Route path="settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="children" element={<ProtectedRoute><Children /></ProtectedRoute>} />
             <Route path="join" element={<ProtectedRoute><JoinTeam /></ProtectedRoute>} />
+            <Route path="calendar/events/:eventId" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />
             <Route path="calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
-            <Route path="events/:eventId" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />
             <Route path="payments" element={<ProtectedRoute><MyPayments /></ProtectedRoute>} />
             <Route path="payments/success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
             <Route path="payments/cancel" element={<ProtectedRoute><PaymentCancel /></ProtectedRoute>} />

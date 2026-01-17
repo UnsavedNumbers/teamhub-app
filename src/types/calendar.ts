@@ -11,15 +11,15 @@
 // migrations land, we model these as explicit unions here.
 
 export type EventType =
-  | 'practice'
-  | 'game'
-  | 'tournament'
-  | 'meeting'
-  | 'tryout'
-  | 'travel'
-  | 'pickup_dropoff'
-  | 'social'
-  | 'blackout'
+    | 'practice'
+    | 'game'
+    | 'tournament'
+    | 'meeting'
+    | 'tryout'
+    | 'travel'
+    | 'pickup_dropoff'
+    | 'social'
+    | 'blackout'
 
 export type RSVPStatus = 'going' | 'late' | 'not_going' | 'unknown'
 
@@ -59,6 +59,20 @@ export interface CalendarEvent {
     created_at: string
     updated_at: string
 
+    // Travel-related fields (for automatic travel detection)
+    requires_travel?: boolean
+    overnight?: boolean
+    departure_time?: string | null
+    return_time?: string | null
+    hotel_name?: string | null
+    hotel_address?: string | null
+    hotel_phone?: string | null
+    hotel_confirmation?: string | null
+    transportation_notes?: string | null
+    itinerary_file_path?: string | null
+    meeting_locations?: MeetingLocation[] | null
+    travel_override?: TravelOverride | null
+
     // Relations (loaded via joins)
     team?: {
         id: string
@@ -75,6 +89,23 @@ export interface CalendarEvent {
     general_rsvps?: GeneralRSVP[]
     recurring_pattern?: RecurringEventPattern | null
     change_history?: EventChangeHistory[]
+}
+
+// Meeting location for travel events
+export interface MeetingLocation {
+    name: string
+    address: string
+    time?: string
+    notes?: string | null
+    maps_url?: string | null
+}
+
+// Travel override set by admin
+export interface TravelOverride {
+    is_travel: boolean
+    reason: string
+    overridden_by: string
+    overridden_at: string
 }
 
 export interface EventLocation {
