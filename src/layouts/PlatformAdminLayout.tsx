@@ -56,6 +56,16 @@ const navSections: NavSection[] = [
     ],
   },
   {
+    label: 'Licenses & Entitlements',
+    items: [
+      { text: 'Overview', icon: 'dashboard', path: '/platform-admin/licenses', requiredAction: 'view_licenses' },
+      { text: 'License Tiers', icon: 'workspace_premium', path: '/platform-admin/licenses/tiers', requiredAction: 'manage_license_tiers' },
+      { text: 'Feature Catalog', icon: 'inventory_2', path: '/platform-admin/licenses/features', requiredAction: 'manage_features' },
+      { text: 'Rules & Overrides', icon: 'rule', path: '/platform-admin/licenses/overrides', requiredAction: 'manage_overrides' },
+      { text: 'Audit & History', icon: 'history', path: '/platform-admin/licenses/audit', requiredAction: 'view_licenses_audit' },
+    ],
+  },
+  {
     label: 'System',
     items: [
       { text: 'Structure', icon: 'account_tree', path: '/platform-admin/structure', requiredAction: 'view_structure' },

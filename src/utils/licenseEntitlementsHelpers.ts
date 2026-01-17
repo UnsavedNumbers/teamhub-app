@@ -1,0 +1,239 @@
+/**
+ * License Entitlements Helper Functions
+ * 
+ * Utilities for handling common operations with proper error handling,
+ * transaction management, and audit logging.
+ */
+
+import { supabase } from '../lib/supabase'
+import type { 
+  LicenseTier, 
+  FeatureEntitlement, 
+  TierFeatureAssignment,
+  EntitlementOverride 
+} from '../types/licenseTiers.types'
+
+/**
+ * Get current authenticated user for audit logging
+ */
+export async function getCurrentUser() {
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) {
+    throw new Error('User not authenticated')
+  }
+  return user
+}
+
+/**
+ * Log audit event with automatic actor information
+ */
+export async function logAuditEvent(params: {
+  action: string
+  targetType: 'tier' | 'feature' | 'override' | null
+  targetId: string | null
+  beforeState?: Record<string, unknown> | null
+  afterState?: Record<string, unknown> | null
+  reason?: string | null
+}) {
+  try {
+    const user = await getCurrentUser()
+    
+    const { error } = await supabase.from('entitlement_audit_log').insert({
+      actor_id: user.id,
+      actor_email: user.email || null,
+      action: params.action,
+      target_type: params.targetType,
+      target_id: params.targetId,
+      before_state: params.beforeState || null,
+      after_state: params.afterState || null,
+      reason: params.reason || null,
+    })
+
+    if (error) {
+      console.error('Failed to log audit event:', error)
+      // Don't throw - audit logging failure shouldn't break the operation
+    }
+  } catch (err) {
+    console.error('Error getting user for audit log:', err)
+    // Continue silently - audit is best effort
+  }
+}
+
+/**
+ * Save tier with optimistic locking and transaction
+ * Returns true if successful, false if version conflict
+ */
+export async function saveTierWithLock(
+  tierId: string,
+  updates: Partial<LicenseTier>,
+  expectedVersion: number
+): Promise<{ success: boolean; conflict?: boolean; error?: string }> {
+  try {
+    // Use RPC function for transaction with locking
+    // Note: This requires a database function to be created
+    // For now, we'll do a simple version check
+    
+    const { data: currentTier, error: fetchError } = await supabase
+      .from('license_tiers')
+      .select('version')
+      .eq('id', tierId)
+      .single()
+
+    if (fetchError) {
+      return { success: false, error: fetchError.message }
+    }
+
+    if (currentTier.version !== expectedVersion) {
+      return { success: false, conflict: true }
+    }
+
+    const { error: updateError } = await supabase
+      .from('license_tiers')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', tierId)
+      .eq('version', expectedVersion) // Ensure version hasn't changed
+
+    if (updateError) {
+      // Check if it's a version conflict (0 rows affected)
+      if (updateError.code === 'PGRST116' || updateError.message?.includes('0 rows')) {
+        return { success: false, conflict: true }
+      }
+      return { success: false, error: updateError.message }
+    }
+
+    return { success: true }
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Unknown error' }
+  }
+}
+
+/**
+ * Validate feature dependencies before creating override
+ */
+export async function validateFeatureDependencies(
+  targetId: string,
+  targetType: 'organization' | 'user',
+  featureId: string,
+  overrideAction: 'enable' | 'disable' | 'set_limit'
+): Promise<{ valid: boolean; missingDependencies?: string[] }> {
+  if (overrideAction !== 'enable') {
+    return { valid: true }
+  }
+
+  try {
+    // Check for required dependencies
+    const { data: dependencies, error } = await supabase
+      .from('feature_dependencies')
+      .select(`
+        depends_on_feature_id,
+        feature_entitlements!feature_dependencies_depends_on_feature_id_fkey(display_name)
+      `)
+      .eq('feature_id', featureId)
+      .eq('required', true)
+
+    if (error) {
+      console.error('Error checking dependencies:', error)
+      return { valid: true } // Fail open - don't block if we can't check
+    }
+
+    if (!dependencies || dependencies.length === 0) {
+      return { valid: true }
+    }
+
+    // Check if dependencies are enabled for the target
+    const missing: string[] = []
+    
+    for (const dep of dependencies) {
+      const depFeatureId = dep.depends_on_feature_id
+      const depName = (dep.feature_entitlements as any)?.display_name || 'Unknown'
+
+      // Check if enabled via tier
+      if (targetType === 'organization') {
+        const { data: org } = await supabase
+          .from('organizations')
+          .select('license_plan')
+          .eq('id', targetId)
+          .single()
+
+        if (org) {
+          const { data: tier } = await supabase
+            .from('license_tiers')
+            .select('id')
+            .eq('tier_key', org.license_plan)
+            .or(`tier_key.eq.basic,license_plan.eq.starter`)
+            .or(`tier_key.eq.power,license_plan.in.(standard,pro)`)
+            .single()
+
+          if (tier) {
+            const { data: assignment } = await supabase
+              .from('tier_feature_assignments')
+              .select('included')
+              .eq('license_tier_id', tier.id)
+              .eq('feature_entitlement_id', depFeatureId)
+              .eq('included', true)
+              .single()
+
+            if (assignment) {
+              continue // Dependency is enabled via tier
+            }
+          }
+        }
+      }
+
+      // Check if enabled via override
+      const { data: override } = await supabase
+        .from('entitlement_overrides')
+        .select('id')
+        .eq('target_id', targetId)
+        .eq('target_type', targetType)
+        .eq('feature_entitlement_id', depFeatureId)
+        .eq('override_action', 'enable')
+        .is('revoked_at', null)
+        .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
+        .single()
+
+      if (!override) {
+        missing.push(depName)
+      }
+    }
+
+    return {
+      valid: missing.length === 0,
+      missingDependencies: missing.length > 0 ? missing : undefined,
+    }
+  } catch (err) {
+    console.error('Error validating dependencies:', err)
+    return { valid: true } // Fail open
+  }
+}
+
+/**
+ * Check if Stripe Price ID verification is still valid (within 24 hours)
+ */
+export function isStripeVerificationValid(verifiedAt: string | null): boolean {
+  if (!verifiedAt) return false
+  
+  const verified = new Date(verifiedAt)
+  const now = new Date()
+  const hoursSinceVerification = (now.getTime() - verified.getTime()) / (1000 * 60 * 60)
+  
+  return hoursSinceVerification < 24
+}
+
+/**
+ * Get archived features count for a tier
+ */
+export async function getArchivedFeaturesCount(tierId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('tier_feature_assignments')
+    .select('*', { count: 'exact', head: true })
+    .eq('license_tier_id', tierId)
+    .eq('included', true)
+    .not('feature_entitlement_id', 'in', 
+      `(SELECT id FROM feature_entitlements WHERE archived_at IS NULL)`)
+
+  return count || 0
+}

@@ -49,6 +49,12 @@ export type PlatformAdminAction =
     // PII access (finance/super for full email, others get masked)
     | 'view_full_email'
     | 'copy_full_stripe_id'
+    // Licenses & Entitlements
+    | 'view_licenses'
+    | 'manage_license_tiers'
+    | 'manage_features'
+    | 'manage_overrides'
+    | 'view_licenses_audit'
 
 /**
  * Permission matrix: maps actions to allowed roles
@@ -92,6 +98,13 @@ const PERMISSION_MATRIX: Record<PlatformAdminAction, PlatformAdminRole[]> = {
     // PII access - finance/super
     view_full_email: ['super_admin', 'finance_admin'],
     copy_full_stripe_id: ['super_admin', 'finance_admin'],
+
+    // Licenses & Entitlements - ops/super
+    view_licenses: ['super_admin', 'ops_admin'],
+    manage_license_tiers: ['super_admin', 'ops_admin'],
+    manage_features: ['super_admin', 'ops_admin'],
+    manage_overrides: ['super_admin', 'ops_admin'],
+    view_licenses_audit: ['super_admin', 'ops_admin'],
 }
 
 /**

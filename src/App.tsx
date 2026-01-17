@@ -32,6 +32,7 @@ import PaymentCancel from './pages/PaymentCancel'
 import Settings from './pages/Settings'
 import Uniforms from './pages/Uniforms'
 import Travel from './pages/Travel'
+import TravelDetail from './pages/TravelDetail'
 import Tryouts from './pages/Tryouts'
 import TryoutDetail from './pages/TryoutDetail'
 import Messages from './pages/Messages'
@@ -55,6 +56,15 @@ const PlatformFees = lazy(() => import('./pages/platformAdmin/Fees'))
 const PlatformEventLog = lazy(() => import('./pages/platformAdmin/EventLog'))
 const PlatformFeatureFlags = lazy(() => import('./pages/platformAdmin/FeatureFlags'))
 const PlatformAdmins = lazy(() => import('./pages/platformAdmin/PlatformAdmins'))
+const LicensesOverview = lazy(() => import('./pages/platformAdmin/LicensesOverview'))
+const LicenseTiers = lazy(() => import('./pages/platformAdmin/LicenseTiers'))
+const LicenseTierDetail = lazy(() => import('./pages/platformAdmin/LicenseTierDetail'))
+const FeatureCatalog = lazy(() => import('./pages/platformAdmin/FeatureCatalog'))
+const FeatureDetail = lazy(() => import('./pages/platformAdmin/FeatureDetail'))
+const Overrides = lazy(() => import('./pages/platformAdmin/Overrides'))
+const OverrideCreate = lazy(() => import('./pages/platformAdmin/OverrideCreate'))
+const OverrideDetail = lazy(() => import('./pages/platformAdmin/OverrideDetail'))
+const LicensesAudit = lazy(() => import('./pages/platformAdmin/LicensesAudit'))
 
 // Admin Pages - Lazy loaded for code splitting
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
@@ -170,6 +180,7 @@ function App() {
             <Route path="payments/cancel" element={<ProtectedRoute><PaymentCancel /></ProtectedRoute>} />
             <Route path="uniforms" element={<ProtectedRoute><Uniforms /></ProtectedRoute>} />
             <Route path="travel" element={<ProtectedRoute><Travel /></ProtectedRoute>} />
+            <Route path="travel/:id" element={<ProtectedRoute><TravelDetail /></ProtectedRoute>} />
             <Route path="tryouts" element={<ProtectedRoute><Tryouts /></ProtectedRoute>} />
             <Route path="tryouts/:tryoutId" element={<ProtectedRoute><TryoutDetail /></ProtectedRoute>} />
             <Route path="messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
@@ -296,6 +307,17 @@ function App() {
               
               {/* Platform Admins */}
               <Route path="admins" element={<PlatformAdmins />} />
+              
+              {/* Licenses & Entitlements */}
+              <Route path="licenses" element={<LicensesOverview />} />
+              <Route path="licenses/tiers" element={<LicenseTiers />} />
+              <Route path="licenses/tiers/:id" element={<LicenseTierDetail />} />
+              <Route path="licenses/features" element={<FeatureCatalog />} />
+              <Route path="licenses/features/:id" element={<FeatureDetail />} />
+              <Route path="licenses/overrides" element={<Overrides />} />
+              <Route path="licenses/overrides/new" element={<OverrideCreate />} />
+              <Route path="licenses/overrides/:id" element={<OverrideDetail />} />
+              <Route path="licenses/audit" element={<LicensesAudit />} />
             </Route>
           </Route>
         </Routes>

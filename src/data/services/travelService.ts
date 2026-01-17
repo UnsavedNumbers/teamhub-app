@@ -563,6 +563,16 @@ export async function getTravelPlanDetails(
 }
 
 /**
+ * Get a single travel plan by ID (convenience function for detail view)
+ */
+export async function getTravelPlanById(
+    context: UserContext,
+    planId: string
+): Promise<{ data: FakeTravelPlan | null; error: Error | null }> {
+    return getTravelPlanDetails(context, planId)
+}
+
+/**
  * @deprecated Use getUpcomingTravelEventsForUser instead
  */
 export async function getUpcomingTravelPlansForUser(

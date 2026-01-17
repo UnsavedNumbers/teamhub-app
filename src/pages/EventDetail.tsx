@@ -5,7 +5,6 @@ import { getEventDetails, updateRSVP, getChildren } from '../data/services'
 import type { RSVPStatus } from '../types/calendar'
 import { getSportFromEvent, type SportInfo } from '../utils/sportContext'
 import PortalLayout from '../components/portal/PortalLayout'
-import PortalHeader from '../components/portal/PortalHeader'
 import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
 import { SportHero } from '../components/portal/SportHero'
 import Card from '../components/portal/Card'
@@ -158,14 +157,11 @@ export default function EventDetail() {
 
   if (loading) {
     return (
-      <>
-        <PortalHeader />
-        <PortalLayout>
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
-          </div>
-        </PortalLayout>
-      </>
+      <PortalLayout>
+        <div className="flex justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+        </div>
+      </PortalLayout>
     )
   }
 
