@@ -345,7 +345,7 @@ export default function Messages() {
                                 </div>
                                 <span className="text-xs font-bold uppercase tracking-widest text-slate-400">{formatDate(ann.created_at)}</span>
                               </div>
-                              <p className="text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{ann.content}</p>
+
                             </Card>
                           </Link>
                           )

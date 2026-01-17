@@ -93,14 +93,34 @@ export async function getAnnouncements(
         await simulateDelay()
         // ... (existing fake logic simplified/omitted for brevity as we focus on real impl)
         // For brevity reusing existing fake calls if needed or just returning array
-        let announcements = getAnnouncementsForOrg(context.orgId)
+        let announcements: FakeAnnouncement[] = []
         if (params.teamId) {
             const teamAnn = getAnnouncementsForTeam(params.teamId)
-            announcements = params.includeOrgWide ? [...announcements, ...teamAnn] : teamAnn
+            const orgWideAnn = getOrgWideAnnouncements(context.orgId)
+            announcements = params.includeOrgWide ? [...orgWideAnn, ...teamAnn] : teamAnn
+        } else {
+            announcements = getAnnouncementsForOrg(context.orgId)
         }
         // Sort
         announcements.sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime())
-        return { data: announcements, error: null }
+
+        // Map to proper Announcement interface
+        const mappedAnnouncements: Announcement[] = announcements.map(fake => ({
+            id: fake.id,
+            team_id: fake.team_id,
+            author_id: fake.created_by_user_id,
+            title: fake.title,
+            content: fake.body,
+            priority: fake.type === 'emergency' ? 'urgent' : 'normal',
+            created_at: fake.created_at,
+            updated_at: fake.updated_at,
+            author: {
+                email: '',
+                role: 'coach'
+            }
+        }))
+
+        return { data: mappedAnnouncements, error: null }
     }
 
     try {
@@ -166,8 +186,26 @@ export async function getAnnouncementById(
 ): Promise<{ data: Announcement | null; error: Error | null }> {
     if (USE_FAKE_DATA) {
         await simulateDelay()
-        const announcement = getFakeAnnouncementById(announcementId)
-        return { data: announcement as Announcement | null, error: null }
+        const fakeAnn = getFakeAnnouncementById(announcementId)
+        if (!fakeAnn) {
+            return { data: null, error: null }
+        }
+        // Map FakeAnnouncement to Announcement interface
+        const announcement: Announcement = {
+            id: fakeAnn.id,
+            team_id: fakeAnn.team_id,
+            author_id: fakeAnn.created_by_user_id,
+            title: fakeAnn.title,
+            content: fakeAnn.body,
+            priority: fakeAnn.type === 'emergency' ? 'urgent' : 'normal',
+            created_at: fakeAnn.created_at,
+            updated_at: fakeAnn.updated_at,
+            author: {
+                email: '',
+                role: 'coach' // Default role for fake data
+            }
+        }
+        return { data: announcement, error: null }
     }
 
     try {

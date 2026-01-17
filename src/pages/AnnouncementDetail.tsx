@@ -3,7 +3,6 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { getAnnouncementById, type Announcement } from '../data/services/messagesService'
 import PortalLayout from '../components/portal/PortalLayout'
-import PortalHeader from '../components/portal/PortalHeader'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
@@ -26,35 +25,50 @@ export default function AnnouncementDetail() {
   }, [])
 
   const fetchData = useCallback(async () => {
-    if (!isReady || !announcementId) {
-      if (!announcementId) {
-        navigate('/portal/messages', { replace: true })
-      }
+    if (!announcementId) {
+      setLoading(false)
+      navigate('/portal/messages', { replace: true })
+      return
+    }
+
+    if (!isReady) {
+      // Wait for context to be ready
       return
     }
 
     setLoading(true)
 
-    const { data, error } = await getAnnouncementById(context, announcementId)
+    try {
+      const { data, error } = await getAnnouncementById(context, announcementId)
 
-    // Check if component is still mounted before updating state
-    if (!isMountedRef.current) return
+      // Check if component is still mounted before updating state
+      if (!isMountedRef.current) return
 
-    if (error || !data) {
-      // Handle different error types
-      if (error?.message?.includes('not found') || error?.message?.includes('No rows')) {
-        // 404 - announcement not found
-        navigate('/portal/messages', { replace: true })
-      } else {
-        // Other errors - log and redirect
-        console.error('Error fetching announcement:', error)
-        navigate('/portal/messages', { replace: true })
+      if (error || !data) {
+        // Set loading to false before navigating to prevent hanging
+        setLoading(false)
+        
+        // Handle different error types
+        if (error?.message?.includes('not found') || error?.message?.includes('No rows')) {
+          // 404 - announcement not found
+          navigate('/portal/messages', { replace: true })
+        } else {
+          // Other errors - log and redirect
+          console.error('Error fetching announcement:', error)
+          navigate('/portal/messages', { replace: true })
+        }
+        return
       }
-      return
-    }
 
-    setAnnouncement(data)
-    setLoading(false)
+      setAnnouncement(data)
+      setLoading(false)
+    } catch (err) {
+      // Catch any unexpected errors
+      if (!isMountedRef.current) return
+      console.error('Unexpected error fetching announcement:', err)
+      setLoading(false)
+      navigate('/portal/messages', { replace: true })
+    }
   }, [announcementId, context, isReady, navigate])
 
   useEffect(() => {
@@ -69,30 +83,24 @@ export default function AnnouncementDetail() {
 
   if (loading) {
     return (
-      <>
-        <PortalHeader />
-        <PortalLayout>
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
-          </div>
-        </PortalLayout>
-      </>
+      <PortalLayout>
+        <div className="flex justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+        </div>
+      </PortalLayout>
     )
   }
 
   if (!announcement) {
     return (
-      <>
-        <PortalHeader />
-        <PortalLayout>
-          <Card className="text-center py-12">
-            <CardTitle>Announcement not found</CardTitle>
-            <Button variant="primary" onClick={() => navigate(backUrl)} className="mt-4">
-              Back to Messages
-            </Button>
-          </Card>
-        </PortalLayout>
-      </>
+      <PortalLayout>
+        <Card className="text-center py-12">
+          <CardTitle>Announcement not found</CardTitle>
+          <Button variant="primary" onClick={() => navigate(backUrl)} className="mt-4">
+            Back to Messages
+          </Button>
+        </Card>
+      </PortalLayout>
     )
   }
 

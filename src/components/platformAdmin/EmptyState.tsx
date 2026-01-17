@@ -1,39 +1,57 @@
+/**
+ * Empty State Component
+ * 
+ * Displays empty state messages with optional actions
+ */
+
+import { Button } from './Button'
 import type { ReactNode } from 'react'
 
 interface EmptyStateProps {
-  /** Icon name (Material Symbols) */
   icon?: string
-  /** Headline (Oswald H2) */
   title: string
-  /** Description text */
   description?: string
-  /** Action button/CTA */
-  action?: ReactNode
+  action?: {
+    label: string
+    onClick: () => void
+  }
+  children?: ReactNode
 }
 
-/**
- * EmptyState - Nike + Google design system
- * 
- * Centered empty state with:
- * - Large icon
- * - Oswald headline
- * - Body description
- * - Primary CTA
- */
-export function EmptyState({
-  icon = 'inbox',
-  title,
-  description,
-  action,
-}: EmptyStateProps) {
+function EmptyState({ icon = 'inbox', title, description, action, children }: EmptyStateProps) {
   return (
-    <div className="pa-empty">
-      <div className="pa-empty-icon">
-        <span className="material-symbols-outlined">{icon}</span>
-      </div>
-      <h2 className="pa-empty-title">{title}</h2>
-      {description && <p className="pa-empty-text">{description}</p>}
-      {action}
+    <div
+      className="pa-card"
+      style={{
+        textAlign: 'center',
+        padding: 'var(--pa-space-8) var(--pa-space-5)',
+        background: 'var(--pa-n50)',
+      }}
+    >
+      <span
+        className="material-symbols-outlined"
+        style={{
+          fontSize: '64px',
+          color: 'var(--pa-n400)',
+          marginBottom: 'var(--pa-space-4)',
+        }}
+      >
+        {icon}
+      </span>
+      <h3 className="pa-h3" style={{ marginBottom: 'var(--pa-space-2)' }}>
+        {title}
+      </h3>
+      {description && (
+        <p className="pa-body-m" style={{ color: 'var(--pa-n600)', marginBottom: action ? 'var(--pa-space-4)' : 0 }}>
+          {description}
+        </p>
+      )}
+      {action && (
+        <Button variant="primary" onClick={action.onClick}>
+          {action.label}
+        </Button>
+      )}
+      {children}
     </div>
   )
 }

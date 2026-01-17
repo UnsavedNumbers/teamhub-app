@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
-import { PageHeader, Card, Button, Input, Select, Badge, Checkbox, ConfirmDialog } from '../../components/platformAdmin'
+import { supabase, isSupabaseConfigured } from '../../lib/supabase'
+import { PageHeader, Card, Button, Input, Select, Badge, Checkbox, ConfirmDialog, ErrorState, EmptyState } from '../../components/platformAdmin'
 import type { LicenseTier, FeatureEntitlement, TierFeatureAssignment, StripePriceVerification } from '../../types/licenseTiers.types'
 import { FEATURE_CATEGORIES, FEATURE_TYPES } from '../../utils/licenseTierConstants'
 import { logAuditEvent, isStripeVerificationValid, getArchivedFeaturesCount } from '../../utils/licenseEntitlementsHelpers'
+import { isValidRouteId, getInvalidRouteIdError } from '../../utils/routeValidation'
+import { useOffline } from '../../hooks/useOffline'
+import { shouldBlockInDemoMode, getDemoModeError } from '../../utils/demoMode'
 
 const FEATURE_CATEGORIES_OPTIONS = FEATURE_CATEGORIES.map(cat => ({ value: cat, label: cat }))
 const FEATURE_TYPES_OPTIONS = FEATURE_TYPES.map(type => ({ value: type, label: type }))
@@ -12,6 +15,7 @@ const FEATURE_TYPES_OPTIONS = FEATURE_TYPES.map(type => ({ value: type, label: t
 export default function LicenseTierDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { isOffline } = useOffline()
   const isNew = id === 'new'
 
   const [tier, setTier] = useState<Partial<LicenseTier & { version?: number }>>({
@@ -31,6 +35,15 @@ export default function LicenseTierDetail() {
   const [verifying, setVerifying] = useState(false)
   const [conflictDialog, setConflictDialog] = useState(false)
   const [archivedFeaturesCount, setArchivedFeaturesCount] = useState(0)
+  const [notFound, setNotFound] = useState(false)
+  const [invalidRoute, setInvalidRoute] = useState(false)
+
+  // Validate route parameter
+  useEffect(() => {
+    if (!isNew && id && !isValidRouteId(id)) {
+      setInvalidRoute(true)
+    }
+  }, [id, isNew])
 
   const fetchTier = useCallback(async () => {
     if (isNew) return
@@ -43,7 +56,13 @@ export default function LicenseTierDetail() {
         .eq('id', id!)
         .single()
 
-      if (tierError) throw tierError
+      if (tierError) {
+        if (tierError.code === 'PGRST116' || tierError.message?.includes('not found')) {
+          setNotFound(true)
+          return
+        }
+        throw tierError
+      }
       setTier(data)
 
       // Check for archived features
@@ -176,6 +195,18 @@ export default function LicenseTierDetail() {
   }
 
   const handleSave = async (reason?: string) => {
+    // Check demo mode
+    if (shouldBlockInDemoMode('write')) {
+      setError(getDemoModeError('save license tier'))
+      return
+    }
+
+    // Check offline
+    if (isOffline) {
+      setError('Cannot save while offline. Please check your internet connection.')
+      return
+    }
+
     if (!tier.tier_name || !tier.stripe_price_id) {
       setError('Tier name and Stripe Price ID are required')
       return
@@ -291,7 +322,18 @@ export default function LicenseTierDetail() {
         })
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to save tier')
+      // Provide user-friendly error messages
+      let errorMessage = 'Failed to save tier'
+      if (err.code === '23505') {
+        errorMessage = 'A tier with this Stripe Price ID already exists'
+      } else if (err.code === '23503') {
+        errorMessage = 'Invalid reference. Please refresh and try again.'
+      } else if (err.code === '42501') {
+        errorMessage = 'Permission denied. You do not have access to modify license tiers.'
+      } else if (err.message) {
+        errorMessage = err.message
+      }
+      setError(errorMessage)
     } finally {
       setSaving(false)
     }
@@ -367,10 +409,41 @@ export default function LicenseTierDetail() {
     return acc
   }, {} as Record<string, FeatureEntitlement[]>)
 
+  if (invalidRoute) {
+    return (
+      <div>
+        <PageHeader title="Invalid Route" />
+        <ErrorState
+          title="Invalid License Tier ID"
+          message={getInvalidRouteIdError(id, 'license tier')}
+          onRetry={() => navigate('/platform-admin/licenses/tiers')}
+          retryLabel="Back to Tiers"
+        />
+      </div>
+    )
+  }
+
+  if (notFound) {
+    return (
+      <div>
+        <PageHeader title="License Tier Not Found" />
+        <ErrorState
+          title="Tier Not Found"
+          message="The license tier you're looking for doesn't exist or has been deleted."
+          onRetry={() => navigate('/platform-admin/licenses/tiers')}
+          retryLabel="Back to Tiers"
+        />
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div>
         <PageHeader title="Loading..." />
+        <Card>
+          <div className="pa-skeleton" style={{ height: '300px', width: '100%' }} />
+        </Card>
       </div>
     )
   }
@@ -385,20 +458,49 @@ export default function LicenseTierDetail() {
             <Button variant="secondary" onClick={() => navigate('/platform-admin/licenses/tiers')}>
               Cancel
             </Button>
-            <Button variant="primary" onClick={() => handleSave()} disabled={saving}>
-              {saving ? 'Saving...' : 'Save Changes'}
+            <Button 
+              variant="primary" 
+              onClick={() => handleSave()} 
+              disabled={saving || isOffline || shouldBlockInDemoMode('write')}
+            >
+              {saving ? 'Saving...' : shouldBlockInDemoMode('write') ? 'Demo Mode' : 'Save Changes'}
             </Button>
           </div>
         }
       />
 
-      {error && (
-        <div className="pa-card pa-mb-4" style={{ borderLeft: '3px solid var(--pa-danger)', background: 'var(--pa-danger-bg)' }}>
+      {isOffline && (
+        <div className="pa-card pa-mb-4" style={{ borderLeft: '3px solid var(--pa-warning)', background: 'var(--pa-warning-bg)' }}>
           <div className="pa-flex pa-items-center pa-gap-2">
-            <span className="material-symbols-outlined" style={{ color: 'var(--pa-danger)' }}>error</span>
-            <span className="pa-body-m">{error}</span>
+            <span className="material-symbols-outlined" style={{ color: 'var(--pa-warning)' }}>wifi_off</span>
+            <span className="pa-body-m">You are currently offline. Some features may not be available.</span>
           </div>
         </div>
+      )}
+
+      {error && (
+        <ErrorState
+          title="Error"
+          message={error}
+          onRetry={() => {
+            setError(null)
+            if (isNew) {
+              // Reset form
+              setTier({
+                tier_key: 'basic',
+                tier_name: '',
+                description: '',
+                stripe_price_id: '',
+                status: 'active',
+                version: 1,
+              })
+            } else if (id) {
+              // Reload data
+              window.location.reload()
+            }
+          }}
+          retryLabel={isNew ? 'Reset Form' : 'Reload'}
+        />
       )}
 
       <div className="pa-grid pa-grid-2" style={{ gap: 'var(--pa-space-5)' }}>

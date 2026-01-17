@@ -26,4 +26,5 @@ export { default as FilterBar } from './FilterBar'
 export { default as ConfirmDialog } from './ConfirmDialog'
 export { default as JsonViewer } from './JsonViewer'
 export { EventLogDetailModal } from './EventLogDetailModal'
+export { ErrorState } from './ErrorState'
 
