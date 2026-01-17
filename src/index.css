@@ -20,6 +20,38 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Glass effect variables for mega menu */
+  --gn-glass-bg: rgba(255, 255, 255, 0.85);
+  --gn-glass-border: rgba(0, 0, 0, 0.08);
+  --gn-glass-blur: blur(20px);
+  --gn-glass-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+
+  /* Navigation colors */
+  --gn-text-primary: #1e293b;
+  --gn-text-secondary: #64748b;
+  --gn-text-muted: #94a3b8;
+  --gn-border: #e2e8f0;
+  --gn-hover-bg: #f1f5f9;
+  --gn-active-bg: #e2e8f0;
+
+  /* Motion */
+  --gn-motion-fast: 150ms;
+  --gn-motion-normal: 200ms;
+  --gn-ease-out: cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+.dark {
+  --gn-glass-bg: rgba(15, 23, 42, 0.9);
+  --gn-glass-border: rgba(255, 255, 255, 0.1);
+  --gn-glass-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+
+  --gn-text-primary: #f8fafc;
+  --gn-text-secondary: #94a3b8;
+  --gn-text-muted: #64748b;
+  --gn-border: #334155;
+  --gn-hover-bg: rgba(255, 255, 255, 0.08);
+  --gn-active-bg: rgba(255, 255, 255, 0.12);
 }
 
 body {
@@ -128,5 +160,345 @@ body {
   /* Google OAuth button */
   body:not(.md-admin-root) .btn-google {
     @apply flex items-center justify-center gap-3 w-full py-3 px-4 border border-slate-300 dark:border-slate-600 rounded-lg font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors duration-200;
+  }
+}
+
+/* ============================================================
+   GLOBAL NAVIGATION - Mega Menu System
+   Used by both Portal and Admin layouts
+   ============================================================ */
+
+/* Main navigation container */
+.gn-root {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  background: var(--gn-glass-bg);
+  backdrop-filter: var(--gn-glass-blur);
+  -webkit-backdrop-filter: var(--gn-glass-blur);
+  border-bottom: 1px solid var(--gn-glass-border);
+  box-shadow: var(--gn-glass-shadow);
+}
+
+/* Left section: logo + nav items */
+.gn-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+/* Brand/Logo */
+.gn-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.gn-brand:hover {
+  text-decoration: none;
+}
+
+.gn-logo {
+  width: 32px;
+  height: 32px;
+  background: var(--gn-text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.dark .gn-logo {
+  background: var(--gn-text-primary);
+}
+
+.gn-logo .material-symbols-outlined {
+  font-size: 20px;
+  color: white;
+}
+
+.dark .gn-logo .material-symbols-outlined {
+  color: #0f172a;
+}
+
+.gn-brand-text {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gn-text-primary);
+  letter-spacing: -0.01em;
+}
+
+/* Navigation items container */
+.gn-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Individual nav item */
+.gn-nav-item {
+  position: relative;
+}
+
+/* Nav trigger button */
+.gn-nav-trigger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 40px;
+  padding: 0 12px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gn-text-secondary);
+  cursor: pointer;
+  transition: all var(--gn-motion-normal) var(--gn-ease-out);
+}
+
+.gn-nav-trigger:hover {
+  background: var(--gn-hover-bg);
+  color: var(--gn-text-primary);
+}
+
+.gn-nav-trigger[aria-expanded="true"] {
+  background: var(--gn-active-bg);
+  color: var(--gn-text-primary);
+}
+
+.gn-nav-trigger:focus-visible {
+  outline: 2px solid var(--gn-text-secondary);
+  outline-offset: 2px;
+}
+
+.gn-nav-trigger .material-symbols-outlined {
+  font-size: 18px;
+  transition: transform var(--gn-motion-normal) var(--gn-ease-out);
+}
+
+.gn-nav-trigger[aria-expanded="true"] .gn-chevron {
+  transform: rotate(180deg);
+}
+
+/* Right section: utilities */
+.gn-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Utility buttons (theme, notifications) */
+.gn-util-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  color: var(--gn-text-secondary);
+  cursor: pointer;
+  transition: all var(--gn-motion-normal) var(--gn-ease-out);
+}
+
+.gn-util-btn:hover {
+  background: var(--gn-hover-bg);
+  color: var(--gn-text-primary);
+}
+
+.gn-util-btn:focus-visible {
+  outline: 2px solid var(--gn-text-secondary);
+  outline-offset: 2px;
+}
+
+.gn-util-btn .material-symbols-outlined {
+  font-size: 22px;
+}
+
+/* Divider between utils */
+.gn-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--gn-border);
+}
+
+/* ============================================================
+   MEGA MENU PANEL
+   ============================================================ */
+
+.gn-mega {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 280px;
+  max-width: 640px;
+  background: var(--gn-glass-bg);
+  backdrop-filter: var(--gn-glass-blur);
+  -webkit-backdrop-filter: var(--gn-glass-blur);
+  border: 1px solid var(--gn-glass-border);
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  padding: 12px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition: all var(--gn-motion-normal) var(--gn-ease-out);
+  z-index: 200;
+}
+
+.gn-mega.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* Mega menu with multiple columns */
+.gn-mega--wide {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  min-width: 520px;
+}
+
+/* Mega menu group */
+.gn-mega-group {
+  padding: 8px 0;
+}
+
+.gn-mega-group:not(:last-child) {
+  border-bottom: 1px solid var(--gn-border);
+  padding-bottom: 12px;
+  margin-bottom: 8px;
+}
+
+.gn-mega--wide .gn-mega-group:not(:last-child) {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 8px;
+}
+
+.gn-mega-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gn-text-muted);
+  padding: 8px 12px;
+}
+
+/* Mega menu links */
+.gn-mega-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--gn-text-secondary);
+  transition: all var(--gn-motion-normal) var(--gn-ease-out);
+}
+
+.gn-mega-link:hover {
+  background: var(--gn-hover-bg);
+  color: var(--gn-text-primary);
+  text-decoration: none;
+}
+
+.gn-mega-link:focus-visible {
+  outline: 2px solid var(--gn-text-secondary);
+  outline-offset: -2px;
+}
+
+.gn-mega-link .material-symbols-outlined {
+  font-size: 20px;
+  color: var(--gn-text-muted);
+  flex-shrink: 0;
+}
+
+.gn-mega-link:hover .material-symbols-outlined {
+  color: var(--gn-text-secondary);
+}
+
+.gn-mega-link-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.gn-mega-link-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gn-text-primary);
+}
+
+.gn-mega-link-desc {
+  font-size: 12px;
+  color: var(--gn-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================================
+   MOBILE NAVIGATION
+   ============================================================ */
+
+.gn-mobile-toggle {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .gn-nav {
+    display: none;
+  }
+
+  .gn-mobile-toggle {
+    display: flex;
+  }
+
+  /* Mobile mega menu becomes full-width drawer */
+  .gn-mega {
+    position: fixed;
+    top: 64px;
+    left: 0;
+    right: 0;
+    max-width: none;
+    max-height: calc(100vh - 64px);
+    overflow-y: auto;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  .gn-mega--wide {
+    grid-template-columns: 1fr;
+    min-width: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .gn-root {
+    padding: 0 16px;
+  }
+
+  .gn-brand-text {
+    display: none;
+  }
+
+  .gn-divider {
+    display: none;
   }
 }

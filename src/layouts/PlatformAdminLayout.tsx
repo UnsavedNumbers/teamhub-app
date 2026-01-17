@@ -8,6 +8,7 @@ import {
 } from '../utils/platformAdminPermissions'
 import type { PlatformAdminRole } from '../types/platformAdmin.types'
 import { usePlatformAdminTheme } from '../hooks/usePlatformAdminTheme'
+import GlobalNav from '../components/common/GlobalNav'
 
 // Navigation structure per design spec
 type NavSection = {
@@ -196,42 +197,8 @@ export default function PlatformAdminLayout() {
 
       {/* Main */}
       <div className="pa-main">
-        {/* Top Bar */}
-        <header className="pa-topbar">
-          <div className="pa-topbar-left">
-            {/* Mobile menu button */}
-            <button
-              className="pa-btn pa-btn--ghost pa-btn--dense"
-              onClick={() => setMobileOpen(!mobileOpen)}
-              style={{ display: 'none' }} // Hide on desktop, show on mobile via CSS
-              aria-label="Toggle menu"
-            >
-              <span className="material-symbols-outlined">menu</span>
-            </button>
-            <h1 className="pa-topbar-title">Platform Administration</h1>
-          </div>
-
-          <div className="pa-topbar-right">
-            {/* Search */}
-            <div className="pa-search">
-              <span className="pa-search-icon">
-                <span className="material-symbols-outlined">search</span>
-              </span>
-              <input
-                type="text"
-                className="pa-search-input"
-                placeholder="Search..."
-              />
-            </div>
-
-            {/* User menu */}
-            <div className="pa-user-menu">
-              <div className="pa-user-avatar">
-                <span className="material-symbols-outlined">person</span>
-              </div>
-            </div>
-          </div>
-        </header>
+        {/* Global Navigation */}
+        <GlobalNav variant="platform-admin" />
 
         {/* Content */}
         <main className="pa-content">

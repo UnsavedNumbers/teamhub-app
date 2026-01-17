@@ -6,7 +6,7 @@ import { useLicense } from '../hooks/useLicense'
 import { LicenseWarningBanner } from '../components/admin/LicenseWarningBanner'
 import AdminLoadingSpinner from '../components/admin/AdminLoadingSpinner'
 import { usePlatformAdminTheme } from '../hooks/usePlatformAdminTheme'
-import UserContextDropdown from '../components/common/UserContextDropdown'
+import GlobalNav from '../components/common/GlobalNav'
 
 // Navigation menu items - converted to Material Symbols
 const menuSections = [
@@ -161,27 +161,8 @@ export default function AdminLayout() {
 
       {/* Main */}
       <div className="pa-main">
-        {/* Top Bar */}
-        <header className="pa-topbar">
-          <div className="pa-topbar-left">
-            <button
-              className="pa-btn pa-btn--ghost pa-btn--dense"
-              onClick={() => setMobileOpen(!mobileOpen)}
-              style={{ display: 'none' }}
-              aria-label="Toggle menu"
-            >
-              <span className="material-symbols-outlined">menu</span>
-            </button>
-            <h1 className="pa-topbar-title">Organization Administration</h1>
-          </div>
-
-          <div className="pa-topbar-right">
-            {/* User menu */}
-            <div className="pa-user-menu">
-              <UserContextDropdown />
-            </div>
-          </div>
-        </header>
+        {/* Global Navigation */}
+        <GlobalNav variant="admin" />
 
         {/* License Warning Banner */}
         {summary && <LicenseWarningBanner summary={summary} />}

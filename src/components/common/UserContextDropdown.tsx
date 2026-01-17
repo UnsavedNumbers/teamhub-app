@@ -78,7 +78,16 @@ export default function UserContextDropdown() {
 
         {/* Menu */}
         {isOpen && (
-            <div className="absolute right-0 mt-2 w-72 origin-top-right rounded-md bg-white dark:bg-slate-900 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 overflow-hidden border border-slate-100 dark:border-slate-700">
+            <div 
+                className="absolute right-0 mt-2 w-72 origin-top-right rounded-xl overflow-hidden z-50"
+                style={{
+                    background: 'var(--pa-glass-bg, rgba(255, 255, 255, 0.85))',
+                    backdropFilter: 'var(--pa-glass-blur, blur(20px))',
+                    WebkitBackdropFilter: 'var(--pa-glass-blur, blur(20px))',
+                    border: '1px solid var(--pa-glass-border, rgba(0, 0, 0, 0.06))',
+                    boxShadow: 'var(--pa-shadow-3, 0 16px 40px rgba(0, 0, 0, 0.18))',
+                }}
+            >
                 
                 {/* 1. User Identity */}
                 <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
