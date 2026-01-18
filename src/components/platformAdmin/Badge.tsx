@@ -1,18 +1,14 @@
-import type { ReactNode } from 'react'
+import type { HTMLAttributes, ReactNode } from 'react'
 
 type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral'
 
-interface BadgeProps {
+interface BadgeProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'children'> {
   /** Visual variant based on semantic meaning */
   variant?: BadgeVariant
   /** Badge content */
   children: ReactNode
   /** Optional icon (Material Symbols name) */
   icon?: string
-  /** Additional CSS classes */
-  className?: string
-  /** Tooltip title */
-  title?: string
 }
 
 /**
@@ -30,10 +26,10 @@ export function Badge({
   children,
   icon,
   className = '',
-  title,
+  ...attrs
 }: BadgeProps) {
   return (
-    <span className={`pa-badge pa-badge--${variant} ${className}`.trim()} title={title}>
+    <span className={`pa-badge pa-badge--${variant} ${className}`.trim()} {...attrs}>
       {icon && (
         <span className="material-symbols-outlined" style={{ fontSize: '12px' }}>
           {icon}

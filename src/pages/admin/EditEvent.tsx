@@ -188,15 +188,21 @@ export default function EditEvent() {
   const fetchSeasons = useCallback(async (teamId: string) => {
     if (!isReady) return
     
+    // Use view to get seasons associated with the team
     const { data, error } = await supabase
-        .from('seasons')
-        .select('id, name, team_id')
+        .from('team_seasons_view')
+        .select('season_id, name')
         .eq('team_id', teamId)
-        .eq('status', 'active')
-        .order('start_date', { ascending: false })
-
+        .eq('is_active', true)
+    
     if (!error && data) {
-      setSeasons(data)
+       // Map season_id to id
+       const mappedSeasons = data.map(s => ({
+          id: s.season_id,
+          name: s.name,
+          team_id: teamId
+      }))
+      setSeasons(mappedSeasons)
     }
   }, [isReady])
 

@@ -11,10 +11,7 @@ import {
     TEAM_U12_SOCCER_ID,
     TEAM_U10_BASKETBALL_ID,
     TEAM_U12_BASKETBALL_ID,
-    SEASON_SPRING_2024_U10_SOCCER_ID,
-    SEASON_SPRING_2024_U12_SOCCER_ID,
-    SEASON_SPRING_2024_U10_BB_ID,
-    SEASON_SPRING_2024_U12_BB_ID,
+    SEASON_SPRING_2024_ID,
 } from './fakeTeams'
 import {
     CHILD_EMMA_JOHNSON_ID,
@@ -133,7 +130,7 @@ export const fakeFees: FakeFee[] = [
         id: FEE_TOURNAMENT_U12_ID,
         org_id: DEMO_ORG_A_ID,
         team_id: TEAM_U12_SOCCER_ID,
-        season_id: SEASON_SPRING_2024_U12_SOCCER_ID,
+        season_id: SEASON_SPRING_2024_ID,
         title: 'Spring Cup Tournament Fee',
         description: 'Tournament entry fee. Covers 3 guaranteed games.',
         amount_cents: 4500, // $45.00

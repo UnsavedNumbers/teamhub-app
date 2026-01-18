@@ -1,14 +1,12 @@
-import type { ReactNode } from 'react'
+import type { HTMLAttributes, ReactNode } from 'react'
 
-interface CardProps {
+interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
   /** Card title (H3 style) */
   title?: string
   /** Action buttons/links for card header */
   actions?: ReactNode
   /** Card content */
   children: ReactNode
-  /** Additional CSS classes */
-  className?: string
   /** Remove default padding */
   noPadding?: boolean
 }
@@ -27,11 +25,16 @@ export function Card({
   children,
   className = '',
   noPadding = false,
+  style,
+  ...rest
 }: CardProps) {
+  const mergedStyle = noPadding ? { padding: 0, ...style } : style
+
   return (
     <div
       className={`pa-card ${className}`.trim()}
-      style={noPadding ? { padding: 0 } : undefined}
+      style={mergedStyle}
+      {...rest}
     >
       {(title || actions) && (
         <div className="pa-card-header">

@@ -60,6 +60,7 @@ function buildPermissions(context: UserContext): PermissionSet {
 export interface TeamsQueryParams {
     sportId?: string
     programId?: string
+    levelId?: string
     activeOnly?: boolean
 }
 
@@ -107,6 +108,11 @@ export async function getTeams(
             teams = teams.filter((t) => t.program_id === params.programId)
         }
 
+        // Filter by level if provided
+        if (params.levelId) {
+            teams = teams.filter((t) => t.level_id === params.levelId)
+        }
+
         // Non-admin users only see teams they have access to
         if (!permissions.canViewAllOrgData) {
             const accessibleTeamIds = new Set<string>()
@@ -141,7 +147,10 @@ export async function getTeams(
  *     *,
  *     sport:sports(*),
  *     program:programs(*),
- *     seasons:seasons(*)
+ *     level:levels(*),
+ *     active_season:team_seasons(
+ *       season:seasons(*)
+ *     )
  *   `)
  *   .eq('id', teamId)
  *   .single()
@@ -193,8 +202,10 @@ export { getSports, getPrograms } from './sportsService'
  * TODO: Replace with Supabase query:
  * ```typescript
  * const { data, error } = await supabase
- *   .from('seasons')
- *   .select('*')
+ *   .from('team_seasons')
+ *   .select(`
+ *     season:seasons(*)
+ *   `)
  *   .eq('team_id', teamId)
  *   .eq('is_active', true)
  *   .single()

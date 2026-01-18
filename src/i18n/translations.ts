@@ -138,6 +138,12 @@ export const en = {
         missingOrganization: 'Organization is required to load billing.',
         unsupportedPlan: 'Unsupported plan selected.',
         inactiveLicense: 'Your license is inactive. Update billing to continue.',
+        eventIdAndChildIdRequired: 'Event ID and Athlete ID are required',
+        childNotEligible: 'Athlete is not eligible for this event',
+        cannotUpdateRsvp: 'Unauthorized: Cannot update RSVP for this athlete',
+        selectChildOrApplyToAll: 'Select an athlete or apply to all',
+        unknownAthlete: 'Unknown Athlete',
+        athlete: 'Athlete',
     },
     portal: {
         travel: {
@@ -219,6 +225,31 @@ export const en = {
                 spanish: 'Spanish',
                 description: 'Choose your preferred language',
             },
+        },
+        children: {
+            title: 'Athletes',
+            noChildren: 'No athletes added',
+            addChildren: 'Add athletes to register them for teams.',
+            add: 'Add',
+        },
+        events: {
+            noChildren: 'No athletes added.',
+            add: 'Add',
+        },
+        uniforms: {
+            addChildrenFirst: 'Add athletes first to manage uniforms.',
+            add: 'Add',
+        },
+        joinTeam: {
+            addChildFirst: 'Add an athlete first.',
+            selectChild: 'Select Athlete',
+            chooseChild: 'Choose an athlete',
+            add: 'Add',
+            success: 'Your athlete has been added to',
+        },
+        navigation: {
+            myChildren: 'My Athletes',
+            yourChildrenTeams: 'Your athletes\' teams',
         },
     },
     calendar: {
@@ -364,41 +395,6 @@ export const en = {
             },
         },
     },
-    portal: {
-        children: {
-            title: 'Athletes',
-            noChildren: 'No athletes added',
-            addChildren: 'Add athletes to register them for teams.',
-            add: 'Add',
-        },
-        events: {
-            noChildren: 'No athletes added.',
-            add: 'Add',
-        },
-        uniforms: {
-            addChildrenFirst: 'Add athletes first to manage uniforms.',
-            add: 'Add',
-        },
-        joinTeam: {
-            addChildFirst: 'Add an athlete first.',
-            selectChild: 'Select Athlete',
-            chooseChild: 'Choose an athlete',
-            add: 'Add',
-            success: 'Your athlete has been added to',
-        },
-        navigation: {
-            myChildren: 'My Athletes',
-            yourChildrenTeams: 'Your athletes\' teams',
-        },
-    },
-    errors: {
-        eventIdAndChildIdRequired: 'Event ID and Athlete ID are required',
-        childNotEligible: 'Athlete is not eligible for this event',
-        cannotUpdateRsvp: 'Unauthorized: Cannot update RSVP for this athlete',
-        selectChildOrApplyToAll: 'Select an athlete or apply to all',
-        unknownAthlete: 'Unknown Athlete',
-        athlete: 'Athlete',
-    },
 }
 
 /**
@@ -526,6 +522,12 @@ export const es: typeof en = {
         missingOrganization: 'Se requiere organización para cargar facturación.',
         unsupportedPlan: 'Plan seleccionado no compatible.',
         inactiveLicense: 'Su licencia está inactiva. Actualice la facturación para continuar.',
+        eventIdAndChildIdRequired: 'Se requieren ID de Evento e ID de Atleta',
+        childNotEligible: 'El atleta no es elegible para este evento',
+        cannotUpdateRsvp: 'No autorizado: No se puede actualizar RSVP para este atleta',
+        selectChildOrApplyToAll: 'Seleccione un atleta o aplique a todos',
+        unknownAthlete: 'Atleta Desconocido',
+        athlete: 'Atleta',
     },
     portal: {
         travel: {
@@ -607,6 +609,31 @@ export const es: typeof en = {
                 spanish: 'Español',
                 description: 'Elija su idioma preferido',
             },
+        },
+        children: {
+            title: 'Atletas',
+            noChildren: 'No se han agregado atletas',
+            addChildren: 'Agregue atletas para registrarlos en equipos.',
+            add: 'Agregar',
+        },
+        events: {
+            noChildren: 'No se han agregado atletas.',
+            add: 'Agregar',
+        },
+        uniforms: {
+            addChildrenFirst: 'Agregue atletas primero para gestionar uniformes.',
+            add: 'Agregar',
+        },
+        joinTeam: {
+            addChildFirst: 'Agregue un atleta primero.',
+            selectChild: 'Seleccionar Atleta',
+            chooseChild: 'Elija un atleta',
+            add: 'Agregar',
+            success: 'Su atleta ha sido agregado a',
+        },
+        navigation: {
+            myChildren: 'Mis Atletas',
+            yourChildrenTeams: 'Equipos de sus atletas',
         },
     },
     calendar: {
@@ -751,41 +778,6 @@ export const es: typeof en = {
                 recurringEndRequired: 'Especifique fecha de finalización o número de ocurrencias',
             },
         },
-    },
-    portal: {
-        children: {
-            title: 'Atletas',
-            noChildren: 'No se han agregado atletas',
-            addChildren: 'Agregue atletas para registrarlos en equipos.',
-            add: 'Agregar',
-        },
-        events: {
-            noChildren: 'No se han agregado atletas.',
-            add: 'Agregar',
-        },
-        uniforms: {
-            addChildrenFirst: 'Agregue atletas primero para gestionar uniformes.',
-            add: 'Agregar',
-        },
-        joinTeam: {
-            addChildFirst: 'Agregue un atleta primero.',
-            selectChild: 'Seleccionar Atleta',
-            chooseChild: 'Elija un atleta',
-            add: 'Agregar',
-            success: 'Su atleta ha sido agregado a',
-        },
-        navigation: {
-            myChildren: 'Mis Atletas',
-            yourChildrenTeams: 'Equipos de sus atletas',
-        },
-    },
-    errors: {
-        eventIdAndChildIdRequired: 'Se requieren ID de Evento e ID de Atleta',
-        childNotEligible: 'El atleta no es elegible para este evento',
-        cannotUpdateRsvp: 'No autorizado: No se puede actualizar RSVP para este atleta',
-        selectChildOrApplyToAll: 'Seleccione un atleta o aplique a todos',
-        unknownAthlete: 'Atleta Desconocido',
-        athlete: 'Atleta',
     },
 }
 

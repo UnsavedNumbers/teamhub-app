@@ -29,9 +29,9 @@ interface TableProps<T> {
   /** Row click handler */
   onRowClick?: (row: T) => void
   /** Selected row IDs */
-  selectedRows?: Set<string | number>
+  selectedRows?: Set<T['id']>
   /** Selection handler */
-  onSelectionChange?: (selectedIds: Set<string | number>) => void
+  onSelectionChange?: (selectedIds: Set<T['id']>) => void
   /** Enable row selection */
   selectable?: boolean
   /** Enable zebra striping */
@@ -86,13 +86,13 @@ export function Table<T extends { id: string | number }>({
     if (checked) {
       onSelectionChange(new Set(data.map((row) => row.id)))
     } else {
-      onSelectionChange(new Set())
+      onSelectionChange(new Set<T['id']>())
     }
   }
 
-  const handleSelectRow = (id: string | number, checked: boolean) => {
+  const handleSelectRow = (id: T['id'], checked: boolean) => {
     if (!onSelectionChange || !selectedRows) return
-    const newSelection = new Set(selectedRows)
+    const newSelection = new Set<T['id']>(selectedRows)
     if (checked) {
       newSelection.add(id)
     } else {

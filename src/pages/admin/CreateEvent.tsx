@@ -107,16 +107,23 @@ export default function CreateEvent() {
   const fetchSeasons = useCallback(async (teamId: string) => {
     if (!isReady) return
     
+    // Use view to get seasons associated with the team
     const { data, error } = await supabase
-        .from('seasons')
-        .select('id, name, team_id')
+        .from('team_seasons_view')
+        .select('season_id, name')
         .eq('team_id', teamId)
-        .eq('status', 'active')
-        .order('start_date', { ascending: false })
+        .eq('is_active', true)
+        // .order('start_date', { ascending: false }) // View might not sort implicitly, usually need to enable querying ordered col
 
     if (!error && data) {
-      setSeasons(data)
-      if (data.length > 0) setValue('season_id', data[0].id)
+      // Map season_id to id for the select component
+      const mappedSeasons = data.map(s => ({
+          id: s.season_id,
+          name: s.name,
+          team_id: teamId
+      }))
+      setSeasons(mappedSeasons)
+      if (mappedSeasons.length > 0) setValue('season_id', mappedSeasons[0].id)
     }
   }, [context, isReady, setValue])
 

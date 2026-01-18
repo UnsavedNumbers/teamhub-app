@@ -19,63 +19,14 @@ import {
     type FakeSport,
     type FakeProgram,
 } from '../fake/fakeTeams'
-
-// ============================================================================
-// Types
-// ============================================================================
-
-export interface Sport {
-    id: string
-    org_id: string
-    name: string
-    icon: string | null
-    color: string
-    created_at: string
-    updated_at: string
-    deleted_at: string | null
-}
-
-export interface Program {
-    id: string
-    org_id: string
-    sport_id: string
-    name: string
-    description: string | null
-    age_min: number | null
-    age_max: number | null
-    created_at: string
-    updated_at: string
-    deleted_at: string | null
-}
-
-export interface CreateSportDTO {
-    org_id: string
-    name: string
-    icon?: string
-    color?: string
-}
-
-export interface UpdateSportDTO {
-    name?: string
-    icon?: string
-    color?: string
-}
-
-export interface CreateProgramDTO {
-    org_id: string
-    sport_id: string
-    name: string
-    description?: string
-    age_min?: number
-    age_max?: number
-}
-
-export interface UpdateProgramDTO {
-    name?: string
-    description?: string
-    age_min?: number
-    age_max?: number
-}
+import type {
+    Sport,
+    Program,
+    CreateSportDTO,
+    UpdateSportDTO,
+    CreateProgramDTO,
+    UpdateProgramDTO
+} from '../types/organization'
 
 // ============================================================================
 // Helper Functions
@@ -345,6 +296,7 @@ export async function createProgram(
                 org_id: dto.org_id,
                 sport_id: dto.sport_id,
                 name: dto.name,
+                gender_category: dto.gender_category,
                 description: dto.description || null,
                 age_min: dto.age_min || null,
                 age_max: dto.age_max || null,
@@ -379,6 +331,7 @@ export async function updateProgram(
     try {
         const updateData: any = {}
         if (dto.name !== undefined) updateData.name = dto.name
+        if (dto.gender_category !== undefined) updateData.gender_category = dto.gender_category
         if (dto.description !== undefined) updateData.description = dto.description
         if (dto.age_min !== undefined) updateData.age_min = dto.age_min
         if (dto.age_max !== undefined) updateData.age_max = dto.age_max

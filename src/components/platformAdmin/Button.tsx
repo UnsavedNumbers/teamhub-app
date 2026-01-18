@@ -1,9 +1,9 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import type { ComponentPropsWithoutRef, ElementType, ReactNode } from 'react'
 
 type ButtonVariant = 'primary' | 'blue' | 'volt' | 'secondary' | 'ghost' | 'danger'
 type ButtonSize = 'default' | 'compact' | 'dense'
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+type ButtonProps<E extends ElementType = 'button'> = {
   /** Visual variant */
   variant?: ButtonVariant
   /** Size variant */
@@ -16,7 +16,11 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean
   /** Children (button label) */
   children: ReactNode
-}
+  /** Render as a different element */
+  as?: E
+  /** Disabled state */
+  disabled?: boolean
+} & Omit<ComponentPropsWithoutRef<E>, 'children' | 'className'>
 
 /**
  * Button - Nike + Google design system
@@ -29,7 +33,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
  * - ghost: No border
  * - danger: Red for destructive actions
  */
-export function Button({
+export function Button<E extends ElementType = 'button'>({
   variant = 'primary',
   size = 'default',
   icon,
@@ -38,17 +42,29 @@ export function Button({
   disabled,
   children,
   className = '',
-  ...props
-}: ButtonProps) {
+  as,
+  ...rest
+}: ButtonProps<E>) {
   const sizeClass = size === 'compact' ? 'pa-btn--compact' : size === 'dense' ? 'pa-btn--dense' : ''
   const variantClass = `pa-btn--${variant}`
+  const Tag = as ?? 'button'
+
+  const classNames = `pa-btn ${variantClass} ${sizeClass} ${className}`.trim()
+  const componentProps = {
+    className: classNames,
+    ...rest,
+  } as ComponentPropsWithoutRef<E>
+
+  if (Tag === 'button') {
+    const buttonProps = componentProps as ComponentPropsWithoutRef<'button'>
+    buttonProps.disabled = disabled || loading
+    if (!buttonProps.type) {
+      buttonProps.type = 'button'
+    }
+  }
 
   return (
-    <button
-      className={`pa-btn ${variantClass} ${sizeClass} ${className}`.trim()}
-      disabled={disabled || loading}
-      {...props}
-    >
+    <Tag {...componentProps}>
       {loading ? (
         <span
           className="pa-spinner"
@@ -69,7 +85,7 @@ export function Button({
           {iconRight}
         </span>
       )}
-    </button>
+    </Tag>
   )
 }
 

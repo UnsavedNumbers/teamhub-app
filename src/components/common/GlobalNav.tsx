@@ -6,6 +6,10 @@ import UserContextDropdown from './UserContextDropdown'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
 
+interface GlobalNavProps {
+  variant: 'admin' | 'platform-admin'
+}
+
 export default function GlobalNav({ variant }: GlobalNavProps) {
   const { currentOrganization } = useOrganization()
   const t = useT()
@@ -77,69 +81,6 @@ export default function GlobalNav({ variant }: GlobalNavProps) {
       },
     ],
   },
-]
-
-// Navigation configuration for Platform Admin
-const platformAdminNavSections: { label: string; groups: NavGroup[] }[] = [
-  {
-    label: 'Overview',
-    groups: [
-      {
-        label: '',
-        items: [
-          { text: 'Dashboard', icon: 'dashboard', path: '/platform-admin', description: 'Platform metrics' },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'Organizations',
-    groups: [
-      {
-        label: '',
-        items: [
-          { text: 'Organizations', icon: 'apartment', path: '/platform-admin/organizations', description: 'All organizations' },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'Users',
-    groups: [
-      {
-        label: '',
-        items: [
-          { text: 'Users', icon: 'group', path: '/platform-admin/users', description: 'All platform users' },
-          { text: 'Platform Admins', icon: 'admin_panel_settings', path: '/platform-admin/admins', description: 'Admin management' },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'Finance',
-    groups: [
-      {
-        label: '',
-        items: [
-          { text: 'Payments', icon: 'credit_card', path: '/platform-admin/payments', description: 'Payment transactions' },
-          { text: 'Fees', icon: 'receipt_long', path: '/platform-admin/fees', description: 'Fee schedules' },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'System',
-    groups: [
-      {
-        label: '',
-        items: [
-          { text: 'Event Log', icon: 'history', path: '/platform-admin/audit', description: 'Audit trail' },
-          { text: 'Feature Flags', icon: 'flag', path: '/platform-admin/feature-flags', description: 'Feature toggles' },
-          { text: 'Structure', icon: 'account_tree', path: '/platform-admin/structure', description: 'Data model' },
-        ],
-      },
-    ],
-    },
   ], [t])
 
   // Navigation configuration for Platform Admin
@@ -205,7 +146,6 @@ const platformAdminNavSections: { label: string; groups: NavGroup[] }[] = [
     },
   ]
 
-  const isAdmin = variant === 'admin'
   const navSections = isAdmin ? adminNavSections : platformAdminNavSections
 
   // Filter nav items based on org requirement (admin variant only)
