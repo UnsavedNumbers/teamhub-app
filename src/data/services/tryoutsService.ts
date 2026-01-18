@@ -68,7 +68,7 @@ async function simulateDelay() {
 }
 
 export async function getTryouts(
-    context: UserContext,
+    _context: UserContext,
     _orgId?: string
 ): Promise<{ data: Tryout[]; error: Error | null }> {
     await simulateDelay()

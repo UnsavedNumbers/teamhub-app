@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
-import { useAuth } from '../../hooks/useAuth'
+
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { getTeams, getTeamDetails } from '../../data/services/teamsService'
@@ -43,11 +43,11 @@ export default function CreateTravelPlan() {
   const [error, setError] = useState<string | null>(null)
   const [itineraryFile, setItineraryFile] = useState<File | null>(null)
 
-  const { currentOrganization } = useOrganization()
+
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
-  const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<TravelFormData>({
+  const { control, handleSubmit, watch, setValue } = useForm<TravelFormData>({
     defaultValues: { 
       team_id: '', season_id: '', title: '', location: '', destination_city: '', 
       destination_state: '', start_date: '', end_date: '', venue_name: '', venue_address: '', 

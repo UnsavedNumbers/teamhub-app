@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth'
+
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { getFeeAssignmentsForUser, getOrgPaymentSummary, formatCurrency } from '../../data/services/paymentsService'
 import { 
   PageHeader, 
-  Card, 
   Badge, 
   StatCard, 
   PlatformDataTable, 
@@ -36,7 +35,7 @@ export default function Payments() {
   })
 
 
-  const { currentOrganization } = useOrganization()
+
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 

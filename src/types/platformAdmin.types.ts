@@ -104,6 +104,7 @@ export interface AdminPayment {
  * admin_fees_status view row
  */
 export interface AdminFeeStatus {
+    id: string // Mapped from fee_id
     fee_id: string
     fee_name: string
     amount_cents: number

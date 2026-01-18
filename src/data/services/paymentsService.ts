@@ -12,7 +12,6 @@ import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext, PermissionSet } from '../fake/userContext'
 import { calculatePermissions } from '../fake/userContext'
 import {
-    fakeFees,
     fakeFeeAssignments,
     getFeeById,
     getFeesForOrg,

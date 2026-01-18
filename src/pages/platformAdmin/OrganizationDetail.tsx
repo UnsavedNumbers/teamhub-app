@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { PageHeader, Badge, Card, ConfirmDialog, PlatformDataTable, type ColumnConfig } from '../../components/platformAdmin'
 import { canPerformAction } from '../../utils/platformAdminPermissions'
+import { isRpcSuccessResponse } from '../../utils/typeAdapters'
 import type { 
   AdminOrganization, 
   AdminFeatureFlag, 
@@ -103,8 +104,8 @@ export default function OrganizationDetail() {
         return
       }
 
-      if (data && !data.success) {
-        setDialogError(data.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !data.success) {
+        setDialogError(data?.error || 'Unknown error')
         return
       }
 

@@ -41,7 +41,7 @@ export default function JoinTeam() {
   const [joining, setJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { profile } = useAuth()
+
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
@@ -188,9 +188,11 @@ export default function JoinTeam() {
                 {children.length === 0 ? (
                   <div className="text-center py-4">
                     <p className="text-slate-500 dark:text-slate-400 mb-6">{t('portal.joinTeam.addChildFirst')}</p>
-                    <Button variant="primary" as={Link} to="/portal/children">
-                      {t('portal.joinTeam.add')}
-                    </Button>
+                    <Link to="/portal/children">
+                      <Button variant="primary">
+                        {t('portal.joinTeam.add')}
+                      </Button>
+                    </Link>
                   </div>
                 ) : (
                   <>

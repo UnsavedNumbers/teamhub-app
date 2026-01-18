@@ -107,7 +107,7 @@ export default function Events() {
     fetchEvents() 
   }, [fetchEvents])
 
-  const getTypeVariant = (type: string): 'info' | 'success' | 'warning' | 'neutral' | 'error' => {
+  const getTypeVariant = (type: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'error' => {
     switch (type) {
       case 'practice': return 'info'
       case 'game': return 'success'
@@ -154,3 +154,4 @@ export default function Events() {
     </div>
   )
 }
+

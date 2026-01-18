@@ -118,7 +118,7 @@ export default function TravelDetail() {
   const [tripEvents, setTripEvents] = useState<CalendarEvent[]>([])
   const [eventsLoading, setEventsLoading] = useState(false)
   const [copiedText, setCopiedText] = useState<string | null>(null)
-  const [showMapsDropdown, setShowMapsDropdown] = useState<string | null>(null)
+
 
   useEffect(() => {
     if (!isReady || !id) return

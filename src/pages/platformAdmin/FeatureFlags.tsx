@@ -1,21 +1,16 @@
 import { useState, useEffect, useCallback } from 'react'
-import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { PageHeader, Badge, Card, FilterBar, ConfirmDialog, Button, Input, Select, PlatformDataTable, type ColumnConfig } from '../../components/platformAdmin'
-import { canPerformAction, getDeniedMessage } from '../../utils/platformAdminPermissions'
+import { canPerformAction } from '../../utils/platformAdminPermissions'
 import { getEnvironment } from '../../utils/featureFlags'
+import { mapFeatureFlagOverride, isRpcSuccessResponse } from '../../utils/typeAdapters'
 import type { 
   AdminFeatureFlag, 
   FeatureFlagValueType, 
   FeatureFlagEnvironment,
   FeatureFlagOverride,
   CreateFeatureFlagRequest,
-  SetPlatformDefaultRequest,
-  SetOrgOverrideRequest,
-  SetUserOverrideRequest,
-  RemoveOverrideRequest,
-  DeleteFeatureFlagRequest,
   RpcResponse,
 } from '../../types/featureFlags.types'
 import type { PlatformAdminRole } from '../../types/platformAdmin.types'
@@ -127,7 +122,9 @@ export default function FeatureFlags() {
         console.error('Error fetching overrides:', error)
         setOverrides([])
       } else {
-        setOverrides(data || [])
+        // Map rows to include id field
+        const mapped = (data || []).map(row => mapFeatureFlagOverride(row as any))
+        setOverrides(mapped)
       }
     } catch (err) {
       console.error('Error:', err)
@@ -151,7 +148,7 @@ export default function FeatureFlags() {
     }
   }, [toast])
 
-  const handleCreateFlag = async (reason: string) => {
+  const handleCreateFlag = async (_reason: string) => {
     if (!newFlag.key.trim()) {
       setDialogError('Flag key is required')
       return
@@ -173,8 +170,8 @@ export default function FeatureFlags() {
         return
       }
       
-      if (data && !data.success) {
-        setDialogError(data.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !data.success) {
+        setDialogError(data?.error || 'Unknown error')
         return
       }
       
@@ -225,8 +222,8 @@ export default function FeatureFlags() {
         return
       }
       
-      if (data && !data.success) {
-        setDialogError(data.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !data.success) {
+        setDialogError(data?.error || 'Unknown error')
         return
       }
       
@@ -285,8 +282,8 @@ export default function FeatureFlags() {
         return
       }
 
-      if (data && !data.success) {
-        setDialogError(data.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !data.success) {
+        setDialogError(data?.error || 'Unknown error')
         return
       }
 
@@ -404,8 +401,8 @@ export default function FeatureFlags() {
         return
       }
       
-      if (data && !data.success) {
-        setDialogError(data.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !data.success) {
+        setDialogError(data?.error || 'Unknown error')
         return
       }
       
@@ -478,8 +475,8 @@ export default function FeatureFlags() {
         return
       }
       
-      if (data && !data.success) {
-        setDialogError(data.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !data.success) {
+        setDialogError(data?.error || 'Unknown error')
         return
       }
       
@@ -559,7 +556,7 @@ export default function FeatureFlags() {
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
           <Button
             variant="ghost"
-            size="sm"
+            size="small"
             onClick={() => {
               setEditDefaultDialog({ open: true, flag: row })
               setDefaultValue({
@@ -573,21 +570,21 @@ export default function FeatureFlags() {
           </Button>
           <Button
             variant="ghost"
-            size="sm"
+            size="small"
             onClick={() => setOrgOverrideDialog({ open: true, flag: row })}
           >
             Org Override
           </Button>
           <Button
             variant="ghost"
-            size="sm"
+            size="small"
             onClick={() => setUserOverrideDialog({ open: true, flag: row })}
           >
             User Override
           </Button>
           <Button
             variant="ghost"
-            size="sm"
+            size="small"
             onClick={() => navigate(`/platform-admin/feature-flags/${row.id}`)}
           >
             View Details
@@ -595,7 +592,7 @@ export default function FeatureFlags() {
           {row.deleted_at ? (
             <Button
               variant="ghost"
-              size="sm"
+              size="small"
               onClick={() => setRestoreDialog({ open: true, flag: row })}
             >
               Restore
@@ -603,7 +600,7 @@ export default function FeatureFlags() {
           ) : (
             <Button
               variant="ghost"
-              size="sm"
+              size="small"
               onClick={() => setDeleteDialog({ open: true, flag: row })}
             >
               Delete
@@ -614,7 +611,7 @@ export default function FeatureFlags() {
     },
   ]
   
-  const overrideColumns: ColumnConfig<FeatureFlagOverride>[] = [
+  const overrideColumns: ColumnConfig<FeatureFlagOverride & { id: string }>[] = [
     {
       id: 'feature_key',
       label: 'Flag Key',
@@ -635,8 +632,8 @@ export default function FeatureFlags() {
     },
     {
       id: 'scope_name',
-      label: row => row.override_type === 'org' ? 'Organization' : 'User',
-      render: (row) => (
+      label: (row: FeatureFlagOverride) => row.override_type === 'org' ? 'Organization' : 'User',
+      render: (row: FeatureFlagOverride) => (
         <div className="pa-body-m">{row.scope_name}</div>
       ),
     },
@@ -658,10 +655,7 @@ export default function FeatureFlags() {
       render: (row) => (
         <Button
           variant="ghost"
-          size="sm"
           onClick={() => {
-            // Open remove dialog
-            const removeDialog = { open: true, override: row }
             // We'll use ConfirmDialog for this
             if (window.confirm(`Remove ${row.override_type} override for ${row.scope_name}?`)) {
               handleRemoveOverride(row, 'Removed via admin UI')
@@ -777,8 +771,8 @@ export default function FeatureFlags() {
       {activeTab === 'overrides' && (
         <Card>
           <PlatformDataTable
-            columns={overrideColumns}
-            rows={overrides}
+            columns={overrideColumns as ColumnConfig<{ id: string }>[]}
+            rows={overrides as ({ id: string })[]}
             loading={loading}
             emptyMessage="No overrides found"
             page={0}

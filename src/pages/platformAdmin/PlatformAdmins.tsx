@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { PageHeader, Badge, Card, FilterBar, PlatformDataTable, ConfirmDialog, type ColumnConfig } from '../../components/platformAdmin'
-import { canPerformAction, getDeniedMessage, ROLE_LABELS, ROLE_DESCRIPTIONS } from '../../utils/platformAdminPermissions'
+import { canPerformAction, ROLE_LABELS, ROLE_DESCRIPTIONS } from '../../utils/platformAdminPermissions'
+import { isRpcSuccessResponse } from '../../utils/typeAdapters'
 import type { PlatformAdminRole } from '../../types/platformAdmin.types'
 
 interface PlatformAdminWithUser {
@@ -154,8 +155,8 @@ export default function PlatformAdmins() {
         return
       }
 
-      if (data && !data.success) {
-        setRemoveError(data.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !data.success) {
+        setRemoveError(data?.error || 'Unknown error')
         return
       }
 
@@ -200,11 +201,14 @@ export default function PlatformAdmins() {
       id: 'role',
       label: 'Role',
       minWidth: 150,
-      render: (row) => (
-        <Badge variant={getRoleVariant(row.role)}>
-          {ROLE_LABELS[row.role]}
-        </Badge>
-      ),
+      render: (row: PlatformAdminWithUser) => {
+        const role: PlatformAdminRole = row.role
+        return (
+          <Badge variant={getRoleVariant(role)}>
+            {ROLE_LABELS[role]}
+          </Badge>
+        )
+      },
     },
     {
       id: 'created_at',

@@ -1,11 +1,12 @@
-import { ButtonHTMLAttributes, ReactNode } from 'react'
+import { ReactNode, ElementType, ComponentPropsWithoutRef } from 'react'
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+type ButtonProps<E extends ElementType = 'button'> = {
   variant?: 'primary' | 'secondary'
   children: ReactNode
-}
+  as?: E
+} & ComponentPropsWithoutRef<E>
 
-export default function Button({ variant = 'primary', children, className = '', ...props }: ButtonProps) {
+export default function Button<E extends ElementType = 'button'>({ variant = 'primary', children, className = '', as, ...props }: ButtonProps<E>) {
   const baseClasses = 'px-8 py-3 rounded font-bold text-sm tracking-wide transition-all'
   
   const variantClasses = {
@@ -13,12 +14,14 @@ export default function Button({ variant = 'primary', children, className = '', 
     secondary: 'border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-900 dark:text-white',
   }
 
+  const Tag = as ?? 'button'
+
   return (
-    <button
+    <Tag
       className={`${baseClasses} ${variantClasses[variant]} ${className}`}
       {...props}
     >
       {children}
-    </button>
+    </Tag>
   )
 }

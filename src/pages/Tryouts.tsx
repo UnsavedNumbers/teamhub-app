@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+
 import { useAuth } from '../hooks/useAuth'
 import { useUserContext } from '../hooks/useUserContext'
 import { useOrganization } from '../contexts/OrganizationContext'
@@ -20,7 +20,7 @@ export default function Tryouts() {
   const [selectedTryout, setSelectedTryout] = useState<Tryout | null>(null)
   const [selectedChild, setSelectedChild] = useState('')
 
-  const { profile } = useAuth()
+
   const { context, isReady } = useUserContext()
   const { currentOrganization } = useOrganization()
 
@@ -137,7 +137,7 @@ export default function Tryouts() {
 
         {selectedTryout && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setSelectedTryout(null)}>
-            <Card className="max-w-lg w-full p-6" onClick={e => e.stopPropagation()}>
+            <Card className="max-w-lg w-full p-6" onClick={(e: React.MouseEvent<HTMLElement>) => e.stopPropagation()}>
               <CardTitle className="mb-2">Register for Tryout</CardTitle>
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">{selectedTryout.title}</p>
               

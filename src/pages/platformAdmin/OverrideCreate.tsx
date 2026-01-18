@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { PageHeader, Card, Button, Input, Select, Checkbox } from '../../components/platformAdmin'
+import Badge from '../../components/platformAdmin/Badge'
+import { mapFeatureEntitlement } from '../../utils/domainMappers'
 import type { FeatureEntitlement, CreateEntitlementOverrideRequest } from '../../types/licenseTiers.types'
 import { validateFeatureDependencies, logAuditEvent } from '../../utils/licenseEntitlementsHelpers'
 
@@ -39,7 +41,7 @@ export default function OverrideCreate() {
         .order('display_name', { ascending: true })
 
       if (featuresError) throw featuresError
-      setFeatures(data || [])
+      setFeatures((data || []).map(row => mapFeatureEntitlement(row)))
     } catch (err: any) {
       console.error('Error fetching features:', err)
     }
@@ -69,7 +71,7 @@ export default function OverrideCreate() {
           .limit(20)
 
         if (error) throw error
-        setSearchResults((data || []).map(user => ({ id: user.id, name: user.display_name || user.email })))
+        setSearchResults((data || []).map(user => ({ id: user.id, name: user.display_name || user.email || '' })))
       }
     } catch (err: any) {
       console.error('Error searching targets:', err)

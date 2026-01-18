@@ -13,7 +13,7 @@ interface RSVPButtonProps {
   disabled?: boolean
 }
 
-export default function RSVPButton({ eventId, childId, childName, currentStatus, onStatusChange, disabled = false }: RSVPButtonProps) {
+export default function RSVPButton({ childName, currentStatus, onStatusChange, disabled = false }: RSVPButtonProps) {
   const { t } = useI18n()
   const [loading, setLoading] = useState(false)
   const [isOpen, setIsOpen] = useState(false)

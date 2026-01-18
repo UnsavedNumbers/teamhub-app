@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, PlatformDataTable, Button, Badge } from '../../../components/platformAdmin'
+import type { ColumnConfig } from '../../../components/platformAdmin/PlatformDataTable'
 import { useUserContext } from '../../../hooks/useUserContext'
 import { getAttendanceEvents } from '../../../data/services/attendanceService'
 import type { AttendanceEventSummary } from '../../../types/attendance'
@@ -28,41 +29,49 @@ export default function AttendanceEvents() {
         })
   }, [isReady, context])
 
-  const columns = [
-    { id: 'start_time', label: 'Date', render: (row: AttendanceEventSummary) => new Date(row.start_time).toLocaleDateString() },
+  const columns: ColumnConfig<AttendanceEventSummary & { id: string }>[] = [
+    { id: 'start_time', label: 'Date', render: (row: AttendanceEventSummary & { id: string }) => new Date(row.start_time).toLocaleDateString() },
     { id: 'team_name', label: 'Team' },
-    { id: 'event_type', label: 'Type', render: (row: AttendanceEventSummary) => <Badge variant="neutral">{row.event_type}</Badge> },
+    { id: 'event_type', label: 'Type', render: (row: AttendanceEventSummary & { id: string }) => <Badge variant="neutral">{row.event_type}</Badge> },
     { 
        id: 'status', 
        label: 'Status', 
-       render: (row: AttendanceEventSummary) => {
-         const variant = row.status === 'complete' ? 'success' : row.status === 'missing' ? 'error' : 'warning'
+       render: (row: AttendanceEventSummary & { id: string }) => {
+         const variant: 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'error' = row.status === 'complete' ? 'success' : row.status === 'missing' ? 'danger' : 'warning'
          return <Badge variant={variant}>{row.status.toUpperCase()}</Badge>
        }
     },
     { 
         id: 'counts', 
         label: 'Present/Total', 
-        render: (row: AttendanceEventSummary) => `${row.present_count} / ${row.total_expected}`
+        render: (row: AttendanceEventSummary & { id: string }) => `${row.present_count} / ${row.total_expected}`
     },
     {
         id: 'actions',
         label: 'Actions',
-        render: (row: AttendanceEventSummary) => (
-            <Button size="small" variant="secondary" onClick={() => navigate(`/admin/events/${row.event_id}/attendance`)}>
+        render: (row: AttendanceEventSummary & { id: string }) => (
+            <Button size="compact" variant="secondary" onClick={() => navigate(`/admin/events/${row.event_id}/attendance`)}>
                 View
             </Button>
         )
     }
   ]
 
+  // Map data to include id field
+  const rowsWithId = data.map(item => ({ ...item, id: item.event_id }))
+
   return (
     <Card>
       <PlatformDataTable
         columns={columns}
-        rows={data}
+        rows={rowsWithId}
         loading={loading}
         emptyMessage="No events found in this range."
+        page={0}
+        rowsPerPage={10}
+        totalCount={rowsWithId.length}
+        onPageChange={() => {}}
+        onRowsPerPageChange={() => {}}
       />
     </Card>
   )

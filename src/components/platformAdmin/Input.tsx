@@ -36,11 +36,12 @@ export function Input({
   ...props
 }: InputProps) {
   const hasError = !!error
+  const isRequired = required === true
 
   return (
     <div className="pa-form-group">
       {label && (
-        <label className={`pa-label ${required ? 'pa-label--required' : ''}`}>
+        <label className={`pa-label ${isRequired ? 'pa-label--required' : ''}`}>
           {label}
         </label>
       )}

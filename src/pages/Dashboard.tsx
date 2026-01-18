@@ -15,7 +15,6 @@ import {
   getUpcomingEventsForUser,
 } from '../data/services/eventsService'
 import {
-  getParentPaymentSummary,
   getUnpaidFeeAssignments,
 } from '../data/services/paymentsService'
 import { getPrimarySportForUser, getSportFromEvent, type SportInfo } from '../utils/sportContext'

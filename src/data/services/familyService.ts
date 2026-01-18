@@ -255,7 +255,7 @@ export async function createFamily(
  * Update a Family
  */
 export async function updateFamily(
-    context: UserContext,
+    _context: UserContext,
     familyId: string,
     dto: UpdateFamilyDTO
 ): Promise<{ data: Family | null; error: Error | null }> {
@@ -286,7 +286,7 @@ export async function updateFamily(
  * Soft Delete a Family
  */
 export async function deleteFamily(
-    context: UserContext,
+    _context: UserContext,
     familyId: string
 ): Promise<{ error: Error | null }> {
     if (USE_FAKE_DATA) {
@@ -312,7 +312,7 @@ export async function deleteFamily(
 // ============================================================================
 
 export async function createChild(
-    context: UserContext,
+    _context: UserContext,
     dto: CreateChildDTO
 ): Promise<{ data: Child | null; error: Error | null }> {
     if (USE_FAKE_DATA) {
@@ -350,7 +350,7 @@ export async function createChild(
 }
 
 export async function updateChild(
-    context: UserContext,
+    _context: UserContext,
     childId: string,
     dto: UpdateChildDTO
 ): Promise<{ data: Child | null; error: Error | null }> {
@@ -378,7 +378,7 @@ export async function updateChild(
 }
 
 export async function deleteChild(
-    context: UserContext,
+    _context: UserContext,
     childId: string
 ): Promise<{ error: Error | null }> {
     if (USE_FAKE_DATA) {

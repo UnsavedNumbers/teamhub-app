@@ -2,7 +2,7 @@
 // Transform Supabase data types to Material Dashboard component formats
 // This ensures type safety and consistent data formatting
 
-import type { Database } from '../lib/database.types.ts'
+import type { SupabaseExtended } from '../lib/supabase.extended.types'
 
 // Type definitions for Material Dashboard table rows
 export interface MaterialTableRow {
@@ -11,12 +11,12 @@ export interface MaterialTableRow {
 }
 
 // Fee Assignment Row Types
-type FeeAssignmentRow = Database['public']['Tables']['fee_assignments']['Row']
-type FeeRow = Database['public']['Tables']['fees']['Row']
-type PaymentRow = Database['public']['Tables']['payments']['Row']
-type TeamRow = Database['public']['Tables']['teams']['Row']
-type ChildRow = Database['public']['Tables']['children']['Row']
-type UserRow = Database['public']['Tables']['users']['Row']
+type FeeAssignmentRow = SupabaseExtended['public']['Tables']['fee_assignments']['Row']
+type FeeRow = SupabaseExtended['public']['Tables']['fees']['Row']
+type PaymentRow = SupabaseExtended['public']['Tables']['payments']['Row']
+type TeamRow = SupabaseExtended['public']['Tables']['teams']['Row']
+type ChildRow = SupabaseExtended['public']['Tables']['children']['Row']
+type UserRow = SupabaseExtended['public']['Tables']['users']['Row']
 
 // Fee Assignment Adapter
 export interface FeeAssignmentTableRow extends MaterialTableRow {

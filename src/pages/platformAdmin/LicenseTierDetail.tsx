@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase, isSupabaseConfigured } from '../../lib/supabase'
 import { PageHeader, Card, Button, Input, Select, Badge, Checkbox, ConfirmDialog, ErrorState, EmptyState } from '../../components/platformAdmin'
+import { mapLicenseTier, mapFeatureEntitlement, mapTierFeatureAssignment } from '../../utils/domainMappers'
 import type { LicenseTier, FeatureEntitlement, TierFeatureAssignment, StripePriceVerification } from '../../types/licenseTiers.types'
 import { FEATURE_CATEGORIES, FEATURE_TYPES } from '../../utils/licenseTierConstants'
 import { logAuditEvent, isStripeVerificationValid, getArchivedFeaturesCount } from '../../utils/licenseEntitlementsHelpers'
@@ -19,10 +20,10 @@ export default function LicenseTierDetail() {
   const isNew = id === 'new'
 
   const [tier, setTier] = useState<Partial<LicenseTier & { version?: number }>>({
-    tier_key: 'basic',
-    tier_name: '',
+    tierKey: 'basic',
+    tierName: '',
     description: '',
-    stripe_price_id: '',
+    stripePriceId: '',
     status: 'active',
     version: 1,
   })
@@ -66,26 +67,26 @@ export default function LicenseTierDetail() {
       setTier(data)
 
       // Check for archived features
-      if (data.id) {
+      if (data?.id) {
         const count = await getArchivedFeaturesCount(data.id)
         setArchivedFeaturesCount(count)
       }
 
       // Use cached Stripe verification if valid, otherwise verify
-      if (data.stripe_price_id) {
-        if (data.stripe_verified_at && isStripeVerificationValid(data.stripe_verified_at)) {
+      if (data?.stripePriceId) {
+        if (data.stripeVerifiedAt && isStripeVerificationValid(data.stripeVerifiedAt)) {
           // Use cached data
           setStripeVerification({
             valid: true,
-            product_name: data.stripe_product_name || undefined,
-            amount_cents: data.stripe_amount_cents || undefined,
-            interval: data.stripe_interval || undefined,
-            currency: data.stripe_currency || undefined,
-            active: data.stripe_active || undefined,
+            product_name: data.stripeProductName || undefined,
+            amount_cents: data.stripeAmountCents || undefined,
+            interval: data.stripeInterval || undefined,
+            currency: data.stripeCurrency || undefined,
+            active: data.stripeActive || undefined,
           })
         } else {
           // Verify fresh
-          verifyStripePrice(data.stripe_price_id, true)
+          verifyStripePrice(data.stripePriceId, true)
         }
       }
     } catch (err: any) {
@@ -124,7 +125,8 @@ export default function LicenseTierDetail() {
 
       const assignmentsMap: Record<string, TierFeatureAssignment> = {}
       ;(data || []).forEach((assignment) => {
-        assignmentsMap[assignment.feature_entitlement_id] = assignment
+        const mapped = mapTierFeatureAssignment(assignment)
+        assignmentsMap[mapped.featureEntitlementId] = mapped
       })
       setAssignments(assignmentsMap)
     } catch (err: any) {
@@ -145,14 +147,14 @@ export default function LicenseTierDetail() {
     }
 
     // Check cache first unless forcing refresh
-    if (!forceRefresh && tier.stripe_verified_at && isStripeVerificationValid(tier.stripe_verified_at)) {
+    if (!forceRefresh && tier.stripeVerifiedAt && isStripeVerificationValid(tier.stripeVerifiedAt)) {
       setStripeVerification({
         valid: true,
-        product_name: tier.stripe_product_name || undefined,
-        amount_cents: tier.stripe_amount_cents || undefined,
-        interval: tier.stripe_interval || undefined,
-        currency: tier.stripe_currency || undefined,
-        active: tier.stripe_active || undefined,
+        product_name: tier.stripeProductName || undefined,
+        amount_cents: tier.stripeAmountCents || undefined,
+        interval: tier.stripeInterval || undefined,
+        currency: tier.stripeCurrency || undefined,
+        active: tier.stripeActive || undefined,
       })
       return
     }
@@ -230,16 +232,16 @@ export default function LicenseTierDetail() {
         const { data, error: createError } = await supabase
           .from('license_tiers')
           .insert({
-            tier_key: tier.tier_key,
-            tier_name: tier.tier_name,
+            tier_key: tier.tierKey,
+            tier_name: tier.tierName,
             description: tier.description || null,
-            stripe_price_id: tier.stripe_price_id,
-            stripe_product_name: tier.stripe_product_name || null,
-            stripe_amount_cents: tier.stripe_amount_cents || null,
-            stripe_interval: tier.stripe_interval || null,
-            stripe_currency: tier.stripe_currency || null,
-            stripe_active: tier.stripe_active || null,
-            stripe_verified_at: tier.stripe_verified_at || null,
+            stripe_price_id: tier.stripePriceId,
+            stripe_product_name: tier.stripeProductName || null,
+            stripe_amount_cents: tier.stripeAmountCents || null,
+            stripe_interval: tier.stripeInterval || null,
+            stripe_currency: tier.stripeCurrency || null,
+            stripe_active: tier.stripeActive || null,
+            stripe_verified_at: tier.stripeVerifiedAt || null,
             status: tier.status || 'active',
           })
           .select()
@@ -451,8 +453,8 @@ export default function LicenseTierDetail() {
   return (
     <div>
       <PageHeader
-        title={isNew ? 'Create License Tier' : tier.tier_name || 'License Tier'}
-        subtitle={isNew ? 'Define a new license tier' : `Manage ${tier.tier_name}`}
+        title={isNew ? 'Create License Tier' : tier.tierName || 'License Tier'}
+        subtitle={isNew ? 'Define a new license tier' : `Manage ${tier.tierName}`}
         actions={
           <div style={{ display: 'flex', gap: 'var(--pa-space-3)' }}>
             <Button variant="secondary" onClick={() => navigate('/platform-admin/licenses/tiers')}>
@@ -509,8 +511,8 @@ export default function LicenseTierDetail() {
           <div className="pa-form-group">
             <label className="pa-label pa-label--required">Tier Key</label>
             <Select
-              value={tier.tier_key || 'basic'}
-              onChange={(e) => setTier({ ...tier, tier_key: e.target.value as 'basic' | 'power' })}
+              value={tier.tierKey || 'basic'}
+              onChange={(e) => setTier({ ...tier, tierKey: e.target.value as 'basic' | 'power' })}
               disabled={!isNew}
               options={[
                 { value: 'basic', label: 'Basic' },
@@ -546,15 +548,15 @@ export default function LicenseTierDetail() {
             <label className="pa-label pa-label--required">Stripe Price ID</label>
             <div style={{ display: 'flex', gap: 'var(--pa-space-2)' }}>
               <Input
-                value={tier.stripe_price_id || ''}
-                onChange={(e) => setTier({ ...tier, stripe_price_id: e.target.value })}
+                value={tier.stripePriceId || ''}
+                onChange={(e) => setTier({ ...tier, stripePriceId: e.target.value })}
                 placeholder="price_..."
                 style={{ flex: 1 }}
               />
                 <Button
                 variant="secondary"
-                onClick={() => tier.stripe_price_id && verifyStripePrice(tier.stripe_price_id, true)}
-                disabled={verifying || !tier.stripe_price_id}
+                onClick={() => tier.stripePriceId && verifyStripePrice(tier.stripePriceId, true)}
+                disabled={verifying || !tier.stripePriceId}
                 size="dense"
               >
                 {verifying ? 'Verifying...' : 'Re-verify'}
@@ -567,7 +569,7 @@ export default function LicenseTierDetail() {
                     <div className="pa-flex pa-items-center pa-gap-2 pa-mb-2">
                       <span className="material-symbols-outlined" style={{ color: 'var(--pa-success)' }}>check_circle</span>
                       <span className="pa-body-m" style={{ fontWeight: 600 }}>Verified</span>
-                      {tier.stripe_verified_at && isStripeVerificationValid(tier.stripe_verified_at) && (
+                      {tier.stripeVerifiedAt && isStripeVerificationValid(tier.stripeVerifiedAt) && (
                         <Badge variant="neutral" style={{ marginLeft: 'auto' }}>Cached</Badge>
                       )}
                     </div>
@@ -584,9 +586,9 @@ export default function LicenseTierDetail() {
                       </div>
                     )}
                     <div className="pa-body-s">Status: {stripeVerification.active ? 'Active' : 'Inactive'}</div>
-                    {tier.stripe_verified_at && (
+                    {tier.stripeVerifiedAt && (
                       <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
-                        Verified: {new Date(tier.stripe_verified_at).toLocaleString()}
+                        Verified: {new Date(tier.stripeVerifiedAt).toLocaleString()}
                       </div>
                     )}
                   </div>

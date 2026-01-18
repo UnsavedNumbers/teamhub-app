@@ -51,7 +51,7 @@ export default function GeneralRSVPForm({ eventId, userId, currentRSVP, disabled
     setError(null)
     
     try {
-      const { data, error: rsvpError } = await setGeneralRSVP(
+      const { error: rsvpError } = await setGeneralRSVP(
         context,
         eventId,
         userId,

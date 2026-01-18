@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
-import { StatCard, PageHeader, Card, Badge, Button } from '../../components/platformAdmin'
+import { StatCard, PageHeader, Card, Button } from '../../components/platformAdmin'
+import { mapLicenseMetrics } from '../../utils/domainMappers'
 import type { LicenseMetrics, LicenseAlert } from '../../types/licenseTiers.types'
 
 // Loading skeleton for stats
@@ -60,28 +61,28 @@ export default function LicensesOverview() {
       // Check for alerts
       const newAlerts: LicenseAlert[] = []
       
-      if (metricsData) {
-        if (metricsData.tiers_missing_price_id > 0) {
+      if (metrics) {
+        if (metrics.tiersMissingPriceId > 0) {
           newAlerts.push({
             type: 'error',
-            message: `${metricsData.tiers_missing_price_id} license tier(s) missing Stripe Price ID`,
+            message: `${metrics.tiersMissingPriceId} license tier(s) missing Stripe Price ID`,
             details: 'Each tier must have a valid Stripe Price ID linked.',
           })
         }
 
-        if (metricsData.features_without_assignment > 0) {
+        if (metrics.featuresWithoutAssignment > 0) {
           newAlerts.push({
             type: 'warning',
-            message: `${metricsData.features_without_assignment} feature(s) not assigned to any tier`,
+            message: `${metrics.featuresWithoutAssignment} feature(s) not assigned to any tier`,
             details: 'Features should be assigned to at least one license tier.',
           })
         }
 
         // Check for tiers with archived features
-        if (metricsData.tiers_with_archived_features > 0) {
+        if (metrics.tiersWithArchivedFeatures > 0) {
           newAlerts.push({
             type: 'warning',
-            message: `${metricsData.tiers_with_archived_features} tier(s) include archived features`,
+            message: `${metrics.tiersWithArchivedFeatures} tier(s) include archived features`,
             details: 'Consider removing archived features from tiers to avoid confusion.',
           })
         }
@@ -254,7 +255,7 @@ export default function LicensesOverview() {
           label="Tiers Missing Price ID"
           value={metrics?.tiers_missing_price_id ?? 0}
           icon="credit_card"
-          meta={metrics?.tiers_missing_price_id > 0 ? 'Action required' : 'All configured'}
+          meta={metrics?.tiers_missing_price_id ?? 0 > 0 ? 'Action required' : 'All configured'}
         />
       </div>
 

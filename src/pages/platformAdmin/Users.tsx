@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { PageHeader, Badge, FilterBar, PlatformDataTable, ConfirmDialog, type ColumnConfig } from '../../components/platformAdmin'
 import { canPerformAction, getDeniedMessage } from '../../utils/platformAdminPermissions'
 import { getDisplayEmail } from '../../utils/platformAdminMasking'
+import { isRpcSuccessResponse } from '../../utils/typeAdapters'
 import type { AdminUser, PlatformAdminRole } from '../../types/platformAdmin.types'
 
 export default function Users() {
@@ -125,8 +126,8 @@ export default function Users() {
         return
       }
 
-      if (data && !data.success) {
-        setDialogError(data.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !data.success) {
+        setDialogError(data?.error || 'Unknown error')
         return
       }
 

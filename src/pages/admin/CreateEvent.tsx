@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
-import { useAuth } from '../../hooks/useAuth'
+
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
@@ -21,7 +21,6 @@ import {
     EventFormData, 
     EVENT_TYPE_LABELS, 
     EventType,
-    DAYS_OF_WEEK
 } from '../../types/calendar'
 
 interface Team { id: string; name: string }
@@ -36,7 +35,7 @@ export default function CreateEvent() {
   const [showLocationDetails, setShowLocationDetails] = useState(false)
   const [showRecurring, setShowRecurring] = useState(false)
 
-  const { currentOrganization } = useOrganization()
+
   const t = useT()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
@@ -82,7 +81,7 @@ export default function CreateEvent() {
   })
 
   const watchTeamId = watch('team_id')
-  const watchRecurEnabled = watch('recurring.enabled')
+
   const watchRSVPEnabled = watch('rsvp_enabled')
 
   const fetchTeams = useCallback(async () => {
@@ -215,13 +214,13 @@ export default function CreateEvent() {
           {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
           
           <div className="pa-grid pa-grid-2 pa-mb-4 pa-gap-4">
-            <Controller name="title" control={control} rules={{ required: 'Title is required' }} render={({ field }) => <Input {...field} label="Event Title" required error={!!errors.title} helperText={errors.title?.message} />} />
-            <Controller name="type" control={control} render={({ field }) => <Select {...field} label="Event Type" options={eventTypeOptions} />} />
+            <Controller name="title" control={control} rules={{ required: 'Title is required' }} render={({ field }) => <Input {...field} label="Event Title" required error={errors.title?.message || undefined} />} />
+            <Controller name="type" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label="Event Type" options={eventTypeOptions} />} />
           </div>
 
           <div className="pa-grid pa-grid-2 pa-mb-4 pa-gap-4">
-            <Controller name="team_id" control={control} rules={{ required: 'Team is required' }} render={({ field }) => <Select {...field} label="Team" options={teams.map(t => ({value:t.id, label:t.name}))} required error={!!errors.team_id} />} />
-            <Controller name="season_id" control={control} rules={{ required: 'Season is required' }} render={({ field }) => <Select {...field} label="Season" options={seasons.map(s => ({value:s.id, label:s.name}))} required disabled={!watchTeamId} />} />
+            <Controller name="team_id" control={control} rules={{ required: 'Team is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label="Team" options={teams.map(t => ({value:t.id, label:t.name}))} required error={errors.team_id?.message || undefined} />} />
+            <Controller name="season_id" control={control} rules={{ required: 'Season is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label="Season" options={seasons.map(s => ({value:s.id, label:s.name}))} required disabled={!watchTeamId} />} />
           </div>
 
           <div className="pa-grid pa-grid-3 pa-mb-4 pa-gap-4">
@@ -233,7 +232,7 @@ export default function CreateEvent() {
           <div className="pa-mb-4">
                <div className="pa-flex pa-justify-between pa-items-center pa-mb-2">
                  <div className="pa-label">Location</div>
-                 <Button type="button" variant="text" onClick={() => setShowLocationDetails(!showLocationDetails)}>{showLocationDetails ? 'Simple Location' : 'Detailed Location'}</Button>
+                 <Button type="button" variant="ghost" onClick={() => setShowLocationDetails(!showLocationDetails)}>{showLocationDetails ? 'Simple Location' : 'Detailed Location'}</Button>
                </div>
                
                <div className="pa-space-y-4">
@@ -281,14 +280,14 @@ export default function CreateEvent() {
                          render={({ field }) => (
                           <Select 
                             {...field} 
+                            value={field.value || ''}
                             label="RSVP Type" 
                             options={[
                               {value: 'general', label: t('admin.events.rsvpType.general')},
                               {value: 'athlete', label: t('admin.events.rsvpType.athlete')}
                             ]}
                              required
-                             error={!!errors.rsvp_type}
-                             helperText={errors.rsvp_type?.message}
+                             error={errors.rsvp_type?.message || undefined}
                            />
                          )} 
                        />
@@ -329,3 +328,4 @@ export default function CreateEvent() {
     </div>
   )
 }
+

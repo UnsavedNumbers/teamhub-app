@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { PageHeader, Card, Button, Input, Select, Badge } from '../../components/platformAdmin'
-import type { FeatureEntitlement, LicenseTier, TierFeatureAssignment } from '../../types/licenseTiers.types'
+import { mapFeatureEntitlement, mapLicenseTier, mapTierFeatureAssignment } from '../../utils/domainMappers'
+import type { FeatureEntitlement, LicenseTier, TierFeatureAssignment } from '../../types/domain/License'
 import { FEATURE_CATEGORIES, FEATURE_TYPES } from '../../utils/licenseTierConstants'
 
 const FEATURE_CATEGORIES_OPTIONS = FEATURE_CATEGORIES.map(cat => ({ value: cat, label: cat }))
@@ -14,12 +15,12 @@ export default function FeatureDetail() {
   const isNew = id === 'new'
 
   const [feature, setFeature] = useState<Partial<FeatureEntitlement>>({
-    feature_key: '',
-    display_name: '',
+    featureKey: '',
+    displayName: '',
     category: 'Scheduling & Calendar',
-    feature_type: 'module',
+    featureType: 'module',
     description: '',
-    rollout_status: 'live',
+    rolloutStatus: 'live',
   })
   const [tiers, setTiers] = useState<LicenseTier[]>([])
   const [assignments, setAssignments] = useState<Record<string, TierFeatureAssignment>>({})
@@ -39,7 +40,9 @@ export default function FeatureDetail() {
         .single()
 
       if (featureError) throw featureError
-      setFeature(data)
+      if (data) {
+        setFeature(mapFeatureEntitlement(data))
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to load feature')
     } finally {
@@ -56,7 +59,7 @@ export default function FeatureDetail() {
         .order('tier_key', { ascending: true })
 
       if (tiersError) throw tiersError
-      setTiers(data || [])
+      setTiers((data || []).map(row => mapLicenseTier(row)))
     } catch (err: any) {
       console.error('Error fetching tiers:', err)
     }
@@ -75,7 +78,8 @@ export default function FeatureDetail() {
 
       const assignmentsMap: Record<string, TierFeatureAssignment> = {}
       ;(data || []).forEach((assignment) => {
-        assignmentsMap[assignment.license_tier_id] = assignment
+        const mapped = mapTierFeatureAssignment(assignment)
+        assignmentsMap[mapped.licenseTierId] = mapped
       })
       setAssignments(assignmentsMap)
     } catch (err: any) {
@@ -90,13 +94,13 @@ export default function FeatureDetail() {
   }, [fetchFeature, fetchTiers, fetchAssignments])
 
   const handleSave = async () => {
-    if (!feature.feature_key || !feature.display_name) {
+    if (!feature.featureKey || !feature.displayName) {
       setError('Feature key and display name are required')
       return
     }
 
     // Validate feature key format
-    if (!/^[a-z0-9_]+$/.test(feature.feature_key)) {
+    if (!/^[a-z0-9_]+$/.test(feature.featureKey)) {
       setError('Feature key must contain only lowercase letters, numbers, and underscores')
       return
     }
@@ -109,12 +113,12 @@ export default function FeatureDetail() {
         const { data, error: createError } = await supabase
           .from('feature_entitlements')
           .insert({
-            feature_key: feature.feature_key,
-            display_name: feature.display_name,
+            feature_key: feature.featureKey,
+            display_name: feature.displayName,
             category: feature.category!,
-            feature_type: feature.feature_type!,
+            feature_type: feature.featureType!,
             description: feature.description || null,
-            rollout_status: feature.rollout_status || 'live',
+            rollout_status: feature.rolloutStatus || 'live',
           })
           .select()
           .single()
@@ -128,11 +132,11 @@ export default function FeatureDetail() {
         const { error: updateError } = await supabase
           .from('feature_entitlements')
           .update({
-            display_name: feature.display_name,
+            display_name: feature.displayName,
             category: feature.category,
-            feature_type: feature.feature_type,
+            feature_type: feature.featureType,
             description: feature.description || null,
-            rollout_status: feature.rollout_status,
+            rollout_status: feature.rolloutStatus,
           })
           .eq('id', id!)
 
@@ -156,8 +160,8 @@ export default function FeatureDetail() {
   return (
     <div>
       <PageHeader
-        title={isNew ? 'Create Feature' : feature.display_name || 'Feature'}
-        subtitle={isNew ? 'Add a new feature to the catalog' : `Manage ${feature.display_name}`}
+        title={isNew ? 'Create Feature' : feature.displayName || 'Feature'}
+        subtitle={isNew ? 'Add a new feature to the catalog' : `Manage ${feature.displayName}`}
         actions={
           <div style={{ display: 'flex', gap: 'var(--pa-space-3)' }}>
             <Button variant="secondary" onClick={() => navigate('/platform-admin/licenses/features')}>
@@ -185,8 +189,8 @@ export default function FeatureDetail() {
           <div className="pa-form-group">
             <label className="pa-label pa-label--required">Feature Key</label>
             <Input
-              value={feature.feature_key || ''}
-              onChange={(e) => setFeature({ ...feature, feature_key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })}
+              value={feature.featureKey || ''}
+              onChange={(e) => setFeature({ ...feature, featureKey: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })}
               placeholder="e.g., travel_details_page"
               disabled={!isNew}
             />
@@ -198,8 +202,8 @@ export default function FeatureDetail() {
           <div className="pa-form-group">
             <label className="pa-label pa-label--required">Display Name</label>
             <Input
-              value={feature.display_name || ''}
-              onChange={(e) => setFeature({ ...feature, display_name: e.target.value })}
+              value={feature.displayName || ''}
+              onChange={(e) => setFeature({ ...feature, displayName: e.target.value })}
               placeholder="e.g., Travel Details"
             />
           </div>
@@ -216,8 +220,8 @@ export default function FeatureDetail() {
           <div className="pa-form-group">
             <label className="pa-label pa-label--required">Feature Type</label>
             <Select
-              value={feature.feature_type || 'module'}
-              onChange={(e) => setFeature({ ...feature, feature_type: e.target.value as any })}
+              value={feature.featureType || 'module'}
+              onChange={(e) => setFeature({ ...feature, featureType: e.target.value as any })}
               options={FEATURE_TYPES_OPTIONS}
             />
           </div>
@@ -236,8 +240,8 @@ export default function FeatureDetail() {
           <div className="pa-form-group">
             <label className="pa-label">Rollout Status</label>
             <Select
-              value={feature.rollout_status || 'live'}
-              onChange={(e) => setFeature({ ...feature, rollout_status: e.target.value as any })}
+              value={feature.rolloutStatus || 'live'}
+              onChange={(e) => setFeature({ ...feature, rolloutStatus: e.target.value as any })}
               options={[
                 { value: 'live', label: 'Live' },
                 { value: 'beta', label: 'Beta' },
@@ -247,17 +251,17 @@ export default function FeatureDetail() {
           </div>
 
           {/* Developer snippet */}
-          {!isNew && feature.feature_key && (
+          {!isNew && feature.featureKey && (
             <div className="pa-form-group">
               <label className="pa-label">Developer Snippet</label>
               <div className="pa-card" style={{ background: 'var(--pa-n50)', padding: 'var(--pa-space-3)' }}>
                 <code className="pa-mono" style={{ fontSize: '12px' }}>
-                  {`"feature_key": "${feature.feature_key}"`}
+                  {`"feature_key": "${feature.featureKey}"`}
                 </code>
                 <Button
                   variant="ghost"
                   size="dense"
-                  onClick={() => navigator.clipboard.writeText(`"feature_key": "${feature.feature_key}"`)}
+                  onClick={() => navigator.clipboard.writeText(`"feature_key": "${feature.featureKey}"`)}
                   style={{ marginTop: 'var(--pa-space-2)' }}
                 >
                   Copy
@@ -282,10 +286,10 @@ export default function FeatureDetail() {
                 <div className="pa-flex pa-items-center pa-justify-between pa-mb-3">
                   <div>
                     <div className="pa-body-m" style={{ fontWeight: 600 }}>
-                      {tier.tier_name}
+                      {tier.tierName}
                     </div>
                     <div className="pa-body-s" style={{ color: 'var(--pa-n500)' }}>
-                      {tier.tier_key}
+                      {tier.tierKey}
                     </div>
                   </div>
                   <Badge variant={included ? 'success' : 'neutral'}>
@@ -295,17 +299,17 @@ export default function FeatureDetail() {
 
                 {included && assignment && (
                   <div style={{ paddingTop: 'var(--pa-space-3)', borderTop: '1px solid var(--pa-n100)' }}>
-                    {feature.feature_type === 'limit' && (
+                    {feature.featureType === 'limit' && (
                       <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
-                        Limit: {assignment.limit_value ?? 'Not set'}
+                        Limit: {assignment.limitValue ?? 'Not set'}
                       </div>
                     )}
-                    {feature.feature_type === 'permission' && (
+                    {feature.featureType === 'permission' && (
                       <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
                         Roles: {[
-                          assignment.role_admin && 'Admin',
-                          assignment.role_coach && 'Coach',
-                          assignment.role_parent && 'Parent',
+                          assignment.roleAdmin && 'Admin',
+                          assignment.roleCoach && 'Coach',
+                          assignment.roleParent && 'Parent',
                         ].filter(Boolean).join(', ') || 'None'}
                       </div>
                     )}

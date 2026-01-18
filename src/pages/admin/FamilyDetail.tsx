@@ -71,8 +71,8 @@ export default function FamilyDetail() {
     // Children Columns
     const childColumns: ColumnConfig<Child>[] = [
         {
-            key: 'first_name',
-            header: 'Name',
+            id: 'first_name',
+            label: 'Name',
             render: (c) => (
                 <div className="pa-flex pa-flex-col">
                     <span className="pa-text-primary" style={{ fontWeight: 600 }}>{c?.first_name} {c?.last_name}</span>
@@ -83,13 +83,13 @@ export default function FamilyDetail() {
             )
         },
         {
-            key: 'gender',
-            header: 'Gender',
+            id: 'gender',
+            label: 'Gender',
             render: (c) => <span className="pa-capitalize">{c?.gender || '-'}</span>
         },
         {
-            key: 'id',
-            header: 'Actions',
+            id: 'id',
+            label: 'Actions',
             align: 'right',
             render: (c) => c?.id ? (
                 <div className="pa-flex pa-gap-2 pa-justify-end" onClick={(e) => e.stopPropagation()}>
@@ -108,18 +108,18 @@ export default function FamilyDetail() {
     // Members Columns
     const memberColumns: ColumnConfig<FamilyMember>[] = [
         {
-            key: 'user_id',
-            header: 'User ID', 
+            id: 'user_id',
+            label: 'User ID', 
             render: (m) => <span className="pa-font-mono pa-text-xs">{m?.user_id ? `${m.user_id.substring(0,8)}...` : '-'}</span>
         },
         {
-            key: 'role',
-            header: 'Role',
-            render: (m) => <Badge variant={m?.role === 'owner' ? 'primary' : 'neutral'}>{m?.role || 'Unknown'}</Badge>
+            id: 'role',
+            label: 'Role',
+            render: (m) => <Badge variant={m?.role === 'owner' ? 'info' : 'neutral'}>{m?.role || 'Unknown'}</Badge>
         },
          {
-            key: 'created_at',
-            header: 'Joined',
+            id: 'created_at',
+            label: 'Joined',
             render: (m) => m?.created_at ? new Date(m.created_at).toLocaleDateString() : '-'
         }
     ]
@@ -134,8 +134,8 @@ export default function FamilyDetail() {
             <PageHeader 
                 title={family.name?.toUpperCase() || 'FAMILY'} 
                 breadcrumbs={[
-                    { label: 'Families', to: '/admin/families' },
-                    { label: family.name || 'Detail', to: '#' }
+                    { label: 'Families', path: '/admin/families' },
+                    { label: family.name || 'Detail' }
                 ]}
                 actions={
                     <Button variant="danger" onClick={() => setDeleteFamilyOpen(true)}>
@@ -151,7 +151,7 @@ export default function FamilyDetail() {
                     <Card>
                         <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
                             <h3 className="pa-h3">{t('admin.families.children')}</h3>
-                            <Button size="small" variant="secondary" onClick={() => navigate(`/admin/families/${family.id}/children/new`)}>
+                            <Button size="compact" variant="secondary" onClick={() => navigate(`/admin/families/${family.id}/children/new`)}>
                                 <span className="material-symbols-outlined">add</span>
                                 {t('admin.families.addChild')}
                             </Button>
@@ -159,8 +159,12 @@ export default function FamilyDetail() {
                         <PlatformDataTable
                             data={family.children || []}
                             columns={childColumns}
-                            disablePagination
-                            emptyStateMessage={t('admin.families.noChildren')}
+                            page={0}
+                            rowsPerPage={family.children?.length || 0}
+                            totalCount={family.children?.length || 0}
+                            onPageChange={() => {}}
+                            onRowsPerPageChange={() => {}}
+                            emptyMessage={t('admin.families.noChildren')}
                         />
                     </Card>
                 </div>
@@ -174,8 +178,12 @@ export default function FamilyDetail() {
                          <PlatformDataTable
                             data={family.members || []}
                             columns={memberColumns}
-                            disablePagination
-                            emptyStateMessage="No guardians found."
+                            page={0}
+                            rowsPerPage={family.members?.length || 0}
+                            totalCount={family.members?.length || 0}
+                            onPageChange={() => {}}
+                            onRowsPerPageChange={() => {}}
+                            emptyMessage="No guardians found."
                         />
                     </Card>
                 </div>
@@ -185,22 +193,23 @@ export default function FamilyDetail() {
             <ConfirmDialog
                 open={deleteFamilyOpen}
                 title="Delete Family?"
-                message="This will remove the family and all associated data. This action cannot be undone."
+                description="This will remove the family and all associated data. This action cannot be undone."
                 confirmLabel="Delete"
-                isDestructive
-                onConfirm={handleDeleteFamily}
+                variant="danger"
+                onConfirm={() => handleDeleteFamily()}
                 onCancel={() => setDeleteFamilyOpen(false)}
             />
 
             <ConfirmDialog
                 open={!!childToDelete}
                 title={t('admin.families.removeChildTitle')}
-                message={t('admin.families.removeChildMessage')}
+                description={t('admin.families.removeChildMessage')}
                 confirmLabel="Remove"
-                isDestructive
-                onConfirm={handleDeleteChild}
+                variant="danger"
+                onConfirm={() => handleDeleteChild()}
                 onCancel={() => setChildToDelete(null)}
             />
         </div>
     )
 }
+

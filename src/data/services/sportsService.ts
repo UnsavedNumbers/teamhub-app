@@ -104,7 +104,7 @@ export async function getSport(
  * Create a new sport
  */
 export async function createSport(
-    context: UserContext,
+    _context: UserContext,
     dto: CreateSportDTO
 ): Promise<{ data: Sport | null; error: Error | null }> {
     if (USE_FAKE_DATA) {
@@ -140,7 +140,7 @@ export async function createSport(
  * Update a sport
  */
 export async function updateSport(
-    context: UserContext,
+    _context: UserContext,
     sportId: string,
     dto: UpdateSportDTO
 ): Promise<{ data: Sport | null; error: Error | null }> {
@@ -179,7 +179,7 @@ export async function updateSport(
  * Soft delete a sport
  */
 export async function deleteSport(
-    context: UserContext,
+    _context: UserContext,
     sportId: string
 ): Promise<{ error: Error | null }> {
     if (USE_FAKE_DATA) {
@@ -278,7 +278,7 @@ export async function getProgram(
  * Create a new program
  */
 export async function createProgram(
-    context: UserContext,
+    _context: UserContext,
     dto: CreateProgramDTO
 ): Promise<{ data: Program | null; error: Error | null }> {
     if (USE_FAKE_DATA) {
@@ -316,7 +316,7 @@ export async function createProgram(
  * Update a program
  */
 export async function updateProgram(
-    context: UserContext,
+    _context: UserContext,
     programId: string,
     dto: UpdateProgramDTO
 ): Promise<{ data: Program | null; error: Error | null }> {
@@ -357,7 +357,7 @@ export async function updateProgram(
  * Soft delete a program
  */
 export async function deleteProgram(
-    context: UserContext,
+    _context: UserContext,
     programId: string
 ): Promise<{ error: Error | null }> {
     if (USE_FAKE_DATA) {

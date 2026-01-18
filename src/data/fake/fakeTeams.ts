@@ -418,13 +418,13 @@ export const fakeSeasons: FakeSeason[] = [
 
 export const fakeTeamSeasons: FakeTeamSeason[] = [
     // Link Spring 2024
-    { team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_2024_ID, is_active: true, created_at: '...', updated_at: '...' },
-    { team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_2024_ID, is_active: true, created_at: '...', updated_at: '...' },
-    { team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_2024_ID, is_active: true, created_at: '...', updated_at: '...' },
-    { team_id: TEAM_U12_BASKETBALL_ID, season_id: SEASON_SPRING_2024_ID, is_active: true, created_at: '...', updated_at: '...' },
-    { team_id: TEAM_U14_SOCCER_ELITE_ID, season_id: SEASON_SPRING_2024_ID, is_active: true, created_at: '...', updated_at: '...' },
+    { team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_2024_ID, is_active: true, created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
+    { team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_2024_ID, is_active: true, created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
+    { team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_2024_ID, is_active: true, created_at: '2024-02-10T00:00:00Z', updated_at: '2024-02-10T00:00:00Z' },
+    { team_id: TEAM_U12_BASKETBALL_ID, season_id: SEASON_SPRING_2024_ID, is_active: true, created_at: '2024-02-15T00:00:00Z', updated_at: '2024-02-15T00:00:00Z' },
+    { team_id: TEAM_U14_SOCCER_ELITE_ID, season_id: SEASON_SPRING_2024_ID, is_active: true, created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
     // Past Season
-    { team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_FALL_2023_ID, is_active: false, created_at: '...', updated_at: '...' },
+    { team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_FALL_2023_ID, is_active: false, created_at: '2023-08-01T00:00:00Z', updated_at: '2023-12-15T00:00:00Z' },
 ]
 
 export const fakeTeamMembers: FakeTeamMember[] = [

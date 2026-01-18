@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
-import { useAuth } from '../../hooks/useAuth'
+
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
@@ -36,12 +36,10 @@ export default function CreateFee() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { currentOrganization } = useOrganization()
-  const t = useT()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
-  const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<FeeFormData>({
+  const { control, handleSubmit, watch, setValue } = useForm<FeeFormData>({
     defaultValues: { 
       team_id: '', season_id: '', child_id: '', amount: '', 
       description: '', due_date: '', applyToAll: false 
@@ -132,7 +130,7 @@ export default function CreateFee() {
     setSaving(true)
     setError(null)
     
-    const amountCents = Math.round(parseFloat(data.amount) * 100)
+
     
     try {
       // In fake data mode, just navigate back with success

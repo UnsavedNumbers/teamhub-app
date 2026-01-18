@@ -289,6 +289,11 @@
     overflow-x: hidden;
 }
 
+/* Main content area adjusts to sidebar width */
+.pa-main {
+    margin-left: 280px;
+}
+
 .pa-sidebar-header {
     padding: var(--pa-space-4);
     border-bottom: 1px solid var(--pa-n700);
@@ -313,6 +318,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
 
 .pa-sidebar-logo .material-symbols-outlined {
@@ -331,46 +337,112 @@
     padding: var(--pa-space-4) 0;
 }
 
-.pa-nav-section {
+/* Top-level nav items (Dashboard, Organization, Management, Operations) */
+.pa-nav-item-top {
     padding: 0 var(--pa-space-4);
-    margin-bottom: var(--pa-space-4);
+    margin-bottom: var(--pa-space-1);
 }
 
-.pa-nav-label {
-    font: var(--pa-text-overline);
-    color: #7A8794;
-    padding: var(--pa-space-4) var(--pa-space-3) var(--pa-space-2);
-    letter-spacing: 0.08em;
+.pa-nav-link-top {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--pa-space-3);
+    padding: var(--pa-space-3);
+    margin: 0;
+    width: 100%;
+    border: none;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--pa-white);
+    text-decoration: none;
+    font: var(--pa-text-body-m);
+    font-weight: 600;
+    transition: all var(--pa-motion-normal) var(--pa-ease-out);
+    position: relative;
+    cursor: pointer;
+    text-align: left;
+}
+
+.pa-nav-link-top:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--pa-white);
+    text-decoration: none;
+}
+
+.pa-nav-link-top:focus-visible {
+    outline: 2px solid var(--pa-n500);
+    outline-offset: -2px;
+}
+
+.pa-nav-link-top.active,
+.pa-nav-link-top.expanded {
+    background: var(--pa-white);
+    color: var(--pa-n900);
+}
+
+.pa-nav-link-top .material-symbols-outlined {
+    font-size: 20px;
+    opacity: 1;
+}
+
+.pa-nav-link-top:hover .material-symbols-outlined {
+    color: var(--pa-white);
+    opacity: 1;
+}
+
+.pa-nav-link-top.active .material-symbols-outlined,
+.pa-nav-link-top.expanded .material-symbols-outlined {
+    color: var(--pa-n900);
+    opacity: 1;
+}
+
+.pa-nav-link-top .pa-nav-toggle-icon {
+    margin-left: auto;
+    font-size: 20px;
+    transition: transform var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.pa-nav-link-top.expanded .pa-nav-toggle-icon {
+    transform: rotate(180deg);
+}
+
+/* Expandable sections */
+.pa-nav-section {
+    padding: 0 var(--pa-space-4);
+    margin-bottom: var(--pa-space-1);
 }
 
 .pa-nav-list {
     list-style: none;
-    margin: 0;
-    padding: 0;
+    margin: var(--pa-space-2) 0 var(--pa-space-2) 0;
+    padding: 0 0 0 var(--pa-space-3);
 }
 
 .pa-nav-item {
-    margin-bottom: 0;
+    margin-bottom: var(--pa-space-1);
 }
 
 /* Increased specificity to override .pa-root a */
 .pa-sidebar .pa-nav-link {
     display: flex;
     align-items: center;
-    gap: var(--pa-space-3);
-    padding: var(--pa-space-3) var(--pa-space-4);
-    margin: 0 calc(-1 * var(--pa-space-4));
-    border-radius: 0;
-    color: #B8BFC7;
+    justify-content: flex-start;
+    gap: var(--pa-space-2);
+    padding: var(--pa-space-2) var(--pa-space-3);
+    margin: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
     text-decoration: none;
-    font: var(--pa-text-body-m);
+    font: var(--pa-text-body-s);
     font-weight: 500;
     transition: all var(--pa-motion-normal) var(--pa-ease-out);
     position: relative;
 }
 
 .pa-sidebar .pa-nav-link:hover {
-    background: var(--pa-n800);
+    background: rgba(255, 255, 255, 0.08);
     color: var(--pa-white);
     text-decoration: none;
 }
@@ -381,14 +453,13 @@
 }
 
 .pa-sidebar .pa-nav-link.active {
-    background: var(--pa-white);
-    color: var(--pa-n900);
-    margin: 0 calc(-1 * var(--pa-space-4));
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--pa-white);
 }
 
 .pa-sidebar .pa-nav-link .material-symbols-outlined {
-    font-size: 20px;
-    opacity: 1;
+    font-size: 18px;
+    opacity: 0.8;
 }
 
 .pa-sidebar .pa-nav-link:hover .material-symbols-outlined {
@@ -397,7 +468,7 @@
 }
 
 .pa-sidebar .pa-nav-link.active .material-symbols-outlined {
-    color: var(--pa-n900);
+    color: var(--pa-white);
     opacity: 1;
 }
 

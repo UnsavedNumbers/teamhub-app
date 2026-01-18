@@ -1,7 +1,7 @@
 import type { ComponentPropsWithoutRef, ElementType, ReactNode } from 'react'
 
-type ButtonVariant = 'primary' | 'blue' | 'volt' | 'secondary' | 'ghost' | 'danger'
-type ButtonSize = 'default' | 'compact' | 'dense'
+type ButtonVariant = 'primary' | 'blue' | 'volt' | 'secondary' | 'ghost' | 'danger' | 'text'
+type ButtonSize = 'default' | 'compact' | 'dense' | 'small'
 
 type ButtonProps<E extends ElementType = 'button'> = {
   /** Visual variant */

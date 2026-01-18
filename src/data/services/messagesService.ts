@@ -177,7 +177,7 @@ export async function getAnnouncements(
 }
 
 export async function getAnnouncementById(
-    context: UserContext,
+    _context: UserContext,
     announcementId: string
 ): Promise<{ data: Announcement | null; error: Error | null }> {
     if (USE_FAKE_DATA) {

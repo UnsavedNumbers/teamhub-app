@@ -89,6 +89,7 @@ export interface FeatureFlagUserOverride {
  * Override record (union type for admin views)
  */
 export interface FeatureFlagOverride {
+  id: string // Composite key: feature_flag_id:scope_id:environment
   override_type: 'org' | 'user'
   feature_flag_id: string
   feature_key: string

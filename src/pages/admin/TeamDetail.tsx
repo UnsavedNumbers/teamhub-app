@@ -27,7 +27,7 @@ export default function TeamDetail() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('overview')
 
-  const { profile } = useAuth()
+
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 

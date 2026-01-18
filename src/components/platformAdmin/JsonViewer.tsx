@@ -3,10 +3,11 @@ import { useState } from 'react'
 interface JsonViewerProps {
   data: unknown
   title?: string
+  defaultExpanded?: boolean
 }
 
-export function JsonViewer({ data, title = 'JSON Data' }: JsonViewerProps) {
-  const [isExpanded, setIsExpanded] = useState(false)
+export function JsonViewer({ data, title = 'JSON Data', defaultExpanded = false }: JsonViewerProps) {
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded)
 
   const jsonString = JSON.stringify(data, null, 2)
 

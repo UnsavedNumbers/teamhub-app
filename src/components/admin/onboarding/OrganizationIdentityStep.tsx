@@ -79,12 +79,12 @@ export default function OrganizationIdentityStep({
             <div className="pa-grid pa-grid-2 pa-gap-6">
               <div className="pa-col-2">
                 <Controller name="name" control={control} rules={{ required: 'Name is required' }} render={({ field }) => (
-                  <Input {...field} label="ORGANIZATION NAME" placeholder="e.g. NORTH SHORE ACADEMY" required error={!!errors.name} helperText={errors.name?.message} />
+                  <Input {...field} label="ORGANIZATION NAME" placeholder="e.g. NORTH SHORE ACADEMY" required error={errors.name?.message || undefined} />
                 )} />
               </div>
               
               <Controller name="org_type" control={control} rules={{ required: 'Type is required' }} render={({ field }) => (
-                <Select {...field} label="TYPE" options={[{value:'club', label:'CLUB'}, {value:'school', label:'SCHOOL'}, {value:'academy', label:'ACADEMY'}, {value:'league', label:'LEAGUE'}, {value:'aau', label:'AAU'}]} required />
+                <Select {...field} value={field.value || ''} label="TYPE" options={[{value:'club', label:'CLUB'}, {value:'school', label:'SCHOOL'}, {value:'academy', label:'ACADEMY'}, {value:'league', label:'LEAGUE'}, {value:'aau', label:'AAU'}]} required />
               )} />
 
               <Controller name="slug" control={control} rules={{ required: 'Slug is required' }} render={({ field }) => (
@@ -94,8 +94,7 @@ export default function OrganizationIdentityStep({
                     label="URL SLUG" 
                     placeholder="your-name" 
                     required 
-                    error={!!errors.slug || !!slugError} 
-                    helperText={slugError || errors.slug?.message}
+                    error={(slugError || errors.slug?.message) || undefined}
                     onChange={(e) => { const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''); field.onChange(val); }}
                   />
                   <div className="pa-text-overline pa-mt-1 pa-text-muted">th.io/{field.value || 'your-name'}</div>
@@ -106,7 +105,7 @@ export default function OrganizationIdentityStep({
 
             <div className="pa-grid pa-grid-2 pa-gap-6">
               <Controller name="contact_email" control={control} rules={{ required: 'Email is required' }} render={({ field }) => (
-                <Input {...field} label="CONTACT EMAIL" type="email" placeholder="admin@organization.com" required error={!!errors.contact_email} />
+                <Input {...field} label="CONTACT EMAIL" type="email" placeholder="admin@organization.com" required error={errors.contact_email?.message || undefined} />
               )} />
               <Controller name="office_location" control={control} render={({ field }) => (
                 <Input {...field} label="OFFICE LOCATION" placeholder="CITY, STATE" />

@@ -9,7 +9,7 @@ import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
 import type { UserContext } from '../fake/userContext'
 import type { Level, CreateLevelDTO, UpdateLevelDTO } from '../types/organization'
-import { getLevelsForProgram, getLevelById, fakeLevels } from '../fake/fakeTeams'
+import { getLevelById, fakeLevels } from '../fake/fakeTeams'
 
 // ============================================================================
 // Helper Functions
@@ -100,7 +100,7 @@ export async function getLevel(
  * Create a new level
  */
 export async function createLevel(
-    context: UserContext,
+    _context: UserContext,
     dto: CreateLevelDTO
 ): Promise<{ data: Level | null; error: Error | null }> {
     if (USE_FAKE_DATA) {
@@ -142,7 +142,7 @@ export async function createLevel(
  * Update a level
  */
 export async function updateLevel(
-    context: UserContext,
+    _context: UserContext,
     levelId: string,
     dto: UpdateLevelDTO
 ): Promise<{ data: Level | null; error: Error | null }> {
@@ -187,7 +187,7 @@ export async function updateLevel(
  * Soft delete a level
  */
 export async function deleteLevel(
-    context: UserContext,
+    _context: UserContext,
     levelId: string
 ): Promise<{ error: Error | null }> {
     if (USE_FAKE_DATA) {

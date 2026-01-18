@@ -10,7 +10,7 @@ export default function AcceptInvite() {
   const code = searchParams.get('code')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
-  const { context } = useUserContext()
+  const { isReady } = useUserContext()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -39,8 +39,8 @@ export default function AcceptInvite() {
             ) : (
               <>
                 <p className="mb-6">You have been invited to join with code: <strong>{code}</strong></p>
-                <Button variant="primary" onClick={handleJoin} loading={loading} className="w-full">
-                  Join Now
+                <Button variant="primary" onClick={handleJoin} disabled={loading} className="w-full">
+                  {loading ? 'Joining...' : 'Join Now'}
                 </Button>
               </>
             )}

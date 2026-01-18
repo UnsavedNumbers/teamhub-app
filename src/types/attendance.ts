@@ -1,7 +1,10 @@
-
 import { Database } from '../lib/database.types'
 
-export type AttendanceStatus = Database['public']['Tables']['event_attendance']['Row']['status']
+// Safe access to event_attendance table type (will be available after type regeneration)
+type EventAttendanceTable = Database['public']['Tables']['event_attendance']
+export type AttendanceStatus = EventAttendanceTable extends { Row: { status: infer S } } 
+  ? S 
+  : 'present' | 'absent' | 'late' | 'excused'
 
 export interface AttendanceRecord {
     id: string

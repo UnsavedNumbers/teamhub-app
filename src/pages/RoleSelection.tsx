@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganization } from '@/contexts/OrganizationContext'
-import { hasRole, formatRoles, getPrimaryRole } from '@/utils/roleHelpers'
+import { hasRole } from '@/utils/roleHelpers'
 import type { Organization, OrgMemberRole } from '@/contexts/OrganizationContext'
 
 interface RoleCard {
@@ -79,7 +79,7 @@ export function RoleSelection() {
   const handleEnter = () => {
     if (!selectedCard) return
 
-    const [orgId] = selectedCard.split('-')
+    const [orgId, role] = selectedCard.split('-')
     const org = profile.organizations.find(o => o.id === orgId)
     
     if (org) {
@@ -87,7 +87,7 @@ export function RoleSelection() {
       
       // Navigate based on selected role
       // Admins and coaches always go to admin section
-      if (card.role === 'org_admin' || card.role === 'coach') {
+      if (role === 'org_admin' || role === 'coach') {
         navigate('/admin/dashboard')
       } else {
         // Parents go to portal dashboard

@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from './database.types.ts'
+import type { SupabaseExtended } from './supabase.extended.types'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -9,7 +9,7 @@ export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey)
 
 // Create client with placeholder or real values
 // The placeholder allows the UI to render for development/preview
-export const supabase: SupabaseClient<Database> = createClient<Database>(
+export const supabase: SupabaseClient<SupabaseExtended> = createClient<SupabaseExtended>(
     supabaseUrl || 'https://placeholder.supabase.co',
     supabaseAnonKey || 'placeholder-key'
 )

@@ -152,7 +152,7 @@ export default function OrganizationBilling() {
               <div className="pa-flex pa-flex-col pa-gap-3">
                 {history.map(event => (
                   <div key={event.id} className="pa-flex pa-justify-between pa-items-center pa-py-2" style={{ borderBottom: '1px solid var(--pa-n100)' }}>
-                    <div className="pa-body-m" style={{ fontWeight: 600 }}>{event.event_type.replace(/_/g, ' ').toUpperCase()}</div>
+                    <div className="pa-body-m" style={{ fontWeight: 600 }}>{event.event_type?.replace(/_/g, ' ').toUpperCase()}</div>
                     <div className="pa-body-s pa-text-muted">{formatDate(event.created_at)}</div>
                   </div>
                 ))}

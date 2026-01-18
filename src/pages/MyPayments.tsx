@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useAuth } from '../hooks/useAuth'
+
 import { useUserContext } from '../hooks/useUserContext'
-import { getFeeAssignmentsForUser, formatCurrency } from '../data/services/paymentsService'
+import { getFeeAssignmentsForUser } from '../data/services/paymentsService'
 import { createParentCheckoutSession } from '../api/payments'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, SectionHeader } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
-import Icon from '../components/portal/Icon'
 
 type FeeAssignmentStatus = 'unpaid' | 'partial' | 'paid' | 'waived' | 'overdue'
 
@@ -50,7 +49,7 @@ export default function MyPayments() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [creatingCheckout, setCreatingCheckout] = useState(false)
 
-  const { profile } = useAuth()
+
   const { context, isReady } = useUserContext()
 
   useEffect(() => {

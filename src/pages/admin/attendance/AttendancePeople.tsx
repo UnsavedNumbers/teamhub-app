@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react'
 import { Card, PlatformDataTable, Badge } from '../../../components/platformAdmin'
+import type { ColumnConfig } from '../../../components/platformAdmin/PlatformDataTable'
 import { useUserContext } from '../../../hooks/useUserContext'
 import { getAttendancePeople } from '../../../data/services/attendanceService'
 import type { AttendancePersonSummary } from '../../../types/attendance'
@@ -19,38 +20,48 @@ export default function AttendancePeople() {
         })
   }, [isReady, context])
 
-  const columns = [
-    { id: 'name', label: 'Name', render: (row: AttendancePersonSummary) => `${row.first_name} ${row.last_name}` },
+  const columns: ColumnConfig<AttendancePersonSummary & { id: string }>[] = [
+    { id: 'name', label: 'Name', render: (row: AttendancePersonSummary & { id: string }) => `${row.first_name} ${row.last_name}` },
     { 
         id: 'rate', 
         label: 'Attendance Rate', 
-        render: (row: AttendancePersonSummary) => {
+        render: (row: AttendancePersonSummary & { id: string }) => {
             const color = row.attendance_rate >= 85 ? 'text-green-600' : row.attendance_rate >= 70 ? 'text-amber-600' : 'text-red-600'
             const val = row.attendance_rate.toFixed(1)
             return <span className={`pa-font-bold ${color}`}>{val}%</span>
         }
     },
-    { id: 'total', label: 'Total Events', accessor: 'total_events' },
-    { id: 'present', label: 'Present', accessor: 'present_count' },
-    { id: 'absent', label: 'Absent', accessor: 'absent_count' },
+    { id: 'total', label: 'Total Events', render: (row: AttendancePersonSummary & { id: string }) => String(row.total_events) },
+    { id: 'present', label: 'Present', render: (row: AttendancePersonSummary & { id: string }) => String(row.present_count) },
+    { id: 'absent', label: 'Absent', render: (row: AttendancePersonSummary & { id: string }) => String(row.absent_count) },
     { 
         id: 'risk', 
         label: 'Status', 
-        render: (row: AttendancePersonSummary) => {
-            const variant = row.risk_level === 'good' ? 'success' : row.risk_level === 'watch' ? 'warning' : 'error'
+        render: (row: AttendancePersonSummary & { id: string }) => {
+            const variant: 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'error' = row.risk_level === 'good' ? 'success' : row.risk_level === 'watch' ? 'warning' : 'error'
             return <Badge variant={variant}>{row.risk_level.toUpperCase().replace('_', ' ')}</Badge>
         }
     }
   ]
 
+  // Map data to include id field
+  const rowsWithId = data.map(item => ({ ...item, id: item.child_id }))
+
   return (
     <Card>
       <PlatformDataTable
         columns={columns}
-        rows={data}
+        rows={rowsWithId}
         loading={loading}
         emptyMessage="No people found."
+        page={0}
+        rowsPerPage={10}
+        totalCount={rowsWithId.length}
+        onPageChange={() => {}}
+        onRowsPerPageChange={() => {}}
       />
     </Card>
   )
 }
+
+

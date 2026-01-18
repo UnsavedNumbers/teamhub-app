@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useOrganization } from '../contexts/OrganizationContext'
@@ -7,52 +7,63 @@ import { LicenseWarningBanner } from '../components/admin/LicenseWarningBanner'
 import AdminLoadingSpinner from '../components/admin/AdminLoadingSpinner'
 import { usePlatformAdminTheme } from '../hooks/usePlatformAdminTheme'
 import { useT } from '../i18n/useI18n'
+import { useSidebar } from '../contexts/SidebarContext'
 
 export default function AdminLayout() {
   const { loaded: themeLoaded } = usePlatformAdminTheme()
   const t = useT()
-  const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
   const { profile, signOut } = useAuth()
   const { currentOrganization } = useOrganization()
   const { summary } = useLicense(currentOrganization?.id)
+  const { expandedSections, toggleSection } = useSidebar()
 
   const hasOrg = !!currentOrganization?.id
 
-  // Navigation menu items - converted to Material Symbols
-  const menuSections = useMemo(() => [
+  // Navigation menu items - four top-level items
+  const menuItems = useMemo(() => [
     {
-      label: 'Overview',
-      items: [
-        { text: 'Dashboard', icon: 'dashboard', path: '/admin', requiresOrg: false },
-        { text: 'Organization', icon: 'business', path: '/admin/organization', requiresOrg: false },
+      label: 'Dashboard',
+      icon: 'dashboard',
+      path: '/admin',
+      requiresOrg: false,
+      children: null,
+    },
+    {
+      label: 'Organization',
+      icon: 'business',
+      path: '/admin/organization',
+      requiresOrg: false,
+      children: [
+        { text: 'Overview', icon: 'info', path: '/admin/organization/structure', requiresOrg: true },
+        { text: 'Sports & Programs', icon: 'sports', path: '/admin/organization/structure/sports-programs', requiresOrg: true },
+        { text: 'Levels', icon: 'grade', path: '/admin/organization/structure/levels', requiresOrg: true },
+        { text: 'Teams', icon: 'groups', path: '/admin/organization/structure/teams', requiresOrg: true },
+        { text: 'Seasons', icon: 'calendar_month', path: '/admin/organization/structure/seasons', requiresOrg: true },
+        { text: 'People', icon: 'person', path: '/admin/organization/structure/people', requiresOrg: true },
       ],
     },
     {
       label: 'Management',
-      items: [
-        { text: 'Teams', icon: 'groups', path: '/admin/teams', requiresOrg: true },
+      icon: 'groups',
+      path: '/admin/management',
+      requiresOrg: true,
+      children: [
         { text: 'Families', icon: 'home', path: '/admin/families', requiresOrg: true },
-        { text: t('admin.navigation.children'), icon: 'child_care', path: '/admin/children', requiresOrg: true },
+        { text: 'Athletes', icon: 'child_care', path: '/admin/children', requiresOrg: true },
       ],
     },
     {
       label: 'Operations',
-      items: [
+      icon: 'settings',
+      path: '/admin/operations',
+      requiresOrg: true,
+      children: [
         { text: 'Payments', icon: 'credit_card', path: '/admin/payments', requiresOrg: true },
         { text: 'Events', icon: 'event', path: '/admin/events', requiresOrg: true },
         { text: 'Attendance', icon: 'how_to_reg', path: '/admin/attendance', requiresOrg: true },
         { text: 'Uniforms', icon: 'checkroom', path: '/admin/uniforms', requiresOrg: true },
-        { text: 'Travel', icon: 'flight', path: '/admin/travel', requiresOrg: true },
-        { text: 'Tryouts', icon: 'emoji_events', path: '/admin/tryouts', requiresOrg: true },
-      ],
-    },
-    {
-      label: 'Communication',
-      items: [
-        { text: 'Messages', icon: 'mail', path: '/admin/messages', requiresOrg: true },
-        { text: 'Reports', icon: 'bar_chart', path: '/admin/reports', requiresOrg: true },
       ],
     },
   ], [t])
@@ -78,10 +89,10 @@ export default function AdminLayout() {
   return (
     <div className="pa-root pa-app">
       {/* Sidebar */}
-      <aside className={`pa-sidebar ${mobileOpen ? 'open' : ''}`}>
+      <aside className="pa-sidebar">
         {/* Brand */}
         <div className="pa-sidebar-header">
-          <Link to="/admin" className="pa-sidebar-brand" onClick={() => setMobileOpen(false)}>
+          <Link to="/admin" className="pa-sidebar-brand">
             <div className="pa-sidebar-logo">
               <span className="material-symbols-outlined">sports</span>
             </div>
@@ -96,47 +107,97 @@ export default function AdminLayout() {
 
         {/* Navigation */}
         <nav className="pa-sidebar-nav">
-          {menuSections.map((section) => {
-            const visibleItems = section.items.filter((item) => !item.requiresOrg || hasOrg)
-            if (visibleItems.length === 0) return null
+          {menuItems.map((item) => {
+            const isDisabled = item.requiresOrg && !hasOrg
+            const active = isActive(item.path)
+            const hasChildren = item.children && item.children.length > 0
+            const isExpanded = expandedSections.has(item.label)
+
+            // If item has no children, render as direct link
+            if (!hasChildren) {
+              if (isDisabled) {
+                return (
+                  <div key={item.label} className="pa-nav-item-top">
+                    <div
+                      className="pa-nav-link-top"
+                      style={{ opacity: 0.4, cursor: 'not-allowed' }}
+                      title="Requires organization setup"
+                    >
+                      <span className="material-symbols-outlined">{item.icon}</span>
+                      <span>{item.label}</span>
+                    </div>
+                  </div>
+                )
+              }
+
+              return (
+                <div key={item.label} className="pa-nav-item-top">
+                  <Link
+                    to={item.path}
+                    className={`pa-nav-link-top ${active ? 'active' : ''}`}
+                  >
+                    <span className="material-symbols-outlined">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </Link>
+                </div>
+              )
+            }
+
+            // Item has children - render as expandable section
+            const visibleChildren = item.children.filter((child) => !child.requiresOrg || hasOrg)
+            if (visibleChildren.length === 0 && isDisabled) return null
 
             return (
-              <div key={section.label} className="pa-nav-section">
-                <div className="pa-nav-label">{section.label}</div>
-                <ul className="pa-nav-list">
-                  {section.items.map((item) => {
-                    const isDisabled = item.requiresOrg && !hasOrg
-                    const active = isActive(item.path)
+              <div key={item.label} className="pa-nav-section">
+                <button
+                  onClick={() => toggleSection(item.label)}
+                  className={`pa-nav-link-top ${isExpanded ? 'expanded' : ''}`}
+                  aria-expanded={isExpanded}
+                  disabled={isDisabled}
+                  style={{ opacity: isDisabled ? 0.4 : 1 }}
+                >
+                  <span className="material-symbols-outlined">{item.icon}</span>
+                  <span>{item.label}</span>
+                  <span className="material-symbols-outlined pa-nav-toggle-icon">
+                    {isExpanded ? 'expand_less' : 'expand_more'}
+                  </span>
+                </button>
 
-                    if (isDisabled) {
+                {isExpanded && visibleChildren.length > 0 && (
+                  <ul className="pa-nav-list">
+                    {item.children.map((child) => {
+                      const childDisabled = child.requiresOrg && !hasOrg
+                      const childActive = isActive(child.path)
+
+                      if (childDisabled) {
+                        return (
+                          <li key={child.path} className="pa-nav-item">
+                            <div
+                              className="pa-nav-link"
+                              style={{ opacity: 0.4, cursor: 'not-allowed' }}
+                              title="Requires organization setup"
+                            >
+                              <span className="material-symbols-outlined">{child.icon}</span>
+                              <span>{child.text}</span>
+                            </div>
+                          </li>
+                        )
+                      }
+
                       return (
-                        <li key={item.path} className="pa-nav-item">
-                          <div
-                            className="pa-sidebar pa-nav-link"
-                            style={{ opacity: 0.4, cursor: 'not-allowed' }}
-                            title="Requires organization setup"
+                        <li key={child.path} className="pa-nav-item">
+                          <Link
+                            to={child.path}
+                            className={`pa-nav-link ${childActive ? 'active' : ''}`}
                           >
-                            <span className="material-symbols-outlined">{item.icon}</span>
-                            <span>{item.text}</span>
-                          </div>
+                            <span className="material-symbols-outlined">{child.icon}</span>
+                            <span>{child.text}</span>
+                          </Link>
                         </li>
                       )
-                    }
-
-                    return (
-                      <li key={item.path} className="pa-nav-item">
-                        <Link
-                          to={item.path}
-                          className={`pa-nav-link ${active ? 'active' : ''}`}
-                          onClick={() => setMobileOpen(false)}
-                        >
-                          <span className="material-symbols-outlined">{item.icon}</span>
-                          <span>{item.text}</span>
-                        </Link>
-                      </li>
-                    )
-                  })}
-                </ul>
+                    })}
+                  </ul>
+                )}
               </div>
             )
           })}
@@ -172,19 +233,7 @@ export default function AdminLayout() {
           <Outlet />
         </main>
       </div>
-
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div
-          onClick={() => setMobileOpen(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(11, 15, 20, 0.5)',
-            zIndex: 99,
-          }}
-        />
-      )}
     </div>
   )
 }
+

@@ -3,7 +3,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useUserContext } from '../hooks/useUserContext'
 import { getChildren } from '../data/services/familyService'
 import PortalLayout from '../components/portal/PortalLayout'
-import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
+import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
@@ -25,7 +25,7 @@ export default function Children() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { profile } = useAuth()
+
   const { context, isReady } = useUserContext()
 
   const fetchChildren = useCallback(async () => {
@@ -142,7 +142,7 @@ export default function Children() {
         {/* Add Child Modal */}
         {showModal && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
-            <Card className="max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <Card className="max-w-md w-full p-6" onClick={(e: React.MouseEvent<HTMLElement>) => e.stopPropagation()}>
               <CardTitle className="mb-6">Add</CardTitle>
               
               {error && (

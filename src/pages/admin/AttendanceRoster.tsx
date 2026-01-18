@@ -4,8 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getEventAttendance, updateAttendance } from '../../data/services/attendanceService'
 import type { AttendanceRecord, AttendanceStatus } from '../../types/attendance'
-import { 
-  PageHeader, 
+import {
   Card, 
   Button, 
   PlatformDataTable, 
@@ -20,6 +19,8 @@ export default function AttendanceRoster() {
   const [records, setRecords] = useState<AttendanceRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
   
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
@@ -77,7 +78,7 @@ export default function AttendanceRoster() {
       render: (row) => (
         <div className="pa-flex pa-gap-2">
           <Button 
-            size="small" 
+            size="compact" 
             variant={row.status === 'present' ? 'primary' : 'secondary'}
             onClick={() => handleUpdate(row.child_id, 'present')}
             disabled={updating === row.child_id}
@@ -85,7 +86,7 @@ export default function AttendanceRoster() {
             Present
           </Button>
           <Button 
-            size="small" 
+            size="compact" 
             variant={row.status === 'absent' ? 'primary' : 'secondary'}
             onClick={() => handleUpdate(row.child_id, 'absent')}
             disabled={updating === row.child_id}
@@ -93,7 +94,7 @@ export default function AttendanceRoster() {
             Absent
           </Button>
           <Button 
-            size="small" 
+            size="compact" 
             variant={row.status === 'late' ? 'primary' : 'secondary'}
             onClick={() => handleUpdate(row.child_id, 'late')}
             disabled={updating === row.child_id}
@@ -101,7 +102,7 @@ export default function AttendanceRoster() {
             Late
           </Button>
           <Button 
-            size="small" 
+            size="compact" 
             variant={row.status === 'excused' ? 'primary' : 'secondary'}
             onClick={() => handleUpdate(row.child_id, 'excused')}
             disabled={updating === row.child_id}
@@ -130,8 +131,15 @@ export default function AttendanceRoster() {
           rows={records}
           loading={loading}
           emptyMessage="No athletes found for this event."
+          page={page}
+          rowsPerPage={rowsPerPage}
+          totalCount={records.length}
+          onPageChange={setPage}
+          onRowsPerPageChange={setRowsPerPage}
         />
       </Card>
     </div>
   )
 }
+
+

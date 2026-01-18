@@ -2,12 +2,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { PageHeader, Badge, Card, Button, PlatformDataTable, type ColumnConfig } from '../../components/platformAdmin'
-import type { AdminFeatureFlag, FeatureFlagOverride, FeatureFlagAuditLog } from '../../types/featureFlags.types'
+import { mapFeatureFlag, mapFeatureFlagOverride, mapFeatureFlagAuditLog } from '../../utils/domainMappers'
+import type { FeatureFlag, FeatureFlagOverride, FeatureFlagAuditLog } from '../../types/domain/FeatureFlag'
 
 export default function FeatureFlagDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [flag, setFlag] = useState<AdminFeatureFlag | null>(null)
+  const [flag, setFlag] = useState<FeatureFlag | null>(null)
   const [overrides, setOverrides] = useState<FeatureFlagOverride[]>([])
   const [auditLog, setAuditLog] = useState<FeatureFlagAuditLog[]>([])
   const [loading, setLoading] = useState(true)
@@ -27,8 +28,8 @@ export default function FeatureFlagDetail() {
       if (error) {
         console.error('Error fetching feature flag:', error)
         setFlag(null)
-      } else {
-        setFlag(data)
+      } else if (data) {
+        setFlag(mapFeatureFlag(data))
       }
     } catch (err) {
       console.error('Error:', err)
@@ -52,7 +53,9 @@ export default function FeatureFlagDetail() {
         console.error('Error fetching overrides:', error)
         setOverrides([])
       } else {
-        setOverrides(data || [])
+        // Map rows to include id field
+        const mapped = (data || []).map(row => mapFeatureFlagOverride(row as any))
+        setOverrides(mapped)
       }
     } catch (err) {
       console.error('Error:', err)
@@ -75,7 +78,7 @@ export default function FeatureFlagDetail() {
         console.error('Error fetching audit log:', error)
         setAuditLog([])
       } else {
-        setAuditLog(data || [])
+        setAuditLog((data || []).map(row => mapFeatureFlagAuditLog(row)))
       }
     } catch (err) {
       console.error('Error:', err)
@@ -95,55 +98,55 @@ export default function FeatureFlagDetail() {
     }
   }, [activeTab, fetchOverrides, fetchAuditLog])
   
-  const getValueDisplay = (flag: AdminFeatureFlag): string => {
-    if (flag.value_type === 'boolean') {
-      return flag.default_value_boolean !== null ? String(flag.default_value_boolean) : 'Not set'
+  const getValueDisplay = (flag: FeatureFlag): string => {
+    if (flag.valueType === 'boolean') {
+      return flag.defaultValueBoolean !== null ? String(flag.defaultValueBoolean) : 'Not set'
     }
-    if (flag.value_type === 'integer') {
-      return flag.default_value_integer !== null ? String(flag.default_value_integer) : 'Not set'
+    if (flag.valueType === 'integer') {
+      return flag.defaultValueInteger !== null ? String(flag.defaultValueInteger) : 'Not set'
     }
-    if (flag.value_type === 'double') {
-      return flag.default_value_double !== null ? String(flag.default_value_double) : 'Not set'
+    if (flag.valueType === 'double') {
+      return flag.defaultValueDouble !== null ? String(flag.defaultValueDouble) : 'Not set'
     }
     return 'Not set'
   }
   
-  const overrideColumns: ColumnConfig<FeatureFlagOverride>[] = [
+  const overrideColumns: ColumnConfig<FeatureFlagOverride & { id: string }>[] = [
     {
       id: 'override_type',
       label: 'Type',
-      render: (row) => (
-        <Badge variant={row.override_type === 'org' ? 'info' : 'warning'}>
-          {row.override_type === 'org' ? 'Organization' : 'User'}
+      render: (row: FeatureFlagOverride & { id: string }) => (
+        <Badge variant={row.overrideType === 'org' ? 'info' : 'warning'}>
+          {row.overrideType === 'org' ? 'Organization' : 'User'}
         </Badge>
       ),
     },
     {
       id: 'scope_name',
-      label: row => row.override_type === 'org' ? 'Organization' : 'User',
-      render: (row) => (
+      label: 'Scope',
+      render: (row: FeatureFlagOverride & { id: string }) => (
         <div className="pa-body-m" style={{ fontWeight: 600 }}>
-          {row.scope_name}
+          {row.scopeName}
         </div>
       ),
     },
     {
       id: 'value',
       label: 'Value',
-      render: (row) => (
+      render: (row: FeatureFlagOverride & { id: string }) => (
         <div className="pa-body-m">
-          {row.value_boolean !== null ? String(row.value_boolean) :
-           row.value_integer !== null ? String(row.value_integer) :
-           row.value_double !== null ? String(row.value_double) : 'N/A'}
+          {row.valueBoolean !== null ? String(row.valueBoolean) :
+           row.valueInteger !== null ? String(row.valueInteger) :
+           row.valueDouble !== null ? String(row.valueDouble) : 'N/A'}
         </div>
       ),
     },
     {
       id: 'created_at',
       label: 'Created',
-      render: (row) => (
+      render: (row: FeatureFlagOverride & { id: string }) => (
         <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
-          {new Date(row.created_at).toLocaleString()}
+          {new Date(row.createdAt).toLocaleString()}
         </div>
       ),
     },
@@ -153,16 +156,16 @@ export default function FeatureFlagDetail() {
     {
       id: 'created_at',
       label: 'Time',
-      render: (row) => (
+      render: (row: FeatureFlagAuditLog) => (
         <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
-          {new Date(row.created_at).toLocaleString()}
+          {new Date(row.createdAt).toLocaleString()}
         </div>
       ),
     },
     {
       id: 'action',
       label: 'Action',
-      render: (row) => (
+      render: (row: FeatureFlagAuditLog) => (
         <Badge variant={row.action === 'delete' ? 'danger' : row.action === 'create' ? 'success' : 'info'}>
           {row.action}
         </Badge>
@@ -171,27 +174,27 @@ export default function FeatureFlagDetail() {
     {
       id: 'actor_name',
       label: 'Actor',
-      render: (row) => (
+      render: (row: FeatureFlagAuditLog) => (
         <div className="pa-body-m">
-          {row.actor_name || row.actor_email || 'System'}
+          {row.actorName || row.actorEmail || 'System'}
         </div>
       ),
     },
     {
       id: 'scope_type',
       label: 'Scope',
-      render: (row) => (
+      render: (row: FeatureFlagAuditLog) => (
         <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
-          {row.scope_type || 'flag'}
+          {row.scopeType || 'flag'}
         </div>
       ),
     },
     {
       id: 'scope_id',
       label: 'Target',
-      render: (row) => (
+      render: (row: FeatureFlagAuditLog) => (
         <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
-          {row.scope_id || '-'}
+          {row.scopeId || '-'}
         </div>
       ),
     },
@@ -246,11 +249,11 @@ export default function FeatureFlagDetail() {
         <Button variant="ghost" onClick={() => navigate('/platform-admin/feature-flags')}>
           ← Back to Flags
         </Button>
-        <Badge variant={flag.deleted_at ? 'danger' : 'success'}>
-          {flag.deleted_at ? 'Deleted' : 'Active'}
+        <Badge variant={flag.deletedAt ? 'danger' : 'success'}>
+          {flag.deletedAt ? 'Deleted' : 'Active'}
         </Badge>
         <Badge variant="info">{flag.environment.toUpperCase()}</Badge>
-        <Badge variant="neutral">{flag.value_type}</Badge>
+        <Badge variant="neutral">{flag.valueType}</Badge>
       </div>
       
       {/* Flag Info */}
@@ -262,7 +265,7 @@ export default function FeatureFlagDetail() {
           </div>
           <div>
             <div className="pa-body-s" style={{ color: 'var(--pa-n700)', marginBottom: '4px' }}>Value Type</div>
-            <div className="pa-body-m">{flag.value_type}</div>
+            <div className="pa-body-m">{flag.valueType}</div>
           </div>
           <div>
             <div className="pa-body-s" style={{ color: 'var(--pa-n700)', marginBottom: '4px' }}>Environment</div>
@@ -274,19 +277,19 @@ export default function FeatureFlagDetail() {
           </div>
           <div>
             <div className="pa-body-s" style={{ color: 'var(--pa-n700)', marginBottom: '4px' }}>Organization Overrides</div>
-            <div className="pa-body-m">{flag.org_override_count}</div>
+            <div className="pa-body-m">{flag.orgOverrideCount}</div>
           </div>
           <div>
             <div className="pa-body-s" style={{ color: 'var(--pa-n700)', marginBottom: '4px' }}>User Overrides</div>
-            <div className="pa-body-m">{flag.user_override_count}</div>
+            <div className="pa-body-m">{flag.userOverrideCount}</div>
           </div>
           <div>
             <div className="pa-body-s" style={{ color: 'var(--pa-n700)', marginBottom: '4px' }}>Created</div>
-            <div className="pa-body-m">{new Date(flag.created_at).toLocaleString()}</div>
+            <div className="pa-body-m">{new Date(flag.createdAt).toLocaleString()}</div>
           </div>
           <div>
             <div className="pa-body-s" style={{ color: 'var(--pa-n700)', marginBottom: '4px' }}>Last Updated</div>
-            <div className="pa-body-m">{new Date(flag.updated_at).toLocaleString()}</div>
+            <div className="pa-body-m">{new Date(flag.updatedAt).toLocaleString()}</div>
           </div>
         </div>
       </Card>
@@ -327,8 +330,8 @@ export default function FeatureFlagDetail() {
       {activeTab === 'overrides' && (
         <Card>
           <PlatformDataTable
-            columns={overrideColumns}
-            rows={overrides}
+            columns={overrideColumns as ColumnConfig<{ id: string }>[]}
+            rows={overrides as ({ id: string })[]}
             loading={false}
             emptyMessage="No overrides found for this flag"
             page={0}

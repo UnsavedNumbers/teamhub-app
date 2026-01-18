@@ -6,7 +6,6 @@ import { getTryouts } from '../../data/services/tryoutsService'
 import type { Tryout } from '../../data/services/tryoutsService'
 import { 
   PageHeader, 
-  Card, 
   Button, 
   PlatformDataTable, 
   Badge,
@@ -16,6 +15,8 @@ import {
 export default function AdminTryouts() {
   const [tryouts, setTryouts] = useState<Tryout[]>([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
   const { context, isReady } = useUserContext()
   const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
@@ -42,7 +43,7 @@ export default function AdminTryouts() {
       label: 'Actions', 
       align: 'right',
       render: (row) => (
-        <Button variant="ghost" size="small" onClick={(e) => { e.stopPropagation(); navigate(`/admin/tryouts/${row.id}`) }}>
+        <Button variant="ghost" size="compact" onClick={(e) => { e.stopPropagation(); navigate(`/admin/tryouts/${row.id}`) }}>
           <span className="material-symbols-outlined">visibility</span>
         </Button>
       )
@@ -60,7 +61,13 @@ export default function AdminTryouts() {
         rows={tryouts}
         loading={loading}
         onRowClick={(row) => navigate(`/admin/tryouts/${row.id}`)}
+        page={page}
+        rowsPerPage={rowsPerPage}
+        totalCount={tryouts.length}
+        onPageChange={setPage}
+        onRowsPerPageChange={setRowsPerPage}
       />
     </div>
   )
 }
+

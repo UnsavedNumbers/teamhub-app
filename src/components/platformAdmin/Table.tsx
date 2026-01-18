@@ -15,7 +15,7 @@ export interface TableColumn<T> {
   render?: (row: T) => ReactNode
 }
 
-interface TableProps<T> {
+interface TableProps<T extends { id: string | number }> {
   /** Column configuration */
   columns: TableColumn<T>[]
   /** Table data */

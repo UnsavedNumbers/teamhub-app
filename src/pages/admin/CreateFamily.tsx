@@ -45,8 +45,8 @@ export default function CreateFamily() {
       <PageHeader
         title="NEW FAMILY"
         breadcrumbs={[
-          { label: 'Families', to: '/admin/families' },
-          { label: 'New Family', to: '/admin/families/new' }
+          { label: 'Families', path: '/admin/families' },
+          { label: 'New Family', path: '/admin/families/new' }
         ]}
       />
 

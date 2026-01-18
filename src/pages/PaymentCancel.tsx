@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle } from '../components/portal/Typography'
-import Card from '../components/portal/Card'
+
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 
@@ -34,9 +34,11 @@ export default function PaymentCancel() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button variant="primary" as={Link} to="/portal/payments">
-              Return to payments
-            </Button>
+            <Link to="/portal/payments">
+              <Button variant="primary">
+                Return to payments
+              </Button>
+            </Link>
             <Link to="/portal/dashboard" className="text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
               Go to dashboard
             </Link>

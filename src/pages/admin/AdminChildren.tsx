@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PageHeader, PlatformDataTable, Badge } from '../../components/platformAdmin'
+import { PageHeader, PlatformDataTable } from '../../components/platformAdmin'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
 import { useUserContext } from '../../hooks/useUserContext'
@@ -30,20 +30,20 @@ export default function AdminChildren() {
 
   const columns: ColumnConfig<Child>[] = [
     {
-      key: 'first_name',
-      header: 'Name',
+      id: 'first_name',
+      label: 'Name',
       sortable: true,
       render: (c) => <span className="pa-text-primary" style={{ fontWeight: 600 }}>{c?.first_name} {c?.last_name}</span>
     },
     {
-       key: 'date_of_birth',
-       header: 'DOB',
+       id: 'date_of_birth',
+       label: 'DOB',
        sortable: true,
        render: (c) => c?.date_of_birth ? new Date(c.date_of_birth).toLocaleDateString() : '-'
     },
     {
-      key: 'family_id',
-      header: 'Family',
+      id: 'family_id',
+      label: 'Family',
       render: (c) => (
           <span 
             className="pa-link"
@@ -75,8 +75,12 @@ export default function AdminChildren() {
             loading={loading}
             // Navigate to family detail since we don't have a child detail page
             onRowClick={(c) => navigate(`/admin/families/${c.family_id}`)}
-            emptyStateTitle={t('admin.children.emptyTitle')}
-            emptyStateMessage={t('admin.children.emptyMessage')}
+            emptyMessage={t('admin.children.emptyMessage')}
+            page={0}
+            rowsPerPage={children.length}
+            totalCount={children.length}
+            onPageChange={() => {}}
+            onRowsPerPageChange={() => {}}
           />
       )}
     </div>

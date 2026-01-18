@@ -53,7 +53,7 @@ export async function getUniformKits(
  * Get items for specific kits
  */
 export async function getUniformKitItems(
-    context: UserContext,
+    _context: UserContext,
     kitIds: string[]
 ): Promise<{ data: UniformItem[]; error: Error | null }> {
     await simulateDelay()
@@ -117,7 +117,7 @@ export async function getAllUniformSubmissions(
  * Get size selections for a submission
  */
 export async function getUniformSizeSelections(
-    context: UserContext,
+    _context: UserContext,
     submissionId: string
 ): Promise<{ data: UniformSizeSelection[]; error: Error | null }> {
     await simulateDelay()

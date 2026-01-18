@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
-import { useAuth } from '../../hooks/useAuth'
+
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { getErrorMessage } from '../../utils/errorUtils'
@@ -24,7 +24,7 @@ export default function CreateUser() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { currentOrganization } = useOrganization()
+
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
@@ -115,8 +115,7 @@ export default function CreateUser() {
                   label="Email" 
                   type="email" 
                   required 
-                  error={!!errors.email} 
-                  helperText={errors.email?.message} 
+                  error={errors.email?.message || undefined} 
                 />
               )} 
             />
@@ -132,8 +131,7 @@ export default function CreateUser() {
                   {...field} 
                   label="Display Name" 
                   required 
-                  error={!!errors.display_name} 
-                  helperText={errors.display_name?.message} 
+                  error={errors.display_name?.message || undefined} 
                 />
               )} 
             />
@@ -187,3 +185,4 @@ export default function CreateUser() {
     </div>
   )
 }
+

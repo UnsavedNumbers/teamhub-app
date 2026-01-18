@@ -7,6 +7,7 @@
 
 import { supabase } from '../lib/supabase'
 import { sanitizeMetadataForAudit } from './platformAdminMasking'
+import type { Json } from '../lib/supabase.extended.types'
 import type {
   EventCategory,
   EventLogParams,
@@ -99,15 +100,15 @@ export async function logEvent<C extends EventCategory>(
     const { data, error } = await supabase.rpc('log_event', {
       p_category: params.category,
       p_event_type: params.eventType,
-      p_actor_user_id: actorUserId,
+      p_actor_user_id: actorUserId ?? undefined,
       p_actor_role: params.actorRole,
-      p_org_id: params.orgId || null,
-      p_target_entity_type: params.targetEntityType || null,
-      p_target_entity_id: params.targetEntityId || null,
-      p_metadata: sanitizedMetadata,
-      p_ip_address: params.ipAddress || null,
-      p_user_agent: params.userAgent || null,
-      p_idempotency_key: params.idempotencyKey || null,
+      p_org_id: params.orgId ?? undefined,
+      p_target_entity_type: params.targetEntityType ?? undefined,
+      p_target_entity_id: params.targetEntityId ?? undefined,
+      p_metadata: sanitizedMetadata as Json,
+      p_ip_address: params.ipAddress ?? undefined,
+      p_user_agent: params.userAgent ?? undefined,
+      p_idempotency_key: params.idempotencyKey ?? undefined,
     })
 
     if (error) {

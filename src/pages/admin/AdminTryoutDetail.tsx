@@ -6,7 +6,6 @@ import type { Tryout, TryoutRegistration } from '../../data/services/tryoutsServ
 import { 
   PageHeader, 
   Card, 
-  Button, 
   PlatformDataTable, 
   Badge,
   type ColumnConfig 
@@ -17,6 +16,8 @@ export default function AdminTryoutDetail() {
   const [tryout, setTryout] = useState<Tryout | null>(null)
   const [registrations, setRegistrations] = useState<TryoutRegistration[]>([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
   
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
@@ -81,6 +82,11 @@ export default function AdminTryoutDetail() {
           rows={registrations}
           loading={loading}
           emptyMessage="No registrations yet."
+          page={page}
+          rowsPerPage={rowsPerPage}
+          totalCount={registrations.length}
+          onPageChange={setPage}
+          onRowsPerPageChange={setRowsPerPage}
         />
       </Card>
     </div>

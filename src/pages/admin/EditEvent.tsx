@@ -31,12 +31,13 @@ export default function EditEvent() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showLocationDetails, setShowLocationDetails] = useState(false)
-  const [showRecurring, setShowRecurring] = useState(false)
+
   const [hasExistingRSVPs, setHasExistingRSVPs] = useState(false)
 
-  const { currentOrganization } = useOrganization()
+
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
+  const t = useT()
 
   const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<EventFormData>({
     defaultValues: { 
@@ -80,7 +81,7 @@ export default function EditEvent() {
 
   const watchTeamId = watch('team_id')
   const watchRSVPEnabled = watch('rsvp_enabled')
-  const watchRSVPType = watch('rsvp_type')
+
 
   const fetchEvent = useCallback(async () => {
     if (!isReady || !eventId) return
@@ -273,11 +274,11 @@ export default function EditEvent() {
           end_time: data.end_time ? new Date(data.end_time).toISOString() : null,
           arrival_time: data.arrival_time ? new Date(data.arrival_time).toISOString() : null,
           timezone: data.timezone,
-          notes: data.notes,
-          uniform_notes: data.uniform_notes,
-          equipment_notes: data.equipment_notes,
+          notes: data.notes || null,
+          uniform_notes: data.uniform_notes || null,
+          equipment_notes: data.equipment_notes || null,
           weather_dependent: data.weather_dependent,
-          external_link: data.external_link,
+          external_link: data.external_link || null,
         })
         .eq('id', eventId)
 
@@ -346,13 +347,13 @@ export default function EditEvent() {
           )}
           
           <div className="pa-grid pa-grid-2 pa-mb-4 pa-gap-4">
-            <Controller name="title" control={control} rules={{ required: 'Title is required' }} render={({ field }) => <Input {...field} label="Event Title" required error={!!errors.title} helperText={errors.title?.message} />} />
-            <Controller name="type" control={control} render={({ field }) => <Select {...field} label="Event Type" options={eventTypeOptions} />} />
+            <Controller name="title" control={control} rules={{ required: 'Title is required' }} render={({ field }) => <Input {...field} label="Event Title" required error={errors.title?.message || undefined} />} />
+            <Controller name="type" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label="Event Type" options={eventTypeOptions} />} />
           </div>
 
           <div className="pa-grid pa-grid-2 pa-mb-4 pa-gap-4">
-            <Controller name="team_id" control={control} rules={{ required: 'Team is required' }} render={({ field }) => <Select {...field} label="Team" options={teams.map(t => ({value:t.id, label:t.name}))} required error={!!errors.team_id} />} />
-            <Controller name="season_id" control={control} rules={{ required: 'Season is required' }} render={({ field }) => <Select {...field} label="Season" options={seasons.map(s => ({value:s.id, label:s.name}))} required disabled={!watchTeamId} />} />
+            <Controller name="team_id" control={control} rules={{ required: 'Team is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label="Team" options={teams.map(t => ({value:t.id, label:t.name}))} required error={errors.team_id?.message || undefined} />} />
+            <Controller name="season_id" control={control} rules={{ required: 'Season is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label="Season" options={seasons.map(s => ({value:s.id, label:s.name}))} required disabled={!watchTeamId} />} />
           </div>
 
           <div className="pa-grid pa-grid-3 pa-mb-4 pa-gap-4">
@@ -364,7 +365,7 @@ export default function EditEvent() {
           <div className="pa-mb-4">
                <div className="pa-flex pa-justify-between pa-items-center pa-mb-2">
                  <div className="pa-label">Location</div>
-                 <Button type="button" variant="text" onClick={() => setShowLocationDetails(!showLocationDetails)}>{showLocationDetails ? 'Simple Location' : 'Detailed Location'}</Button>
+                 <Button type="button" variant="ghost" onClick={() => setShowLocationDetails(!showLocationDetails)}>{showLocationDetails ? 'Simple Location' : 'Detailed Location'}</Button>
                </div>
                
                <div className="pa-space-y-4">
@@ -412,14 +413,14 @@ export default function EditEvent() {
                          render={({ field }) => (
                            <Select 
                              {...field} 
+                            value={field.value || ''}
                             label="RSVP Type" 
                             options={[
                               {value: 'general', label: t('admin.events.rsvpType.general')},
                               {value: 'athlete', label: t('admin.events.rsvpType.athlete')}
                             ]}
                              required
-                             error={!!errors.rsvp_type}
-                             helperText={errors.rsvp_type?.message}
+                             error={errors.rsvp_type?.message || undefined}
                            />
                          )} 
                        />
@@ -444,3 +445,4 @@ export default function EditEvent() {
     </div>
   )
 }
+

@@ -90,7 +90,7 @@ export async function updateUserPreference(
     // Update in Supabase
     const { data, error } = await supabase
       .from('users')
-      .update({ preferences: updatedPreferences })
+      .update({ preferences: updatedPreferences as Json })
       .eq('id', userId)
       .select('preferences')
       .single()
@@ -136,7 +136,7 @@ export async function updateUserPreferences(
     // Update in Supabase
     const { data, error } = await supabase
       .from('users')
-      .update({ preferences: updatedPreferences })
+      .update({ preferences: updatedPreferences as Json })
       .eq('id', userId)
       .select('preferences')
       .single()
@@ -177,7 +177,7 @@ export async function clearUserPreference(
 
     const { data, error } = await supabase
       .from('users')
-      .update({ preferences: updatedPreferences })
+      .update({ preferences: updatedPreferences as Json })
       .eq('id', userId)
       .select('preferences')
       .single()

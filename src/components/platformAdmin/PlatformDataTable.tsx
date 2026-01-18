@@ -9,12 +9,13 @@ export interface ColumnConfig<T> {
   sortable?: boolean
   align?: 'left' | 'center' | 'right'
   minWidth?: number
-  render?: (row: T) => ReactNode
+  render?: (row: any) => ReactNode
 }
 
 interface PlatformDataTableProps<T extends { id: string }> {
   columns: ColumnConfig<T>[]
-  rows: T[]
+  data?: T[]
+  rows?: T[]
   loading?: boolean
   emptyMessage?: string
   page: number
@@ -33,7 +34,8 @@ interface PlatformDataTableProps<T extends { id: string }> {
  */
 export default function PlatformDataTable<T extends { id: string }>({
   columns = [],
-  rows = [],
+  data,
+  rows,
   loading = false,
   emptyMessage = 'No data available',
   page = 0,
@@ -47,7 +49,7 @@ export default function PlatformDataTable<T extends { id: string }>({
   onSort,
 }: PlatformDataTableProps<T>) {
   // Defensive guard against null (if default didn't catch it due to explicit null pass)
-  const safeRows = rows || []
+  const safeRows = (data || rows) || []
   const safeColumns = columns || []
 
   const totalPages = Math.ceil(totalCount / rowsPerPage)

@@ -18,8 +18,7 @@
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
 import type { UserContext, PermissionSet } from '../fake/userContext'
-import { calculatePermissions, filterEventsByRole } from '../fake/userContext'
-import type { CalendarEvent } from '../../types/calendar'
+import { calculatePermissions } from '../fake/userContext'
 import {
     type TravelEvent,
     type TravelTrip,
@@ -51,7 +50,7 @@ export {
     getMeetingLocations,
 }
 
-export type { TravelEvent, TravelTrip, TravelDetectionResult }
+export type { TravelEvent, TravelTrip, TravelDetectionResult, FakeTravelPlan }
 
 // ============================================================================
 // Helper Functions
@@ -414,7 +413,7 @@ export async function getTravelEventsForTeam(
  * Set travel override for an event
  */
 export async function setTravelOverride(
-    context: UserContext,
+    _context: UserContext,
     eventId: string,
     isTravel: boolean,
     reason?: string
@@ -424,7 +423,7 @@ export async function setTravelOverride(
             const { error } = await supabase.rpc('set_travel_override', {
                 p_event_id: eventId,
                 p_is_travel: isTravel,
-                p_reason: reason || null,
+                p_reason: reason ?? null,
             })
 
             if (error) throw error
@@ -445,7 +444,7 @@ export async function setTravelOverride(
  * Clear travel override for an event
  */
 export async function clearTravelOverride(
-    context: UserContext,
+    _context: UserContext,
     eventId: string
 ): Promise<{ error: Error | null }> {
     if (!USE_FAKE_DATA) {

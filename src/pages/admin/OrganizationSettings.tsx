@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
-import { useAuth } from '../../hooks/useAuth'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { getErrorMessage } from '../../utils/errorUtils'
@@ -125,8 +124,7 @@ export default function OrganizationSettings() {
                   {...field} 
                   label="Organization Name" 
                   required 
-                  error={!!errors.name} 
-                  helperText={errors.name?.message} 
+                  error={errors.name?.message || undefined} 
                 />
               )} 
             />
@@ -230,3 +228,4 @@ export default function OrganizationSettings() {
     </div>
   )
 }
+

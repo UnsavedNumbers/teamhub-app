@@ -19,7 +19,6 @@ export function useOffline(): UseOfflineResult {
   useEffect(() => {
     const handleOnline = () => {
       setIsOffline(false)
-      setRetryCount(0)
     }
 
     const handleOffline = () => {

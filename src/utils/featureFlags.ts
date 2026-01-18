@@ -231,8 +231,8 @@ export async function resolveFeatureFlag(
     // Call resolution RPC
     const { data, error } = await supabase.rpc('resolve_feature_flag', {
       p_feature_key: key,
-      p_user_id: finalUserId,
-      p_org_id: orgId,
+      p_user_id: finalUserId ?? undefined,
+      p_org_id: orgId ?? undefined,
       p_environment: finalEnvironment,
     })
     
@@ -247,10 +247,10 @@ export async function resolveFeatureFlag(
     
     // Parse resolved value
     const resolved: ResolvedFeatureFlag = {
-      value: data.value as boolean | number,
-      value_type: data.value_type as 'boolean' | 'integer' | 'double',
-      resolved_from: data.resolved_from as 'platform' | 'organization' | 'user',
-      source_id: data.source_id as string | null,
+      value: (data as any).value as boolean | number,
+      value_type: (data as any).value_type as 'boolean' | 'integer' | 'double',
+      resolved_from: (data as any).resolved_from as 'platform' | 'organization' | 'user',
+      source_id: (data as any).source_id as string | null,
     }
     
     // Cache the result
@@ -292,8 +292,8 @@ export async function resolveFeatureFlags(
     // Call batch resolution RPC
     const { data, error } = await supabase.rpc('resolve_feature_flags', {
       p_feature_keys: keys,
-      p_user_id: finalUserId,
-      p_org_id: orgId,
+      p_user_id: finalUserId ?? undefined,
+      p_org_id: orgId ?? undefined,
       p_environment: finalEnvironment,
     })
     

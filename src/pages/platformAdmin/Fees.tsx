@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { PageHeader, Badge, FilterBar, PlatformDataTable, type ColumnConfig } from '../../components/platformAdmin'
 import { formatCurrency } from '../../utils/platformAdminMasking'
+import { mapAdminFeeStatus } from '../../utils/typeAdapters'
 import type { AdminFeeStatus } from '../../types/platformAdmin.types'
 
 export default function Fees() {
@@ -39,7 +40,9 @@ export default function Fees() {
         setFees([])
         setTotalCount(0)
       } else {
-        setFees(data || [])
+        // Map rows to include id field
+        const mapped = (data || []).map(row => mapAdminFeeStatus(row as any))
+        setFees(mapped)
         setTotalCount(count || 0)
       }
     } catch (err) {
@@ -75,7 +78,7 @@ export default function Fees() {
     return new Date(dueDate) < new Date()
   }
 
-  const columns: ColumnConfig<AdminFeeStatus>[] = [
+  const columns: ColumnConfig<AdminFeeStatus & { id: string }>[] = [
     {
       id: 'fee_name',
       label: 'Fee Name',
@@ -207,8 +210,8 @@ export default function Fees() {
       />
 
       <PlatformDataTable
-        columns={columns}
-        rows={fees}
+        columns={columns as ColumnConfig<{ id: string }>[]}
+        rows={fees as ({ id: string })[]}
         loading={loading}
         emptyMessage="No fees found."
         page={page}

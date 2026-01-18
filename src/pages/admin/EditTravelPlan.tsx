@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
-import { useAuth } from '../../hooks/useAuth'
+
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { getTravelPlanById } from '../../data/services/travelService'
@@ -36,11 +36,11 @@ export default function EditTravelPlan() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { currentOrganization } = useOrganization()
+
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
-  const { control, handleSubmit, reset, formState: { errors } } = useForm<TravelFormData>()
+  const { control, handleSubmit, reset } = useForm<TravelFormData>()
 
   const fetchPlan = useCallback(async () => {
     if (!isReady || !planId) return

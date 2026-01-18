@@ -5,7 +5,6 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { getOrganizationUsers } from '../../data/services/usersService'
 import { 
   PageHeader, 
-  Card, 
   Button, 
   PlatformDataTable, 
   Badge,
@@ -27,7 +26,7 @@ export default function OrganizationUsers() {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(25)
 
-  const { profile } = useAuth()
+
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
@@ -73,7 +72,7 @@ export default function OrganizationUsers() {
           {row.roles.map(role => (
             <Badge 
               key={role} 
-              variant={role === 'admin' ? 'primary' : role === 'coach' ? 'info' : 'neutral'}
+              variant={role === 'admin' ? 'info' : role === 'coach' ? 'info' : 'neutral'}
             >
               {role.toUpperCase()}
             </Badge>
@@ -93,7 +92,7 @@ export default function OrganizationUsers() {
       render: (row) => (
         <Button 
           variant="ghost" 
-          size="small"
+          size="compact"
           onClick={(e) => { 
             e.stopPropagation()
             // TODO: Implement edit user
@@ -131,3 +130,4 @@ export default function OrganizationUsers() {
     </div>
   )
 }
+

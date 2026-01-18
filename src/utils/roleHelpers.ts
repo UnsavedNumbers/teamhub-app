@@ -55,30 +55,15 @@ export function getPrimaryRole(
   org: Organization | null | undefined
 ): OrgMemberRole | null {
   if (!org || org.roles.length === 0) return null
-  
+
   if (org.roles.includes('org_admin')) return 'org_admin'
   if (org.roles.includes('coach')) return 'coach'
   if (org.roles.includes('parent')) return 'parent'
-  
+
   return org.roles[0]
 }
 
-/**
- * Format roles for display (e.g., "Admin, Coach")
- * @param org - Organization object (can be null)
- * @returns Formatted string of role names
- */
-export function formatRoles(org: Organization | null | undefined): string {
-  if (!org || org.roles.length === 0) return 'No roles'
-  
-  const roleNames: Record<OrgMemberRole, string> = {
-    'org_admin': 'Admin',
-    'coach': 'Coach',
-    'parent': 'Parent',
-  }
-  
-  return org.roles.map(r => roleNames[r]).join(', ')
-}
+
 
 /**
  * Check if user has a role in any organization

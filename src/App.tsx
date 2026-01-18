@@ -1,11 +1,11 @@
 import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
-import { AuthProvider } from './hooks/useAuth'
+import { AuthProvider, useAuth } from './hooks/useAuth'
 import { OrganizationProvider } from './contexts/OrganizationContext'
+import { SidebarProvider } from './contexts/SidebarContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import AdminLoadingSpinner from './components/admin/AdminLoadingSpinner'
 import { getHostAppContext } from './utils/host'
-import { useAuth } from './hooks/useAuth'
 
 // Marketing Page
 import Marketing from './pages/Marketing'
@@ -70,6 +70,11 @@ const LicensesAudit = lazy(() => import('./pages/platformAdmin/LicensesAudit'))
 // Admin Pages - Lazy loaded for code splitting
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
 const CreateUser = lazy(() => import('./pages/admin/CreateUser'))
+const OrganizationStructureOverview = lazy(() => import('./pages/admin/OrganizationStructureNew'))
+const SportsAndPrograms = lazy(() => import('./pages/admin/SportsAndPrograms'))
+const LevelsManagement = lazy(() => import('./pages/admin/LevelsManagement'))
+const TeamsManagement = lazy(() => import('./pages/admin/TeamsManagement'))
+const SeasonsManagement = lazy(() => import('./pages/admin/SeasonsManagement'))
 const Teams = lazy(() => import('./pages/admin/Teams'))
 const TeamDetail = lazy(() => import('./pages/admin/TeamDetail'))
 const Roster = lazy(() => import('./pages/admin/Roster'))
@@ -86,6 +91,7 @@ const EditTravelPlan = lazy(() => import('./pages/admin/EditTravelPlan'))
 const AdminTryouts = lazy(() => import('./pages/admin/AdminTryouts'))
 const AdminTryoutDetail = lazy(() => import('./pages/admin/AdminTryoutDetail'))
 const OrganizationSettings = lazy(() => import('./pages/admin/OrganizationSettings'))
+const OrganizationStructureForms = lazy(() => import('./pages/admin/OrganizationStructureForms'))
 const OrganizationUsers = lazy(() => import('./pages/admin/OrganizationUsers'))
 const OrganizationOnboarding = lazy(() => import('./pages/admin/OrganizationOnboarding'))
 const OrganizationBilling = lazy(() => import('./pages/admin/OrganizationBilling'))
@@ -222,16 +228,25 @@ function App() {
             <Route
               element={
                 <ProtectedRoute allowedRoles={['admin', 'org_admin', 'coach']}>
-                  <Suspense fallback={<AdminLoadingSpinner />}>
-                    <AdminLayout />
-                  </Suspense>
+                  <SidebarProvider>
+                    <Suspense fallback={<AdminLoadingSpinner />}>
+                      <AdminLayout />
+                    </Suspense>
+                  </SidebarProvider>
                 </ProtectedRoute>
               }
             >
               {/* Admin Dashboard */}
               <Route index element={<AdminDashboard />} />
             
-              {/* Teams */}
+              {/* Organizational Structure */}
+              <Route path="organization/structure" element={<OrganizationStructureOverview />} />
+              <Route path="organization/structure/sports-programs" element={<SportsAndPrograms />} />
+              <Route path="organization/structure/levels" element={<LevelsManagement />} />
+              <Route path="organization/structure/teams" element={<TeamsManagement />} />
+              <Route path="organization/structure/seasons" element={<SeasonsManagement />} />
+
+              {/* Teams (legacy) */}
               <Route path="teams" element={<Teams />} />
               <Route path="teams/:id" element={<TeamDetail />} />
               <Route path="teams/:id/roster" element={<Roster />} />
@@ -275,6 +290,7 @@ function App() {
             
               {/* Organization */}
               <Route path="organization" element={<OrganizationSettings />} />
+              <Route path="organization/structure" element={<OrganizationStructureForms />} />
               <Route path="organization/users" element={<OrganizationUsers />} />
               <Route path="organization/billing" element={<OrganizationBilling />} />
               <Route path="organization/billing/plan-selection" element={<PlanSelection />} />

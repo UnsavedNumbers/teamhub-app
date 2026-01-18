@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth'
+
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { getTeams } from '../../data/services/teamsService'
@@ -12,7 +12,6 @@ import {
   StatCard, 
   Card, 
   Button, 
-  Badge 
 } from '../../components/platformAdmin'
 
 interface DashboardStats {

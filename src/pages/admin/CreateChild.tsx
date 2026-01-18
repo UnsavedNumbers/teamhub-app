@@ -32,7 +32,7 @@ export default function CreateChild() {
   useEffect(() => {
     async function fetchFamily() {
       if (!familyId || !isReady) return
-      const { data, error } = await getFamilyDetails(context, familyId)
+      const { data } = await getFamilyDetails(context, familyId)
       if (data) {
         setFamilyName(data.name || '')
         // Pre-fill last name from family name if it ends in "Family" (simple heuristic)
@@ -88,9 +88,9 @@ export default function CreateChild() {
         title={t('admin.createChild.title')}
         subtitle={familyName ? `For ${familyName}` : ''}
         breadcrumbs={[
-          { label: 'Families', to: '/admin/families' },
-          { label: familyName || 'Family', to: `/admin/families/${familyId}` },
-          { label: t('admin.createChild.addChild'), to: '#' }
+          { label: 'Families', path: '/admin/families' },
+          { label: familyName || 'Family', path: `/admin/families/${familyId}` },
+          { label: t('admin.createChild.addChild'), path: '#' }
         ]}
       />
 

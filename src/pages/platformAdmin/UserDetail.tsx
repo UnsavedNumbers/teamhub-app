@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { PageHeader, Badge, Card, ConfirmDialog, Button } from '../../components/platformAdmin'
 import { canPerformAction } from '../../utils/platformAdminPermissions'
 import { getDisplayEmail } from '../../utils/platformAdminMasking'
+import { isRpcSuccessResponse } from '../../utils/typeAdapters'
 import type { AdminUser, PlatformAdminRole } from '../../types/platformAdmin.types'
 
 export default function UserDetail() {
@@ -96,16 +97,15 @@ export default function UserDetail() {
           return
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await supabase.rpc(rpcName, { target_user_id: targetUserId, reason }) as any
+      const { data, error } = await supabase.rpc(rpcName, { target_user_id: targetUserId, reason })
 
       if (error) {
         setDialogError(error.message)
         return
       }
 
-      if (data && !data.success) {
-        setDialogError(data.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !data.success) {
+        setDialogError(data?.error || 'Unknown error')
         return
       }
 
