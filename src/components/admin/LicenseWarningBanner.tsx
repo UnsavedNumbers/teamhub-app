@@ -7,7 +7,7 @@ interface LicenseWarningBannerProps {
 export function LicenseWarningBanner({ summary }: LicenseWarningBannerProps) {
   if (!summary.isTrial && !summary.isGracePeriod) return null
 
-  const isCritical = summary.daysRemaining <= 3
+  const isCritical = (summary.daysRemaining ?? 0) <= 3
 
   return (
     <div 

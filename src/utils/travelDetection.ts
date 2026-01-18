@@ -11,7 +11,7 @@
  * - Issue 10: Event type as high-confidence indicator
  */
 
-import type { CalendarEvent, EventLocation, MeetingLocation, TravelOverride } from '../types/calendar'
+import type { CalendarEvent, MeetingLocation, TravelOverride } from '../types/calendar'
 
 // ============================================================================
 // Types
@@ -141,8 +141,6 @@ export function detectTravelEvent(
     orgPrimaryCity?: string | null,
     orgPrimaryState?: string | null
 ): TravelDetectionResult {
-    const reasons: string[] = []
-    let confidence: TravelConfidence = 'low'
     let hasOverride = false
     let overrideConflict = false
 

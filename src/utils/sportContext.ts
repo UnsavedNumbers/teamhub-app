@@ -12,7 +12,6 @@ import { getSports } from '../data/services/sportsService'
 import { getEventDetails } from '../data/services/eventsService'
 import { getChildren } from '../data/services/familyService'
 import type { CalendarEvent } from '../types/calendar'
-import type { FakeTeam } from '../data/fake/fakeTeams'
 
 export interface SportInfo {
     id: string

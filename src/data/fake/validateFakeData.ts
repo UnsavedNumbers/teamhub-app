@@ -1,4 +1,4 @@
-import { fakeTeams, fakeLevels, fakePrograms, fakeSeasons, fakeTeamSeasons, fakeSports } from './fakeTeams'
+import { fakeTeams, fakeLevels, fakePrograms, fakeSeasons, fakeTeamSeasons } from './fakeTeams'
 
 export function validateFakeDataStructure() {
     const errors: string[] = []

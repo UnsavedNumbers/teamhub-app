@@ -221,7 +221,7 @@ function App() {
           >
             <Route
               element={
-                <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'org_admin', 'coach']}>
                   <Suspense fallback={<AdminLoadingSpinner />}>
                     <AdminLayout />
                   </Suspense>

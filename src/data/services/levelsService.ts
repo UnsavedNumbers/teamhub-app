@@ -9,7 +9,7 @@ import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
 import type { UserContext } from '../fake/userContext'
 import type { Level, CreateLevelDTO, UpdateLevelDTO } from '../types/organization'
-import { getLevelsForProgram, getLevelById, fakeLevels, getProgramsForOrg } from '../fake/fakeTeams'
+import { getLevelsForProgram, getLevelById, fakeLevels } from '../fake/fakeTeams'
 
 // ============================================================================
 // Helper Functions

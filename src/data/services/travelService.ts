@@ -34,7 +34,6 @@ import {
     getChildrenForUserId,
     getAssignedTeamsForCoach,
     getTeamsForUserChildren,
-    getChildTeamMemberships,
 } from '../fake/relationships'
 import { fakeEvents } from '../fake/fakeEvents'
 import { fakeTravelPlans, type FakeTravelPlan } from '../fake/fakeTravel'

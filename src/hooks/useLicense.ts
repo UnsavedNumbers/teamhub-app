@@ -104,6 +104,12 @@ export function useLicense(organizationId?: string, options?: { requireOrganizat
         stripePriceId: data.stripe_price_id,
       }
 
+      // Populate computed properties
+      parsed.isTrial = parsed.status === 'trial'
+      parsed.isGracePeriod = isWithinGracePeriod(parsed)
+      parsed.isValid = isLicenseActive(parsed)
+      parsed.daysRemaining = getDaysUntil(parsed.isTrial ? parsed.trialEndsAt : parsed.currentPeriodEnd) ?? 0
+
       setSummary(parsed)
     } catch (err: unknown) {
       setError(getErrorMessage(err))

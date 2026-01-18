@@ -19,7 +19,7 @@ export default function ThemeToggle({
   className = '',
   showLabel = false 
 }: ThemeToggleProps) {
-  const { mode, resolvedTheme, loading, toggle, setTheme } = useTheme()
+  const { resolvedTheme, loading, toggle } = useTheme()
 
   if (loading) {
     return (

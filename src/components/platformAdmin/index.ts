@@ -6,8 +6,9 @@
 
 // Layout
 export { default as PageHeader } from './PageHeader'
-export { default as Card } from './Card'
+export { default as Card, CardHeader, CardTitle, CardContent } from './Card'
 export { default as EmptyState } from './EmptyState'
+export { Tabs, TabsList, TabsTrigger, TabsContent } from './Tabs'
 
 // Data Display
 export { default as StatCard } from './StatCard'

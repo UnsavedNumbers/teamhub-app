@@ -240,7 +240,7 @@ export function Table<T extends { id: string | number }>({
                         className={cellClass}
                         style={{ textAlign: col.align }}
                       >
-                        {value === null || value === undefined ? '—' : value}
+                        {value === null || value === undefined ? '—' : value as ReactNode}
                       </td>
                     )
                   })}

@@ -104,7 +104,7 @@ function daysAgo(days: number): string {
 
 const PARENT_ONLY_ID = DEMO_USER_IDS['parent-only@example.com']
 const PARENT_ADMIN_ID = DEMO_USER_IDS['parent-admin@example.com']
-const COACH_ONLY_ID = DEMO_USER_IDS['coach-only@example.com']
+const _COACH_ONLY_ID = DEMO_USER_IDS['coach-only@example.com']
 
 // ============================================================================
 // Fake Tryouts Data

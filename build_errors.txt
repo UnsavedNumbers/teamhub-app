@@ -1,0 +1,1089 @@
+﻿
+> teamhub-app@0.0.0 build
+> tsc -b && vite build
+
+src/components/admin/LicenseWarningBanner.tsx(10,22): error TS18048: 'summary.daysRemaining' is possibly 'undefined'.
+src/components/admin/NoOrganizationEmptyState.tsx(13,9): error TS2739: Type 'ReactElement<any, any>' is missing the following properties from type '{ label: string; onClick: () => void; }': label, onClick
+src/components/admin/onboarding/LicenseActivationStep.tsx(23,9): error TS6133: 'navigate' is declared but its value is never read.
+src/components/admin/onboarding/OrganizationIdentityStep.tsx(82,111): error TS2322: Type 'boolean' is not assignable to type 'string'.
+src/components/admin/onboarding/OrganizationIdentityStep.tsx(97,21): error TS2322: Type 'boolean' is not assignable to type 'string'.
+src/components/admin/onboarding/OrganizationIdentityStep.tsx(109,116): error TS2322: Type 'boolean' is not assignable to type 'string'.
+src/components/calendar/CalendarGrid.tsx(2,1): error TS6133: 'useState' is declared but its value is never read.
+src/components/calendar/CalendarGrid.tsx(5,1): error TS6133: 'Card' is declared but its value is never read.
+src/components/calendar/CalendarGrid.tsx(38,9): error TS6133: 'getWeekDays' is declared but its value is never read.
+src/components/calendar/CalendarGrid.tsx(64,11): error TS7034: Variable 'week' implicitly has type 'any[]' in some locations where its type cannot be determined.
+src/components/calendar/CalendarGrid.tsx(69,26): error TS7005: Variable 'week' implicitly has an 'any[]' type.
+src/components/calendar/CalendarGrid.tsx(105,45): error TS2339: Property 'getDate' does not exist on type 'never'.
+src/components/calendar/GeneralRSVPForm.tsx(2,10): error TS6133: 'getGeneralRSVP' is declared but its value is never read.
+src/components/calendar/GeneralRSVPForm.tsx(54,15): error TS6133: 'data' is declared but its value is never read.
+src/components/calendar/RSVPButton.tsx(16,38): error TS6133: 'eventId' is declared but its value is never read.
+src/components/calendar/RSVPButton.tsx(16,47): error TS6133: 'childId' is declared but its value is never read.
+src/components/LicenseGate.tsx(31,11): error TS2739: Type 'ReactElement<any, any>' is missing the following properties from type '{ label: string; onClick: () => void; }': label, onClick
+src/components/platformAdmin/Button.tsx(44,3): error TS2322: Type 'string' is not assignable to type 'PropsWithoutRef<ComponentProps<E>>[string]'.
+src/components/platformAdmin/ConfirmDialog.tsx(1,1): error TS6133: 'ReactNode' is declared but its value is never read.
+src/components/platformAdmin/Table.tsx(32,22): error TS2536: Type '"id"' cannot be used to index type 'T'.
+src/components/platformAdmin/Table.tsx(34,41): error TS2536: Type '"id"' cannot be used to index type 'T'.
+src/components/platformAdmin/Table.tsx(243,25): error TS2322: Type '{}' is not assignable to type 'ReactNode'.
+src/components/portal/CreateAnnouncementModal.tsx(161,21): error TS2322: Type '"outline"' is not assignable to type '"primary" | "secondary" | undefined'.
+src/components/portal/PortalNav.tsx(3,25): error TS6133: 'NavGroup' is declared but its value is never read.
+src/components/portal/PortalNav.tsx(51,11): error TS6133: 'profile' is declared but its value is never read.
+src/components/portal/ThemeToggle.tsx(22,11): error TS6133: 'mode' is declared but its value is never read.
+src/components/portal/ThemeToggle.tsx(22,49): error TS6133: 'setTheme' is declared but its value is never read.
+src/data/fake/fakePayments.ts(10,5): error TS6133: 'TEAM_U10_SOCCER_ID' is declared but its value is never read.
+src/data/fake/fakePayments.ts(12,5): error TS6133: 'TEAM_U10_BASKETBALL_ID' is declared but its value is never read.
+src/data/fake/fakePayments.ts(13,5): error TS6133: 'TEAM_U12_BASKETBALL_ID' is declared but its value is never read.
+src/data/fake/fakeTeams.ts(26,5): error TS6133: 'GenderCategory' is declared but its value is never read.
+src/data/fake/fakeTeams.ts(26,21): error TS6133: 'LevelType' is declared but its value is never read.
+src/data/fake/fakeTeams.ts(580,9): error TS2353: Object literal may only specify known properties, and 'seasons' does not exist in type 'FakeTeam & { sport?: FakeSport | undefined; program?: FakeProgram | undefined; level?: FakeLevel | undefined; activeSeason?: FakeSeason | undefined; }'.
+src/data/fake/fakeTryouts.ts(107,7): error TS6133: 'COACH_ONLY_ID' is declared but its value is never read.
+src/data/fake/fakeUniforms.ts(10,5): error TS6133: 'TEAM_U10_SOCCER_ID' is declared but its value is never read.
+src/data/fake/fakeUniforms.ts(11,5): error TS6133: 'TEAM_U12_SOCCER_ID' is declared but its value is never read.
+src/data/fake/relationships.ts(8,25): error TS6133: 'DEMO_ORG_A_ID' is declared but its value is never read.
+src/data/fake/validateFakeData.ts(1,77): error TS6133: 'fakeSports' is declared but its value is never read.
+src/data/services/attendanceService.ts(4,1): error TS6133: 't' is declared but its value is never read.
+src/data/services/attendanceService.ts(11,5): error TS6196: 'AttendanceStats' is declared but never used.
+src/data/services/attendanceService.ts(42,19): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"attendance_settings"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"attendance_settings"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/data/services/attendanceService.ts(79,19): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"attendance_settings"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"attendance_settings"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/data/services/attendanceService.ts(96,5): error TS6133: 'context' is declared but its value is never read.
+src/data/services/attendanceService.ts(108,48): error TS2589: Type instantiation is excessively deep and possibly infinite.
+src/data/services/attendanceService.ts(109,19): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"event_attendance"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"event_attendance"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/data/services/attendanceService.ts(138,19): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"event_attendance"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"event_attendance"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/data/services/attendanceService.ts(159,5): error TS6133: 'context' is declared but its value is never read.
+src/data/services/attendanceService.ts(259,5): error TS6133: 'context' is declared but its value is never read.
+src/data/services/attendanceService.ts(260,5): error TS6133: 'filters' is declared but its value is never read.
+src/data/services/attendanceService.ts(274,48): error TS2589: Type instantiation is excessively deep and possibly infinite.
+src/data/services/attendanceService.ts(275,19): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"event_attendance"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"event_attendance"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/data/services/eventsService.ts(21,26): error TS6133: 'getFakeUpcomingEvents' is declared but its value is never read.
+src/data/services/eventsService.ts(28,58): error TS6133: 'getTeamsForUserChildren' is declared but its value is never read.
+src/data/services/eventsService.ts(258,35): error TS2339: Property 'rsvp_enabled' does not exist on type '{ arrival_time: string | null; cancellation_reason: string | null; cancelled_at: string | null; cancelled_by_user_id: string | null; created_at: string | null; created_by_user_id: string | null; ... 33 more ...; recurring_pattern: { ...; }[]; }'.
+src/data/services/eventsService.ts(259,32): error TS2339: Property 'rsvp_type' does not exist on type '{ arrival_time: string | null; cancellation_reason: string | null; cancelled_at: string | null; cancelled_by_user_id: string | null; created_at: string | null; created_by_user_id: string | null; ... 33 more ...; recurring_pattern: { ...; }[]; }'.
+src/data/services/familyService.ts(15,5): error TS6133: 'fakeFamilyMembers' is declared but its value is never read.
+src/data/services/familyService.ts(16,5): error TS6133: 'fakeUsers' is declared but its value is never read.
+src/data/services/familyService.ts(21,5): error TS6133: 'getChildWithDetails' is declared but its value is never read.
+src/data/services/familyService.ts(32,5): error TS6196: 'ChildWithDetails' is declared but never used.
+src/data/services/familyService.ts(38,1): error TS6133: 'uuidv4' is declared but its value is never read.
+src/data/services/familyService.ts(38,30): error TS2307: Cannot find module 'uuid' or its corresponding type declarations.
+src/data/services/familyService.ts(198,19): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"family_members"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"family_members"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/data/services/familyService.ts(263,5): error TS6133: 'context' is declared but its value is never read.
+src/data/services/familyService.ts(294,5): error TS6133: 'context' is declared but its value is never read.
+src/data/services/familyService.ts(305,23): error TS2353: Object literal may only specify known properties, and 'deleted_at' does not exist in type '{ created_at?: string | null | undefined; id?: string | undefined; name?: string | undefined; org_id?: string | undefined; updated_at?: string | null | undefined; }'.
+src/data/services/familyService.ts(320,5): error TS6133: 'context' is declared but its value is never read.
+src/data/services/familyService.ts(358,5): error TS6133: 'context' is declared but its value is never read.
+src/data/services/familyService.ts(386,5): error TS6133: 'context' is declared but its value is never read.
+src/data/services/familyService.ts(397,23): error TS2353: Object literal may only specify known properties, and 'deleted_at' does not exist in type '{ birthdate?: string | null | undefined; created_at?: string | null | undefined; family_id?: string | null | undefined; first_name?: string | undefined; id?: string | undefined; last_name?: string | undefined; updated_at?: string | ... 1 more ... | undefined; }'.
+src/data/services/levelsService.ts(12,10): error TS6133: 'getLevelsForProgram' is declared but its value is never read.
+src/data/services/levelsService.ts(12,57): error TS6133: 'getProgramsForOrg' is declared but its value is never read.
+src/data/services/levelsService.ts(49,19): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"levels"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"levels"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/data/services/levelsService.ts(84,19): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"levels"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"levels"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/data/services/levelsService.ts(103,5): error TS6133: 'context' is declared but its value is never read.
+src/data/services/levelsService.ts(116,19): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"levels"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"levels"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/data/services/levelsService.ts(170,19): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"levels"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"levels"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/data/services/levelsService.ts(200,19): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"levels"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"levels"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/data/services/messagesService.ts(12,5): error TS6133: 'fakeNotifications' is declared but its value is never read.
+src/data/services/messagesService.ts(15,5): error TS6133: 'getPinnedAnnouncementsForOrg' is declared but its value is never read.
+src/data/services/messagesService.ts(18,5): error TS6133: 'getDraftAnnouncements' is declared but its value is never read.
+src/data/services/messagesService.ts(19,5): error TS6133: 'getEmergencyAnnouncements' is declared but its value is never read.
+src/data/services/messagesService.ts(21,5): error TS6133: 'getUnreadNotificationsForUser' is declared but its value is never read.
+src/data/services/messagesService.ts(184,5): error TS6133: 'context' is declared but its value is never read.
+src/data/services/messagesService.ts(227,40): error TS2353: Object literal may only specify known properties, and 'role' does not exist in type '{ email: string | null; }'.
+src/data/services/messagesService.ts(230,13): error TS2741: Property 'org_id' is missing in type '{ name: string; }' but required in type '{ name: string; org_id: string; }'.
+src/data/services/messagesService.ts(243,29): error TS2339: Property 'role' does not exist on type '{ email: string | null; }'.
+src/data/services/messagesService.ts(245,53): error TS2339: Property 'email' does not exist on type 'never'.
+src/data/services/messagesService.ts(245,66): error TS2353: Object literal may only specify known properties, and 'role' does not exist in type '{ email: string | null; }'.
+src/data/services/messagesService.ts(247,41): error TS2339: Property 'role' does not exist on type '{ email: string | null; }'.
+src/data/services/messagesService.ts(249,25): error TS2339: Property 'role' does not exist on type '{ email: string | null; }'.
+src/data/services/messagesService.ts(252,24): error TS2352: Conversion of type '{ author_id: string; content: string; created_at: string | null; id: string; priority: string | null; team_id: string; title: string; updated_at: string | null; author: { email: string | null; }; team: { ...; }; }' to type 'Announcement' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'author' are incompatible.
+    Property 'role' is missing in type '{ email: string | null; }' but required in type '{ email: string; role: string; }'.
+src/data/services/messagesService.ts(495,21): error TS2589: Type instantiation is excessively deep and possibly infinite.
+src/data/services/messagesService.ts(496,19): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"user_notifications"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"user_notifications"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/data/services/messagesService.ts(522,19): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"user_notifications"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"user_notifications"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/data/services/messagesService.ts(544,19): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"user_notifications"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"user_notifications"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/data/services/messagesService.ts(545,23): error TS2353: Object literal may only specify known properties, and 'read_at' does not exist in type '{ author_id?: string | undefined; content?: string | undefined; created_at?: string | null | undefined; id?: string | undefined; priority?: string | null | undefined; team_id?: string | undefined; title?: string | undefined; updated_at?: string | ... 1 more ... | undefined; } | ... 68 more ... | { ...; }'.
+src/data/services/messagesService.ts(565,19): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"user_notifications"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"user_notifications"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/data/services/messagesService.ts(566,23): error TS2353: Object literal may only specify known properties, and 'read_at' does not exist in type '{ author_id?: string | undefined; content?: string | undefined; created_at?: string | null | undefined; id?: string | undefined; priority?: string | null | undefined; team_id?: string | undefined; title?: string | undefined; updated_at?: string | ... 1 more ... | undefined; } | ... 68 more ... | { ...; }'.
+src/data/services/paymentsService.ts(13,32): error TS6133: 'filterPaymentsByRole' is declared but its value is never read.
+src/data/services/paymentsService.ts(15,5): error TS6133: 'fakeFees' is declared but its value is never read.
+src/data/services/paymentsService.ts(17,5): error TS6133: 'fakePayments' is declared but its value is never read.
+src/data/services/paymentsService.ts(28,5): error TS6133: 'getFeeAssignmentWithDetails' is declared but its value is never read.
+src/data/services/preferencesService.ts(93,17): error TS2322: Type 'UserPreferences' is not assignable to type 'Json | undefined'.
+  Type 'UserPreferences' is missing the following properties from type 'Json[]': length, pop, push, concat, and 28 more.
+src/data/services/preferencesService.ts(139,17): error TS2322: Type 'UserPreferences' is not assignable to type 'Json | undefined'.
+  Type 'UserPreferences' is missing the following properties from type 'Json[]': length, pop, push, concat, and 28 more.
+src/data/services/preferencesService.ts(180,17): error TS2322: Type '{ [x: string]: unknown; theme?: "light" | "dark" | "system"; language?: string; notifications?: Record<string, boolean>; }' is not assignable to type 'Json | undefined'.
+  Type '{ [x: string]: unknown; theme?: "system" | "dark" | "light" | undefined; language?: string | undefined; notifications?: Record<string, boolean> | undefined; }' is missing the following properties from type 'Json[]': length, pop, push, concat, and 28 more.
+src/data/services/rsvpService.ts(34,3): error TS6133: 'context' is declared but its value is never read.
+src/data/services/rsvpService.ts(55,23): error TS2339: Property 'rsvp_enabled' does not exist on type 'SelectQueryError<"column 'rsvp_enabled' does not exist on 'events'.">'.
+src/data/services/rsvpService.ts(56,21): error TS2339: Property 'rsvp_enabled' does not exist on type 'SelectQueryError<"column 'rsvp_enabled' does not exist on 'events'.">'.
+src/data/services/rsvpService.ts(56,42): error TS2339: Property 'rsvp_type' does not exist on type 'SelectQueryError<"column 'rsvp_enabled' does not exist on 'events'.">'.
+src/data/services/rsvpService.ts(56,61): error TS2339: Property 'rsvp_type' does not exist on type 'SelectQueryError<"column 'rsvp_enabled' does not exist on 'events'.">'.
+src/data/services/rsvpService.ts(70,3): error TS6133: 'context' is declared but its value is never read.
+src/data/services/rsvpService.ts(90,26): error TS2339: Property 'rsvp_enabled' does not exist on type 'SelectQueryError<"column 'rsvp_enabled' does not exist on 'events'.">'.
+src/data/services/rsvpService.ts(90,48): error TS2339: Property 'rsvp_type' does not exist on type 'SelectQueryError<"column 'rsvp_enabled' does not exist on 'events'.">'.
+src/data/services/rsvpService.ts(98,13): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"event_general_rsvps"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"event_general_rsvps"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/data/services/rsvpService.ts(120,3): error TS6133: 'context' is declared but its value is never read.
+src/data/services/rsvpService.ts(142,26): error TS2339: Property 'rsvp_enabled' does not exist on type 'SelectQueryError<"column 'rsvp_enabled' does not exist on 'events'.">'.
+src/data/services/rsvpService.ts(142,48): error TS2339: Property 'rsvp_type' does not exist on type 'SelectQueryError<"column 'rsvp_enabled' does not exist on 'events'.">'.
+src/data/services/rsvpService.ts(150,13): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"event_general_rsvps"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"event_general_rsvps"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/data/services/rsvpService.ts(179,3): error TS6133: 'context' is declared but its value is never read.
+src/data/services/rsvpService.ts(191,17): error TS2339: Property 'rsvp_enabled' does not exist on type 'SelectQueryError<"column 'rsvp_enabled' does not exist on 'events'.">'.
+src/data/services/rsvpService.ts(191,39): error TS2339: Property 'rsvp_type' does not exist on type 'SelectQueryError<"column 'rsvp_enabled' does not exist on 'events'.">'.
+src/data/services/rsvpService.ts(245,26): error TS2339: Property 'rsvp_enabled' does not exist on type 'SelectQueryError<"column 'rsvp_enabled' does not exist on 'events'.">'.
+src/data/services/rsvpService.ts(245,48): error TS2339: Property 'rsvp_type' does not exist on type 'SelectQueryError<"column 'rsvp_enabled' does not exist on 'events'.">'.
+src/data/services/rsvpService.ts(254,12): error TS2345: Argument of type '"is_child_eligible_for_event"' is not assignable to parameter of type '"is_platform_admin" | "accept_organization_invite" | "accept_parent_invite" | "add_org_role" | "admin_activate_organization" | "admin_add_platform_admin" | "admin_attach_parents_to_child" | ... 67 more ... | "validate_event_type"'.
+src/data/services/rsvpService.ts(298,3): error TS6133: 'context' is declared but its value is never read.
+src/data/services/rsvpService.ts(304,12): error TS2345: Argument of type '"is_child_eligible_for_event"' is not assignable to parameter of type '"is_platform_admin" | "accept_organization_invite" | "accept_parent_invite" | "add_org_role" | "admin_activate_organization" | "admin_add_platform_admin" | "admin_attach_parents_to_child" | ... 67 more ... | "validate_event_type"'.
+src/data/services/rsvpService.ts(325,3): error TS6133: 'context' is declared but its value is never read.
+src/data/services/rsvpService.ts(344,26): error TS2339: Property 'rsvp_enabled' does not exist on type 'SelectQueryError<"column 'rsvp_enabled' does not exist on 'events'.">'.
+src/data/services/rsvpService.ts(351,15): error TS2339: Property 'rsvp_type' does not exist on type 'SelectQueryError<"column 'rsvp_enabled' does not exist on 'events'.">'.
+src/data/services/rsvpService.ts(354,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"event_general_rsvps"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"event_general_rsvps"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/data/services/rsvpService.ts(361,52): error TS2339: Property 'status' does not exist on type 'SelectQueryError<"column 'status' does not exist on 'users'."> | SelectQueryError<"column 'status' does not exist on 'teams'."> | ... 67 more ... | SelectQueryError<...>'.
+  Property 'status' does not exist on type 'SelectQueryError<"column 'status' does not exist on 'users'.">'.
+src/data/services/rsvpService.ts(362,56): error TS2339: Property 'status' does not exist on type 'SelectQueryError<"column 'status' does not exist on 'users'."> | SelectQueryError<"column 'status' does not exist on 'teams'."> | ... 67 more ... | SelectQueryError<...>'.
+  Property 'status' does not exist on type 'SelectQueryError<"column 'status' does not exist on 'users'.">'.
+src/data/services/rsvpService.ts(363,52): error TS2339: Property 'status' does not exist on type 'SelectQueryError<"column 'status' does not exist on 'users'."> | SelectQueryError<"column 'status' does not exist on 'teams'."> | ... 67 more ... | SelectQueryError<...>'.
+  Property 'status' does not exist on type 'SelectQueryError<"column 'status' does not exist on 'users'.">'.
+src/data/services/rsvpService.ts(405,22): error TS2339: Property 'rsvp_type' does not exist on type 'SelectQueryError<"column 'rsvp_enabled' does not exist on 'events'.">'.
+src/data/services/rsvpService.ts(418,38): error TS2339: Property 'going_count' does not exist on type '{ going_count: number; late_count: number; not_going_count: number; response_rate: number; total_children: number; unknown_count: number; }[]'.
+src/data/services/rsvpService.ts(419,37): error TS2339: Property 'late_count' does not exist on type '{ going_count: number; late_count: number; not_going_count: number; response_rate: number; total_children: number; unknown_count: number; }[]'.
+src/data/services/rsvpService.ts(420,42): error TS2339: Property 'not_going_count' does not exist on type '{ going_count: number; late_count: number; not_going_count: number; response_rate: number; total_children: number; unknown_count: number; }[]'.
+src/data/services/rsvpService.ts(421,40): error TS2339: Property 'unknown_count' does not exist on type '{ going_count: number; late_count: number; not_going_count: number; response_rate: number; total_children: number; unknown_count: number; }[]'.
+src/data/services/rsvpService.ts(422,41): error TS2339: Property 'total_children' does not exist on type '{ going_count: number; late_count: number; not_going_count: number; response_rate: number; total_children: number; unknown_count: number; }[]'.
+src/data/services/rsvpService.ts(423,40): error TS2339: Property 'response_rate' does not exist on type '{ going_count: number; late_count: number; not_going_count: number; response_rate: number; total_children: number; unknown_count: number; }[]'.
+src/data/services/rsvpService.ts(444,3): error TS6133: 'context' is declared but its value is never read.
+src/data/services/rsvpService.ts(463,26): error TS2339: Property 'rsvp_enabled' does not exist on type 'SelectQueryError<"column 'rsvp_enabled' does not exist on 'events'.">'.
+src/data/services/sportsService.ts(13,5): error TS6133: 'fakeSports' is declared but its value is never read.
+src/data/services/sportsService.ts(14,5): error TS6133: 'fakePrograms' is declared but its value is never read.
+src/data/services/sportsService.ts(107,5): error TS6133: 'context' is declared but its value is never read.
+src/data/services/sportsService.ts(193,23): error TS2353: Object literal may only specify known properties, and 'deleted_at' does not exist in type '{ created_at?: string | null | undefined; id?: string | undefined; name?: string | undefined; org_id?: string | undefined; updated_at?: string | null | undefined; }'.
+src/data/services/sportsService.ts(281,5): error TS6133: 'context' is declared but its value is never read.
+src/data/services/sportsService.ts(371,23): error TS2353: Object literal may only specify known properties, and 'deleted_at' does not exist in type '{ created_at?: string | null | undefined; id?: string | undefined; name?: string | undefined; org_id?: string | undefined; sport_id?: string | undefined; updated_at?: string | null | undefined; }'.
+src/data/services/teamsService.ts(18,5): error TS6133: 'getSportsForOrg' is declared but its value is never read.
+src/data/services/teamsService.ts(19,5): error TS6133: 'getProgramsForOrg' is declared but its value is never read.
+src/data/services/teamsService.ts(26,10): error TS6133: 'FakeSport' is declared but its value is never read.
+src/data/services/teamsService.ts(27,10): error TS6133: 'FakeProgram' is declared but its value is never read.
+src/data/services/travelService.ts(21,32): error TS6133: 'filterEventsByRole' is declared but its value is never read.
+src/data/services/travelService.ts(22,1): error TS6133: 'CalendarEvent' is declared but its value is never read.
+src/data/services/travelService.ts(37,5): error TS6133: 'getChildTeamMemberships' is declared but its value is never read.
+src/data/services/travelService.ts(418,5): error TS6133: 'context' is declared but its value is never read.
+src/data/services/travelService.ts(428,17): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/data/services/travelService.ts(449,5): error TS6133: 'context' is declared but its value is never read.
+src/data/services/travelService.ts(540,9): error TS2322: Type 'import("C:/YouthSports.team/web/src/types/calendar").MeetingLocation[] | null' is not assignable to type 'import("C:/YouthSports.team/web/src/data/fake/fakeTravel").MeetingLocation[] | null'.
+  Type 'import("C:/YouthSports.team/web/src/types/calendar").MeetingLocation[]' is not assignable to type 'import("C:/YouthSports.team/web/src/data/fake/fakeTravel").MeetingLocation[]'.
+    Type 'import("C:/YouthSports.team/web/src/types/calendar").MeetingLocation' is not assignable to type 'import("C:/YouthSports.team/web/src/data/fake/fakeTravel").MeetingLocation'.
+      Types of property 'notes' are incompatible.
+        Type 'string | null | undefined' is not assignable to type 'string | null'.
+          Type 'undefined' is not assignable to type 'string | null'.
+src/data/services/tryoutsService.ts(71,5): error TS6133: 'context' is declared but its value is never read.
+src/data/services/tryoutsService.ts(72,5): error TS6133: 'orgId' is declared but its value is never read.
+src/data/services/tryoutsService.ts(80,5): error TS6133: 'context' is declared but its value is never read.
+src/data/services/tryoutsService.ts(90,5): error TS6133: 'context' is declared but its value is never read.
+src/data/services/tryoutsService.ts(99,5): error TS6133: 'context' is declared but its value is never read.
+src/data/services/tryoutsService.ts(100,5): error TS6133: 'tryoutId' is declared but its value is never read.
+src/data/services/tryoutsService.ts(101,5): error TS6133: 'childId' is declared but its value is never read.
+src/data/services/tryoutsService.ts(109,5): error TS6133: 'context' is declared but its value is never read.
+src/data/services/tryoutsService.ts(118,5): error TS6133: 'context' is declared but its value is never read.
+src/data/services/tryoutsService.ts(119,5): error TS6133: 'tryoutId' is declared but its value is never read.
+src/data/services/uniformsService.ts(5,5): error TS6133: 'getUniformItemsForKit' is declared but its value is never read.
+src/data/services/uniformsService.ts(6,5): error TS6133: 'getSubmissionsForKit' is declared but its value is never read.
+src/data/services/uniformsService.ts(7,5): error TS6133: 'fakeUniformKits' is declared but its value is never read.
+src/data/services/uniformsService.ts(58,5): error TS6133: 'context' is declared but its value is never read.
+src/data/services/uniformsService.ts(75,5): error TS6133: 'context' is declared but its value is never read.
+src/data/services/uniformsService.ts(99,5): error TS6133: 'context' is declared but its value is never read.
+src/data/services/uniformsService.ts(116,5): error TS6133: 'context' is declared but its value is never read.
+src/hooks/useOffline.ts(17,10): error TS6133: 'retryCount' is declared but its value is never read.
+src/hooks/useUserContext.ts(49,34): error TS2339: Property 'loading' does not exist on type 'OrganizationContextType'.
+src/pages/AcceptInvite.tsx(13,9): error TS6133: 'context' is declared but its value is never read.
+src/pages/AcceptInvite.tsx(42,64): error TS2322: Type '{ children: string; variant: "primary"; onClick: () => Promise<void>; loading: boolean; className: string; }' is not assignable to type 'IntrinsicAttributes & ButtonProps'.
+  Property 'loading' does not exist on type 'IntrinsicAttributes & ButtonProps'.
+src/pages/admin/AdminAttendance.tsx(3,22): error TS2305: Module '"../../components/platformAdmin"' has no exported member 'Tabs'.
+src/pages/admin/AdminAttendance.tsx(3,28): error TS2305: Module '"../../components/platformAdmin"' has no exported member 'TabsContent'.
+src/pages/admin/AdminAttendance.tsx(3,41): error TS2305: Module '"../../components/platformAdmin"' has no exported member 'TabsList'.
+src/pages/admin/AdminAttendance.tsx(3,51): error TS2305: Module '"../../components/platformAdmin"' has no exported member 'TabsTrigger'.
+src/pages/admin/AdminAttendance.tsx(17,9): error TS2322: Type '{ title: string; description: string; }' is not assignable to type 'IntrinsicAttributes & PageHeaderProps'.
+  Property 'description' does not exist on type 'IntrinsicAttributes & PageHeaderProps'.
+src/pages/admin/AdminChildren.tsx(3,41): error TS6133: 'Badge' is declared but its value is never read.
+src/pages/admin/AdminChildren.tsx(33,7): error TS2353: Object literal may only specify known properties, and 'key' does not exist in type 'ColumnConfig<Child>'.
+src/pages/admin/AdminChildren.tsx(39,8): error TS2353: Object literal may only specify known properties, and 'key' does not exist in type 'ColumnConfig<Child>'.
+src/pages/admin/AdminChildren.tsx(45,7): error TS2353: Object literal may only specify known properties, and 'key' does not exist in type 'ColumnConfig<Child>'.
+src/pages/admin/AdminChildren.tsx(74,13): error TS2322: Type 'ColumnConfig<Child>[]' is not assignable to type 'ColumnConfig<{ id: string; }>[]'.
+  Type 'ColumnConfig<Child>' is not assignable to type 'ColumnConfig<{ id: string; }>'.
+    Type '{ id: string; }' is missing the following properties from type 'Child': family_id, first_name, last_name, date_of_birth, and 9 more.
+src/pages/admin/AdminChildren.tsx(77,62): error TS2339: Property 'family_id' does not exist on type '{ id: string; }'.
+src/pages/admin/AdminDashboard.tsx(3,1): error TS6133: 'useAuth' is declared but its value is never read.
+src/pages/admin/AdminDashboard.tsx(15,3): error TS6133: 'Badge' is declared but its value is never read.
+src/pages/admin/AdminDashboard.tsx(95,19): error TS2322: Type '{ title: string; value: number; icon: string; onClick: () => void | Promise<void>; }' is not assignable to type 'IntrinsicAttributes & StatCardProps'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & StatCardProps'.
+src/pages/admin/AdminDashboard.tsx(96,19): error TS2322: Type '{ title: string; value: number; icon: string; onClick: () => void | Promise<void>; }' is not assignable to type 'IntrinsicAttributes & StatCardProps'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & StatCardProps'.
+src/pages/admin/AdminDashboard.tsx(97,19): error TS2322: Type '{ title: string; value: number; icon: string; }' is not assignable to type 'IntrinsicAttributes & StatCardProps'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & StatCardProps'.
+src/pages/admin/AdminDashboard.tsx(98,19): error TS2322: Type '{ title: string; value: number; icon: string; onClick: () => void | Promise<void>; variant: string; }' is not assignable to type 'IntrinsicAttributes & StatCardProps'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & StatCardProps'.
+src/pages/admin/AdminDashboard.tsx(99,19): error TS2322: Type '{ title: string; value: number; icon: string; onClick: () => void | Promise<void>; }' is not assignable to type 'IntrinsicAttributes & StatCardProps'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & StatCardProps'.
+src/pages/admin/AdminDashboard.tsx(100,19): error TS2322: Type '{ title: string; value: number; icon: string; onClick: () => void | Promise<void>; }' is not assignable to type 'IntrinsicAttributes & StatCardProps'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & StatCardProps'.
+src/pages/admin/AdminFamilies.tsx(32,7): error TS2353: Object literal may only specify known properties, and 'key' does not exist in type 'ColumnConfig<Family>'.
+src/pages/admin/AdminFamilies.tsx(38,7): error TS2353: Object literal may only specify known properties, and 'key' does not exist in type 'ColumnConfig<Family>'.
+src/pages/admin/AdminFamilies.tsx(44,9): error TS2353: Object literal may only specify known properties, and 'key' does not exist in type 'ColumnConfig<Family>'.
+src/pages/admin/AdminFamilies.tsx(73,13): error TS2322: Type 'ColumnConfig<Family>[]' is not assignable to type 'ColumnConfig<{ id: string; }>[]'.
+  Type 'ColumnConfig<Family>' is not assignable to type 'ColumnConfig<{ id: string; }>'.
+    Type '{ id: string; }' is missing the following properties from type 'Family': name, created_by_user_id, org_id, created_at, and 2 more.
+src/pages/admin/AdminTryoutDetail.tsx(9,3): error TS6133: 'Button' is declared but its value is never read.
+src/pages/admin/AdminTryoutDetail.tsx(56,9): error TS2322: Type '{ title: string; breadcrumbs: ({ label: string; path: string; } | { label: string; })[]; }' is not assignable to type 'IntrinsicAttributes & PageHeaderProps'.
+  Property 'breadcrumbs' does not exist on type 'IntrinsicAttributes & PageHeaderProps'.
+src/pages/admin/AdminTryoutDetail.tsx(79,10): error TS2739: Type '{ columns: ColumnConfig<TryoutRegistration>[]; rows: TryoutRegistration[]; loading: false; emptyMessage: string; }' is missing the following properties from type 'PlatformDataTableProps<TryoutRegistration>': page, rowsPerPage, totalCount, onPageChange, onRowsPerPageChange
+src/pages/admin/AdminTryouts.tsx(9,3): error TS6133: 'Card' is declared but its value is never read.
+src/pages/admin/AdminTryouts.tsx(45,33): error TS2322: Type '"small"' is not assignable to type 'ButtonSize | undefined'.
+src/pages/admin/AdminTryouts.tsx(58,8): error TS2739: Type '{ columns: ColumnConfig<Tryout>[]; rows: Tryout[]; loading: boolean; onRowClick: (row: Tryout) => void | Promise<void>; }' is missing the following properties from type 'PlatformDataTableProps<Tryout>': page, rowsPerPage, totalCount, onPageChange, onRowsPerPageChange
+src/pages/admin/attendance/AttendanceEvents.tsx(40,24): error TS2322: Type '"error" | "warning" | "success"' is not assignable to type 'BadgeVariant | undefined'.
+  Type '"error"' is not assignable to type 'BadgeVariant | undefined'.
+src/pages/admin/attendance/AttendanceEvents.tsx(52,21): error TS2322: Type '"small"' is not assignable to type 'ButtonSize | undefined'.
+src/pages/admin/attendance/AttendanceEvents.tsx(62,9): error TS2322: Type '({ id: string; label: string; render: (row: AttendanceEventSummary) => string; } | { id: string; label: string; render?: undefined; } | { id: string; label: string; render: (row: AttendanceEventSummary) => Element; })[]' is not assignable to type 'ColumnConfig<{ id: string; }>[]'.
+  Type '{ id: string; label: string; render: (row: AttendanceEventSummary) => string; } | { id: string; label: string; render?: undefined; } | { id: string; label: string; render: (row: AttendanceEventSummary) => Element; }' is not assignable to type 'ColumnConfig<{ id: string; }>'.
+    Type '{ id: string; label: string; render: (row: AttendanceEventSummary) => string; }' is not assignable to type 'ColumnConfig<{ id: string; }>'.
+      Types of property 'render' are incompatible.
+        Type '(row: AttendanceEventSummary) => string' is not assignable to type '(row: { id: string; }) => ReactNode'.
+          Types of parameters 'row' and 'row' are incompatible.
+            Type '{ id: string; }' is missing the following properties from type 'AttendanceEventSummary': event_id, team_name, event_type, start_time, and 8 more.
+src/pages/admin/attendance/AttendanceEvents.tsx(63,9): error TS2322: Type 'AttendanceEventSummary[]' is not assignable to type '{ id: string; }[]'.
+  Property 'id' is missing in type 'AttendanceEventSummary' but required in type '{ id: string; }'.
+src/pages/admin/attendance/AttendanceOverview.tsx(2,16): error TS2305: Module '"../../../components/platformAdmin"' has no exported member 'CardHeader'.
+src/pages/admin/attendance/AttendanceOverview.tsx(2,28): error TS2305: Module '"../../../components/platformAdmin"' has no exported member 'CardTitle'.
+src/pages/admin/attendance/AttendanceOverview.tsx(2,39): error TS2305: Module '"../../../components/platformAdmin"' has no exported member 'CardContent'.
+src/pages/admin/attendance/AttendancePeople.tsx(41,27): error TS2322: Type '"error" | "warning" | "success"' is not assignable to type 'BadgeVariant | undefined'.
+  Type '"error"' is not assignable to type 'BadgeVariant | undefined'.
+src/pages/admin/attendance/AttendancePeople.tsx(49,9): error TS2322: Type '({ id: string; label: string; render: (row: AttendancePersonSummary) => string; accessor?: undefined; } | { id: string; label: string; render: (row: AttendancePersonSummary) => Element; accessor?: undefined; } | { ...; })[]' is not assignable to type 'ColumnConfig<{ id: string; }>[]'.
+  Type '{ id: string; label: string; render: (row: AttendancePersonSummary) => string; accessor?: undefined; } | { id: string; label: string; render: (row: AttendancePersonSummary) => Element; accessor?: undefined; } | { ...; }' is not assignable to type 'ColumnConfig<{ id: string; }>'.
+    Type '{ id: string; label: string; render: (row: AttendancePersonSummary) => string; accessor?: undefined; }' is not assignable to type 'ColumnConfig<{ id: string; }>'.
+      Types of property 'render' are incompatible.
+        Type '(row: AttendancePersonSummary) => string' is not assignable to type '(row: { id: string; }) => ReactNode'.
+          Types of parameters 'row' and 'row' are incompatible.
+            Type '{ id: string; }' is missing the following properties from type 'AttendancePersonSummary': child_id, first_name, last_name, team_names, and 8 more.
+src/pages/admin/attendance/AttendancePeople.tsx(50,9): error TS2322: Type 'AttendancePersonSummary[]' is not assignable to type '{ id: string; }[]'.
+  Property 'id' is missing in type 'AttendancePersonSummary' but required in type '{ id: string; }'.
+src/pages/admin/attendance/AttendanceReports.tsx(2,16): error TS2305: Module '"../../../components/platformAdmin"' has no exported member 'CardHeader'.
+src/pages/admin/attendance/AttendanceReports.tsx(2,28): error TS2305: Module '"../../../components/platformAdmin"' has no exported member 'CardTitle'.
+src/pages/admin/attendance/AttendanceReports.tsx(2,39): error TS2305: Module '"../../../components/platformAdmin"' has no exported member 'CardContent'.
+src/pages/admin/attendance/AttendanceSettings.tsx(3,16): error TS2305: Module '"../../../components/platformAdmin"' has no exported member 'CardHeader'.
+src/pages/admin/attendance/AttendanceSettings.tsx(3,28): error TS2305: Module '"../../../components/platformAdmin"' has no exported member 'CardTitle'.
+src/pages/admin/attendance/AttendanceSettings.tsx(3,39): error TS2305: Module '"../../../components/platformAdmin"' has no exported member 'CardContent'.
+src/pages/admin/AttendanceRoster.tsx(8,3): error TS6133: 'PageHeader' is declared but its value is never read.
+src/pages/admin/AttendanceRoster.tsx(66,27): error TS2322: Type '"error" | "warning" | "success" | "neutral"' is not assignable to type 'BadgeVariant | undefined'.
+  Type '"error"' is not assignable to type 'BadgeVariant | undefined'.
+src/pages/admin/AttendanceRoster.tsx(80,13): error TS2322: Type '"small"' is not assignable to type 'ButtonSize | undefined'.
+src/pages/admin/AttendanceRoster.tsx(88,13): error TS2322: Type '"small"' is not assignable to type 'ButtonSize | undefined'.
+src/pages/admin/AttendanceRoster.tsx(96,13): error TS2322: Type '"small"' is not assignable to type 'ButtonSize | undefined'.
+src/pages/admin/AttendanceRoster.tsx(104,13): error TS2322: Type '"small"' is not assignable to type 'ButtonSize | undefined'.
+src/pages/admin/AttendanceRoster.tsx(128,10): error TS2739: Type '{ columns: ColumnConfig<AttendanceRecord>[]; rows: AttendanceRecord[]; loading: boolean; emptyMessage: string; }' is missing the following properties from type 'PlatformDataTableProps<AttendanceRecord>': page, rowsPerPage, totalCount, onPageChange, onRowsPerPageChange
+src/pages/admin/CreateChild.tsx(35,21): error TS6133: 'error' is declared but its value is never read.
+src/pages/admin/CreateChild.tsx(58,15): error TS6133: 'data' is declared but its value is never read.
+src/pages/admin/CreateChild.tsx(90,9): error TS2322: Type '{ title: string; subtitle: string; breadcrumbs: { label: string; to: string; }[]; }' is not assignable to type 'IntrinsicAttributes & PageHeaderProps'.
+  Property 'breadcrumbs' does not exist on type 'IntrinsicAttributes & PageHeaderProps'.
+src/pages/admin/CreateEvent.tsx(5,1): error TS6133: 'useAuth' is declared but its value is never read.
+src/pages/admin/CreateEvent.tsx(9,1): error TS6192: All imports in import declaration are unused.
+src/pages/admin/CreateEvent.tsx(24,5): error TS6133: 'DAYS_OF_WEEK' is declared but its value is never read.
+src/pages/admin/CreateEvent.tsx(39,9): error TS6133: 'currentOrganization' is declared but its value is never read.
+src/pages/admin/CreateEvent.tsx(85,9): error TS6133: 'watchRecurEnabled' is declared but its value is never read.
+src/pages/admin/CreateEvent.tsx(112,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"team_seasons_view"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"team_seasons_view"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/admin/CreateEvent.tsx(121,17): error TS2339: Property 'season_id' does not exist on type 'SelectQueryError<"column 'season_id' does not exist on 'users'."> | SelectQueryError<"column 'season_id' does not exist on 'teams'."> | ... 67 more ... | SelectQueryError<...>'.
+  Property 'season_id' does not exist on type 'SelectQueryError<"column 'season_id' does not exist on 'users'.">'.
+src/pages/admin/CreateEvent.tsx(122,19): error TS2339: Property 'name' does not exist on type 'SelectQueryError<"column 'season_id' does not exist on 'users'."> | SelectQueryError<"column 'season_id' does not exist on 'teams'."> | ... 67 more ... | SelectQueryError<...>'.
+  Property 'name' does not exist on type 'SelectQueryError<"column 'season_id' does not exist on 'users'.">'.
+src/pages/admin/CreateEvent.tsx(144,85): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(values: { arrival_time?: string | null | undefined; cancellation_reason?: string | null | undefined; cancelled_at?: string | null | undefined; cancelled_by_user_id?: string | null | undefined; ... 29 more ...; weather_dependent?: boolean | ... 1 more ... | undefined; }, options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Type 'string | null' is not assignable to type 'string'.
+      Type 'null' is not assignable to type 'string'.
+  Overload 2 of 2, '(values: { arrival_time?: string | null | undefined; cancellation_reason?: string | null | undefined; cancelled_at?: string | null | undefined; cancelled_by_user_id?: string | null | undefined; ... 29 more ...; weather_dependent?: boolean | ... 1 more ... | undefined; }[], options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Object literal may only specify known properties, and 'title' does not exist in type '{ arrival_time?: string | null | undefined; cancellation_reason?: string | null | undefined; cancelled_at?: string | null | undefined; cancelled_by_user_id?: string | null | undefined; ... 29 more ...; weather_dependent?: boolean | ... 1 more ... | undefined; }[]'.
+src/pages/admin/CreateEvent.tsx(191,97): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(values: { created_at?: string | null | undefined; days_of_week: number[]; end_date?: string | null | undefined; exception_dates?: string[] | null | undefined; frequency: "weekly" | "custom"; id?: string | undefined; max_occurrences?: number | ... 1 more ... | undefined; parent_event_id: string; updated_at?: string | ... 1 more ... | undefined; }, options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Argument of type '{ parent_event_id: string; frequency: RecurrenceFrequency; days_of_week: number[]; end_date: string | null; max_occurrences: number | null; }' is not assignable to parameter of type '{ created_at?: string | null | undefined; days_of_week: number[]; end_date?: string | null | undefined; exception_dates?: string[] | null | undefined; frequency: "weekly" | "custom"; id?: string | undefined; max_occurrences?: number | ... 1 more ... | undefined; parent_event_id: string; updated_at?: string | ... 1 m...'.
+      Types of property 'frequency' are incompatible.
+        Type 'RecurrenceFrequency' is not assignable to type '"weekly" | "custom"'.
+          Type '"monthly"' is not assignable to type '"weekly" | "custom"'.
+  Overload 2 of 2, '(values: { created_at?: string | null | undefined; days_of_week: number[]; end_date?: string | null | undefined; exception_dates?: string[] | null | undefined; frequency: "weekly" | "custom"; id?: string | undefined; max_occurrences?: number | ... 1 more ... | undefined; parent_event_id: string; updated_at?: string | ... 1 more ... | undefined; }[], options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Argument of type '{ parent_event_id: string; frequency: RecurrenceFrequency; days_of_week: number[]; end_date: string | null; max_occurrences: number | null; }' is not assignable to parameter of type '{ created_at?: string | null | undefined; days_of_week: number[]; end_date?: string | null | undefined; exception_dates?: string[] | null | undefined; frequency: "weekly" | "custom"; id?: string | undefined; max_occurrences?: number | ... 1 more ... | undefined; parent_event_id: string; updated_at?: string | ... 1 m...'.
+      Type '{ parent_event_id: string; frequency: RecurrenceFrequency; days_of_week: number[]; end_date: string | null; max_occurrences: number | null; }' is missing the following properties from type '{ created_at?: string | null | undefined; days_of_week: number[]; end_date?: string | null | undefined; exception_dates?: string[] | null | undefined; frequency: "weekly" | "custom"; id?: string | undefined; max_occurrences?: number | ... 1 more ... | undefined; parent_event_id: string; updated_at?: string | ... 1 m...': length, pop, push, concat, and 28 more.
+src/pages/admin/CreateEvent.tsx(218,168): error TS2322: Type 'boolean' is not assignable to type 'string'.
+src/pages/admin/CreateEvent.tsx(223,218): error TS2322: Type 'boolean' is not assignable to type 'string'.
+src/pages/admin/CreateEvent.tsx(236,40): error TS2322: Type '"text"' is not assignable to type 'ButtonVariant | undefined'.
+src/pages/admin/CreateEvent.tsx(290,30): error TS2322: Type 'boolean' is not assignable to type 'string'.
+src/pages/admin/CreateFamily.tsx(47,9): error TS2322: Type '{ title: string; breadcrumbs: { label: string; to: string; }[]; }' is not assignable to type 'IntrinsicAttributes & PageHeaderProps'.
+  Property 'breadcrumbs' does not exist on type 'IntrinsicAttributes & PageHeaderProps'.
+src/pages/admin/CreateFee.tsx(4,1): error TS6133: 'useAuth' is declared but its value is never read.
+src/pages/admin/CreateFee.tsx(39,9): error TS6133: 'currentOrganization' is declared but its value is never read.
+src/pages/admin/CreateFee.tsx(40,9): error TS6133: 't' is declared but its value is never read.
+src/pages/admin/CreateFee.tsx(44,62): error TS6133: 'errors' is declared but its value is never read.
+src/pages/admin/CreateFee.tsx(69,25): error TS2339: Property 'seasons' does not exist on type 'FakeTeam & { sport?: FakeSport | undefined; program?: FakeProgram | undefined; level?: FakeLevel | undefined; activeSeason?: FakeSeason | undefined; }'.
+src/pages/admin/CreateFee.tsx(70,23): error TS2339: Property 'seasons' does not exist on type 'FakeTeam & { sport?: FakeSport | undefined; program?: FakeProgram | undefined; level?: FakeLevel | undefined; activeSeason?: FakeSeason | undefined; }'.
+src/pages/admin/CreateFee.tsx(70,35): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/pages/admin/CreateFee.tsx(135,11): error TS6133: 'amountCents' is declared but its value is never read.
+src/pages/admin/CreateTravelPlan.tsx(4,1): error TS6133: 'useAuth' is declared but its value is never read.
+src/pages/admin/CreateTravelPlan.tsx(46,9): error TS6133: 'currentOrganization' is declared but its value is never read.
+src/pages/admin/CreateTravelPlan.tsx(50,62): error TS6133: 'errors' is declared but its value is never read.
+src/pages/admin/CreateTravelPlan.tsx(75,25): error TS2339: Property 'seasons' does not exist on type 'FakeTeam & { sport?: FakeSport | undefined; program?: FakeProgram | undefined; level?: FakeLevel | undefined; activeSeason?: FakeSeason | undefined; }'.
+src/pages/admin/CreateTravelPlan.tsx(76,23): error TS2339: Property 'seasons' does not exist on type 'FakeTeam & { sport?: FakeSport | undefined; program?: FakeProgram | undefined; level?: FakeLevel | undefined; activeSeason?: FakeSeason | undefined; }'.
+src/pages/admin/CreateTravelPlan.tsx(76,35): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/pages/admin/CreateTravelPlan.tsx(91,27): error TS6133: 'data' is declared but its value is never read.
+src/pages/admin/CreateUser.tsx(4,1): error TS6133: 'useAuth' is declared but its value is never read.
+src/pages/admin/CreateUser.tsx(27,9): error TS6133: 'currentOrganization' is declared but its value is never read.
+src/pages/admin/CreateUser.tsx(28,9): error TS6198: All destructured elements are unused.
+src/pages/admin/CreateUser.tsx(40,27): error TS6133: 'data' is declared but its value is never read.
+src/pages/admin/CreateUser.tsx(118,19): error TS2322: Type 'boolean' is not assignable to type 'string'.
+src/pages/admin/CreateUser.tsx(135,19): error TS2322: Type 'boolean' is not assignable to type 'string'.
+src/pages/admin/EditEvent.tsx(6,1): error TS6133: 'useT' is declared but its value is never read.
+src/pages/admin/EditEvent.tsx(34,10): error TS6133: 'showRecurring' is declared but its value is never read.
+src/pages/admin/EditEvent.tsx(34,25): error TS6133: 'setShowRecurring' is declared but its value is never read.
+src/pages/admin/EditEvent.tsx(37,9): error TS6133: 'currentOrganization' is declared but its value is never read.
+src/pages/admin/EditEvent.tsx(83,9): error TS6133: 'watchRSVPType' is declared but its value is never read.
+src/pages/admin/EditEvent.tsx(108,17): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"event_general_rsvps"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"event_general_rsvps"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/admin/EditEvent.tsx(145,38): error TS2339: Property 'rsvp_enabled' does not exist on type '{ arrival_time: string | null; cancellation_reason: string | null; cancelled_at: string | null; cancelled_by_user_id: string | null; created_at: string | null; created_by_user_id: string | null; ... 28 more ...; event_location: { ...; } | null; }'.
+src/pages/admin/EditEvent.tsx(146,36): error TS2339: Property 'rsvp_enabled' does not exist on type '{ arrival_time: string | null; cancellation_reason: string | null; cancelled_at: string | null; cancelled_by_user_id: string | null; created_at: string | null; created_by_user_id: string | null; ... 28 more ...; event_location: { ...; } | null; }'.
+src/pages/admin/EditEvent.tsx(146,58): error TS2339: Property 'rsvp_type' does not exist on type '{ arrival_time: string | null; cancellation_reason: string | null; cancelled_at: string | null; cancelled_by_user_id: string | null; created_at: string | null; created_by_user_id: string | null; ... 28 more ...; event_location: { ...; } | null; }'.
+src/pages/admin/EditEvent.tsx(146,77): error TS2339: Property 'rsvp_type' does not exist on type '{ arrival_time: string | null; cancellation_reason: string | null; cancelled_at: string | null; cancelled_by_user_id: string | null; created_at: string | null; created_by_user_id: string | null; ... 28 more ...; event_location: { ...; } | null; }'.
+src/pages/admin/EditEvent.tsx(193,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"team_seasons_view"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"team_seasons_view"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/admin/EditEvent.tsx(201,17): error TS2339: Property 'season_id' does not exist on type 'SelectQueryError<"column 'season_id' does not exist on 'users'."> | SelectQueryError<"column 'season_id' does not exist on 'teams'."> | ... 67 more ... | SelectQueryError<...>'.
+  Property 'season_id' does not exist on type 'SelectQueryError<"column 'season_id' does not exist on 'users'.">'.
+src/pages/admin/EditEvent.tsx(202,19): error TS2339: Property 'name' does not exist on type 'SelectQueryError<"column 'season_id' does not exist on 'users'."> | SelectQueryError<"column 'season_id' does not exist on 'teams'."> | ... 67 more ... | SelectQueryError<...>'.
+  Property 'name' does not exist on type 'SelectQueryError<"column 'season_id' does not exist on 'users'.">'.
+src/pages/admin/EditEvent.tsx(232,49): error TS2339: Property 'rsvp_type' does not exist on type 'SelectQueryError<"column 'rsvp_type' does not exist on 'events'.">'.
+src/pages/admin/EditEvent.tsx(232,75): error TS2339: Property 'rsvp_type' does not exist on type 'SelectQueryError<"column 'rsvp_type' does not exist on 'events'.">'.
+src/pages/admin/EditEvent.tsx(246,16): error TS2345: Argument of type '"update_event_rsvp_config"' is not assignable to parameter of type '"is_platform_admin" | "accept_organization_invite" | "accept_parent_invite" | "add_org_role" | "admin_activate_organization" | "admin_add_platform_admin" | "admin_attach_parents_to_child" | ... 67 more ... | "validate_event_type"'.
+src/pages/admin/EditEvent.tsx(254,31): error TS2352: Conversion of type 'null' to type '{ error?: string | undefined; has_data?: boolean | undefined; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/pages/admin/EditEvent.tsx(273,11): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/pages/admin/EditEvent.tsx(349,168): error TS2322: Type 'boolean' is not assignable to type 'string'.
+src/pages/admin/EditEvent.tsx(354,218): error TS2322: Type 'boolean' is not assignable to type 'string'.
+src/pages/admin/EditEvent.tsx(367,40): error TS2322: Type '"text"' is not assignable to type 'ButtonVariant | undefined'.
+src/pages/admin/EditEvent.tsx(417,57): error TS2304: Cannot find name 't'.
+src/pages/admin/EditEvent.tsx(418,57): error TS2304: Cannot find name 't'.
+src/pages/admin/EditEvent.tsx(421,30): error TS2322: Type 'boolean' is not assignable to type 'string'.
+src/pages/admin/EditTravelPlan.tsx(4,1): error TS6133: 'useAuth' is declared but its value is never read.
+src/pages/admin/EditTravelPlan.tsx(39,9): error TS6133: 'currentOrganization' is declared but its value is never read.
+src/pages/admin/EditTravelPlan.tsx(43,52): error TS6133: 'errors' is declared but its value is never read.
+src/pages/admin/EditTravelPlan.tsx(81,27): error TS6133: 'data' is declared but its value is never read.
+src/pages/admin/Events.tsx(125,58): error TS2322: Type '"error" | "warning" | "success" | "neutral" | "info"' is not assignable to type 'BadgeVariant | undefined'.
+  Type '"error"' is not assignable to type 'BadgeVariant | undefined'.
+src/pages/admin/Events.tsx(150,121): error TS2739: Type 'ReactElement<any, any>' is missing the following properties from type '{ label: string; onClick: () => void; }': label, onClick
+src/pages/admin/FamilyDetail.tsx(74,13): error TS2353: Object literal may only specify known properties, and 'key' does not exist in type 'ColumnConfig<Child>'.
+src/pages/admin/FamilyDetail.tsx(86,13): error TS2353: Object literal may only specify known properties, and 'key' does not exist in type 'ColumnConfig<Child>'.
+src/pages/admin/FamilyDetail.tsx(91,13): error TS2353: Object literal may only specify known properties, and 'key' does not exist in type 'ColumnConfig<Child>'.
+src/pages/admin/FamilyDetail.tsx(111,13): error TS2353: Object literal may only specify known properties, and 'key' does not exist in type 'ColumnConfig<FamilyMember>'.
+src/pages/admin/FamilyDetail.tsx(116,13): error TS2353: Object literal may only specify known properties, and 'key' does not exist in type 'ColumnConfig<FamilyMember>'.
+src/pages/admin/FamilyDetail.tsx(118,35): error TS2322: Type '"primary" | "neutral"' is not assignable to type 'BadgeVariant | undefined'.
+  Type '"primary"' is not assignable to type 'BadgeVariant | undefined'.
+src/pages/admin/FamilyDetail.tsx(121,13): error TS2353: Object literal may only specify known properties, and 'key' does not exist in type 'ColumnConfig<FamilyMember>'.
+src/pages/admin/FamilyDetail.tsx(136,17): error TS2322: Type '{ title: string; breadcrumbs: { label: string; to: string; }[]; actions: Element; }' is not assignable to type 'IntrinsicAttributes & PageHeaderProps'.
+  Property 'breadcrumbs' does not exist on type 'IntrinsicAttributes & PageHeaderProps'.
+src/pages/admin/FamilyDetail.tsx(154,37): error TS2322: Type '"small"' is not assignable to type 'ButtonSize | undefined'.
+src/pages/admin/FamilyDetail.tsx(161,29): error TS2322: Type 'ColumnConfig<Child>[]' is not assignable to type 'ColumnConfig<{ id: string; }>[]'.
+  Type 'ColumnConfig<Child>' is not assignable to type 'ColumnConfig<{ id: string; }>'.
+    Type '{ id: string; }' is missing the following properties from type 'Child': family_id, first_name, last_name, date_of_birth, and 9 more.
+src/pages/admin/FamilyDetail.tsx(176,29): error TS2322: Type 'ColumnConfig<FamilyMember>[]' is not assignable to type 'ColumnConfig<{ id: string; }>[]'.
+  Type 'ColumnConfig<FamilyMember>' is not assignable to type 'ColumnConfig<{ id: string; }>'.
+    Type '{ id: string; }' is missing the following properties from type 'FamilyMember': family_id, user_id, role, permissions, and 3 more.
+src/pages/admin/FamilyDetail.tsx(188,17): error TS2322: Type '{ open: boolean; title: string; message: string; confirmLabel: string; isDestructive: true; onConfirm: () => Promise<void>; onCancel: () => void; }' is not assignable to type 'IntrinsicAttributes & ConfirmDialogProps'.
+  Property 'message' does not exist on type 'IntrinsicAttributes & ConfirmDialogProps'.
+src/pages/admin/FamilyDetail.tsx(198,17): error TS2322: Type '{ open: boolean; title: string; message: string; confirmLabel: string; isDestructive: true; onConfirm: () => Promise<void>; onCancel: () => void; }' is not assignable to type 'IntrinsicAttributes & ConfirmDialogProps'.
+  Property 'message' does not exist on type 'IntrinsicAttributes & ConfirmDialogProps'.
+src/pages/admin/OrganizationBilling.tsx(15,3): error TS6133: 'StatCard' is declared but its value is never read.
+src/pages/admin/OrganizationBilling.tsx(23,36): error TS6133: 'isActive' is declared but its value is never read.
+src/pages/admin/OrganizationBilling.tsx(156,77): error TS18047: 'event.event_type' is possibly 'null'.
+src/pages/admin/OrganizationSettings.tsx(1,31): error TS6133: 'useCallback' is declared but its value is never read.
+src/pages/admin/OrganizationSettings.tsx(3,1): error TS6133: 'useAuth' is declared but its value is never read.
+src/pages/admin/OrganizationSettings.tsx(31,9): error TS6198: All destructured elements are unused.
+src/pages/admin/OrganizationSettings.tsx(50,38): error TS2339: Property 'website' does not exist on type 'Organization'.
+src/pages/admin/OrganizationSettings.tsx(51,36): error TS2339: Property 'phone' does not exist on type 'Organization'.
+src/pages/admin/OrganizationSettings.tsx(52,36): error TS2339: Property 'email' does not exist on type 'Organization'.
+src/pages/admin/OrganizationSettings.tsx(53,38): error TS2339: Property 'address' does not exist on type 'Organization'.
+src/pages/admin/OrganizationSettings.tsx(54,35): error TS2339: Property 'city' does not exist on type 'Organization'.
+src/pages/admin/OrganizationSettings.tsx(55,36): error TS2339: Property 'state' does not exist on type 'Organization'.
+src/pages/admin/OrganizationSettings.tsx(56,34): error TS2339: Property 'zip' does not exist on type 'Organization'.
+src/pages/admin/OrganizationSettings.tsx(61,27): error TS6133: 'data' is declared but its value is never read.
+src/pages/admin/OrganizationSettings.tsx(128,19): error TS2322: Type 'boolean' is not assignable to type 'string'.
+src/pages/admin/OrganizationUsers.tsx(8,3): error TS6133: 'Card' is declared but its value is never read.
+src/pages/admin/OrganizationUsers.tsx(30,9): error TS6133: 'profile' is declared but its value is never read.
+src/pages/admin/OrganizationUsers.tsx(76,15): error TS2322: Type '"primary" | "neutral" | "info"' is not assignable to type 'BadgeVariant | undefined'.
+  Type '"primary"' is not assignable to type 'BadgeVariant | undefined'.
+src/pages/admin/OrganizationUsers.tsx(93,16): error TS6133: 'row' is declared but its value is never read.
+src/pages/admin/OrganizationUsers.tsx(96,11): error TS2322: Type '"small"' is not assignable to type 'ButtonSize | undefined'.
+src/pages/admin/Payments.tsx(9,3): error TS6133: 'Card' is declared but its value is never read.
+src/pages/admin/Payments.tsx(38,9): error TS6133: 'profile' is declared but its value is never read.
+src/pages/admin/Payments.tsx(39,9): error TS6133: 'currentOrganization' is declared but its value is never read.
+src/pages/admin/Roster.tsx(36,9): error TS6133: 'profile' is declared but its value is never read.
+src/pages/admin/Roster.tsx(38,9): error TS6133: 'navigate' is declared but its value is never read.
+src/pages/admin/Roster.tsx(72,14): error TS2339: Property 'seasons' does not exist on type 'FakeTeam & { sport?: FakeSport | undefined; program?: FakeProgram | undefined; level?: FakeLevel | undefined; activeSeason?: FakeSeason | undefined; }'.
+src/pages/admin/Roster.tsx(72,30): error TS2339: Property 'seasons' does not exist on type 'FakeTeam & { sport?: FakeSport | undefined; program?: FakeProgram | undefined; level?: FakeLevel | undefined; activeSeason?: FakeSeason | undefined; }'.
+src/pages/admin/Roster.tsx(73,31): error TS2339: Property 'seasons' does not exist on type 'FakeTeam & { sport?: FakeSport | undefined; program?: FakeProgram | undefined; level?: FakeLevel | undefined; activeSeason?: FakeSeason | undefined; }'.
+src/pages/admin/Roster.tsx(73,43): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/pages/admin/TeamDetail.tsx(30,9): error TS6133: 'profile' is declared but its value is never read.
+src/pages/admin/TeamDetail.tsx(48,7): error TS2353: Object literal may only specify known properties, and 'sport_name' does not exist in type 'Team | ((prevState: Team | null) => Team | null)'.
+src/pages/admin/TeamDetail.tsx(54,18): error TS2339: Property 'seasons' does not exist on type 'FakeTeam & { sport?: FakeSport | undefined; program?: FakeProgram | undefined; level?: FakeLevel | undefined; activeSeason?: FakeSeason | undefined; }'.
+src/pages/admin/TeamDetail.tsx(55,27): error TS2339: Property 'seasons' does not exist on type 'FakeTeam & { sport?: FakeSport | undefined; program?: FakeProgram | undefined; level?: FakeLevel | undefined; activeSeason?: FakeSeason | undefined; }'.
+src/pages/admin/TeamDetail.tsx(55,39): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/pages/admin/TeamDetail.tsx(102,9): error TS2322: Type '{ title: string; breadcrumbs: ({ label: string; onClick: () => void | Promise<void>; } | { label: string; })[]; actions: Element; }' is not assignable to type 'IntrinsicAttributes & PageHeaderProps'.
+  Property 'breadcrumbs' does not exist on type 'IntrinsicAttributes & PageHeaderProps'.
+src/pages/admin/TeamDetail.tsx(169,130): error TS2739: Type 'ReactElement<any, any>' is missing the following properties from type '{ label: string; onClick: () => void; }': label, onClick
+src/pages/admin/Teams.tsx(29,9): error TS6133: 'profile' is declared but its value is never read.
+src/pages/admin/Teams.tsx(30,9): error TS6133: 'currentOrganization' is declared but its value is never read.
+src/pages/admin/Teams.tsx(118,13): error TS2739: Type 'ReactElement<any, any>' is missing the following properties from type '{ label: string; onClick: () => void; }': label, onClick
+src/pages/admin/TravelPlans.tsx(8,8): error TS2459: Module '"../../data/services/travelService"' declares 'FakeTravelPlan' locally, but it is not exported.
+src/pages/admin/TravelPlans.tsx(114,47): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/pages/admin/TravelPlans.tsx(115,78): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/pages/admin/TravelPlans.tsx(116,78): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/pages/admin/TravelPlans.tsx(128,147): error TS2739: Type 'ReactElement<any, any>' is missing the following properties from type '{ label: string; onClick: () => void; }': label, onClick
+src/pages/admin/UniformOrders.tsx(5,10): error TS2724: '"../../data/services/uniformsService"' has no exported member named 'getAllUniformSubmissions'. Did you mean 'getUniformSubmissions'?
+src/pages/admin/UniformOrders.tsx(33,9): error TS6133: 'profile' is declared but its value is never read.
+src/pages/AuthCallback.tsx(148,67): error TS2345: Argument of type '{ id: any; name: any; roles: any; }[]' is not assignable to parameter of type 'Organization[]'.
+  Property 'role' is missing in type '{ id: any; name: any; roles: any; }' but required in type 'Organization'.
+src/pages/Children.tsx(6,21): error TS6133: 'SectionHeader' is declared but its value is never read.
+src/pages/Children.tsx(28,9): error TS6133: 'profile' is declared but its value is never read.
+src/pages/Children.tsx(145,51): error TS2322: Type '{ children: ("" | Element | null)[]; className: string; onClick: (e: any) => any; }' is not assignable to type 'IntrinsicAttributes & CardProps'.
+  Property 'onClick' does not exist on type 'IntrinsicAttributes & CardProps'.
+src/pages/Children.tsx(145,61): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/pages/Dashboard.tsx(18,3): error TS6133: 'getParentPaymentSummary' is declared but its value is never read.
+src/pages/Dashboard.tsx(229,61): error TS2339: Property 'name' does not exist on type 'EventLocation'.
+src/pages/Dashboard.tsx(373,50): error TS2339: Property 'maps_url' does not exist on type 'EventLocation'.
+src/pages/Dashboard.tsx(374,59): error TS2339: Property 'maps_url' does not exist on type 'EventLocation'.
+src/pages/JoinTeam.tsx(44,9): error TS6133: 'profile' is declared but its value is never read.
+src/pages/JoinTeam.tsx(95,18): error TS2339: Property 'seasons' does not exist on type 'FakeTeam & { sport?: FakeSport | undefined; program?: FakeProgram | undefined; level?: FakeLevel | undefined; activeSeason?: FakeSeason | undefined; }'.
+src/pages/JoinTeam.tsx(96,35): error TS2339: Property 'seasons' does not exist on type 'FakeTeam & { sport?: FakeSport | undefined; program?: FakeProgram | undefined; level?: FakeLevel | undefined; activeSeason?: FakeSeason | undefined; }'.
+src/pages/JoinTeam.tsx(96,47): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/pages/JoinTeam.tsx(191,47): error TS2322: Type '{ children: string; variant: "primary"; as: ForwardRefExoticComponent<LinkProps & RefAttributes<HTMLAnchorElement>>; to: string; }' is not assignable to type 'IntrinsicAttributes & ButtonProps'.
+  Property 'as' does not exist on type 'IntrinsicAttributes & ButtonProps'.
+src/pages/Login.tsx(76,54): error TS2345: Argument of type '{ id: any; name: any; roles: any; }[]' is not assignable to parameter of type 'Organization[]'.
+  Property 'role' is missing in type '{ id: any; name: any; roles: any; }' but required in type 'Organization'.
+src/pages/MyPayments.tsx(4,36): error TS6133: 'formatCurrency' is declared but its value is never read.
+src/pages/MyPayments.tsx(10,1): error TS6133: 'Icon' is declared but its value is never read.
+src/pages/MyPayments.tsx(53,9): error TS6133: 'profile' is declared but its value is never read.
+src/pages/MyPayments.tsx(76,22): error TS2339: Property 'due_date' does not exist on type 'FakeFeeAssignment & { fee?: FakeFee | undefined; payments?: FakePayment[] | undefined; }'.
+src/pages/MyPayments.tsx(83,28): error TS2339: Property 'fee_type' does not exist on type 'FakeFee'.
+src/pages/PaymentCancel.tsx(5,1): error TS6133: 'Card' is declared but its value is never read.
+src/pages/PaymentCancel.tsx(37,39): error TS2322: Type '{ children: string; variant: "primary"; as: ForwardRefExoticComponent<LinkProps & RefAttributes<HTMLAnchorElement>>; to: string; }' is not assignable to type 'IntrinsicAttributes & ButtonProps'.
+  Property 'as' does not exist on type 'IntrinsicAttributes & ButtonProps'.
+src/pages/PaymentSuccess.tsx(122,39): error TS2322: Type '{ children: string; variant: "primary"; as: ForwardRefExoticComponent<LinkProps & RefAttributes<HTMLAnchorElement>>; to: string; }' is not assignable to type 'IntrinsicAttributes & ButtonProps'.
+  Property 'as' does not exist on type 'IntrinsicAttributes & ButtonProps'.
+src/pages/platformAdmin/AuditLog.tsx(38,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"admin_audit_log"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"admin_audit_log"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/AuditLog.tsx(69,17): error TS2345: Argument of type 'ResultOne[]' is not assignable to parameter of type 'SetStateAction<AdminAuditLog[]>'.
+  Type 'ResultOne[]' is not assignable to type 'AdminAuditLog[]'.
+    Type 'ResultOne' is not assignable to type 'AdminAuditLog'.
+src/pages/platformAdmin/AuditLog.tsx(168,11): error TS2322: Type '{ data: Record<string, unknown>; title: string; defaultExpanded: boolean; }' is not assignable to type 'IntrinsicAttributes & JsonViewerProps'.
+  Property 'defaultExpanded' does not exist on type 'IntrinsicAttributes & JsonViewerProps'.
+src/pages/platformAdmin/EventLog.tsx(3,59): error TS6133: 'JsonViewer' is declared but its value is never read.
+src/pages/platformAdmin/EventLog.tsx(59,38): error TS2345: Argument of type 'string' is not assignable to parameter of type 'NonNullable<"AUTH" | "ORGANIZATION" | "USER" | "PARENT" | "CHILD" | "TEAM" | "SEASON" | "EVENT" | "PAYMENT" | "TRYOUT" | "TRAVEL" | "UNIFORM" | "FEATURE_FLAG" | "ADMIN" | "SYSTEM" | null>'.
+src/pages/platformAdmin/EventLog.tsx(90,17): error TS2345: Argument of type '{ actor_email: string | null; actor_name: string | null; actor_role: "platform_admin" | "org_admin" | "coach" | "parent" | "system" | null; actor_user_id: string | null; category: "AUTH" | ... 14 more ... | null; ... 9 more ...; user_agent: string | null; }[]' is not assignable to parameter of type 'SetStateAction<AdminEventLog[]>'.
+  Type '{ actor_email: string | null; actor_name: string | null; actor_role: "platform_admin" | "org_admin" | "coach" | "parent" | "system" | null; actor_user_id: string | null; category: "AUTH" | ... 14 more ... | null; ... 9 more ...; user_agent: string | null; }[]' is not assignable to type 'AdminEventLog[]'.
+    Type '{ actor_email: string | null; actor_name: string | null; actor_role: "platform_admin" | "org_admin" | "coach" | "parent" | "system" | null; actor_user_id: string | null; category: "AUTH" | ... 14 more ... | null; ... 9 more ...; user_agent: string | null; }' is not assignable to type 'AdminEventLog'.
+      Types of property 'id' are incompatible.
+        Type 'string | null' is not assignable to type 'string'.
+          Type 'null' is not assignable to type 'string'.
+src/pages/platformAdmin/FeatureCatalog.tsx(34,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"admin_feature_entitlements_list"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"admin_feature_entitlements_list"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/FeatureCatalog.tsx(63,21): error TS2345: Argument of type 'ResultOne[]' is not assignable to parameter of type 'SetStateAction<FeatureEntitlementWithCounts[]>'.
+  Type 'ResultOne[]' is not assignable to type 'FeatureEntitlementWithCounts[]'.
+    Type 'ResultOne' is not assignable to type 'FeatureEntitlementWithCounts'.
+src/pages/platformAdmin/FeatureDetail.tsx(36,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"feature_entitlements"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"feature_entitlements"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/FeatureDetail.tsx(42,18): error TS2345: Argument of type 'ResultOne' is not assignable to parameter of type 'SetStateAction<Partial<FeatureEntitlement>>'.
+  Type 'ResultOne' is not assignable to type 'Partial<FeatureEntitlement>'.
+src/pages/platformAdmin/FeatureDetail.tsx(53,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"license_tiers"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"license_tiers"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/FeatureDetail.tsx(59,16): error TS2345: Argument of type 'ResultOne[]' is not assignable to parameter of type 'SetStateAction<LicenseTier[]>'.
+  Type 'ResultOne[]' is not assignable to type 'LicenseTier[]'.
+    Type 'ResultOne' is not assignable to type 'LicenseTier'.
+src/pages/platformAdmin/FeatureDetail.tsx(70,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"tier_feature_assignments"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"tier_feature_assignments"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/FeatureDetail.tsx(78,9): error TS2322: Type 'ResultOne' is not assignable to type 'TierFeatureAssignment'.
+src/pages/platformAdmin/FeatureDetail.tsx(78,35): error TS2339: Property 'license_tier_id' does not exist on type 'ResultOne'.
+src/pages/platformAdmin/FeatureDetail.tsx(110,17): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"feature_entitlements"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"feature_entitlements"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/FeatureDetail.tsx(112,13): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(values: { author_id: string; content: string; created_at?: string | null | undefined; id?: string | undefined; priority?: string | null | undefined; team_id: string; title: string; updated_at?: string | ... 1 more ... | undefined; } | ... 68 more ... | { ...; }, options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Object literal may only specify known properties, and 'feature_key' does not exist in type '{ category: string; coach_id: string; created_at?: string | null | undefined; criteria_id?: string | null | undefined; id?: string | undefined; notes?: string | null | undefined; registration_id: string; score: number; updated_at?: string | ... 1 more ... | undefined; }'.
+  Overload 2 of 2, '(values: ({ author_id: string; content: string; created_at?: string | null | undefined; id?: string | undefined; priority?: string | null | undefined; team_id: string; title: string; updated_at?: string | ... 1 more ... | undefined; } | ... 68 more ... | { ...; })[], options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Object literal may only specify known properties, and 'feature_key' does not exist in type '({ author_id: string; content: string; created_at?: string | null | undefined; id?: string | undefined; priority?: string | null | undefined; team_id: string; title: string; updated_at?: string | ... 1 more ... | undefined; } | ... 68 more ... | { ...; })[]'.
+src/pages/platformAdmin/FeatureDetail.tsx(129,17): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"feature_entitlements"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"feature_entitlements"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/FeatureFlagDetail.tsx(31,17): error TS2345: Argument of type '{ created_at: string | null; default_value_boolean: boolean | null; default_value_double: number | null; default_value_integer: number | null; deleted_at: string | null; description: string | null; ... 7 more ...; version: number | null; }' is not assignable to parameter of type 'SetStateAction<AdminFeatureFlag | null>'.
+  Type '{ created_at: string | null; default_value_boolean: boolean | null; default_value_double: number | null; default_value_integer: number | null; deleted_at: string | null; description: string | null; ... 7 more ...; version: number | null; }' is not assignable to type 'AdminFeatureFlag'.
+    Types of property 'id' are incompatible.
+      Type 'string | null' is not assignable to type 'string'.
+        Type 'null' is not assignable to type 'string'.
+src/pages/platformAdmin/FeatureFlagDetail.tsx(55,22): error TS2345: Argument of type '{ created_at: string | null; environment: "dev" | "staging" | "prod" | null; feature_flag_id: string | null; feature_key: string | null; override_type: string | null; scope_id: string | null; ... 5 more ...; version: number | null; }[]' is not assignable to parameter of type 'SetStateAction<FeatureFlagOverride[]>'.
+  Type '{ created_at: string | null; environment: "dev" | "staging" | "prod" | null; feature_flag_id: string | null; feature_key: string | null; override_type: string | null; scope_id: string | null; ... 5 more ...; version: number | null; }[]' is not assignable to type 'FeatureFlagOverride[]'.
+    Type '{ created_at: string | null; environment: "dev" | "staging" | "prod" | null; feature_flag_id: string | null; feature_key: string | null; override_type: string | null; scope_id: string | null; ... 5 more ...; version: number | null; }' is not assignable to type 'FeatureFlagOverride'.
+      Types of property 'override_type' are incompatible.
+        Type 'string | null' is not assignable to type '"user" | "org"'.
+          Type 'null' is not assignable to type '"user" | "org"'.
+src/pages/platformAdmin/FeatureFlagDetail.tsx(78,21): error TS2345: Argument of type '{ action: string | null; actor_email: string | null; actor_id: string | null; actor_name: string | null; created_at: string | null; environment: "dev" | "staging" | "prod" | null; ... 6 more ...; scope_type: string | null; }[]' is not assignable to parameter of type 'SetStateAction<FeatureFlagAuditLog[]>'.
+  Type '{ action: string | null; actor_email: string | null; actor_id: string | null; actor_name: string | null; created_at: string | null; environment: "dev" | "staging" | "prod" | null; ... 6 more ...; scope_type: string | null; }[]' is not assignable to type 'FeatureFlagAuditLog[]'.
+    Type '{ action: string | null; actor_email: string | null; actor_id: string | null; actor_name: string | null; created_at: string | null; environment: "dev" | "staging" | "prod" | null; ... 6 more ...; scope_type: string | null; }' is not assignable to type 'FeatureFlagAuditLog'.
+      Types of property 'id' are incompatible.
+        Type 'string | null' is not assignable to type 'string'.
+          Type 'null' is not assignable to type 'string'.
+src/pages/platformAdmin/FeatureFlagDetail.tsx(123,14): error TS7006: Parameter 'row' implicitly has an 'any' type.
+src/pages/platformAdmin/FeatureFlagDetail.tsx(123,14): error TS2322: Type '(row: any) => "User" | "Organization"' is not assignable to type 'string'.
+src/pages/platformAdmin/FeatureFlagDetail.tsx(330,13): error TS2322: Type 'ColumnConfig<FeatureFlagOverride>[]' is not assignable to type 'ColumnConfig<{ id: string; }>[]'.
+  Type 'ColumnConfig<FeatureFlagOverride>' is not assignable to type 'ColumnConfig<{ id: string; }>'.
+    Type '{ id: string; }' is missing the following properties from type 'FeatureFlagOverride': override_type, feature_flag_id, feature_key, scope_id, and 8 more.
+src/pages/platformAdmin/FeatureFlagDetail.tsx(331,13): error TS2322: Type 'FeatureFlagOverride[]' is not assignable to type '{ id: string; }[]'.
+  Property 'id' is missing in type 'FeatureFlagOverride' but required in type '{ id: string; }'.
+src/pages/platformAdmin/FeatureFlags.tsx(6,28): error TS6133: 'getDeniedMessage' is declared but its value is never read.
+src/pages/platformAdmin/FeatureFlags.tsx(14,3): error TS6196: 'SetPlatformDefaultRequest' is declared but never used.
+src/pages/platformAdmin/FeatureFlags.tsx(15,3): error TS6196: 'SetOrgOverrideRequest' is declared but never used.
+src/pages/platformAdmin/FeatureFlags.tsx(16,3): error TS6196: 'SetUserOverrideRequest' is declared but never used.
+src/pages/platformAdmin/FeatureFlags.tsx(17,3): error TS6196: 'RemoveOverrideRequest' is declared but never used.
+src/pages/platformAdmin/FeatureFlags.tsx(18,3): error TS6196: 'DeleteFeatureFlagRequest' is declared but never used.
+src/pages/platformAdmin/FeatureFlags.tsx(107,18): error TS2345: Argument of type '{ created_at: string | null; default_value_boolean: boolean | null; default_value_double: number | null; default_value_integer: number | null; deleted_at: string | null; description: string | null; ... 7 more ...; version: number | null; }[]' is not assignable to parameter of type 'SetStateAction<AdminFeatureFlag[]>'.
+  Type '{ created_at: string | null; default_value_boolean: boolean | null; default_value_double: number | null; default_value_integer: number | null; deleted_at: string | null; description: string | null; ... 7 more ...; version: number | null; }[]' is not assignable to type 'AdminFeatureFlag[]'.
+    Type '{ created_at: string | null; default_value_boolean: boolean | null; default_value_double: number | null; default_value_integer: number | null; deleted_at: string | null; description: string | null; ... 7 more ...; version: number | null; }' is not assignable to type 'AdminFeatureFlag'.
+      Types of property 'id' are incompatible.
+        Type 'string | null' is not assignable to type 'string'.
+          Type 'null' is not assignable to type 'string'.
+src/pages/platformAdmin/FeatureFlags.tsx(130,22): error TS2345: Argument of type '{ created_at: string | null; environment: "dev" | "staging" | "prod" | null; feature_flag_id: string | null; feature_key: string | null; override_type: string | null; scope_id: string | null; ... 5 more ...; version: number | null; }[]' is not assignable to parameter of type 'SetStateAction<FeatureFlagOverride[]>'.
+  Type '{ created_at: string | null; environment: "dev" | "staging" | "prod" | null; feature_flag_id: string | null; feature_key: string | null; override_type: string | null; scope_id: string | null; ... 5 more ...; version: number | null; }[]' is not assignable to type 'FeatureFlagOverride[]'.
+    Type '{ created_at: string | null; environment: "dev" | "staging" | "prod" | null; feature_flag_id: string | null; feature_key: string | null; override_type: string | null; scope_id: string | null; ... 5 more ...; version: number | null; }' is not assignable to type 'FeatureFlagOverride'.
+      Types of property 'override_type' are incompatible.
+        Type 'string | null' is not assignable to type '"user" | "org"'.
+          Type 'null' is not assignable to type '"user" | "org"'.
+src/pages/platformAdmin/FeatureFlags.tsx(154,35): error TS6133: 'reason' is declared but its value is never read.
+src/pages/platformAdmin/FeatureFlags.tsx(167,9): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/pages/platformAdmin/FeatureFlags.tsx(176,25): error TS2339: Property 'success' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'success' does not exist on type 'string'.
+src/pages/platformAdmin/FeatureFlags.tsx(177,29): error TS2339: Property 'error' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'error' does not exist on type 'string'.
+src/pages/platformAdmin/FeatureFlags.tsx(215,9): error TS2322: Type 'boolean | null' is not assignable to type 'boolean | undefined'.
+  Type 'null' is not assignable to type 'boolean | undefined'.
+src/pages/platformAdmin/FeatureFlags.tsx(216,9): error TS2322: Type 'number | null' is not assignable to type 'number | undefined'.
+  Type 'null' is not assignable to type 'number | undefined'.
+src/pages/platformAdmin/FeatureFlags.tsx(217,9): error TS2322: Type 'number | null' is not assignable to type 'number | undefined'.
+  Type 'null' is not assignable to type 'number | undefined'.
+src/pages/platformAdmin/FeatureFlags.tsx(228,25): error TS2339: Property 'success' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'success' does not exist on type 'string'.
+src/pages/platformAdmin/FeatureFlags.tsx(229,29): error TS2339: Property 'error' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'error' does not exist on type 'string'.
+src/pages/platformAdmin/FeatureFlags.tsx(275,9): error TS2322: Type 'boolean | null' is not assignable to type 'boolean | undefined'.
+  Type 'null' is not assignable to type 'boolean | undefined'.
+src/pages/platformAdmin/FeatureFlags.tsx(276,9): error TS2322: Type 'number | null' is not assignable to type 'number | undefined'.
+  Type 'null' is not assignable to type 'number | undefined'.
+src/pages/platformAdmin/FeatureFlags.tsx(277,9): error TS2322: Type 'number | null' is not assignable to type 'number | undefined'.
+  Type 'null' is not assignable to type 'number | undefined'.
+src/pages/platformAdmin/FeatureFlags.tsx(288,25): error TS2339: Property 'success' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'success' does not exist on type 'string'.
+src/pages/platformAdmin/FeatureFlags.tsx(289,29): error TS2339: Property 'error' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'error' does not exist on type 'string'.
+src/pages/platformAdmin/FeatureFlags.tsx(337,9): error TS2322: Type 'boolean | null' is not assignable to type 'boolean | undefined'.
+  Type 'null' is not assignable to type 'boolean | undefined'.
+src/pages/platformAdmin/FeatureFlags.tsx(338,9): error TS2322: Type 'number | null' is not assignable to type 'number | undefined'.
+  Type 'null' is not assignable to type 'number | undefined'.
+src/pages/platformAdmin/FeatureFlags.tsx(339,9): error TS2322: Type 'number | null' is not assignable to type 'number | undefined'.
+  Type 'null' is not assignable to type 'number | undefined'.
+src/pages/platformAdmin/FeatureFlags.tsx(350,25): error TS2339: Property 'success' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'success' does not exist on type 'string'.
+src/pages/platformAdmin/FeatureFlags.tsx(351,29): error TS2339: Property 'error' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'error' does not exist on type 'string'.
+src/pages/platformAdmin/FeatureFlags.tsx(388,9): error TS2322: Type 'Json' is not assignable to type 'RpcResponse'.
+  Type 'null' is not assignable to type 'RpcResponse'.
+src/pages/platformAdmin/FeatureFlags.tsx(398,9): error TS2322: Type 'Json' is not assignable to type 'RpcResponse'.
+  Type 'null' is not assignable to type 'RpcResponse'.
+src/pages/platformAdmin/FeatureFlags.tsx(444,25): error TS2339: Property 'success' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'success' does not exist on type 'string'.
+src/pages/platformAdmin/FeatureFlags.tsx(445,29): error TS2339: Property 'error' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'error' does not exist on type 'string'.
+src/pages/platformAdmin/FeatureFlags.tsx(481,25): error TS2339: Property 'success' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'success' does not exist on type 'string'.
+src/pages/platformAdmin/FeatureFlags.tsx(482,29): error TS2339: Property 'error' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'error' does not exist on type 'string'.
+src/pages/platformAdmin/FeatureFlags.tsx(562,13): error TS2322: Type '"sm"' is not assignable to type 'ButtonSize | undefined'.
+src/pages/platformAdmin/FeatureFlags.tsx(576,13): error TS2322: Type '"sm"' is not assignable to type 'ButtonSize | undefined'.
+src/pages/platformAdmin/FeatureFlags.tsx(583,13): error TS2322: Type '"sm"' is not assignable to type 'ButtonSize | undefined'.
+src/pages/platformAdmin/FeatureFlags.tsx(590,13): error TS2322: Type '"sm"' is not assignable to type 'ButtonSize | undefined'.
+src/pages/platformAdmin/FeatureFlags.tsx(598,15): error TS2322: Type '"sm"' is not assignable to type 'ButtonSize | undefined'.
+src/pages/platformAdmin/FeatureFlags.tsx(606,15): error TS2322: Type '"sm"' is not assignable to type 'ButtonSize | undefined'.
+src/pages/platformAdmin/FeatureFlags.tsx(638,14): error TS7006: Parameter 'row' implicitly has an 'any' type.
+src/pages/platformAdmin/FeatureFlags.tsx(638,14): error TS2322: Type '(row: any) => "User" | "Organization"' is not assignable to type 'string'.
+src/pages/platformAdmin/FeatureFlags.tsx(661,11): error TS2322: Type '"sm"' is not assignable to type 'ButtonSize | undefined'.
+src/pages/platformAdmin/FeatureFlags.tsx(664,19): error TS6133: 'removeDialog' is declared but its value is never read.
+src/pages/platformAdmin/FeatureFlags.tsx(780,13): error TS2322: Type 'ColumnConfig<FeatureFlagOverride>[]' is not assignable to type 'ColumnConfig<{ id: string; }>[]'.
+  Type 'ColumnConfig<FeatureFlagOverride>' is not assignable to type 'ColumnConfig<{ id: string; }>'.
+    Type '{ id: string; }' is missing the following properties from type 'FeatureFlagOverride': override_type, feature_flag_id, feature_key, scope_id, and 8 more.
+src/pages/platformAdmin/FeatureFlags.tsx(781,13): error TS2322: Type 'FeatureFlagOverride[]' is not assignable to type '{ id: string; }[]'.
+  Property 'id' is missing in type 'FeatureFlagOverride' but required in type '{ id: string; }'.
+src/pages/platformAdmin/FeatureFlags.tsx(1526,20): error TS2345: Argument of type '{ id: string; email: string | null; display_name: string | null; }[]' is not assignable to parameter of type 'SetStateAction<{ id: string; email: string; display_name: string | null; }[]>'.
+  Type '{ id: string; email: string | null; display_name: string | null; }[]' is not assignable to type '{ id: string; email: string; display_name: string | null; }[]'.
+    Type '{ id: string; email: string | null; display_name: string | null; }' is not assignable to type '{ id: string; email: string; display_name: string | null; }'.
+      Types of property 'email' are incompatible.
+        Type 'string | null' is not assignable to type 'string'.
+          Type 'null' is not assignable to type 'string'.
+src/pages/platformAdmin/Fees.tsx(42,17): error TS2345: Argument of type '{ amount_cents: number | null; assigned_count: number | null; currency: string | null; due_date: string | null; fee_id: string | null; fee_name: string | null; fee_status: "draft" | "published" | "closed" | "archived" | null; ... 4 more ...; unpaid_count: number | null; }[]' is not assignable to parameter of type 'SetStateAction<AdminFeeStatus[]>'.
+  Type '{ amount_cents: number | null; assigned_count: number | null; currency: string | null; due_date: string | null; fee_id: string | null; fee_name: string | null; fee_status: "draft" | "published" | "closed" | "archived" | null; ... 4 more ...; unpaid_count: number | null; }[]' is not assignable to type 'AdminFeeStatus[]'.
+    Type '{ amount_cents: number | null; assigned_count: number | null; currency: string | null; due_date: string | null; fee_id: string | null; fee_name: string | null; fee_status: "draft" | "published" | "closed" | "archived" | null; ... 4 more ...; unpaid_count: number | null; }' is not assignable to type 'AdminFeeStatus'.
+      Types of property 'fee_id' are incompatible.
+        Type 'string | null' is not assignable to type 'string'.
+          Type 'null' is not assignable to type 'string'.
+src/pages/platformAdmin/Fees.tsx(210,9): error TS2322: Type 'ColumnConfig<AdminFeeStatus>[]' is not assignable to type 'ColumnConfig<{ id: string; }>[]'.
+  Type 'ColumnConfig<AdminFeeStatus>' is not assignable to type 'ColumnConfig<{ id: string; }>'.
+    Type '{ id: string; }' is missing the following properties from type 'AdminFeeStatus': fee_id, fee_name, amount_cents, currency, and 8 more.
+src/pages/platformAdmin/Fees.tsx(211,9): error TS2322: Type 'AdminFeeStatus[]' is not assignable to type '{ id: string; }[]'.
+  Property 'id' is missing in type 'AdminFeeStatus' but required in type '{ id: string; }'.
+src/pages/platformAdmin/LicensesAudit.tsx(23,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"entitlement_audit_log"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"entitlement_audit_log"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/LicensesAudit.tsx(54,17): error TS2345: Argument of type 'ResultOne[]' is not assignable to parameter of type 'SetStateAction<EntitlementAuditLog[]>'.
+  Type 'ResultOne[]' is not assignable to type 'EntitlementAuditLog[]'.
+    Type 'ResultOne' is not assignable to type 'EntitlementAuditLog'.
+src/pages/platformAdmin/LicensesOverview.tsx(5,38): error TS6133: 'Badge' is declared but its value is never read.
+src/pages/platformAdmin/LicensesOverview.tsx(37,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"admin_license_metrics"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"admin_license_metrics"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/LicensesOverview.tsx(57,20): error TS2345: Argument of type 'ResultOne' is not assignable to parameter of type 'SetStateAction<LicenseMetrics | null>'.
+  Type 'ResultOne' is not assignable to type 'LicenseMetrics'.
+src/pages/platformAdmin/LicensesOverview.tsx(64,25): error TS2339: Property 'tiers_missing_price_id' does not exist on type 'NonNullable<ResultOne>'.
+src/pages/platformAdmin/LicensesOverview.tsx(67,37): error TS2339: Property 'tiers_missing_price_id' does not exist on type 'NonNullable<ResultOne>'.
+src/pages/platformAdmin/LicensesOverview.tsx(72,25): error TS2339: Property 'features_without_assignment' does not exist on type 'NonNullable<ResultOne>'.
+src/pages/platformAdmin/LicensesOverview.tsx(75,37): error TS2339: Property 'features_without_assignment' does not exist on type 'NonNullable<ResultOne>'.
+src/pages/platformAdmin/LicensesOverview.tsx(81,25): error TS2339: Property 'tiers_with_archived_features' does not exist on type 'NonNullable<ResultOne>'.
+src/pages/platformAdmin/LicensesOverview.tsx(84,37): error TS2339: Property 'tiers_with_archived_features' does not exist on type 'NonNullable<ResultOne>'.
+src/pages/platformAdmin/LicensesOverview.tsx(91,17): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"license_tiers"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"license_tiers"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/LicensesOverview.tsx(98,22): error TS2339: Property 'stripe_price_id' does not exist on type 'SelectQueryError<"column 'stripe_price_id' does not exist on 'users'."> | SelectQueryError<"column 'stripe_price_id' does not exist on 'teams'."> | ... 67 more ... | SelectQueryError<...>'.
+  Property 'stripe_price_id' does not exist on type 'SelectQueryError<"column 'stripe_price_id' does not exist on 'users'.">'.
+src/pages/platformAdmin/LicensesOverview.tsx(98,51): error TS2339: Property 'stripe_price_id' does not exist on type 'SelectQueryError<"column 'stripe_price_id' does not exist on 'users'."> | SelectQueryError<"column 'stripe_price_id' does not exist on 'teams'."> | ... 67 more ... | SelectQueryError<...>'.
+  Property 'stripe_price_id' does not exist on type 'SelectQueryError<"column 'stripe_price_id' does not exist on 'users'.">'.
+src/pages/platformAdmin/LicensesOverview.tsx(257,17): error TS18048: 'metrics.tiers_missing_price_id' is possibly 'undefined'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(3,20): error TS6133: 'isSupabaseConfigured' is declared but its value is never read.
+src/pages/platformAdmin/LicenseTierDetail.tsx(4,95): error TS6133: 'EmptyState' is declared but its value is never read.
+src/pages/platformAdmin/LicenseTierDetail.tsx(12,7): error TS6133: 'FEATURE_CATEGORIES_OPTIONS' is declared but its value is never read.
+src/pages/platformAdmin/LicenseTierDetail.tsx(13,7): error TS6133: 'FEATURE_TYPES_OPTIONS' is declared but its value is never read.
+src/pages/platformAdmin/LicenseTierDetail.tsx(54,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"license_tiers"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"license_tiers"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(66,15): error TS2345: Argument of type 'ResultOne' is not assignable to parameter of type 'SetStateAction<Partial<LicenseTier & { version?: number | undefined; }>>'.
+  Type 'ResultOne' is not assignable to type 'Partial<LicenseTier & { version?: number | undefined; }>'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(69,16): error TS2339: Property 'id' does not exist on type 'ResultOne'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(70,59): error TS2339: Property 'id' does not exist on type 'ResultOne'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(75,16): error TS2339: Property 'stripe_price_id' does not exist on type 'ResultOne'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(76,18): error TS2339: Property 'stripe_verified_at' does not exist on type 'ResultOne'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(76,71): error TS2339: Property 'stripe_verified_at' does not exist on type 'ResultOne'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(80,32): error TS2339: Property 'stripe_product_name' does not exist on type 'ResultOne'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(81,32): error TS2339: Property 'stripe_amount_cents' does not exist on type 'ResultOne'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(82,28): error TS2339: Property 'stripe_interval' does not exist on type 'ResultOne'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(83,28): error TS2339: Property 'stripe_currency' does not exist on type 'ResultOne'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(84,26): error TS2339: Property 'stripe_active' does not exist on type 'ResultOne'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(88,34): error TS2339: Property 'stripe_price_id' does not exist on type 'ResultOne'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(101,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"feature_entitlements"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"feature_entitlements"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(108,19): error TS2345: Argument of type 'ResultOne[]' is not assignable to parameter of type 'SetStateAction<FeatureEntitlement[]>'.
+  Type 'ResultOne[]' is not assignable to type 'FeatureEntitlement[]'.
+    Type 'ResultOne' is not assignable to type 'FeatureEntitlement'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(119,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"tier_feature_assignments"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"tier_feature_assignments"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(127,9): error TS2322: Type 'ResultOne' is not assignable to type 'TierFeatureAssignment'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(127,35): error TS2339: Property 'feature_entitlement_id' does not exist on type 'ResultOne'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(231,17): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"license_tiers"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"license_tiers"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(233,13): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(values: { author_id: string; content: string; created_at?: string | null | undefined; id?: string | undefined; priority?: string | null | undefined; team_id: string; title: string; updated_at?: string | ... 1 more ... | undefined; } | ... 68 more ... | { ...; }, options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Object literal may only specify known properties, and 'tier_key' does not exist in type '{ child_id: string; created_at?: string | null | undefined; id?: string | undefined; organization_id: string; status?: "pending" | "active" | "removed" | undefined; updated_at?: string | null | undefined; user_id: string; } | ... 6 more ... | { ...; }'.
+  Overload 2 of 2, '(values: ({ author_id: string; content: string; created_at?: string | null | undefined; id?: string | undefined; priority?: string | null | undefined; team_id: string; title: string; updated_at?: string | ... 1 more ... | undefined; } | ... 68 more ... | { ...; })[], options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Object literal may only specify known properties, and 'tier_key' does not exist in type '({ author_id: string; content: string; created_at?: string | null | undefined; id?: string | undefined; priority?: string | null | undefined; team_id: string; title: string; updated_at?: string | ... 1 more ... | undefined; } | ... 68 more ... | { ...; })[]'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(270,17): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"license_tiers"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"license_tiers"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(277,25): error TS2339: Property 'version' does not exist on type 'SelectQueryError<"column 'version' does not exist on 'users'."> | SelectQueryError<"column 'version' does not exist on 'teams'."> | ... 67 more ... | SelectQueryError<...>'.
+  Property 'version' does not exist on type 'SelectQueryError<"column 'version' does not exist on 'users'.">'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(284,17): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"license_tiers"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"license_tiers"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(353,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"tier_feature_assignments"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"tier_feature_assignments"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/LicenseTierDetail.tsx(355,11): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(values: { author_id: string; content: string; created_at?: string | null | undefined; id?: string | undefined; priority?: string | null | undefined; team_id: string; title: string; updated_at?: string | ... 1 more ... | undefined; } | ... 68 more ... | { ...; }, options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Object literal may only specify known properties, and 'license_tier_id' does not exist in type '{ author_id: string; content: string; created_at?: string | null | undefined; id?: string | undefined; priority?: string | null | undefined; team_id: string; title: string; updated_at?: string | ... 1 more ... | undefined; } | ... 68 more ... | { ...; }'.
+  Overload 2 of 2, '(values: ({ author_id: string; content: string; created_at?: string | null | undefined; id?: string | undefined; priority?: string | null | undefined; team_id: string; title: string; updated_at?: string | ... 1 more ... | undefined; } | ... 68 more ... | { ...; })[], options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Object literal may only specify known properties, and 'license_tier_id' does not exist in type '({ author_id: string; content: string; created_at?: string | null | undefined; id?: string | undefined; priority?: string | null | undefined; team_id: string; title: string; updated_at?: string | ... 1 more ... | undefined; } | ... 68 more ... | { ...; })[]'.
+src/pages/platformAdmin/LicenseTiers.tsx(21,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"admin_license_tiers_list"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"admin_license_tiers_list"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/LicenseTiers.tsx(41,18): error TS2345: Argument of type 'ResultOne[]' is not assignable to parameter of type 'SetStateAction<LicenseTierWithCounts[]>'.
+  Type 'ResultOne[]' is not assignable to type 'LicenseTierWithCounts[]'.
+    Type 'ResultOne' is not assignable to type 'LicenseTierWithCounts'.
+src/pages/platformAdmin/OrganizationDetail.tsx(4,10): error TS6133: 'PageHeader' is declared but its value is never read.
+src/pages/platformAdmin/OrganizationDetail.tsx(55,25): error TS2345: Argument of type '{ created_at: string | null; id: string | null; license_current_period_end: string | null; license_plan: "starter" | "standard" | "pro" | null; license_status: "canceled" | "expired" | "active" | "trial" | "past_due" | null; ... 10 more ...; user_count: number | null; }' is not assignable to parameter of type 'SetStateAction<AdminOrganization | null>'.
+  Type '{ created_at: string | null; id: string | null; license_current_period_end: string | null; license_plan: "starter" | "standard" | "pro" | null; license_status: "canceled" | "expired" | "active" | "trial" | "past_due" | null; ... 10 more ...; user_count: number | null; }' is not assignable to type 'AdminOrganization'.
+    Types of property 'id' are incompatible.
+      Type 'string | null' is not assignable to type 'string'.
+        Type 'null' is not assignable to type 'string'.
+src/pages/platformAdmin/OrganizationDetail.tsx(64,25): error TS2345: Argument of type '{ created_at: string | null; enabled: boolean | null; feature_key: string | null; id: string | null; organization_id: string | null; organization_name: string | null; updated_at: string | null; }[]' is not assignable to parameter of type 'SetStateAction<AdminFeatureFlag[]>'.
+  Type '{ created_at: string | null; enabled: boolean | null; feature_key: string | null; id: string | null; organization_id: string | null; organization_name: string | null; updated_at: string | null; }[]' is not assignable to type 'AdminFeatureFlag[]'.
+    Type '{ created_at: string | null; enabled: boolean | null; feature_key: string | null; id: string | null; organization_id: string | null; organization_name: string | null; updated_at: string | null; }' is not assignable to type 'AdminFeatureFlag'.
+      Types of property 'id' are incompatible.
+        Type 'string | null' is not assignable to type 'string'.
+          Type 'null' is not assignable to type 'string'.
+src/pages/platformAdmin/OrganizationDetail.tsx(106,25): error TS2339: Property 'success' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'success' does not exist on type 'string'.
+src/pages/platformAdmin/OrganizationDetail.tsx(107,29): error TS2339: Property 'error' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'error' does not exist on type 'string'.
+src/pages/platformAdmin/Organizations.tsx(61,36): error TS2345: Argument of type 'string' is not assignable to parameter of type 'NonNullable<"expired" | "active" | "trial" | "suspended" | null>'.
+src/pages/platformAdmin/Organizations.tsx(77,26): error TS2345: Argument of type '{ created_at: string | null; id: string | null; license_current_period_end: string | null; license_plan: "starter" | "standard" | "pro" | null; license_status: "canceled" | "expired" | "active" | "trial" | "past_due" | null; ... 10 more ...; user_count: number | null; }[]' is not assignable to parameter of type 'SetStateAction<AdminOrganization[]>'.
+  Type '{ created_at: string | null; id: string | null; license_current_period_end: string | null; license_plan: "starter" | "standard" | "pro" | null; license_status: "canceled" | "expired" | "active" | "trial" | "past_due" | null; ... 10 more ...; user_count: number | null; }[]' is not assignable to type 'AdminOrganization[]'.
+    Type '{ created_at: string | null; id: string | null; license_current_period_end: string | null; license_plan: "starter" | "standard" | "pro" | null; license_status: "canceled" | "expired" | "active" | "trial" | "past_due" | null; ... 10 more ...; user_count: number | null; }' is not assignable to type 'AdminOrganization'.
+      Types of property 'id' are incompatible.
+        Type 'string | null' is not assignable to type 'string'.
+          Type 'null' is not assignable to type 'string'.
+src/pages/platformAdmin/Organizations.tsx(149,25): error TS2339: Property 'success' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'success' does not exist on type 'string'.
+src/pages/platformAdmin/Organizations.tsx(150,29): error TS2339: Property 'error' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'error' does not exist on type 'string'.
+src/pages/platformAdmin/OverrideCreate.tsx(26,10): error TS6133: 'dependencyError' is declared but its value is never read.
+src/pages/platformAdmin/OverrideCreate.tsx(36,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"feature_entitlements"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"feature_entitlements"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/OverrideCreate.tsx(42,19): error TS2345: Argument of type 'ResultOne[]' is not assignable to parameter of type 'SetStateAction<FeatureEntitlement[]>'.
+  Type 'ResultOne[]' is not assignable to type 'FeatureEntitlement[]'.
+    Type 'ResultOne' is not assignable to type 'FeatureEntitlement'.
+src/pages/platformAdmin/OverrideCreate.tsx(72,26): error TS2345: Argument of type '{ id: string; name: string | null; }[]' is not assignable to parameter of type 'SetStateAction<{ id: string; name: string; }[]>'.
+  Type '{ id: string; name: string | null; }[]' is not assignable to type '{ id: string; name: string; }[]'.
+    Type '{ id: string; name: string | null; }' is not assignable to type '{ id: string; name: string; }'.
+      Types of property 'name' are incompatible.
+        Type 'string | null' is not assignable to type 'string'.
+          Type 'null' is not assignable to type 'string'.
+src/pages/platformAdmin/OverrideCreate.tsx(132,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"entitlement_overrides"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"entitlement_overrides"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/OverrideCreate.tsx(133,17): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(values: { author_id: string; content: string; created_at?: string | null | undefined; id?: string | undefined; priority?: string | null | undefined; team_id: string; title: string; updated_at?: string | ... 1 more ... | undefined; } | ... 68 more ... | { ...; }, options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Argument of type 'CreateEntitlementOverrideRequest' is not assignable to parameter of type '{ author_id: string; content: string; created_at?: string | null | undefined; id?: string | undefined; priority?: string | null | undefined; team_id: string; title: string; updated_at?: string | ... 1 more ... | undefined; } | ... 68 more ... | { ...; }'.
+      Type 'CreateEntitlementOverrideRequest' is missing the following properties from type '{ amount_cents: number; created_at?: string | null | undefined; created_by_admin_id: string; fee_assignment_id: string; id?: string | undefined; organization_id: string; reason: string; }': amount_cents, created_by_admin_id, fee_assignment_id, organization_id
+  Overload 2 of 2, '(values: ({ author_id: string; content: string; created_at?: string | null | undefined; id?: string | undefined; priority?: string | null | undefined; team_id: string; title: string; updated_at?: string | ... 1 more ... | undefined; } | ... 68 more ... | { ...; })[], options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Argument of type 'CreateEntitlementOverrideRequest' is not assignable to parameter of type '({ author_id: string; content: string; created_at?: string | null | undefined; id?: string | undefined; priority?: string | null | undefined; team_id: string; title: string; updated_at?: string | ... 1 more ... | undefined; } | ... 68 more ... | { ...; })[]'.
+      Type 'CreateEntitlementOverrideRequest' is missing the following properties from type '({ author_id: string; content: string; created_at?: string | null | undefined; id?: string | undefined; priority?: string | null | undefined; team_id: string; title: string; updated_at?: string | ... 1 more ... | undefined; } | ... 68 more ... | { ...; })[]': length, pop, push, concat, and 28 more.
+src/pages/platformAdmin/OverrideCreate.tsx(342,20): error TS2304: Cannot find name 'Badge'.
+src/pages/platformAdmin/OverrideCreate.tsx(342,76): error TS2304: Cannot find name 'Badge'.
+src/pages/platformAdmin/OverrideCreate.tsx(343,20): error TS2304: Cannot find name 'Badge'.
+src/pages/platformAdmin/OverrideCreate.tsx(343,69): error TS2304: Cannot find name 'Badge'.
+src/pages/platformAdmin/OverrideDetail.tsx(14,10): error TS6133: 'revokeReason' is declared but its value is never read.
+src/pages/platformAdmin/OverrideDetail.tsx(23,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"admin_entitlement_overrides_list"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"admin_entitlement_overrides_list"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/OverrideDetail.tsx(29,19): error TS2345: Argument of type 'ResultOne' is not assignable to parameter of type 'SetStateAction<EntitlementOverrideWithDetails | null>'.
+  Type 'ResultOne' is not assignable to type 'EntitlementOverrideWithDetails'.
+src/pages/platformAdmin/OverrideDetail.tsx(51,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"entitlement_overrides"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"entitlement_overrides"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/OverrideDetail.tsx(53,11): error TS2353: Object literal may only specify known properties, and 'revoked_at' does not exist in type '{ author_id?: string | undefined; content?: string | undefined; created_at?: string | null | undefined; id?: string | undefined; priority?: string | null | undefined; team_id?: string | undefined; title?: string | undefined; updated_at?: string | ... 1 more ... | undefined; } | ... 68 more ... | { ...; }'.
+src/pages/platformAdmin/Overrides.tsx(23,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"admin_entitlement_overrides_list"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"admin_entitlement_overrides_list"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/Overrides.tsx(51,22): error TS2345: Argument of type 'ResultOne[]' is not assignable to parameter of type 'SetStateAction<EntitlementOverrideWithDetails[]>'.
+  Type 'ResultOne[]' is not assignable to type 'EntitlementOverrideWithDetails[]'.
+    Type 'ResultOne' is not assignable to type 'EntitlementOverrideWithDetails'.
+src/pages/platformAdmin/PlatformAdminDashboard.tsx(61,19): error TS2345: Argument of type '{ active_organizations: number | null; failed_payments: number | null; platform_admin_count: number | null; successful_payments: number | null; suspended_organizations: number | null; ... 4 more ...; trial_organizations: number | null; }' is not assignable to parameter of type 'SetStateAction<AdminPlatformHealth | null>'.
+  Type '{ active_organizations: number | null; failed_payments: number | null; platform_admin_count: number | null; successful_payments: number | null; suspended_organizations: number | null; ... 4 more ...; trial_organizations: number | null; }' is not assignable to type 'AdminPlatformHealth'.
+    Types of property 'active_organizations' are incompatible.
+      Type 'number | null' is not assignable to type 'number'.
+        Type 'null' is not assignable to type 'number'.
+src/pages/platformAdmin/PlatformAdminDashboard.tsx(66,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"admin_audit_log"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"admin_audit_log"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/pages/platformAdmin/PlatformAdminDashboard.tsx(77,27): error TS2345: Argument of type 'ResultOne[]' is not assignable to parameter of type 'SetStateAction<AdminAuditLog[]>'.
+  Type 'ResultOne[]' is not assignable to type 'AdminAuditLog[]'.
+    Type 'ResultOne' is not assignable to type 'AdminAuditLog'.
+src/pages/platformAdmin/PlatformAdmins.tsx(3,35): error TS6133: 'FilterBar' is declared but its value is never read.
+src/pages/platformAdmin/PlatformAdmins.tsx(4,28): error TS6133: 'getDeniedMessage' is declared but its value is never read.
+src/pages/platformAdmin/PlatformAdmins.tsx(118,25): error TS2339: Property 'success' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'success' does not exist on type 'string'.
+src/pages/platformAdmin/PlatformAdmins.tsx(119,26): error TS2339: Property 'error' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'error' does not exist on type 'string'.
+src/pages/platformAdmin/PlatformAdmins.tsx(129,42): error TS2339: Property 'action' does not exist on type 'string | number | boolean | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'action' does not exist on type 'string'.
+src/pages/platformAdmin/PlatformAdmins.tsx(157,25): error TS2339: Property 'success' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'success' does not exist on type 'string'.
+src/pages/platformAdmin/PlatformAdmins.tsx(158,29): error TS2339: Property 'error' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'error' does not exist on type 'string'.
+src/pages/platformAdmin/PlatformPayments.tsx(62,36): error TS2345: Argument of type 'string' is not assignable to parameter of type 'NonNullable<"pending" | "succeeded" | "refunded" | "failed" | "partially_refunded" | null>'.
+src/pages/platformAdmin/PlatformPayments.tsx(78,21): error TS2345: Argument of type '{ amount_cents: number | null; child_id: string | null; child_name: string | null; created_at: string | null; currency: string | null; fee_assignment_id: string | null; fee_id: string | null; ... 7 more ...; stripe_payment_intent_id: string | null; }[]' is not assignable to parameter of type 'SetStateAction<AdminPayment[]>'.
+  Type '{ amount_cents: number | null; child_id: string | null; child_name: string | null; created_at: string | null; currency: string | null; fee_assignment_id: string | null; fee_id: string | null; ... 7 more ...; stripe_payment_intent_id: string | null; }[]' is not assignable to type 'AdminPayment[]'.
+    Type '{ amount_cents: number | null; child_id: string | null; child_name: string | null; created_at: string | null; currency: string | null; fee_assignment_id: string | null; fee_id: string | null; ... 7 more ...; stripe_payment_intent_id: string | null; }' is not assignable to type 'AdminPayment'.
+      Types of property 'id' are incompatible.
+        Type 'string | null' is not assignable to type 'string'.
+          Type 'null' is not assignable to type 'string'.
+src/pages/platformAdmin/Structure.tsx(48,23): error TS2345: Argument of type '{ organization_id: string | null; organization_name: string | null; player_count: number | null; season_active: boolean | null; season_id: string | null; season_name: string | null; team_id: string | null; team_name: string | null; }[]' is not assignable to parameter of type 'SetStateAction<AdminStructure[]>'.
+  Type '{ organization_id: string | null; organization_name: string | null; player_count: number | null; season_active: boolean | null; season_id: string | null; season_name: string | null; team_id: string | null; team_name: string | null; }[]' is not assignable to type 'AdminStructure[]'.
+    Type '{ organization_id: string | null; organization_name: string | null; player_count: number | null; season_active: boolean | null; season_id: string | null; season_name: string | null; team_id: string | null; team_name: string | null; }' is not assignable to type 'AdminStructure'.
+      Types of property 'organization_id' are incompatible.
+        Type 'string | null' is not assignable to type 'string'.
+          Type 'null' is not assignable to type 'string'.
+src/pages/platformAdmin/UserDetail.tsx(4,10): error TS6133: 'PageHeader' is declared but its value is never read.
+src/pages/platformAdmin/UserDetail.tsx(4,50): error TS6133: 'Button' is declared but its value is never read.
+src/pages/platformAdmin/UserDetail.tsx(49,17): error TS2345: Argument of type '{ created_at: string | null; display_name: string | null; email: string | null; email_confirmed: boolean | null; id: string | null; is_platform_admin: boolean | null; last_sign_in_at: string | null; organizations: Json; phone: string | null; roles: string[] | null; updated_at: string | null; }' is not assignable to parameter of type 'SetStateAction<AdminUser | null>'.
+  Type '{ created_at: string | null; display_name: string | null; email: string | null; email_confirmed: boolean | null; id: string | null; is_platform_admin: boolean | null; last_sign_in_at: string | null; organizations: Json; phone: string | null; roles: string[] | null; updated_at: string | null; }' is not assignable to type 'AdminUser'.
+    Types of property 'id' are incompatible.
+      Type 'string | null' is not assignable to type 'string'.
+        Type 'null' is not assignable to type 'string'.
+src/pages/platformAdmin/Users.tsx(65,18): error TS2345: Argument of type '{ created_at: string | null; display_name: string | null; email: string | null; email_confirmed: boolean | null; id: string | null; is_platform_admin: boolean | null; last_sign_in_at: string | null; organizations: Json; phone: string | null; roles: string[] | null; updated_at: string | null; }[]' is not assignable to parameter of type 'SetStateAction<AdminUser[]>'.
+  Type '{ created_at: string | null; display_name: string | null; email: string | null; email_confirmed: boolean | null; id: string | null; is_platform_admin: boolean | null; last_sign_in_at: string | null; organizations: Json; phone: string | null; roles: string[] | null; updated_at: string | null; }[]' is not assignable to type 'AdminUser[]'.
+    Type '{ created_at: string | null; display_name: string | null; email: string | null; email_confirmed: boolean | null; id: string | null; is_platform_admin: boolean | null; last_sign_in_at: string | null; organizations: Json; phone: string | null; roles: string[] | null; updated_at: string | null; }' is not assignable to type 'AdminUser'.
+      Types of property 'id' are incompatible.
+        Type 'string | null' is not assignable to type 'string'.
+          Type 'null' is not assignable to type 'string'.
+src/pages/platformAdmin/Users.tsx(128,25): error TS2339: Property 'success' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'success' does not exist on type 'string'.
+src/pages/platformAdmin/Users.tsx(129,29): error TS2339: Property 'error' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'error' does not exist on type 'string'.
+src/pages/RoleSelection.tsx(5,19): error TS6133: 'formatRoles' is declared but its value is never read.
+src/pages/RoleSelection.tsx(5,32): error TS6133: 'getPrimaryRole' is declared but its value is never read.
+src/pages/RoleSelection.tsx(90,11): error TS2304: Cannot find name 'card'.
+src/pages/RoleSelection.tsx(90,40): error TS2304: Cannot find name 'card'.
+src/pages/TravelDetail.tsx(121,10): error TS6133: 'showMapsDropdown' is declared but its value is never read.
+src/pages/TravelDetail.tsx(121,28): error TS6133: 'setShowMapsDropdown' is declared but its value is never read.
+src/pages/Tryouts.tsx(2,1): error TS6133: 'Link' is declared but its value is never read.
+src/pages/Tryouts.tsx(23,9): error TS6133: 'profile' is declared but its value is never read.
+src/pages/Tryouts.tsx(140,51): error TS2322: Type '{ children: Element[]; className: string; onClick: (e: any) => any; }' is not assignable to type 'IntrinsicAttributes & CardProps'.
+  Property 'onClick' does not exist on type 'IntrinsicAttributes & CardProps'.
+src/pages/Tryouts.tsx(140,60): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/pages/Uniforms.tsx(8,21): error TS6133: 'SectionHeader' is declared but its value is never read.
+src/pages/Uniforms.tsx(26,9): error TS6133: 'profile' is declared but its value is never read.
+src/pages/Uniforms.tsx(78,39): error TS2322: Type '{ children: string; variant: "primary"; as: ForwardRefExoticComponent<LinkProps & RefAttributes<HTMLAnchorElement>>; to: string; }' is not assignable to type 'IntrinsicAttributes & ButtonProps'.
+  Property 'as' does not exist on type 'IntrinsicAttributes & ButtonProps'.
+src/types/attendance.ts(4,61): error TS2339: Property 'event_attendance' does not exist on type '{ announcements: { Row: { author_id: string; content: string; created_at: string | null; id: string; priority: string | null; team_id: string; title: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 68 more ...; waivers: { ...; }; }'.
+src/utils/eventLogger.ts(102,7): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/utils/eventLogger.ts(104,7): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/utils/eventLogger.ts(105,7): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/utils/eventLogger.ts(106,7): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/utils/eventLogger.ts(107,7): error TS2322: Type 'Record<string, unknown>' is not assignable to type 'Json | undefined'.
+  Type 'Record<string, unknown>' is missing the following properties from type 'Json[]': length, pop, push, concat, and 28 more.
+src/utils/eventLogger.ts(108,7): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/utils/eventLogger.ts(109,7): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/utils/eventLogger.ts(110,7): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/utils/featureFlags.ts(58,10): error TS6133: 'isCacheValid' is declared but its value is never read.
+src/utils/featureFlags.ts(162,8): error TS6133: 'payload' is declared but its value is never read.
+src/utils/featureFlags.ts(174,8): error TS6133: 'payload' is declared but its value is never read.
+src/utils/featureFlags.ts(234,7): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/utils/featureFlags.ts(235,7): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/utils/featureFlags.ts(250,19): error TS2551: Property 'value' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'. Did you mean 'valueOf'?
+  Property 'value' does not exist on type 'string'.
+src/utils/featureFlags.ts(251,24): error TS2339: Property 'value_type' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'value_type' does not exist on type 'string'.
+src/utils/featureFlags.ts(252,27): error TS2339: Property 'resolved_from' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'resolved_from' does not exist on type 'string'.
+src/utils/featureFlags.ts(253,23): error TS2339: Property 'source_id' does not exist on type 'string | number | true | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'source_id' does not exist on type 'string'.
+src/utils/featureFlags.ts(295,7): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/utils/featureFlags.ts(296,7): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/utils/licenseEntitlementsHelpers.ts(36,43): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"entitlement_audit_log"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"entitlement_audit_log"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/utils/licenseEntitlementsHelpers.ts(36,68): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(values: { author_id: string; content: string; created_at?: string | null | undefined; id?: string | undefined; priority?: string | null | undefined; team_id: string; title: string; updated_at?: string | ... 1 more ... | undefined; } | ... 68 more ... | { ...; }, options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Object literal may only specify known properties, and 'actor_email' does not exist in type '{ author_id: string; content: string; created_at?: string | null | undefined; id?: string | undefined; priority?: string | null | undefined; team_id: string; title: string; updated_at?: string | ... 1 more ... | undefined; } | ... 68 more ... | { ...; }'.
+  Overload 2 of 2, '(values: ({ author_id: string; content: string; created_at?: string | null | undefined; id?: string | undefined; priority?: string | null | undefined; team_id: string; title: string; updated_at?: string | ... 1 more ... | undefined; } | ... 68 more ... | { ...; })[], options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Object literal may only specify known properties, and 'actor_id' does not exist in type '({ author_id: string; content: string; created_at?: string | null | undefined; id?: string | undefined; priority?: string | null | undefined; team_id: string; title: string; updated_at?: string | ... 1 more ... | undefined; } | ... 68 more ... | { ...; })[]'.
+src/utils/licenseEntitlementsHelpers.ts(72,13): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"license_tiers"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"license_tiers"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/utils/licenseEntitlementsHelpers.ts(81,21): error TS2339: Property 'version' does not exist on type 'SelectQueryError<"column 'version' does not exist on 'users'."> | SelectQueryError<"column 'version' does not exist on 'teams'."> | ... 67 more ... | SelectQueryError<...>'.
+  Property 'version' does not exist on type 'SelectQueryError<"column 'version' does not exist on 'users'.">'.
+src/utils/licenseEntitlementsHelpers.ts(86,13): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"license_tiers"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"license_tiers"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/utils/licenseEntitlementsHelpers.ts(124,13): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"feature_dependencies"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"feature_dependencies"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/utils/licenseEntitlementsHelpers.ts(145,32): error TS2339: Property 'depends_on_feature_id' does not exist on type 'SelectQueryError<"column 'depends_on_feature_id' does not exist on 'users'."> | SelectQueryError<"column 'depends_on_feature_id' does not exist on 'teams'."> | ... 67 more ... | SelectQueryError<...>'.
+  Property 'depends_on_feature_id' does not exist on type 'SelectQueryError<"column 'depends_on_feature_id' does not exist on 'users'.">'.
+src/utils/licenseEntitlementsHelpers.ts(146,28): error TS2339: Property 'feature_entitlements' does not exist on type 'SelectQueryError<"column 'depends_on_feature_id' does not exist on 'users'."> | SelectQueryError<"column 'depends_on_feature_id' does not exist on 'teams'."> | ... 67 more ... | SelectQueryError<...>'.
+  Property 'feature_entitlements' does not exist on type 'SelectQueryError<"column 'depends_on_feature_id' does not exist on 'users'.">'.
+src/utils/licenseEntitlementsHelpers.ts(158,19): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"license_tiers"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"license_tiers"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/utils/licenseEntitlementsHelpers.ts(160,29): error TS2345: Argument of type 'string | null' is not assignable to parameter of type '{}'.
+  Type 'null' is not assignable to type '{}'.
+src/utils/licenseEntitlementsHelpers.ts(167,21): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"tier_feature_assignments"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"tier_feature_assignments"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/utils/licenseEntitlementsHelpers.ts(169,43): error TS2339: Property 'id' does not exist on type 'SelectQueryError<"column 'id' does not exist on 'users'."> | SelectQueryError<"column 'id' does not exist on 'teams'."> | SelectQueryError<"column 'id' does not exist on 'children'."> | ... 66 more ... | SelectQueryError<...>'.
+  Property 'id' does not exist on type 'SelectQueryError<"column 'id' does not exist on 'users'.">'.
+src/utils/licenseEntitlementsHelpers.ts(183,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"entitlement_overrides"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"entitlement_overrides"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.
+src/utils/licenseEntitlementsHelpers.ts(225,18): error TS6133: 'error' is declared but its value is never read.
+src/utils/licenseEntitlementsHelpers.ts(226,11): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"tier_feature_assignments"' is not assignable to parameter of type '"users" | "teams" | "children" | "events" | "organizations" | "fee_assignments" | "fees" | "charges" | "checkout_sessions" | "seasons" | "families" | "discount_codes" | "feature_flags" | ... 56 more ... | "waivers"'.
+  Overload 2 of 2, '(relation: "admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"tier_feature_assignments"' is not assignable to parameter of type '"admin_users" | "users_legacy" | "admin_structure" | "admin_payments" | "admin_fees_status" | "admin_organizations" | "admin_feature_flags" | "admin_feature_flags_list" | ... 4 more ... | "event_logs_recent"'.

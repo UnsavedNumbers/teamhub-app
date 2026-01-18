@@ -12,13 +12,10 @@ import { supabase } from '../../lib/supabase'
 import {
     fakeFamilies,
     fakeChildren,
-    fakeFamilyMembers,
-    fakeUsers,
     getFamiliesForUser,
     getChildrenForUser,
     getFamilyById,
     getFamilyMembersForFamily,
-    getChildWithDetails,
     type FakeFamily,
     type FakeChild,
     type FakeFamilyMember,
@@ -29,13 +26,11 @@ import type {
     Child,
     FamilyMember,
     FamilyWithDetails,
-    ChildWithDetails,
     CreateFamilyDTO,
     UpdateFamilyDTO,
     CreateChildDTO,
     UpdateChildDTO
 } from '../../types/family'
-import { v4 as uuidv4 } from 'uuid'
 
 // ============================================================================
 // Helper Functions

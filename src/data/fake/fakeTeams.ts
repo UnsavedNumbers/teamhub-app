@@ -22,8 +22,7 @@ import {
 } from './fakeUsers'
 
 import {
-    Sport, Program, Level, Team, Season, TeamSeason,
-    GenderCategory, LevelType
+    Sport, Program, Level, Team, Season, TeamSeason
 } from '../types/organization'
 
 // ============================================================================
@@ -565,7 +564,7 @@ export function getChildTeamMemberships(): Array<{ childId: string; teamId: stri
  * Get team with full relations for display
  * Includes Level, Program, Sport, ActiveSeason
  */
-export function getTeamWithDetails(teamId: string): (FakeTeam & { sport?: FakeSport; program?: FakeProgram; level?: FakeLevel; activeSeason?: FakeSeason }) | undefined {
+export function getTeamWithDetails(teamId: string): (FakeTeam & { sport?: FakeSport; program?: FakeProgram; level?: FakeLevel; activeSeason?: FakeSeason; seasons?: FakeSeason[] }) | undefined {
     const team = getTeamById(teamId)
     if (!team) return undefined
 

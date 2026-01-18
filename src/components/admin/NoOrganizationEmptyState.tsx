@@ -10,16 +10,10 @@ export function NoOrganizationEmptyState() {
         icon="business"
         title="NO ORGANIZATION FOUND"
         description="You haven't set up an organization yet. Create your first organization to get started with TeamHub."
-        action={
-          <div style={{ display: 'flex', gap: 'var(--pa-space-3)', justifyContent: 'center' }}>
-            <button
-              className="pa-btn pa-btn--primary"
-              onClick={() => navigate('/admin/onboarding')}
-            >
-              Set Up Organization
-            </button>
-          </div>
-        }
+        action={{
+          label: 'Set Up Organization',
+          onClick: () => navigate('/admin/onboarding')
+        }}
       />
     </div>
   )

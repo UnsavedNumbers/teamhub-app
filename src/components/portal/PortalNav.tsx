@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import MegaMenu, { type NavGroup } from '../common/MegaMenu'
+import MegaMenu from '../common/MegaMenu'
 import ThemeToggle from './ThemeToggle'
 import UserContextDropdown from '../common/UserContextDropdown'
 import { useAuth } from '../../hooks/useAuth'
@@ -48,7 +48,7 @@ interface PortalNavProps {
  * - Responsive with mobile hamburger menu
  */
 export default function PortalNav({ forceRole }: PortalNavProps) {
-  const { profile, hasAnyRole, isOrgAdmin } = useAuth()
+  const { hasAnyRole, isOrgAdmin } = useAuth()
   const { currentOrganization } = useOrganization()
   const { resolvedTheme } = useTheme()
   const t = useT()

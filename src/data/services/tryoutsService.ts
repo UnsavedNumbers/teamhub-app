@@ -69,7 +69,7 @@ async function simulateDelay() {
 
 export async function getTryouts(
     context: UserContext,
-    orgId?: string
+    _orgId?: string
 ): Promise<{ data: Tryout[]; error: Error | null }> {
     await simulateDelay()
     if (!USE_FAKE_DATA) return { data: [], error: null }
@@ -77,7 +77,7 @@ export async function getTryouts(
 }
 
 export async function getTryoutById(
-    context: UserContext,
+    _context: UserContext,
     tryoutId: string
 ): Promise<{ data: Tryout | null; error: Error | null }> {
     await simulateDelay()
@@ -87,7 +87,7 @@ export async function getTryoutById(
 }
 
 export async function getTryoutRegistrations(
-    context: UserContext
+    _context: UserContext
 ): Promise<{ data: TryoutRegistration[]; error: Error | null }> {
     await simulateDelay()
     if (!USE_FAKE_DATA) return { data: [], error: null }
@@ -96,9 +96,9 @@ export async function getTryoutRegistrations(
 }
 
 export async function registerChildForTryout(
-    context: UserContext,
-    tryoutId: string,
-    childId: string
+    _context: UserContext,
+    _tryoutId: string,
+    _childId: string
 ): Promise<{ error: Error | null }> {
     await simulateDelay()
     if (!USE_FAKE_DATA) return { error: null }
@@ -106,7 +106,7 @@ export async function registerChildForTryout(
 }
 
 export async function createTryout(
-    context: UserContext,
+    _context: UserContext,
     tryout: Partial<Tryout>
 ): Promise<{ data: Tryout | null; error: Error | null }> {
     await simulateDelay()
@@ -115,8 +115,8 @@ export async function createTryout(
 }
 
 export async function getAdminTryoutRegistrations(
-    context: UserContext,
-    tryoutId: string
+    _context: UserContext,
+    _tryoutId: string
 ): Promise<{ data: TryoutRegistration[]; error: Error | null }> {
     await simulateDelay()
     if (!USE_FAKE_DATA) return { data: [], error: null }

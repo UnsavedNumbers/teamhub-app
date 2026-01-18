@@ -18,14 +18,13 @@ import {
     getEventById as getFakeEventById,
     getEventsForTeam as getFakeEventsForTeam,
     getEventsForSeason as getFakeEventsForSeason,
-    getUpcomingEvents as getFakeUpcomingEvents,
     getEventsInDateRange as getFakeEventsInDateRange,
     getEventLocation as getFakeEventLocation,
     getRSVPsForEvent as getFakeRSVPsForEvent,
     getChildRSVPForEvent as getFakeChildRSVPForEvent,
     getAllEvents as getFakeAllEvents,
 } from '../fake/fakeEvents'
-import { getChildrenForUserId, getAssignedTeamsForCoach, getTeamsForUserChildren, getChildTeamMemberships } from '../fake/relationships'
+import { getChildrenForUserId, getAssignedTeamsForCoach, getChildTeamMemberships } from '../fake/relationships'
 
 // ============================================================================
 // Helper Functions
@@ -251,7 +250,7 @@ export async function getEventDetails(
                 `)
                 .eq('id', eventId)
                 .single()
-            
+
             // Transform RSVP config
             if (data) {
                 (data as any).rsvp_config = {
@@ -486,25 +485,25 @@ export async function updateRSVP(
         const existing = getFakeChildRSVPForEvent(eventId, childId)
         const updated: EventRSVP = existing
             ? {
-                  ...existing,
-                  status,
-                  note: note ?? null,
-                  responded_at: new Date().toISOString(),
-                  responded_by_user_id: context.userId,
-                  updated_at: new Date().toISOString(),
-              }
+                ...existing,
+                status,
+                note: note ?? null,
+                responded_at: new Date().toISOString(),
+                responded_by_user_id: context.userId,
+                updated_at: new Date().toISOString(),
+            }
             : {
-                  id: `rsvp-${eventId}-${childId}`,
-                  event_id: eventId,
-                  child_id: childId,
-                  status,
-                  note: note ?? null,
-                  responded_at: new Date().toISOString(),
-                  responded_by_user_id: context.userId,
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString(),
-                  child: undefined,
-              }
+                id: `rsvp-${eventId}-${childId}`,
+                event_id: eventId,
+                child_id: childId,
+                status,
+                note: note ?? null,
+                responded_at: new Date().toISOString(),
+                responded_by_user_id: context.userId,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                child: undefined,
+            }
 
         return { data: updated, error: null }
     } catch (err) {

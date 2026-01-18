@@ -5,7 +5,7 @@
  * Provides validation functions and relationship lookup utilities.
  */
 
-import { DEMO_USER_IDS, DEMO_ORG_A_ID } from '../config'
+import { DEMO_USER_IDS } from '../config'
 import {
     FAMILY_JOHNSON_ID,
     FAMILY_CHEN_ID,

@@ -1,9 +1,6 @@
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext } from '../fake/userContext'
 import {
-    getUniformKitsForOrg,
-    getUniformItemsForKit,
-    getSubmissionsForKit,
     fakeUniformKits,
     fakeUniformItems,
     fakeUniformSubmissions,
@@ -88,6 +85,29 @@ export async function getUniformSubmissions(
     }
 
     // In a real app we might also filter by user if they are the submitter
+
+    return { data: submissions, error: null }
+}
+
+/**
+ * Get all uniform submissions for the organization (admin view)
+ * Returns all submissions across all kits in the org, not filtered by childIds
+ */
+export async function getAllUniformSubmissions(
+    context: UserContext
+): Promise<{ data: UniformSubmission[]; error: Error | null }> {
+    await simulateDelay()
+
+    if (!USE_FAKE_DATA) {
+        return { data: [], error: null }
+    }
+
+    // Get all kits for the org
+    const orgKits = fakeUniformKits.filter(k => k.org_id === context.orgId)
+    const orgKitIds = orgKits.map(k => k.id)
+
+    // Get all submissions for those kits
+    const submissions = fakeUniformSubmissions.filter(s => orgKitIds.includes(s.kit_id))
 
     return { data: submissions, error: null }
 }

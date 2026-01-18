@@ -1,14 +1,12 @@
 
 import { supabase } from '../../lib/supabase'
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
-import { t } from '../../i18n'
 import type { UserContext } from '../fake/userContext'
 import type {
     AttendanceRecord,
     AttendanceSettings,
     AttendanceEventSummary,
     AttendancePersonSummary,
-    AttendanceStats,
     AttendanceStatus
 } from '../../types/attendance'
 
@@ -93,7 +91,7 @@ export async function updateAttendanceSettings(context: UserContext, settings: P
 // ============================================================================
 
 export async function getEventAttendance(
-    context: UserContext,
+    _context: UserContext,
     eventId: string
 ): Promise<{ data: AttendanceRecord[]; error: Error | null }> {
     if (USE_FAKE_DATA) {
@@ -156,7 +154,7 @@ export async function updateAttendance(
 // ============================================================================
 
 export async function getAttendanceEvents(
-    context: UserContext,
+    _context: UserContext,
     filters: { startDate: Date; endDate: Date; teamId?: string }
 ): Promise<{ data: AttendanceEventSummary[]; error: Error | null }> {
     if (USE_FAKE_DATA) {
@@ -256,8 +254,8 @@ export async function getAttendanceEvents(
 }
 
 export async function getAttendancePeople(
-    context: UserContext,
-    filters: { seasonId?: string, teamId?: string }
+    _context: UserContext,
+    _filters: { seasonId?: string, teamId?: string }
 ): Promise<{ data: AttendancePersonSummary[]; error: Error | null }> {
     // This is expensive without a dedicated stats table.
     // Strategy: Fetch all relevant attendance records and aggregate in JS.

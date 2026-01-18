@@ -1,8 +1,6 @@
 
-import { useState } from 'react'
 import { CalendarEvent, CalendarViewMode, formatEventTimeRange } from '../../types/calendar'
 import type { SportInfo } from '../../utils/sportContext'
-import Card from '../portal/Card'
 import Icon from '../portal/Icon'
 import EventCard from './EventCard'
 
@@ -35,16 +33,6 @@ export default function CalendarGrid({ events, eventSports, viewMode, currentDat
     return days
   }
 
-  const getWeekDays = (date: Date) => {
-      const curr = new Date(date)
-      const first = curr.getDate() - curr.getDay()
-      const days = []
-      for(let i = 0; i < 7; i++) {
-          days.push(new Date(curr.setDate(first + i)))
-      }
-      return days
-  }
-
   const isToday = (date: Date) => {
     const today = new Date()
     return date.getDate() === today.getDate() &&
@@ -60,8 +48,8 @@ export default function CalendarGrid({ events, eventSports, viewMode, currentDat
 
   const renderMonthView = () => {
       const days = getDaysInMonth(currentDate)
-      const weeks = []
-      let week = []
+      const weeks: (Date | null)[][] = []
+      let week: (Date | null)[] = []
       
       days.forEach((day, index) => {
           week.push(day)

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useUserContext } from '../../hooks/useUserContext'
-import { getAllUniformSubmissions } from '../../data/services/uniformsService'
+import { getAllUniformSubmissions, type UniformSubmission } from '../../data/services/uniformsService'
 import { 
   PageHeader, 
   Card, 
@@ -12,17 +12,6 @@ import {
   EmptyState,
   type ColumnConfig 
 } from '../../components/platformAdmin'
-
-interface UniformSubmission {
-  id: string
-  child_id: string
-  team_id: string
-  season_id: string
-  size: string
-  number: string | null
-  status: 'pending' | 'ordered' | 'received' | 'cancelled'
-  created_at: string
-}
 
 export default function UniformOrders() {
   const [submissions, setSubmissions] = useState<UniformSubmission[]>([])
@@ -57,39 +46,36 @@ export default function UniformOrders() {
       render: (row) => `Child ${row.child_id.slice(0, 8)}`
     },
     { 
-      id: 'team_id', 
-      label: 'Team',
-      render: (row) => `Team ${row.team_id.slice(0, 8)}`
-    },
-    { 
-      id: 'size', 
-      label: 'Size'
-    },
-    { 
-      id: 'number', 
-      label: 'Number',
-      render: (row) => row.number || '—'
+      id: 'kit_id', 
+      label: 'Kit',
+      render: (row) => `Kit ${row.kit_id.slice(0, 8)}`
     },
     { 
       id: 'status', 
       label: 'Status',
       render: (row) => {
-        const variantMap = {
-          pending: 'warning' as const,
-          ordered: 'info' as const,
-          received: 'success' as const,
-          cancelled: 'neutral' as const,
+        const variantMap: Record<string, 'warning' | 'info' | 'success' | 'neutral'> = {
+          pending: 'warning',
+          locked: 'info',
+          ordered: 'info',
+          delivered: 'success',
         }
+        const variant = variantMap[row.status] || 'neutral'
         return (
-          <Badge variant={variantMap[row.status]}>
+          <Badge variant={variant}>
             {row.status.toUpperCase()}
           </Badge>
         )
       }
     },
     { 
-      id: 'created_at', 
+      id: 'submitted_at', 
       label: 'Submitted',
+      render: (row) => row.submitted_at ? new Date(row.submitted_at).toLocaleDateString() : '—'
+    },
+    { 
+      id: 'created_at', 
+      label: 'Created',
       render: (row) => new Date(row.created_at).toLocaleDateString()
     },
   ]

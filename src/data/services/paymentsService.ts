@@ -10,11 +10,10 @@
 
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext, PermissionSet } from '../fake/userContext'
-import { calculatePermissions, filterPaymentsByRole } from '../fake/userContext'
+import { calculatePermissions } from '../fake/userContext'
 import {
     fakeFees,
     fakeFeeAssignments,
-    fakePayments,
     getFeeById,
     getFeesForOrg,
     getActiveFeesForOrg,
@@ -25,7 +24,6 @@ import {
     getPaymentsForOrg,
     getTotalPaidForOrg,
     getTotalOutstandingForOrg,
-    getFeeAssignmentWithDetails,
     getFeeAssignmentsWithDetailsForChild,
     formatCurrency,
     type FakeFee,

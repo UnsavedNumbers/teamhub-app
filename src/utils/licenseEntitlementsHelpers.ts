@@ -6,12 +6,7 @@
  */
 
 import { supabase } from '../lib/supabase'
-import type { 
-  LicenseTier, 
-  FeatureEntitlement, 
-  TierFeatureAssignment,
-  EntitlementOverride 
-} from '../types/licenseTiers.types'
+import type { LicenseTier } from '../types/licenseTiers.types'
 
 /**
  * Get current authenticated user for audit logging
@@ -37,7 +32,7 @@ export async function logAuditEvent(params: {
 }) {
   try {
     const user = await getCurrentUser()
-    
+
     const { error } = await supabase.from('entitlement_audit_log').insert({
       actor_id: user.id,
       actor_email: user.email || null,
@@ -72,7 +67,7 @@ export async function saveTierWithLock(
     // Use RPC function for transaction with locking
     // Note: This requires a database function to be created
     // For now, we'll do a simple version check
-    
+
     const { data: currentTier, error: fetchError } = await supabase
       .from('license_tiers')
       .select('version')
@@ -145,7 +140,7 @@ export async function validateFeatureDependencies(
 
     // Check if dependencies are enabled for the target
     const missing: string[] = []
-    
+
     for (const dep of dependencies) {
       const depFeatureId = dep.depends_on_feature_id
       const depName = (dep.feature_entitlements as any)?.display_name || 'Unknown'
@@ -215,11 +210,11 @@ export async function validateFeatureDependencies(
  */
 export function isStripeVerificationValid(verifiedAt: string | null): boolean {
   if (!verifiedAt) return false
-  
+
   const verified = new Date(verifiedAt)
   const now = new Date()
   const hoursSinceVerification = (now.getTime() - verified.getTime()) / (1000 * 60 * 60)
-  
+
   return hoursSinceVerification < 24
 }
 
@@ -232,7 +227,7 @@ export async function getArchivedFeaturesCount(tierId: string): Promise<number> 
     .select('*', { count: 'exact', head: true })
     .eq('license_tier_id', tierId)
     .eq('included', true)
-    .not('feature_entitlement_id', 'in', 
+    .not('feature_entitlement_id', 'in',
       `(SELECT id FROM feature_entitlements WHERE archived_at IS NULL)`)
 
   return count || 0

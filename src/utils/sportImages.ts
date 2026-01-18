@@ -5,7 +5,7 @@
  * Implements multi-level fallback: sport-specific → default → CSS gradient.
  */
 
-import type { SportInfo } from './sportContext'
+// Sport image utilities - SportInfo type used indirectly via sportContext
 
 /**
  * Sport name to image path mapping
@@ -206,18 +206,10 @@ export function getHeroImageSrcSet(
     darkMode: boolean = false
 ): string {
     const basePath = getSportImagePath(sportName, 'hero', darkMode)
-    const baseName = basePath.replace(/\.(jpg|jpeg|png|webp)$/i, '')
 
-    // Generate srcset for different sizes
+    // TODO: Generate srcset for different sizes when responsive images are added
     // Mobile: 800x533, Tablet: 1200x800, Desktop: 2400x1600
-    const sizes = [
-        { width: 800, path: `${baseName}-mobile.jpg` },
-        { width: 1200, path: `${baseName}-tablet.jpg` },
-        { width: 2400, path: `${baseName}-desktop.jpg` },
-    ]
-
     // For now, return single image path (responsive images can be added later)
-    // When responsive images are implemented, return: "path1 800w, path2 1200w, path3 2400w"
     return basePath
 }
 

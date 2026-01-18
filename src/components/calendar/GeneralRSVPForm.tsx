@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getGeneralRSVP, setGeneralRSVP } from '../../data/services/rsvpService'
+import { setGeneralRSVP } from '../../data/services/rsvpService'
 import { useUserContext } from '../../hooks/useUserContext'
 import type { GeneralRSVP, GeneralRSVPStatus } from '../../types/calendar'
 import Icon from '../portal/Icon'

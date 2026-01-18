@@ -1,5 +1,5 @@
 import { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useOrganization } from '../contexts/OrganizationContext'
 import { useLicense } from '../hooks/useLicense'
 import { EmptyState } from './platformAdmin'
@@ -12,6 +12,7 @@ interface LicenseGateProps {
 export function LicenseGate({ children }: LicenseGateProps) {
   const { currentOrganization } = useOrganization()
   const { summary, loading } = useLicense(currentOrganization?.id)
+  const navigate = useNavigate()
 
   if (loading) {
     return (
@@ -28,11 +29,10 @@ export function LicenseGate({ children }: LicenseGateProps) {
           icon="lock"
           title="SUBSCRIPTION REQUIRED"
           description="Access to this feature requires an active subscription. Please update your billing information or start a trial."
-          action={
-            <Link to="/admin/organization/billing" className="pa-btn pa-btn--primary">
-              View Billing & Plans
-            </Link>
-          }
+          action={{
+            label: 'View Billing & Plans',
+            onClick: () => navigate('/admin/organization/billing')
+          }}
         />
       </div>
     )

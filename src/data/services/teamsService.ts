@@ -15,16 +15,14 @@ import {
     getTeamById,
     getTeamsForOrg,
     getActiveTeamsForOrg,
-    getSportsForOrg,
-    getProgramsForOrg,
+
     getActiveSeasonForTeam,
     getTeamMembersForSeason,
     getCoachAssignmentsForTeam,
     getTeamWithDetails,
     type FakeTeam,
     type FakeSeason,
-    type FakeSport,
-    type FakeProgram,
+    type FakeSeason,
     type FakeTeamMember,
     type FakeCoachAssignment,
 } from '../fake/fakeTeams'

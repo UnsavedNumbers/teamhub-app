@@ -4,7 +4,7 @@
  * Determines where to redirect users after login based on their roles
  */
 
-import type { Organization, OrgMemberRole } from '../contexts/OrganizationContext'
+import type { Organization } from '../contexts/OrganizationContext'
 
 /**
  * Check if user has multiple roles (across all organizations or within a single org)
@@ -15,19 +15,19 @@ import type { Organization, OrgMemberRole } from '../contexts/OrganizationContex
  */
 export function hasMultipleRoles(organizations: Organization[]): boolean {
   if (organizations.length === 0) return false
-  
+
   // Check if user has multiple roles within any single organization
   for (const org of organizations) {
     if (org.roles.length > 1) {
       return true
     }
   }
-  
+
   // Check if user has roles in multiple organizations
   if (organizations.length > 1) {
     return true
   }
-  
+
   return false
 }
 
@@ -63,22 +63,22 @@ export function getLoginRedirect(
   if (isPlatformAdmin) {
     return '/platform-admin'
   }
-  
+
   // Priority 2: Multiple roles -> role selection
   if (hasMultipleRoles(organizations)) {
     return '/portal/role-selection'
   }
-  
+
   // Priority 3: Admin role -> admin section
   if (hasAdminRole(organizations)) {
     return '/admin/dashboard'
   }
-  
+
   // Priority 4: Coach role -> admin section
   if (hasCoachRole(organizations)) {
     return '/admin/dashboard'
   }
-  
+
   // Default: Parent dashboard
   return '/portal/dashboard'
 }

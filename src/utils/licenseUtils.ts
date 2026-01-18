@@ -12,6 +12,11 @@ export interface LicenseSummary {
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
   stripePriceId?: string | null
+  // Computed properties used by UI components
+  isTrial?: boolean
+  isGracePeriod?: boolean
+  isValid?: boolean
+  daysRemaining?: number
 }
 
 const MILLISECONDS_IN_DAY = 1000 * 60 * 60 * 24
