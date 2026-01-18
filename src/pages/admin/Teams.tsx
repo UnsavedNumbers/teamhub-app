@@ -26,7 +26,7 @@ export default function Teams() {
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
-  const { profile } = useAuth()
+
   const { currentOrganization } = useOrganization()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
@@ -115,11 +115,10 @@ export default function Teams() {
             icon="groups"
             title="NO TEAMS YET"
             description="Create your first team to start managing rosters and schedules."
-            action={
-              <Button onClick={() => setShowCreateModal(true)}>
-                Create Team
-              </Button>
-            }
+            action={{
+              label: 'Create Team',
+              onClick: () => setShowCreateModal(true)
+            }}
           />
         </Card>
       ) : (

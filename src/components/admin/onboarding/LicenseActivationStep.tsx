@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { getErrorMessage } from '../../../utils/errorUtils'
 import { 
   Card, 
@@ -20,7 +19,6 @@ export default function LicenseActivationStep({
 }: LicenseActivationStepProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const navigate = useNavigate()
 
   const handleActivateLicense = async () => {
     if (!organizationId) { setError('Organization not found'); return }

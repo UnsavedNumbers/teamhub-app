@@ -92,12 +92,12 @@ export default function AdminDashboard() {
       />
 
       <div className="pa-grid pa-grid-3 pa-gap-4 pa-mb-8">
-        <StatCard title="TOTAL TEAMS" value={stats.totalTeams} icon="groups" onClick={() => navigate('/admin/teams')} />
-        <StatCard title="TOTAL PLAYERS" value={stats.totalPlayers} icon="person" onClick={() => navigate('/admin/roster')} />
-        <StatCard title="ACTIVE SEASONS" value={stats.activeSeasons} icon="calendar_today" />
-        <StatCard title="UNPAID FEES" value={stats.outstandingPayments} icon="payments" onClick={() => navigate('/admin/payments')} variant="danger" />
-        <StatCard title="UPCOMING EVENTS" value={stats.upcomingEvents} icon="event" onClick={() => navigate('/admin/events')} />
-        <StatCard title="UNIFORM ORDERS" value={stats.pendingUniformOrders} icon="checkroom" onClick={() => navigate('/admin/uniforms')} />
+        <StatCard label="TOTAL TEAMS" value={stats.totalTeams} icon="groups" onClick={() => navigate('/admin/teams')} />
+        <StatCard label="TOTAL PLAYERS" value={stats.totalPlayers} icon="person" onClick={() => navigate('/admin/roster')} />
+        <StatCard label="ACTIVE SEASONS" value={stats.activeSeasons} icon="calendar_today" />
+        <StatCard label="UNPAID FEES" value={stats.outstandingPayments} icon="payments" onClick={() => navigate('/admin/payments')} />
+        <StatCard label="UPCOMING EVENTS" value={stats.upcomingEvents} icon="event" onClick={() => navigate('/admin/events')} />
+        <StatCard label="UNIFORM ORDERS" value={stats.pendingUniformOrders} icon="checkroom" onClick={() => navigate('/admin/uniforms')} />
       </div>
 
       <div className="pa-grid pa-grid-12 pa-gap-6">

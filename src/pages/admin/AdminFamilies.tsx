@@ -29,20 +29,20 @@ export default function AdminFamilies() {
 
   const columns: ColumnConfig<Family>[] = [
     {
-      key: 'name',
-      header: 'Family Name',
+      id: 'name',
+      label: 'Family Name',
       sortable: true,
       render: (row) => <span className="pa-text-primary" style={{ fontWeight: 600 }}>{row?.name || 'Unnamed Family'}</span>
     },
     {
-      key: 'created_at',
-      header: 'Joined',
+      id: 'created_at',
+      label: 'Joined',
       sortable: true,
       render: (row) => row?.created_at ? new Date(row.created_at).toLocaleDateString() : '-'
     },
     {
-        key: 'id',
-        header: 'Status',
+        id: 'id',
+        label: 'Status',
         render: () => (
              <Badge variant="success">Active</Badge>
         )
@@ -69,12 +69,16 @@ export default function AdminFamilies() {
           </div>
       ) : (
           <PlatformDataTable
-            data={families}
+            rows={families}
             columns={columns}
             loading={loading}
             onRowClick={(f) => navigate(`/admin/families/${f.id}`)}
-            emptyStateTitle="No families found"
-            emptyStateMessage="Get started by creating your first family."
+            emptyMessage="Get started by creating your first family."
+            page={0}
+            rowsPerPage={100}
+            totalCount={families.length}
+            onPageChange={() => {}}
+            onRowsPerPageChange={() => {}}
           />
       )}
     </div>

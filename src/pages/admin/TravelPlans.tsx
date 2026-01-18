@@ -125,7 +125,7 @@ export default function TravelPlans() {
         actions={<Button onClick={() => navigate('/admin/travel/new')}><span className="material-symbols-outlined">add</span>New Plan</Button>} 
       />
       {plans.length === 0 && !loading ? (
-        <Card><EmptyState icon="flight_takeoff" title="NO TRAVEL PLANS" description="Create a travel plan to help your teams prepare for events." action={<Button onClick={() => navigate('/admin/travel/new')}>Create Plan</Button>} /></Card>
+        <Card><EmptyState icon="flight_takeoff" title="NO TRAVEL PLANS" description="Create a travel plan to help your teams prepare for events." action={{ label: 'Create Plan', onClick: () => navigate('/admin/travel/new') }} /></Card>
       ) : (
         <PlatformDataTable columns={columns} rows={plans} loading={loading} totalCount={totalCount} page={page} rowsPerPage={rowsPerPage} onPageChange={setPage} onRowsPerPageChange={setRowsPerPage} onRowClick={r => navigate(`/admin/travel/${r.id}`)} />
       )}

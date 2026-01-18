@@ -147,7 +147,7 @@ export default function Events() {
         actions={<Button onClick={() => navigate('/admin/events/new')}><span className="material-symbols-outlined">add</span>New Event</Button>} 
       />
       {events.length === 0 && !loading ? (
-        <Card><EmptyState icon="event" title="NO UPCOMING EVENTS" description="Create your first event to get started." action={<Button onClick={() => navigate('/admin/events/new')}>Create Event</Button>} /></Card>
+        <Card><EmptyState icon="event" title="NO UPCOMING EVENTS" description="Create your first event to get started." action={{ label: 'Create Event', onClick: () => navigate('/admin/events/new') }} /></Card>
       ) : (
         <PlatformDataTable columns={columns} rows={events} loading={loading} totalCount={totalCount} page={page} rowsPerPage={rowsPerPage} onPageChange={setPage} onRowsPerPageChange={setRowsPerPage} />
       )}

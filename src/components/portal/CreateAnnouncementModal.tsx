@@ -158,7 +158,7 @@ export default function CreateAnnouncementModal({
           </div>
 
           <div className="pt-2 flex justify-end gap-2">
-            <Button variant="outline" onClick={onClose} type="button">
+            <Button variant="secondary" onClick={onClose} type="button">
               Cancel
             </Button>
             <Button variant="primary" type="submit" disabled={loading || !title.trim() || !content.trim() || !teamId}>

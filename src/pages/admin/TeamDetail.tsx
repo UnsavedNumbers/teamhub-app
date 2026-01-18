@@ -166,7 +166,7 @@ export default function TeamDetail() {
             <Button variant="secondary" onClick={() => setShowSeasonModal(true)}>New Season</Button>
           </div>
           {seasons.length === 0 ? (
-            <Card><EmptyState icon="calendar_today" title="NO SEASONS" description="Create a season to start assigning rosters." action={<Button onClick={() => setShowSeasonModal(true)}>Create Season</Button>} /></Card>
+            <Card><EmptyState icon="calendar_today" title="NO SEASONS" description="Create a season to start assigning rosters." action={{ label: 'Create Season', onClick: () => setShowSeasonModal(true) }} /></Card>
           ) : (
             <div className="pa-grid pa-grid-2">
               {seasons.map(s => (

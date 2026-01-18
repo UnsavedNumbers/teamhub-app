@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth'
+
+
 import { useUserContext } from '../../hooks/useUserContext'
 import { useTeamParams } from '../../hooks/useRouteParams'
 import { getTeamDetails, getTeamRoster } from '../../data/services/teamsService'
@@ -33,9 +33,7 @@ export default function Roster() {
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
 
-  const { profile } = useAuth()
   const { context, isReady } = useUserContext()
-  const navigate = useNavigate()
 
   const fetchRoster = useCallback(async (seasonId: string) => {
     if (!teamId || !isReady) return

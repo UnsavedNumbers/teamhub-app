@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../hooks/useAuth'
 import { useUserContext } from '../hooks/useUserContext'
 import { getUniformKits, getUniformSubmissions, type UniformKit } from '../data/services/uniformsService'
 import { getChildren } from '../data/services/familyService'
 import PortalLayout from '../components/portal/PortalLayout'
-import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
+import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
@@ -23,7 +22,6 @@ export default function Uniforms() {
   const [kits, setKits] = useState<UniformKit[]>([])
   const [loading, setLoading] = useState(true)
 
-  const { profile } = useAuth()
   const { context, isReady } = useUserContext()
 
   const fetchData = useCallback(async () => {
@@ -75,9 +73,11 @@ export default function Uniforms() {
         ) : children.length === 0 ? (
           <Card className="text-center py-12">
             <p className="text-slate-500 dark:text-slate-400 mb-6">{t('portal.uniforms.addChildrenFirst')}</p>
-            <Button variant="primary" as={Link} to="/portal/children">
-              {t('portal.uniforms.add')}
-            </Button>
+            <Link to="/portal/children">
+              <Button variant="primary">
+                {t('portal.uniforms.add')}
+              </Button>
+            </Link>
           </Card>
         ) : kits.length === 0 ? (
           <Card className="text-center py-12">

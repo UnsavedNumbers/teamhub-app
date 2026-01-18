@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import React, { ReactNode } from 'react'
 
 interface ConfirmDialogProps {
   open: boolean
@@ -154,4 +154,4 @@ export function ConfirmDialog({
 export default ConfirmDialog
 
 // Need React import for useState
-import React from 'react'
+

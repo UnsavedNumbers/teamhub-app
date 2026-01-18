@@ -14,7 +14,7 @@ export interface UseOfflineResult {
 
 export function useOffline(): UseOfflineResult {
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
-  const [retryCount, setRetryCount] = useState(0)
+
 
   useEffect(() => {
     const handleOnline = () => {
@@ -36,7 +36,6 @@ export function useOffline(): UseOfflineResult {
   }, [])
 
   const retry = () => {
-    setRetryCount(prev => prev + 1)
     // Force a re-check of online status
     setIsOffline(!navigator.onLine)
   }

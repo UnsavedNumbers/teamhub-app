@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getAllUniformSubmissions, type UniformSubmission } from '../../data/services/uniformsService'
 import { 
@@ -19,7 +18,6 @@ export default function UniformOrders() {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(25)
 
-  const { profile } = useAuth()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 

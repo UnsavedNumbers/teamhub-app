@@ -4,6 +4,7 @@ import {
     fakeUniformKits,
     fakeUniformItems,
     fakeUniformSubmissions,
+    getUniformKitsForOrg,
     type FakeUniformKit,
     type FakeUniformItem,
     type FakeUniformSubmission,
@@ -69,7 +70,7 @@ export async function getUniformKitItems(
  * Get submissions for the user (or specific children)
  */
 export async function getUniformSubmissions(
-    context: UserContext,
+    _context: UserContext,
     childIds?: string[]
 ): Promise<{ data: UniformSubmission[]; error: Error | null }> {
     await simulateDelay()
@@ -133,7 +134,7 @@ export async function getUniformSizeSelections(
  * Submit uniform sizes
  */
 export async function submitUniformSizes(
-    context: UserContext,
+    _context: UserContext,
     kitId: string,
     childId: string,
     items: { item_id: string, size: string }[]

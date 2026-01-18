@@ -35,7 +35,7 @@ export default function Payments() {
     collected: 0,
   })
 
-  const { profile } = useAuth()
+
   const { currentOrganization } = useOrganization()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
