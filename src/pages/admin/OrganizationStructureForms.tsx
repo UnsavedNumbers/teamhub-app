@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import { useT } from '../../i18n/useI18n'
 import { getSports, getPrograms, createSport, createProgram, updateSport, updateProgram } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
 import { createLevel, updateLevel } from '../../data/services/levelsService'
@@ -15,6 +16,12 @@ interface RadioOption {
   value: string
   label: string
   helper?: string
+}
+
+type FormType = 'sport' | 'program' | 'level' | 'team' | 'season'
+
+function isFormType(value: string | null): value is FormType {
+  return value === 'sport' || value === 'program' || value === 'level' || value === 'team' || value === 'season'
 }
 
 function RadioGroup({
@@ -67,6 +74,7 @@ function RadioGroup({
 
 
 export default function OrganizationStructureForms() {
+  const t = useT()
   const { context, isReady } = useUserContext()
   const { currentOrganization } = useOrganization()
   const location = useLocation()
@@ -82,80 +90,6 @@ export default function OrganizationStructureForms() {
     team: false,
     season: false,
   })
-
-  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search])
-  const editType = searchParams.get('edit')
-  const editId = searchParams.get('id')
-
-  useEffect(() => {
-    if (!editType || !editId) return
-
-    if (editType === 'sport') {
-      const sport = sports.find((s) => s.id === editId)
-      if (sport) {
-        setSportForm((prev) => ({
-          ...prev,
-          name: sport.name,
-        }))
-      }
-    }
-
-    if (editType === 'program') {
-      const program = programs.find((p) => p.id === editId)
-      if (program) {
-        setProgramForm((prev) => ({
-          ...prev,
-          sportId: program.sport_id,
-          gender: program.gender_category,
-          name: program.name,
-          nameTouched: true,
-        }))
-      }
-    }
-
-    if (editType === 'level') {
-      const level = levels.find((l) => l.id === editId)
-      if (level) {
-        setLevelForm((prev) => ({
-          ...prev,
-          programId: level.program_id,
-          name: level.name,
-          type: level.level_type,
-          ageMin: level.age_min ? String(level.age_min) : '',
-          ageMax: level.age_max ? String(level.age_max) : '',
-          gradeMin: level.grade_min ? String(level.grade_min) : '',
-          gradeMax: level.grade_max ? String(level.grade_max) : '',
-          skillDescription: level.description || '',
-        }))
-      }
-    }
-
-    if (editType === 'team') {
-      const team = teams.find((t) => t.id === editId)
-      if (team) {
-        setTeamForm((prev) => ({
-          ...prev,
-          levelId: team.level_id ?? '',
-          name: team.name,
-          seasonId: '',
-          isActive: team.is_active ?? true,
-        }))
-      }
-    }
-
-    if (editType === 'season') {
-      const season = seasons.find((s) => s.id === editId)
-      if (season) {
-        setSeasonForm((prev) => ({
-          ...prev,
-          name: season.name,
-          startDate: season.start_date,
-          endDate: season.end_date,
-          isActive: season.is_active ?? false,
-        }))
-      }
-    }
-  }, [editType, editId, sports, programs, levels, teams, seasons])
 
   const [sports, setSports] = useState<Sport[]>([])
   const [programs, setPrograms] = useState<Program[]>([])
@@ -202,8 +136,19 @@ export default function OrganizationStructureForms() {
     isActive: false,
   })
 
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search])
+  const editTypeParam = searchParams.get('edit')
+  const editType = isFormType(editTypeParam) ? editTypeParam : null
+  const editId = searchParams.get('id')?.trim() || null
+  const typeParam = searchParams.get('type')
+  const requestedFormType = isFormType(typeParam) ? typeParam : null
+  const activeFormType = editType ?? requestedFormType
+  const [editInitialized, setEditInitialized] = useState(false)
+
   useEffect(() => {
     if (!isReady) return
+
+    let isActive = true
 
     const load = async () => {
       setLoading(true)
@@ -218,51 +163,58 @@ export default function OrganizationStructureForms() {
           getSeasons(context),
         ])
 
+        if (!isActive) return
+
         setSports(sportsResult.data as Sport[])
         setPrograms(programsResult.data as Program[])
         setLevels(levelsResult.data as Level[])
         setTeams(teamsResult.data as Team[])
         setSeasons(seasonsResult.data as Season[])
-      } catch (err) {
-        setLoadError(err instanceof Error ? err.message : 'Failed to load organization data')
+      } catch (_err) {
+        if (!isActive) return
+        setLoadError(t('admin.structureForms.errors.loadFailed'))
       } finally {
-        setLoading(false)
+        if (isActive) setLoading(false)
       }
     }
 
     load()
-  }, [context, isReady])
+
+    return () => {
+      isActive = false
+    }
+  }, [context, isReady, t])
 
   const sportOptions = useMemo(
     () => [
-      { value: '', label: 'Select sport' },
+      { value: '', label: t('admin.structureForms.fields.programSport.select') },
       ...sports.map((sport) => ({ value: sport.id, label: sport.name })),
     ],
-    [sports]
+    [sports, t]
   )
 
   const programOptions = useMemo(
     () => [
-      { value: '', label: 'Select program' },
+      { value: '', label: t('admin.structureForms.fields.levelProgram.select') },
       ...programs.map((program) => ({ value: program.id, label: program.name })),
     ],
-    [programs]
+    [programs, t]
   )
 
   const levelOptions = useMemo(
     () => [
-      { value: '', label: 'Select level' },
+      { value: '', label: t('admin.structureForms.fields.teamLevel.select') },
       ...levels.map((level) => ({ value: level.id, label: level.name })),
     ],
-    [levels]
+    [levels, t]
   )
 
   const seasonOptions = useMemo(
     () => [
-      { value: '', label: 'Select season' },
+      { value: '', label: t('admin.structureForms.fields.teamSeason.select') },
       ...seasons.map((season) => ({ value: season.id, label: season.name })),
     ],
-    [seasons]
+    [seasons, t]
   )
 
   const sportById = useMemo(() => new Map(sports.map((s) => [s.id, s])), [sports])
@@ -282,82 +234,192 @@ export default function OrganizationStructureForms() {
     setProgramForm((prev) => ({ ...prev, name: suggested }))
   }, [programForm.sportId, programForm.gender, programForm.nameTouched, sportById])
 
-  const activeFormType = editType ?? searchParams.get('type') ?? ''
+  useEffect(() => {
+    setEditInitialized(false)
+  }, [editType, editId])
+
+  useEffect(() => {
+    if (editTypeParam && !editType) {
+      setActionError(t('admin.structureForms.errors.invalidParams'))
+      return
+    }
+
+    if (!editType && typeParam && !requestedFormType) {
+      setActionError(t('admin.structureForms.errors.invalidParams'))
+      return
+    }
+
+    if (editType && !editId) {
+      setActionError(t('admin.structureForms.errors.invalidParams'))
+      return
+    }
+
+    setActionError(null)
+  }, [editType, editId, editTypeParam, typeParam, requestedFormType, t])
+
+  useEffect(() => {
+    if (!editType || !editId || loading || editInitialized) return
+
+    setActionError(null)
+    setSuccessMessage(null)
+
+    const setNotFound = () => {
+      setActionError(t('admin.structureForms.errors.notFound', { item: t(`admin.structureForms.items.${editType}`) }))
+    }
+
+    if (editType === 'sport') {
+      const sport = sports.find((s) => s.id === editId)
+      if (!sport) {
+        setNotFound()
+      } else {
+        setSportForm((prev) => ({
+          ...prev,
+          name: sport.name,
+        }))
+      }
+    }
+
+    if (editType === 'program') {
+      const program = programs.find((p) => p.id === editId)
+      if (!program) {
+        setNotFound()
+      } else {
+        setProgramForm((prev) => ({
+          ...prev,
+          sportId: program.sport_id,
+          gender: program.gender_category,
+          name: program.name,
+          nameTouched: true,
+        }))
+      }
+    }
+
+    if (editType === 'level') {
+      const level = levels.find((l) => l.id === editId)
+      if (!level) {
+        setNotFound()
+      } else {
+        setLevelForm((prev) => ({
+          ...prev,
+          programId: level.program_id,
+          name: level.name,
+          type: level.level_type,
+          ageMin: level.age_min ? String(level.age_min) : '',
+          ageMax: level.age_max ? String(level.age_max) : '',
+          gradeMin: level.grade_min ? String(level.grade_min) : '',
+          gradeMax: level.grade_max ? String(level.grade_max) : '',
+          skillDescription: level.description || '',
+        }))
+      }
+    }
+
+    if (editType === 'team') {
+      const team = teams.find((t) => t.id === editId)
+      if (!team) {
+        setNotFound()
+      } else {
+        setTeamForm((prev) => ({
+          ...prev,
+          levelId: team.level_id ?? '',
+          name: team.name,
+          seasonId: '',
+          isActive: team.is_active ?? true,
+        }))
+      }
+    }
+
+    if (editType === 'season') {
+      const season = seasons.find((s) => s.id === editId)
+      if (!season) {
+        setNotFound()
+      } else {
+        setSeasonForm((prev) => ({
+          ...prev,
+          name: season.name,
+          startDate: season.start_date,
+          endDate: season.end_date,
+          isActive: season.is_active ?? false,
+        }))
+      }
+    }
+
+    setEditInitialized(true)
+  }, [editType, editId, loading, editInitialized, sports, programs, levels, teams, seasons, t])
 
   const sportNameError = touched['sport.name'] && !sportForm.name.trim()
-    ? 'Sport name is required.'
+    ? t('admin.structureForms.validation.sportNameRequired')
     : undefined
 
   const programSportError = touched['program.sport'] && !programForm.sportId
-    ? 'Select a parent sport.'
+    ? t('admin.structureForms.validation.programSportRequired')
     : undefined
 
   const programGenderError = touched['program.gender'] && !programForm.gender
-    ? 'Select a gender category.'
+    ? t('admin.structureForms.validation.programGenderRequired')
     : undefined
 
   const programNameError = touched['program.name'] && !programForm.name.trim()
-    ? 'Program name is required.'
+    ? t('admin.structureForms.validation.programNameRequired')
     : undefined
 
   const levelProgramError = touched['level.program'] && !levelForm.programId
-    ? 'Select a parent program.'
+    ? t('admin.structureForms.validation.levelProgramRequired')
     : undefined
 
   const levelNameError = touched['level.name'] && !levelForm.name.trim()
-    ? 'Level name is required.'
+    ? t('admin.structureForms.validation.levelNameRequired')
     : undefined
 
   const levelTypeError = touched['level.type'] && !levelForm.type
-    ? 'Select a level type.'
+    ? t('admin.structureForms.validation.levelTypeRequired')
     : undefined
 
   const levelAgeMinError = touched['level.ageMin'] && !levelForm.ageMin
-    ? 'Minimum age is required.'
+    ? t('admin.structureForms.validation.levelAgeMinRequired')
     : undefined
 
   const levelAgeMaxError = touched['level.ageMax'] && !levelForm.ageMax
-    ? 'Maximum age is required.'
+    ? t('admin.structureForms.validation.levelAgeMaxRequired')
     : undefined
 
   const levelGradeMinError = touched['level.gradeMin'] && !levelForm.gradeMin
-    ? 'Minimum grade is required.'
+    ? t('admin.structureForms.validation.levelGradeMinRequired')
     : undefined
 
   const levelGradeMaxError = touched['level.gradeMax'] && !levelForm.gradeMax
-    ? 'Maximum grade is required.'
+    ? t('admin.structureForms.validation.levelGradeMaxRequired')
     : undefined
 
   const levelSkillError = touched['level.skillDescription'] && !levelForm.skillDescription.trim()
-    ? 'Short description is required.'
+    ? t('admin.structureForms.validation.levelSkillRequired')
     : undefined
 
   const teamLevelError = touched['team.level'] && !teamForm.levelId
-    ? 'Select a parent level.'
+    ? t('admin.structureForms.validation.teamLevelRequired')
     : undefined
 
   const teamSeasonError = touched['team.season'] && !teamForm.seasonId
-    ? 'Select a season.'
+    ? t('admin.structureForms.validation.teamSeasonRequired')
     : undefined
 
   const teamNameError = touched['team.name'] && !teamForm.name.trim()
-    ? 'Team name is required.'
+    ? t('admin.structureForms.validation.teamNameRequired')
     : undefined
 
   const seasonNameError = touched['season.name'] && !seasonForm.name.trim()
-    ? 'Season name is required.'
+    ? t('admin.structureForms.validation.seasonNameRequired')
     : undefined
 
   const seasonStartError = touched['season.startDate'] && !seasonForm.startDate
-    ? 'Start date is required.'
+    ? t('admin.structureForms.validation.seasonStartRequired')
     : undefined
 
   const seasonEndError = touched['season.endDate'] && !seasonForm.endDate
-    ? 'End date is required.'
+    ? t('admin.structureForms.validation.seasonEndRequired')
     : undefined
 
   const seasonRangeError = touched['season.endDate'] && seasonForm.startDate && seasonForm.endDate && seasonForm.endDate < seasonForm.startDate
-    ? 'End date must be on or after the start date.'
+    ? t('admin.structureForms.validation.seasonRangeInvalid')
     : undefined
 
   const canCreateSport = !!sportForm.name.trim()
@@ -372,19 +434,21 @@ export default function OrganizationStructureForms() {
   const isSeasonRangeValid = !!seasonForm.startDate && !!seasonForm.endDate && seasonForm.endDate >= seasonForm.startDate
   const canCreateSeason = !!seasonForm.name.trim() && isSeasonRangeValid
 
-  const formLabels: Record<string, string> = {
-    sport: 'Sport',
-    program: 'Program',
-    level: 'Level',
-    team: 'Team',
-    season: 'Season',
+  const formLabels: Record<FormType, string> = {
+    sport: t('admin.structureForms.items.sport'),
+    program: t('admin.structureForms.items.program'),
+    level: t('admin.structureForms.items.level'),
+    team: t('admin.structureForms.items.team'),
+    season: t('admin.structureForms.items.season'),
   }
 
-  const activeFormLabel = activeFormType ? formLabels[activeFormType] ?? 'Item' : 'Organization Structure'
-  const pageTitle = activeFormType ? `${editType ? 'Edit' : 'Add'} ${activeFormLabel}` : 'Organization Structure'
+  const activeFormLabel = activeFormType ? formLabels[activeFormType] : t('admin.structureForms.breadcrumbs.structure')
+  const pageTitle = activeFormType
+    ? t(editType ? 'admin.structureForms.pageTitle.edit' : 'admin.structureForms.pageTitle.add', { item: activeFormLabel })
+    : t('admin.structureForms.pageTitle.default')
   const pageSubtitle = activeFormType
-    ? 'Complete the required details to continue.'
-    : 'Choose what you want to add or edit.'
+    ? t('admin.structureForms.pageSubtitle.add')
+    : t('admin.structureForms.pageSubtitle.select')
 
   if (loading) {
     return <div className="pa-skeleton" style={{ height: '500px' }} />
@@ -397,7 +461,7 @@ export default function OrganizationStructureForms() {
         title={pageTitle}
         subtitle={pageSubtitle}
         breadcrumbs={[
-          { label: 'Organizations', path: '/admin/organization/structure' },
+          { label: t('admin.structureForms.breadcrumbs.organizations'), path: '/admin/organization/structure' },
           { label: activeFormLabel },
         ]}
       />
@@ -421,33 +485,36 @@ export default function OrganizationStructureForms() {
       )}
 
       {!activeFormType && (
-        <Card title="What would you like to add?" className="pa-mb-6">
+        <Card title={t('admin.structureForms.selector.title')} className="pa-mb-6">
           <div className="pa-flex pa-flex-col pa-gap-3">
             <Link to="/admin/organization/structure/forms?type=sport">
-              <Button>Add Sport</Button>
+              <Button>{t('admin.structureForms.actions.addItem', { item: formLabels.sport })}</Button>
             </Link>
             <Link to="/admin/organization/structure/forms?type=program">
-              <Button variant="secondary">Add Program</Button>
+              <Button variant="secondary">{t('admin.structureForms.actions.addItem', { item: formLabels.program })}</Button>
             </Link>
             <Link to="/admin/organization/structure/forms?type=level">
-              <Button variant="secondary">Add Level</Button>
+              <Button variant="secondary">{t('admin.structureForms.actions.addItem', { item: formLabels.level })}</Button>
             </Link>
             <Link to="/admin/organization/structure/forms?type=team">
-              <Button variant="secondary">Add Team</Button>
+              <Button variant="secondary">{t('admin.structureForms.actions.addItem', { item: formLabels.team })}</Button>
             </Link>
             <Link to="/admin/organization/structure/forms?type=season">
-              <Button variant="secondary">Add Season</Button>
+              <Button variant="secondary">{t('admin.structureForms.actions.addItem', { item: formLabels.season })}</Button>
             </Link>
           </div>
         </Card>
       )}
 
       {activeFormType === 'sport' && (
-      <Card title={editType === 'sport' ? 'Edit Sport' : 'Add Sport'} className="pa-mb-6">
+      <Card
+        title={t(editType === 'sport' ? 'admin.structureForms.pageTitle.edit' : 'admin.structureForms.pageTitle.add', { item: formLabels.sport })}
+        className="pa-mb-6"
+      >
         <div className="pa-flex pa-flex-col pa-gap-4">
           <Input
-            label="Sport name"
-            placeholder="e.g. Soccer"
+            label={t('admin.structureForms.fields.sportName.label')}
+            placeholder={t('admin.structureForms.fields.sportName.placeholder')}
             value={sportForm.name}
             onChange={(e) => setSportForm((prev) => ({ ...prev, name: e.target.value }))}
             onBlur={() => markTouched('sport.name')}
@@ -466,41 +533,43 @@ export default function OrganizationStructureForms() {
               if (editType === 'sport' && editId) {
                 const result = await updateSport(context, editId, { name: sportForm.name.trim() })
                 if (result.error) {
-                  setActionError(result.error.message)
+                  setActionError(t('admin.structureForms.errors.saveFailed', { item: formLabels.sport }))
                 } else if (result.data) {
                   setSports((prev) => prev.map((s) => (s.id === editId ? (result.data as Sport) : s)))
-                  setSuccessMessage('Sport updated successfully.')
+                  setSuccessMessage(t('admin.structureForms.messages.updated', { item: formLabels.sport }))
                 }
               } else {
                 const result = await createSport(context, {
                   org_id: currentOrganization.id,
                   name: sportForm.name.trim(),
-                  icon: null,
                   color: '#137fec',
                 })
                 if (result.error) {
-                  setActionError(result.error.message)
+                  setActionError(t('admin.structureForms.errors.saveFailed', { item: formLabels.sport }))
                 } else if (result.data) {
                   setSports((prev) => [result.data as Sport, ...prev])
                   setSportForm((prev) => ({ ...prev, name: '' }))
-                  setSuccessMessage('Sport created successfully.')
+                  setSuccessMessage(t('admin.structureForms.messages.created', { item: formLabels.sport }))
                 }
               }
 
               setSubmitting((prev) => ({ ...prev, sport: false }))
             }}
           >
-            {editType === 'sport' ? 'Update Sport' : 'Create Sport'}
+            {t(editType === 'sport' ? 'admin.structureForms.actions.updateItem' : 'admin.structureForms.actions.createItem', { item: formLabels.sport })}
           </Button>
         </div>
       </Card>
       )}
 
       {activeFormType === 'program' && (
-      <Card title={editType === 'program' ? 'Edit Program' : 'Add Program'} className="pa-mb-6">
+      <Card
+        title={t(editType === 'program' ? 'admin.structureForms.pageTitle.edit' : 'admin.structureForms.pageTitle.add', { item: formLabels.program })}
+        className="pa-mb-6"
+      >
         <div className="pa-flex pa-flex-col pa-gap-4">
           <Select
-            label="Parent sport"
+            label={t('admin.structureForms.fields.programSport.label')}
             required
             value={programForm.sportId}
             onChange={(e) => setProgramForm((prev) => ({ ...prev, sportId: e.target.value }))}
@@ -510,24 +579,24 @@ export default function OrganizationStructureForms() {
           />
           <RadioGroup
             name="program-gender"
-            label="Gender category"
+            label={t('admin.structureForms.fields.programGender.label')}
             required
             value={programForm.gender}
             onChange={(value) => setProgramForm((prev) => ({ ...prev, gender: value as GenderCategory }))}
             options={[
-              { value: 'boys', label: 'Boys' },
-              { value: 'girls', label: 'Girls' },
-              { value: 'coed', label: 'Co-ed' },
+              { value: 'boys', label: t('admin.structureForms.options.gender.boys') },
+              { value: 'girls', label: t('admin.structureForms.options.gender.girls') },
+              { value: 'coed', label: t('admin.structureForms.options.gender.coed') },
             ]}
             error={programGenderError}
           />
           <Input
-            label="Program name"
-            placeholder="e.g. Girls Soccer"
+            label={t('admin.structureForms.fields.programName.label')}
+            placeholder={t('admin.structureForms.fields.programName.placeholder')}
             value={programForm.name}
             onChange={(e) => setProgramForm((prev) => ({ ...prev, name: e.target.value, nameTouched: true }))}
             onBlur={() => markTouched('program.name')}
-            helper="Suggested from gender and sport. You can edit it any time."
+            helper={t('admin.structureForms.fields.programName.helper')}
             required
             error={programNameError}
           />
@@ -544,13 +613,13 @@ export default function OrganizationStructureForms() {
                 const result = await updateProgram(context, editId, {
                   name: programForm.name.trim(),
                   gender_category: programForm.gender as GenderCategory,
-                  description: null,
+                  description: undefined,
                 })
                 if (result.error) {
-                  setActionError(result.error.message)
+                  setActionError(t('admin.structureForms.errors.saveFailed', { item: formLabels.program }))
                 } else if (result.data) {
                   setPrograms((prev) => prev.map((p) => (p.id === editId ? (result.data as Program) : p)))
-                  setSuccessMessage('Program updated successfully.')
+                  setSuccessMessage(t('admin.structureForms.messages.updated', { item: formLabels.program }))
                 }
               } else {
                 const result = await createProgram(context, {
@@ -558,10 +627,10 @@ export default function OrganizationStructureForms() {
                   sport_id: programForm.sportId,
                   name: programForm.name.trim(),
                   gender_category: programForm.gender as GenderCategory,
-                  description: null,
+                  description: undefined,
                 })
                 if (result.error) {
-                  setActionError(result.error.message)
+                  setActionError(t('admin.structureForms.errors.saveFailed', { item: formLabels.program }))
                 } else if (result.data) {
                   setPrograms((prev) => [result.data as Program, ...prev])
                   setProgramForm((prev) => ({
@@ -571,24 +640,27 @@ export default function OrganizationStructureForms() {
                     gender: 'coed',
                     nameTouched: false,
                   }))
-                  setSuccessMessage('Program created successfully.')
+                  setSuccessMessage(t('admin.structureForms.messages.created', { item: formLabels.program }))
                 }
               }
 
               setSubmitting((prev) => ({ ...prev, program: false }))
             }}
           >
-            {editType === 'program' ? 'Update Program' : 'Create Program'}
+            {t(editType === 'program' ? 'admin.structureForms.actions.updateItem' : 'admin.structureForms.actions.createItem', { item: formLabels.program })}
           </Button>
         </div>
       </Card>
       )}
 
       {activeFormType === 'level' && (
-      <Card title={editType === 'level' ? 'Edit Level' : 'Add Level'} className="pa-mb-6">
+      <Card
+        title={t(editType === 'level' ? 'admin.structureForms.pageTitle.edit' : 'admin.structureForms.pageTitle.add', { item: formLabels.level })}
+        className="pa-mb-6"
+      >
         <div className="pa-flex pa-flex-col pa-gap-4">
           <Select
-            label="Parent program"
+            label={t('admin.structureForms.fields.levelProgram.label')}
             required
             value={levelForm.programId}
             onChange={(e) => setLevelForm((prev) => ({ ...prev, programId: e.target.value }))}
@@ -597,8 +669,8 @@ export default function OrganizationStructureForms() {
             error={levelProgramError}
           />
           <Input
-            label="Level name"
-            placeholder="e.g. U12 or Varsity"
+            label={t('admin.structureForms.fields.levelName.label')}
+            placeholder={t('admin.structureForms.fields.levelName.placeholder')}
             value={levelForm.name}
             onChange={(e) => setLevelForm((prev) => ({ ...prev, name: e.target.value }))}
             onBlur={() => markTouched('level.name')}
@@ -607,14 +679,14 @@ export default function OrganizationStructureForms() {
           />
           <RadioGroup
             name="level-type"
-            label="Level type"
+            label={t('admin.structureForms.fields.levelType.label')}
             required
             value={levelForm.type}
             onChange={(value) => setLevelForm((prev) => ({ ...prev, type: value as LevelType }))}
             options={[
-              { value: 'age_based', label: 'Age-based' },
-              { value: 'grade_based', label: 'Grade-based' },
-              { value: 'skill_based', label: 'Skill-based' },
+              { value: 'age_based', label: t('admin.structureForms.options.levelType.ageBased') },
+              { value: 'grade_based', label: t('admin.structureForms.options.levelType.gradeBased') },
+              { value: 'skill_based', label: t('admin.structureForms.options.levelType.skillBased') },
             ]}
             error={levelTypeError}
           />
@@ -622,7 +694,7 @@ export default function OrganizationStructureForms() {
           {levelForm.type === 'age_based' && (
             <>
               <Input
-                label="Minimum age"
+                label={t('admin.structureForms.fields.levelAgeMin.label')}
                 type="number"
                 value={levelForm.ageMin}
                 onChange={(e) => setLevelForm((prev) => ({ ...prev, ageMin: e.target.value }))}
@@ -631,7 +703,7 @@ export default function OrganizationStructureForms() {
                 error={levelAgeMinError}
               />
               <Input
-                label="Maximum age"
+                label={t('admin.structureForms.fields.levelAgeMax.label')}
                 type="number"
                 value={levelForm.ageMax}
                 onChange={(e) => setLevelForm((prev) => ({ ...prev, ageMax: e.target.value }))}
@@ -645,7 +717,7 @@ export default function OrganizationStructureForms() {
           {levelForm.type === 'grade_based' && (
             <>
               <Input
-                label="Minimum grade"
+                label={t('admin.structureForms.fields.levelGradeMin.label')}
                 type="number"
                 value={levelForm.gradeMin}
                 onChange={(e) => setLevelForm((prev) => ({ ...prev, gradeMin: e.target.value }))}
@@ -654,7 +726,7 @@ export default function OrganizationStructureForms() {
                 error={levelGradeMinError}
               />
               <Input
-                label="Maximum grade"
+                label={t('admin.structureForms.fields.levelGradeMax.label')}
                 type="number"
                 value={levelForm.gradeMax}
                 onChange={(e) => setLevelForm((prev) => ({ ...prev, gradeMax: e.target.value }))}
@@ -667,8 +739,8 @@ export default function OrganizationStructureForms() {
 
           {levelForm.type === 'skill_based' && (
             <Input
-              label="Eligibility description"
-              placeholder="Short description of skill requirements"
+              label={t('admin.structureForms.fields.levelSkillDescription.label')}
+              placeholder={t('admin.structureForms.fields.levelSkillDescription.placeholder')}
               value={levelForm.skillDescription}
               onChange={(e) => setLevelForm((prev) => ({ ...prev, skillDescription: e.target.value }))}
               onBlur={() => markTouched('level.skillDescription')}
@@ -689,19 +761,19 @@ export default function OrganizationStructureForms() {
                 const result = await updateLevel(context, editId, {
                   name: levelForm.name.trim(),
                   level_type: levelForm.type as LevelType,
-                  description: levelForm.skillDescription?.trim() || null,
-                  age_min: levelForm.ageMin ? Number(levelForm.ageMin) : null,
-                  age_max: levelForm.ageMax ? Number(levelForm.ageMax) : null,
-                  grade_min: levelForm.gradeMin ? Number(levelForm.gradeMin) : null,
-                  grade_max: levelForm.gradeMax ? Number(levelForm.gradeMax) : null,
-                  skill_min: levelForm.type === 'skill_based' ? 1 : null,
-                  skill_max: levelForm.type === 'skill_based' ? 5 : null,
+                  description: levelForm.skillDescription?.trim() || undefined,
+                  age_min: levelForm.ageMin ? Number(levelForm.ageMin) : undefined,
+                  age_max: levelForm.ageMax ? Number(levelForm.ageMax) : undefined,
+                  grade_min: levelForm.gradeMin ? Number(levelForm.gradeMin) : undefined,
+                  grade_max: levelForm.gradeMax ? Number(levelForm.gradeMax) : undefined,
+                  skill_min: levelForm.type === 'skill_based' ? 1 : undefined,
+                  skill_max: levelForm.type === 'skill_based' ? 5 : undefined,
                 })
                 if (result.error) {
-                  setActionError(result.error.message)
+                  setActionError(t('admin.structureForms.errors.saveFailed', { item: formLabels.level }))
                 } else if (result.data) {
                   setLevels((prev) => prev.map((l) => (l.id === editId ? (result.data as Level) : l)))
-                  setSuccessMessage('Level updated successfully.')
+                  setSuccessMessage(t('admin.structureForms.messages.updated', { item: formLabels.level }))
                 }
               } else {
                 const result = await createLevel(context, {
@@ -709,16 +781,16 @@ export default function OrganizationStructureForms() {
                   program_id: levelForm.programId,
                   name: levelForm.name.trim(),
                   level_type: levelForm.type as LevelType,
-                  description: levelForm.skillDescription?.trim() || null,
-                  age_min: levelForm.ageMin ? Number(levelForm.ageMin) : null,
-                  age_max: levelForm.ageMax ? Number(levelForm.ageMax) : null,
-                  grade_min: levelForm.gradeMin ? Number(levelForm.gradeMin) : null,
-                  grade_max: levelForm.gradeMax ? Number(levelForm.gradeMax) : null,
-                  skill_min: levelForm.type === 'skill_based' ? 1 : null,
-                  skill_max: levelForm.type === 'skill_based' ? 5 : null,
+                  description: levelForm.skillDescription?.trim() || undefined,
+                  age_min: levelForm.ageMin ? Number(levelForm.ageMin) : undefined,
+                  age_max: levelForm.ageMax ? Number(levelForm.ageMax) : undefined,
+                  grade_min: levelForm.gradeMin ? Number(levelForm.gradeMin) : undefined,
+                  grade_max: levelForm.gradeMax ? Number(levelForm.gradeMax) : undefined,
+                  skill_min: levelForm.type === 'skill_based' ? 1 : undefined,
+                  skill_max: levelForm.type === 'skill_based' ? 5 : undefined,
                 })
                 if (result.error) {
-                  setActionError(result.error.message)
+                  setActionError(t('admin.structureForms.errors.saveFailed', { item: formLabels.level }))
                 } else if (result.data) {
                   setLevels((prev) => [result.data as Level, ...prev])
                   setLevelForm((prev) => ({
@@ -732,24 +804,27 @@ export default function OrganizationStructureForms() {
                     gradeMax: '',
                     skillDescription: '',
                   }))
-                  setSuccessMessage('Level created successfully.')
+                  setSuccessMessage(t('admin.structureForms.messages.created', { item: formLabels.level }))
                 }
               }
 
               setSubmitting((prev) => ({ ...prev, level: false }))
             }}
           >
-            {editType === 'level' ? 'Update Level' : 'Create Level'}
+            {t(editType === 'level' ? 'admin.structureForms.actions.updateItem' : 'admin.structureForms.actions.createItem', { item: formLabels.level })}
           </Button>
         </div>
       </Card>
       )}
 
       {activeFormType === 'team' && (
-      <Card title={editType === 'team' ? 'Edit Team' : 'Add Team'} className="pa-mb-6">
+      <Card
+        title={t(editType === 'team' ? 'admin.structureForms.pageTitle.edit' : 'admin.structureForms.pageTitle.add', { item: formLabels.team })}
+        className="pa-mb-6"
+      >
         <div className="pa-flex pa-flex-col pa-gap-4">
           <Select
-            label="Parent level"
+            label={t('admin.structureForms.fields.teamLevel.label')}
             required
             value={teamForm.levelId}
             onChange={(e) => setTeamForm((prev) => ({ ...prev, levelId: e.target.value }))}
@@ -759,7 +834,7 @@ export default function OrganizationStructureForms() {
           />
           {!isEditingTeam && (
             <Select
-              label="Season"
+              label={t('admin.structureForms.fields.teamSeason.label')}
               required
               value={teamForm.seasonId}
               onChange={(e) => setTeamForm((prev) => ({ ...prev, seasonId: e.target.value }))}
@@ -769,8 +844,8 @@ export default function OrganizationStructureForms() {
             />
           )}
           <Input
-            label="Team name"
-            placeholder="e.g. U10 Blue"
+            label={t('admin.structureForms.fields.teamName.label')}
+            placeholder={t('admin.structureForms.fields.teamName.placeholder')}
             value={teamForm.name}
             onChange={(e) => setTeamForm((prev) => ({ ...prev, name: e.target.value }))}
             onBlur={() => markTouched('team.name')}
@@ -780,7 +855,7 @@ export default function OrganizationStructureForms() {
           <Checkbox
             checked={teamForm.isActive}
             onChange={(e) => setTeamForm((prev) => ({ ...prev, isActive: e.target.checked }))}
-            label="Team is active"
+            label={t('admin.structureForms.fields.teamActive.label')}
           />
           <Button
             disabled={!canCreateTeam || submitting.team}
@@ -802,10 +877,10 @@ export default function OrganizationStructureForms() {
                   is_active: teamForm.isActive,
                 })
                 if (result.error) {
-                  setActionError(result.error.message)
+                  setActionError(t('admin.structureForms.errors.saveFailed', { item: formLabels.team }))
                 } else if (result.data) {
                   setTeams((prev) => prev.map((t) => (t.id === editId ? (result.data as Team) : t)))
-                  setSuccessMessage('Team updated successfully.')
+                  setSuccessMessage(t('admin.structureForms.messages.updated', { item: formLabels.team }))
                 }
               } else {
                 const result = await createTeam(context, {
@@ -818,7 +893,7 @@ export default function OrganizationStructureForms() {
                   season_id: teamForm.seasonId,
                 })
                 if (result.error) {
-                  setActionError(result.error.message)
+                  setActionError(t('admin.structureForms.errors.saveFailed', { item: formLabels.team }))
                 } else if (result.data) {
                   setTeams((prev) => [result.data as Team, ...prev])
                   setTeamForm((prev) => ({
@@ -828,25 +903,28 @@ export default function OrganizationStructureForms() {
                     name: '',
                     isActive: true,
                   }))
-                  setSuccessMessage('Team created successfully.')
+                  setSuccessMessage(t('admin.structureForms.messages.created', { item: formLabels.team }))
                 }
               }
 
               setSubmitting((prev) => ({ ...prev, team: false }))
             }}
           >
-            {editType === 'team' ? 'Update Team' : 'Create Team'}
+            {t(editType === 'team' ? 'admin.structureForms.actions.updateItem' : 'admin.structureForms.actions.createItem', { item: formLabels.team })}
           </Button>
         </div>
       </Card>
       )}
 
       {activeFormType === 'season' && (
-      <Card title={editType === 'season' ? 'Edit Season' : 'Add Season'} className="pa-mb-6">
+      <Card
+        title={t(editType === 'season' ? 'admin.structureForms.pageTitle.edit' : 'admin.structureForms.pageTitle.add', { item: formLabels.season })}
+        className="pa-mb-6"
+      >
         <div className="pa-flex pa-flex-col pa-gap-4">
           <Input
-            label="Season name"
-            placeholder="e.g. Spring 2026"
+            label={t('admin.structureForms.fields.seasonName.label')}
+            placeholder={t('admin.structureForms.fields.seasonName.placeholder')}
             value={seasonForm.name}
             onChange={(e) => setSeasonForm((prev) => ({ ...prev, name: e.target.value }))}
             onBlur={() => markTouched('season.name')}
@@ -854,7 +932,7 @@ export default function OrganizationStructureForms() {
             error={seasonNameError}
           />
           <Input
-            label="Start date"
+            label={t('admin.structureForms.fields.seasonStart.label')}
             type="date"
             value={seasonForm.startDate}
             onChange={(e) => setSeasonForm((prev) => ({ ...prev, startDate: e.target.value }))}
@@ -863,7 +941,7 @@ export default function OrganizationStructureForms() {
             error={seasonStartError}
           />
           <Input
-            label="End date"
+            label={t('admin.structureForms.fields.seasonEnd.label')}
             type="date"
             value={seasonForm.endDate}
             onChange={(e) => setSeasonForm((prev) => ({ ...prev, endDate: e.target.value }))}
@@ -874,7 +952,7 @@ export default function OrganizationStructureForms() {
           <Checkbox
             checked={seasonForm.isActive}
             onChange={(e) => setSeasonForm((prev) => ({ ...prev, isActive: e.target.checked }))}
-            label="Set as active season"
+            label={t('admin.structureForms.fields.seasonActive.label')}
           />
           <Button
             disabled={!canCreateSeason || submitting.season}
@@ -896,10 +974,10 @@ export default function OrganizationStructureForms() {
                   is_active: seasonForm.isActive,
                 })
                 if (result.error) {
-                  setActionError(result.error.message)
+                  setActionError(t('admin.structureForms.errors.saveFailed', { item: formLabels.season }))
                 } else if (result.data) {
                   setSeasons((prev) => prev.map((s) => (s.id === editId ? (result.data as Season) : s)))
-                  setSuccessMessage('Season updated successfully.')
+                  setSuccessMessage(t('admin.structureForms.messages.updated', { item: formLabels.season }))
                 }
               } else {
                 const result = await createSeason(context, {
@@ -910,7 +988,7 @@ export default function OrganizationStructureForms() {
                   is_active: seasonForm.isActive,
                 })
                 if (result.error) {
-                  setActionError(result.error.message)
+                  setActionError(t('admin.structureForms.errors.saveFailed', { item: formLabels.season }))
                 } else if (result.data) {
                   setSeasons((prev) => [result.data as Season, ...prev])
                   setSeasonForm((prev) => ({
@@ -920,14 +998,14 @@ export default function OrganizationStructureForms() {
                     endDate: '',
                     isActive: false,
                   }))
-                  setSuccessMessage('Season created successfully.')
+                  setSuccessMessage(t('admin.structureForms.messages.created', { item: formLabels.season }))
                 }
               }
 
               setSubmitting((prev) => ({ ...prev, season: false }))
             }}
           >
-            {editType === 'season' ? 'Update Season' : 'Create Season'}
+            {t(editType === 'season' ? 'admin.structureForms.actions.updateItem' : 'admin.structureForms.actions.createItem', { item: formLabels.season })}
           </Button>
         </div>
       </Card>
@@ -936,7 +1014,7 @@ export default function OrganizationStructureForms() {
 
       {!currentOrganization && (
         <Card>
-          <div className="pa-text-muted">Finish organization setup to unlock these forms.</div>
+          <div className="pa-text-muted">{t('admin.structureForms.empty.missingOrganization')}</div>
         </Card>
       )}
     </div>

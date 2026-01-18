@@ -42,7 +42,29 @@ async function simulateDelay(): Promise<void> {
 // ============================================================================
 
 /**
- * Get all sports for an organization (excluding deleted)
+ * Get all system sports (predefined sports available to all organizations)
+ */
+export async function getSystemSports(): Promise<{ data: Sport[]; error: Error | null }> {
+    try {
+        const { data, error } = await supabase
+            .from('sports')
+            .select('*')
+            .eq('is_system', true)
+            .is('org_id', null)
+            .is('deleted_at', null)
+            .order('name')
+
+        if (error) throw error
+        return { data: data as Sport[], error: null }
+    } catch (err) {
+        console.error('[sportsService] Error getting system sports:', err)
+        return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+    }
+}
+
+/**
+ * Get all sports for an organization
+ * Returns system sports that the organization has enabled via organization_sports
  */
 export async function getSports(
     context: UserContext
@@ -54,15 +76,23 @@ export async function getSports(
     }
 
     try {
+        // Get sports linked to this organization via organization_sports junction table
         const { data, error } = await supabase
-            .from('sports')
-            .select('*')
-            .eq('org_id', context.orgId)
-            .is('deleted_at', null)
-            .order('name')
+            .from('organization_sports')
+            .select(`
+                sport:sports(*)
+            `)
+            .eq('organization_id', context.orgId)
 
         if (error) throw error
-        return { data: data as Sport[], error: null }
+
+        // Extract sports from the joined data
+        const sports = (data || [])
+            .map((row: any) => row.sport)
+            .filter((sport: any) => sport && !sport.deleted_at)
+            .sort((a: Sport, b: Sport) => a.name.localeCompare(b.name))
+
+        return { data: sports as Sport[], error: null }
     } catch (err) {
         console.error('[sportsService] Error getting sports:', err)
         return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
@@ -100,10 +130,11 @@ export async function getSport(
 }
 
 /**
- * Create a new sport
+ * Link a system sport to an organization
+ * Organizations can only link to predefined system sports
  */
 export async function createSport(
-    _context: UserContext,
+    context: UserContext,
     dto: CreateSportDTO
 ): Promise<{ data: Sport | null; error: Error | null }> {
     if (USE_FAKE_DATA) {
@@ -115,27 +146,60 @@ export async function createSport(
     }
 
     try {
-        const { data, error } = await supabase
+        // Find the system sport by name (case-insensitive)
+        const normalizedName = dto.name.trim()
+        if (!normalizedName || normalizedName.length > 100) {
+            return { data: null, error: new Error('Invalid sport name: must be between 1 and 100 characters') }
+        }
+
+        // Find the system sport
+        const { data: systemSports, error: findError } = await supabase
             .from('sports')
+            .select('*')
+            .eq('is_system', true)
+            .is('org_id', null)
+            .ilike('name', normalizedName)
+            .limit(1)
+            .single()
+
+        if (findError || !systemSports) {
+            return { data: null, error: new Error('Sport not found. Please select from the available system sports.') }
+        }
+
+        // Check if already linked
+        const { data: existingLink } = await supabase
+            .from('organization_sports')
+            .select('*')
+            .eq('organization_id', dto.org_id)
+            .eq('sport_id', systemSports.id)
+            .single()
+
+        if (existingLink) {
+            return { data: systemSports as Sport, error: null }
+        }
+
+        // Link the system sport to the organization
+        const { data: linkData, error: linkError } = await supabase
+            .from('organization_sports')
             .insert({
-                org_id: dto.org_id,
-                name: dto.name,
-                icon: dto.icon || null,
-                color: dto.color || '#137fec',
-            } as Database['public']['Tables']['sports']['Insert'])
+                organization_id: dto.org_id,
+                sport_id: systemSports.id,
+            })
             .select()
             .single()
 
-        if (error) throw error
-        return { data: data as Sport, error: null }
+        if (linkError) throw linkError
+
+        return { data: systemSports as Sport, error: null }
     } catch (err) {
-        console.error('[sportsService] Error creating sport:', err)
+        console.error('[sportsService] Error linking sport:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
     }
 }
 
 /**
  * Update a sport
+ * Note: System sports cannot be updated. Only organization-specific customizations can be updated.
  */
 export async function updateSport(
     context: UserContext,
@@ -151,8 +215,29 @@ export async function updateSport(
     }
 
     try {
+        // Check if this is a system sport
+        const { data: sport, error: fetchError } = await supabase
+            .from('sports')
+            .select('is_system, org_id')
+            .eq('id', sportId)
+            .single()
+
+        if (fetchError) throw fetchError
+
+        // System sports cannot be updated
+        if (sport?.is_system) {
+            return { data: null, error: new Error('System sports cannot be modified. They are predefined for consistency.') }
+        }
+
+        // For legacy org-specific sports, allow updates
         const updateData: any = {}
-        if (dto.name !== undefined) updateData.name = dto.name
+        if (dto.name !== undefined) {
+            const normalizedName = dto.name.trim()
+            if (!normalizedName || normalizedName.length > 100) {
+                return { data: null, error: new Error('Invalid sport name: must be between 1 and 100 characters') }
+            }
+            updateData.name = normalizedName
+        }
         if (dto.icon !== undefined) updateData.icon = dto.icon
         if (dto.color !== undefined) updateData.color = dto.color
 
@@ -174,7 +259,8 @@ export async function updateSport(
 }
 
 /**
- * Soft delete a sport
+ * Unlink a sport from an organization
+ * For system sports, this removes the link. For legacy org sports, it soft deletes.
  */
 export async function deleteSport(
     context: UserContext,
@@ -186,6 +272,28 @@ export async function deleteSport(
     }
 
     try {
+        // Check if this is a system sport
+        const { data: sport, error: fetchError } = await supabase
+            .from('sports')
+            .select('is_system')
+            .eq('id', sportId)
+            .single()
+
+        if (fetchError) throw fetchError
+
+        // For system sports, remove the organization link
+        if (sport?.is_system) {
+            const { error: unlinkError } = await supabase
+                .from('organization_sports')
+                .delete()
+                .eq('sport_id', sportId)
+                .eq('organization_id', context.orgId)
+
+            if (unlinkError) throw unlinkError
+            return { error: null }
+        }
+
+        // For legacy org-specific sports, soft delete
         const { error } = await supabase
             .from('sports')
             .update({ deleted_at: new Date().toISOString() } as Database['public']['Tables']['sports']['Update'])

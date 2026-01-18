@@ -8,29 +8,163 @@
 // Sport image utilities - SportInfo type used indirectly via sportContext
 
 /**
+ * System-wide predefined sports
+ * Organizations must select from this list to ensure consistency
+ */
+export const SYSTEM_SPORTS = [
+    'Soccer',
+    'Basketball',
+    'Baseball',
+    'Softball',
+    'Football',
+    'Flag Football',
+    'Volleyball',
+    'Lacrosse',
+    'Field Hockey',
+    'Ice Hockey',
+    'Wrestling',
+    'Track & Field',
+    'Gymnastics',
+    'Cross Country',
+    'Tennis',
+    'Cheerleading',
+    'Poms',
+    'Dance',
+    'Golf',
+    'Swimming',
+    'Diving',
+] as const
+
+export type SystemSport = typeof SYSTEM_SPORTS[number]
+
+/**
+ * Normalize sport name for consistent matching
+ * Handles case, whitespace, and edge cases
+ */
+function normalizeSportName(sportName: string | null | undefined): string | null {
+    if (!sportName || typeof sportName !== 'string') return null
+    const trimmed = sportName.trim()
+    if (!trimmed || trimmed.length > 100) return null
+    return trimmed.toLowerCase()
+}
+
+/**
+ * Convert sport name to folder-safe name
+ * "Track & Field" → "track-and-field"
+ */
+function sportNameToFolderName(sportName: string): string {
+    return sportName
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/&/g, 'and')
+        .replace(/[^a-z0-9-]/g, '')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+}
+
+/**
+ * Sport name aliases for common variations
+ */
+const SPORT_NAME_ALIASES: Record<string, string> = {
+    'football (soccer)': 'soccer',
+    'association football': 'soccer',
+    'american football': 'football',
+    'track': 'track & field',
+    'track and field': 'track & field',
+    'xc': 'cross country',
+    'cross-country': 'cross country',
+}
+
+/**
  * Sport name to image path mapping
  * All images are WebP format for optimal performance
+ * Keys are normalized (lowercase) for case-insensitive matching
  */
 const SPORT_IMAGE_MAP: Record<string, { hero: string; card: string }> = {
-    Soccer: {
+    'soccer': {
         hero: '/images/sports/soccer/hero-bg.webp',
         card: '/images/sports/soccer/card-bg.webp',
     },
-    Basketball: {
+    'basketball': {
         hero: '/images/sports/basketball/hero-bg.webp',
         card: '/images/sports/basketball/card-bg.webp',
     },
-    Baseball: {
+    'baseball': {
         hero: '/images/sports/baseball/hero-bg.webp',
         card: '/images/sports/baseball/card-bg.webp',
     },
-    Volleyball: {
+    'softball': {
+        hero: '/images/sports/softball/hero-bg.webp',
+        card: '/images/sports/softball/card-bg.webp',
+    },
+    'football': {
+        hero: '/images/sports/football/hero-bg.webp',
+        card: '/images/sports/football/card-bg.webp',
+    },
+    'flag football': {
+        hero: '/images/sports/flag-football/hero-bg.webp',
+        card: '/images/sports/flag-football/card-bg.webp',
+    },
+    'volleyball': {
         hero: '/images/sports/volleyball/hero-bg.webp',
         card: '/images/sports/volleyball/card-bg.webp',
     },
-    Football: {
-        hero: '/images/sports/football/hero-bg.webp',
-        card: '/images/sports/football/card-bg.webp',
+    'lacrosse': {
+        hero: '/images/sports/lacrosse/hero-bg.webp',
+        card: '/images/sports/lacrosse/card-bg.webp',
+    },
+    'field hockey': {
+        hero: '/images/sports/field-hockey/hero-bg.webp',
+        card: '/images/sports/field-hockey/card-bg.webp',
+    },
+    'ice hockey': {
+        hero: '/images/sports/ice-hockey/hero-bg.webp',
+        card: '/images/sports/ice-hockey/card-bg.webp',
+    },
+    'wrestling': {
+        hero: '/images/sports/wrestling/hero-bg.webp',
+        card: '/images/sports/wrestling/card-bg.webp',
+    },
+    'track & field': {
+        hero: '/images/sports/track-field/hero-bg.webp',
+        card: '/images/sports/track-field/card-bg.webp',
+    },
+    'gymnastics': {
+        hero: '/images/sports/gymnastics/hero-bg.webp',
+        card: '/images/sports/gymnastics/card-bg.webp',
+    },
+    'cross country': {
+        hero: '/images/sports/cross-country/hero-bg.webp',
+        card: '/images/sports/cross-country/card-bg.webp',
+    },
+    'tennis': {
+        hero: '/images/sports/tennis/hero-bg.webp',
+        card: '/images/sports/tennis/card-bg.webp',
+    },
+    'cheerleading': {
+        hero: '/images/sports/cheerleading/hero-bg.webp',
+        card: '/images/sports/cheerleading/card-bg.webp',
+    },
+    'poms': {
+        hero: '/images/sports/poms/hero-bg.webp',
+        card: '/images/sports/poms/card-bg.webp',
+    },
+    'dance': {
+        hero: '/images/sports/dance/hero-bg.webp',
+        card: '/images/sports/dance/card-bg.webp',
+    },
+    'golf': {
+        hero: '/images/sports/golf/hero-bg.webp',
+        card: '/images/sports/golf/card-bg.webp',
+    },
+    'swimming': {
+        hero: '/images/sports/swimming/hero-bg.webp',
+        card: '/images/sports/swimming/card-bg.webp',
+    },
+    'diving': {
+        hero: '/images/sports/diving/hero-bg.webp',
+        card: '/images/sports/diving/card-bg.webp',
     },
 }
 
@@ -48,11 +182,27 @@ const DEFAULT_IMAGE_PATHS = {
  * Example: Soccer card: 3 means card-bg.webp, card-bg2.webp, card-bg3.webp exist
  */
 const SPORT_IMAGE_VARIANTS: Record<string, { hero: number; card: number }> = {
-    Soccer: { hero: 1, card: 1 },
-    Basketball: { hero: 1, card: 1 },
-    Baseball: { hero: 1, card: 1 },
-    Volleyball: { hero: 1, card: 1 },
-    Football: { hero: 1, card: 1 },
+    'soccer': { hero: 1, card: 1 },
+    'basketball': { hero: 1, card: 1 },
+    'baseball': { hero: 1, card: 1 },
+    'softball': { hero: 1, card: 1 },
+    'football': { hero: 1, card: 1 },
+    'flag football': { hero: 1, card: 1 },
+    'volleyball': { hero: 1, card: 1 },
+    'lacrosse': { hero: 1, card: 1 },
+    'field hockey': { hero: 1, card: 1 },
+    'ice hockey': { hero: 1, card: 1 },
+    'wrestling': { hero: 1, card: 1 },
+    'track & field': { hero: 1, card: 1 },
+    'gymnastics': { hero: 1, card: 1 },
+    'cross country': { hero: 1, card: 1 },
+    'tennis': { hero: 1, card: 1 },
+    'cheerleading': { hero: 1, card: 1 },
+    'poms': { hero: 1, card: 1 },
+    'dance': { hero: 1, card: 1 },
+    'golf': { hero: 1, card: 1 },
+    'swimming': { hero: 1, card: 1 },
+    'diving': { hero: 1, card: 1 },
 }
 
 /**
@@ -68,13 +218,19 @@ export function getRandomSportImagePath(
         return DEFAULT_IMAGE_PATHS[type]
     }
 
-    const normalizedName = sportName.trim()
-    if (!normalizedName) {
+    // Normalize and check aliases
+    let normalized = normalizeSportName(sportName)
+    if (!normalized) {
         return DEFAULT_IMAGE_PATHS[type]
     }
 
-    const sportImages = SPORT_IMAGE_MAP[normalizedName]
-    const variants = SPORT_IMAGE_VARIANTS[normalizedName]
+    // Check aliases first
+    if (SPORT_NAME_ALIASES[normalized]) {
+        normalized = SPORT_NAME_ALIASES[normalized]
+    }
+
+    const sportImages = SPORT_IMAGE_MAP[normalized]
+    const variants = SPORT_IMAGE_VARIANTS[normalized]
 
     if (!sportImages) {
         return DEFAULT_IMAGE_PATHS[type]
@@ -140,12 +296,18 @@ export function getSportImagePath(
         return DEFAULT_IMAGE_PATHS[type]
     }
 
-    const normalizedName = sportName.trim()
-    if (!normalizedName) {
+    // Normalize and check aliases
+    let normalized = normalizeSportName(sportName)
+    if (!normalized) {
         return DEFAULT_IMAGE_PATHS[type]
     }
 
-    const sportImages = SPORT_IMAGE_MAP[normalizedName]
+    // Check aliases first
+    if (SPORT_NAME_ALIASES[normalized]) {
+        normalized = SPORT_NAME_ALIASES[normalized]
+    }
+
+    const sportImages = SPORT_IMAGE_MAP[normalized]
 
     if (!sportImages) {
         return DEFAULT_IMAGE_PATHS[type]
