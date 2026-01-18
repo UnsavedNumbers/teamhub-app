@@ -27,7 +27,8 @@ export default function OrganizationSettings() {
   const [success, setSuccess] = useState(false)
 
   const { currentOrganization } = useOrganization()
-  const { context, isReady } = useUserContext()
+  // Context available if needed for future use
+  // const { context, isReady } = useUserContext()
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<OrgSettingsFormData>({
     defaultValues: {

@@ -95,7 +95,35 @@ export default function EditEvent() {
           event_location:event_locations(*)
         `)
         .eq('id', eventId)
-        .single()
+        .single() as { data: {
+          id: string
+          title: string
+          type: string
+          team_id: string
+          season_id: string
+          start_time: string
+          end_time: string | null
+          arrival_time: string | null
+          timezone: string
+          notes: string | null
+          uniform_notes: string | null
+          equipment_notes: string | null
+          weather_dependent: boolean | null
+          external_link: string | null
+          rsvp_enabled: boolean | null
+          rsvp_type: string | null
+          event_location?: {
+            venue_name: string | null
+            address_line1: string | null
+            address_line2: string | null
+            city: string | null
+            state: string | null
+            postal_code: string | null
+            is_tbd: boolean | null
+            is_virtual: boolean | null
+            virtual_link: string | null
+          }
+        } | null; error: { message?: string } | null }
 
       if (eventError) throw eventError
       if (!event) throw new Error('Event not found')
@@ -228,7 +256,7 @@ export default function EditEvent() {
           .from('events')
           .select('rsvp_type')
           .eq('id', eventId)
-          .single()
+          .single() as { data: { rsvp_type: string | null } | null; error: { message?: string } | null }
 
         if (!currentEventError && currentEvent?.rsvp_type && currentEvent.rsvp_type !== data.rsvp_type) {
           const confirmChange = window.confirm(
@@ -252,7 +280,7 @@ export default function EditEvent() {
           })
 
         if (configError) {
-          const configData = (configResult as { error?: string; has_data?: boolean }) || {}
+          const configData = (configResult as unknown as { error?: string; has_data?: boolean }) || {}
           if (configData?.error && configData?.has_data) {
             setError('Cannot change RSVP type: existing RSVPs found. Please clear them first.')
             setSaving(false)
@@ -279,7 +307,7 @@ export default function EditEvent() {
           equipment_notes: data.equipment_notes || null,
           weather_dependent: data.weather_dependent,
           external_link: data.external_link || null,
-        })
+        } as Database['public']['Tables']['events']['Update'])
         .eq('id', eventId)
 
       if (updateError) throw updateError
@@ -316,7 +344,7 @@ export default function EditEvent() {
           is_tbd: data.location.is_tbd,
           is_virtual: data.location.is_virtual,
           virtual_link: data.location.virtual_link || null
-        })
+        } as Database['public']['Tables']['event_locations']['Insert'])
       }
 
       navigate('/admin/events')

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
@@ -43,7 +43,7 @@ export default function AdminTryouts() {
       label: 'Actions', 
       align: 'right',
       render: (row) => (
-        <Button variant="ghost" size="compact" onClick={(e) => { e.stopPropagation(); navigate(`/admin/tryouts/${row.id}`) }}>
+        <Button variant="ghost" size="compact" onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); navigate(`/admin/tryouts/${row.id}`) }}>
           <span className="material-symbols-outlined">visibility</span>
         </Button>
       )

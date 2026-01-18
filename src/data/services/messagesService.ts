@@ -7,9 +7,10 @@
 
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
+import { getTeamWithOrg, getOrgMembers, getOrgMember, getUserEmail } from '../../lib/supabase-helpers'
+import type { Database } from '../../lib/database.types'
 import type { UserContext } from '../fake/userContext'
 import {
-    fakeNotifications,
     getAnnouncementById as getFakeAnnouncementById,
     getAnnouncementsForOrg,
     getAnnouncementsForTeam,
@@ -123,7 +124,7 @@ export async function getAnnouncements(
         // 1. Get Team Org ID
         let orgId = context.orgId;
         if (params.teamId && !orgId) {
-            const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', params.teamId).single()
+            const teamData = await getTeamWithOrg(params.teamId)
             if (teamData) orgId = teamData.org_id
         }
 
@@ -150,13 +151,8 @@ export async function getAnnouncements(
         // 3. Fetch Roles Manually
         if (announcements.length > 0 && orgId) {
             const authorIds = [...new Set(announcements.map(a => a.author_id))]
-            const { data: members } = await supabase
-                .from('organization_members')
-                .select('user_id, role')
-                .eq('organization_id', orgId)
-                .in('user_id', authorIds)
-
-            const roleMap = new Map(members?.map(m => [m.user_id, m.role]))
+            const members = await getOrgMembers(orgId, authorIds)
+            const roleMap = new Map(members.map(m => [m.user_id, m.role]))
 
             // Merge
             announcements.forEach(a => {
@@ -227,22 +223,22 @@ export async function getAnnouncementById(
         }
 
         // Fetch author role from organization_members
-        if (data && data.team?.org_id) {
-            const { data: memberData } = await supabase
-                .from('organization_members')
-                .select('role')
-                .eq('organization_id', data.team.org_id)
-                .eq('user_id', data.author_id)
-                .single()
+        const dataAny = data as unknown as { team?: { org_id?: string }; author_id?: string; author?: { email?: string; role?: string } }
+        if (dataAny && dataAny.team?.org_id && dataAny.author_id) {
+            const memberData = await getOrgMember(dataAny.team.org_id, dataAny.author_id)
 
-            if (data.author) {
-                data.author.role = memberData?.role || 'parent'
+            if (dataAny.author) {
+                dataAny.author.role = memberData?.role || 'parent'
             } else {
-                data.author = { email: data.author?.email || '', role: memberData?.role || 'parent' }
+                dataAny.author = { email: '', role: memberData?.role || 'parent' }
             }
-        } else if (data && !data.author.role) {
+        } else if (dataAny && !dataAny.author?.role) {
             // If no team/org context, default role
-            data.author.role = 'parent'
+            if (dataAny.author) {
+                dataAny.author.role = 'parent'
+            } else {
+                dataAny.author = { email: '', role: 'parent' }
+            }
         }
 
         return { data: data as Announcement, error: null }
@@ -281,7 +277,7 @@ export async function createAnnouncement(
                 priority,
                 team_id: teamId,
                 author_id: authorId
-            })
+            } as any)
             .select(`*, author:users(email)`) // Can't easily get role in one shot if it's in another table
             .single()
 
@@ -289,18 +285,14 @@ export async function createAnnouncement(
 
         // Manually fetch role for consistent return
         if (data) {
-            const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', teamId).single()
+            const teamData = await getTeamWithOrg(teamId)
             let role = 'parent'
             if (teamData) {
-                const { data: memberData } = await supabase
-                    .from('organization_members')
-                    .select('role')
-                    .eq('organization_id', teamData.org_id)
-                    .eq('user_id', authorId)
-                    .single()
+                const memberData = await getOrgMember(teamData.org_id, authorId)
                 if (memberData) role = memberData.role
             }
-            (data as any).author = { ...(data as any).author, role }
+            const dataAny = data as unknown as { author?: { email?: string; role?: string } }
+            dataAny.author = { ...dataAny.author, role }
         }
 
         return { data: data as any as Announcement, error: null }
@@ -338,22 +330,22 @@ export async function getMessages(
         // Fetch Roles
         if (messages.length > 0) {
             // All messages in same team -> same org
-            const orgId = messages[0].team?.org_id
+            const firstMessage = messages[0] as unknown as { team?: { org_id?: string }; author_id?: string; author?: { email?: string; role?: string } }
+            const orgId = firstMessage.team?.org_id
             if (orgId) {
-                const authorIds = [...new Set(messages.map(m => m.author_id))]
-                const { data: members } = await supabase
-                    .from('organization_members')
-                    .select('user_id, role')
-                    .eq('organization_id', orgId)
-                    .in('user_id', authorIds)
-
-                const roleMap = new Map(members?.map(m => [m.user_id, m.role]))
-                messages.forEach(m => {
-                    const realRole = roleMap.get(m.author_id)
-                    if (m.author) {
-                        m.author.role = realRole || 'parent'
+                const authorIds = [...new Set(messages.map((m: unknown) => {
+                    const msg = m as { author_id?: string }
+                    return msg.author_id
+                }).filter((id): id is string => typeof id === 'string'))]
+                const members = await getOrgMembers(orgId, authorIds)
+                const roleMap = new Map(members.map(m => [m.user_id, m.role]))
+                messages.forEach((m: unknown) => {
+                    const msg = m as { author_id?: string; author?: { email?: string; role?: string } }
+                    const realRole = roleMap.get(msg.author_id || '')
+                    if (msg.author) {
+                        msg.author.role = realRole || 'parent'
                     } else {
-                        m.author = { email: '', role: realRole || 'parent' }
+                        msg.author = { email: '', role: realRole || 'parent' }
                     }
                 })
             }
@@ -396,7 +388,7 @@ export async function createMessage(
         if (error) throw error
 
         if (data) {
-            const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', teamId).single()
+            const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', teamId).single() as { data: any; error: any }
             let role = 'parent'
             if (teamData) {
                 const { data: memberData } = await supabase
@@ -404,7 +396,7 @@ export async function createMessage(
                     .select('role')
                     .eq('organization_id', teamData.org_id)
                     .eq('user_id', authorId)
-                    .single()
+                    .single() as { data: any; error: any }
                 if (memberData) role = memberData.role
             }
             (data as any).author = { ...(data as any).author, role }
@@ -434,29 +426,20 @@ export function subscribeToMessages(
             },
             async (payload) => {
                 // Fetch author details
-                const { data: authorData } = await supabase
-                    .from('users')
-                    .select('email')
-                    .eq('id', payload.new.author_id)
-                    .single()
+                const authorEmail = await getUserEmail(payload.new.author_id)
 
                 // Fetch Role
                 let role = 'parent'
-                const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', teamId).single()
+                const teamData = await getTeamWithOrg(teamId)
                 if (teamData) {
-                    const { data: memberData } = await supabase
-                        .from('organization_members')
-                        .select('role')
-                        .eq('organization_id', teamData.org_id)
-                        .eq('user_id', payload.new.author_id)
-                        .single()
+                    const memberData = await getOrgMember(teamData.org_id, payload.new.author_id)
                     if (memberData) role = memberData.role
                 }
 
                 const message = {
                     ...payload.new,
                     author: {
-                        email: authorData?.email,
+                        email: authorEmail || '',
                         role
                     }
                 } as unknown as Message
@@ -538,7 +521,7 @@ export async function markNotificationRead(
     try {
         const { error } = await supabase
             .from('user_notifications')
-            .update({ read_at: new Date().toISOString() })
+            .update({ read_at: new Date().toISOString() } as Database['public']['Tables']['user_notifications']['Update'])
             .eq('id', notificationId)
             .eq('user_id', context.userId)
 
@@ -559,7 +542,7 @@ export async function markAllNotificationsRead(
     try {
         const { error } = await supabase
             .from('user_notifications')
-            .update({ read_at: new Date().toISOString() })
+            .update({ read_at: new Date().toISOString() } as any)
             .eq('user_id', context.userId)
             .is('read_at', null)
 

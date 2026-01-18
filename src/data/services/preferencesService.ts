@@ -7,6 +7,7 @@
 
 import { USE_FAKE_DATA } from '../config'
 import { supabase } from '../../lib/supabase'
+import type { Json } from '../../lib/database.types'
 
 // ============================================================================
 // Types

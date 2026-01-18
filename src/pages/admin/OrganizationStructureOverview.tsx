@@ -16,6 +16,7 @@ import { getTeams } from '../../data/services/teamsService'
 import { getSeasons } from '../../data/services/seasonsService'
 import type { Sport, Program, Level, Team, Season } from '../../data/types/organization'
 import { PageHeader, Card, Button } from '../../components/platformAdmin'
+import OfflineBanner from '../../components/admin/OfflineBanner'
 
 export default function OrganizationStructureOverview() {
   useParams<{ orgId?: string }>()
@@ -88,6 +89,7 @@ export default function OrganizationStructureOverview() {
 
   return (
     <div className="pa-root">
+      <OfflineBanner />
       <PageHeader
         title="Organization Overview"
         subtitle={`${currentOrganization?.name || 'Organization'} — Structural setup and team management`}
@@ -131,7 +133,7 @@ export default function OrganizationStructureOverview() {
               <div className="pa-body-m pa-text-muted">Current</div>
               <div className="pa-h3">{activeSeason.name}</div>
             </div>
-            <Link to={`/admin/organization/structure/seasons/${activeSeason.id}`}>
+            <Link to="/admin/organization/structure/seasons">
               <Button variant="secondary">View Details</Button>
             </Link>
           </div>
@@ -140,37 +142,37 @@ export default function OrganizationStructureOverview() {
 
       <Card title="Quick Actions" className="pa-mb-6">
         <div className="pa-flex pa-flex-col pa-gap-3">
-          <Link to="/admin/organization/structure/sports/new">
+          <Link to="/admin/organization/structure/forms?type=sport">
             <Button>Add Sport</Button>
           </Link>
           {sports.length > 0 && (
-            <Link to="/admin/organization/structure/programs/new">
+            <Link to="/admin/organization/structure/forms?type=program">
               <Button variant="secondary">
                 Add Program
               </Button>
             </Link>
           )}
           {programs.length > 0 && (
-            <Link to="/admin/organization/structure/levels/new">
+            <Link to="/admin/organization/structure/forms?type=level">
               <Button variant="secondary">
                 Add Level
               </Button>
             </Link>
           )}
           {levels.length > 0 && seasons.length > 0 && (
-            <Link to="/admin/organization/structure/teams/new">
+            <Link to="/admin/organization/structure/forms?type=team">
               <Button variant="secondary">
                 Add Team
               </Button>
             </Link>
           )}
-          <Link to="/admin/organization/structure/seasons/new">
+          <Link to="/admin/organization/structure/forms?type=season">
             <Button variant="secondary">
               Add Season
             </Button>
           </Link>
           {teams.length > 0 && (
-            <Link to="/admin/organization/structure/people/players/new">
+            <Link to="/admin/children">
               <Button variant="secondary">
                 Add Player
               </Button>
@@ -189,7 +191,7 @@ export default function OrganizationStructureOverview() {
             <p className="pa-body-m pa-text-muted pa-mb-4">
               Start by adding a sport. Then create programs, levels, and teams to structure your organization.
             </p>
-            <Link to="/admin/organization/structure/sports/new">
+            <Link to="/admin/organization/structure/forms?type=sport">
               <Button>Add Your First Sport</Button>
             </Link>
           </div>

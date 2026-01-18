@@ -4,11 +4,11 @@ import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 
 import { useUserContext } from '../../hooks/useUserContext'
-import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
 import { getTeams, getTeamDetails } from '../../data/services/teamsService'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { supabase } from '../../lib/supabase'
+import type { Database } from '../../lib/database.types'
 import { 
   PageHeader, 
   Card, 
@@ -116,7 +116,8 @@ export default function CreateEvent() {
 
     if (!error && data) {
       // Map season_id to id for the select component
-      const mappedSeasons = data.map(s => ({
+      const dataTyped = data as Array<{ season_id: string; name: string }>
+      const mappedSeasons = dataTyped.map(s => ({
           id: s.season_id,
           name: s.name,
           team_id: teamId
@@ -181,7 +182,7 @@ export default function CreateEvent() {
       // 3. Handle Recurring
       if (data.recurring?.enabled) {
           const recurData = {
-              parent_event_id: eventData.id,
+              parent_event_id: eventDataTyped.id,
               frequency: data.recurring.frequency,
               days_of_week: data.recurring.days_of_week.length > 0 ? data.recurring.days_of_week : [new Date(data.start_time).getDay()],
               end_date: data.recurring.end_date || null,

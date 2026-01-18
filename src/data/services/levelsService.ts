@@ -7,6 +7,7 @@
 
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
+import type { Database } from '../../lib/database.types'
 import type { UserContext } from '../fake/userContext'
 import type { Level, CreateLevelDTO, UpdateLevelDTO } from '../types/organization'
 import { getLevelById, fakeLevels } from '../fake/fakeTeams'
@@ -126,7 +127,7 @@ export async function createLevel(
                 grade_max: dto.grade_max || null,
                 skill_min: dto.skill_min || null,
                 skill_max: dto.skill_max || null,
-            })
+            } as Database['public']['Tables']['levels']['Insert'])
             .select()
             .single()
 
@@ -142,7 +143,7 @@ export async function createLevel(
  * Update a level
  */
 export async function updateLevel(
-    _context: UserContext,
+    context: UserContext,
     levelId: string,
     dto: UpdateLevelDTO
 ): Promise<{ data: Level | null; error: Error | null }> {
@@ -168,7 +169,7 @@ export async function updateLevel(
 
         const { data, error } = await supabase
             .from('levels')
-            .update(updateData)
+            .update(updateData as any)
             .eq('id', levelId)
             .eq('org_id', context.orgId)
             .is('deleted_at', null)
@@ -187,7 +188,7 @@ export async function updateLevel(
  * Soft delete a level
  */
 export async function deleteLevel(
-    _context: UserContext,
+    context: UserContext,
     levelId: string
 ): Promise<{ error: Error | null }> {
     if (USE_FAKE_DATA) {
@@ -198,7 +199,7 @@ export async function deleteLevel(
     try {
         const { error } = await supabase
             .from('levels')
-            .update({ deleted_at: new Date().toISOString() })
+            .update({ deleted_at: new Date().toISOString() } as Database['public']['Tables']['levels']['Update'])
             .eq('id', levelId)
             .eq('org_id', context.orgId)
 

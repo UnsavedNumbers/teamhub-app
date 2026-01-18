@@ -11,6 +11,7 @@ import { getLevels } from '../../data/services/levelsService'
 import { getPrograms } from '../../data/services/sportsService'
 import type { Level, Program } from '../../data/types/organization'
 import { PageHeader, Card, Button, Select } from '../../components/platformAdmin'
+import OfflineBanner from '../../components/admin/OfflineBanner'
 
 export default function LevelsManagement() {
   const { context, isReady } = useUserContext()
@@ -65,6 +66,7 @@ export default function LevelsManagement() {
 
   return (
     <div className="pa-root">
+      <OfflineBanner />
       <PageHeader
         title="Levels"
         subtitle="Define eligibility boundaries (age, grade, or skill)"
@@ -88,7 +90,7 @@ export default function LevelsManagement() {
             </span>
             <h3 className="pa-h3">No levels yet</h3>
             <p className="pa-body-m pa-text-muted pa-mb-4">Create programs first, then add levels to define eligibility.</p>
-            <Link to="/admin/organization/structure/programs/new">
+            <Link to="/admin/organization/structure/forms?type=program">
               <Button>Add a Program</Button>
             </Link>
           </div>
@@ -106,7 +108,7 @@ export default function LevelsManagement() {
                   ...programs.map((p) => ({ value: p.id, label: p.name })),
                 ]}
               />
-              <Link to="/admin/organization/structure/levels/new">
+              <Link to="/admin/organization/structure/forms?type=level">
                 <Button>Add Level</Button>
               </Link>
             </div>
@@ -151,7 +153,7 @@ export default function LevelsManagement() {
                         </span>
                       </td>
                       <td className="pa-p-4">
-                        <Link to={`/admin/organization/structure/levels/${level.id}/edit`}>
+                        <Link to={`/admin/organization/structure/forms?edit=level&id=${level.id}`}>
                           <Button variant="secondary">
                             Edit
                           </Button>

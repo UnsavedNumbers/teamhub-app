@@ -79,7 +79,7 @@ export async function updateAttendanceSettings(context: UserContext, settings: P
                 org_id: context.orgId,
                 ...settings,
                 updated_at: new Date().toISOString()
-            })
+            } as Database['public']['Tables']['attendance_settings']['Insert'])
         return { error: error ? new Error(error.message) : null }
     } catch (e: any) {
         return { error: e }
@@ -141,7 +141,7 @@ export async function updateAttendance(
                 notes,
                 recorded_by_user_id: context.userId,
                 updated_at: new Date().toISOString()
-            }, { onConflict: 'event_id, child_id' })
+            } as Database['public']['Tables']['event_attendance']['Insert'], { onConflict: 'event_id, child_id' })
 
         return { error: error ? new Error(error.message) : null }
     } catch (e: any) {

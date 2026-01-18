@@ -9,9 +9,8 @@
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
 import type { UserContext } from '../fake/userContext'
+import type { Database } from '../../lib/database.types'
 import {
-    fakeSports,
-    fakePrograms,
     getSportById,
     getSportsForOrg,
     getProgramById,
@@ -109,7 +108,6 @@ export async function createSport(
 ): Promise<{ data: Sport | null; error: Error | null }> {
     if (USE_FAKE_DATA) {
         await simulateDelay()
-        // Demo mode: return error or mock success
         return {
             data: null,
             error: new Error('Create operations are not available in demo mode')
@@ -124,7 +122,7 @@ export async function createSport(
                 name: dto.name,
                 icon: dto.icon || null,
                 color: dto.color || '#137fec',
-            })
+            } as Database['public']['Tables']['sports']['Insert'])
             .select()
             .single()
 
@@ -140,7 +138,7 @@ export async function createSport(
  * Update a sport
  */
 export async function updateSport(
-    _context: UserContext,
+    context: UserContext,
     sportId: string,
     dto: UpdateSportDTO
 ): Promise<{ data: Sport | null; error: Error | null }> {
@@ -160,7 +158,7 @@ export async function updateSport(
 
         const { data, error } = await supabase
             .from('sports')
-            .update(updateData)
+            .update(updateData as any)
             .eq('id', sportId)
             .eq('org_id', context.orgId)
             .is('deleted_at', null)
@@ -179,7 +177,7 @@ export async function updateSport(
  * Soft delete a sport
  */
 export async function deleteSport(
-    _context: UserContext,
+    context: UserContext,
     sportId: string
 ): Promise<{ error: Error | null }> {
     if (USE_FAKE_DATA) {
@@ -190,7 +188,7 @@ export async function deleteSport(
     try {
         const { error } = await supabase
             .from('sports')
-            .update({ deleted_at: new Date().toISOString() })
+            .update({ deleted_at: new Date().toISOString() } as Database['public']['Tables']['sports']['Update'])
             .eq('id', sportId)
             .eq('org_id', context.orgId)
 
@@ -300,7 +298,7 @@ export async function createProgram(
                 description: dto.description || null,
                 age_min: dto.age_min || null,
                 age_max: dto.age_max || null,
-            })
+            } as Database['public']['Tables']['programs']['Insert'])
             .select()
             .single()
 
@@ -316,7 +314,7 @@ export async function createProgram(
  * Update a program
  */
 export async function updateProgram(
-    _context: UserContext,
+    context: UserContext,
     programId: string,
     dto: UpdateProgramDTO
 ): Promise<{ data: Program | null; error: Error | null }> {
@@ -338,9 +336,9 @@ export async function updateProgram(
 
         const { data, error } = await supabase
             .from('programs')
-            .update(updateData)
+            .update(updateData as Database['public']['Tables']['programs']['Update'])
             .eq('id', programId)
-            .eq('org_id', context.orgId)
+            .eq('org_id', _context.orgId)
             .is('deleted_at', null)
             .select()
             .single()
@@ -357,7 +355,7 @@ export async function updateProgram(
  * Soft delete a program
  */
 export async function deleteProgram(
-    _context: UserContext,
+    context: UserContext,
     programId: string
 ): Promise<{ error: Error | null }> {
     if (USE_FAKE_DATA) {
@@ -368,9 +366,9 @@ export async function deleteProgram(
     try {
         const { error } = await supabase
             .from('programs')
-            .update({ deleted_at: new Date().toISOString() })
+            .update({ deleted_at: new Date().toISOString() } as Database['public']['Tables']['programs']['Update'])
             .eq('id', programId)
-            .eq('org_id', context.orgId)
+            .eq('org_id', _context.orgId)
 
         if (error) throw error
         return { error: null }

@@ -25,7 +25,8 @@ export default function CreateUser() {
   const [error, setError] = useState<string | null>(null)
 
 
-  const { context, isReady } = useUserContext()
+  // Context available if needed for future use
+  // const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
   const { control, handleSubmit, formState: { errors } } = useForm<UserFormData>({

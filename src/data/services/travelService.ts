@@ -19,6 +19,7 @@ import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
 import type { UserContext, PermissionSet } from '../fake/userContext'
 import { calculatePermissions } from '../fake/userContext'
+import type { Database } from '../../lib/database.types'
 import {
     type TravelEvent,
     type TravelTrip,
@@ -630,7 +631,7 @@ export async function cancelTravelPlan(
                     is_cancelled: true,
                     cancellation_reason: 'Cancelled via admin panel',
                     cancelled_at: new Date().toISOString(),
-                })
+                } as Database['public']['Tables']['events']['Update'])
                 .eq('id', eventId)
 
             if (error) throw error

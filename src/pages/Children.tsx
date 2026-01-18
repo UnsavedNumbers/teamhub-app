@@ -142,7 +142,8 @@ export default function Children() {
         {/* Add Child Modal */}
         {showModal && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
-            <Card className="max-w-md w-full p-6" onClick={(e: React.MouseEvent<HTMLElement>) => e.stopPropagation()}>
+            <div onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+              <Card className="max-w-md w-full p-6">
               <CardTitle className="mb-6">Add</CardTitle>
               
               {error && (
@@ -196,7 +197,8 @@ export default function Children() {
                   {saving ? 'Saving' : 'Save'}
                 </Button>
               </div>
-            </Card>
+              </Card>
+            </div>
           </div>
         )}
       </PortalLayout>

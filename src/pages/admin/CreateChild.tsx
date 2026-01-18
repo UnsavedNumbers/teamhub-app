@@ -55,7 +55,7 @@ export default function CreateChild() {
     setError(null)
 
     try {
-      const { data, error: createError } = await createChild(context, {
+      const { error: createError } = await createChild(context, {
         family_id: familyId,
         first_name: formData.first_name,
         last_name: formData.last_name,

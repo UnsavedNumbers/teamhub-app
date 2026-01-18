@@ -10,20 +10,7 @@ import { Link } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getSports, getPrograms } from '../../data/services/sportsService'
 import type { Sport, Program } from '../../data/types/organization'
-
-
-/**
- * Sports & Programs Management
- *
- * Master-detail view for sports and programs with contextual actions.
- * Redesigned with a focus on hierarchy, typography, and clean interaction.
- */
-
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { useUserContext } from '../../hooks/useUserContext'
-import { getSports, getPrograms } from '../../data/services/sportsService'
-import type { Sport, Program } from '../../data/types/organization'
+import OfflineBanner from '../../components/admin/OfflineBanner'
 
 export default function SportsAndPrograms() {
   const { context, isReady } = useUserContext()
@@ -125,9 +112,10 @@ export default function SportsAndPrograms() {
 
   return (
     <div className="max-w-5xl mx-auto p-8">
+      <OfflineBanner />
       <div className="flex justify-between items-start">
         <Header />
-        <Link to="/admin/organization/structure/sports/new">
+        <Link to="/admin/organization/structure/forms?type=sport">
           <PrimaryButton>Add Sport</PrimaryButton>
         </Link>
       </div>
@@ -138,7 +126,7 @@ export default function SportsAndPrograms() {
             <span className="material-symbols-outlined text-5xl text-slate-300 mb-4">sports</span>
             <h3 className="text-lg font-semibold text-slate-900 mb-1">No sports yet</h3>
             <p className="text-slate-500 mb-6">Start by adding your first sport to the platform.</p>
-            <Link to="/admin/organization/structure/sports/new">
+            <Link to="/admin/organization/structure/forms?type=sport">
               <PrimaryButton>Add Sport</PrimaryButton>
             </Link>
           </div>
@@ -174,10 +162,10 @@ export default function SportsAndPrograms() {
                   </div>
                   
                   <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
-                    <Link to={`/admin/organization/structure/sports/${sport.id}/edit`}>
+                    <Link to={`/admin/organization/structure/forms?edit=sport&id=${sport.id}`}>
                       <SecondaryButton>Edit</SecondaryButton>
                     </Link>
-                    <Link to={`/admin/organization/structure/programs/new?sport_id=${sport.id}`}>
+                    <Link to={`/admin/organization/structure/forms?type=program`}>
                       <SecondaryButton>Add Program</SecondaryButton>
                     </Link>
                   </div>
@@ -200,10 +188,10 @@ export default function SportsAndPrograms() {
                           </div>
                           
                           <div className="flex items-center gap-2">
-                            <Link to={`/admin/organization/structure/programs/${program.id}/edit`}>
+                            <Link to={`/admin/organization/structure/forms?edit=program&id=${program.id}`}>
                               <SecondaryButton>Edit</SecondaryButton>
                             </Link>
-                            <Link to={`/admin/organization/structure/levels/new?program_id=${program.id}`}>
+                            <Link to={`/admin/organization/structure/forms?type=level`}>
                               <SecondaryButton>Add Level</SecondaryButton>
                             </Link>
                           </div>
@@ -212,7 +200,7 @@ export default function SportsAndPrograms() {
                     ) : (
                       <div className="p-6 text-center border border-dashed border-slate-200 rounded-lg bg-white/50">
                         <p className="text-sm text-slate-500 mb-3">No programs found for {sport.name}.</p>
-                        <Link to={`/admin/organization/structure/programs/new?sport_id=${sport.id}`}>
+                        <Link to={`/admin/organization/structure/forms?type=program`}>
                           <button className="text-sm font-semibold text-slate-900 hover:underline">
                             Create a Program
                           </button>

@@ -290,7 +290,7 @@ function App() {
             
               {/* Organization */}
               <Route path="organization" element={<OrganizationSettings />} />
-              <Route path="organization/structure" element={<OrganizationStructureForms />} />
+              <Route path="organization/structure/forms" element={<OrganizationStructureForms />} />
               <Route path="organization/users" element={<OrganizationUsers />} />
               <Route path="organization/billing" element={<OrganizationBilling />} />
               <Route path="organization/billing/plan-selection" element={<PlanSelection />} />

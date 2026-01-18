@@ -10,6 +10,7 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { getSeasons } from '../../data/services/seasonsService'
 import type { Season } from '../../data/types/organization'
 import { PageHeader, Card, Button } from '../../components/platformAdmin'
+import OfflineBanner from '../../components/admin/OfflineBanner'
 
 export default function SeasonsManagement() {
   const { context, isReady } = useUserContext()
@@ -53,6 +54,7 @@ export default function SeasonsManagement() {
 
   return (
     <div className="pa-root">
+      <OfflineBanner />
       <PageHeader
         title="Seasons"
         subtitle="Manage organization-wide time periods"
@@ -76,7 +78,7 @@ export default function SeasonsManagement() {
             </span>
             <h3 className="pa-h3">No seasons yet</h3>
             <p className="pa-body-m pa-text-muted pa-mb-4">Create your first season to start organizing teams and events.</p>
-            <Link to="/admin/organization/structure/seasons/new">
+            <Link to="/admin/organization/structure/forms?type=season">
               <Button>Add Season</Button>
             </Link>
           </div>
@@ -84,7 +86,7 @@ export default function SeasonsManagement() {
       ) : (
         <>
           <div className="pa-flex pa-justify-end pa-mb-4">
-            <Link to="/admin/organization/structure/seasons/new">
+            <Link to="/admin/organization/structure/forms?type=season">
               <Button>Add Season</Button>
             </Link>
           </div>
@@ -123,7 +125,7 @@ export default function SeasonsManagement() {
                       </span>
                     </td>
                     <td className="pa-p-4">
-                      <Link to={`/admin/organization/structure/seasons/${season.id}/edit`}>
+                      <Link to={`/admin/organization/structure/forms?edit=season&id=${season.id}`}>
                         <Button variant="secondary">
                           Edit
                         </Button>

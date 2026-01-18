@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import { useUserContext } from '../../hooks/useUserContext'
 import { PageHeader } from '../../components/platformAdmin'
+import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getSports, getPrograms } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
 import { getTeams } from '../../data/services/teamsService'
@@ -10,6 +13,8 @@ import type { Sport, Program, Level, Team, Season, Child } from '../../data/type
 
 export default function OrganizationStructureNew() {
   const { currentOrganization } = useOrganization()
+  const { context, isReady } = useUserContext()
+  const navigate = useNavigate()
   const [sports, setSports] = useState<Sport[]>([])
   const [programs, setPrograms] = useState<Program[]>([])
   const [levels, setLevels] = useState<Level[]>([])
@@ -17,38 +22,54 @@ export default function OrganizationStructureNew() {
   const [seasons, setSeasons] = useState<Season[]>([])
   const [children, setChildren] = useState<Child[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadData = useCallback(async () => {
+    if (!isReady) return
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const [sportsResult, programsResult, levelsResult, teamsResult, seasonsResult, childrenResult] =
+        await Promise.all([
+          getSports(context),
+          getPrograms(context),
+          getLevels(context),
+          getTeams(context),
+          getSeasons(context),
+          getChildren(context),
+        ])
+
+      if (sportsResult.error || programsResult.error || levelsResult.error || teamsResult.error || seasonsResult.error || childrenResult.error) {
+        throw (
+          sportsResult.error ||
+          programsResult.error ||
+          levelsResult.error ||
+          teamsResult.error ||
+          seasonsResult.error ||
+          childrenResult.error ||
+          new Error('Failed to load organization data')
+        )
+      }
+
+      setSports(Array.isArray(sportsResult.data) ? sportsResult.data : [])
+      setPrograms(Array.isArray(programsResult.data) ? programsResult.data : [])
+      setLevels(Array.isArray(levelsResult.data) ? levelsResult.data : [])
+      setTeams(Array.isArray(teamsResult.data) ? teamsResult.data : [])
+      setSeasons(Array.isArray(seasonsResult.data) ? seasonsResult.data : [])
+      setChildren(Array.isArray(childrenResult.data) ? childrenResult.data : [])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load organization data')
+    } finally {
+      setLoading(false)
+    }
+  }, [context, isReady])
 
   useEffect(() => {
-    if (!currentOrganization?.id) return
-
-    const loadData = async () => {
-      setLoading(true)
-      try {
-        const [sportsData, programsData, levelsData, teamsData, seasonsData, childrenData] =
-          await Promise.all([
-            getSports(currentOrganization.id),
-            getPrograms(currentOrganization.id),
-            getLevels(currentOrganization.id),
-            getTeams(currentOrganization.id),
-            getSeasons(currentOrganization.id),
-            getChildren(currentOrganization.id),
-          ])
-
-        setSports(Array.isArray(sportsData) ? sportsData : [])
-        setPrograms(Array.isArray(programsData) ? programsData : [])
-        setLevels(Array.isArray(levelsData) ? levelsData : [])
-        setTeams(Array.isArray(teamsData) ? teamsData : [])
-        setSeasons(Array.isArray(seasonsData) ? seasonsData : [])
-        setChildren(Array.isArray(childrenData) ? childrenData : [])
-      } catch (error) {
-        console.error('Error loading organization data:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
+    if (!isReady) return
     loadData()
-  }, [currentOrganization?.id])
+  }, [isReady, loadData])
 
   const stats = {
     sports: Array.isArray(sports) ? sports.length : 0,
@@ -60,10 +81,10 @@ export default function OrganizationStructureNew() {
     coaches: 0,
   }
 
-  const activeSeasons = Array.isArray(seasons) ? seasons.filter((s) => s.status === 'active') : []
+  const activeSeasons = Array.isArray(seasons) ? seasons.filter((s) => s.is_active) : []
   const currentSeason = activeSeasons.length > 0 ? activeSeasons[0] : null
 
-  if (loading) {
+  if (!isReady || loading) {
     return (
       <div className="pa-flex pa-items-center pa-justify-center pa-h-full">
         <div className="pa-spinner"></div>
@@ -71,8 +92,34 @@ export default function OrganizationStructureNew() {
     )
   }
 
+  if (error) {
+    return (
+      <div className="org-structure-page">
+        <PageHeader
+          title={
+            <>
+              Organization <span className="pa-title-accent">Overview</span>
+            </>
+          }
+          subtitle={`${currentOrganization?.name || 'Organization'} — Structural setup and team management`}
+          breadcrumbs={[
+            { label: 'Organizations', path: '/admin/organization' },
+            { label: currentOrganization?.name || 'Organization' },
+          ]}
+        />
+        <div className="pa-card">
+          <div className="pa-text-danger pa-mb-3">{error}</div>
+          <button className="pa-btn pa-btn--primary" onClick={loadData}>
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="org-structure-page">
+      <OfflineBanner />
       <PageHeader
         title={
           <>
@@ -107,7 +154,9 @@ export default function OrganizationStructureNew() {
               <span className="org-season-status">Active Season</span>
             </div>
           </div>
-          <button className="org-season-btn">View Full Schedule</button>
+          <button className="org-season-btn" onClick={() => navigate('/admin/events')}>
+            View Full Schedule
+          </button>
         </section>
       )}
 
@@ -115,12 +164,36 @@ export default function OrganizationStructureNew() {
         <div className="org-quick-actions">
           <h3 className="org-section-header">Quick Actions</h3>
           <div className="org-actions-grid">
-            <QuickActionButton icon="sports_basketball" label="Add Sport" />
-            <QuickActionButton icon="category" label="Add Program" />
-            <QuickActionButton icon="stairs" label="Add Level" />
-            <QuickActionButton icon="groups" label="Add Team" />
-            <QuickActionButton icon="calendar_today" label="Add Season" />
-            <QuickActionButton icon="person_add" label="Add Player" />
+            <QuickActionButton
+              icon="sports_basketball"
+              label="Add Sport"
+              onClick={() => navigate('/admin/organization/structure/sports-programs')}
+            />
+            <QuickActionButton
+              icon="category"
+              label="Add Program"
+              onClick={() => navigate('/admin/organization/structure/sports-programs')}
+            />
+            <QuickActionButton
+              icon="stairs"
+              label="Add Level"
+              onClick={() => navigate('/admin/organization/structure/levels')}
+            />
+            <QuickActionButton
+              icon="groups"
+              label="Add Team"
+              onClick={() => navigate('/admin/organization/structure/teams')}
+            />
+            <QuickActionButton
+              icon="calendar_today"
+              label="Add Season"
+              onClick={() => navigate('/admin/organization/structure/seasons')}
+            />
+            <QuickActionButton
+              icon="person_add"
+              label="Add Player"
+              onClick={() => navigate('/admin/children')}
+            />
           </div>
         </div>
 
@@ -159,9 +232,17 @@ function StatBox({ label, value, isEmpty }: { label: string; value: number; isEm
   )
 }
 
-function QuickActionButton({ icon, label }: { icon: string; label: string }) {
+function QuickActionButton({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: string
+  label: string
+  onClick: () => void
+}) {
   return (
-    <button className="org-action-btn">
+    <button className="org-action-btn" onClick={onClick}>
       <div className="org-action-content">
         <span className="material-symbols-outlined org-action-icon">{icon}</span>
         <span className="org-action-label">{label}</span>

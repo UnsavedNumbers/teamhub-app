@@ -2237,6 +2237,26 @@
 }
 
 /* =====================================================================
+   OFFLINE BANNER
+   ===================================================================== */
+
+.pa-offline-banner {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+    padding: var(--pa-space-3) var(--pa-space-4);
+    background: rgba(11, 15, 20, 0.9);
+    color: var(--pa-white);
+    font: var(--pa-text-body-s);
+    border-radius: 6px;
+    margin-bottom: var(--pa-space-4);
+}
+
+.pa-offline-banner .material-symbols-outlined {
+    font-size: 18px;
+}
+
+/* =====================================================================
    ORGANIZATION STRUCTURE PAGE (ATHLETIC DESIGN)
    ===================================================================== */
 

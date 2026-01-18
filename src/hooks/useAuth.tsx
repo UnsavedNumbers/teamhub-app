@@ -121,14 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId)
         .single()
 
-      // Type the org data from RPC
-      interface OrgRpcResult {
-        organization_id: string
-        org_name: string
-        roles: OrgMemberRole[] // NEW: roles array from updated RPC
-      }
-      
-      const organizations: Organization[] = (orgData as OrgRpcResult[] | null)?.map((org) => ({
+      const organizations: Organization[] = (orgData || []).map((org) => ({
         id: org.organization_id,
         name: org.org_name,
         roles: org.roles,

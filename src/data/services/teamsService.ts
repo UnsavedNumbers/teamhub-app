@@ -29,6 +29,8 @@ import {
     getAssignedTeamsForCoach,
     getTeamsForUserChildren,
 } from '../fake/relationships'
+import { supabase } from '../../lib/supabase'
+import type { Team, CreateTeamDTO, UpdateTeamDTO } from '../types/organization'
 
 // ============================================================================
 // Helper Functions
@@ -81,9 +83,26 @@ export interface TeamsQueryParams {
 export async function getTeams(
     context: UserContext,
     params: TeamsQueryParams = {}
-): Promise<{ data: FakeTeam[]; error: Error | null }> {
+): Promise<{ data: Team[]; error: Error | null }> {
     if (!USE_FAKE_DATA) {
-        return { data: [], error: new Error('Real data not implemented') }
+        try {
+            let query = supabase
+                .from('teams')
+                .select('*')
+                .eq('org_id', context.orgId)
+                .order('name')
+
+            if (params.sportId) query = query.eq('sport_id', params.sportId)
+            if (params.programId) query = query.eq('program_id', params.programId)
+            if (params.levelId) query = query.eq('level_id', params.levelId)
+            if (params.activeOnly) query = query.eq('is_active', true)
+
+            const { data, error } = await query
+            if (error) throw error
+            return { data: (data as Team[]) || [], error: null }
+        } catch (err) {
+            return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        }
     }
 
     try {
@@ -126,9 +145,123 @@ export async function getTeams(
             teams = teams.filter((t) => accessibleTeamIds.has(t.id))
         }
 
-        return { data: teams, error: null }
+        return { data: teams as Team[], error: null }
     } catch (err) {
         return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+    }
+}
+
+export async function createTeam(
+    context: UserContext,
+    dto: CreateTeamDTO
+): Promise<{ data: Team | null; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+        const now = new Date().toISOString()
+        const created: Team = {
+            id: `demo-team-${Date.now()}`,
+            org_id: dto.org_id,
+            name: dto.name,
+            level_id: dto.level_id,
+            sport_id: dto.sport_id ?? null,
+            program_id: dto.program_id ?? null,
+            max_roster_size: dto.max_roster_size ?? null,
+            is_active: dto.is_active ?? true,
+            created_at: now,
+            updated_at: now,
+        }
+        return { data: created, error: null }
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('teams')
+            .insert({
+                org_id: dto.org_id,
+                name: dto.name,
+                level_id: dto.level_id,
+                sport_id: dto.sport_id ?? null,
+                program_id: dto.program_id ?? null,
+                max_roster_size: dto.max_roster_size ?? null,
+                is_active: dto.is_active ?? true,
+            })
+            .select()
+            .single()
+
+        if (error) throw error
+
+        if (dto.season_id) {
+            const { error: linkError } = await supabase
+                .from('team_seasons')
+                .insert({
+                    team_id: (data as Team).id,
+                    season_id: dto.season_id,
+                    is_active: true,
+                })
+
+            if (linkError) throw linkError
+        }
+
+        return { data: data as Team, error: null }
+    } catch (err) {
+        return { data: null, error: err instanceof Error ? err : new Error('Create team failed') }
+    }
+}
+
+export async function updateTeam(
+    context: UserContext,
+    teamId: string,
+    dto: UpdateTeamDTO
+): Promise<{ data: Team | null; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+        return { data: null, error: null }
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('teams')
+            .update({
+                name: dto.name,
+                level_id: dto.level_id,
+                sport_id: dto.sport_id ?? null,
+                program_id: dto.program_id ?? null,
+                max_roster_size: dto.max_roster_size ?? null,
+                is_active: dto.is_active ?? undefined,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', teamId)
+            .eq('org_id', context.orgId)
+            .select()
+            .single()
+
+        if (error) throw error
+        return { data: data as Team, error: null }
+    } catch (err) {
+        return { data: null, error: err instanceof Error ? err : new Error('Update team failed') }
+    }
+}
+
+export async function deleteTeam(
+    context: UserContext,
+    teamId: string
+): Promise<{ error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+        return { error: null }
+    }
+
+    try {
+        const { error } = await supabase
+            .from('teams')
+            .delete()
+            .eq('id', teamId)
+            .eq('org_id', context.orgId)
+
+        if (error) throw error
+        return { error: null }
+    } catch (err) {
+        return { error: err instanceof Error ? err : new Error('Delete team failed') }
     }
 }
 

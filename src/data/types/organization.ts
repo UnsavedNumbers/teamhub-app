@@ -51,12 +51,12 @@ export interface Level {
 export interface Team {
     id: string
     org_id: string
-    program_id: string | null // Should be derived from level, but keeping for direct reference if needed or as legacy
-    level_id: string
-    sport_id: string // Derived from program->sport usually, but good for quick filtering
+    program_id?: string | null
+    level_id: string | null
+    sport_id?: string | null
     name: string
-    max_roster_size: number | null
-    is_active: boolean
+    max_roster_size?: number | null
+    is_active?: boolean
     created_at: string
     updated_at: string
 
@@ -69,13 +69,11 @@ export interface Team {
 export interface Season {
     id: string
     org_id: string
-    // team_id: string // REMOVED - Season is now org-scoped
+    team_id?: string | null
     name: string
     start_date: string
     end_date: string
     is_active: boolean
-    registration_open: boolean
-    registration_deadline: string | null
     created_at: string
     updated_at: string
 }
@@ -86,6 +84,45 @@ export interface TeamSeason {
     is_active: boolean
     created_at: string
     updated_at: string
+}
+
+export interface CreateTeamDTO {
+    org_id: string
+    name: string
+    level_id: string
+    sport_id?: string | null
+    program_id?: string | null
+    max_roster_size?: number | null
+    is_active?: boolean
+    season_id?: string
+}
+
+export interface UpdateTeamDTO {
+    name?: string
+    level_id?: string
+    sport_id?: string | null
+    program_id?: string | null
+    max_roster_size?: number | null
+    is_active?: boolean
+}
+
+export interface CreateSeasonDTO {
+    org_id: string
+    name: string
+    start_date: string
+    end_date: string
+    is_active?: boolean
+    sport_id?: string | null
+    program_id?: string | null
+}
+
+export interface UpdateSeasonDTO {
+    name?: string
+    start_date?: string
+    end_date?: string
+    is_active?: boolean
+    sport_id?: string | null
+    program_id?: string | null
 }
 
 // DTOs

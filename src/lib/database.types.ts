@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -131,6 +131,47 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_settings: {
+        Row: {
+          org_id: string
+          reminder_enabled: boolean
+          lock_after_hours: number | null
+          required_for_practice: boolean
+          required_for_game: boolean
+          required_for_meeting: boolean
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          org_id: string
+          reminder_enabled?: boolean
+          lock_after_hours?: number | null
+          required_for_practice?: boolean
+          required_for_game?: boolean
+          required_for_meeting?: boolean
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          org_id?: string
+          reminder_enabled?: boolean
+          lock_after_hours?: number | null
+          required_for_practice?: boolean
+          required_for_game?: boolean
+          required_for_meeting?: boolean
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_settings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -1354,6 +1395,54 @@ export type Database = {
           user_agent?: string | null
         }
         Relationships: []
+      }
+      event_general_rsvps: {
+        Row: {
+          id: string
+          event_id: string
+          user_id: string | null
+          status: Database["public"]["Enums"]["general_rsvp_status"]
+          note: string | null
+          responded_at: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          event_id: string
+          user_id?: string | null
+          status?: Database["public"]["Enums"]["general_rsvp_status"]
+          note?: string | null
+          responded_at?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          event_id?: string
+          user_id?: string | null
+          status?: Database["public"]["Enums"]["general_rsvp_status"]
+          note?: string | null
+          responded_at?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_general_rsvps_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_general_rsvps_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       event_rsvps: {
         Row: {
@@ -2916,6 +3005,75 @@ export type Database = {
         }
         Relationships: []
       }
+      levels: {
+        Row: {
+          id: string
+          org_id: string
+          program_id: string
+          name: string
+          level_type: string
+          description: string | null
+          age_min: number | null
+          age_max: number | null
+          grade_min: number | null
+          grade_max: number | null
+          skill_min: number | null
+          skill_max: number | null
+          created_at: string | null
+          updated_at: string | null
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          program_id: string
+          name: string
+          level_type?: Database["public"]["Enums"]["level_type"]
+          description?: string | null
+          age_min?: number | null
+          age_max?: number | null
+          grade_min?: number | null
+          grade_max?: number | null
+          skill_min?: number | null
+          skill_max?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          program_id?: string
+          name?: string
+          level_type?: Database["public"]["Enums"]["level_type"]
+          description?: string | null
+          age_min?: number | null
+          age_max?: number | null
+          grade_min?: number | null
+          grade_max?: number | null
+          skill_min?: number | null
+          skill_max?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+          deleted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "levels_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "levels_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           author_id: string
@@ -4460,7 +4618,7 @@ export type Database = {
           program_id: string | null
           sport_id: string | null
           start_date: string
-          team_id: string
+          team_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -4473,7 +4631,7 @@ export type Database = {
           program_id?: string | null
           sport_id?: string | null
           start_date: string
-          team_id: string
+          team_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -4486,7 +4644,7 @@ export type Database = {
           program_id?: string | null
           sport_id?: string | null
           start_date?: string
-          team_id?: string
+          team_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -4678,31 +4836,37 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
-          invite_code: string
+          level_id: string | null
           name: string
           org_id: string
-          program: string | null
-          sport: string | null
+          program_id: string | null
+          sport_id: string | null
+          max_roster_size: number | null
+          is_active: boolean | null
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           id?: string
-          invite_code: string
+          level_id?: string | null
           name: string
           org_id: string
-          program?: string | null
-          sport?: string | null
+          program_id?: string | null
+          sport_id?: string | null
+          max_roster_size?: number | null
+          is_active?: boolean | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           id?: string
-          invite_code?: string
+          level_id?: string | null
           name?: string
           org_id?: string
-          program?: string | null
-          sport?: string | null
+          program_id?: string | null
+          sport_id?: string | null
+          max_roster_size?: number | null
+          is_active?: boolean | null
           updated_at?: string | null
         }
         Relationships: [
@@ -5605,6 +5769,80 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_notifications: {
+        Row: {
+          id: string
+          user_id: string
+          org_id: string
+          team_id: string | null
+          type: string
+          kit_id: string | null
+          title: string
+          body: string
+          payload: Json | null
+          dedupe_key: string
+          read_at: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          org_id: string
+          team_id?: string | null
+          type: string
+          kit_id?: string | null
+          title: string
+          body: string
+          payload?: Json | null
+          dedupe_key: string
+          read_at?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          org_id?: string
+          team_id?: string | null
+          type?: string
+          kit_id?: string | null
+          title?: string
+          body?: string
+          payload?: Json | null
+          dedupe_key?: string
+          read_at?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_notifications_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_notifications_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_notifications_kit_id_fkey"
+            columns: ["kit_id"]
+            isOneToOne: false
+            referencedRelation: "uniform_kits"
             referencedColumns: ["id"]
           },
         ]
@@ -6526,6 +6764,19 @@ export type Database = {
           unknown_count: number
         }[]
       }
+      is_child_eligible_for_event: {
+        Args: { p_child_id: string; p_event_id: string }
+        Returns: boolean
+      }
+      update_event_rsvp_config: {
+        Args: {
+          p_event_id: string
+          p_rsvp_enabled: boolean
+          p_rsvp_type: string | null
+          p_clear_existing?: boolean
+        }
+        Returns: { error?: string; has_data?: boolean }
+      }
       get_invite_details: {
         Args: { p_token: string }
         Returns: {
@@ -6888,6 +7139,7 @@ export type Database = {
         | "fundraiser"
         | "misc"
       fee_visibility: "all_parents" | "assigned_only"
+      general_rsvp_status: "going" | "not_going" | "maybe"
       installment_frequency: "weekly" | "biweekly" | "monthly"
       installment_schedule_status:
         | "active"
@@ -6902,6 +7154,7 @@ export type Database = {
         | "skipped"
         | "waived"
       join_request_status: "pending" | "approved" | "denied"
+      level_type: "age" | "grade" | "skill" | "custom"
       license_plan: "starter" | "standard" | "pro"
       license_status: "trial" | "active" | "past_due" | "canceled" | "expired"
       membership_status: "active" | "invited" | "removed"
@@ -7297,6 +7550,7 @@ export const Constants = {
         "misc",
       ],
       fee_visibility: ["all_parents", "assigned_only"],
+      general_rsvp_status: ["going", "not_going", "maybe"],
       installment_frequency: ["weekly", "biweekly", "monthly"],
       installment_schedule_status: [
         "active",
@@ -7313,6 +7567,7 @@ export const Constants = {
         "waived",
       ],
       join_request_status: ["pending", "approved", "denied"],
+      level_type: ["age", "grade", "skill", "custom"],
       license_plan: ["starter", "standard", "pro"],
       license_status: ["trial", "active", "past_due", "canceled", "expired"],
       membership_status: ["active", "invited", "removed"],

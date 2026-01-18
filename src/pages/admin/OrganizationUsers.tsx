@@ -69,7 +69,7 @@ export default function OrganizationUsers() {
       label: 'Roles',
       render: (row) => (
         <div className="pa-flex pa-gap-2">
-          {row.roles.map(role => (
+          {row.roles.map((role: string) => (
             <Badge 
               key={role} 
               variant={role === 'admin' ? 'info' : role === 'coach' ? 'info' : 'neutral'}

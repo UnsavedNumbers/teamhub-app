@@ -12,6 +12,7 @@ import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
 import { t } from '../../i18n'
 import type { UserContext, PermissionSet } from '../fake/userContext'
+import type { Database } from '../../lib/database.types'
 import { calculatePermissions, filterEventsByRole } from '../fake/userContext'
 import type { CalendarEvent, EventRSVP, EventLocation, RSVPStatus } from '../../types/calendar'
 import {
@@ -458,7 +459,7 @@ export async function updateRSVP(
                     note: note ?? null,
                     responded_at: new Date().toISOString(),
                     responded_by_user_id: context.userId
-                }, { onConflict: 'event_id,child_id' })
+                } as Database['public']['Tables']['event_rsvps']['Insert'], { onConflict: 'event_id,child_id' })
                 .select()
                 .single()
 

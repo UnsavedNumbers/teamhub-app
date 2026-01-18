@@ -29,7 +29,7 @@ export interface OrganizationStructureContext {
   resetTo: (level: 'sport' | 'program' | 'level' | 'team' | 'season') => void
 }
 
-const Context = createContext<OrganizationStructureContext | undefined>(undefined)
+export const Context = createContext<OrganizationStructureContext | undefined>(undefined)
 
 export function OrganizationStructureProvider({ children }: { children: ReactNode }) {
   const [selectedSportId, setSelectedSportId] = useState<string>()

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { supabase } from '../../lib/supabase'
+import type { Database } from '../../lib/database.types'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization, Organization } from '../../contexts/OrganizationContext'
 import OrganizationIdentityStep from '../../components/admin/onboarding/OrganizationIdentityStep'
@@ -45,7 +46,7 @@ export default function OrganizationOnboarding() {
   const loadOrganizationData = useCallback(async () => {
     if (!currentOrganization?.id) { setLoading(false); return }
     try {
-      const { data, error: fetchError } = await supabase.from('organizations').select('name, slug, org_type, contact_email').eq('id', currentOrganization.id).single()
+      const { data, error: fetchError } = await supabase.from('organizations').select('name, slug, org_type, contact_email').eq('id', currentOrganization.id).single() as { data: { name?: string; slug?: string; org_type?: string; contact_email?: string } | null; error: { message?: string } | null }
       if (fetchError) throw fetchError
       if (data) {
         if (data.slug && data.org_type) {
@@ -94,10 +95,10 @@ export default function OrganizationOnboarding() {
         const { data: existingOrg } = await supabase.from('organizations').select('id').eq('slug', data.slug).maybeSingle()
         if (existingOrg) { setError('This URL slug is already taken. Please choose a different one.'); setCreating(false); return }
 
-        const { data: newOrg, error: createError } = await supabase.from('organizations').insert({ name: data.name, slug: data.slug, org_type: data.org_type || undefined, contact_email: data.contact_email }).select().single()
-        if (createError) throw createError
+        const { data: newOrg, error: createError } = await supabase.from('organizations').insert({ name: data.name, slug: data.slug, org_type: data.org_type || undefined, contact_email: data.contact_email } as Database['public']['Tables']['organizations']['Insert']).select().single() as { data: { id: string; name: string; slug: string | null } | null; error: { message?: string } | null }
+        if (createError || !newOrg) throw createError || new Error('Failed to create organization')
         orgId = newOrg.id
-        const { error: memberError } = await supabase.from('organization_members').insert({ organization_id: orgId, user_id: profile.id, role: 'org_admin' })
+        const { error: memberError } = await supabase.from('organization_members').insert({ organization_id: orgId, user_id: profile.id, role: 'org_admin' } as Database['public']['Tables']['organization_members']['Insert'])
         if (memberError) { await supabase.from('organizations').delete().eq('id', orgId); throw memberError }
 
         const nextOrg: Organization = { 
@@ -109,7 +110,7 @@ export default function OrganizationOnboarding() {
         }
         setCurrentOrganization(nextOrg); setOrganizations([nextOrg])
       } else {
-        const { error: updateError } = await supabase.from('organizations').update({ name: data.name, slug: data.slug, org_type: data.org_type || undefined, contact_email: data.contact_email }).eq('id', orgId)
+        const { error: updateError } = await supabase.from('organizations').update({ name: data.name, slug: data.slug, org_type: data.org_type || undefined, contact_email: data.contact_email } as Database['public']['Tables']['organizations']['Update']).eq('id', orgId)
         if (updateError) throw updateError
       }
       clearSetupOrganizationFlag()

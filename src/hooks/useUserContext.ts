@@ -46,7 +46,7 @@ export interface UseUserContextResult {
 
 export function useUserContext(): UseUserContextResult {
     const { user, profile, loading: authLoading } = useAuth()
-    const { currentOrganization, loading: orgLoading } = useOrganization()
+    const { currentOrganization, isLoading: orgLoading } = useOrganization()
 
     const context = useMemo<UserContext>(() => ({
         userId: user?.id ?? '',

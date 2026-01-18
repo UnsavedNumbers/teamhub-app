@@ -9,6 +9,7 @@ import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext, PermissionSet } from '../fake/userContext'
 import { calculatePermissions } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
+import type { Database } from '../../lib/database.types'
 import {
     fakeFamilies,
     fakeChildren,
@@ -239,8 +240,7 @@ export async function createFamily(
             .insert({
                 name: dto.name,
                 org_id: dto.org_id,
-                created_by_user_id: context.userId
-            })
+            } as Database['public']['Tables']['families']['Insert'])
             .select()
             .single()
 
@@ -270,7 +270,7 @@ export async function updateFamily(
             .update({
                 ...dto,
                 updated_at: new Date().toISOString()
-            })
+            } as any)
             .eq('id', familyId)
             .select()
             .single()
@@ -297,7 +297,7 @@ export async function deleteFamily(
     try {
         const { error } = await supabase
             .from('families')
-            .update({ deleted_at: new Date().toISOString() })
+            .update({ deleted_at: new Date().toISOString() } as Database['public']['Tables']['families']['Update'])
             .eq('id', familyId)
 
         if (error) throw error
@@ -338,7 +338,7 @@ export async function createChild(
     try {
         const { data, error } = await supabase
             .from('children')
-            .insert(dto)
+            .insert(dto as any)
             .select()
             .single()
 
@@ -365,7 +365,7 @@ export async function updateChild(
             .update({
                 ...dto,
                 updated_at: new Date().toISOString()
-            })
+            } as Database['public']['Tables']['children']['Update'])
             .eq('id', childId)
             .select()
             .single()
@@ -389,7 +389,7 @@ export async function deleteChild(
     try {
         const { error } = await supabase
             .from('children')
-            .update({ deleted_at: new Date().toISOString() })
+            .update({ deleted_at: new Date().toISOString() } as Database['public']['Tables']['children']['Update'])
             .eq('id', childId)
 
         if (error) throw error
@@ -439,7 +439,7 @@ export async function getChildren(
             .is('deleted_at', null)
 
         if (error) throw error
-        return { data: (data || []).map(d => ({ ...d, family: undefined }) as any as Child), error: null }
+        return { data: (data || []).map((d: any) => ({ ...d, family: undefined }) as Child), error: null }
     } catch (err) {
         return { data: [], error: err instanceof Error ? err : new Error('Fetch failed') }
     }

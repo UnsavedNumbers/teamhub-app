@@ -10,7 +10,8 @@ export default function AcceptInvite() {
   const code = searchParams.get('code')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
-  const { isReady } = useUserContext()
+  // Context available if needed
+  // const { isReady } = useUserContext()
   const navigate = useNavigate()
 
   useEffect(() => {

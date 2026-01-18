@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 
 import { useUserContext } from '../../hooks/useUserContext'
-import { useOrganization } from '../../contexts/OrganizationContext'
-import { useT } from '../../i18n/useI18n'
 import { getTeams, getTeamDetails, getTeamRoster } from '../../data/services/teamsService'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { 

@@ -8,7 +8,7 @@
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
 import type { UserContext } from '../fake/userContext'
-import type { Season } from '../types/organization'
+import type { Season, CreateSeasonDTO, UpdateSeasonDTO } from '../types/organization'
 import { getSeasonById, getSeasonsForOrg } from '../fake/fakeTeams'
 
 async function simulateDelay(): Promise<void> {
@@ -29,11 +29,22 @@ export async function getSeasons(
     const { data, error } = await supabase
       .from('seasons')
       .select('*')
-      .eq('org_id', context.orgId)
+      .eq('organization_id', context.orgId)
       .order('start_date', { ascending: false })
 
     if (error) throw error
-    return { data: data as Season[], error: null }
+    const mapped = (data || []).map((row: any) => ({
+      id: row.id,
+      org_id: row.organization_id,
+      team_id: row.team_id ?? null,
+      name: row.name,
+      start_date: row.start_date,
+      end_date: row.end_date,
+      is_active: row.is_active ?? false,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    }))
+    return { data: mapped, error: null }
   } catch (err) {
     console.error('[seasonsService] Error getting seasons:', err)
     return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
@@ -54,13 +65,158 @@ export async function getSeason(
       .from('seasons')
       .select('*')
       .eq('id', seasonId)
-      .eq('org_id', context.orgId)
+      .eq('organization_id', context.orgId)
       .single()
 
     if (error) throw error
-    return { data: data as Season, error: null }
+    const row = data as any
+    return {
+      data: {
+        id: row.id,
+        org_id: row.organization_id,
+        team_id: row.team_id ?? null,
+        name: row.name,
+        start_date: row.start_date,
+        end_date: row.end_date,
+        is_active: row.is_active ?? false,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      },
+      error: null,
+    }
   } catch (err) {
     console.error('[seasonsService] Error getting season:', err)
     return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+  }
+}
+
+export async function createSeason(
+  context: UserContext,
+  dto: CreateSeasonDTO
+): Promise<{ data: Season | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return {
+      data: {
+        id: `demo-season-${Date.now()}`,
+        org_id: dto.org_id,
+        team_id: null,
+        name: dto.name,
+        start_date: dto.start_date,
+        end_date: dto.end_date,
+        is_active: dto.is_active ?? false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      error: null,
+    }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('seasons')
+      .insert({
+        organization_id: dto.org_id,
+        name: dto.name,
+        start_date: dto.start_date,
+        end_date: dto.end_date,
+        is_active: dto.is_active ?? false,
+        sport_id: dto.sport_id ?? null,
+        program_id: dto.program_id ?? null,
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    const row = data as any
+    return {
+      data: {
+        id: row.id,
+        org_id: row.organization_id,
+        team_id: row.team_id ?? null,
+        name: row.name,
+        start_date: row.start_date,
+        end_date: row.end_date,
+        is_active: row.is_active ?? false,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      },
+      error: null,
+    }
+  } catch (err) {
+    return { data: null, error: err instanceof Error ? err : new Error('Create season failed') }
+  }
+}
+
+export async function updateSeason(
+  context: UserContext,
+  seasonId: string,
+  dto: UpdateSeasonDTO
+): Promise<{ data: Season | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { data: null, error: null }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('seasons')
+      .update({
+        name: dto.name,
+        start_date: dto.start_date,
+        end_date: dto.end_date,
+        is_active: dto.is_active,
+        sport_id: dto.sport_id ?? null,
+        program_id: dto.program_id ?? null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', seasonId)
+      .eq('organization_id', context.orgId)
+      .select()
+      .single()
+
+    if (error) throw error
+    const row = data as any
+
+    return {
+      data: {
+        id: row.id,
+        org_id: row.organization_id,
+        team_id: row.team_id ?? null,
+        name: row.name,
+        start_date: row.start_date,
+        end_date: row.end_date,
+        is_active: row.is_active ?? false,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      },
+      error: null,
+    }
+  } catch (err) {
+    return { data: null, error: err instanceof Error ? err : new Error('Update season failed') }
+  }
+}
+
+export async function deleteSeason(
+  context: UserContext,
+  seasonId: string
+): Promise<{ error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { error: null }
+  }
+
+  try {
+    const { error } = await supabase
+      .from('seasons')
+      .delete()
+      .eq('id', seasonId)
+      .eq('organization_id', context.orgId)
+
+    if (error) throw error
+    return { error: null }
+  } catch (err) {
+    return { error: err instanceof Error ? err : new Error('Delete season failed') }
   }
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase, isSupabaseConfigured } from '../../lib/supabase'
+import type { Database } from '../../lib/database.types'
 import { PageHeader, Card, Button, Input, Select, Badge, Checkbox, ConfirmDialog, ErrorState, EmptyState } from '../../components/platformAdmin'
 import { mapLicenseTier, mapFeatureEntitlement, mapTierFeatureAssignment } from '../../utils/domainMappers'
 import type { LicenseTier, FeatureEntitlement, TierFeatureAssignment, StripePriceVerification } from '../../types/licenseTiers.types'
@@ -20,10 +21,10 @@ export default function LicenseTierDetail() {
   const isNew = id === 'new'
 
   const [tier, setTier] = useState<Partial<LicenseTier & { version?: number }>>({
-    tierKey: 'basic',
-    tierName: '',
+    tier_key: 'basic',
+    tier_name: '',
     description: '',
-    stripePriceId: '',
+    stripe_price_id: '',
     status: 'active',
     version: 1,
   })
@@ -453,8 +454,8 @@ export default function LicenseTierDetail() {
   return (
     <div>
       <PageHeader
-        title={isNew ? 'Create License Tier' : tier.tierName || 'License Tier'}
-        subtitle={isNew ? 'Define a new license tier' : `Manage ${tier.tierName}`}
+        title={isNew ? 'Create License Tier' : tier.tier_name || 'License Tier'}
+        subtitle={isNew ? 'Define a new license tier' : `Manage ${tier.tier_name}`}
         actions={
           <div style={{ display: 'flex', gap: 'var(--pa-space-3)' }}>
             <Button variant="secondary" onClick={() => navigate('/platform-admin/licenses/tiers')}>
@@ -548,15 +549,15 @@ export default function LicenseTierDetail() {
             <label className="pa-label pa-label--required">Stripe Price ID</label>
             <div style={{ display: 'flex', gap: 'var(--pa-space-2)' }}>
               <Input
-                value={tier.stripePriceId || ''}
-                onChange={(e) => setTier({ ...tier, stripePriceId: e.target.value })}
+                value={tier.stripe_price_id || ''}
+                onChange={(e) => setTier({ ...tier, stripe_price_id: e.target.value })}
                 placeholder="price_..."
                 style={{ flex: 1 }}
               />
                 <Button
                 variant="secondary"
-                onClick={() => tier.stripePriceId && verifyStripePrice(tier.stripePriceId, true)}
-                disabled={verifying || !tier.stripePriceId}
+                onClick={() => tier.stripe_price_id && verifyStripePrice(tier.stripe_price_id, true)}
+                disabled={verifying || !tier.stripe_price_id}
                 size="dense"
               >
                 {verifying ? 'Verifying...' : 'Re-verify'}
@@ -569,7 +570,7 @@ export default function LicenseTierDetail() {
                     <div className="pa-flex pa-items-center pa-gap-2 pa-mb-2">
                       <span className="material-symbols-outlined" style={{ color: 'var(--pa-success)' }}>check_circle</span>
                       <span className="pa-body-m" style={{ fontWeight: 600 }}>Verified</span>
-                      {tier.stripeVerifiedAt && isStripeVerificationValid(tier.stripeVerifiedAt) && (
+                      {tier.stripe_verified_at && isStripeVerificationValid(tier.stripe_verified_at) && (
                         <Badge variant="neutral" style={{ marginLeft: 'auto' }}>Cached</Badge>
                       )}
                     </div>
@@ -586,9 +587,9 @@ export default function LicenseTierDetail() {
                       </div>
                     )}
                     <div className="pa-body-s">Status: {stripeVerification.active ? 'Active' : 'Inactive'}</div>
-                    {tier.stripeVerifiedAt && (
+                    {tier.stripe_verified_at && (
                       <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
-                        Verified: {new Date(tier.stripeVerifiedAt).toLocaleString()}
+                        Verified: {new Date(tier.stripe_verified_at).toLocaleString()}
                       </div>
                     )}
                   </div>

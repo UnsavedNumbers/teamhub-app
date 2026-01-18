@@ -13,23 +13,7 @@ import { getSports, getPrograms } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
 import { getSeasons } from '../../data/services/seasonsService'
 import type { Team, Sport, Program, Level, Season } from '../../data/types/organization'
-
-
-/**
- * Teams Management
- *
- * Table view with filtering by season, sport, program, level, and status.
- * Redesigned with a focus on powerful filtering and clean list presentation.
- */
-
-import { useEffect, useState, useMemo } from 'react'
-import { Link } from 'react-router-dom'
-import { useUserContext } from '../../hooks/useUserContext'
-import { getTeams } from '../../data/services/teamsService'
-import { getSports, getPrograms } from '../../data/services/sportsService'
-import { getLevels } from '../../data/services/levelsService'
-import { getSeasons } from '../../data/services/seasonsService'
-import type { Team, Sport, Program, Level, Season } from '../../data/types/organization'
+import OfflineBanner from '../../components/admin/OfflineBanner'
 
 export default function TeamsManagement() {
   const { context, isReady } = useUserContext()
@@ -170,6 +154,7 @@ export default function TeamsManagement() {
 
   return (
     <div className="max-w-7xl mx-auto p-8">
+      <OfflineBanner />
       <Header />
 
       {error && (
@@ -216,7 +201,7 @@ export default function TeamsManagement() {
                  Actually, simpler to have filters in one block and button floating or right-aligned. 
                  Let's stick to placing it in the grid for responsive alignment. 
              */}
-             <Link to="/admin/organization/structure/teams/new" className="w-full lg:w-auto">
+             <Link to="/admin/organization/structure/forms?type=team" className="w-full lg:w-auto">
                 <PrimaryButton className="w-full lg:w-auto">Add Team</PrimaryButton>
              </Link>
           </div>

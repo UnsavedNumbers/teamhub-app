@@ -378,6 +378,7 @@ export const fakeAdminPayments: AdminPayment[] = [
 
 export const fakeAdminFeesStatus: AdminFeeStatus[] = [
     {
+        id: 'fee-spring-soccer-reg-001',
         fee_id: 'fee-spring-soccer-reg-001',
         fee_name: 'Spring 2024 Soccer Registration',
         amount_cents: 15000,
@@ -392,6 +393,7 @@ export const fakeAdminFeesStatus: AdminFeeStatus[] = [
         payment_rate_percent: 67,
     },
     {
+        id: 'fee-spring-bb-reg-002',
         fee_id: 'fee-spring-bb-reg-002',
         fee_name: 'Spring 2024 Basketball Registration',
         amount_cents: 12500,

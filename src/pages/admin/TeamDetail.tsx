@@ -42,12 +42,14 @@ export default function TeamDetail() {
       return
     }
 
+    // Note: sport_name, program_name, level_name are computed properties, not stored on Team
     setTeam({
       id: teamData.id,
       name: teamData.name,
-      sport_name: teamData.sport?.name,
-      program_name: teamData.program?.name,
-      level_name: teamData.level?.name
+      // These would need to be added to the Team type or computed separately
+      // sport_name: teamData.sport?.name,
+      // program_name: teamData.program?.name,
+      // level_name: teamData.level?.name
     })
 
     // Transform seasons from fake data

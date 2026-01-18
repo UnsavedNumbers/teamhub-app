@@ -166,7 +166,7 @@ export default function Users() {
         <div className="pa-flex pa-gap-1" style={{ flexWrap: 'wrap' }}>
           {row.roles && row.roles.length > 0 ? (
             <>
-              {row.roles.slice(0, 3).map((role) => (
+              {row.roles.slice(0, 3).map((role: string) => (
                 <Badge key={role} variant="neutral">{role}</Badge>
               ))}
               {row.roles.length > 3 && (
@@ -186,7 +186,7 @@ export default function Users() {
         const orgs = row.organizations || []
         if (orgs.length === 0) return <span className="pa-body-s pa-text-muted">None</span>
         return (
-          <Badge variant="neutral" title={orgs.map(o => o.org_name).join(', ')}>
+          <Badge variant="neutral" title={orgs.map((o: { org_name: string }) => o.org_name).join(', ')}>
             {orgs.length === 1 ? orgs[0].org_name : `${orgs.length} orgs`}
           </Badge>
         )

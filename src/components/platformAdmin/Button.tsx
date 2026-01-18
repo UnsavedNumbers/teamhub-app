@@ -51,8 +51,8 @@ export function Button<E extends ElementType = 'button'>({
 
   const classNames = `pa-btn ${variantClass} ${sizeClass} ${className}`.trim()
   const componentProps = {
-    className: classNames,
     ...rest,
+    className: classNames,
   } as ComponentPropsWithoutRef<E>
 
   if (Tag === 'button') {

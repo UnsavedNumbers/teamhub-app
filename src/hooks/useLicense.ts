@@ -77,10 +77,21 @@ export function useLicense(organizationId?: string, options?: { requireOrganizat
           stripe_price_id
         `)
         .eq('id', orgId)
-        .maybeSingle()
+        .maybeSingle() as { data: {
+          license_status?: string | null
+          license_plan?: string | null
+          license_current_period_start?: string | null
+          license_current_period_end?: string | null
+          license_trial_ends_at?: string | null
+          license_grace_ends_at?: string | null
+          license_cancel_at_period_end?: boolean | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          stripe_price_id?: string | null
+        } | null; error: { message?: string } | null }
 
       if (fetchError) {
-        setError(fetchError.message)
+        setError(fetchError.message || 'Unknown error')
         setSummary(null)
         return
       }
@@ -94,14 +105,14 @@ export function useLicense(organizationId?: string, options?: { requireOrganizat
       const parsed: LicenseSummary = {
         status: (data.license_status as LicenseStatus | null) ?? null,
         plan: (data.license_plan as LicensePlan | null) ?? null,
-        currentPeriodStart: data.license_current_period_start,
-        currentPeriodEnd: data.license_current_period_end,
-        trialEndsAt: data.license_trial_ends_at,
-        graceEndsAt: data.license_grace_ends_at,
-        cancelAtPeriodEnd: data.license_cancel_at_period_end,
-        stripeCustomerId: data.stripe_customer_id,
-        stripeSubscriptionId: data.stripe_subscription_id,
-        stripePriceId: data.stripe_price_id,
+        currentPeriodStart: data.license_current_period_start ?? null,
+        currentPeriodEnd: data.license_current_period_end ?? null,
+        trialEndsAt: data.license_trial_ends_at ?? null,
+        graceEndsAt: data.license_grace_ends_at ?? null,
+        cancelAtPeriodEnd: data.license_cancel_at_period_end ?? null,
+        stripeCustomerId: data.stripe_customer_id ?? null,
+        stripeSubscriptionId: data.stripe_subscription_id ?? null,
+        stripePriceId: data.stripe_price_id ?? null,
       }
 
       // Populate computed properties

@@ -19,7 +19,7 @@ export default function OrganizationBilling() {
   const { currentOrganization } = useOrganization()
   const orgId = currentOrganization?.id
 
-  const { summary, loading, error, isActive, refresh } = useLicense(orgId)
+  const { summary, loading, error, refresh } = useLicense(orgId)
 
   const [history, setHistory] = useState<BillingEvent[]>([])
   const [historyError, setHistoryError] = useState<string | null>(null)

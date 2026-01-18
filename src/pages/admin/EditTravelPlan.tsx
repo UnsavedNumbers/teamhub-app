@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 
 import { useUserContext } from '../../hooks/useUserContext'
-import { useOrganization } from '../../contexts/OrganizationContext'
 import { getTravelPlanById } from '../../data/services/travelService'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { 

@@ -8,6 +8,7 @@
 import { supabase } from '../../lib/supabase'
 import { t } from '../../i18n'
 import type { UserContext } from '../fake/userContext'
+import type { Database } from '../../lib/database.types'
 import type { 
   EventRSVPConfig, 
   GeneralRSVP, 
@@ -31,7 +32,7 @@ export function isAthleteRSVP(event: CalendarEvent | null | undefined): boolean 
 
 // Get RSVP configuration for an event
 export async function getEventRSVPConfig(
-  context: UserContext,
+  _context: UserContext,
   eventId: string
 ): Promise<{ data: EventRSVPConfig | null; error: Error | null }> {
   try {
@@ -67,7 +68,7 @@ export async function getEventRSVPConfig(
 
 // Get user's general RSVP for an event
 export async function getGeneralRSVP(
-  context: UserContext,
+  _context: UserContext,
   eventId: string,
   userId: string
 ): Promise<{ data: GeneralRSVP | null; error: Error | null }> {
@@ -117,7 +118,7 @@ export async function getGeneralRSVP(
 
 // Set general RSVP (UPSERT pattern)
 export async function setGeneralRSVP(
-  context: UserContext,
+  _context: UserContext,
   eventId: string,
   userId: string,
   status: GeneralRSVPStatus,
@@ -154,7 +155,7 @@ export async function setGeneralRSVP(
         status,
         note: note || null,
         responded_at: new Date().toISOString()
-      }, {
+      } as Database['public']['Tables']['event_general_rsvps']['Insert'], {
         onConflict: 'event_id,user_id'
       })
       .select()
@@ -176,7 +177,7 @@ export async function setGeneralRSVP(
 
 // Get all athlete RSVPs for an event
 export async function getAthleteRSVPs(
-  context: UserContext,
+  _context: UserContext,
   eventId: string
 ): Promise<{ data: EventRSVP[]; error: Error | null }> {
   try {
@@ -273,7 +274,7 @@ export async function setAthleteRSVP(
         note: note || null,
         responded_at: status !== 'unknown' ? new Date().toISOString() : null,
         responded_by_user_id: context.userId
-      }, {
+      } as Database['public']['Tables']['event_rsvps']['Insert'], {
         onConflict: 'event_id,child_id'
       })
       .select()
@@ -295,7 +296,7 @@ export async function setAthleteRSVP(
 
 // Validate child eligibility for event
 export async function validateChildEventEligibility(
-  context: UserContext,
+  _context: UserContext,
   childId: string,
   eventId: string
 ): Promise<{ data: boolean; error: Error | null }> {
@@ -322,7 +323,7 @@ export async function validateChildEventEligibility(
 
 // Get RSVP summary for coach/admin
 export async function getRSVPSummary(
-  context: UserContext,
+  _context: UserContext,
   eventId: string
 ): Promise<{ data: RSVPSummary | null; error: Error | null }> {
   try {
@@ -441,7 +442,7 @@ export async function getRSVPSummary(
 
 // Send RSVP reminder (triggers notification)
 export async function sendRSVPReminder(
-  context: UserContext,
+  _context: UserContext,
   eventId: string
 ): Promise<{ data: boolean; error: Error | null }> {
   try {

@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
-import { getSports, getPrograms } from '../../data/services/sportsService'
+import { getSports, getPrograms, createSport, createProgram, updateSport, updateProgram } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
-import { getTeams } from '../../data/services/teamsService'
-import { getSeasons } from '../../data/services/seasonsService'
+import { createLevel, updateLevel } from '../../data/services/levelsService'
+import { getTeams, createTeam, updateTeam } from '../../data/services/teamsService'
+import { getSeasons, createSeason, updateSeason } from '../../data/services/seasonsService'
 import type { Sport, Program, Level, Team, Season, GenderCategory, LevelType } from '../../data/types/organization'
 import { PageHeader, Card, Button, Input, Select, Checkbox } from '../../components/platformAdmin'
+import OfflineBanner from '../../components/admin/OfflineBanner'
 
 interface RadioOption {
   value: string
@@ -62,52 +65,97 @@ function RadioGroup({
   )
 }
 
-function Toggle({
-  label,
-  checked,
-  onChange,
-  helper,
-}: {
-  label: string
-  checked: boolean
-  onChange: (checked: boolean) => void
-  helper?: string
-}) {
-  return (
-    <div className="pa-form-group">
-      <label className="pa-label">{label}</label>
-      {helper && <div className="pa-helper">{helper}</div>}
-      <div className="pa-flex pa-items-center pa-gap-3" style={{ marginTop: '8px' }}>
-        <label className="pa-toggle">
-          <input
-            type="checkbox"
-            className="pa-toggle-input"
-            checked={checked}
-            onChange={(e) => onChange(e.target.checked)}
-          />
-          <div className="pa-toggle-track" />
-          <div className="pa-toggle-thumb" />
-        </label>
-        <span className="pa-body-m">{checked ? 'Enabled' : 'Disabled'}</span>
-      </div>
-    </div>
-  )
-}
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-}
 
 export default function OrganizationStructureForms() {
   const { context, isReady } = useUserContext()
   const { currentOrganization } = useOrganization()
+  const location = useLocation()
 
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState({
+    sport: false,
+    program: false,
+    level: false,
+    team: false,
+    season: false,
+  })
+
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search])
+  const editType = searchParams.get('edit')
+  const editId = searchParams.get('id')
+
+  useEffect(() => {
+    if (!editType || !editId) return
+
+    if (editType === 'sport') {
+      const sport = sports.find((s) => s.id === editId)
+      if (sport) {
+        setSportForm((prev) => ({
+          ...prev,
+          name: sport.name,
+        }))
+      }
+    }
+
+    if (editType === 'program') {
+      const program = programs.find((p) => p.id === editId)
+      if (program) {
+        setProgramForm((prev) => ({
+          ...prev,
+          sportId: program.sport_id,
+          gender: program.gender_category,
+          name: program.name,
+          nameTouched: true,
+        }))
+      }
+    }
+
+    if (editType === 'level') {
+      const level = levels.find((l) => l.id === editId)
+      if (level) {
+        setLevelForm((prev) => ({
+          ...prev,
+          programId: level.program_id,
+          name: level.name,
+          type: level.level_type,
+          ageMin: level.age_min ? String(level.age_min) : '',
+          ageMax: level.age_max ? String(level.age_max) : '',
+          gradeMin: level.grade_min ? String(level.grade_min) : '',
+          gradeMax: level.grade_max ? String(level.grade_max) : '',
+          skillDescription: level.description || '',
+        }))
+      }
+    }
+
+    if (editType === 'team') {
+      const team = teams.find((t) => t.id === editId)
+      if (team) {
+        setTeamForm((prev) => ({
+          ...prev,
+          levelId: team.level_id ?? '',
+          name: team.name,
+          seasonId: '',
+          isActive: team.is_active ?? true,
+        }))
+      }
+    }
+
+    if (editType === 'season') {
+      const season = seasons.find((s) => s.id === editId)
+      if (season) {
+        setSeasonForm((prev) => ({
+          ...prev,
+          name: season.name,
+          startDate: season.start_date,
+          endDate: season.end_date,
+          isActive: season.is_active ?? false,
+        }))
+      }
+    }
+  }, [editType, editId, sports, programs, levels, teams, seasons])
 
   const [sports, setSports] = useState<Sport[]>([])
   const [programs, setPrograms] = useState<Program[]>([])
@@ -120,9 +168,6 @@ export default function OrganizationStructureForms() {
 
   const [sportForm, setSportForm] = useState({
     name: '',
-    showSeasonPattern: false,
-    defaultSeasonPattern: '',
-    enabled: true,
   })
 
   const [programForm, setProgramForm] = useState({
@@ -130,9 +175,6 @@ export default function OrganizationStructureForms() {
     gender: '' as GenderCategory | '',
     name: '',
     nameTouched: false,
-    showOptional: false,
-    governingBody: '',
-    status: 'active',
   })
 
   const [levelForm, setLevelForm] = useState({
@@ -144,61 +186,20 @@ export default function OrganizationStructureForms() {
     gradeMin: '',
     gradeMax: '',
     skillDescription: '',
-    showOptional: false,
-    displayOrder: '',
-    status: 'active',
   })
 
   const [teamForm, setTeamForm] = useState({
     levelId: '',
     seasonId: '',
     name: '',
-    designation: '',
-    coachMode: 'invite',
-    coachEmail: '',
-    coachId: '',
-    status: 'active',
-    showOptional: false,
-    homeLocation: '',
-    notes: '',
+    isActive: true,
   })
 
   const [seasonForm, setSeasonForm] = useState({
     name: '',
-    nameTouched: false,
-    year: '',
-    term: '',
     startDate: '',
     endDate: '',
-    showDates: false,
-    status: 'upcoming',
-  })
-
-  const [childForm, setChildForm] = useState({
-    firstName: '',
-    lastName: '',
-    dob: '',
-    genderRequired: false,
-    gender: '',
-    seasonId: '',
-    sportId: '',
-    programId: '',
-    levelId: '',
-    teamId: '',
-    guardianMode: 'invite',
-    guardianEmail: '',
-    guardianId: '',
-    guardianRelationship: 'parent',
-  })
-
-  const [coachForm, setCoachForm] = useState({
-    name: '',
-    email: '',
-    role: 'head',
-    seasonId: '',
-    teamIds: [] as string[],
-    assignToLevel: false,
-    levelId: '',
+    isActive: false,
   })
 
   useEffect(() => {
@@ -281,70 +282,7 @@ export default function OrganizationStructureForms() {
     setProgramForm((prev) => ({ ...prev, name: suggested }))
   }, [programForm.sportId, programForm.gender, programForm.nameTouched, sportById])
 
-  useEffect(() => {
-    if (seasonForm.nameTouched) return
-
-    if (!seasonForm.term || !seasonForm.year) {
-      setSeasonForm((prev) => ({ ...prev, name: '' }))
-      return
-    }
-
-    const termLabel = seasonForm.term.charAt(0).toUpperCase() + seasonForm.term.slice(1)
-    setSeasonForm((prev) => ({ ...prev, name: `${termLabel} ${seasonForm.year}` }))
-  }, [seasonForm.term, seasonForm.year, seasonForm.nameTouched])
-
-  useEffect(() => {
-    setChildForm((prev) => ({ ...prev, programId: '', levelId: '', teamId: '' }))
-  }, [childForm.sportId])
-
-  useEffect(() => {
-    setChildForm((prev) => ({ ...prev, levelId: '', teamId: '' }))
-  }, [childForm.programId])
-
-  useEffect(() => {
-    setChildForm((prev) => ({ ...prev, teamId: '' }))
-  }, [childForm.levelId])
-
-  const filteredProgramsForSport = useMemo(
-    () => programs.filter((program) => program.sport_id === childForm.sportId),
-    [programs, childForm.sportId]
-  )
-
-  const filteredLevelsForProgram = useMemo(
-    () => levels.filter((level) => level.program_id === childForm.programId),
-    [levels, childForm.programId]
-  )
-
-  const filteredTeamsForLevel = useMemo(
-    () => teams.filter((team) => team.level_id === childForm.levelId),
-    [teams, childForm.levelId]
-  )
-
-  const programOptionsForChild = useMemo(
-    () => [
-      { value: '', label: childForm.sportId ? 'Select program' : 'Select sport first' },
-      ...filteredProgramsForSport.map((program) => ({ value: program.id, label: program.name })),
-    ],
-    [filteredProgramsForSport, childForm.sportId]
-  )
-
-  const levelOptionsForChild = useMemo(
-    () => [
-      { value: '', label: childForm.programId ? 'Select level' : 'Select program first' },
-      ...filteredLevelsForProgram.map((level) => ({ value: level.id, label: level.name })),
-    ],
-    [filteredLevelsForProgram, childForm.programId]
-  )
-
-  const teamOptionsForChild = useMemo(
-    () => [
-      { value: '', label: childForm.levelId ? 'Select team' : 'Select level first' },
-      ...filteredTeamsForLevel.map((team) => ({ value: team.id, label: team.name })),
-    ],
-    [filteredTeamsForLevel, childForm.levelId]
-  )
-
-  const internalKey = slugify(sportForm.name)
+  const activeFormType = editType ?? searchParams.get('type') ?? ''
 
   const sportNameError = touched['sport.name'] && !sportForm.name.trim()
     ? 'Sport name is required.'
@@ -410,80 +348,16 @@ export default function OrganizationStructureForms() {
     ? 'Season name is required.'
     : undefined
 
-  const seasonYearError = touched['season.year'] && !seasonForm.year
-    ? 'Year is required.'
+  const seasonStartError = touched['season.startDate'] && !seasonForm.startDate
+    ? 'Start date is required.'
     : undefined
 
-  const seasonTermError = touched['season.term'] && !seasonForm.term
-    ? 'Term is required.'
+  const seasonEndError = touched['season.endDate'] && !seasonForm.endDate
+    ? 'End date is required.'
     : undefined
 
-  const childFirstNameError = touched['child.firstName'] && !childForm.firstName.trim()
-    ? 'First name is required.'
-    : undefined
-
-  const childLastNameError = touched['child.lastName'] && !childForm.lastName.trim()
-    ? 'Last name is required.'
-    : undefined
-
-  const childDobError = touched['child.dob'] && !childForm.dob
-    ? 'Date of birth is required.'
-    : undefined
-
-  const childGenderError = childForm.genderRequired && touched['child.gender'] && !childForm.gender
-    ? 'Select a gender.'
-    : undefined
-
-  const childSeasonError = touched['child.season'] && !childForm.seasonId
-    ? 'Select a season.'
-    : undefined
-
-  const childSportError = touched['child.sport'] && !childForm.sportId
-    ? 'Select a sport.'
-    : undefined
-
-  const childProgramError = touched['child.program'] && !childForm.programId
-    ? 'Select a program.'
-    : undefined
-
-  const childLevelError = touched['child.level'] && !childForm.levelId
-    ? 'Select a level.'
-    : undefined
-
-  const childTeamError = touched['child.team'] && !childForm.teamId
-    ? 'Select a team.'
-    : undefined
-
-  const guardianEmailError = childForm.guardianMode === 'invite' && touched['child.guardianEmail'] && !childForm.guardianEmail.trim()
-    ? 'Guardian email is required.'
-    : undefined
-
-  const guardianIdError = childForm.guardianMode === 'link' && touched['child.guardianId'] && !childForm.guardianId
-    ? 'Select an existing guardian.'
-    : undefined
-
-  const coachNameError = touched['coach.name'] && !coachForm.name.trim()
-    ? 'Coach name is required.'
-    : undefined
-
-  const coachEmailError = touched['coach.email'] && !coachForm.email.trim()
-    ? 'Coach email is required.'
-    : undefined
-
-  const coachRoleError = touched['coach.role'] && !coachForm.role
-    ? 'Select a role.'
-    : undefined
-
-  const coachSeasonError = touched['coach.season'] && !coachForm.seasonId
-    ? 'Select a season.'
-    : undefined
-
-  const coachTeamsError = touched['coach.teams'] && coachForm.teamIds.length === 0
-    ? 'Assign at least one team.'
-    : undefined
-
-  const coachLevelError = coachForm.assignToLevel && touched['coach.level'] && !coachForm.levelId
-    ? 'Select a level.'
+  const seasonRangeError = touched['season.endDate'] && seasonForm.startDate && seasonForm.endDate && seasonForm.endDate < seasonForm.startDate
+    ? 'End date must be on or after the start date.'
     : undefined
 
   const canCreateSport = !!sportForm.name.trim()
@@ -493,13 +367,24 @@ export default function OrganizationStructureForms() {
     (levelForm.type === 'grade_based' && !!levelForm.gradeMin && !!levelForm.gradeMax) ||
     (levelForm.type === 'skill_based' && !!levelForm.skillDescription.trim())
   )
-  const canCreateTeam = !!teamForm.levelId && !!teamForm.seasonId && !!teamForm.name.trim()
-  const canCreateSeason = !!seasonForm.name.trim() && !!seasonForm.year && !!seasonForm.term
-  const canAddChild = !!childForm.firstName.trim() && !!childForm.lastName.trim() && !!childForm.dob && !!childForm.seasonId && !!childForm.sportId && !!childForm.programId && !!childForm.levelId && !!childForm.teamId && (!childForm.genderRequired || !!childForm.gender) && (
-    (childForm.guardianMode === 'invite' && !!childForm.guardianEmail.trim()) ||
-    (childForm.guardianMode === 'link' && !!childForm.guardianId)
-  )
-  const canAddCoach = !!coachForm.name.trim() && !!coachForm.email.trim() && !!coachForm.role && !!coachForm.seasonId && coachForm.teamIds.length > 0 && (!coachForm.assignToLevel || !!coachForm.levelId)
+  const isEditingTeam = editType === 'team'
+  const canCreateTeam = !!teamForm.levelId && !!teamForm.name.trim() && (isEditingTeam || !!teamForm.seasonId)
+  const isSeasonRangeValid = !!seasonForm.startDate && !!seasonForm.endDate && seasonForm.endDate >= seasonForm.startDate
+  const canCreateSeason = !!seasonForm.name.trim() && isSeasonRangeValid
+
+  const formLabels: Record<string, string> = {
+    sport: 'Sport',
+    program: 'Program',
+    level: 'Level',
+    team: 'Team',
+    season: 'Season',
+  }
+
+  const activeFormLabel = activeFormType ? formLabels[activeFormType] ?? 'Item' : 'Organization Structure'
+  const pageTitle = activeFormType ? `${editType ? 'Edit' : 'Add'} ${activeFormLabel}` : 'Organization Structure'
+  const pageSubtitle = activeFormType
+    ? 'Complete the required details to continue.'
+    : 'Choose what you want to add or edit.'
 
   if (loading) {
     return <div className="pa-skeleton" style={{ height: '500px' }} />
@@ -507,10 +392,27 @@ export default function OrganizationStructureForms() {
 
   return (
     <div className="pa-root">
+      <OfflineBanner />
       <PageHeader
-        title="Organization Structure Forms"
-        subtitle="Define sports, programs, levels, teams, and seasons in the same way you plan a season."
+        title={pageTitle}
+        subtitle={pageSubtitle}
+        breadcrumbs={[
+          { label: 'Organizations', path: '/admin/organization/structure' },
+          { label: activeFormLabel },
+        ]}
       />
+
+      {successMessage && (
+        <Card className="pa-mb-6">
+          <div className="pa-text-success">{successMessage}</div>
+        </Card>
+      )}
+
+      {actionError && (
+        <Card className="pa-mb-6">
+          <div className="pa-text-danger">{actionError}</div>
+        </Card>
+      )}
 
       {loadError && (
         <Card className="pa-mb-6">
@@ -518,7 +420,30 @@ export default function OrganizationStructureForms() {
         </Card>
       )}
 
-      <Card title="Create Sport" className="pa-mb-6">
+      {!activeFormType && (
+        <Card title="What would you like to add?" className="pa-mb-6">
+          <div className="pa-flex pa-flex-col pa-gap-3">
+            <Link to="/admin/organization/structure/forms?type=sport">
+              <Button>Add Sport</Button>
+            </Link>
+            <Link to="/admin/organization/structure/forms?type=program">
+              <Button variant="secondary">Add Program</Button>
+            </Link>
+            <Link to="/admin/organization/structure/forms?type=level">
+              <Button variant="secondary">Add Level</Button>
+            </Link>
+            <Link to="/admin/organization/structure/forms?type=team">
+              <Button variant="secondary">Add Team</Button>
+            </Link>
+            <Link to="/admin/organization/structure/forms?type=season">
+              <Button variant="secondary">Add Season</Button>
+            </Link>
+          </div>
+        </Card>
+      )}
+
+      {activeFormType === 'sport' && (
+      <Card title={editType === 'sport' ? 'Edit Sport' : 'Add Sport'} className="pa-mb-6">
         <div className="pa-flex pa-flex-col pa-gap-4">
           <Input
             label="Sport name"
@@ -529,42 +454,50 @@ export default function OrganizationStructureForms() {
             required
             error={sportNameError}
           />
-          <Input
-            label="Internal key"
-            value={internalKey}
-            helper="Generated automatically from the sport name."
-            readOnly
-          />
-          <Checkbox
-            checked={sportForm.showSeasonPattern}
-            onChange={(e) => setSportForm((prev) => ({ ...prev, showSeasonPattern: e.target.checked }))}
-            label="Add a default season pattern"
-          />
-          {sportForm.showSeasonPattern && (
-            <RadioGroup
-              name="sport-season-pattern"
-              label="Default season pattern"
-              value={sportForm.defaultSeasonPattern}
-              onChange={(value) => setSportForm((prev) => ({ ...prev, defaultSeasonPattern: value }))}
-              options={[
-                { value: 'fall', label: 'Fall' },
-                { value: 'spring', label: 'Spring' },
-                { value: 'winter', label: 'Winter' },
-                { value: 'summer', label: 'Summer' },
-              ]}
-            />
-          )}
-          <Toggle
-            label="Enable sport"
-            checked={sportForm.enabled}
-            onChange={(checked) => setSportForm((prev) => ({ ...prev, enabled: checked }))}
-            helper="Disable to prevent new programs from being created under this sport."
-          />
-          <Button disabled={!canCreateSport}>Create Sport</Button>
+          <Button
+            disabled={!canCreateSport || submitting.sport}
+            loading={submitting.sport}
+            onClick={async () => {
+              if (!canCreateSport || !currentOrganization?.id) return
+              setSubmitting((prev) => ({ ...prev, sport: true }))
+              setActionError(null)
+              setSuccessMessage(null)
+
+              if (editType === 'sport' && editId) {
+                const result = await updateSport(context, editId, { name: sportForm.name.trim() })
+                if (result.error) {
+                  setActionError(result.error.message)
+                } else if (result.data) {
+                  setSports((prev) => prev.map((s) => (s.id === editId ? (result.data as Sport) : s)))
+                  setSuccessMessage('Sport updated successfully.')
+                }
+              } else {
+                const result = await createSport(context, {
+                  org_id: currentOrganization.id,
+                  name: sportForm.name.trim(),
+                  icon: null,
+                  color: '#137fec',
+                })
+                if (result.error) {
+                  setActionError(result.error.message)
+                } else if (result.data) {
+                  setSports((prev) => [result.data as Sport, ...prev])
+                  setSportForm((prev) => ({ ...prev, name: '' }))
+                  setSuccessMessage('Sport created successfully.')
+                }
+              }
+
+              setSubmitting((prev) => ({ ...prev, sport: false }))
+            }}
+          >
+            {editType === 'sport' ? 'Update Sport' : 'Create Sport'}
+          </Button>
         </div>
       </Card>
+      )}
 
-      <Card title="Create Program" className="pa-mb-6">
+      {activeFormType === 'program' && (
+      <Card title={editType === 'program' ? 'Edit Program' : 'Add Program'} className="pa-mb-6">
         <div className="pa-flex pa-flex-col pa-gap-4">
           <Select
             label="Parent sport"
@@ -598,34 +531,61 @@ export default function OrganizationStructureForms() {
             required
             error={programNameError}
           />
-          <Checkbox
-            checked={programForm.showOptional}
-            onChange={(e) => setProgramForm((prev) => ({ ...prev, showOptional: e.target.checked }))}
-            label="Add optional details"
-          />
-          {programForm.showOptional && (
-            <Input
-              label="Governing body"
-              placeholder="e.g. State Athletic Association"
-              value={programForm.governingBody}
-              onChange={(e) => setProgramForm((prev) => ({ ...prev, governingBody: e.target.value }))}
-            />
-          )}
-          <RadioGroup
-            name="program-status"
-            label="Program status"
-            value={programForm.status}
-            onChange={(value) => setProgramForm((prev) => ({ ...prev, status: value }))}
-            options={[
-              { value: 'active', label: 'Active' },
-              { value: 'inactive', label: 'Inactive' },
-            ]}
-          />
-          <Button disabled={!canCreateProgram}>Create Program</Button>
+          <Button
+            disabled={!canCreateProgram || submitting.program}
+            loading={submitting.program}
+            onClick={async () => {
+              if (!canCreateProgram || !currentOrganization?.id) return
+              setSubmitting((prev) => ({ ...prev, program: true }))
+              setActionError(null)
+              setSuccessMessage(null)
+
+              if (editType === 'program' && editId) {
+                const result = await updateProgram(context, editId, {
+                  name: programForm.name.trim(),
+                  gender_category: programForm.gender as GenderCategory,
+                  description: null,
+                })
+                if (result.error) {
+                  setActionError(result.error.message)
+                } else if (result.data) {
+                  setPrograms((prev) => prev.map((p) => (p.id === editId ? (result.data as Program) : p)))
+                  setSuccessMessage('Program updated successfully.')
+                }
+              } else {
+                const result = await createProgram(context, {
+                  org_id: currentOrganization.id,
+                  sport_id: programForm.sportId,
+                  name: programForm.name.trim(),
+                  gender_category: programForm.gender as GenderCategory,
+                  description: null,
+                })
+                if (result.error) {
+                  setActionError(result.error.message)
+                } else if (result.data) {
+                  setPrograms((prev) => [result.data as Program, ...prev])
+                  setProgramForm((prev) => ({
+                    ...prev,
+                    name: '',
+                    sportId: '',
+                    gender: 'coed',
+                    nameTouched: false,
+                  }))
+                  setSuccessMessage('Program created successfully.')
+                }
+              }
+
+              setSubmitting((prev) => ({ ...prev, program: false }))
+            }}
+          >
+            {editType === 'program' ? 'Update Program' : 'Create Program'}
+          </Button>
         </div>
       </Card>
+      )}
 
-      <Card title="Create Level" className="pa-mb-6">
+      {activeFormType === 'level' && (
+      <Card title={editType === 'level' ? 'Edit Level' : 'Add Level'} className="pa-mb-6">
         <div className="pa-flex pa-flex-col pa-gap-4">
           <Select
             label="Parent program"
@@ -716,36 +676,77 @@ export default function OrganizationStructureForms() {
               error={levelSkillError}
             />
           )}
+          <Button
+            disabled={!canCreateLevel || submitting.level}
+            loading={submitting.level}
+            onClick={async () => {
+              if (!canCreateLevel || !currentOrganization?.id) return
+              setSubmitting((prev) => ({ ...prev, level: true }))
+              setActionError(null)
+              setSuccessMessage(null)
 
-          <Checkbox
-            checked={levelForm.showOptional}
-            onChange={(e) => setLevelForm((prev) => ({ ...prev, showOptional: e.target.checked }))}
-            label="Add optional details"
-          />
-          {levelForm.showOptional && (
-            <Input
-              label="Display order"
-              type="number"
-              placeholder="Optional ordering within the program"
-              value={levelForm.displayOrder}
-              onChange={(e) => setLevelForm((prev) => ({ ...prev, displayOrder: e.target.value }))}
-            />
-          )}
-          <RadioGroup
-            name="level-status"
-            label="Level status"
-            value={levelForm.status}
-            onChange={(value) => setLevelForm((prev) => ({ ...prev, status: value }))}
-            options={[
-              { value: 'active', label: 'Active' },
-              { value: 'inactive', label: 'Inactive' },
-            ]}
-          />
-          <Button disabled={!canCreateLevel}>Create Level</Button>
+              if (editType === 'level' && editId) {
+                const result = await updateLevel(context, editId, {
+                  name: levelForm.name.trim(),
+                  level_type: levelForm.type as LevelType,
+                  description: levelForm.skillDescription?.trim() || null,
+                  age_min: levelForm.ageMin ? Number(levelForm.ageMin) : null,
+                  age_max: levelForm.ageMax ? Number(levelForm.ageMax) : null,
+                  grade_min: levelForm.gradeMin ? Number(levelForm.gradeMin) : null,
+                  grade_max: levelForm.gradeMax ? Number(levelForm.gradeMax) : null,
+                  skill_min: levelForm.type === 'skill_based' ? 1 : null,
+                  skill_max: levelForm.type === 'skill_based' ? 5 : null,
+                })
+                if (result.error) {
+                  setActionError(result.error.message)
+                } else if (result.data) {
+                  setLevels((prev) => prev.map((l) => (l.id === editId ? (result.data as Level) : l)))
+                  setSuccessMessage('Level updated successfully.')
+                }
+              } else {
+                const result = await createLevel(context, {
+                  org_id: currentOrganization.id,
+                  program_id: levelForm.programId,
+                  name: levelForm.name.trim(),
+                  level_type: levelForm.type as LevelType,
+                  description: levelForm.skillDescription?.trim() || null,
+                  age_min: levelForm.ageMin ? Number(levelForm.ageMin) : null,
+                  age_max: levelForm.ageMax ? Number(levelForm.ageMax) : null,
+                  grade_min: levelForm.gradeMin ? Number(levelForm.gradeMin) : null,
+                  grade_max: levelForm.gradeMax ? Number(levelForm.gradeMax) : null,
+                  skill_min: levelForm.type === 'skill_based' ? 1 : null,
+                  skill_max: levelForm.type === 'skill_based' ? 5 : null,
+                })
+                if (result.error) {
+                  setActionError(result.error.message)
+                } else if (result.data) {
+                  setLevels((prev) => [result.data as Level, ...prev])
+                  setLevelForm((prev) => ({
+                    ...prev,
+                    programId: '',
+                    name: '',
+                    type: 'age_based',
+                    ageMin: '',
+                    ageMax: '',
+                    gradeMin: '',
+                    gradeMax: '',
+                    skillDescription: '',
+                  }))
+                  setSuccessMessage('Level created successfully.')
+                }
+              }
+
+              setSubmitting((prev) => ({ ...prev, level: false }))
+            }}
+          >
+            {editType === 'level' ? 'Update Level' : 'Create Level'}
+          </Button>
         </div>
       </Card>
+      )}
 
-      <Card title="Create Team" className="pa-mb-6">
+      {activeFormType === 'team' && (
+      <Card title={editType === 'team' ? 'Edit Team' : 'Add Team'} className="pa-mb-6">
         <div className="pa-flex pa-flex-col pa-gap-4">
           <Select
             label="Parent level"
@@ -756,15 +757,17 @@ export default function OrganizationStructureForms() {
             options={levelOptions}
             error={teamLevelError}
           />
-          <Select
-            label="Season"
-            required
-            value={teamForm.seasonId}
-            onChange={(e) => setTeamForm((prev) => ({ ...prev, seasonId: e.target.value }))}
-            onBlur={() => markTouched('team.season')}
-            options={seasonOptions}
-            error={teamSeasonError}
-          />
+          {!isEditingTeam && (
+            <Select
+              label="Season"
+              required
+              value={teamForm.seasonId}
+              onChange={(e) => setTeamForm((prev) => ({ ...prev, seasonId: e.target.value }))}
+              onBlur={() => markTouched('team.season')}
+              options={seasonOptions}
+              error={teamSeasonError}
+            />
+          )}
           <Input
             label="Team name"
             placeholder="e.g. U10 Blue"
@@ -774,396 +777,162 @@ export default function OrganizationStructureForms() {
             required
             error={teamNameError}
           />
-          <Input
-            label="Team designation"
-            placeholder="e.g. A, B, Blue, White"
-            value={teamForm.designation}
-            onChange={(e) => setTeamForm((prev) => ({ ...prev, designation: e.target.value }))}
-          />
-          <RadioGroup
-            name="coach-mode"
-            label="Coaches"
-            helper="Invite a new coach by email or pick an existing user."
-            value={teamForm.coachMode}
-            onChange={(value) => setTeamForm((prev) => ({ ...prev, coachMode: value }))}
-            options={[
-              { value: 'invite', label: 'Invite new coach' },
-              { value: 'existing', label: 'Add existing user' },
-            ]}
-          />
-          {teamForm.coachMode === 'invite' ? (
-            <Input
-              label="Coach email"
-              type="email"
-              placeholder="coach@example.com"
-              value={teamForm.coachEmail}
-              onChange={(e) => setTeamForm((prev) => ({ ...prev, coachEmail: e.target.value }))}
-            />
-          ) : (
-            <Select
-              label="Existing coach"
-              value={teamForm.coachId}
-              onChange={(e) => setTeamForm((prev) => ({ ...prev, coachId: e.target.value }))}
-              options={[{ value: '', label: 'Select a coach' }]}
-              helper="Connect a coach who already has an account."
-            />
-          )}
-          <RadioGroup
-            name="team-status"
-            label="Team status"
-            value={teamForm.status}
-            onChange={(value) => setTeamForm((prev) => ({ ...prev, status: value }))}
-            options={[
-              { value: 'active', label: 'Active' },
-              { value: 'inactive', label: 'Inactive' },
-            ]}
-          />
           <Checkbox
-            checked={teamForm.showOptional}
-            onChange={(e) => setTeamForm((prev) => ({ ...prev, showOptional: e.target.checked }))}
-            label="Add optional details"
+            checked={teamForm.isActive}
+            onChange={(e) => setTeamForm((prev) => ({ ...prev, isActive: e.target.checked }))}
+            label="Team is active"
           />
-          {teamForm.showOptional && (
-            <>
-              <Input
-                label="Home location"
-                placeholder="Primary field or gym"
-                value={teamForm.homeLocation}
-                onChange={(e) => setTeamForm((prev) => ({ ...prev, homeLocation: e.target.value }))}
-              />
-              <Input
-                label="Notes (admin-only)"
-                placeholder="Internal notes"
-                value={teamForm.notes}
-                onChange={(e) => setTeamForm((prev) => ({ ...prev, notes: e.target.value }))}
-              />
-            </>
-          )}
-          <Button disabled={!canCreateTeam}>Create Team</Button>
+          <Button
+            disabled={!canCreateTeam || submitting.team}
+            loading={submitting.team}
+            onClick={async () => {
+              if (!canCreateTeam || !currentOrganization?.id) return
+              setSubmitting((prev) => ({ ...prev, team: true }))
+              setActionError(null)
+              setSuccessMessage(null)
+              const selectedLevel = levels.find((l) => l.id === teamForm.levelId)
+              const selectedProgram = programs.find((p) => p.id === selectedLevel?.program_id)
+
+              if (editType === 'team' && editId) {
+                const result = await updateTeam(context, editId, {
+                  name: teamForm.name.trim(),
+                  level_id: teamForm.levelId,
+                  program_id: selectedLevel?.program_id ?? null,
+                  sport_id: selectedProgram?.sport_id ?? null,
+                  is_active: teamForm.isActive,
+                })
+                if (result.error) {
+                  setActionError(result.error.message)
+                } else if (result.data) {
+                  setTeams((prev) => prev.map((t) => (t.id === editId ? (result.data as Team) : t)))
+                  setSuccessMessage('Team updated successfully.')
+                }
+              } else {
+                const result = await createTeam(context, {
+                  org_id: currentOrganization.id,
+                  name: teamForm.name.trim(),
+                  level_id: teamForm.levelId,
+                  program_id: selectedLevel?.program_id ?? null,
+                  sport_id: selectedProgram?.sport_id ?? null,
+                  is_active: teamForm.isActive,
+                  season_id: teamForm.seasonId,
+                })
+                if (result.error) {
+                  setActionError(result.error.message)
+                } else if (result.data) {
+                  setTeams((prev) => [result.data as Team, ...prev])
+                  setTeamForm((prev) => ({
+                    ...prev,
+                    levelId: '',
+                    seasonId: '',
+                    name: '',
+                    isActive: true,
+                  }))
+                  setSuccessMessage('Team created successfully.')
+                }
+              }
+
+              setSubmitting((prev) => ({ ...prev, team: false }))
+            }}
+          >
+            {editType === 'team' ? 'Update Team' : 'Create Team'}
+          </Button>
         </div>
       </Card>
+      )}
 
-      <Card title="Create Season" className="pa-mb-6">
+      {activeFormType === 'season' && (
+      <Card title={editType === 'season' ? 'Edit Season' : 'Add Season'} className="pa-mb-6">
         <div className="pa-flex pa-flex-col pa-gap-4">
           <Input
             label="Season name"
             placeholder="e.g. Spring 2026"
             value={seasonForm.name}
-            onChange={(e) => setSeasonForm((prev) => ({ ...prev, name: e.target.value, nameTouched: true }))}
+            onChange={(e) => setSeasonForm((prev) => ({ ...prev, name: e.target.value }))}
             onBlur={() => markTouched('season.name')}
             required
             error={seasonNameError}
           />
           <Input
-            label="Year"
-            type="number"
-            value={seasonForm.year}
-            onChange={(e) => setSeasonForm((prev) => ({ ...prev, year: e.target.value }))}
-            onBlur={() => markTouched('season.year')}
-            required
-            error={seasonYearError}
-          />
-          <RadioGroup
-            name="season-term"
-            label="Term"
-            required
-            value={seasonForm.term}
-            onChange={(value) => setSeasonForm((prev) => ({ ...prev, term: value }))}
-            options={[
-              { value: 'fall', label: 'Fall' },
-              { value: 'spring', label: 'Spring' },
-              { value: 'winter', label: 'Winter' },
-              { value: 'summer', label: 'Summer' },
-            ]}
-            error={seasonTermError}
-          />
-          <Checkbox
-            checked={seasonForm.showDates}
-            onChange={(e) => setSeasonForm((prev) => ({ ...prev, showDates: e.target.checked }))}
-            label="Add season dates"
-          />
-          {seasonForm.showDates && (
-            <>
-              <Input
-                label="Start date"
-                type="date"
-                value={seasonForm.startDate}
-                onChange={(e) => setSeasonForm((prev) => ({ ...prev, startDate: e.target.value }))}
-              />
-              <Input
-                label="End date"
-                type="date"
-                value={seasonForm.endDate}
-                onChange={(e) => setSeasonForm((prev) => ({ ...prev, endDate: e.target.value }))}
-              />
-            </>
-          )}
-          <RadioGroup
-            name="season-status"
-            label="Status"
-            value={seasonForm.status}
-            onChange={(value) => setSeasonForm((prev) => ({ ...prev, status: value }))}
-            options={[
-              { value: 'upcoming', label: 'Upcoming' },
-              { value: 'active', label: 'Active' },
-              { value: 'locked', label: 'Locked' },
-              { value: 'archived', label: 'Archived' },
-            ]}
-          />
-          <Button disabled={!canCreateSeason}>Create Season</Button>
-        </div>
-      </Card>
-
-      <Card title="Add Child (Player)" className="pa-mb-6">
-        <div className="pa-flex pa-flex-col pa-gap-4">
-          <h3 className="pa-h3">Child details</h3>
-          <Input
-            label="Child first name"
-            value={childForm.firstName}
-            onChange={(e) => setChildForm((prev) => ({ ...prev, firstName: e.target.value }))}
-            onBlur={() => markTouched('child.firstName')}
-            required
-            error={childFirstNameError}
-          />
-          <Input
-            label="Child last name"
-            value={childForm.lastName}
-            onChange={(e) => setChildForm((prev) => ({ ...prev, lastName: e.target.value }))}
-            onBlur={() => markTouched('child.lastName')}
-            required
-            error={childLastNameError}
-          />
-          <Input
-            label="Date of birth"
+            label="Start date"
             type="date"
-            value={childForm.dob}
-            onChange={(e) => setChildForm((prev) => ({ ...prev, dob: e.target.value }))}
-            onBlur={() => markTouched('child.dob')}
+            value={seasonForm.startDate}
+            onChange={(e) => setSeasonForm((prev) => ({ ...prev, startDate: e.target.value }))}
+            onBlur={() => markTouched('season.startDate')}
             required
-            error={childDobError}
-          />
-          <Checkbox
-            checked={childForm.genderRequired}
-            onChange={(e) => setChildForm((prev) => ({ ...prev, genderRequired: e.target.checked, gender: '' }))}
-            label="Gender is required by this organization"
-          />
-          {childForm.genderRequired && (
-            <RadioGroup
-              name="child-gender"
-              label="Gender"
-              required
-              value={childForm.gender}
-              onChange={(value) => setChildForm((prev) => ({ ...prev, gender: value }))}
-              options={[
-                { value: 'boys', label: 'Boy' },
-                { value: 'girls', label: 'Girl' },
-                { value: 'coed', label: 'Non-binary / Co-ed' },
-              ]}
-              error={childGenderError}
-            />
-          )}
-
-          <h3 className="pa-h3">Team assignment</h3>
-          <Select
-            label="Season"
-            required
-            value={childForm.seasonId}
-            onChange={(e) => setChildForm((prev) => ({ ...prev, seasonId: e.target.value }))}
-            onBlur={() => markTouched('child.season')}
-            options={seasonOptions}
-            error={childSeasonError}
-          />
-          <Select
-            label="Sport"
-            required
-            value={childForm.sportId}
-            onChange={(e) => setChildForm((prev) => ({ ...prev, sportId: e.target.value }))}
-            onBlur={() => markTouched('child.sport')}
-            options={sportOptions}
-            error={childSportError}
-          />
-          <Select
-            label="Program"
-            required
-            value={childForm.programId}
-            onChange={(e) => setChildForm((prev) => ({ ...prev, programId: e.target.value }))}
-            onBlur={() => markTouched('child.program')}
-            options={programOptionsForChild}
-            error={childProgramError}
-          />
-          <Select
-            label="Level"
-            required
-            value={childForm.levelId}
-            onChange={(e) => setChildForm((prev) => ({ ...prev, levelId: e.target.value }))}
-            onBlur={() => markTouched('child.level')}
-            options={levelOptionsForChild}
-            error={childLevelError}
-          />
-          <Select
-            label="Team"
-            required
-            value={childForm.teamId}
-            onChange={(e) => setChildForm((prev) => ({ ...prev, teamId: e.target.value }))}
-            onBlur={() => markTouched('child.team')}
-            options={teamOptionsForChild}
-            error={childTeamError}
-          />
-
-          <h3 className="pa-h3">Guardians</h3>
-          <RadioGroup
-            name="guardian-mode"
-            label="Guardian link"
-            value={childForm.guardianMode}
-            onChange={(value) => setChildForm((prev) => ({ ...prev, guardianMode: value, guardianEmail: '', guardianId: '' }))}
-            options={[
-              { value: 'invite', label: 'Add guardian by email' },
-              { value: 'link', label: 'Link existing guardian' },
-            ]}
-          />
-          {childForm.guardianMode === 'invite' ? (
-            <Input
-              label="Guardian email"
-              type="email"
-              placeholder="parent@example.com"
-              value={childForm.guardianEmail}
-              onChange={(e) => setChildForm((prev) => ({ ...prev, guardianEmail: e.target.value }))}
-              onBlur={() => markTouched('child.guardianEmail')}
-              required
-              error={guardianEmailError}
-            />
-          ) : (
-            <Select
-              label="Existing guardian"
-              value={childForm.guardianId}
-              onChange={(e) => setChildForm((prev) => ({ ...prev, guardianId: e.target.value }))}
-              onBlur={() => markTouched('child.guardianId')}
-              options={[{ value: '', label: 'Select a guardian' }]}
-              required
-              error={guardianIdError}
-            />
-          )}
-          <RadioGroup
-            name="guardian-relationship"
-            label="Relationship type"
-            value={childForm.guardianRelationship}
-            onChange={(value) => setChildForm((prev) => ({ ...prev, guardianRelationship: value }))}
-            options={[
-              { value: 'parent', label: 'Parent or legal guardian' },
-              { value: 'family', label: 'Family member' },
-              { value: 'other', label: 'Other caregiver' },
-            ]}
-          />
-          <Button disabled={!canAddChild}>Add Child</Button>
-        </div>
-      </Card>
-
-      <Card title="Add Coach / Staff" className="pa-mb-6">
-        <div className="pa-flex pa-flex-col pa-gap-4">
-          <Input
-            label="Name"
-            value={coachForm.name}
-            onChange={(e) => setCoachForm((prev) => ({ ...prev, name: e.target.value }))}
-            onBlur={() => markTouched('coach.name')}
-            required
-            error={coachNameError}
+            error={seasonStartError}
           />
           <Input
-            label="Email"
-            type="email"
-            value={coachForm.email}
-            onChange={(e) => setCoachForm((prev) => ({ ...prev, email: e.target.value }))}
-            onBlur={() => markTouched('coach.email')}
+            label="End date"
+            type="date"
+            value={seasonForm.endDate}
+            onChange={(e) => setSeasonForm((prev) => ({ ...prev, endDate: e.target.value }))}
+            onBlur={() => markTouched('season.endDate')}
             required
-            error={coachEmailError}
+            error={seasonEndError || seasonRangeError}
           />
-          <RadioGroup
-            name="coach-role"
-            label="Role"
-            required
-            value={coachForm.role}
-            onChange={(value) => setCoachForm((prev) => ({ ...prev, role: value }))}
-            options={[
-              { value: 'head', label: 'Head Coach' },
-              { value: 'assistant', label: 'Assistant Coach' },
-              { value: 'staff', label: 'Staff' },
-            ]}
-            error={coachRoleError}
-          />
-          <Select
-            label="Season scope"
-            required
-            value={coachForm.seasonId}
-            onChange={(e) => setCoachForm((prev) => ({ ...prev, seasonId: e.target.value }))}
-            onBlur={() => markTouched('coach.season')}
-            options={seasonOptions}
-            error={coachSeasonError}
-          />
-          <div className="pa-form-group">
-            <label className="pa-label pa-label--required">Assign to team(s)</label>
-            <div className="pa-helper">Coaches can be assigned to multiple teams within the season.</div>
-            <div className="pa-flex pa-flex-col pa-gap-2" style={{ marginTop: '8px' }}>
-              {teams.length === 0 && (
-                <div className="pa-helper">No teams available yet.</div>
-              )}
-              {teams.map((team) => (
-                <label key={team.id} className="pa-flex pa-items-center pa-gap-2" style={{ cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={coachForm.teamIds.includes(team.id)}
-                    onChange={(e) => {
-                      const next = e.target.checked
-                        ? [...coachForm.teamIds, team.id]
-                        : coachForm.teamIds.filter((id) => id !== team.id)
-                      setCoachForm((prev) => ({ ...prev, teamIds: next }))
-                    }}
-                    onBlur={() => markTouched('coach.teams')}
-                  />
-                  <span className="pa-body-m">{team.name}</span>
-                </label>
-              ))}
-            </div>
-            {coachTeamsError && <div className="pa-helper pa-helper--error">{coachTeamsError}</div>}
-          </div>
           <Checkbox
-            checked={coachForm.assignToLevel}
-            onChange={(e) => setCoachForm((prev) => ({ ...prev, assignToLevel: e.target.checked, levelId: '' }))}
-            label="Assign to a level (optional)"
+            checked={seasonForm.isActive}
+            onChange={(e) => setSeasonForm((prev) => ({ ...prev, isActive: e.target.checked }))}
+            label="Set as active season"
           />
-          {coachForm.assignToLevel && (
-            <Select
-              label="Level assignment"
-              value={coachForm.levelId}
-              onChange={(e) => setCoachForm((prev) => ({ ...prev, levelId: e.target.value }))}
-              onBlur={() => markTouched('coach.level')}
-              options={levelOptions}
-              error={coachLevelError}
-            />
-          )}
-          <Button disabled={!canAddCoach}>Add Coach</Button>
+          <Button
+            disabled={!canCreateSeason || submitting.season}
+            loading={submitting.season}
+            onClick={async () => {
+              if (!canCreateSeason || !currentOrganization?.id) return
+              setSubmitting((prev) => ({ ...prev, season: true }))
+              setActionError(null)
+              setSuccessMessage(null)
+
+              const start = seasonForm.startDate
+              const end = seasonForm.endDate
+
+              if (editType === 'season' && editId) {
+                const result = await updateSeason(context, editId, {
+                  name: seasonForm.name.trim(),
+                  start_date: start,
+                  end_date: end,
+                  is_active: seasonForm.isActive,
+                })
+                if (result.error) {
+                  setActionError(result.error.message)
+                } else if (result.data) {
+                  setSeasons((prev) => prev.map((s) => (s.id === editId ? (result.data as Season) : s)))
+                  setSuccessMessage('Season updated successfully.')
+                }
+              } else {
+                const result = await createSeason(context, {
+                  org_id: currentOrganization.id,
+                  name: seasonForm.name.trim(),
+                  start_date: start,
+                  end_date: end,
+                  is_active: seasonForm.isActive,
+                })
+                if (result.error) {
+                  setActionError(result.error.message)
+                } else if (result.data) {
+                  setSeasons((prev) => [result.data as Season, ...prev])
+                  setSeasonForm((prev) => ({
+                    ...prev,
+                    name: '',
+                    startDate: '',
+                    endDate: '',
+                    isActive: false,
+                  }))
+                  setSuccessMessage('Season created successfully.')
+                }
+              }
+
+              setSubmitting((prev) => ({ ...prev, season: false }))
+            }}
+          >
+            {editType === 'season' ? 'Update Season' : 'Create Season'}
+          </Button>
         </div>
       </Card>
+      )}
 
-      <Card title="Bulk Operations" className="pa-mb-6">
-        <div className="pa-flex pa-flex-col pa-gap-4">
-          <div className="pa-body-m">Use bulk actions for large organizations. Every action includes a preview and full validation before saving.</div>
-          <Button variant="secondary">Bulk create teams under a level</Button>
-          <Button variant="secondary">Bulk assign seasons to teams</Button>
-          <Button variant="secondary">Bulk import players (CSV)</Button>
-          <Button variant="secondary">Bulk invite guardians</Button>
-        </div>
-      </Card>
-
-      <Card title="Global Validation Rules" className="pa-mb-6">
-        <ul className="pa-flex pa-flex-col pa-gap-2" style={{ paddingLeft: '16px' }}>
-          <li>Program cannot exist without a sport.</li>
-          <li>Level cannot exist without a program.</li>
-          <li>Team cannot exist without a level and season.</li>
-          <li>Child cannot be assigned without a team.</li>
-          <li>Season cannot be deleted if linked to teams.</li>
-          <li>Inactive entities cannot accept new children.</li>
-        </ul>
-      </Card>
 
       {!currentOrganization && (
         <Card>
