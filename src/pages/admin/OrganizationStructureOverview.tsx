@@ -16,7 +16,6 @@ import { getTeams } from '../../data/services/teamsService'
 import { getSeasons } from '../../data/services/seasonsService'
 import type { Sport, Program, Level, Team, Season } from '../../data/types/organization'
 import { PageHeader, Card, Button } from '../../components/platformAdmin'
-import { Breadcrumbs } from '../../components/admin/Breadcrumbs'
 
 export default function OrganizationStructureOverview() {
   useParams<{ orgId?: string }>()
@@ -92,10 +91,7 @@ export default function OrganizationStructureOverview() {
       <PageHeader
         title="Organization Overview"
         subtitle={`${currentOrganization?.name || 'Organization'} — Structural setup and team management`}
-      />
-
-      <Breadcrumbs
-        items={[
+        breadcrumbs={[
           { label: 'Organizations', path: '/admin/organization' },
           { label: currentOrganization?.name || 'Organization' },
         ]}

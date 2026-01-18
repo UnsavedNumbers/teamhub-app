@@ -10,7 +10,6 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { getSeasons } from '../../data/services/seasonsService'
 import type { Season } from '../../data/types/organization'
 import { PageHeader, Card, Button } from '../../components/platformAdmin'
-import { Breadcrumbs } from '../../components/admin/Breadcrumbs'
 
 export default function SeasonsManagement() {
   const { context, isReady } = useUserContext()
@@ -54,11 +53,11 @@ export default function SeasonsManagement() {
 
   return (
     <div className="pa-root">
-      <PageHeader title="Seasons" subtitle="Manage organization-wide time periods" />
-
-      <Breadcrumbs
-        items={[
-          { label: 'Organization Structure', path: '/admin/organization/structure' },
+      <PageHeader
+        title="Seasons"
+        subtitle="Manage organization-wide time periods"
+        breadcrumbs={[
+          { label: 'Organizations', path: '/admin/organization/structure' },
           { label: 'Seasons' },
         ]}
       />

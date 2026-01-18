@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useState, useMemo } from 'react'
+import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getTeams } from '../../data/services/teamsService'
@@ -12,8 +13,23 @@ import { getSports, getPrograms } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
 import { getSeasons } from '../../data/services/seasonsService'
 import type { Team, Sport, Program, Level, Season } from '../../data/types/organization'
-import { PageHeader, Card, Button, Select } from '../../components/platformAdmin'
-import { Breadcrumbs } from '../../components/admin/Breadcrumbs'
+
+
+/**
+ * Teams Management
+ *
+ * Table view with filtering by season, sport, program, level, and status.
+ * Redesigned with a focus on powerful filtering and clean list presentation.
+ */
+
+import { useEffect, useState, useMemo } from 'react'
+import { Link } from 'react-router-dom'
+import { useUserContext } from '../../hooks/useUserContext'
+import { getTeams } from '../../data/services/teamsService'
+import { getSports, getPrograms } from '../../data/services/sportsService'
+import { getLevels } from '../../data/services/levelsService'
+import { getSeasons } from '../../data/services/seasonsService'
+import type { Team, Sport, Program, Level, Season } from '../../data/types/organization'
 
 export default function TeamsManagement() {
   const { context, isReady } = useUserContext()
@@ -83,155 +99,226 @@ export default function TeamsManagement() {
     return true
   })
 
+  // --- UI Components ---
+
+  const Header = () => (
+    <div className="mb-10">
+      <nav className="flex items-center gap-2 text-xs font-medium text-slate-400 mb-3">
+        <Link to="/admin" className="hover:text-slate-600 transition-colors">Admin</Link>
+        <span>/</span>
+        <Link to="/admin/organization/structure" className="hover:text-slate-600 transition-colors">Structure</Link>
+        <span>/</span>
+        <span className="text-slate-600">Teams</span>
+      </nav>
+      <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 mb-2">
+        Teams
+      </h1>
+      <p className="text-lg text-slate-500 max-w-2xl font-light">
+        Manage your rostered competition units and their assignments.
+      </p>
+    </div>
+  )
+
+  const FilterLabel = ({ children }: { children: ReactNode }) => (
+    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+      {children}
+    </label>
+  )
+
+  const SelectInput = ({ ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) => (
+    <div className="relative">
+      <select
+        className="w-full h-11 pl-3 pr-10 text-sm font-medium text-slate-900 bg-white border border-slate-200 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all hover:border-slate-300"
+        {...props}
+      />
+      <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-400">
+        <span className="material-symbols-outlined text-lg">expand_more</span>
+      </div>
+    </div>
+  )
+
+  const PrimaryButton = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
+    <button className={`inline-flex items-center justify-center h-11 px-6 font-semibold text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 ${className}`}>
+      {children}
+    </button>
+  )
+
+  const StatusBadge = ({ active }: { active: boolean }) => (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+      active 
+        ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
+        : 'bg-slate-100 text-slate-600 border border-slate-200'
+    }`}>
+      {active ? 'Active' : 'Inactive'}
+    </span>
+  )
+
   if (loading) {
-    return <div className="pa-skeleton" style={{ height: '500px' }} />
+    return (
+      <div className="max-w-7xl mx-auto p-8 animate-pulse">
+        <div className="h-8 bg-slate-200 rounded w-1/4 mb-4"></div>
+        <div className="h-4 bg-slate-100 rounded w-1/3 mb-12"></div>
+        <div className="h-40 bg-slate-100 rounded-xl mb-8"></div>
+        <div className="space-y-2">
+          {[1, 2, 3, 4, 5].map(i => (
+             <div key={i} className="h-16 bg-slate-100 rounded-lg"></div>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="pa-root">
-      <PageHeader title="Teams" subtitle="Manage rostered competition units" />
-
-      <Breadcrumbs
-        items={[
-          { label: 'Organization Structure', path: '/admin/organization/structure' },
-          { label: 'Teams' },
-        ]}
-      />
+    <div className="max-w-7xl mx-auto p-8">
+      <Header />
 
       {error && (
-        <Card className="pa-mb-4">
-          <div className="pa-text-danger">{error}</div>
-        </Card>
+        <div className="p-4 mb-6 bg-red-50 text-red-700 rounded-xl border border-red-100">
+          {error}
+        </div>
       )}
 
-      {teams.length === 0 ? (
-        <Card>
-          <div className="pa-flex pa-flex-col pa-items-center pa-justify-center pa-text-center pa-p-6">
-            <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--pa-n300)', marginBottom: '16px' }}>
-              groups
-            </span>
-            <h3 className="pa-h3">No teams yet</h3>
-            <p className="pa-body-m pa-text-muted pa-mb-4">
-              Create levels and seasons first, then add teams to structure your competition.
-            </p>
-            <Link to="/admin/organization/structure/teams/new">
-              <Button>Add a Team</Button>
-            </Link>
+      {/* Filter Bar */}
+      <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
+          
+          {/* Row 1 */}
+          <div>
+            <FilterLabel>Season</FilterLabel>
+            <SelectInput 
+              value={filterSeasonId}
+              onChange={(e) => setFilterSeasonId(e.target.value)}
+            >
+              <option value="">All seasons</option>
+              {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </SelectInput>
           </div>
-        </Card>
-      ) : (
-        <>
-          <Card className="pa-mb-4" noPadding>
-            <div className="pa-p-4 pa-grid pa-grid-6 pa-gap-3 pa-border-b" style={{ borderColor: 'var(--pa-n200)' }}>
-              <Select
-                label="Season"
-                value={filterSeasonId}
-                onChange={(e) => setFilterSeasonId(e.target.value)}
-                options={[
-                  { value: '', label: 'All seasons' },
-                  ...seasons.map((s) => ({ value: s.id, label: s.name })),
-                ]}
-              />
-              <Select
-                label="Sport"
-                value={filterSportId}
-                onChange={(e) => {
-                  setFilterSportId(e.target.value)
-                  setFilterProgramId('')
-                  setFilterLevelId('')
-                }}
-                options={[
-                  { value: '', label: 'All sports' },
-                  ...sports.map((s) => ({ value: s.id, label: s.name })),
-                ]}
-              />
-              <Select
-                label="Program"
-                value={filterProgramId}
-                onChange={(e) => {
-                  setFilterProgramId(e.target.value)
-                  setFilterLevelId('')
-                }}
-                options={[
-                  { value: '', label: 'All programs' },
-                  ...availablePrograms.map((p) => ({ value: p.id, label: p.name })),
-                ]}
-              />
-              <Select
-                label="Level"
-                value={filterLevelId}
-                onChange={(e) => setFilterLevelId(e.target.value)}
-                options={[
-                  { value: '', label: 'All levels' },
-                  ...availableLevels.map((l) => ({ value: l.id, label: l.name })),
-                ]}
-              />
-              <Select
-                label="Status"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                options={[
-                  { value: 'all', label: 'All statuses' },
-                  { value: 'active', label: 'Active' },
-                  { value: 'inactive', label: 'Inactive' },
-                ]}
-              />
-              <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                <Link to="/admin/organization/structure/teams/new" style={{ width: '100%' }}>
-                  <Button>Add Team</Button>
-                </Link>
-              </div>
-            </div>
-          </Card>
 
-          <Card noPadding>
-            <table className="pa-table" style={{ width: '100%' }}>
+          <div>
+            <FilterLabel>Sport</FilterLabel>
+            <SelectInput
+              value={filterSportId}
+              onChange={(e) => {
+                setFilterSportId(e.target.value)
+                setFilterProgramId('')
+                setFilterLevelId('')
+              }}
+            >
+              <option value="">All sports</option>
+              {sports.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </SelectInput>
+          </div>
+
+          <div className="flex items-end justify-end md:col-span-2 lg:col-span-1">
+             {/* Desktop: Button aligns to the right. Mobile: Button will be full width below filters using CSS if we wanted, but grid flow handles it reasonably. 
+                 To follow rule "Primary action ... aligned to the right of the filter bar", we place it in the grid flow but aligned. 
+                 For now, let's keep it structurally here but maybe visually separate if needed. 
+                 Actually, simpler to have filters in one block and button floating or right-aligned. 
+                 Let's stick to placing it in the grid for responsive alignment. 
+             */}
+             <Link to="/admin/organization/structure/teams/new" className="w-full lg:w-auto">
+                <PrimaryButton className="w-full lg:w-auto">Add Team</PrimaryButton>
+             </Link>
+          </div>
+
+          {/* Row 2 - Hidden if no sport selected? No, showing all filters as per typical dashboard */}
+          <div>
+            <FilterLabel>Program</FilterLabel>
+            <SelectInput
+              value={filterProgramId}
+              onChange={(e) => {
+                setFilterProgramId(e.target.value)
+                setFilterLevelId('')
+              }}
+              disabled={!filterSportId && availablePrograms.length === programs.length} // Optional UI hint
+            >
+              <option value="">All programs</option>
+              {availablePrograms.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </SelectInput>
+          </div>
+
+          <div>
+            <FilterLabel>Level</FilterLabel>
+            <SelectInput
+              value={filterLevelId}
+              onChange={(e) => setFilterLevelId(e.target.value)}
+            >
+              <option value="">All levels</option>
+              {availableLevels.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </SelectInput>
+          </div>
+
+           <div>
+            <FilterLabel>Status</FilterLabel>
+            <SelectInput
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+            >
+              <option value="all">All statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </SelectInput>
+          </div>
+
+        </div>
+      </div>
+
+      {/* Teams List */}
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+        {filteredTeams.length === 0 ? (
+          <div className="p-12 text-center">
+            <span className="material-symbols-outlined text-5xl text-slate-200 mb-4">groups</span>
+            <p className="text-slate-500 font-medium">No teams match your filters.</p>
+            {teams.length === 0 && (
+               <p className="text-sm text-slate-400 mt-2">Start by adding your first team to the organization.</p>
+            )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr>
-                  <th className="pa-p-4">Team Name</th>
-                  <th className="pa-p-4">Level</th>
-                  <th className="pa-p-4">Program</th>
-                  <th className="pa-p-4">Sport</th>
-                  <th className="pa-p-4">Seasons</th>
-                  <th className="pa-p-4">Players</th>
-                  <th className="pa-p-4">Status</th>
-                  <th className="pa-p-4">Actions</th>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Team Name</th>
+                  <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Details</th>
+                  <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Level</th>
+                  <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Size</th>
+                  <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                  <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Action</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100">
                 {filteredTeams.map((team) => {
                   const sport = sportById.get(team.sport_id)
                   const program = programById.get(team.program_id || '')
                   const level = levelById.get(team.level_id)
 
                   return (
-                    <tr key={team.id} style={{ borderTop: '1px solid var(--pa-n200)' }}>
-                      <td className="pa-p-4 pa-font-medium">{team.name}</td>
-                      <td className="pa-p-4 pa-text-muted">{level?.name || '—'}</td>
-                      <td className="pa-p-4 pa-text-muted">{program?.name || '—'}</td>
-                      <td className="pa-p-4 pa-text-muted">{sport?.name || '—'}</td>
-                      <td className="pa-p-4 pa-text-muted">—</td>
-                      <td className="pa-p-4 pa-text-muted">{team.max_roster_size || '—'}</td>
-                      <td className="pa-p-4">
-                        <span
-                          style={{
-                            display: 'inline-block',
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            backgroundColor: team.is_active ? 'var(--pa-success-bg)' : 'var(--pa-n200)',
-                            color: team.is_active ? 'var(--pa-success)' : 'var(--pa-n600)',
-                          }}
-                        >
-                          {team.is_active ? 'Active' : 'Inactive'}
+                    <tr key={team.id} className="hover:bg-slate-50/80 transition-colors group">
+                      <td className="py-4 px-6">
+                        <div className="font-bold text-slate-900">{team.name}</div>
+                      </td>
+                      <td className="py-4 px-6">
+                         <div className="flex flex-col">
+                            <span className="text-sm font-medium text-slate-700">{program?.name || '—'}</span>
+                            <span className="text-xs text-slate-400">{sport?.name || '—'}</span>
+                         </div>
+                      </td>
+                       <td className="py-4 px-6">
+                        <span className="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-xs font-medium text-slate-600">
+                          {level?.name || '—'}
                         </span>
                       </td>
-                      <td className="pa-p-4">
-                        <Link to={`/admin/teams/${team.id}`}>
-                          <Button variant="secondary">
+                      <td className="py-4 px-6 text-sm text-slate-500 font-medium">
+                        {team.max_roster_size ? `${team.max_roster_size} max` : '—'}
+                      </td>
+                      <td className="py-4 px-6">
+                        <StatusBadge active={team.is_active} />
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        <Link to={`/admin/teams/${team.id}`} className="invisible group-hover:visible focus:visible">
+                          <button className="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors">
                             Manage
-                          </Button>
+                          </button>
                         </Link>
                       </td>
                     </tr>
@@ -239,12 +326,9 @@ export default function TeamsManagement() {
                 })}
               </tbody>
             </table>
-            {filteredTeams.length === 0 && (
-              <div className="pa-p-4 pa-text-center pa-text-muted">No teams match your filters.</div>
-            )}
-          </Card>
-        </>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

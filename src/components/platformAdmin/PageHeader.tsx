@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 
 interface PageHeaderProps {
   /** Page title (Oswald H1) */
-  title: string
+  title: ReactNode
   /** Optional subtitle (Inter, muted) */
   subtitle?: string
   /** Optional description */
@@ -33,27 +34,46 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <div className="pa-page-header">
-      {breadcrumbs && (
+      {breadcrumbs && breadcrumbs.length > 0 && (
         <nav className="pa-breadcrumbs">
-          {breadcrumbs.map((crumb, index) => (
-            <span key={index}>
-              {crumb.path ? (
-                <a href={crumb.path} onClick={crumb.onClick}>{crumb.label}</a>
-              ) : (
-                <span onClick={crumb.onClick}>{crumb.label}</span>
-              )}
-              {index < breadcrumbs.length - 1 && ' / '}
-            </span>
-          ))}
+          {breadcrumbs.map((crumb, index) => {
+            const isLast = index === breadcrumbs.length - 1
+
+            return (
+              <span key={`${crumb.label}-${index}`} className="pa-breadcrumb-item">
+                {index > 0 && (
+                  <span className="material-symbols-outlined pa-breadcrumb-chevron">chevron_right</span>
+                )}
+                {crumb.path ? (
+                  <Link
+                    to={crumb.path}
+                    onClick={crumb.onClick}
+                    className={isLast ? 'pa-breadcrumb-current' : 'pa-breadcrumb-link'}
+                  >
+                    {crumb.label}
+                  </Link>
+                ) : (
+                  <span
+                    onClick={crumb.onClick}
+                    className={isLast ? 'pa-breadcrumb-current' : 'pa-breadcrumb-link'}
+                  >
+                    {crumb.label}
+                  </span>
+                )}
+              </span>
+            )
+          })}
         </nav>
       )}
-      <div className="pa-page-header-content">
-        <h1 className="pa-page-title">{title}</h1>
-        {subtitle && <p className="pa-page-subtitle">{subtitle}</p>}
-        {description && <p className="pa-page-description">{description}</p>}
-        {children}
+      <div className="pa-page-header-row">
+        <div className="pa-page-header-content">
+          <h1 className="pa-page-title">{title}</h1>
+          {subtitle && <p className="pa-page-subtitle">{subtitle}</p>}
+          {description && <p className="pa-page-description">{description}</p>}
+          {children}
+        </div>
+        {actions && <div className="pa-page-actions">{actions}</div>}
       </div>
-      {actions && <div className="pa-page-actions">{actions}</div>}
     </div>
   )
 }

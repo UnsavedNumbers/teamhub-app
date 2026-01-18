@@ -11,7 +11,6 @@ import { getLevels } from '../../data/services/levelsService'
 import { getPrograms } from '../../data/services/sportsService'
 import type { Level, Program } from '../../data/types/organization'
 import { PageHeader, Card, Button, Select } from '../../components/platformAdmin'
-import { Breadcrumbs } from '../../components/admin/Breadcrumbs'
 
 export default function LevelsManagement() {
   const { context, isReady } = useUserContext()
@@ -66,11 +65,11 @@ export default function LevelsManagement() {
 
   return (
     <div className="pa-root">
-      <PageHeader title="Levels" subtitle="Define eligibility boundaries (age, grade, or skill)" />
-
-      <Breadcrumbs
-        items={[
-          { label: 'Organization Structure', path: '/admin/organization/structure' },
+      <PageHeader
+        title="Levels"
+        subtitle="Define eligibility boundaries (age, grade, or skill)"
+        breadcrumbs={[
+          { label: 'Organizations', path: '/admin/organization/structure' },
           { label: 'Levels' },
         ]}
       />

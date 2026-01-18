@@ -5,12 +5,25 @@
  */
 
 import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getSports, getPrograms } from '../../data/services/sportsService'
 import type { Sport, Program } from '../../data/types/organization'
-import { PageHeader, Card, Button } from '../../components/platformAdmin'
-import { Breadcrumbs } from '../../components/admin/Breadcrumbs'
+
+
+/**
+ * Sports & Programs Management
+ *
+ * Master-detail view for sports and programs with contextual actions.
+ * Redesigned with a focus on hierarchy, typography, and clean interaction.
+ */
+
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useUserContext } from '../../hooks/useUserContext'
+import { getSports, getPrograms } from '../../data/services/sportsService'
+import type { Sport, Program } from '../../data/types/organization'
 
 export default function SportsAndPrograms() {
   const { context, isReady } = useUserContext()
@@ -30,7 +43,10 @@ export default function SportsAndPrograms() {
       setError(null)
 
       try {
-        const [sportsResult, programsResult] = await Promise.all([getSports(context), getPrograms(context)])
+        const [sportsResult, programsResult] = await Promise.all([
+          getSports(context), 
+          getPrograms(context)
+        ])
 
         setSports(sportsResult.data as Sport[])
         setPrograms(programsResult.data as Program[])
@@ -50,126 +66,166 @@ export default function SportsAndPrograms() {
     setExpandedSportId(expandedSportId === sportId ? null : sportId)
   }
 
+  // --- Components ---
+
+  const Header = () => (
+    <div className="mb-10">
+      <nav className="flex items-center gap-2 text-xs font-medium text-slate-400 mb-3">
+        <Link to="/admin" className="hover:text-slate-600 transition-colors">Admin</Link>
+        <span>/</span>
+        <Link to="/admin/organization/structure" className="hover:text-slate-600 transition-colors">Structure</Link>
+        <span>/</span>
+        <span className="text-slate-600">Sports & Programs</span>
+      </nav>
+      <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 mb-2">
+        Sports & Programs
+      </h1>
+      <p className="text-lg text-slate-500 max-w-2xl font-light">
+        Define the sports your organization offers and the specific programs within them.
+      </p>
+    </div>
+  )
+
+  const PrimaryButton = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
+    <button className={`inline-flex items-center justify-center h-10 px-6 font-medium text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 ${className}`}>
+      {children}
+    </button>
+  )
+
+  const SecondaryButton = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
+    <button className={`inline-flex items-center justify-center h-9 px-4 font-medium text-xs text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 hover:border-slate-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-200 ${className}`}>
+      {children}
+    </button>
+  )
+
   if (loading) {
-    return <div className="pa-skeleton" style={{ height: '500px' }} />
+    return (
+      <div className="max-w-5xl mx-auto p-8 animate-pulse">
+        <div className="h-8 bg-slate-200 rounded w-1/3 mb-4"></div>
+        <div className="h-4 bg-slate-100 rounded w-1/2 mb-12"></div>
+        <div className="space-y-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-24 bg-slate-100 rounded-xl"></div>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   if (error) {
     return (
-      <div className="pa-root">
-        <PageHeader title="Sports & Programs" />
-        <Card>
-          <div className="pa-text-danger">{error}</div>
-        </Card>
+      <div className="max-w-5xl mx-auto p-8">
+        <Header />
+        <div className="p-6 bg-red-50 text-red-700 rounded-xl border border-red-100">
+          {error}
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="pa-root">
-      <PageHeader title="Sports & Programs" subtitle="Define sports and gender-specific programs" />
+    <div className="max-w-5xl mx-auto p-8">
+      <div className="flex justify-between items-start">
+        <Header />
+        <Link to="/admin/organization/structure/sports/new">
+          <PrimaryButton>Add Sport</PrimaryButton>
+        </Link>
+      </div>
 
-      <Breadcrumbs
-        items={[
-          { label: 'Organization Structure', path: '/admin/organization/structure' },
-          { label: 'Sports & Programs' },
-        ]}
-      />
-
-      {sports.length === 0 ? (
-        <Card>
-          <div className="pa-flex pa-flex-col pa-items-center pa-justify-center pa-text-center pa-p-6">
-            <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--pa-n300)', marginBottom: '16px' }}>
-              sports
-            </span>
-            <h3 className="pa-h3">No sports yet</h3>
-            <p className="pa-body-m pa-text-muted pa-mb-4">Start by adding your first sport.</p>
+      <div className="flex flex-col gap-4">
+        {sports.length === 0 ? (
+          <div className="p-12 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50">
+            <span className="material-symbols-outlined text-5xl text-slate-300 mb-4">sports</span>
+            <h3 className="text-lg font-semibold text-slate-900 mb-1">No sports yet</h3>
+            <p className="text-slate-500 mb-6">Start by adding your first sport to the platform.</p>
             <Link to="/admin/organization/structure/sports/new">
-              <Button>Add Sport</Button>
+              <PrimaryButton>Add Sport</PrimaryButton>
             </Link>
           </div>
-        </Card>
-      ) : (
-        <>
-          <div className="pa-flex pa-justify-end pa-mb-4">
-            <Link to="/admin/organization/structure/sports/new">
-              <Button>Add Sport</Button>
-            </Link>
-          </div>
+        ) : (
+          sports.map((sport) => {
+            const sportPrograms = programsBySport(sport.id)
+            const isExpanded = expandedSportId === sport.id
 
-          <div className="pa-flex pa-flex-col pa-gap-3">
-            {sports.map((sport) => {
-              const sportPrograms = programsBySport(sport.id)
-              const isExpanded = expandedSportId === sport.id
-
-              return (
-                <Card key={sport.id} noPadding>
-                  <div
-                    className="pa-p-4 pa-cursor-pointer pa-flex pa-items-center pa-justify-between pa-hover"
-                    onClick={() => toggleSportExpand(sport.id)}
-                  >
-                    <div className="pa-flex pa-items-center pa-gap-3">
-                      <span className="material-symbols-outlined">{isExpanded ? 'expand_less' : 'expand_more'}</span>
-                      <div>
-                        <div className="pa-body-m pa-font-bold">{sport.name}</div>
-                        <div className="pa-body-s pa-text-muted">{sportPrograms.length} program(s)</div>
-                      </div>
-                    </div>
-                    <div className="pa-flex pa-items-center pa-gap-2">
-                      <Link to={`/admin/organization/structure/sports/${sport.id}/edit`} onClick={(e) => e.stopPropagation()}>
-                        <Button variant="secondary">
-                          Edit
-                        </Button>
-                      </Link>
-                      <Link
-                        to={`/admin/organization/structure/programs/new?sport_id=${sport.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Button variant="secondary">
-                          Add Program
-                        </Button>
-                      </Link>
+            return (
+              <div 
+                key={sport.id} 
+                className={`group bg-white border border-slate-200 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md ${isExpanded ? 'ring-1 ring-slate-200 shadow-md' : ''}`}
+              >
+                {/* Sport Header */}
+                <div
+                  className="p-6 flex items-center justify-between cursor-pointer hover:bg-slate-50/50 transition-colors"
+                  onClick={() => toggleSportExpand(sport.id)}
+                >
+                  <div className="flex items-center gap-4">
+                    <span 
+                      className={`material-symbols-outlined text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-slate-600' : ''}`}
+                    >
+                      expand_more
+                    </span>
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900 leading-tight">
+                        {sport.name}
+                      </h3>
+                      <p className="text-sm font-medium text-slate-400 mt-0.5">
+                        {sportPrograms.length} {sportPrograms.length === 1 ? 'program' : 'programs'}
+                      </p>
                     </div>
                   </div>
+                  
+                  <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
+                    <Link to={`/admin/organization/structure/sports/${sport.id}/edit`}>
+                      <SecondaryButton>Edit</SecondaryButton>
+                    </Link>
+                    <Link to={`/admin/organization/structure/programs/new?sport_id=${sport.id}`}>
+                      <SecondaryButton>Add Program</SecondaryButton>
+                    </Link>
+                  </div>
+                </div>
 
-                  {isExpanded && sportPrograms.length > 0 && (
-                    <div className="pa-p-4 pa-border-t" style={{ borderColor: 'var(--pa-n200)' }}>
-                      <div className="pa-flex pa-flex-col pa-gap-2">
-                        {sportPrograms.map((program) => (
-                          <div key={program.id} className="pa-flex pa-items-center pa-justify-between pa-p-3" style={{ backgroundColor: 'var(--pa-n50)', borderRadius: '6px' }}>
-                            <div>
-                              <div className="pa-body-m pa-font-medium">{program.name}</div>
-                              <div className="pa-body-s pa-text-muted">{program.gender_category}</div>
-                            </div>
-                            <div className="pa-flex pa-items-center pa-gap-2">
-                              <Link to={`/admin/organization/structure/programs/${program.id}/edit`}>
-                                <Button variant="secondary">
-                                  Edit
-                                </Button>
-                              </Link>
-                              <Link to={`/admin/organization/structure/levels/new?program_id=${program.id}`}>
-                                <Button variant="secondary">
-                                  Add Level
-                                </Button>
-                              </Link>
+                {/* Expanded Programs List */}
+                {isExpanded && (
+                  <div className="bg-slate-50/50 border-t border-slate-100 p-4 pl-14 sm:pl-16 space-y-3 pb-6">
+                    {sportPrograms.length > 0 ? (
+                      sportPrograms.map((program) => (
+                        <div 
+                          key={program.id} 
+                          className="flex items-center justify-between p-4 bg-white border border-slate-200/60 rounded-lg shadow-sm hover:border-slate-300 transition-colors"
+                        >
+                          <div>
+                            <div className="font-semibold text-slate-800">{program.name}</div>
+                            <div className="text-xs font-medium text-slate-400 mt-1 uppercase tracking-wide">
+                              {program.gender_category}
                             </div>
                           </div>
-                        ))}
+                          
+                          <div className="flex items-center gap-2">
+                            <Link to={`/admin/organization/structure/programs/${program.id}/edit`}>
+                              <SecondaryButton>Edit</SecondaryButton>
+                            </Link>
+                            <Link to={`/admin/organization/structure/levels/new?program_id=${program.id}`}>
+                              <SecondaryButton>Add Level</SecondaryButton>
+                            </Link>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-6 text-center border border-dashed border-slate-200 rounded-lg bg-white/50">
+                        <p className="text-sm text-slate-500 mb-3">No programs found for {sport.name}.</p>
+                        <Link to={`/admin/organization/structure/programs/new?sport_id=${sport.id}`}>
+                          <button className="text-sm font-semibold text-slate-900 hover:underline">
+                            Create a Program
+                          </button>
+                        </Link>
                       </div>
-                    </div>
-                  )}
-
-                  {isExpanded && sportPrograms.length === 0 && (
-                    <div className="pa-p-4 pa-border-t" style={{ borderColor: 'var(--pa-n200)', color: 'var(--pa-n500)' }}>
-                      <p className="pa-body-s">No programs yet. Add a gender-specific program to this sport.</p>
-                    </div>
-                  )}
-                </Card>
-              )
-            })}
-          </div>
-        </>
-      )}
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })
+        )}
+      </div>
     </div>
   )
 }
