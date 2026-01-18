@@ -325,6 +325,155 @@ export const en = {
             emptyTitle: 'No athletes found',
             emptyMessage: 'Athletes are added via Families.',
         },
+        structureForms: {
+            pageTitle: {
+                default: 'Organization Structure',
+                add: 'Add {{item}}',
+                edit: 'Edit {{item}}',
+            },
+            pageSubtitle: {
+                add: 'Complete the required details to continue.',
+                select: 'Choose what you want to add or edit.',
+            },
+            breadcrumbs: {
+                organizations: 'Organizations',
+                structure: 'Organization Structure',
+            },
+            selector: {
+                title: 'What would you like to add?',
+            },
+            items: {
+                sport: 'Sport',
+                program: 'Program',
+                level: 'Level',
+                team: 'Team',
+                season: 'Season',
+            },
+            actions: {
+                addItem: 'Add {{item}}',
+                createItem: 'Create {{item}}',
+                updateItem: 'Update {{item}}',
+            },
+            messages: {
+                created: '{{item}} created successfully.',
+                updated: '{{item}} updated successfully.',
+            },
+            errors: {
+                loadFailed: 'We couldn’t load organization data. Check your connection and try again.',
+                saveFailed: 'We couldn’t save the {{item}}. Check required fields and try again.',
+                invalidParams: 'This link is missing required information. Return to Organization Structure and try again.',
+                notFound: 'We couldn’t find that {{item}}. Return to Organization Structure and select another.',
+            },
+            fields: {
+                sportName: {
+                    label: 'Sport name',
+                    placeholder: 'e.g. Soccer',
+                },
+                programSport: {
+                    label: 'Parent sport',
+                    select: 'Select sport',
+                },
+                programGender: {
+                    label: 'Gender category',
+                },
+                programName: {
+                    label: 'Program name',
+                    placeholder: 'e.g. Girls Soccer',
+                    helper: 'Suggested from gender and sport. You can edit it any time.',
+                },
+                levelProgram: {
+                    label: 'Parent program',
+                    select: 'Select program',
+                },
+                levelName: {
+                    label: 'Level name',
+                    placeholder: 'e.g. U12 or Varsity',
+                },
+                levelType: {
+                    label: 'Level type',
+                },
+                levelAgeMin: {
+                    label: 'Minimum age',
+                },
+                levelAgeMax: {
+                    label: 'Maximum age',
+                },
+                levelGradeMin: {
+                    label: 'Minimum grade',
+                },
+                levelGradeMax: {
+                    label: 'Maximum grade',
+                },
+                levelSkillDescription: {
+                    label: 'Eligibility description',
+                    placeholder: 'Short description of skill requirements',
+                },
+                teamLevel: {
+                    label: 'Parent level',
+                    select: 'Select level',
+                },
+                teamSeason: {
+                    label: 'Season',
+                    select: 'Select season',
+                },
+                teamName: {
+                    label: 'Team name',
+                    placeholder: 'e.g. U10 Blue',
+                },
+                teamActive: {
+                    label: 'Team is active',
+                },
+                seasonName: {
+                    label: 'Season name',
+                    placeholder: 'e.g. Spring 2026',
+                },
+                seasonStart: {
+                    label: 'Start date',
+                },
+                seasonEnd: {
+                    label: 'End date',
+                },
+                seasonActive: {
+                    label: 'Set as active season',
+                },
+            },
+            options: {
+                gender: {
+                    boys: 'Boys',
+                    girls: 'Girls',
+                    coed: 'Co-ed',
+                },
+                levelType: {
+                    ageBased: 'Age-based',
+                    gradeBased: 'Grade-based',
+                    skillBased: 'Skill-based',
+                },
+            },
+            validation: {
+                sportNameRequired: 'Enter a sport name.',
+                programSportRequired: 'Select a parent sport.',
+                programGenderRequired: 'Select a gender category.',
+                programNameRequired: 'Enter a program name.',
+                levelProgramRequired: 'Select a parent program.',
+                levelNameRequired: 'Enter a level name.',
+                levelTypeRequired: 'Select a level type.',
+                levelAgeMinRequired: 'Enter a minimum age.',
+                levelAgeMaxRequired: 'Enter a maximum age.',
+                levelGradeMinRequired: 'Enter a minimum grade.',
+                levelGradeMaxRequired: 'Enter a maximum grade.',
+                levelSkillRequired: 'Enter a short description of eligibility.',
+                teamLevelRequired: 'Select a parent level.',
+                teamSeasonRequired: 'Select a season.',
+                teamNameRequired: 'Enter a team name.',
+                seasonNameRequired: 'Enter a season name.',
+                seasonStartRequired: 'Select a start date.',
+                seasonEndRequired: 'Select an end date.',
+                seasonRangeInvalid: 'End date must be on or after the start date.',
+            },
+            empty: {
+                missingOrganization: 'Finish organization setup to unlock these forms.',
+            },
+        },
         createChild: {
             title: 'ADD ATHLETE',
             addChild: 'Add Athlete',
@@ -409,6 +558,155 @@ export const es: typeof en = {
         save: 'Guardar',
         cancel: 'Cancelar',
         close: 'Cerrar',
+        structureForms: {
+            pageTitle: {
+                default: 'Estructura de la organización',
+                add: 'Agregar {{item}}',
+                edit: 'Editar {{item}}',
+            },
+            pageSubtitle: {
+                add: 'Complete los datos requeridos para continuar.',
+                select: 'Elija lo que desea agregar o editar.',
+            },
+            breadcrumbs: {
+                organizations: 'Organizaciones',
+                structure: 'Estructura de la organización',
+            },
+            selector: {
+                title: '¿Qué desea agregar?',
+            },
+            items: {
+                sport: 'Deporte',
+                program: 'Programa',
+                level: 'Nivel',
+                team: 'Equipo',
+                season: 'Temporada',
+            },
+            actions: {
+                addItem: 'Agregar {{item}}',
+                createItem: 'Crear {{item}}',
+                updateItem: 'Actualizar {{item}}',
+            },
+            messages: {
+                created: '{{item}} creado correctamente.',
+                updated: '{{item}} actualizado correctamente.',
+            },
+            errors: {
+                loadFailed: 'No pudimos cargar los datos de la organización. Verifique su conexión e inténtelo de nuevo.',
+                saveFailed: 'No pudimos guardar {{item}}. Verifique los campos obligatorios e inténtelo de nuevo.',
+                invalidParams: 'Este enlace no tiene la información requerida. Vuelva a Estructura de la organización e inténtelo de nuevo.',
+                notFound: 'No pudimos encontrar {{item}}. Vuelva a Estructura de la organización y seleccione otro.',
+            },
+            fields: {
+                sportName: {
+                    label: 'Nombre del deporte',
+                    placeholder: 'p. ej. Fútbol',
+                },
+                programSport: {
+                    label: 'Deporte principal',
+                    select: 'Seleccionar deporte',
+                },
+                programGender: {
+                    label: 'Categoría de género',
+                },
+                programName: {
+                    label: 'Nombre del programa',
+                    placeholder: 'p. ej. Fútbol femenino',
+                    helper: 'Se sugiere según género y deporte. Puede editarlo en cualquier momento.',
+                },
+                levelProgram: {
+                    label: 'Programa principal',
+                    select: 'Seleccionar programa',
+                },
+                levelName: {
+                    label: 'Nombre del nivel',
+                    placeholder: 'p. ej. Sub-12 o Varsity',
+                },
+                levelType: {
+                    label: 'Tipo de nivel',
+                },
+                levelAgeMin: {
+                    label: 'Edad mínima',
+                },
+                levelAgeMax: {
+                    label: 'Edad máxima',
+                },
+                levelGradeMin: {
+                    label: 'Grado mínimo',
+                },
+                levelGradeMax: {
+                    label: 'Grado máximo',
+                },
+                levelSkillDescription: {
+                    label: 'Descripción de elegibilidad',
+                    placeholder: 'Descripción breve de requisitos de habilidad',
+                },
+                teamLevel: {
+                    label: 'Nivel principal',
+                    select: 'Seleccionar nivel',
+                },
+                teamSeason: {
+                    label: 'Temporada',
+                    select: 'Seleccionar temporada',
+                },
+                teamName: {
+                    label: 'Nombre del equipo',
+                    placeholder: 'p. ej. Sub-10 Azul',
+                },
+                teamActive: {
+                    label: 'El equipo está activo',
+                },
+                seasonName: {
+                    label: 'Nombre de la temporada',
+                    placeholder: 'p. ej. Primavera 2026',
+                },
+                seasonStart: {
+                    label: 'Fecha de inicio',
+                },
+                seasonEnd: {
+                    label: 'Fecha de finalización',
+                },
+                seasonActive: {
+                    label: 'Establecer como temporada activa',
+                },
+            },
+            options: {
+                gender: {
+                    boys: 'Niños',
+                    girls: 'Niñas',
+                    coed: 'Mixto',
+                },
+                levelType: {
+                    ageBased: 'Por edad',
+                    gradeBased: 'Por grado',
+                    skillBased: 'Por habilidad',
+                },
+            },
+            validation: {
+                sportNameRequired: 'Ingrese un nombre del deporte.',
+                programSportRequired: 'Seleccione un deporte principal.',
+                programGenderRequired: 'Seleccione una categoría de género.',
+                programNameRequired: 'Ingrese un nombre del programa.',
+                levelProgramRequired: 'Seleccione un programa principal.',
+                levelNameRequired: 'Ingrese un nombre del nivel.',
+                levelTypeRequired: 'Seleccione un tipo de nivel.',
+                levelAgeMinRequired: 'Ingrese una edad mínima.',
+                levelAgeMaxRequired: 'Ingrese una edad máxima.',
+                levelGradeMinRequired: 'Ingrese un grado mínimo.',
+                levelGradeMaxRequired: 'Ingrese un grado máximo.',
+                levelSkillRequired: 'Ingrese una descripción breve de elegibilidad.',
+                teamLevelRequired: 'Seleccione un nivel principal.',
+                teamSeasonRequired: 'Seleccione una temporada.',
+                teamNameRequired: 'Ingrese un nombre del equipo.',
+                seasonNameRequired: 'Ingrese un nombre de la temporada.',
+                seasonStartRequired: 'Seleccione una fecha de inicio.',
+                seasonEndRequired: 'Seleccione una fecha de finalización.',
+                seasonRangeInvalid: 'La fecha de finalización debe ser igual o posterior a la fecha de inicio.',
+            },
+            empty: {
+                missingOrganization: 'Finalice la configuración de la organización para habilitar estos formularios.',
+            },
+        },
         goBack: 'Volver',
         viewDetails: 'Ver Detalles',
         edit: 'Editar',

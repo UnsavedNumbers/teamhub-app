@@ -182,7 +182,7 @@ export default function CreateEvent() {
       // 3. Handle Recurring
       if (data.recurring?.enabled) {
           const recurData = {
-              parent_event_id: eventDataTyped.id,
+              parent_event_id: eventData.id,
               frequency: data.recurring.frequency,
               days_of_week: data.recurring.days_of_week.length > 0 ? data.recurring.days_of_week : [new Date(data.start_time).getDay()],
               end_date: data.recurring.end_date || null,
@@ -214,112 +214,114 @@ export default function CreateEvent() {
         <form onSubmit={handleSubmit(onSubmit)}>
           {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
           
+          {/* SECTION 1: EVENT BASICS */}
           <div className="pa-grid pa-grid-2 pa-mb-4 pa-gap-4">
             <Controller name="title" control={control} rules={{ required: 'Title is required' }} render={({ field }) => <Input {...field} label="Event Title" required error={errors.title?.message || undefined} />} />
             <Controller name="type" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label="Event Type" options={eventTypeOptions} />} />
-          </div>
-
-          <div className="pa-grid pa-grid-2 pa-mb-4 pa-gap-4">
             <Controller name="team_id" control={control} rules={{ required: 'Team is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label="Team" options={teams.map(t => ({value:t.id, label:t.name}))} required error={errors.team_id?.message || undefined} />} />
             <Controller name="season_id" control={control} rules={{ required: 'Season is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label="Season" options={seasons.map(s => ({value:s.id, label:s.name}))} required disabled={!watchTeamId} />} />
           </div>
 
+          {/* SECTION 2: DATE + TIME */}
           <div className="pa-grid pa-grid-3 pa-mb-4 pa-gap-4">
             <Controller name="start_time" control={control} rules={{ required: 'Start time is required' }} render={({ field }) => <Input {...field} label="Start Time" type="datetime-local" required />} />
             <Controller name="end_time" control={control} render={({ field }) => <Input {...field} label="End Time" type="datetime-local" />} />
-             <Controller name="arrival_time" control={control} render={({ field }) => <Input {...field} label="Arrival Time" type="datetime-local" />} />
+            <Controller name="arrival_time" control={control} render={({ field }) => <Input {...field} label="Arrival Time" type="datetime-local" />} />
           </div>
 
+          {/* SECTION 3: LOCATION */}
           <div className="pa-mb-4">
-               <div className="pa-flex pa-justify-between pa-items-center pa-mb-2">
-                 <div className="pa-label">Location</div>
-                 <Button type="button" variant="ghost" onClick={() => setShowLocationDetails(!showLocationDetails)}>{showLocationDetails ? 'Simple Location' : 'Detailed Location'}</Button>
-               </div>
-               
-               <div className="pa-space-y-4">
-                   <div className="pa-grid pa-grid-2 pa-gap-4">
-                        <Controller name="location.venue_name" control={control} render={({ field }) => <Input {...field} label="Venue Name" placeholder="e.g. Field 1" />} />
-                        <Controller name="location.address_line1" control={control} render={({ field }) => <Input {...field} label="Address" placeholder="123 Main St" />} />
-                   </div>
-                   
-                   {showLocationDetails && (
-                       <>
-                        <div className="pa-grid pa-grid-3 pa-gap-4">
-                                <Controller name="location.city" control={control} render={({ field }) => <Input {...field} label="City" />} />
-                                <Controller name="location.state" control={control} render={({ field }) => <Input {...field} label="State" />} />
-                                <Controller name="location.postal_code" control={control} render={({ field }) => <Input {...field} label="Zip Code" />} />
-                        </div>
-                        <div className="pa-flex pa-gap-4">
-                             <Controller name="location.is_tbd" control={control} render={({ field: { value, onChange } }) => <Checkbox checked={value} onChange={(e) => onChange(e.target.checked)} label="Location TBD" />} />
-                             <Controller name="location.is_virtual" control={control} render={({ field: { value, onChange } }) => <Checkbox checked={value} onChange={(e) => onChange(e.target.checked)} label="Virtual Event" />} />
-                        </div>
-                         <Controller name="location.virtual_link" control={control} render={({ field }) => <Input {...field} label="Virtual Link" placeholder="https://zoom.us/..." />} />
-                       </>
-                   )}
-               </div>
+            <div className="pa-flex pa-justify-between pa-items-center pa-mb-2">
+              <div className="pa-label">Location</div>
+              <Button type="button" variant="ghost" onClick={() => setShowLocationDetails(!showLocationDetails)}>{showLocationDetails ? 'Simple Location' : 'Detailed Location'}</Button>
+            </div>
+            
+            <div className="pa-space-y-4">
+              <div className="pa-grid pa-grid-2 pa-gap-4">
+                <Controller name="location.venue_name" control={control} render={({ field }) => <Input {...field} label="Venue Name" placeholder="e.g. Field 1" />} />
+                <Controller name="location.address_line1" control={control} render={({ field }) => <Input {...field} label="Address" placeholder="123 Main St" />} />
+              </div>
+              
+              {showLocationDetails && (
+                <>
+                  <div className="pa-grid pa-grid-3 pa-gap-4">
+                    <Controller name="location.city" control={control} render={({ field }) => <Input {...field} label="City" />} />
+                    <Controller name="location.state" control={control} render={({ field }) => <Input {...field} label="State" />} />
+                    <Controller name="location.postal_code" control={control} render={({ field }) => <Input {...field} label="Zip Code" />} />
+                  </div>
+                  <div className="pa-flex pa-gap-4">
+                    <Controller name="location.is_tbd" control={control} render={({ field: { value, onChange } }) => <Checkbox checked={value} onChange={(e) => onChange(e.target.checked)} label="Location TBD" />} />
+                    <Controller name="location.is_virtual" control={control} render={({ field: { value, onChange } }) => <Checkbox checked={value} onChange={(e) => onChange(e.target.checked)} label="Virtual Event" />} />
+                  </div>
+                  <Controller name="location.virtual_link" control={control} render={({ field }) => <Input {...field} label="Virtual Link" placeholder="https://zoom.us/..." />} />
+                </>
+              )}
+            </div>
           </div>
           
-           <div className="pa-mb-4 pa-border pa-border-divider pa-rounded pa-p-4">
-              <div className="pa-flex pa-items-center pa-justify-between pa-mb-4">
-                 <div className="pa-font-bold">RSVP Required?</div>
-                 <Controller name="rsvp_enabled" control={control} render={({ field: { value, onChange } }) => (
-                     <Checkbox checked={!!value} onChange={(e) => { 
-                       onChange(e.target.checked)
-                       if (!e.target.checked) {
-                         setValue('rsvp_type', null)
-                       }
-                     }} label="Enable" />
-                 )} />
+          {/* SECTION 4: RSVP + RECURRENCE (SETTINGS) */}
+          <div className="pa-mb-4">
+            <div className="pa-flex pa-items-center pa-gap-6 pa-mb-4">
+              <div className="pa-flex pa-items-center pa-gap-2">
+                <span className="pa-label">RSVP Required?</span>
+                <Controller name="rsvp_enabled" control={control} render={({ field: { value, onChange } }) => (
+                  <Checkbox checked={!!value} onChange={(e) => { 
+                    onChange(e.target.checked)
+                    if (!e.target.checked) {
+                      setValue('rsvp_type', null)
+                    }
+                  }} label="" />
+                )} />
               </div>
-              
-              {watchRSVPEnabled && (
-                  <div className="pa-space-y-4">
-                       <Controller 
-                         name="rsvp_type" 
-                         control={control} 
-                         rules={{ required: watchRSVPEnabled ? 'RSVP type is required' : false }}
-                         render={({ field }) => (
-                          <Select 
-                            {...field} 
-                            value={field.value || ''}
-                            label="RSVP Type" 
-                            options={[
-                              {value: 'general', label: t('admin.events.rsvpType.general')},
-                              {value: 'athlete', label: t('admin.events.rsvpType.athlete')}
-                            ]}
-                             required
-                             error={errors.rsvp_type?.message || undefined}
-                           />
-                         )} 
-                       />
-                  </div>
-              )}
-           </div>
-
-           <div className="pa-mb-4 pa-border pa-border-divider pa-rounded pa-p-4">
-              <div className="pa-flex pa-items-center pa-justify-between pa-mb-4">
-                 <div className="pa-font-bold">Recurring Event?</div>
-                 <Controller name="recurring.enabled" control={control} render={({ field: { value, onChange } }) => (
-                     <Checkbox checked={!!value} onChange={(e) => { onChange(e.target.checked); setShowRecurring(e.target.checked); }} label="Enable" />
-                 )} />
+              <div className="pa-flex pa-items-center pa-gap-2">
+                <span className="pa-label">Recurring Event?</span>
+                <Controller name="recurring.enabled" control={control} render={({ field: { value, onChange } }) => (
+                  <Checkbox checked={!!value} onChange={(e) => { onChange(e.target.checked); setShowRecurring(e.target.checked); }} label="" />
+                )} />
               </div>
-              
-              {showRecurring && (
-                  <div className="pa-space-y-4">
-                       <Controller name="recurring.frequency" control={control} render={({ field }) => <Select {...field} label="Frequency" options={[{value:'weekly', label:'Weekly'}]} />} />
-                       <Controller name="recurring.end_date" control={control} render={({ field }) => <Input {...field} label="Recurs Until" type="date" />} />
-                  </div>
-              )}
-           </div>
+            </div>
+            
+            {watchRSVPEnabled && (
+              <div className="pa-mb-4">
+                <Controller 
+                  name="rsvp_type" 
+                  control={control} 
+                  rules={{ required: watchRSVPEnabled ? 'RSVP type is required' : false }}
+                  render={({ field }) => (
+                    <Select 
+                      {...field} 
+                      value={field.value || ''}
+                      label="RSVP Type" 
+                      options={[
+                        {value: 'general', label: t('admin.events.rsvpType.general')},
+                        {value: 'athlete', label: t('admin.events.rsvpType.athlete')}
+                      ]}
+                      required
+                      error={errors.rsvp_type?.message || undefined}
+                    />
+                  )} 
+                />
+              </div>
+            )}
+            
+            {showRecurring && (
+              <div className="pa-space-y-4">
+                <Controller name="recurring.frequency" control={control} render={({ field }) => <Select {...field} label="Frequency" options={[{value:'weekly', label:'Weekly'}]} />} />
+                <Controller name="recurring.end_date" control={control} render={({ field }) => <Input {...field} label="Recurs Until" type="date" />} />
+              </div>
+            )}
+          </div>
 
+          {/* SECTION 5: NOTES + PREP */}
           <div className="pa-grid pa-grid-2 pa-mb-6 pa-gap-4">
             <Controller name="notes" control={control} render={({ field }) => <textarea className="pa-input pa-textarea" {...field} placeholder="General Notes..." style={{ minHeight: '80px' }} />} />
             <div className="pa-space-y-2">
-                 <Controller name="uniform_notes" control={control} render={({ field }) => <Input {...field} label="Uniform Notes" placeholder="e.g. Home Kit" />} />
-                 <Controller name="equipment_notes" control={control} render={({ field }) => <Input {...field} label="Equipment Notes" placeholder="e.g. Bring water" />} />
+              <Controller name="uniform_notes" control={control} render={({ field }) => <Input {...field} label="Uniform Notes" placeholder="e.g. Home Kit" />} />
+              <Controller name="equipment_notes" control={control} render={({ field }) => <Input {...field} label="Equipment Notes" placeholder="e.g. Bring water" />} />
             </div>
           </div>
 
+          {/* SECTION 6: ACTIONS */}
           <div className="pa-flex pa-justify-end pa-gap-3">
             <Button variant="secondary" onClick={() => navigate(-1)}>Cancel</Button>
             <Button type="submit" loading={saving}>Create Event</Button>
