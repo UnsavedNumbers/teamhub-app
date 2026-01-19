@@ -30,7 +30,9 @@ import type {
     CreateFamilyDTO,
     UpdateFamilyDTO,
     CreateChildDTO,
-    UpdateChildDTO
+    UpdateChildDTO,
+    CreateAthleteDTO,
+    UpdateAthleteDTO
 } from '../../types/family'
 
 // ============================================================================
@@ -182,7 +184,7 @@ export async function getFamilyDetails(
 
         // Fetch children
         const { data: children, error: childrenError } = await supabase
-            .from('children')
+            .from('athletes')
             .select('*')
             .eq('family_id', familyId)
             .is('deleted_at', null)
@@ -325,6 +327,7 @@ export async function createChild(
             data: {
                 id: `demo-child-${Date.now()}`,
                 ...dto,
+                family_id: dto.family_id ?? null,
                 gender: dto.gender || null,
                 jersey_number: dto.jersey_number || null,
                 medical_notes: dto.medical_notes || null,
@@ -340,10 +343,10 @@ export async function createChild(
     }
 
     try {
-        type ChildInsert = Database['public']['Tables']['children']['Insert']
+        type ChildInsert = Database['public']['Tables']['athletes']['Insert']
         const insertData = dto satisfies ChildInsert
         const { data, error } = await supabase
-            .from('children')
+            .from('athletes')
             .insert(insertData)
             .select()
             .single()
@@ -366,13 +369,13 @@ export async function updateChild(
     }
 
     try {
-        type ChildUpdate = Database['public']['Tables']['children']['Update']
+        type ChildUpdate = Database['public']['Tables']['athletes']['Update']
         const updateData = {
             ...dto,
             updated_at: new Date().toISOString()
         } satisfies ChildUpdate
         const { data, error } = await supabase
-            .from('children')
+            .from('athletes')
             .update(updateData)
             .eq('id', childId)
             .select()
@@ -396,7 +399,7 @@ export async function deleteChild(
 
     try {
         const { error } = await supabase
-            .from('children')
+            .from('athletes')
             .delete()
             .eq('id', childId)
 
@@ -438,7 +441,7 @@ export async function getChildren(
         // Admins can see all in org.
         // For now, this query relies on RLS to filter.
         const { data, error } = await supabase
-            .from('children')
+            .from('athletes')
             .select(`
                 *,
                 family:families!inner(org_id)
@@ -451,4 +454,178 @@ export async function getChildren(
     } catch (err) {
         return { data: [], error: err instanceof Error ? err : new Error('Fetch failed') }
     }
+}
+
+// ============================================================================
+// Athlete Service Functions (New Athlete-Centric Model)
+// ============================================================================
+
+/**
+ * Create athlete with guardians atomically
+ * Uses RPC function for all-or-nothing transaction
+ */
+export async function createAthleteWithGuardians(
+    context: UserContext,
+    dto: CreateAthleteDTO
+): Promise<{ data: { athlete_id: string; guardians: any[] } | null; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+        return {
+            data: {
+                athlete_id: `demo-athlete-${Date.now()}`,
+                guardians: (dto.guardians || []).map((g, idx) => ({
+                    type: 'invite',
+                    email: g.email,
+                    status: 'pending',
+                    id: `demo-invite-${idx}`
+                }))
+            },
+            error: null
+        }
+    }
+
+    try {
+        // Prepare athlete data
+        const athleteData = {
+            first_name: dto.first_name,
+            last_name: dto.last_name,
+            birthdate: dto.date_of_birth,
+            gender: dto.gender || null,
+            jersey_number: dto.jersey_number || null,
+            medical_notes: dto.medical_notes || null,
+            allergies: dto.allergies || null,
+            emergency_contact_name: dto.emergency_contact_name || null,
+            emergency_contact_phone: dto.emergency_contact_phone || null,
+            family_id: dto.family_id || null,
+            team_id: dto.team_id || null,
+            season_id: dto.season_id || null
+        }
+
+        // Prepare guardians array
+        const guardians = (dto.guardians || []).map(g => ({
+            email: g.email,
+            relationship_type: g.relationship_type || 'parent'
+        }))
+
+        // Call RPC function
+        const { data, error } = await supabase
+            .rpc('create_athlete_with_guardians', {
+                p_org_id: context.orgId,
+                p_athlete_data: athleteData,
+                p_guardians: guardians
+            })
+
+        if (error) throw error
+
+        return { data: data as any, error: null }
+    } catch (err) {
+        console.error('Error creating athlete with guardians:', err)
+        return {
+            data: null,
+            error: err instanceof Error ? err : new Error('Create athlete failed')
+        }
+    }
+}
+
+/**
+ * Get derived family for an athlete
+ * Returns family computed from guardian relationships
+ */
+export async function getDerivedFamilyForAthlete(
+    athleteId: string,
+    orgId: string
+): Promise<{ data: any | null; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+        return {
+            data: {
+                athlete_ids: [athleteId],
+                guardian_ids: [],
+                athletes: [],
+                guardians: [],
+                is_derived: true,
+                has_guardians: false
+            },
+            error: null
+        }
+    }
+
+    try {
+        const { data, error } = await supabase
+            .rpc('get_derived_family_for_athlete', {
+                p_athlete_id: athleteId,
+                p_org_id: orgId
+            })
+
+        if (error) throw error
+
+        return { data, error: null }
+    } catch (err) {
+        console.error('Error getting derived family:', err)
+        return {
+            data: null,
+            error: err instanceof Error ? err : new Error('Get family failed')
+        }
+    }
+}
+
+/**
+ * Get orphaned athletes (athletes with no guardians)
+ */
+export async function getOrphanedAthletes(
+    orgId: string
+): Promise<{ data: any[]; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+        return { data: [], error: null }
+    }
+
+    try {
+        const { data, error } = await supabase
+            .rpc('get_orphaned_athletes', {
+                p_org_id: orgId
+            })
+
+        if (error) throw error
+
+        return { data: data || [], error: null }
+    } catch (err) {
+        console.error('Error getting orphaned athletes:', err)
+        return {
+            data: [],
+            error: err instanceof Error ? err : new Error('Get orphaned athletes failed')
+        }
+    }
+}
+
+/**
+ * Legacy alias for createAthleteWithGuardians
+ * Maintains backward compatibility
+ */
+export async function createAthlete(
+    context: UserContext,
+    dto: CreateAthleteDTO
+): Promise<{ data: { athlete_id: string; guardians: any[] } | null; error: Error | null }> {
+    return createAthleteWithGuardians(context, dto)
+}
+
+/**
+ * Update athlete (same as updateChild, just renamed for clarity)
+ */
+export async function updateAthlete(
+    context: UserContext,
+    athleteId: string,
+    dto: UpdateAthleteDTO
+): Promise<{ data: Child | null; error: Error | null }> {
+    return updateChild(context, athleteId, dto)
+}
+
+/**
+ * Delete athlete (same as deleteChild, just renamed for clarity)
+ */
+export async function deleteAthlete(
+    context: UserContext,
+    athleteId: string
+): Promise<{ error: Error | null }> {
+    return deleteChild(context, athleteId)
 }

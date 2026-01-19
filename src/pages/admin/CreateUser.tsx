@@ -4,7 +4,7 @@ import { useForm, Controller } from 'react-hook-form'
 
 import { getErrorMessage } from '../../utils/errorUtils'
 import { 
-  PageHeader, 
+  AdminPageHeader, 
   Card, 
   Button, 
   Input, 
@@ -92,95 +92,97 @@ export default function CreateUser() {
 
   return (
     <div className="pa-root">
-      <PageHeader title="Create User" />
-      <Card>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
-          
-          <div className="pa-mb-4">
-            <Controller 
-              name="email" 
-              control={control} 
-              rules={{ 
-                required: 'Email is required',
-                pattern: {
-                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                  message: 'Invalid email address'
-                }
-              }} 
-              render={({ field }) => (
-                <Input 
-                  {...field} 
-                  label="Email" 
-                  type="email" 
-                  required 
-                  error={errors.email?.message || undefined} 
-                />
-              )} 
-            />
-          </div>
+      <AdminPageHeader 
+        title="Create User" 
+        breadcrumbs={[
+          { label: 'Users', path: '/admin/users' },
+          { label: 'Create User' },
+        ]}
+      />
+      <div className="pa-form-container">
+        <Card>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
+            
+            <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+              <Controller 
+                name="email" 
+                control={control} 
+                rules={{ 
+                  required: 'Email is required',
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: 'Invalid email address'
+                  }
+                }} 
+                render={({ field }) => (
+                  <Input 
+                    {...field} 
+                    label="Email" 
+                    type="email" 
+                    required 
+                    error={errors.email?.message || undefined} 
+                  />
+                )} 
+              />
+              <Controller 
+                name="display_name" 
+                control={control} 
+                rules={{ required: 'Display name is required' }} 
+                render={({ field }) => (
+                  <Input 
+                    {...field} 
+                    label="Display Name" 
+                    required 
+                    error={errors.display_name?.message || undefined} 
+                  />
+                )} 
+              />
+            </div>
 
-          <div className="pa-mb-4">
-            <Controller 
-              name="display_name" 
-              control={control} 
-              rules={{ required: 'Display name is required' }} 
-              render={({ field }) => (
-                <Input 
-                  {...field} 
-                  label="Display Name" 
-                  required 
-                  error={errors.display_name?.message || undefined} 
-                />
-              )} 
-            />
-          </div>
+            <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-6">
+              <Controller 
+                name="phone" 
+                control={control} 
+                render={({ field }) => (
+                  <Input 
+                    {...field} 
+                    label="Phone Number" 
+                    type="tel" 
+                    placeholder="(555) 123-4567" 
+                  />
+                )} 
+              />
+              <Controller 
+                name="role" 
+                control={control} 
+                render={({ field }) => (
+                  <Select 
+                    {...field} 
+                    label="Role" 
+                    options={[
+                      { value: 'parent', label: 'Parent' },
+                      { value: 'coach', label: 'Coach' },
+                      { value: 'admin', label: 'Admin' },
+                    ]} 
+                  />
+                )} 
+              />
+            </div>
 
-          <div className="pa-mb-4">
-            <Controller 
-              name="phone" 
-              control={control} 
-              render={({ field }) => (
-                <Input 
-                  {...field} 
-                  label="Phone Number" 
-                  type="tel" 
-                  placeholder="(555) 123-4567" 
-                />
-              )} 
-            />
-          </div>
+            <div className="pa-card pa-mb-6" style={{ background: 'var(--pa-info-bg)', border: 'none' }}>
+              <p className="pa-body-s">
+                <strong>Note:</strong> The user will receive an email invitation to set their password and activate their account.
+              </p>
+            </div>
 
-          <div className="pa-mb-6">
-            <Controller 
-              name="role" 
-              control={control} 
-              render={({ field }) => (
-                <Select 
-                  {...field} 
-                  label="Role" 
-                  options={[
-                    { value: 'parent', label: 'Parent' },
-                    { value: 'coach', label: 'Coach' },
-                    { value: 'admin', label: 'Admin' },
-                  ]} 
-                />
-              )} 
-            />
-          </div>
-
-          <div className="pa-card pa-mb-6" style={{ background: 'var(--pa-info-bg)', border: 'none' }}>
-            <p className="pa-body-s">
-              <strong>Note:</strong> The user will receive an email invitation to set their password and activate their account.
-            </p>
-          </div>
-
-          <div className="pa-flex pa-justify-end pa-gap-3">
-            <Button variant="secondary" onClick={() => navigate('/admin/users')}>Cancel</Button>
-            <Button type="submit" loading={saving}>Create User</Button>
-          </div>
-        </form>
-      </Card>
+            <div className="pa-flex pa-justify-end pa-gap-3">
+              <Button variant="secondary" onClick={() => navigate('/admin/users')}>Cancel</Button>
+              <Button type="submit" loading={saving}>Create User</Button>
+            </div>
+          </form>
+        </Card>
+      </div>
     </div>
   )
 }

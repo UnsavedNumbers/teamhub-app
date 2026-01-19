@@ -19,6 +19,7 @@ export interface UserContext {
     userId: string
     email: string | null
     orgId: string
+    organizationName?: string | null
     roles: OrgMemberRole[]
     isPlatformAdmin: boolean
 }

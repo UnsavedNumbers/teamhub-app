@@ -7,6 +7,114 @@ export type { Json }
 // Additional tables and views that are not present in the generated database.types.ts
 // This augments the Supabase schema used by the client to cover license/entitlements tables and views.
 type AdditionalTables = {
+  organization_settings: {
+    Row: {
+      org_id: string
+      organization_name: string
+      timezone: string
+      default_language: string | null
+      theme_id: string | null
+      status: 'active' | 'inactive'
+      updated_at: string | null
+    }
+    Insert: Partial<AdditionalTables['organization_settings']['Row']> & {
+      org_id: string
+    }
+    Update: Partial<AdditionalTables['organization_settings']['Row']>
+    Relationships: []
+  }
+  organization_defaults: {
+    Row: {
+      org_id: string
+      default_season_id: string | null
+      default_sport_id: string | null
+      default_program_id: string | null
+      default_level_id: string | null
+      default_event_types: string[] | null
+      updated_at: string | null
+    }
+    Insert: Partial<AdditionalTables['organization_defaults']['Row']> & {
+      org_id: string
+    }
+    Update: Partial<AdditionalTables['organization_defaults']['Row']>
+    Relationships: []
+  }
+  organization_attendance_settings: {
+    Row: {
+      org_id: string
+      required_for_practice: boolean
+      required_for_game: boolean
+      required_for_meeting: boolean
+      submission_deadline_hours: number
+      lock_after_days: number | null
+      allow_admin_override: boolean
+      enable_coach_reminders: boolean
+      parent_visibility: Json | null
+      updated_at: string | null
+    }
+    Insert: Partial<AdditionalTables['organization_attendance_settings']['Row']> & {
+      org_id: string
+    }
+    Update: Partial<AdditionalTables['organization_attendance_settings']['Row']>
+    Relationships: []
+  }
+  organization_registration_settings: {
+    Row: {
+      org_id: string
+      required_fields: string[] | null
+      allow_players_without_guardians: boolean
+      allow_guardian_self_invite: boolean
+      medical_form_required: boolean
+      updated_at: string | null
+    }
+    Insert: Partial<AdditionalTables['organization_registration_settings']['Row']> & {
+      org_id: string
+    }
+    Update: Partial<AdditionalTables['organization_registration_settings']['Row']>
+    Relationships: []
+  }
+  organization_visibility_settings: {
+    Row: {
+      org_id: string
+      role_permissions: Json | null
+      updated_at: string | null
+    }
+    Insert: Partial<AdditionalTables['organization_visibility_settings']['Row']> & {
+      org_id: string
+    }
+    Update: Partial<AdditionalTables['organization_visibility_settings']['Row']>
+    Relationships: []
+  }
+  organization_notification_settings: {
+    Row: {
+      org_id: string
+      default_channels: string[] | null
+      attendance_reminders_enabled: boolean
+      schedule_change_alerts_enabled: boolean
+      payment_reminder_behavior: 'immediate' | 'daily_digest'
+      updated_at: string | null
+    }
+    Insert: Partial<AdditionalTables['organization_notification_settings']['Row']> & {
+      org_id: string
+    }
+    Update: Partial<AdditionalTables['organization_notification_settings']['Row']>
+    Relationships: []
+  }
+  organization_advanced_settings: {
+    Row: {
+      org_id: string
+      data_retention_days: number | null
+      enable_api_access: boolean
+      api_rate_limit: number | null
+      allow_data_export: boolean
+      updated_at: string | null
+    }
+    Insert: Partial<AdditionalTables['organization_advanced_settings']['Row']> & {
+      org_id: string
+    }
+    Update: Partial<AdditionalTables['organization_advanced_settings']['Row']>
+    Relationships: []
+  }
   license_tiers: {
     Row: {
       id: string

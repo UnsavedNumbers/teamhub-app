@@ -7,7 +7,7 @@ import { LicensePlan } from '../../utils/licenseUtils'
 import { t } from '../../i18n'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { 
-  PageHeader, 
+  AdminPageHeader, 
   Card, 
   Button 
 } from '../../components/platformAdmin'
@@ -60,7 +60,7 @@ export default function PlanSelection() {
 
   return (
     <div className="pa-root">
-      <PageHeader 
+      <AdminPageHeader 
         title={t('billing.planSelectionTitle')} 
         actions={<Button variant="secondary" onClick={() => navigate('/admin/organization/billing')}>{t('common.goBack')}</Button>} 
       />

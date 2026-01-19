@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-
+import { useNavigate } from 'react-router-dom'
 
 import { useUserContext } from '../../hooks/useUserContext'
 import { useTeamParams } from '../../hooks/useRouteParams'
 import { getTeamDetails, getTeamRoster } from '../../data/services/teamsService'
 import { 
-  PageHeader, 
+  AdminPageHeader,
   Card, 
   Button, 
   Select, 
@@ -26,6 +26,7 @@ interface Membership {
 }
 
 export default function Roster() {
+  const navigate = useNavigate()
   const { teamId } = useTeamParams()
   const [seasons, setSeasons] = useState<Season[]>([])
   const [selectedSeason, setSelectedSeason] = useState<string>('')
@@ -135,13 +136,17 @@ export default function Roster() {
 
   return (
     <div>
-      <PageHeader 
+      <AdminPageHeader 
         title="Team Roster" 
         actions={
-          <Button onClick={() => setShowAddModal(true)}>
-            <span className="material-symbols-outlined">add</span>
-            Add Player
-          </Button>
+          <div className="pa-flex pa-gap-2">
+            <Button onClick={() => navigate(`/admin/athletes/import?teamId=${teamId}&seasonId=${selectedSeason}`)} variant="secondary" icon="upload_file">
+              Import Athletes
+            </Button>
+            <Button onClick={() => setShowAddModal(true)} icon="add">
+              Add Player
+            </Button>
+          </div>
         }
       />
 

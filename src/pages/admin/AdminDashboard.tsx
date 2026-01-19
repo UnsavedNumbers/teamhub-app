@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom'
 
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import { useT } from '../../i18n/useI18n'
 import { getTeams } from '../../data/services/teamsService'
 import { getChildren } from '../../data/services/familyService'
 import { getUnpaidFeeAssignments } from '../../data/services/paymentsService'
 import { getUpcomingEventsForUser } from '../../data/services/eventsService'
 import { 
-  PageHeader, 
+  AdminPageHeader, 
   StatCard, 
   Card, 
   Button, 
@@ -40,6 +41,7 @@ export default function AdminDashboard() {
   const { currentOrganization } = useOrganization()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
+  const t = useT()
 
   const fetchDashboardData = useCallback(async () => {
     if (!isReady) { setLoading(false); return }
@@ -84,19 +86,19 @@ export default function AdminDashboard() {
 
   return (
     <div className="pa-root">
-      <PageHeader 
+      <AdminPageHeader 
         title="DASHBOARD" 
         subtitle={currentOrganization?.name?.toUpperCase()} 
         actions={<Button variant="secondary" onClick={() => fetchDashboardData()}>Refresh</Button>} 
       />
 
       <div className="pa-grid pa-grid-3 pa-gap-4 pa-mb-8">
-        <StatCard label="TOTAL TEAMS" value={stats.totalTeams} icon="groups" onClick={() => navigate('/admin/teams')} />
-        <StatCard label="TOTAL PLAYERS" value={stats.totalPlayers} icon="person" onClick={() => navigate('/admin/roster')} />
-        <StatCard label="ACTIVE SEASONS" value={stats.activeSeasons} icon="calendar_today" />
-        <StatCard label="UNPAID FEES" value={stats.outstandingPayments} icon="payments" onClick={() => navigate('/admin/payments')} />
-        <StatCard label="UPCOMING EVENTS" value={stats.upcomingEvents} icon="event" onClick={() => navigate('/admin/events')} />
-        <StatCard label="UNIFORM ORDERS" value={stats.pendingUniformOrders} icon="checkroom" onClick={() => navigate('/admin/uniforms')} />
+        <StatCard label={t('admin.dashboard.totalTeams')} value={stats.totalTeams} icon="groups" onClick={() => navigate('/admin/teams')} />
+        <StatCard label={t('admin.dashboard.totalAthletes')} value={stats.totalPlayers} icon="person" onClick={() => navigate('/admin/athletes')} />
+        <StatCard label={t('admin.dashboard.activeSeasons')} value={stats.activeSeasons} icon="calendar_today" />
+        <StatCard label={t('admin.dashboard.unpaidFees')} value={stats.outstandingPayments} icon="payments" onClick={() => navigate('/admin/payments')} />
+        <StatCard label={t('admin.dashboard.upcomingEvents')} value={stats.upcomingEvents} icon="event" onClick={() => navigate('/admin/events')} />
+        <StatCard label={t('admin.dashboard.uniformOrders')} value={stats.pendingUniformOrders} icon="checkroom" onClick={() => navigate('/admin/uniforms')} />
       </div>
 
       <div className="pa-grid pa-grid-12 pa-gap-6">

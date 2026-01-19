@@ -8,7 +8,7 @@ import {
   type FakeTravelPlan 
 } from '../../data/services/travelService'
 import { 
-  PageHeader, 
+  AdminPageHeader, 
   Card, 
   Badge, 
   PlatformDataTable, 
@@ -120,7 +120,7 @@ export default function TravelPlans() {
 
   return (
     <div className="pa-root">
-      <PageHeader 
+      <AdminPageHeader 
         title="Travel Plans" 
         actions={<Button onClick={() => navigate('/admin/travel/new')}><span className="material-symbols-outlined">add</span>New Plan</Button>} 
       />

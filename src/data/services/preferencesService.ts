@@ -9,6 +9,7 @@ import { USE_FAKE_DATA } from '../config'
 import { supabase } from '../../lib/supabase'
 import type { Json } from '../../lib/database.types'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
+import { getFakeUserPreferences } from '../fake/fakeSettings'
 
 // ============================================================================
 // Types
@@ -17,7 +18,30 @@ import type { SupabaseExtended as Database } from '../../lib/supabase.extended.t
 export interface UserPreferences {
   theme?: 'light' | 'dark' | 'system'
   language?: string
-  notifications?: Record<string, boolean>
+  notifications?: {
+    email?: boolean
+    push?: boolean
+    attendance_issues?: boolean
+    schedule_changes?: boolean
+    payment_issues?: boolean
+    registration_activity?: boolean
+    system_announcements?: boolean
+    frequency?: 'immediate' | 'daily' | 'weekly'
+  }
+  workflow?: {
+    default_landing_page?: string
+    default_season_id?: string
+    remember_filters?: boolean
+    auto_select_org?: boolean
+  }
+  profile?: {
+    phone?: string
+    timezone?: string
+  }
+  advanced?: {
+    beta_features?: boolean
+    ui_density?: 'comfortable' | 'compact'
+  }
   [key: string]: unknown // Allow other preferences
 }
 
@@ -32,8 +56,9 @@ export async function getUserPreferences(
   userId: string
 ): Promise<{ data: UserPreferences | null; error: Error | null }> {
   if (USE_FAKE_DATA) {
-    // Demo mode: return empty preferences (use localStorage)
-    return { data: null, error: null }
+    // Demo mode: return fake preferences
+    const fakePrefs = getFakeUserPreferences(userId)
+    return { data: fakePrefs || {}, error: null }
   }
 
   try {

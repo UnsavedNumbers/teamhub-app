@@ -51,7 +51,7 @@ export default function AdminLayout() {
       requiresOrg: true,
       children: [
         { text: 'Families', icon: 'home', path: '/admin/families', requiresOrg: true },
-        { text: 'Athletes', icon: 'child_care', path: '/admin/children', requiresOrg: true },
+        { text: 'Athletes', icon: 'child_care', path: '/admin/athletes', requiresOrg: true },
       ],
     },
     {
@@ -64,6 +64,15 @@ export default function AdminLayout() {
         { text: 'Events', icon: 'event', path: '/admin/events', requiresOrg: true },
         { text: 'Attendance', icon: 'how_to_reg', path: '/admin/attendance', requiresOrg: true },
         { text: 'Uniforms', icon: 'checkroom', path: '/admin/uniforms', requiresOrg: true },
+      ],
+    },
+    {
+      label: 'Account',
+      icon: 'account_circle',
+      path: '/admin/account',
+      requiresOrg: false,
+      children: [
+        { text: 'Settings', icon: 'settings', path: '/admin/settings', requiresOrg: false },
       ],
     },
   ], [t])
@@ -99,7 +108,7 @@ export default function AdminLayout() {
             <span className="pa-sidebar-title">TEAMHUB</span>
           </Link>
           {currentOrganization && (
-            <div style={{ marginTop: '8px', fontSize: '11px', color: '#7A8794', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--pa-n500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               {currentOrganization.name}
             </div>
           )}

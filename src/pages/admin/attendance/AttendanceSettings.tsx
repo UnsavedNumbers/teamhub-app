@@ -39,18 +39,18 @@ export default function AttendanceSettingsTab() {
       <Card>
         <CardHeader><CardTitle>General Configuration</CardTitle></CardHeader>
         <CardContent className="pa-space-y-4">
-           <div className="pa-flex pa-items-center pa-justify-between">
+             <div className="pa-flex pa-items-center pa-justify-between">
              <label>Enable Coach Reminders</label>
-             <input type="checkbox" checked={settings.reminder_enabled} onChange={() => toggle('reminder_enabled')} />
+             <input type="checkbox" checked={settings.enable_coach_reminders} onChange={() => toggle('enable_coach_reminders')} />
            </div>
            
            <div className="pa-flex pa-items-center pa-justify-between">
-             <label>Lock Attendance Record After (hours)</label>
+             <label>Submission Deadline (Hours)</label>
              <input 
                 type="number" 
                 className="pa-input pa-w-24" 
-                value={settings.lock_after_hours}
-                onChange={(e) => setSettings({...settings, lock_after_hours: parseInt(e.target.value) || 0})}
+                value={settings.submission_deadline_hours}
+                onChange={(e) => setSettings({...settings, submission_deadline_hours: parseInt(e.target.value) || 0})}
              />
            </div>
         </CardContent>

@@ -15,7 +15,7 @@ export function hasRole(
   org: Organization | null | undefined,
   role: OrgMemberRole
 ): boolean {
-  return org?.roles.includes(role) ?? false
+  return org?.roles?.includes(role) ?? false
 }
 
 /**
@@ -41,7 +41,7 @@ export function hasAllRoles(
   org: Organization | null | undefined,
   roles: OrgMemberRole[]
 ): boolean {
-  if (!org) return false
+  if (!org || !org.roles) return false
   return roles.every(role => org.roles.includes(role))
 }
 
@@ -54,7 +54,7 @@ export function hasAllRoles(
 export function getPrimaryRole(
   org: Organization | null | undefined
 ): OrgMemberRole | null {
-  if (!org || org.roles.length === 0) return null
+  if (!org || !org.roles || org.roles.length === 0) return null
 
   if (org.roles.includes('org_admin')) return 'org_admin'
   if (org.roles.includes('coach')) return 'coach'
@@ -75,5 +75,5 @@ export function hasRoleInAnyOrg(
   organizations: Organization[],
   role: OrgMemberRole
 ): boolean {
-  return organizations.some(org => org.roles.includes(role))
+  return organizations.some(org => org.roles?.includes(role))
 }

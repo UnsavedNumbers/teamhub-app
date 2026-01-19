@@ -52,9 +52,10 @@ export function useUserContext(): UseUserContextResult {
         userId: user?.id ?? '',
         email: user?.email ?? null,
         orgId: currentOrganization?.id ?? '',
+        organizationName: currentOrganization?.name ?? null,
         roles: currentOrganization?.roles ?? [],
         isPlatformAdmin: profile?.isPlatformAdmin ?? false,
-    }), [user?.id, user?.email, currentOrganization?.id, currentOrganization?.roles, profile?.isPlatformAdmin])
+    }), [user?.id, user?.email, currentOrganization?.id, currentOrganization?.name, currentOrganization?.roles, profile?.isPlatformAdmin])
 
     const isLoading = authLoading || orgLoading
     const isAuthenticated = !!user

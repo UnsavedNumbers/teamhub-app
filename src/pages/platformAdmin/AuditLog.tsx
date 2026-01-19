@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { PageHeader, Badge, FilterBar, PlatformDataTable, JsonViewer, type ColumnConfig } from '../../components/platformAdmin'
 import type { AdminAuditLog } from '../../types/platformAdmin.types'
+import { mapEventLogsToAuditLogs, type AdminEventLog } from '../../utils/auditLogMapper'
 
 // Action types for filtering
 const actionOptions = [
@@ -35,7 +36,7 @@ export default function AuditLog() {
 
     try {
       let query = supabase
-        .from('admin_audit_log')
+        .from('admin_event_logs')
         .select('*', { count: 'exact' })
 
       if (search) {
@@ -43,7 +44,8 @@ export default function AuditLog() {
       }
 
       if (actionFilter) {
-        query = query.eq('action', actionFilter)
+        // Map action filter to event_type column
+        query = query.eq('event_type', actionFilter)
       }
 
       if (dateFrom) {
@@ -66,7 +68,9 @@ export default function AuditLog() {
         setLogs([])
         setTotalCount(0)
       } else {
-        setLogs(data as AdminAuditLog[] || [])
+        // Map event logs to audit log format for UI compatibility
+        const mappedLogs = mapEventLogsToAuditLogs((data || []) as AdminEventLog[])
+        setLogs(mappedLogs)
         setTotalCount(count || 0)
       }
     } catch (err) {

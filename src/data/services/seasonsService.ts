@@ -81,8 +81,8 @@ export async function getSeason(
         start_date: row.start_date,
         end_date: row.end_date,
         is_active: row.is_active ?? false,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
+        created_at: row.created_at || '',
+        updated_at: row.updated_at || '',
       },
       error: null,
     }

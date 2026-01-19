@@ -39,6 +39,11 @@
   --gn-motion-fast: 150ms;
   --gn-motion-normal: 200ms;
   --gn-ease-out: cubic-bezier(0.33, 1, 0.68, 1);
+
+  /* Organization Theme Variables (applied dynamically by useOrganizationTheme hook) */
+  --org-primary: #1e40af;    /* Default blue - overridden by theme */
+  --org-secondary: #3b82f6;  /* Default blue-500 - overridden by theme */
+  --org-accent: #d946ef;     /* Default fuchsia-500 - overridden by theme */
 }
 
 .dark {

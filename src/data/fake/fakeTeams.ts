@@ -68,6 +68,23 @@ export const SPORT_SOCCER_ID = 'sport-soccer-001'
 export const SPORT_BASKETBALL_ID = 'sport-basketball-002'
 export const SPORT_BASEBALL_ID = 'sport-baseball-003'
 export const SPORT_VOLLEYBALL_ID = 'sport-volleyball-004'
+export const SPORT_SOFTBALL_ID = 'sport-softball-005'
+export const SPORT_FOOTBALL_ID = 'sport-football-006'
+export const SPORT_FLAG_FOOTBALL_ID = 'sport-flag-football-007'
+export const SPORT_LACROSSE_ID = 'sport-lacrosse-008'
+export const SPORT_FIELD_HOCKEY_ID = 'sport-field-hockey-009'
+export const SPORT_ICE_HOCKEY_ID = 'sport-ice-hockey-010'
+export const SPORT_WRESTLING_ID = 'sport-wrestling-011'
+export const SPORT_TRACK_FIELD_ID = 'sport-track-field-012'
+export const SPORT_GYMNASTICS_ID = 'sport-gymnastics-013'
+export const SPORT_CROSS_COUNTRY_ID = 'sport-cross-country-014'
+export const SPORT_TENNIS_ID = 'sport-tennis-015'
+export const SPORT_CHEERLEADING_ID = 'sport-cheerleading-016'
+export const SPORT_POMS_ID = 'sport-poms-017'
+export const SPORT_DANCE_ID = 'sport-dance-018'
+export const SPORT_GOLF_ID = 'sport-golf-019'
+export const SPORT_SWIMMING_ID = 'sport-swimming-020'
+export const SPORT_DIVING_ID = 'sport-diving-021'
 
 // Programs
 export const PROGRAM_SOCCER_REC_ID = 'program-soccer-rec-001'
@@ -143,11 +160,181 @@ export const fakeSports: FakeSport[] = [
         deleted_at: null
     },
     {
+        id: SPORT_SOFTBALL_ID,
+        org_id: DEMO_ORG_A_ID,
+        name: 'Softball',
+        icon: 'sports_baseball',
+        color: '#f59e0b',
+        created_at: '2023-01-01T00:00:00Z',
+        updated_at: '2023-01-01T00:00:00Z',
+        deleted_at: null
+    },
+    {
+        id: SPORT_FOOTBALL_ID,
+        org_id: DEMO_ORG_A_ID,
+        name: 'Football',
+        icon: 'sports_football',
+        color: '#991b1b',
+        created_at: '2023-01-01T00:00:00Z',
+        updated_at: '2023-01-01T00:00:00Z',
+        deleted_at: null
+    },
+    {
+        id: SPORT_FLAG_FOOTBALL_ID,
+        org_id: DEMO_ORG_A_ID,
+        name: 'Flag Football',
+        icon: 'sports_football',
+        color: '#b91c1c',
+        created_at: '2023-01-01T00:00:00Z',
+        updated_at: '2023-01-01T00:00:00Z',
+        deleted_at: null
+    },
+    {
         id: SPORT_VOLLEYBALL_ID,
         org_id: DEMO_ORG_A_ID,
         name: 'Volleyball',
         icon: 'sports_volleyball',
         color: '#7c3aed',
+        created_at: '2023-01-01T00:00:00Z',
+        updated_at: '2023-01-01T00:00:00Z',
+        deleted_at: null
+    },
+    {
+        id: SPORT_LACROSSE_ID,
+        org_id: DEMO_ORG_A_ID,
+        name: 'Lacrosse',
+        icon: 'sports',
+        color: '#059669',
+        created_at: '2023-01-01T00:00:00Z',
+        updated_at: '2023-01-01T00:00:00Z',
+        deleted_at: null
+    },
+    {
+        id: SPORT_FIELD_HOCKEY_ID,
+        org_id: DEMO_ORG_A_ID,
+        name: 'Field Hockey',
+        icon: 'sports_hockey',
+        color: '#0d9488',
+        created_at: '2023-01-01T00:00:00Z',
+        updated_at: '2023-01-01T00:00:00Z',
+        deleted_at: null
+    },
+    {
+        id: SPORT_ICE_HOCKEY_ID,
+        org_id: DEMO_ORG_A_ID,
+        name: 'Ice Hockey',
+        icon: 'sports_hockey',
+        color: '#0891b2',
+        created_at: '2023-01-01T00:00:00Z',
+        updated_at: '2023-01-01T00:00:00Z',
+        deleted_at: null
+    },
+    {
+        id: SPORT_WRESTLING_ID,
+        org_id: DEMO_ORG_A_ID,
+        name: 'Wrestling',
+        icon: 'sports_martial_arts',
+        color: '#1e40af',
+        created_at: '2023-01-01T00:00:00Z',
+        updated_at: '2023-01-01T00:00:00Z',
+        deleted_at: null
+    },
+    {
+        id: SPORT_TRACK_FIELD_ID,
+        org_id: DEMO_ORG_A_ID,
+        name: 'Track & Field',
+        icon: 'sports',
+        color: '#7c2d12',
+        created_at: '2023-01-01T00:00:00Z',
+        updated_at: '2023-01-01T00:00:00Z',
+        deleted_at: null
+    },
+    {
+        id: SPORT_GYMNASTICS_ID,
+        org_id: DEMO_ORG_A_ID,
+        name: 'Gymnastics',
+        icon: 'sports_gymnastics',
+        color: '#be185d',
+        created_at: '2023-01-01T00:00:00Z',
+        updated_at: '2023-01-01T00:00:00Z',
+        deleted_at: null
+    },
+    {
+        id: SPORT_CROSS_COUNTRY_ID,
+        org_id: DEMO_ORG_A_ID,
+        name: 'Cross Country',
+        icon: 'directions_run',
+        color: '#92400e',
+        created_at: '2023-01-01T00:00:00Z',
+        updated_at: '2023-01-01T00:00:00Z',
+        deleted_at: null
+    },
+    {
+        id: SPORT_TENNIS_ID,
+        org_id: DEMO_ORG_A_ID,
+        name: 'Tennis',
+        icon: 'sports_tennis',
+        color: '#166534',
+        created_at: '2023-01-01T00:00:00Z',
+        updated_at: '2023-01-01T00:00:00Z',
+        deleted_at: null
+    },
+    {
+        id: SPORT_CHEERLEADING_ID,
+        org_id: DEMO_ORG_A_ID,
+        name: 'Cheerleading',
+        icon: 'celebration',
+        color: '#c026d3',
+        created_at: '2023-01-01T00:00:00Z',
+        updated_at: '2023-01-01T00:00:00Z',
+        deleted_at: null
+    },
+    {
+        id: SPORT_POMS_ID,
+        org_id: DEMO_ORG_A_ID,
+        name: 'Poms',
+        icon: 'celebration',
+        color: '#a21caf',
+        created_at: '2023-01-01T00:00:00Z',
+        updated_at: '2023-01-01T00:00:00Z',
+        deleted_at: null
+    },
+    {
+        id: SPORT_DANCE_ID,
+        org_id: DEMO_ORG_A_ID,
+        name: 'Dance',
+        icon: 'music_note',
+        color: '#9f1239',
+        created_at: '2023-01-01T00:00:00Z',
+        updated_at: '2023-01-01T00:00:00Z',
+        deleted_at: null
+    },
+    {
+        id: SPORT_GOLF_ID,
+        org_id: DEMO_ORG_A_ID,
+        name: 'Golf',
+        icon: 'sports_golf',
+        color: '#065f46',
+        created_at: '2023-01-01T00:00:00Z',
+        updated_at: '2023-01-01T00:00:00Z',
+        deleted_at: null
+    },
+    {
+        id: SPORT_SWIMMING_ID,
+        org_id: DEMO_ORG_A_ID,
+        name: 'Swimming',
+        icon: 'pool',
+        color: '#0c4a6e',
+        created_at: '2023-01-01T00:00:00Z',
+        updated_at: '2023-01-01T00:00:00Z',
+        deleted_at: null
+    },
+    {
+        id: SPORT_DIVING_ID,
+        org_id: DEMO_ORG_A_ID,
+        name: 'Diving',
+        icon: 'pool',
+        color: '#075985',
         created_at: '2023-01-01T00:00:00Z',
         updated_at: '2023-01-01T00:00:00Z',
         deleted_at: null

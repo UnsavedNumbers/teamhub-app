@@ -233,7 +233,7 @@ export async function updateTeam(
             sport_id: dto.sport_id ?? null,
             program_id: dto.program_id ?? null,
             max_roster_size: dto.max_roster_size ?? null,
-            is_active: dto.is_active ?? undefined,
+            is_active: dto.is_active ?? true,
             updated_at: new Date().toISOString(),
         } satisfies TeamUpdate
         const { data, error } = await supabase
@@ -380,7 +380,7 @@ export async function getActiveSeason(
  *   .from('team_members')
  *   .select(`
  *     *,
- *     child:children(
+ *     athlete:athletes(
  *       id, first_name, last_name, date_of_birth, jersey_number,
  *       family:families(id, name)
  *     )

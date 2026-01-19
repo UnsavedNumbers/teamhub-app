@@ -4,7 +4,7 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { getTryoutById, getAdminTryoutRegistrations } from '../../data/services/tryoutsService'
 import type { Tryout, TryoutRegistration } from '../../data/services/tryoutsService'
 import { 
-  PageHeader, 
+  AdminPageHeader,
   Card, 
   PlatformDataTable, 
   Badge,
@@ -52,7 +52,7 @@ export default function AdminTryoutDetail() {
 
   return (
     <div className="pa-root">
-      <PageHeader 
+      <AdminPageHeader 
         title={tryout?.title || 'Tryout Details'} 
         breadcrumbs={[
           { label: 'Tryouts', path: '/admin/tryouts' },

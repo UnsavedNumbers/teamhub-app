@@ -5,7 +5,7 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { getEvents } from '../../data/services/eventsService'
 import { getRSVPSummary } from '../../data/services/rsvpService'
 import { 
-  PageHeader, 
+  AdminPageHeader, 
   Card, 
   Badge, 
   PlatformDataTable, 
@@ -142,7 +142,7 @@ export default function Events() {
 
   return (
     <div className="pa-root">
-      <PageHeader 
+      <AdminPageHeader 
         title="Events" 
         actions={<Button onClick={() => navigate('/admin/events/new')}><span className="material-symbols-outlined">add</span>New Event</Button>} 
       />

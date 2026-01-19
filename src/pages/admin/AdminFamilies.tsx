@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PageHeader, PlatformDataTable, Button, Badge } from '../../components/platformAdmin'
+import { AdminPageHeader, PlatformDataTable, Button, Badge } from '../../components/platformAdmin'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getFamilies } from '../../data/services/familyService'
 import type { Family } from '../../types/family'
+import { Info } from 'lucide-react'
 
 export default function AdminFamilies() {
   const navigate = useNavigate()
@@ -53,15 +54,30 @@ export default function AdminFamilies() {
 
   return (
     <div className="pa-root">
-      <PageHeader 
+      <AdminPageHeader 
         title="FAMILIES" 
         actions={
-          <Button onClick={() => navigate('/admin/families/new')}>
+          <Button onClick={() => navigate('/admin/athletes/new')}>
             <span className="material-symbols-outlined">add</span>
-            New Family
+            Add Athlete
           </Button>
         }
       />
+
+      {/* Info Banner */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex items-start gap-3">
+        <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+        <div>
+          <h3 className="text-sm font-semibold text-blue-900 mb-1">
+            Families are Created Automatically
+          </h3>
+          <p className="text-sm text-blue-800">
+            Families are automatically formed when athletes share guardians. To create a new family,
+            simply add athletes and link their guardians. Athletes with shared guardians will appear
+            together as a family.
+          </p>
+        </div>
+      </div>
 
       {error ? (
           <div className="pa-p-4 pa-bg-danger-subtle pa-text-danger">
@@ -73,7 +89,7 @@ export default function AdminFamilies() {
             columns={columns}
             loading={loading}
             onRowClick={(f) => navigate(`/admin/families/${f.id}`)}
-            emptyMessage="Get started by creating your first family."
+            emptyMessage="No families yet. Add athletes with guardians to automatically create families."
             page={0}
             rowsPerPage={100}
             totalCount={families.length}

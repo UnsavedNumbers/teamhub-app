@@ -53,9 +53,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { setOrganizations, currentOrganization } = useOrganization()
 
   const fetchProfile = useCallback(async (userId: string) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:53',message:'fetchProfile called',data:{userId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
     try {
       // Fetch user profile
       const { data: userData, error: userError } = await supabase
@@ -63,11 +60,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .select('id, email, phone, display_name, role, family_id, org_id, requires_org_setup')
         .eq('id', userId)
         .single()
-
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:60',message:'User query completed',data:{hasData:!!userData,hasError:!!userError,error:userError?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-
       if (userError) {
         console.error('Error fetching profile:', userError)
         
@@ -104,11 +96,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         orgError = err as any
         orgData = []
       }
-
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:85',message:'Org query completed',data:{hasData:!!orgData,orgCount:orgData?.length||0,hasError:!!orgError,errorCode:orgError?.code,errorMessage:orgError?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-
       if (orgError && orgError.code !== 'PGRST202') {
         console.error('Error fetching organizations:', orgError)
         // Continue with empty orgs rather than failing completely
@@ -144,22 +131,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isPlatformAdmin: !!adminData,
         requiresOrgSetup: userDataAny.requires_org_setup ?? false,
       }
-
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:110',message:'Setting profile and organizations',data:{profileId:userProfile.id,orgCount:organizations.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
       setProfile(userProfile)
       setOrganizations(organizations)
     } catch (err) {
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:112',message:'Error in fetchProfile catch',data:{error:err instanceof Error?err.message:String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
       console.error('Error in fetchProfile:', err)
       setProfile(null)
     } finally {
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:116',message:'fetchProfile finally: setting loading false',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
       setLoading(false)
     }
   }, [setOrganizations])

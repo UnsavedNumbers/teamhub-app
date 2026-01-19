@@ -5,7 +5,7 @@ import { useOrganization } from '../../contexts/OrganizationContext'
 import { getTryouts } from '../../data/services/tryoutsService'
 import type { Tryout } from '../../data/services/tryoutsService'
 import { 
-  PageHeader, 
+  AdminPageHeader, 
   Button, 
   PlatformDataTable, 
   Badge,
@@ -52,7 +52,7 @@ export default function AdminTryouts() {
 
   return (
     <div className="pa-root">
-      <PageHeader 
+      <AdminPageHeader 
         title="Tryouts" 
         actions={<Button onClick={() => navigate('/admin/tryouts/new')}><span className="material-symbols-outlined">add</span>Create Tryout</Button>}
       />

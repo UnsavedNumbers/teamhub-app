@@ -69,7 +69,7 @@ export default function Children() {
     setSaving(false)
     
     // TODO: Replace with real Supabase insert when migrating
-    // const { error } = await supabase.from('children').insert({ ... })
+    // const { error } = await supabase.from('athletes').insert({ ... })
   }
 
   function calculateAge(birthdate: string | null) {

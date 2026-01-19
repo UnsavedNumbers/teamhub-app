@@ -6,7 +6,7 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { getTeams, getTeamDetails, getTeamRoster } from '../../data/services/teamsService'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { 
-  PageHeader, 
+  AdminPageHeader, 
   Card, 
   Button, 
   Input, 
@@ -182,48 +182,56 @@ export default function CreateFee() {
 
   return (
     <div className="pa-root">
-      <PageHeader title="Create Fee" />
-      <Card>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
-          
-          <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
-            <Controller name="team_id" control={control} rules={{ required: 'Team is required' }} render={({ field }) => <Select {...field} label="Team" options={teams.map(t => ({value:t.id, label:t.name}))} required />} />
-            <Controller name="season_id" control={control} rules={{ required: 'Season is required' }} render={({ field }) => <Select {...field} label="Season" options={seasons.map(s => ({value:s.id, label:s.name}))} required disabled={!watchTeamId} />} />
-          </div>
-
-          <div className="pa-mb-4">
-            <Controller name="applyToAll" control={control} render={({ field }) => (
-              <label className="pa-flex pa-items-center pa-gap-2 pa-clickable">
-                <input type="checkbox" checked={field.value} onChange={field.onChange} />
-                <span className="pa-body-m">Apply to all players on team</span>
-              </label>
-            )} />
-          </div>
-
-          {!watchApplyToAll && (
-            <div className="pa-mb-4">
-              <Controller name="child_id" control={control} rules={{ required: !watchApplyToAll }} render={({ field }) => <Select {...field} label="Player" options={children.map(c => ({value:c.id, label:`${c.first_name} ${c.last_name}`}))} required disabled={!watchSeasonId} />} />
+      <AdminPageHeader 
+        title="Create Fee" 
+        breadcrumbs={[
+          { label: 'Payments', path: '/admin/payments' },
+          { label: 'Create Fee' },
+        ]}
+      />
+      <div className="pa-form-container">
+        <Card>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
+            
+            <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+              <Controller name="team_id" control={control} rules={{ required: 'Team is required' }} render={({ field }) => <Select {...field} label="Team" options={teams.map(t => ({value:t.id, label:t.name}))} required />} />
+              <Controller name="season_id" control={control} rules={{ required: 'Season is required' }} render={({ field }) => <Select {...field} label="Season" options={seasons.map(s => ({value:s.id, label:s.name}))} required disabled={!watchTeamId} />} />
             </div>
-          )}
 
-          <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
-            <Controller name="amount" control={control} rules={{ required: 'Amount is required' }} render={({ field }) => <Input {...field} label="Amount ($)" type="number" step="0.01" required />} />
-            <Controller name="due_date" control={control} render={({ field }) => <Input {...field} label="Due Date" type="date" />} />
-          </div>
+            <div className="pa-mb-4">
+              <Controller name="applyToAll" control={control} render={({ field }) => (
+                <label className="pa-flex pa-items-center pa-gap-2 pa-clickable">
+                  <input type="checkbox" checked={field.value} onChange={field.onChange} />
+                  <span className="pa-body-m">Apply to all players on team</span>
+                </label>
+              )} />
+            </div>
 
-          <div className="pa-mb-8">
-            <Controller name="description" control={control} render={({ field }) => <Input {...field} label="Description" placeholder="e.g. Season registration fee" />} />
-          </div>
+            {!watchApplyToAll && (
+              <div className="pa-mb-4">
+                <Controller name="child_id" control={control} rules={{ required: !watchApplyToAll }} render={({ field }) => <Select {...field} label="Player" options={children.map(c => ({value:c.id, label:`${c.first_name} ${c.last_name}`}))} required disabled={!watchSeasonId} />} />
+              </div>
+            )}
 
-          <div className="pa-flex pa-justify-end pa-gap-3">
-            <Button variant="secondary" onClick={() => navigate('/admin/payments')}>Cancel</Button>
-            <Button type="submit" loading={saving}>
-              {watchApplyToAll ? `Create for ${children.length} players` : 'Create Fee'}
-            </Button>
-          </div>
-        </form>
-      </Card>
+            <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+              <Controller name="amount" control={control} rules={{ required: 'Amount is required' }} render={({ field }) => <Input {...field} label="Amount ($)" type="number" step="0.01" required />} />
+              <Controller name="due_date" control={control} render={({ field }) => <Input {...field} label="Due Date" type="date" />} />
+            </div>
+
+            <div className="pa-mb-8">
+              <Controller name="description" control={control} render={({ field }) => <Input {...field} label="Description" placeholder="e.g. Season registration fee" />} />
+            </div>
+
+            <div className="pa-flex pa-justify-end pa-gap-3">
+              <Button variant="secondary" onClick={() => navigate('/admin/payments')}>Cancel</Button>
+              <Button type="submit" loading={saving}>
+                {watchApplyToAll ? `Create for ${children.length} players` : 'Create Fee'}
+              </Button>
+            </div>
+          </form>
+        </Card>
+      </div>
     </div>
   )
 }

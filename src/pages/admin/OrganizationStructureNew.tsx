@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useUserContext } from '../../hooks/useUserContext'
-import { PageHeader } from '../../components/platformAdmin'
+import { AdminPageHeader } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getSports, getPrograms } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
@@ -16,6 +16,7 @@ export default function OrganizationStructureNew() {
   const { currentOrganization } = useOrganization()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
+  const [exampleType, setExampleType] = useState<'school' | 'club' | 'aau' | 'recreation'>('school')
   const [sports, setSports] = useState<Sport[]>([])
   const [programs, setPrograms] = useState<Program[]>([])
   const [levels, setLevels] = useState<Level[]>([])
@@ -96,7 +97,7 @@ export default function OrganizationStructureNew() {
   if (error) {
     return (
       <div className="org-structure-page">
-        <PageHeader
+        <AdminPageHeader
           title={
             <>
               Organization <span className="pa-title-accent">Overview</span>
@@ -121,7 +122,7 @@ export default function OrganizationStructureNew() {
   return (
     <div className="org-structure-page">
       <OfflineBanner />
-      <PageHeader
+      <AdminPageHeader
         title={
           <>
             Organization <span className="pa-title-accent">Overview</span>
@@ -129,7 +130,7 @@ export default function OrganizationStructureNew() {
         }
         subtitle={`${currentOrganization?.name || 'Organization'} — Structural setup and team management`}
         breadcrumbs={[
-          { label: 'Organizations', path: '/admin/organization' },
+          { label: 'Organizations', path: '/admin/organization/structure' },
           { label: currentOrganization?.name || 'Organization' },
         ]}
       />
@@ -168,32 +169,32 @@ export default function OrganizationStructureNew() {
             <QuickActionButton
               icon="sports_basketball"
               label="Add Sport"
-              onClick={() => navigate('/admin/organization/structure/sports-programs')}
+              onClick={() => navigate('/admin/organization/structure/forms?type=sport')}
             />
             <QuickActionButton
               icon="category"
               label="Add Program"
-              onClick={() => navigate('/admin/organization/structure/sports-programs')}
+              onClick={() => navigate('/admin/organization/structure/forms?type=program')}
             />
             <QuickActionButton
               icon="stairs"
               label="Add Level"
-              onClick={() => navigate('/admin/organization/structure/levels')}
+              onClick={() => navigate('/admin/organization/structure/forms?type=level')}
             />
             <QuickActionButton
               icon="groups"
               label="Add Team"
-              onClick={() => navigate('/admin/organization/structure/teams')}
+              onClick={() => navigate('/admin/organization/structure/forms?type=team')}
             />
             <QuickActionButton
               icon="calendar_today"
               label="Add Season"
-              onClick={() => navigate('/admin/organization/structure/seasons')}
+              onClick={() => navigate('/admin/organization/structure/forms?type=season')}
             />
             <QuickActionButton
               icon="person_add"
               label="Add Player"
-              onClick={() => navigate('/admin/children')}
+              onClick={() => navigate('/admin/athletes')}
             />
           </div>
         </div>
@@ -210,14 +211,115 @@ export default function OrganizationStructureNew() {
       </div>
 
       <div className="org-hierarchy-section">
-        <h3 className="org-section-header">Structural Hierarchy</h3>
+        <div className="org-hierarchy-header">
+          <h3 className="org-section-header">How Your Organization Is Structured</h3>
+          <div className="org-example-select">
+            <label className="org-example-label" htmlFor="org-example-type">Example Type</label>
+            <select
+              id="org-example-type"
+              className="org-example-input"
+              value={exampleType}
+              onChange={(event) => setExampleType(event.target.value as 'school' | 'club' | 'aau' | 'recreation')}
+            >
+              <option value="school">School</option>
+              <option value="club">Club</option>
+              <option value="aau">AAU / Travel</option>
+              <option value="recreation">Recreation League</option>
+            </select>
+          </div>
+        </div>
         <div className="org-hierarchy-flow">
-          <HierarchyStep level="Root Entity" label="Organization" variant="dark" />
-          <HierarchyStep level="Level 01" label="Sport" variant="primary" />
-          <HierarchyStep level="Level 02" label="Program" variant="dark" />
-          <HierarchyStep level="Level 03" label="Level" variant="primary" />
-          <HierarchyStep level="Level 04" label="Team" variant="dark" />
-          <HierarchyStep level="Final Node" label="Players" variant="primary" last />
+          <HierarchyStep
+            level="Organization"
+            label="Organization"
+            descriptor="Your organization name"
+            example={
+              exampleType === 'school'
+                ? 'Davis High School'
+                : exampleType === 'club'
+                  ? 'North Bay United'
+                  : exampleType === 'aau'
+                    ? 'Elite Hoops Academy'
+                    : 'City Youth Sports'
+            }
+            variant="dark"
+          />
+          <HierarchyStep
+            level="Sport"
+            label="Sport"
+            descriptor="The sport you offer"
+            example={
+              exampleType === 'school'
+                ? 'Soccer'
+                : exampleType === 'club'
+                  ? 'Soccer'
+                  : exampleType === 'aau'
+                    ? 'Basketball'
+                    : 'Basketball'
+            }
+            variant="primary"
+          />
+          <HierarchyStep
+            level="Program"
+            label="Program"
+            descriptor="Gender or division grouping"
+            example={
+              exampleType === 'school'
+                ? 'Boys Soccer'
+                : exampleType === 'club'
+                  ? 'Competitive Boys Program'
+                  : exampleType === 'aau'
+                    ? 'Boys AAU Program'
+                    : 'Girls Winter League'
+            }
+            variant="dark"
+          />
+          <HierarchyStep
+            level="Level"
+            label="Level"
+            descriptor="Age or skill band"
+            example={
+              exampleType === 'school'
+                ? 'Varsity Boys'
+                : exampleType === 'club'
+                  ? 'Boys U14'
+                  : exampleType === 'aau'
+                    ? 'Boys 17U'
+                    : 'Grades 3–4 Girls'
+            }
+            variant="primary"
+          />
+          <HierarchyStep
+            level="Team"
+            label="Team"
+            descriptor="The team people join"
+            example={
+              exampleType === 'school'
+                ? 'Varsity Boys Soccer'
+                : exampleType === 'club'
+                  ? 'Boys U14 Red'
+                  : exampleType === 'aau'
+                    ? 'Elite 17U Boys Black'
+                    : 'Girls Blue Team'
+            }
+            variant="dark"
+          />
+          <HierarchyStep
+            level="Players"
+            label="Players"
+            descriptor="Who participates"
+            example={
+              exampleType === 'school'
+                ? 'Rostered Boys Student-Athletes'
+                : exampleType === 'club'
+                  ? 'Registered Boys Athletes'
+                  : exampleType === 'aau'
+                    ? 'Tournament Boys Roster'
+                    : 'Registered Girls Participants'
+            }
+            variant="primary"
+            last
+          />
         </div>
       </div>
     </div>
@@ -268,18 +370,26 @@ function Principle({ label, description }: { label: string; description: string 
 function HierarchyStep({
   level,
   label,
+  descriptor,
+  example,
   variant,
   last,
 }: {
   level: string
   label: string
+  descriptor: string
+  example: string
   variant: 'primary' | 'dark'
   last?: boolean
 }) {
   return (
     <div className={`org-hierarchy-step variant-${variant}`}>
-      <span className="org-hierarchy-level">{level}</span>
-      <span className="org-hierarchy-label">{label}</span>
+      <div className="org-hierarchy-card">
+        <span className="org-hierarchy-level">{level}</span>
+        <span className="org-hierarchy-label">{label}</span>
+        <span className="org-hierarchy-description">{descriptor}</span>
+        <span className="org-hierarchy-example">{example}</span>
+      </div>
       {!last && (
         <span className="org-hierarchy-arrow">
           <span className="material-symbols-outlined">trending_flat</span>

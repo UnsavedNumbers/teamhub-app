@@ -216,7 +216,7 @@ export async function getAthleteRSVPs(
       .from('event_rsvps')
       .select(`
         *,
-        child:children(id, first_name, last_name)
+        athlete:athletes(id, first_name, last_name)
       `)
       .eq('event_id', eventId)
       .order('created_at', { ascending: true })

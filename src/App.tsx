@@ -6,6 +6,7 @@ import { SidebarProvider } from './contexts/SidebarContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import AdminLoadingSpinner from './components/admin/AdminLoadingSpinner'
 import { getHostAppContext } from './utils/host'
+import { useOrganizationTheme } from './hooks/useOrganizationTheme'
 
 // Marketing Page
 import Marketing from './pages/Marketing'
@@ -98,11 +99,14 @@ const OrganizationBilling = lazy(() => import('./pages/admin/OrganizationBilling
 const PlanSelection = lazy(() => import('./pages/admin/PlanSelection'))
 const CheckoutSuccess = lazy(() => import('./pages/admin/CheckoutSuccess'))
 const CheckoutCancel = lazy(() => import('./pages/admin/CheckoutCancel'))
+const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'))
 const AdminFamilies = lazy(() => import('./pages/admin/AdminFamilies'))
 const CreateFamily = lazy(() => import('./pages/admin/CreateFamily'))
 const FamilyDetail = lazy(() => import('./pages/admin/FamilyDetail'))
 const CreateChild = lazy(() => import('./pages/admin/CreateChild'))
+const CreateAthlete = lazy(() => import('./pages/admin/CreateAthlete'))
 const AdminChildren = lazy(() => import('./pages/admin/AdminChildren'))
+const ImportAthletes = lazy(() => import('./pages/admin/ImportAthletes'))
 
 function HostHomeRoute() {
   const appContext = getHostAppContext()
@@ -165,7 +169,18 @@ function App() {
   return (
     <OrganizationProvider>
       <AuthProvider>
-        <Routes>
+        <AppWithTheme />
+      </AuthProvider>
+    </OrganizationProvider>
+  )
+}
+
+function AppWithTheme() {
+  // Apply organization theme globally - must be inside both OrganizationProvider and AuthProvider
+  useOrganizationTheme()
+
+  return (
+    <Routes>
           {/* Marketing Landing Page - Public */}
           <Route path="/" element={<HostHomeRoute />} />
 
@@ -203,8 +218,9 @@ function App() {
             {/* Redirect root portal to dashboard */}
             <Route index element={<Navigate to="/portal/dashboard" replace />} />
 
-            {/* Catch-all to prevent blank/\"blue\" screens on unknown portal routes */}
-            <Route path="*" element={<Navigate to="/portal/dashboard" replace />} />
+            {/* Catch-all to prevent blank/"blue" screens on unknown portal routes */}
+            {/* Use replace: false to preserve browser history for back button navigation */}
+            <Route path="*" element={<Navigate to="/portal/dashboard" replace={false} />} />
           </Route>
 
           {/* Organization Onboarding - Standalone route outside AdminLayout */}
@@ -256,7 +272,11 @@ function App() {
               <Route path="families/new" element={<CreateFamily />} />
               <Route path="families/:id" element={<FamilyDetail />} />
               <Route path="families/:familyId/children/new" element={<CreateChild />} />
-              <Route path="children" element={<AdminChildren />} />
+              
+              {/* Athletes */}
+              <Route path="athletes" element={<AdminChildren />} />
+              <Route path="athletes/new" element={<CreateAthlete />} />
+              <Route path="athletes/import" element={<ImportAthletes />} />
             
               {/* Events */}
             
@@ -296,6 +316,9 @@ function App() {
               <Route path="organization/billing/plan-selection" element={<PlanSelection />} />
               <Route path="organization/billing/checkout/success" element={<CheckoutSuccess />} />
               <Route path="organization/billing/checkout/cancel" element={<CheckoutCancel />} />
+              
+              {/* Personal Settings */}
+              <Route path="settings" element={<AdminSettings />} />
             </Route>
           </Route>
 
@@ -357,8 +380,6 @@ function App() {
             </Route>
           </Route>
         </Routes>
-      </AuthProvider>
-    </OrganizationProvider>
   )
 }
 

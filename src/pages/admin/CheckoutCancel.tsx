@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { t } from '../../i18n'
 import { 
-  PageHeader, 
+  AdminPageHeader, 
   Card, 
   Button 
 } from '../../components/platformAdmin'
@@ -11,7 +11,7 @@ export default function CheckoutCancel() {
 
   return (
     <div className="pa-root">
-      <PageHeader title={t('billing.checkoutCancelTitle').toUpperCase()} />
+      <AdminPageHeader title={t('billing.checkoutCancelTitle').toUpperCase()} />
       <Card style={{ maxWidth: '600px' }}>
         <div className="pa-flex pa-items-center pa-gap-4 pa-mb-6 pa-text-muted">
           <span className="material-symbols-outlined" style={{ fontSize: '48px' }}>cancel</span>

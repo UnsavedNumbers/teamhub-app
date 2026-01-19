@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getOrganizationUsers } from '../../data/services/usersService'
 import { 
-  PageHeader, 
+  AdminPageHeader, 
   Button, 
   PlatformDataTable, 
   Badge,
@@ -105,7 +105,7 @@ export default function OrganizationUsers() {
 
   return (
     <div className="pa-root">
-      <PageHeader 
+      <AdminPageHeader 
         title="Organization Users" 
         actions={
           <Button onClick={() => navigate('/admin/users/new')}>

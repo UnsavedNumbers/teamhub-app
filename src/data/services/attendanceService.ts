@@ -14,11 +14,13 @@ import type {
 // Fake data stores (internal to module for demo mode)
 let FAKE_SETTINGS: AttendanceSettings = {
     org_id: 'org-1',
-    reminder_enabled: true,
-    lock_after_hours: 24,
+    enable_coach_reminders: true,
+    submission_deadline_hours: 24,
+    lock_after_days: 7,
     required_for_practice: true,
     required_for_game: true,
     required_for_meeting: false,
+    parent_visibility: {},
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
 }
@@ -37,22 +39,30 @@ export async function getAttendanceSettings(context: UserContext): Promise<{ dat
     }
 
     try {
+        type AttendanceSettingsRow = Database['public']['Tables']['organization_attendance_settings']['Row'];
+
         const { data, error } = await supabase
-            .from('attendance_settings')
+            .from('organization_attendance_settings')
             .select('*')
             .eq('org_id', context.orgId)
-            .single()
+            .single<AttendanceSettingsRow>()
 
         if (error && error.code === 'PGRST116') {
             // Not found - return default
             return {
                 data: {
                     org_id: context.orgId,
-                    reminder_enabled: false,
-                    lock_after_hours: 24,
+                    enable_coach_reminders: false,
+                    submission_deadline_hours: 24,
+                    lock_after_days: null,
                     required_for_practice: true,
                     required_for_game: true,
                     required_for_meeting: false,
+                    parent_visibility: {
+                        can_view_own_child: true,
+                        can_view_team_attendance: false,
+                        can_submit_attendance: false
+                    },
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                 },
@@ -110,7 +120,7 @@ export async function getEventAttendance(
             .from('event_attendance')
             .select(`
                 *,
-                child:children(id, first_name, last_name),
+                athlete:athletes(id, first_name, last_name),
                 recorder:users!recorded_by_user_id(display_name)
             `)
             .eq('event_id', eventId)
@@ -287,9 +297,10 @@ export async function getAttendancePeople(
                 child_id,
                 status,
                 event:events(start_time),
-                child:children(id, first_name, last_name)
+                athlete:athletes(id, first_name, last_name)
             `)
-            .limit(1000) // Safety cap
+            .limit(1000)
+            .returns<EventAttendanceRow[]>() // Safety cap
 
         if (error) throw error
 

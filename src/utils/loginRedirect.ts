@@ -18,7 +18,7 @@ export function hasMultipleRoles(organizations: Organization[]): boolean {
 
   // Check if user has multiple roles within any single organization
   for (const org of organizations) {
-    if (org.roles.length > 1) {
+    if (org.roles && org.roles.length > 1) {
       return true
     }
   }
@@ -35,14 +35,14 @@ export function hasMultipleRoles(organizations: Organization[]): boolean {
  * Check if user has admin role in any organization
  */
 export function hasAdminRole(organizations: Organization[]): boolean {
-  return organizations.some(org => org.roles.includes('org_admin'))
+  return organizations.some(org => org.roles?.includes('org_admin'))
 }
 
 /**
  * Check if user has coach role in any organization
  */
 export function hasCoachRole(organizations: Organization[]): boolean {
-  return organizations.some(org => org.roles.includes('coach'))
+  return organizations.some(org => org.roles?.includes('coach'))
 }
 
 /**
@@ -71,12 +71,12 @@ export function getLoginRedirect(
 
   // Priority 3: Admin role -> admin section
   if (hasAdminRole(organizations)) {
-    return '/admin/dashboard'
+    return '/admin'
   }
 
   // Priority 4: Coach role -> admin section
   if (hasCoachRole(organizations)) {
-    return '/admin/dashboard'
+    return '/admin'
   }
 
   // Default: Parent dashboard

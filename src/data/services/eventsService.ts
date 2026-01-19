@@ -91,7 +91,7 @@ export async function getEvents(
                     team:teams(id, name, org_id),
                     season:seasons(id, name),
                     event_location:event_locations(*),
-                    rsvps:event_rsvps(*, child:children(id, first_name, last_name)),
+                    rsvps:event_rsvps(*, athlete:athletes(id, first_name, last_name)),
                     general_rsvps:event_general_rsvps(*),
                     recurring_pattern:recurring_event_patterns(*)
                 `)
@@ -225,7 +225,7 @@ export async function getEvents(
  *     team:teams(id, name, org_id),
  *     season:seasons(id, name),
  *     event_location:event_locations(*),
- *     rsvps:event_rsvps(*, child:children(id, first_name, last_name)),
+ *     rsvps:event_rsvps(*, athlete:athletes(id, first_name, last_name)),
  *     recurring_pattern:recurring_event_patterns(*)
  *   `)
  *   .eq('id', eventId)
@@ -245,7 +245,7 @@ export async function getEventDetails(
                     team:teams(id, name, org_id),
                     season:seasons(id, name),
                     event_location:event_locations(*),
-                    rsvps:event_rsvps(*, child:children(id, first_name, last_name)),
+                    rsvps:event_rsvps(*, athlete:athletes(id, first_name, last_name)),
                     general_rsvps:event_general_rsvps(*),
                     recurring_pattern:recurring_event_patterns(*)
                 `)
@@ -332,7 +332,7 @@ export async function getUpcomingEventsForUser(
  *   .from('event_rsvps')
  *   .select(`
  *     *,
- *     child:children(id, first_name, last_name)
+ *     athlete:athletes(id, first_name, last_name)
  *   `)
  *   .eq('event_id', eventId)
  * ```
@@ -347,7 +347,7 @@ export async function getEventRSVPs(
                 .from('event_rsvps')
                 .select(`
                     *,
-                    child:children(id, first_name, last_name)
+                    athlete:athletes(id, first_name, last_name)
                 `)
                 .eq('event_id', eventId)
 

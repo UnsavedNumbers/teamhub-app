@@ -1,14 +1,26 @@
-import { useState, FormEvent } from 'react'
+import { useState, FormEvent, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { useTheme } from '../hooks/useTheme'
+import { AUTH_HERO_IMAGES } from '../utils/authImages'
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [heroImage, setHeroImage] = useState<string>('')
 
   const { resetPassword } = useAuth()
+  const { resolvedTheme } = useTheme()
+
+  // Select random hero image on mount
+  useEffect(() => {
+    if (AUTH_HERO_IMAGES.length > 0) {
+      const randomImage = AUTH_HERO_IMAGES[Math.floor(Math.random() * AUTH_HERO_IMAGES.length)]
+      setHeroImage(randomImage)
+    }
+  }, [])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -27,58 +39,69 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="flex min-h-screen font-sans bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 antialiased">
+    <div className="h-screen w-screen overflow-hidden bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-white antialiased relative flex">
+      {/* Background Field Markings (Grid) */}
+      <div 
+        className="fixed inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.02] z-[-1]"
+        style={{
+          backgroundImage: 'linear-gradient(to right, #f3f4f6 1px, transparent 1px), linear-gradient(to bottom, #f3f4f6 1px, transparent 1px)',
+          backgroundSize: '100px 100px',
+        }}
+      />
+
       {/* Left side - Hero Image (hidden on mobile) */}
-      <div className="relative hidden w-0 flex-1 lg:block">
-        <img
-          alt="Empty sports stadium at dusk"
-          className="absolute inset-0 h-full w-full object-cover"
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuD0EioYyXup8hWypN337Pbn_TYldQzX6pJ4B-XzTwJNpPYzGkJM01_RX7voFn-WqPfzeKYEV3uehlCj6Ydm2kjcJgKhzjTJFk4ivzAGO71ShxUz2s0urAT6vdIuo1L6WOCPkjK_G3zgt7Ydml45W9KGChFKid43FWMrIDJEQ3Mo6QfpKjlwuFkFyCV5TwbqkBBH-M_0Uqg9OViXz-ry9d9HkTPPNWa7E6D153LVwiEQyYTbFEZdVULTK-loC4YTy2yXfn98L3Y0F-Q"
-        />
-        <div className="absolute inset-0 bg-slate-900/40 mix-blend-multiply"></div>
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent"></div>
-        <div className="absolute bottom-16 left-16 right-16">
-          <h2 className="font-display text-5xl text-white tracking-wider mb-4">
-            Reset Your Password
+      <div className="hidden lg:block relative w-0 flex-1">
+        {heroImage && (
+          <img
+            alt="Youth sports"
+            className="absolute inset-0 h-full w-full object-cover"
+            src={heroImage}
+          />
+        )}
+        <div className="absolute inset-0 bg-slate-900/60"></div>
+        <div className="absolute bottom-16 left-16 right-16 z-10">
+          <h2 className="text-5xl font-black tracking-tighter leading-none text-white mb-4 font-impact">
+            RESET YOUR PASSWORD
           </h2>
-          <p className="text-xl text-slate-200 max-w-lg leading-relaxed">
-            Don't worry, it happens to the best of us. We'll help you get back into your account.
+          <p className="text-lg font-light tracking-wide text-white/80 max-w-lg leading-relaxed">
+            Don&apos;t worry, it happens to the best of us. We&apos;ll help you get back into your account.
           </p>
         </div>
       </div>
 
       {/* Right side - Form */}
-      <div className="flex flex-1 flex-col justify-center px-6 py-12 lg:flex-none lg:px-20 xl:px-24 bg-white dark:bg-slate-900">
-        <div className="mx-auto w-full max-w-sm lg:w-96">
+      <div className="flex-1 flex flex-col px-6 py-8 lg:px-20 xl:px-24 bg-white dark:bg-slate-900/50 overflow-hidden">
+        <div className="mx-auto w-full max-w-sm lg:w-96 flex flex-col min-h-0">
           {/* Logo */}
-          <div className="mb-10 flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
-              <span className="material-symbols-outlined text-white text-xl">sports_score</span>
-            </div>
-            <span className="font-display text-2xl tracking-tight text-slate-900 dark:text-white">TEAMHUB</span>
+          <div className="mb-8 pt-4">
+            <img 
+              src={resolvedTheme === 'dark' ? '/images/logo-dark.png' : '/images/logo-light.png'}
+              alt="YouthSports" 
+              className="h-24 w-auto object-contain"
+            />
           </div>
 
           {success ? (
             /* Success State */
             <div className="text-center">
-              <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                <span className="material-symbols-outlined text-green-600 dark:text-green-400 text-3xl">
+              <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-3xl">
                   mark_email_read
                 </span>
               </div>
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-4">
-                Check your email
+              <h2 className="text-4xl font-black tracking-tighter leading-none text-slate-900 dark:text-white mb-4 font-impact">
+                CHECK YOUR EMAIL
               </h2>
-              <p className="text-slate-600 dark:text-slate-400 mb-8">
-                We've sent a password reset link to <strong className="text-slate-900 dark:text-white">{email}</strong>. 
+              <p className="text-lg font-light tracking-wide text-slate-500 dark:text-slate-400 mb-8">
+                We&apos;ve sent a password reset link to <strong className="text-slate-900 dark:text-white">{email}</strong>. 
                 Please check your inbox and follow the instructions.
               </p>
               <div className="space-y-4">
                 <Link
                   to="/portal/login"
-                  className="flex w-full justify-center rounded-md bg-primary px-3 py-3 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors"
+                  className="bg-[#137fec] hover:bg-[#137fec]/90 text-white px-8 py-3 rounded font-bold text-sm tracking-wide w-full flex items-center justify-center transition-colors"
                 >
-                  Back to Sign In
+                  BACK TO SIGN IN
                 </Link>
                 <button
                   type="button"
@@ -86,9 +109,9 @@ export default function ForgotPassword() {
                     setSuccess(false)
                     setEmail('')
                   }}
-                  className="text-sm text-primary hover:text-blue-500 font-semibold"
+                  className="text-sm text-[#137fec] hover:text-[#137fec]/80 font-bold transition-colors"
                 >
-                  Try a different email
+                  TRY A DIFFERENT EMAIL
                 </button>
               </div>
             </div>
@@ -96,75 +119,72 @@ export default function ForgotPassword() {
             /* Form State */
             <>
               {/* Header */}
-              <div>
-                <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                  Forgot your password?
+              <div className="mb-8">
+                <h2 className="text-4xl font-black tracking-tighter leading-none text-slate-900 dark:text-white mb-2 font-impact">
+                  FORGOT YOUR PASSWORD?
                 </h2>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                  No worries! Enter your email and we'll send you a reset link.
+                <p className="text-lg font-light tracking-wide text-slate-500 dark:text-slate-400">
+                  No worries! Enter your email and we&apos;ll send you a reset link.
                 </p>
               </div>
 
-              {/* Form */}
-              <div className="mt-10">
-                {/* Error Message */}
-                {error && (
-                  <div className="mb-4 p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg text-red-600 dark:text-red-400 text-sm">
-                    {error}
-                  </div>
-                )}
-
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div>
-                    <label 
-                      htmlFor="email" 
-                      className="block text-sm font-medium leading-6 text-slate-900 dark:text-slate-300"
-                    >
-                      Email Address
-                    </label>
-                    <div className="mt-2">
-                      <input
-                        id="email"
-                        name="email"
-                        type="email"
-                        autoComplete="email"
-                        required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="name@email.com"
-                        className="auth-input"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="flex w-full justify-center rounded-md bg-primary px-3 py-3 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {loading ? 'Sending...' : 'Send Reset Link'}
-                    </button>
-                  </div>
-                </form>
-
-                {/* Back to sign in link */}
-                <div className="mt-10 pt-10 border-t border-slate-100 dark:border-slate-800">
-                  <p className="text-center text-sm text-slate-500 dark:text-slate-400">
-                    Remember your password?{' '}
-                    <Link to="/login" className="font-semibold leading-6 text-primary hover:text-blue-500">
-                      Sign in
-                    </Link>
-                  </p>
+              {/* Error Message */}
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl text-red-600 dark:text-red-400 text-sm">
+                  {error}
                 </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                  <label 
+                    htmlFor="email" 
+                    className="block text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-2 font-impact"
+                  >
+                    EMAIL ADDRESS
+                  </label>
+                  <div className="mt-2">
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="name@email.com"
+                      className="block w-full rounded border-0 py-3 px-4 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#137fec] sm:text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="bg-slate-900 dark:bg-white text-white dark:text-black px-8 py-3 font-black text-sm tracking-widest uppercase w-full hover:bg-[#5468FF] dark:hover:bg-[#5468FF] dark:hover:text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'SENDING...' : 'SEND RESET LINK'}
+                  </button>
+                </div>
+              </form>
+
+              {/* Back to sign in link */}
+              <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800">
+                <p className="text-center text-sm text-slate-500 dark:text-slate-400">
+                  Remember your password?{' '}
+                  <Link to="/portal/login" className="font-bold text-[#137fec] hover:text-[#137fec]/80 transition-colors">
+                    SIGN IN
+                  </Link>
+                </p>
               </div>
             </>
           )}
 
           {/* Footer */}
-          <div className="mt-auto pt-10 text-center">
-            <p className="text-[11px] text-slate-400 dark:text-slate-600 uppercase tracking-widest">
-              © 2024 TeamHub Professional Sports Management
+          <div className="mt-auto pt-8 text-center">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-600">
+              © {new Date().getFullYear()} YOUTHSPORTS PROFESSIONAL SPORTS MANAGEMENT
             </p>
           </div>
         </div>

@@ -1,6 +1,4 @@
 # Logs
-logs
-*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -75,7 +73,7 @@ typings/
 .env.development.local
 .env.test.local
 .env.production.local
-*.env
+#*.env
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -138,3 +136,7 @@ docs
 *.md
 #*.sql
 *.txt
+
+# Logs
+logs
+*.log
