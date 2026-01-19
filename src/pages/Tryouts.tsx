@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 
-import { useAuth } from '../hooks/useAuth'
 import { useUserContext } from '../hooks/useUserContext'
 import { useOrganization } from '../contexts/OrganizationContext'
 import { getTryouts, getTryoutRegistrations, registerChildForTryout } from '../data/services/tryoutsService'
@@ -137,7 +136,8 @@ export default function Tryouts() {
 
         {selectedTryout && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setSelectedTryout(null)}>
-            <Card className="max-w-lg w-full p-6" onClick={(e: React.MouseEvent<HTMLElement>) => e.stopPropagation()}>
+            <div onClick={(e) => e.stopPropagation()}>
+              <Card className="max-w-lg w-full p-6">
               <CardTitle className="mb-2">Register for Tryout</CardTitle>
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">{selectedTryout.title}</p>
               
@@ -159,7 +159,8 @@ export default function Tryouts() {
                 <Button variant="secondary" onClick={() => setSelectedTryout(null)}>Cancel</Button>
                 <Button variant="primary" onClick={handleRegister} disabled={!selectedChild}>Confirm Registration</Button>
               </div>
-            </Card>
+              </Card>
+            </div>
           </div>
         )}
       </PortalLayout>

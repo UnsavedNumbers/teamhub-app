@@ -14,7 +14,7 @@ export default function AttendanceSettingsTab() {
   useEffect(() => {
     if (!isReady) return
     getAttendanceSettings(context).then(res => {
-        if (res.data) setSettings(res.data)
+        if (res.data) setSettings(res.data as AttendanceSettings)
         setLoading(false)
     })
   }, [isReady, context])

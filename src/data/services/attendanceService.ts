@@ -1,5 +1,6 @@
 
 import { supabase } from '../../lib/supabase'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext } from '../fake/userContext'
 import type {
@@ -73,13 +74,15 @@ export async function updateAttendanceSettings(context: UserContext, settings: P
     }
 
     try {
+        type AttendanceSettingsUpsert = Database['public']['Tables']['attendance_settings']['Insert']
+        const upsertData = {
+            org_id: context.orgId,
+            ...settings,
+            updated_at: new Date().toISOString()
+        } satisfies AttendanceSettingsUpsert
         const { error } = await supabase
             .from('attendance_settings')
-            .upsert({
-                org_id: context.orgId,
-                ...settings,
-                updated_at: new Date().toISOString()
-            } as Database['public']['Tables']['attendance_settings']['Insert'])
+            .upsert(upsertData)
         return { error: error ? new Error(error.message) : null }
     } catch (e: any) {
         return { error: e }
@@ -132,16 +135,18 @@ export async function updateAttendance(
     }
 
     try {
+        type EventAttendanceUpsert = Database['public']['Tables']['event_attendance']['Insert']
+        const upsertData2 = {
+            event_id: eventId,
+            child_id: childId,
+            status,
+            notes,
+            recorded_by_user_id: context.userId,
+            updated_at: new Date().toISOString()
+        } satisfies EventAttendanceUpsert
         const { error } = await supabase
             .from('event_attendance')
-            .upsert({
-                event_id: eventId,
-                child_id: childId,
-                status,
-                notes,
-                recorded_by_user_id: context.userId,
-                updated_at: new Date().toISOString()
-            } as Database['public']['Tables']['event_attendance']['Insert'], { onConflict: 'event_id, child_id' })
+            .upsert(upsertData2, { onConflict: 'event_id, child_id' })
 
         return { error: error ? new Error(error.message) : null }
     } catch (e: any) {
@@ -210,10 +215,10 @@ export async function getAttendanceEvents(
 
         const summaries: AttendanceEventSummary[] = events.map((e: any) => {
             const records = e.attendance || []
-            const present = records.filter((r: any) => r.status === 'present').length
-            const absent = records.filter((r: any) => r.status === 'absent').length
-            const late = records.filter((r: any) => r.status === 'late').length
-            const excused = records.filter((r: any) => r.status === 'excused').length
+            const present = records.filter((r: AttendanceRecord) => r.status === 'present').length
+            const absent = records.filter((r: AttendanceRecord) => r.status === 'absent').length
+            const late = records.filter((r: AttendanceRecord) => r.status === 'late').length
+            const excused = records.filter((r: AttendanceRecord) => r.status === 'excused').length
 
             // "Unknown" is tricky without knowing total roster size. 
             // We'll estimate "total expected" = records.length for now, or 0 if no records.
@@ -269,6 +274,13 @@ export async function getAttendancePeople(
         // Simplified: Query attendance records directly for the org's teams
         // relying on RLS to filter to current org
 
+        type EventAttendanceRow = {
+            child_id: string
+            status: AttendanceStatus
+            event: { start_time: string }
+            child: { id: string, first_name: string, last_name: string }
+        }
+
         const { data: records, error } = await supabase
             .from('event_attendance')
             .select(`
@@ -284,7 +296,7 @@ export async function getAttendancePeople(
         // Aggregate
         const statsMap = new Map<string, AttendancePersonSummary>()
 
-        records.forEach((r: any) => {
+        records.forEach((r: EventAttendanceRow) => {
             const cid = r.child_id
             if (!statsMap.has(cid)) {
                 statsMap.set(cid, {

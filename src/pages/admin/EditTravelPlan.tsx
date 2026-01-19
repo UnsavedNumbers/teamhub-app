@@ -77,7 +77,7 @@ export default function EditTravelPlan() {
     if (isReady && planId) fetchPlan() 
   }, [isReady, planId, fetchPlan])
 
-  const onSubmit = async (data: TravelFormData) => {
+  const onSubmit = async (_data: TravelFormData) => {
     setSaving(true)
     setError(null)
     

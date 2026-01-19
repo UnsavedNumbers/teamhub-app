@@ -87,7 +87,7 @@ export default function CreateTravelPlan() {
     } 
   }, [watchTeamId, isReady, setValue, fetchSeasons])
 
-  const onSubmit = async (data: TravelFormData) => {
+  const onSubmit = async (_data: TravelFormData) => {
     setSaving(true)
     setError(null)
     

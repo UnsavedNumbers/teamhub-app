@@ -4,7 +4,8 @@ import { supabase } from '../../lib/supabase'
 import { PageHeader, Badge, FilterBar, PlatformDataTable, ConfirmDialog, type ColumnConfig } from '../../components/platformAdmin'
 import { canPerformAction, getDeniedMessage } from '../../utils/platformAdminPermissions'
 import { isRpcSuccessResponse } from '../../utils/typeAdapters'
-import type { AdminOrganization, PlatformAdminRole, OrganizationStatus } from '../../types/platformAdmin.types'
+import type { AdminOrganization, AdminRpcResponse, PlatformAdminRole, OrganizationStatus } from '../../types/platformAdmin.types'
+import { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 
 // Status filter options
 const statusOptions = [
@@ -59,7 +60,7 @@ export default function Organizations() {
       }
 
       if (statusFilter) {
-        query = query.eq('status', statusFilter)
+        query = query.eq('status', statusFilter as Database["public"]["Enums"]["org_status"])
       }
 
       query = query.order(orderBy, { ascending: order === 'asc' })
@@ -75,7 +76,7 @@ export default function Organizations() {
         setOrganizations([])
         setTotalCount(0)
       } else {
-        setOrganizations(data || [])
+        setOrganizations(data as AdminOrganization[])
         setTotalCount(count || 0)
       }
     } catch (err) {
@@ -140,15 +141,15 @@ export default function Organizations() {
       const { data, error } = await supabase.rpc(rpcName, {
         target_org_id: confirmDialog.org.id,
         reason,
-      })
+      } as any)
 
       if (error) {
         setDialogError(error.message)
         return
       }
 
-      if (!isRpcSuccessResponse(data) || !data.success) {
-        setDialogError(data?.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !(data as AdminRpcResponse).success) {
+        setDialogError((data as AdminRpcResponse)?.error || 'Unknown error')
         return
       }
 

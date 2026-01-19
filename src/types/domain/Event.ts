@@ -61,6 +61,7 @@ export type EventType =
 
 export interface EventLocation {
   id: string
+  name?: string | null
   venueName: string | null
   address: string | null
   city: string | null
@@ -70,6 +71,7 @@ export interface EventLocation {
   latitude: number | null
   longitude: number | null
   mapsUrl: string | null
+  maps_url?: string | null
   isVirtual: boolean
   isTbd: boolean
 }

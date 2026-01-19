@@ -19,7 +19,6 @@ import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
 import type { UserContext, PermissionSet } from '../fake/userContext'
 import { calculatePermissions } from '../fake/userContext'
-import type { Database } from '../../lib/database.types'
 import {
     type TravelEvent,
     type TravelTrip,
@@ -30,6 +29,7 @@ import {
     getHotelInfo,
     getMeetingLocations,
 } from '../../utils/travelDetection'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import {
     getChildrenForUserId,
     getAssignedTeamsForCoach,
@@ -425,7 +425,7 @@ export async function setTravelOverride(
                 p_event_id: eventId,
                 p_is_travel: isTravel,
                 p_reason: reason ?? null,
-            })
+            } as any)
 
             if (error) throw error
 
@@ -452,7 +452,7 @@ export async function clearTravelOverride(
         try {
             const { error } = await supabase.rpc('clear_travel_override', {
                 p_event_id: eventId,
-            })
+            } as any)
 
             if (error) throw error
 
@@ -625,13 +625,15 @@ export async function cancelTravelPlan(
     // In the new model, cancel the event
     if (!USE_FAKE_DATA) {
         try {
+            type EventUpdate = Database['public']['Tables']['events']['Update']
+            const updateData = {
+                is_cancelled: true,
+                cancellation_reason: 'Cancelled via admin panel',
+                cancelled_at: new Date().toISOString(),
+            } satisfies EventUpdate
             const { error } = await supabase
                 .from('events')
-                .update({
-                    is_cancelled: true,
-                    cancellation_reason: 'Cancelled via admin panel',
-                    cancelled_at: new Date().toISOString(),
-                } as Database['public']['Tables']['events']['Update'])
+                .update(updateData)
                 .eq('id', eventId)
 
             if (error) throw error

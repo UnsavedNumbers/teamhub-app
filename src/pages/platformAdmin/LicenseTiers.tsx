@@ -38,7 +38,7 @@ export default function LicenseTiers() {
         setTiers([])
         setTotalCount(0)
       } else {
-        setTiers(data || [])
+        setTiers(data as LicenseTierWithCounts[])
         setTotalCount(count || 0)
       }
     } catch (err) {

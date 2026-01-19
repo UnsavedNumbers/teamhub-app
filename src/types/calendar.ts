@@ -111,6 +111,7 @@ export interface TravelOverride {
 export interface EventLocation {
     id: string
     event_id: string
+    name?: string | null
     venue_name: string | null
     address_line1: string | null
     address_line2: string | null
@@ -120,6 +121,7 @@ export interface EventLocation {
     country: string
     latitude: number | null
     longitude: number | null
+    maps_url?: string | null
     is_tbd: boolean
     is_virtual: boolean
     virtual_link: string | null

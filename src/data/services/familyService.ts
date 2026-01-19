@@ -129,7 +129,7 @@ export async function getFamilies(
         if (error) throw error
 
         return {
-            data: (data as any[]).map(d => d as Family),
+            data: (data || []) as Family[],
             count: count || 0,
             error: null
         }
@@ -235,17 +235,19 @@ export async function createFamily(
     }
 
     try {
+        type FamilyInsert = Database['public']['Tables']['families']['Insert']
+        const insertData = {
+            name: dto.name,
+            org_id: dto.org_id,
+        } satisfies FamilyInsert
         const { data, error } = await supabase
             .from('families')
-            .insert({
-                name: dto.name,
-                org_id: dto.org_id,
-            } as Database['public']['Tables']['families']['Insert'])
+            .insert(insertData)
             .select()
             .single()
 
         if (error) throw error
-        return { data: data as any as Family, error: null }
+        return { data: data as unknown as Family, error: null }
     } catch (err) {
         return { data: null, error: err instanceof Error ? err : new Error('Create failed') }
     }
@@ -265,18 +267,20 @@ export async function updateFamily(
     }
 
     try {
+        type FamilyUpdate = Database['public']['Tables']['families']['Update']
+        const updateData = {
+            ...dto,
+            updated_at: new Date().toISOString()
+        } satisfies FamilyUpdate
         const { data, error } = await supabase
             .from('families')
-            .update({
-                ...dto,
-                updated_at: new Date().toISOString()
-            } as any)
+            .update(updateData)
             .eq('id', familyId)
             .select()
             .single()
 
         if (error) throw error
-        return { data: data as any as Family, error: null }
+        return { data: data as unknown as Family, error: null }
     } catch (err) {
         return { data: null, error: err instanceof Error ? err : new Error('Update failed') }
     }
@@ -297,7 +301,7 @@ export async function deleteFamily(
     try {
         const { error } = await supabase
             .from('families')
-            .update({ deleted_at: new Date().toISOString() } as Database['public']['Tables']['families']['Update'])
+            .delete()
             .eq('id', familyId)
 
         if (error) throw error
@@ -336,14 +340,16 @@ export async function createChild(
     }
 
     try {
+        type ChildInsert = Database['public']['Tables']['children']['Insert']
+        const insertData = dto satisfies ChildInsert
         const { data, error } = await supabase
             .from('children')
-            .insert(dto as any)
+            .insert(insertData)
             .select()
             .single()
 
         if (error) throw error
-        return { data: data as any as Child, error: null }
+        return { data: data as unknown as Child, error: null }
     } catch (err) {
         return { data: null, error: err instanceof Error ? err : new Error('Create child failed') }
     }
@@ -360,18 +366,20 @@ export async function updateChild(
     }
 
     try {
+        type ChildUpdate = Database['public']['Tables']['children']['Update']
+        const updateData = {
+            ...dto,
+            updated_at: new Date().toISOString()
+        } satisfies ChildUpdate
         const { data, error } = await supabase
             .from('children')
-            .update({
-                ...dto,
-                updated_at: new Date().toISOString()
-            } as Database['public']['Tables']['children']['Update'])
+            .update(updateData)
             .eq('id', childId)
             .select()
             .single()
 
         if (error) throw error
-        return { data: data as any as Child, error: null }
+        return { data: data as unknown as Child, error: null }
     } catch (err) {
         return { data: null, error: err instanceof Error ? err : new Error('Update child failed') }
     }
@@ -389,7 +397,7 @@ export async function deleteChild(
     try {
         const { error } = await supabase
             .from('children')
-            .update({ deleted_at: new Date().toISOString() } as Database['public']['Tables']['children']['Update'])
+            .delete()
             .eq('id', childId)
 
         if (error) throw error

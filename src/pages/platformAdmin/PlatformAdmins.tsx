@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, Badge, Card, FilterBar, PlatformDataTable, ConfirmDialog, type ColumnConfig } from '../../components/platformAdmin'
+import { PageHeader, Badge, Card, PlatformDataTable, ConfirmDialog, type ColumnConfig } from '../../components/platformAdmin'
 import { canPerformAction, ROLE_LABELS, ROLE_DESCRIPTIONS } from '../../utils/platformAdminPermissions'
 import { isRpcSuccessResponse } from '../../utils/typeAdapters'
-import type { PlatformAdminRole } from '../../types/platformAdmin.types'
+import type { AdminRpcResponse, PlatformAdminRole } from '../../types/platformAdmin.types'
+import { Database } from '@/lib/database.types'
 
 interface PlatformAdminWithUser {
   user_id: string
@@ -105,19 +106,21 @@ export default function PlatformAdmins() {
     setAddError(null)
 
     try {
+      type AdminRpcArgs = Database['public']['Functions']['admin_add_platform_admin']['Args']
+      
       const { data, error } = await supabase.rpc('admin_add_platform_admin', {
         target_email: addEmail,
         target_role: addRole,
         reason: addReason,
-      })
+      } as AdminRpcArgs)
 
       if (error) {
         setAddError(error.message)
         return
       }
 
-      if (data && !data.success) {
-        setAddError(data.error || 'Unknown error')
+      if (data && !(data as AdminRpcResponse).success) {
+        setAddError((data as AdminRpcResponse).error || 'Unknown error')
         return
       }
 
@@ -127,7 +130,7 @@ export default function PlatformAdmins() {
       setAddReason('')
       setToast({
         show: true,
-        message: `Platform admin ${data?.action === 'updated' ? 'updated' : 'added'} successfully`,
+        message: `Platform admin ${(data as AdminRpcResponse)?.action === 'updated' ? 'updated' : 'added'} successfully`,
         variant: 'success',
       })
       fetchAdmins()
@@ -148,15 +151,15 @@ export default function PlatformAdmins() {
       const { data, error } = await supabase.rpc('admin_remove_platform_admin', {
         target_user_id: removeDialog.admin.user_id,
         reason,
-      })
+      } as any)
 
       if (error) {
         setRemoveError(error.message)
         return
       }
 
-      if (!isRpcSuccessResponse(data) || !data.success) {
-        setRemoveError(data?.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !(data as AdminRpcResponse).success) {
+        setRemoveError((data as AdminRpcResponse)?.error || 'Unknown error')
         return
       }
 

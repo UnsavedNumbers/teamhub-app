@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { PageHeader, Card, Button, Input, Select, Badge } from '../../components/platformAdmin'
 import { mapFeatureEntitlement, mapLicenseTier, mapTierFeatureAssignment } from '../../utils/domainMappers'
 import type { FeatureEntitlement, LicenseTier, TierFeatureAssignment } from '../../types/domain/License'
@@ -110,34 +111,38 @@ export default function FeatureDetail() {
 
     try {
       if (isNew) {
+        type FeatureInsert = Database['public']['Tables']['feature_entitlements']['Insert']
+        const insertData = {
+          feature_key: feature.featureKey,
+          display_name: feature.displayName,
+          category: feature.category!,
+          feature_type: feature.featureType!,
+          description: feature.description || null,
+          rollout_status: feature.rolloutStatus || 'live',
+        } satisfies FeatureInsert
         const { data, error: createError } = await supabase
           .from('feature_entitlements')
-          .insert({
-            feature_key: feature.featureKey,
-            display_name: feature.displayName,
-            category: feature.category!,
-            feature_type: feature.featureType!,
-            description: feature.description || null,
-            rollout_status: feature.rolloutStatus || 'live',
-          })
+          .insert(insertData)
           .select()
           .single()
 
         if (createError) throw createError
 
         if (data) {
-          navigate(`/platform-admin/licenses/features/${data.id}`)
+          navigate(`/platform-admin/licenses/features/${(data as any).id}`)
         }
       } else {
+        type FeatureUpdate = Database['public']['Tables']['feature_entitlements']['Update']
+        const updateData = {
+          display_name: feature.displayName,
+          category: feature.category,
+          feature_type: feature.featureType,
+          description: feature.description || null,
+          rollout_status: feature.rolloutStatus,
+        } satisfies FeatureUpdate
         const { error: updateError } = await supabase
           .from('feature_entitlements')
-          .update({
-            display_name: feature.displayName,
-            category: feature.category,
-            feature_type: feature.featureType,
-            description: feature.description || null,
-            rollout_status: feature.rolloutStatus,
-          })
+          .update(updateData)
           .eq('id', id!)
 
         if (updateError) throw updateError

@@ -63,14 +63,18 @@ export default function Login() {
         try {
           const { data: orgData } = await supabase.rpc('get_user_organizations', {
             check_user_id: user.id
-          })
+          } as any)
 
           // Map to Organization format
-          const organizations = (orgData || []).map((org: any) => ({
-            id: org.organization_id,
-            name: org.org_name,
-            roles: org.roles || [],
-          }))
+          const organizations = (orgData || []).map((org: any) => {
+            const roles = org.roles || []
+            return {
+              id: org.organization_id,
+              name: org.org_name,
+              roles,
+              get role() { return this.roles[0] ?? 'parent' }
+            }
+          })
 
           // Determine redirect based on roles
           const redirectTo = getLoginRedirect(false, organizations)

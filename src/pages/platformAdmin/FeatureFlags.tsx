@@ -123,7 +123,7 @@ export default function FeatureFlags() {
         setOverrides([])
       } else {
         // Map rows to include id field
-        const mapped = (data || []).map(row => mapFeatureFlagOverride(row as any))
+        const mapped = (data || []).map(row => mapFeatureFlagOverride(row))
         setOverrides(mapped)
       }
     } catch (err) {
@@ -163,15 +163,15 @@ export default function FeatureFlags() {
         p_value_type: newFlag.value_type,
         p_description: newFlag.description || null,
         p_environment: newFlag.environment,
-      })
+      } as any)
       
       if (error) {
         setDialogError(error.message)
         return
       }
       
-      if (!isRpcSuccessResponse(data) || !data.success) {
-        setDialogError(data?.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !(data as RpcResponse).success) {
+        setDialogError((data as RpcResponse)?.error || 'Unknown error')
         return
       }
       
@@ -215,15 +215,15 @@ export default function FeatureFlags() {
         p_environment: flag.environment,
         p_reason: reason,
         p_expected_version: flag.version,
-      })
+      } as any)
       
       if (error) {
         setDialogError(error.message)
         return
       }
       
-      if (!isRpcSuccessResponse(data) || !data.success) {
-        setDialogError(data?.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !(data as RpcResponse).success) {
+        setDialogError((data as RpcResponse)?.error || 'Unknown error')
         return
       }
       
@@ -275,15 +275,15 @@ export default function FeatureFlags() {
         p_environment: flag.environment,
         p_reason: reason,
         p_expected_version: existing?.version,
-      })
+      } as any)
 
       if (error) {
         setDialogError(error.message)
         return
       }
 
-      if (!isRpcSuccessResponse(data) || !data.success) {
-        setDialogError(data?.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !(data as RpcResponse).success) {
+        setDialogError((data as RpcResponse)?.error || 'Unknown error')
         return
       }
 
@@ -337,15 +337,15 @@ export default function FeatureFlags() {
         p_environment: flag.environment,
         p_reason: reason,
         p_expected_version: existing?.version,
-      })
+      } as any)
       
       if (error) {
         setDialogError(error.message)
         return
       }
       
-      if (data && !data.success) {
-        setDialogError(data.error || 'Unknown error')
+      if (data && !(data as RpcResponse).success) {
+        setDialogError((data as RpcResponse).error || 'Unknown error')
         return
       }
       
@@ -381,8 +381,8 @@ export default function FeatureFlags() {
           p_environment: override.environment,
           p_reason: reason,
           p_expected_version: override.version,
-        })
-        data = result.data
+        } as any)
+        data = result.data as any
         error = result.error
       } else {
         const result = await supabase.rpc('admin_remove_user_override', {
@@ -391,8 +391,8 @@ export default function FeatureFlags() {
           p_environment: override.environment,
           p_reason: reason,
           p_expected_version: override.version,
-        })
-        data = result.data
+        } as any)
+        data = result.data as any
         error = result.error
       }
       
@@ -431,15 +431,15 @@ export default function FeatureFlags() {
         p_feature_flag_id: deleteDialog.flag!.id,
         p_environment: deleteDialog.flag!.environment,
         p_reason: reason,
-      })
+      } as any)
       
       if (error) {
         setDialogError(error.message)
         return
       }
       
-      if (data && !data.success) {
-        setDialogError(data.error || 'Unknown error')
+      if (data && !(data as RpcResponse).success) {
+        setDialogError((data as RpcResponse).error || 'Unknown error')
         return
       }
       
@@ -468,15 +468,15 @@ export default function FeatureFlags() {
         p_feature_flag_id: restoreDialog.flag!.id,
         p_environment: restoreDialog.flag!.environment,
         p_reason: reason,
-      })
+      } as any)
       
       if (error) {
         setDialogError(error.message)
         return
       }
       
-      if (!isRpcSuccessResponse(data) || !data.success) {
-        setDialogError(data?.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !(data as RpcResponse).success) {
+        setDialogError((data as RpcResponse)?.error || 'Unknown error')
         return
       }
       
@@ -632,7 +632,7 @@ export default function FeatureFlags() {
     },
     {
       id: 'scope_name',
-      label: (row: FeatureFlagOverride) => row.override_type === 'org' ? 'Organization' : 'User',
+      label: 'Scope',
       render: (row: FeatureFlagOverride) => (
         <div className="pa-body-m">{row.scope_name}</div>
       ),
@@ -1517,7 +1517,7 @@ function UserSearchSelect({
           .limit(20)
         
         if (!error && data) {
-          setUsers(data)
+          setUsers(data as Array<{ id: string; email: string; display_name: string | null }>)
         }
       } catch (err) {
         console.error('Error fetching users:', err)

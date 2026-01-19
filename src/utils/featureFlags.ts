@@ -50,15 +50,17 @@ const flagCache = new Map<string, CachedFlagValue>()
 /**
  * Cache TTL in milliseconds (5 minutes)
  */
-const CACHE_TTL_MS = 5 * 60 * 1000
+// Removed - unused constant
+// const CACHE_TTL_MS = 5 * 60 * 1000
 
 /**
  * Check if cached value is still valid
  */
-function isCacheValid(cached: CachedFlagValue): boolean {
-  const age = Date.now() - cached.timestamp
-  return age < CACHE_TTL_MS
-}
+// Removed - unused helper
+// function isCacheValid(cached: CachedFlagValue): boolean {
+//   const age = Date.now() - cached.timestamp
+//   return age < CACHE_TTL_MS
+// }
 
 /**
  * Get cached flag value if available and valid
@@ -159,7 +161,7 @@ export function subscribeToFlagChanges(): () => void {
         schema: 'public',
         table: 'feature_flag_org_overrides',
       },
-      (payload) => {
+      (_payload) => {
         // Invalidate all cache (org override affects resolution)
         invalidateFlagCache()
       }
@@ -171,7 +173,7 @@ export function subscribeToFlagChanges(): () => void {
         schema: 'public',
         table: 'feature_flag_user_overrides',
       },
-      (payload) => {
+      (_payload) => {
         // Invalidate all cache (user override affects resolution)
         invalidateFlagCache()
       }
@@ -234,7 +236,7 @@ export async function resolveFeatureFlag(
       p_user_id: finalUserId ?? undefined,
       p_org_id: orgId ?? undefined,
       p_environment: finalEnvironment,
-    })
+    } as any)
     
     if (error) {
       console.error(`Error resolving feature flag "${key}":`, error)
@@ -295,7 +297,7 @@ export async function resolveFeatureFlags(
       p_user_id: finalUserId ?? undefined,
       p_org_id: orgId ?? undefined,
       p_environment: finalEnvironment,
-    })
+    } as any)
     
     if (error) {
       console.error('Error resolving feature flags:', error)

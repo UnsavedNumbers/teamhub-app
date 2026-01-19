@@ -54,7 +54,7 @@ export default function FeatureFlagDetail() {
         setOverrides([])
       } else {
         // Map rows to include id field
-        const mapped = (data || []).map(row => mapFeatureFlagOverride(row as any))
+        const mapped = (data || []).map(row => mapFeatureFlagOverride(row))
         setOverrides(mapped)
       }
     } catch (err) {

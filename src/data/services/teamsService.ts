@@ -30,6 +30,7 @@ import {
     getTeamsForUserChildren,
 } from '../fake/relationships'
 import { supabase } from '../../lib/supabase'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { Team, CreateTeamDTO, UpdateTeamDTO } from '../types/organization'
 
 // ============================================================================
@@ -152,7 +153,7 @@ export async function getTeams(
 }
 
 export async function createTeam(
-    context: UserContext,
+    _context: UserContext,
     dto: CreateTeamDTO
 ): Promise<{ data: Team | null; error: Error | null }> {
     if (USE_FAKE_DATA) {
@@ -169,40 +170,46 @@ export async function createTeam(
             is_active: dto.is_active ?? true,
             created_at: now,
             updated_at: now,
+            deleted_at: null,
         }
         return { data: created, error: null }
     }
 
     try {
+        type TeamInsert = Database['public']['Tables']['teams']['Insert']
+        const insertData = {
+            org_id: dto.org_id,
+            name: dto.name,
+            level_id: dto.level_id,
+            sport_id: dto.sport_id ?? null,
+            program_id: dto.program_id ?? null,
+            max_roster_size: dto.max_roster_size ?? null,
+            is_active: dto.is_active ?? true,
+        } satisfies TeamInsert
         const { data, error } = await supabase
             .from('teams')
-            .insert({
-                org_id: dto.org_id,
-                name: dto.name,
-                level_id: dto.level_id,
-                sport_id: dto.sport_id ?? null,
-                program_id: dto.program_id ?? null,
-                max_roster_size: dto.max_roster_size ?? null,
-                is_active: dto.is_active ?? true,
-            })
+            .insert(insertData)
             .select()
             .single()
 
         if (error) throw error
 
         if (dto.season_id) {
+            type TeamSeasonInsert = Database['public']['Tables']['team_seasons']['Insert']
+            type CreatedTeam = { id: string }
+            const insertData2 = {
+                team_id: (data as CreatedTeam).id,
+                season_id: dto.season_id,
+                is_active: true,
+            } satisfies TeamSeasonInsert
             const { error: linkError } = await supabase
                 .from('team_seasons')
-                .insert({
-                    team_id: (data as Team).id,
-                    season_id: dto.season_id,
-                    is_active: true,
-                })
+                .insert(insertData2)
 
             if (linkError) throw linkError
         }
 
-        return { data: data as Team, error: null }
+        return { data: data as unknown as Team, error: null }
     } catch (err) {
         return { data: null, error: err instanceof Error ? err : new Error('Create team failed') }
     }
@@ -219,17 +226,19 @@ export async function updateTeam(
     }
 
     try {
+        type TeamUpdate = Database['public']['Tables']['teams']['Update']
+        const updateData = {
+            name: dto.name,
+            level_id: dto.level_id,
+            sport_id: dto.sport_id ?? null,
+            program_id: dto.program_id ?? null,
+            max_roster_size: dto.max_roster_size ?? null,
+            is_active: dto.is_active ?? undefined,
+            updated_at: new Date().toISOString(),
+        } satisfies TeamUpdate
         const { data, error } = await supabase
             .from('teams')
-            .update({
-                name: dto.name,
-                level_id: dto.level_id,
-                sport_id: dto.sport_id ?? null,
-                program_id: dto.program_id ?? null,
-                max_roster_size: dto.max_roster_size ?? null,
-                is_active: dto.is_active ?? undefined,
-                updated_at: new Date().toISOString(),
-            })
+            .update(updateData)
             .eq('id', teamId)
             .eq('org_id', context.orgId)
             .select()

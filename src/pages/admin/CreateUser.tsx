@@ -2,8 +2,6 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 
-import { useUserContext } from '../../hooks/useUserContext'
-import { useOrganization } from '../../contexts/OrganizationContext'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { 
   PageHeader, 
@@ -38,7 +36,7 @@ export default function CreateUser() {
     },
   })
 
-  const onSubmit = async (data: UserFormData) => {
+  const onSubmit = async (_data: UserFormData) => {
     setSaving(true)
     setError(null)
     

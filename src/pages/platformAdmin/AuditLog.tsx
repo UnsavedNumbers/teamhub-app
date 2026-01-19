@@ -66,7 +66,7 @@ export default function AuditLog() {
         setLogs([])
         setTotalCount(0)
       } else {
-        setLogs(data || [])
+        setLogs(data as AdminAuditLog[] || [])
         setTotalCount(count || 0)
       }
     } catch (err) {

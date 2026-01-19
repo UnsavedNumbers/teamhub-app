@@ -10,9 +10,8 @@
 
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
-import { t } from '../../i18n'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { UserContext, PermissionSet } from '../fake/userContext'
-import type { Database } from '../../lib/database.types'
 import { calculatePermissions, filterEventsByRole } from '../fake/userContext'
 import type { CalendarEvent, EventRSVP, EventLocation, RSVPStatus } from '../../types/calendar'
 import {
@@ -26,6 +25,7 @@ import {
     getAllEvents as getFakeAllEvents,
 } from '../fake/fakeEvents'
 import { getChildrenForUserId, getAssignedTeamsForCoach, getChildTeamMemberships } from '../fake/relationships'
+import { t } from '@/i18n'
 
 // ============================================================================
 // Helper Functions
@@ -254,9 +254,17 @@ export async function getEventDetails(
 
             // Transform RSVP config
             if (data) {
-                (data as any).rsvp_config = {
-                    enabled: data.rsvp_enabled ?? false,
-                    type: data.rsvp_type as 'none' | 'general' | 'athlete' | null
+                const eventData = data as Record<string, unknown> & {
+                    rsvp_enabled?: boolean | null
+                    rsvp_type?: string | null
+                    rsvp_config?: {
+                        enabled: boolean
+                        type: 'none' | 'general' | 'athlete' | null
+                    }
+                }
+                eventData.rsvp_config = {
+                    enabled: eventData.rsvp_enabled ?? false,
+                    type: eventData.rsvp_type as 'none' | 'general' | 'athlete' | null
                 }
             }
 
@@ -450,16 +458,18 @@ export async function updateRSVP(
 ): Promise<{ data: EventRSVP | null; error: Error | null }> {
     if (!USE_FAKE_DATA) {
         try {
+            type EventRSVPUpsert = Database['public']['Tables']['event_rsvps']['Insert']
+            const upsertData = {
+                event_id: eventId,
+                child_id: childId,
+                status: status,
+                note: note ?? null,
+                responded_at: new Date().toISOString(),
+                responded_by_user_id: context.userId
+            } satisfies EventRSVPUpsert
             const { data, error } = await supabase
                 .from('event_rsvps')
-                .upsert({
-                    event_id: eventId,
-                    child_id: childId,
-                    status: status,
-                    note: note ?? null,
-                    responded_at: new Date().toISOString(),
-                    responded_by_user_id: context.userId
-                } as Database['public']['Tables']['event_rsvps']['Insert'], { onConflict: 'event_id,child_id' })
+                .upsert(upsertData, { onConflict: 'event_id,child_id' })
                 .select()
                 .single()
 

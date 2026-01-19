@@ -10,6 +10,7 @@ import { supabase } from '../../lib/supabase'
 import type { UserContext } from '../fake/userContext'
 import type { Season, CreateSeasonDTO, UpdateSeasonDTO } from '../types/organization'
 import { getSeasonById, getSeasonsForOrg } from '../fake/fakeTeams'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 
 async function simulateDelay(): Promise<void> {
   if (FAKE_DATA_DELAY_MS > 0) {
@@ -69,7 +70,8 @@ export async function getSeason(
       .single()
 
     if (error) throw error
-    const row = data as any
+    type SeasonRow = Database['public']['Tables']['seasons']['Row'] & { id: string; name: string; start_date: string; end_date: string; is_active: boolean; org_id: string }
+    const row = data as SeasonRow
     return {
       data: {
         id: row.id,
@@ -91,7 +93,7 @@ export async function getSeason(
 }
 
 export async function createSeason(
-  context: UserContext,
+  _context: UserContext,
   dto: CreateSeasonDTO
 ): Promise<{ data: Season | null; error: Error | null }> {
   if (USE_FAKE_DATA) {
@@ -113,17 +115,20 @@ export async function createSeason(
   }
 
   try {
+    type SeasonInsert = Database['public']['Tables']['seasons']['Insert']
+    const insertData = {
+      organization_id: dto.org_id,
+      name: dto.name,
+      start_date: dto.start_date,
+      end_date: dto.end_date,
+      is_active: dto.is_active ?? false,
+      sport_id: dto.sport_id ?? null,
+      program_id: dto.program_id ?? null,
+      team_id: "",
+    } satisfies SeasonInsert
     const { data, error } = await supabase
       .from('seasons')
-      .insert({
-        organization_id: dto.org_id,
-        name: dto.name,
-        start_date: dto.start_date,
-        end_date: dto.end_date,
-        is_active: dto.is_active ?? false,
-        sport_id: dto.sport_id ?? null,
-        program_id: dto.program_id ?? null,
-      })
+      .insert(insertData)
       .select()
       .single()
 
@@ -160,17 +165,19 @@ export async function updateSeason(
   }
 
   try {
+    type SeasonUpdate = Database['public']['Tables']['seasons']['Update']
+    const updateData = {
+      name: dto.name,
+      start_date: dto.start_date,
+      end_date: dto.end_date,
+      is_active: dto.is_active,
+      sport_id: dto.sport_id ?? null,
+      program_id: dto.program_id ?? null,
+      updated_at: new Date().toISOString(),
+    } satisfies SeasonUpdate
     const { data, error } = await supabase
       .from('seasons')
-      .update({
-        name: dto.name,
-        start_date: dto.start_date,
-        end_date: dto.end_date,
-        is_active: dto.is_active,
-        sport_id: dto.sport_id ?? null,
-        program_id: dto.program_id ?? null,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', seasonId)
       .eq('organization_id', context.orgId)
       .select()

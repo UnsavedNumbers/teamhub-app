@@ -51,7 +51,7 @@ export default function LicensesAudit() {
         setLogs([])
         setTotalCount(0)
       } else {
-        setLogs(data || [])
+        setLogs(data as EntitlementAuditLog[])
         setTotalCount(count || 0)
       }
     } catch (err) {

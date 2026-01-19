@@ -9,7 +9,8 @@ import { getLevels } from '../../data/services/levelsService'
 import { getTeams } from '../../data/services/teamsService'
 import { getSeasons } from '../../data/services/seasonsService'
 import { getChildren } from '../../data/services/familyService'
-import type { Sport, Program, Level, Team, Season, Child } from '../../data/types/organization'
+import type { Sport, Program, Level, Team, Season } from '../../data/types/organization'
+import type { Child } from '../../types/family'
 
 export default function OrganizationStructureNew() {
   const { currentOrganization } = useOrganization()

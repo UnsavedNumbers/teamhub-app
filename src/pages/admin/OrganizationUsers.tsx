@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getOrganizationUsers } from '../../data/services/usersService'
 import { 
@@ -89,11 +88,11 @@ export default function OrganizationUsers() {
       id: 'actions', 
       label: 'Actions', 
       align: 'right',
-      render: (row) => (
+      render: (_row) => (
         <Button 
           variant="ghost" 
           size="compact"
-          onClick={(e) => { 
+          onClick={(e: React.MouseEvent<HTMLElement>) => { 
             e.stopPropagation()
             // TODO: Implement edit user
           }}

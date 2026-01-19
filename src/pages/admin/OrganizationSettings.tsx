@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
-import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { 
@@ -58,7 +57,7 @@ export default function OrganizationSettings() {
     }
   }, [currentOrganization, reset])
 
-  const onSubmit = async (data: OrgSettingsFormData) => {
+  const onSubmit = async (_data: OrgSettingsFormData) => {
     setSaving(true)
     setError(null)
     setSuccess(false)

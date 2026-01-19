@@ -121,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId)
         .single()
 
-      const organizations: Organization[] = (orgData || []).map((org) => ({
+      const organizations: Organization[] = (orgData || []).map((org: any) => ({
         id: org.organization_id,
         name: org.org_name,
         roles: org.roles,
@@ -131,17 +131,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       })) ?? []
 
+      const userDataAny = userData as any
       const userProfile: UserProfile = {
-        id: userData.id,
-        email: userData.email,
-        phone: userData.phone,
-        display_name: userData.display_name,
-        role: userData.role,
-        family_id: userData.family_id,
-        org_id: userData.org_id,
+        id: userDataAny.id,
+        email: userDataAny.email,
+        phone: userDataAny.phone,
+        display_name: userDataAny.display_name,
+        role: userDataAny.role,
+        family_id: userDataAny.family_id,
+        org_id: userDataAny.org_id,
         organizations,
         isPlatformAdmin: !!adminData,
-        requiresOrgSetup: userData.requires_org_setup ?? false,
+        requiresOrgSetup: userDataAny.requires_org_setup ?? false,
       }
 
       // #region agent log
@@ -219,9 +220,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
       
-      if (invites && invites.length > 0) {
+      const invitesAny = invites as any
+      if (invitesAny && invitesAny.length > 0) {
         // Store pending invites in sessionStorage for the accept invite page
-        sessionStorage.setItem('pending_invites', JSON.stringify(invites))
+        sessionStorage.setItem('pending_invites', JSON.stringify(invitesAny))
       }
     } catch (err) {
       // RPC function might not exist - this is okay, just skip

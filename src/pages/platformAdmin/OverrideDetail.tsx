@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { PageHeader, Card, Button, Badge, ConfirmDialog } from '../../components/platformAdmin'
 import type { EntitlementOverrideWithDetails } from '../../types/licenseTiers.types'
 
@@ -11,7 +12,6 @@ export default function OverrideDetail() {
   const [loading, setLoading] = useState(true)
   const [revoking, setRevoking] = useState(false)
   const [revokeDialog, setRevokeDialog] = useState(false)
-  const [revokeReason, setRevokeReason] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const fetchOverride = useCallback(async () => {
@@ -47,19 +47,20 @@ export default function OverrideDetail() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       
+      type OverrideUpdate = Database['public']['Tables']['entitlement_overrides']['Update']
+      const updateData = {
+        revoked_at: new Date().toISOString(),
+        revoked_by: user?.id || null,
+        revoked_reason: reason,
+      } satisfies OverrideUpdate
       const { error: revokeError } = await supabase
         .from('entitlement_overrides')
-        .update({
-          revoked_at: new Date().toISOString(),
-          revoked_by: user?.id || null,
-          revoked_reason: reason,
-        })
+        .update(updateData)
         .eq('id', id)
 
       if (revokeError) throw revokeError
 
       setRevokeDialog(false)
-      setRevokeReason('')
       fetchOverride()
     } catch (err: any) {
       setError(err.message || 'Failed to revoke override')
@@ -204,7 +205,6 @@ export default function OverrideDetail() {
         onConfirm={handleRevoke}
         onCancel={() => {
           setRevokeDialog(false)
-          setRevokeReason('')
           setError(null)
         }}
       />

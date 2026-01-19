@@ -87,6 +87,12 @@ export default function OrganizationStructureForms() {
   const editType = searchParams.get('edit')
   const editId = searchParams.get('id')
 
+  const [sports, setSports] = useState<Sport[]>([])
+  const [programs, setPrograms] = useState<Program[]>([])
+  const [levels, setLevels] = useState<Level[]>([])
+  const [teams, setTeams] = useState<Team[]>([])
+  const [seasons, setSeasons] = useState<Season[]>([])
+
   useEffect(() => {
     if (!editType || !editId) return
 
@@ -156,12 +162,6 @@ export default function OrganizationStructureForms() {
       }
     }
   }, [editType, editId, sports, programs, levels, teams, seasons])
-
-  const [sports, setSports] = useState<Sport[]>([])
-  const [programs, setPrograms] = useState<Program[]>([])
-  const [levels, setLevels] = useState<Level[]>([])
-  const [teams, setTeams] = useState<Team[]>([])
-  const [seasons, setSeasons] = useState<Season[]>([])
 
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const markTouched = (key: string) => setTouched((prev) => ({ ...prev, [key]: true }))
@@ -475,7 +475,7 @@ export default function OrganizationStructureForms() {
                 const result = await createSport(context, {
                   org_id: currentOrganization.id,
                   name: sportForm.name.trim(),
-                  icon: null,
+                  icon: undefined,
                   color: '#137fec',
                 })
                 if (result.error) {
@@ -544,7 +544,7 @@ export default function OrganizationStructureForms() {
                 const result = await updateProgram(context, editId, {
                   name: programForm.name.trim(),
                   gender_category: programForm.gender as GenderCategory,
-                  description: null,
+                  description: undefined,
                 })
                 if (result.error) {
                   setActionError(result.error.message)
@@ -558,7 +558,7 @@ export default function OrganizationStructureForms() {
                   sport_id: programForm.sportId,
                   name: programForm.name.trim(),
                   gender_category: programForm.gender as GenderCategory,
-                  description: null,
+                  description: undefined,
                 })
                 if (result.error) {
                   setActionError(result.error.message)
@@ -689,13 +689,13 @@ export default function OrganizationStructureForms() {
                 const result = await updateLevel(context, editId, {
                   name: levelForm.name.trim(),
                   level_type: levelForm.type as LevelType,
-                  description: levelForm.skillDescription?.trim() || null,
-                  age_min: levelForm.ageMin ? Number(levelForm.ageMin) : null,
-                  age_max: levelForm.ageMax ? Number(levelForm.ageMax) : null,
-                  grade_min: levelForm.gradeMin ? Number(levelForm.gradeMin) : null,
-                  grade_max: levelForm.gradeMax ? Number(levelForm.gradeMax) : null,
-                  skill_min: levelForm.type === 'skill_based' ? 1 : null,
-                  skill_max: levelForm.type === 'skill_based' ? 5 : null,
+                  description: levelForm.skillDescription?.trim() || undefined,
+                  age_min: levelForm.ageMin ? Number(levelForm.ageMin) : undefined,
+                  age_max: levelForm.ageMax ? Number(levelForm.ageMax) : undefined,
+                  grade_min: levelForm.gradeMin ? Number(levelForm.gradeMin) : undefined,
+                  grade_max: levelForm.gradeMax ? Number(levelForm.gradeMax) : undefined,
+                  skill_min: levelForm.type === 'skill_based' ? 1 : undefined,
+                  skill_max: levelForm.type === 'skill_based' ? 5 : undefined,
                 })
                 if (result.error) {
                   setActionError(result.error.message)
@@ -709,13 +709,13 @@ export default function OrganizationStructureForms() {
                   program_id: levelForm.programId,
                   name: levelForm.name.trim(),
                   level_type: levelForm.type as LevelType,
-                  description: levelForm.skillDescription?.trim() || null,
-                  age_min: levelForm.ageMin ? Number(levelForm.ageMin) : null,
-                  age_max: levelForm.ageMax ? Number(levelForm.ageMax) : null,
-                  grade_min: levelForm.gradeMin ? Number(levelForm.gradeMin) : null,
-                  grade_max: levelForm.gradeMax ? Number(levelForm.gradeMax) : null,
-                  skill_min: levelForm.type === 'skill_based' ? 1 : null,
-                  skill_max: levelForm.type === 'skill_based' ? 5 : null,
+                  description: levelForm.skillDescription?.trim() || undefined,
+                  age_min: levelForm.ageMin ? Number(levelForm.ageMin) : undefined,
+                  age_max: levelForm.ageMax ? Number(levelForm.ageMax) : undefined,
+                  grade_min: levelForm.gradeMin ? Number(levelForm.gradeMin) : undefined,
+                  grade_max: levelForm.gradeMax ? Number(levelForm.gradeMax) : undefined,
+                  skill_min: levelForm.type === 'skill_based' ? 1 : undefined,
+                  skill_max: levelForm.type === 'skill_based' ? 5 : undefined,
                 })
                 if (result.error) {
                   setActionError(result.error.message)

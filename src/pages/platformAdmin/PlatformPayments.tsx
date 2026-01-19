@@ -9,6 +9,7 @@ import {
   copyStripeIdToClipboard,
 } from '../../utils/platformAdminMasking'
 import type { AdminPayment, PlatformAdminRole } from '../../types/platformAdmin.types'
+import { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 
 // Status filter options
 const statusOptions = [
@@ -59,7 +60,7 @@ export default function PlatformPayments() {
       }
 
       if (statusFilter) {
-        query = query.eq('status', statusFilter)
+        query = query.eq('status', statusFilter as Database["public"]["Enums"]["payment_status_new"])
       }
 
       query = query.order(orderBy, { ascending: order === 'asc' })
@@ -75,7 +76,7 @@ export default function PlatformPayments() {
         setPayments([])
         setTotalCount(0)
       } else {
-        setPayments(data || [])
+        setPayments(data as AdminPayment[])
         setTotalCount(count || 0)
       }
 
@@ -85,10 +86,10 @@ export default function PlatformPayments() {
         .select('amount_cents, status')
 
       if (allPayments) {
-        const succeeded = allPayments.filter(p => p.status === 'succeeded')
-        const failed = allPayments.filter(p => p.status === 'failed')
+        const succeeded = allPayments.filter((p: any) => p.status === 'succeeded')
+        const failed = allPayments.filter((p: any) => p.status === 'failed')
         setStats({
-          totalVolume: succeeded.reduce((sum, p) => sum + (p.amount_cents || 0), 0),
+          totalVolume: succeeded.reduce((sum, p: any) => sum + (p.amount_cents || 0), 0),
           successCount: succeeded.length,
           failedCount: failed.length,
         })

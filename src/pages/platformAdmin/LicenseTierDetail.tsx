@@ -1,18 +1,20 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { supabase, isSupabaseConfigured } from '../../lib/supabase'
-import type { Database } from '../../lib/database.types'
-import { PageHeader, Card, Button, Input, Select, Badge, Checkbox, ConfirmDialog, ErrorState, EmptyState } from '../../components/platformAdmin'
-import { mapLicenseTier, mapFeatureEntitlement, mapTierFeatureAssignment } from '../../utils/domainMappers'
+import { supabase } from '../../lib/supabase'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
+import { PageHeader, Card, Button, Input, Select, Badge, Checkbox, ConfirmDialog, ErrorState } from '../../components/platformAdmin'
+import { mapTierFeatureAssignment } from '../../utils/domainMappers'
 import type { LicenseTier, FeatureEntitlement, TierFeatureAssignment, StripePriceVerification } from '../../types/licenseTiers.types'
-import { FEATURE_CATEGORIES, FEATURE_TYPES } from '../../utils/licenseTierConstants'
+// Unused - keep for future use
+// import { FEATURE_CATEGORIES, FEATURE_TYPES } from '../../utils/licenseTierConstants'
 import { logAuditEvent, isStripeVerificationValid, getArchivedFeaturesCount } from '../../utils/licenseEntitlementsHelpers'
 import { isValidRouteId, getInvalidRouteIdError } from '../../utils/routeValidation'
 import { useOffline } from '../../hooks/useOffline'
 import { shouldBlockInDemoMode, getDemoModeError } from '../../utils/demoMode'
 
-const FEATURE_CATEGORIES_OPTIONS = FEATURE_CATEGORIES.map(cat => ({ value: cat, label: cat }))
-const FEATURE_TYPES_OPTIONS = FEATURE_TYPES.map(type => ({ value: type, label: type }))
+// Unused - keep for future use
+// const FEATURE_CATEGORIES_OPTIONS = FEATURE_CATEGORIES.map(cat => ({ value: cat, label: cat }))
+// const FEATURE_TYPES_OPTIONS = FEATURE_TYPES.map(type => ({ value: type, label: type }))
 
 export default function LicenseTierDetail() {
   const { id } = useParams<{ id: string }>()
@@ -65,30 +67,30 @@ export default function LicenseTierDetail() {
         }
         throw tierError
       }
-      setTier(data)
+      setTier(data as Partial<LicenseTier & { version?: number | undefined }>)
 
       // Check for archived features
-      if (data?.id) {
-        const count = await getArchivedFeaturesCount(data.id)
+      if ((data as LicenseTier)?.id) {
+        const count = await getArchivedFeaturesCount((data as LicenseTier).id)
         setArchivedFeaturesCount(count)
       }
 
       // Use cached Stripe verification if valid, otherwise verify
-      if (data?.stripePriceId) {
-        if (data.stripeVerifiedAt && isStripeVerificationValid(data.stripeVerifiedAt)) {
+      if ((data as LicenseTier)?.stripe_price_id) {
+        if ((data as LicenseTier)?.stripe_verified_at && isStripeVerificationValid((data as LicenseTier)?.stripe_verified_at)) {
           // Use cached data
           setStripeVerification({
             valid: true,
-            product_name: data.stripeProductName || undefined,
-            amount_cents: data.stripeAmountCents || undefined,
-            interval: data.stripeInterval || undefined,
-            currency: data.stripeCurrency || undefined,
-            active: data.stripeActive || undefined,
+            product_name: (data as LicenseTier)?.stripe_product_name || undefined,
+            amount_cents: (data as LicenseTier)?.stripe_amount_cents || undefined,
+            interval: (data as LicenseTier)?.stripe_interval || undefined,
+            currency: (data as LicenseTier)?.stripe_currency || undefined,
+            active: (data as LicenseTier)?.stripe_active || undefined,
           })
         } else {
           // Verify fresh
-          verifyStripePrice(data.stripePriceId, true)
-        }
+          verifyStripePrice((data as LicenseTier)?.stripe_price_id, true)
+        } 
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load tier')
@@ -107,7 +109,7 @@ export default function LicenseTierDetail() {
         .order('display_name', { ascending: true })
 
       if (featuresError) throw featuresError
-      setFeatures(data || [])
+      setFeatures(data as FeatureEntitlement[])
     } catch (err: any) {
       console.error('Error fetching features:', err)
     }
@@ -127,7 +129,7 @@ export default function LicenseTierDetail() {
       const assignmentsMap: Record<string, TierFeatureAssignment> = {}
       ;(data || []).forEach((assignment) => {
         const mapped = mapTierFeatureAssignment(assignment)
-        assignmentsMap[mapped.featureEntitlementId] = mapped
+        assignmentsMap[mapped.featureEntitlementId] = mapped as any
       })
       setAssignments(assignmentsMap)
     } catch (err: any) {
@@ -148,14 +150,14 @@ export default function LicenseTierDetail() {
     }
 
     // Check cache first unless forcing refresh
-    if (!forceRefresh && tier.stripeVerifiedAt && isStripeVerificationValid(tier.stripeVerifiedAt)) {
+    if (!forceRefresh && tier.stripe_verified_at && isStripeVerificationValid(tier.stripe_verified_at)) {
       setStripeVerification({
         valid: true,
-        product_name: tier.stripeProductName || undefined,
-        amount_cents: tier.stripeAmountCents || undefined,
-        interval: tier.stripeInterval || undefined,
-        currency: tier.stripeCurrency || undefined,
-        active: tier.stripeActive || undefined,
+        product_name: tier.stripe_product_name || undefined,
+        amount_cents: tier.stripe_amount_cents || undefined,
+        interval: tier.stripe_interval || undefined,
+        currency: tier.stripe_currency || undefined,
+        active: tier.stripe_active || undefined,
       })
       return
     }
@@ -230,21 +232,23 @@ export default function LicenseTierDetail() {
       const beforeState = isNew ? null : { ...tier }
 
       if (isNew) {
+        type LicenseTierInsert = Database['public']['Tables']['license_tiers']['Insert']
+        const insertData: LicenseTierInsert = {
+          tier_key: tier.tier_key!,
+          tier_name: tier.tier_name!,
+          description: tier.description || null,
+          stripe_price_id: tier.stripe_price_id!,
+          stripe_product_name: tier.stripe_product_name || null,
+          stripe_amount_cents: tier.stripe_amount_cents || null,
+          stripe_interval: tier.stripe_interval || null,
+          stripe_currency: tier.stripe_currency || null,
+          stripe_active: tier.stripe_active || null,
+          stripe_verified_at: tier.stripe_verified_at || null,
+          status: tier.status || 'active',
+        }
         const { data, error: createError } = await supabase
           .from('license_tiers')
-          .insert({
-            tier_key: tier.tierKey,
-            tier_name: tier.tierName,
-            description: tier.description || null,
-            stripe_price_id: tier.stripePriceId,
-            stripe_product_name: tier.stripeProductName || null,
-            stripe_amount_cents: tier.stripeAmountCents || null,
-            stripe_interval: tier.stripeInterval || null,
-            stripe_currency: tier.stripeCurrency || null,
-            stripe_active: tier.stripeActive || null,
-            stripe_verified_at: tier.stripeVerifiedAt || null,
-            status: tier.status || 'active',
-          })
+          .insert(insertData)
           .select()
           .single()
 
@@ -258,12 +262,12 @@ export default function LicenseTierDetail() {
           await logAuditEvent({
             action: 'tier_created',
             targetType: 'tier',
-            targetId: data.id,
+            targetId: (data as any).id,
             afterState: data,
             reason: reason || 'Tier created',
           })
           
-          navigate(`/platform-admin/licenses/tiers/${data.id}`)
+          navigate(`/platform-admin/licenses/tiers/${(data as any).id}`)
         }
       } else {
         // Optimistic locking: check version
@@ -277,26 +281,28 @@ export default function LicenseTierDetail() {
 
         if (fetchError) throw fetchError
 
-        if (currentTier.version !== expectedVersion) {
+        if ((currentTier as any).version !== expectedVersion) {
           setConflictDialog(true)
           setSaving(false)
           return
         }
 
+        type LicenseTierUpdate = Database['public']['Tables']['license_tiers']['Update']
+        const updateData = {
+          tier_name: tier.tier_name,
+          description: tier.description || null,
+          stripe_price_id: tier.stripe_price_id,
+          stripe_product_name: tier.stripe_product_name || null,
+          stripe_amount_cents: tier.stripe_amount_cents || null,
+          stripe_interval: tier.stripe_interval || null,
+          stripe_currency: tier.stripe_currency || null,
+          stripe_active: tier.stripe_active || null,
+          stripe_verified_at: tier.stripe_verified_at || null,
+          status: tier.status,
+        } satisfies LicenseTierUpdate
         const { data: updatedTier, error: updateError } = await supabase
           .from('license_tiers')
-          .update({
-            tier_name: tier.tier_name,
-            description: tier.description || null,
-            stripe_price_id: tier.stripe_price_id,
-            stripe_product_name: tier.stripe_product_name || null,
-            stripe_amount_cents: tier.stripe_amount_cents || null,
-            stripe_interval: tier.stripe_interval || null,
-            stripe_currency: tier.stripe_currency || null,
-            stripe_active: tier.stripe_active || null,
-            stripe_verified_at: tier.stripe_verified_at || null,
-            status: tier.status,
-          })
+          .update(updateData)
           .eq('id', id!)
           .eq('version', expectedVersion) // Ensure version hasn't changed
           .select()
@@ -352,17 +358,19 @@ export default function LicenseTierDetail() {
     const assignmentEntries = Object.entries(assignments).filter(([_, assignment]) => assignment.included)
 
     for (const [featureId, assignment] of assignmentEntries) {
+      type AssignmentUpsert = Database['public']['Tables']['tier_feature_assignments']['Insert']
+      const upsertData = {
+        license_tier_id: tierId,
+        feature_entitlement_id: featureId,
+        included: assignment.included,
+        limit_value: assignment.limit_value || null,
+        role_admin: assignment.role_admin ?? true,
+        role_coach: assignment.role_coach ?? true,
+        role_parent: assignment.role_parent ?? false,
+      } satisfies AssignmentUpsert
       const { error } = await supabase
         .from('tier_feature_assignments')
-        .upsert({
-          license_tier_id: tierId,
-          feature_entitlement_id: featureId,
-          included: assignment.included,
-          limit_value: assignment.limit_value || null,
-          role_admin: assignment.role_admin ?? true,
-          role_coach: assignment.role_coach ?? true,
-          role_parent: assignment.role_parent ?? false,
-        }, {
+        .upsert(upsertData, {
           onConflict: 'license_tier_id,feature_entitlement_id',
         })
 
@@ -512,8 +520,8 @@ export default function LicenseTierDetail() {
           <div className="pa-form-group">
             <label className="pa-label pa-label--required">Tier Key</label>
             <Select
-              value={tier.tierKey || 'basic'}
-              onChange={(e) => setTier({ ...tier, tierKey: e.target.value as 'basic' | 'power' })}
+              value={tier.tier_key || 'basic'}
+              onChange={(e) => setTier({ ...tier, tier_key: e.target.value as 'basic' | 'power' })}
               disabled={!isNew}
               options={[
                 { value: 'basic', label: 'Basic' },

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '../hooks/useAuth'
 import { useUserContext } from '../hooks/useUserContext'
 import { getChildren } from '../data/services/familyService'
 import PortalLayout from '../components/portal/PortalLayout'

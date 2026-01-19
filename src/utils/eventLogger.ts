@@ -109,7 +109,7 @@ export async function logEvent<C extends EventCategory>(
       p_ip_address: params.ipAddress ?? undefined,
       p_user_agent: params.userAgent ?? undefined,
       p_idempotency_key: params.idempotencyKey ?? undefined,
-    })
+    } as any)
 
     if (error) {
       console.error('Event logging failed:', error)

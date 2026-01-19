@@ -10,6 +10,15 @@ export interface Organization {
   slug?: string
   org_type?: 'school' | 'club' | 'league' | 'academy' | 'aau' | null
   
+  // Contact information
+  website?: string | null
+  phone?: string | null
+  email?: string | null
+  address?: string | null
+  city?: string | null
+  state?: string | null
+  zip?: string | null
+  
   /** @deprecated Use roles array instead. Returns roles[0] or 'parent'. Will be removed in v2.0. */
   get role(): OrgMemberRole
 }
