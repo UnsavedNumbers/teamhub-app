@@ -136,55 +136,13 @@ export default function Login() {
           />
         )}
         <div className="absolute inset-0 bg-slate-900/60"></div>
-        <div className="absolute inset-0 flex flex-col items-center justify-center px-16 relative z-10">
-          <div className="w-full max-w-md">
-          {/* Title & Description */}
-          <h2 className="text-2xl font-black uppercase tracking-tight text-white mb-6 font-impact">
+        <div className="absolute bottom-16 left-16 right-16 z-10">
+          <h2 className="text-5xl font-black tracking-tighter leading-none text-white mb-4 font-impact">
             CREATE YOUR ORGANIZATION
           </h2>
-          <p className="text-lg font-light tracking-wide text-white/80 mb-8">
+          <p className="text-lg font-light tracking-wide text-white/80 max-w-lg leading-relaxed">
             Start managing your youth sports organization with professional tools for registration, scheduling, payments, and communication.
           </p>
-
-          {/* Features List */}
-          <ul className="space-y-4 mb-8">
-            <li className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-xl text-white">check_circle</span>
-              <span className="text-sm text-white/80">Unlimited teams and players</span>
-            </li>
-            <li className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-xl text-white">check_circle</span>
-              <span className="text-sm text-white/80">Integrated payments and invoicing</span>
-            </li>
-            <li className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-xl text-white">check_circle</span>
-              <span className="text-sm text-white/80">Event scheduling and attendance</span>
-            </li>
-            <li className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-xl text-white">check_circle</span>
-              <span className="text-sm text-white/80">Parent and coach portals</span>
-            </li>
-          </ul>
-
-          {/* CTA Button */}
-          <button
-            type="button"
-            onClick={handleSetupOrganization}
-            className="bg-slate-900 dark:bg-white text-white dark:text-black px-8 py-3 font-black text-sm tracking-widest uppercase w-full flex items-center justify-center gap-2 hover:bg-[#5468FF] dark:hover:bg-[#5468FF] dark:hover:text-white transition-all duration-300 mb-4"
-          >
-            <span className="material-symbols-outlined text-xl">arrow_forward</span>
-            GET STARTED FREE
-          </button>
-
-          <p className="text-xs text-white/60 text-center mb-6">
-            No credit card required. Setup in under 5 minutes.
-          </p>
-
-          {/* Bottom tagline */}
-          <p className="text-sm text-white/60 text-center">
-            Trusted by youth sports organizations nationwide
-          </p>
-          </div>
         </div>
       </div>
 
