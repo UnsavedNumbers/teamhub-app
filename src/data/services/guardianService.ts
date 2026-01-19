@@ -8,16 +8,17 @@
  * - Getting athletes for a guardian
  */
 
+import { Database } from '@/lib/database.types'
 import { supabase } from '../../lib/supabase'
 import type {
     Guardian,
     GuardianMatch,
     AthleteGuardian,
     Athlete,
-    GuardianFormData,
-    ParentInvite,
     RelationshipType
 } from '../../types/family'
+
+type ParentInvite = Database['public']['Tables']['parent_invites']['Row']
 
 // ============================================================================
 // Helper Functions
@@ -28,19 +29,19 @@ import type {
  */
 export function normalizeEmail(email: string): string {
     if (!email) return ''
-    
+
     const normalized = email.toLowerCase().trim()
     const [local, domain] = normalized.split('@')
-    
+
     if (!local || !domain) return normalized
-    
+
     // Gmail-specific normalization
     if (domain === 'gmail.com' || domain === 'googlemail.com') {
         // Remove dots and everything after +
         const cleanLocal = local.replace(/\./g, '').split('+')[0]
         return `${cleanLocal}@${domain}`
     }
-    
+
     return normalized
 }
 
@@ -70,7 +71,7 @@ export async function findGuardianByEmail(
                 error: new Error('Invalid email format')
             }
         }
-        
+
         // Call RPC function that does normalized email matching
         const { data, error } = await supabase
             .rpc('find_guardian_by_email', {
@@ -78,7 +79,7 @@ export async function findGuardianByEmail(
                 p_org_id: orgId
             })
             .single()
-        
+
         if (error) {
             // No user found is not an error - just return no match
             if (error.code === 'PGRST116') {
@@ -94,7 +95,7 @@ export async function findGuardianByEmail(
             }
             throw error
         }
-        
+
         if (!data) {
             return {
                 data: {
@@ -106,12 +107,14 @@ export async function findGuardianByEmail(
                 error: null
             }
         }
-        
+
+        type LinkedAthlete = { id: string; first_name: string; last_name: string; birthdate: string }
+
         // Parse linked_athletes JSONB
-        const linkedAthletes = Array.isArray(data.linked_athletes) 
-            ? data.linked_athletes 
+        const linkedAthletes = Array.isArray(data.linked_athletes)
+            ? data.linked_athletes as LinkedAthlete[]
             : []
-        
+
         return {
             data: {
                 exists: true,
@@ -145,14 +148,14 @@ export async function isGuardianLinkedToAthlete(
 ): Promise<{ isLinked: boolean; error: Error | null }> {
     try {
         const { data: match, error } = await findGuardianByEmail(email, orgId)
-        
+
         if (error || !match || !match.exists) {
             return { isLinked: false, error }
         }
-        
+
         // Check if this athlete is in the linked athletes list
         const isLinked = match.linkedAthletes.some(a => a.id === athleteId)
-        
+
         return { isLinked, error: null }
     } catch (err) {
         return {
@@ -183,7 +186,7 @@ export async function linkGuardianToAthlete(
                 error: new Error('Invalid email format')
             }
         }
-        
+
         const { data, error } = await supabase
             .rpc('link_guardian_to_athlete', {
                 p_athlete_id: athleteId,
@@ -191,9 +194,9 @@ export async function linkGuardianToAthlete(
                 p_org_id: orgId,
                 p_relationship_type: relationshipType
             })
-        
+
         if (error) throw error
-        
+
         return { data, error: null }
     } catch (err) {
         console.error('Error linking guardian to athlete:', err)
@@ -219,10 +222,12 @@ export async function removeGuardianFromAthlete(
                 p_user_id: userId,
                 p_org_id: orgId
             })
-        
+
         if (error) throw error
-        
-        return { success: data?.success || false, error: null }
+
+        const success = typeof data === 'object' && data !== null && !Array.isArray(data) && 'success' in data && typeof (data as any).success === 'boolean' ? (data as any).success : false
+
+        return { success: success || false, error: null }
     } catch (err) {
         console.error('Error removing guardian from athlete:', err)
         return {
@@ -249,9 +254,9 @@ export async function getAthleteGuardians(
                 p_athlete_id: athleteId,
                 p_org_id: orgId
             })
-        
+
         if (error) throw error
-        
+
         const guardians: Guardian[] = (data || []).map((g: any) => ({
             id: g.guardian_id,
             user_id: g.user_id,
@@ -261,7 +266,7 @@ export async function getAthleteGuardians(
             relationship_type: g.relationship_type || 'parent',
             status: g.status
         }))
-        
+
         return { data: guardians, error: null }
     } catch (err) {
         console.error('Error getting athlete guardians:', err)
@@ -285,9 +290,9 @@ export async function getGuardianAthletes(
                 p_user_id: userId,
                 p_org_id: orgId
             })
-        
+
         if (error) throw error
-        
+
         const athletes: Athlete[] = (data || []).map((a: any) => ({
             id: a.athlete_id,
             first_name: a.first_name,
@@ -304,7 +309,7 @@ export async function getGuardianAthletes(
             updated_at: new Date().toISOString(),
             deleted_at: null
         }))
-        
+
         return { data: athletes, error: null }
     } catch (err) {
         console.error('Error getting guardian athletes:', err)
@@ -330,10 +335,10 @@ export async function getAthleteInvites(
             .eq('organization_id', orgId)
             .eq('status', 'pending')
             .order('created_at', { ascending: false })
-        
+
         if (error) throw error
-        
-        return { data: data || [], error: null }
+
+        return { data: data ?? [], error: null }
     } catch (err) {
         console.error('Error getting athlete invites:', err)
         return {
@@ -354,9 +359,9 @@ export async function cancelInvite(
             .from('parent_invites')
             .update({ status: 'cancelled' })
             .eq('id', inviteId)
-        
+
         if (error) throw error
-        
+
         return { success: true, error: null }
     } catch (err) {
         console.error('Error cancelling invite:', err)
@@ -376,17 +381,17 @@ export async function resendInvite(
     try {
         const expiresAt = new Date()
         expiresAt.setDate(expiresAt.getDate() + 30)  // Extend by 30 days
-        
+
         const { error } = await supabase
             .from('parent_invites')
-            .update({ 
+            .update({
                 expires_at: expiresAt.toISOString(),
                 updated_at: new Date().toISOString()
             })
             .eq('id', inviteId)
-        
+
         if (error) throw error
-        
+
         return { success: true, error: null }
     } catch (err) {
         console.error('Error resending invite:', err)

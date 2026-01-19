@@ -5,7 +5,7 @@ import { PageHeader, Badge, FilterBar, PlatformDataTable, ConfirmDialog, type Co
 import { canPerformAction, getDeniedMessage } from '../../utils/platformAdminPermissions'
 import { getDisplayEmail } from '../../utils/platformAdminMasking'
 import { isRpcSuccessResponse } from '../../utils/typeAdapters'
-import type { AdminUser, PlatformAdminRole } from '../../types/platformAdmin.types'
+import type { AdminUser, AdminRpcResponse, PlatformAdminRole } from '../../types/platformAdmin.types'
 
 export default function Users() {
   const [users, setUsers] = useState<AdminUser[]>([])
@@ -63,7 +63,7 @@ export default function Users() {
         setUsers([])
         setTotalCount(0)
       } else {
-        setUsers(data || [])
+        setUsers(data as AdminUser[] || [])
         setTotalCount(count || 0)
       }
     } catch (err) {
@@ -119,15 +119,15 @@ export default function Users() {
       const { data, error } = await supabase.rpc(rpcName, {
         target_user_id: confirmDialog.user.id,
         reason,
-      })
+      } as any)
 
       if (error) {
         setDialogError(error.message)
         return
       }
 
-      if (!isRpcSuccessResponse(data) || !data.success) {
-        setDialogError(data?.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !(data as AdminRpcResponse).success) {
+        setDialogError((data as AdminRpcResponse)?.error || 'Unknown error')
         return
       }
 
@@ -254,8 +254,8 @@ export default function Users() {
       />
 
       <PlatformDataTable
-        columns={columns}
-        rows={users}
+        columns={columns as ColumnConfig<{ id: string }>[]}
+        rows={users as { id: string }[]}
         loading={loading}
         emptyMessage="No users found."
         page={page}
@@ -263,7 +263,7 @@ export default function Users() {
         totalCount={totalCount}
         onPageChange={setPage}
         onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0) }}
-        onRowClick={handleRowClick}
+        onRowClick={handleRowClick as (row: { id: string }) => void}
         orderBy={orderBy}
         order={order}
         onSort={handleSort}

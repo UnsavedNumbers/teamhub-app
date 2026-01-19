@@ -1,3 +1,4 @@
+import { OverrideStatus, OverrideTargetType } from '@/types/licenseTiers.types'
 import type { Database, Json } from './database.types'
 
 // Re-export Json for use in other modules
@@ -328,28 +329,132 @@ type AdditionalTables = {
       }
     ]
   }
+  levels: {
+    Row: {
+      id: string
+      org_id: string
+      program_id: string
+      name: string
+      level_type: 'age_based' | 'grade_based' | 'skill_based'
+      description: string | null
+      age_min: number | null
+      age_max: number | null
+      grade_min: number | null
+      grade_max: number | null
+      skill_min: number | null
+      skill_max: number | null
+      created_at: string
+      updated_at: string
+      deleted_at: string | null
+    }
+    Insert: Partial<AdditionalTables['levels']['Row']> & {
+      org_id: string
+      program_id: string
+      name: string
+      level_type: 'age_based' | 'grade_based' | 'skill_based'
+    }
+    Update: Partial<AdditionalTables['levels']['Row']>
+    Relationships: []
+  }
+  attendance_settings: {
+    Row: {
+      org_id: string
+      reminder_enabled: boolean
+      lock_after_hours: number
+      required_for_practice: boolean
+      required_for_game: boolean
+      required_for_meeting: boolean
+      created_at: string
+      updated_at: string
+    }
+    Insert: Partial<AdditionalTables['attendance_settings']['Row']> & {
+      org_id: string
+    }
+    Update: Partial<AdditionalTables['attendance_settings']['Row']>
+    Relationships: []
+  }
+  team_seasons: {
+    Row: {
+      id: string
+      team_id: string
+      season_id: string
+      is_active: boolean
+      created_at: string | null
+      updated_at: string | null
+    }
+    Insert: {
+      id?: string
+      team_id: string
+      season_id: string
+      is_active?: boolean
+      created_at?: string | null
+      updated_at?: string | null
+    }
+    Update: {
+      id?: string
+      team_id?: string
+      season_id?: string
+      is_active?: boolean
+      created_at?: string | null
+      updated_at?: string | null
+    }
+    Relationships: []
+  }
+}
+
+type ViewDef<Row> = {
+  Row: Row
+  Relationships: []
+  // include these if your generated views have them:
+  Insert: never
+  Update: never
 }
 
 type AdditionalViews = {
-  admin_license_tiers_list: {
-    Row: AdditionalTables['license_tiers']['Row'] & {
+  admin_license_tiers_list: ViewDef<
+    AdditionalTables['license_tiers']['Row'] & {
       included_features_count: number
       orgs_using_count: number
     }
-  }
-  admin_entitlement_overrides_list: {
-    Row: AdditionalTables['entitlement_overrides']['Row'] & {
+  > 
+  admin_entitlement_overrides_list: ViewDef<
+    AdditionalTables['entitlement_overrides']['Row'] & {
       target_name: string | null
       feature_key: string
       feature_name: string
       created_by_email: string | null
       revoked_by_email: string | null
-      status: 'active' | 'expired' | 'revoked'
+      target_type: OverrideTargetType
+      status: OverrideStatus
     }
-  }
-  admin_audit_log: {
-    Row: AdditionalTables['entitlement_audit_log']['Row']
-  }
+  >
+  admin_feature_entitlements_list: ViewDef<
+    AdditionalTables['feature_entitlements']['Row'] & {
+      tier_assignments_count: number
+      active_overrides_count: number
+    }
+  >
+  admin_audit_log: ViewDef<{
+    id: string
+    actor_id: string | null
+    actor_email: string | null
+    actor_name: string | null
+    action: string
+    entity_type: string
+    entity_id: string
+    metadata: Record<string, unknown>
+    created_at: string}
+  >
+  team_seasons_view: ViewDef<{
+    team_id: string
+    season_id: string
+    org_id: string
+    name: string
+    start_date: string
+    end_date: string
+    season_is_active: boolean
+    is_active: boolean
+  }>
   // Admin feature flag views - these exist in database.types.ts but we ensure they're typed correctly
   admin_feature_flags_list: {
     Row: {
@@ -418,6 +523,16 @@ type AdditionalViews = {
       payment_rate_percent: number
     }
   }
+  admin_license_metrics: ViewDef<{
+    active_tiers: number
+    total_features: number
+    orgs_on_basic: number
+    orgs_on_power: number
+    active_overrides: number
+    tiers_missing_price_id: number
+    features_without_assignment: number
+    tiers_with_archived_features?: number
+  }>
 }
 
 // RPC response type for admin functions
@@ -617,10 +732,56 @@ type AdditionalFunctions = {
     }
     Returns: boolean
   }
+  get_user_organizations: {
+    Args: {
+      check_user_id: string
+    }
+    Returns: {
+      organization_id: string
+      org_name: string
+      roles: string[]
+    }[]
+  }
+  update_event_rsvp_config: {
+    Args: {
+      p_event_id: string
+      p_rsvp_enabled: boolean
+      p_rsvp_type: 'general' | 'athlete' | null
+      p_clear_existing: boolean
+    }
+    Returns: { success: boolean; error?: string }
+  }
+  get_event_rsvp_summary: {
+    Args: {
+      p_event_id: string
+    }
+    Returns: {
+      going_count: number
+      late_count: number
+      not_going_count: number
+      unknown_count: number
+      total_children: number
+      response_rate: number
+    }
+  }
+  set_travel_override: {
+    Args: {
+      p_event_id: string
+      p_is_travel: boolean
+      p_reason: string | null
+    }
+    Returns: void
+  }
+  clear_travel_override: {
+    Args: {
+      p_event_id: string
+    }
+    Returns: void
+  }
 }
 
 export type SupabaseExtended = Omit<Database, 'public'> & {
-  public: {
+  public: Database['public'] & {
     Tables: Database['public']['Tables'] & AdditionalTables
     Views: Database['public']['Views'] & AdditionalViews
     Functions: Database['public']['Functions'] & AdditionalFunctions

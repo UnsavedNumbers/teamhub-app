@@ -16,7 +16,6 @@ import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { useUserContext } from '../../hooks/useUserContext'
 import { createAthleteWithGuardians } from '../../data/services/familyService'
 import { GuardianList } from '../../components/admin/GuardianInput'
-import { useT } from '../../i18n/useI18n'
 import type { Gender, GuardianFormData, CreateAthleteDTO } from '../../types/family'
 import { createDefaultGuardians, validateGuardians, findDuplicateEmails } from '../../utils/guardianMatching'
 import { AlertCircle } from 'lucide-react'
@@ -24,7 +23,6 @@ import { AlertCircle } from 'lucide-react'
 export default function CreateAthlete() {
     const navigate = useNavigate()
     const { context, isReady } = useUserContext()
-    const t = useT()
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<Error | null>(null)
     const [validationErrors, setValidationErrors] = useState<string[]>([])
@@ -209,8 +207,7 @@ export default function CreateAthlete() {
                                     value={formData.medical_notes}
                                     onChange={(e) => setFormData({ ...formData, medical_notes: e.target.value })}
                                     placeholder="Any medical conditions coaches should know about"
-                                    multiline
-                                    rows={3}
+                                    multiple
                                 />
                             </div>
 
@@ -280,7 +277,7 @@ export default function CreateAthlete() {
                         <div className="mt-6 flex justify-end gap-3">
                             <Button
                                 type="button"
-                                variant="outline"
+                                variant="ghost"
                                 onClick={() => navigate('/admin/athletes')}
                                 disabled={loading}
                             >

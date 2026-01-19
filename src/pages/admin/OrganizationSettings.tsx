@@ -36,8 +36,9 @@ import {
   getOrganizationThemeSettings,
   updateOrganizationThemeSettings,
   type OrganizationThemeSettings,
-  type OrganizationSettings as OrgSettingsType
 } from '../../data/services/organizationSettingsService'
+
+import { type OrganizationSettings as OrgSettingsType } from '@/types/organizationSettings'
 
 import type { Organization } from '../../types/domain/Organization'
 
@@ -542,7 +543,7 @@ function AttendanceForm({ settings, onSave, loading }: { settings: OrgSettingsTy
         <h3 className="pa-h3 pa-mb-4">Parent Controls</h3>
          <div className="pa-mb-6">
            <Controller name="parent_visibility.can_submit_attendance" control={control} render={({field}) => (
-            <Checkbox label="Parents can set attendance status" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+            <Checkbox label="Parents can set attendance status" checked={field.value!} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
         </div>
 
@@ -640,13 +641,13 @@ function PermissionsForm({ settings, onSave, loading }: { settings: OrgSettingsT
         <h4 className="pa-h4 pa-mb-2">Parent Role</h4>
         <div className="pa-form-grid pa-form-grid-3 pa-mb-6">
            <Controller name="role_permissions.parent.can_view_roster" control={control} render={({field}) => (
-            <Checkbox label="View Team Roster" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+            <Checkbox label="View Team Roster" checked={field.value!} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
             <Controller name="role_permissions.parent.can_view_schedule" control={control} render={({field}) => (
-            <Checkbox label="View Schedule" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+            <Checkbox label="View Schedule" checked={field.value!} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
              <Controller name="role_permissions.parent.can_view_payments" control={control} render={({field}) => (
-            <Checkbox label="View Billing" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+            <Checkbox label="View Billing" checked={field.value!} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
         </div>
 
@@ -654,10 +655,10 @@ function PermissionsForm({ settings, onSave, loading }: { settings: OrgSettingsT
         <h4 className="pa-h4 pa-mb-2">Coach Role</h4>
         <div className="pa-form-grid pa-form-grid-2 pa-mb-6">
            <Controller name="role_permissions.coach.can_view_payments" control={control} render={({field}) => (
-            <Checkbox label="View Financials" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+            <Checkbox label="View Financials" checked={field.value!} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
            <Controller name="role_permissions.coach.can_edit" control={control} render={({field}) => (
-            <Checkbox label="Edit Events" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+            <Checkbox label="Edit Events" checked={field.value!} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
         </div>
 

@@ -614,7 +614,7 @@ export default function OrganizationStructureForms() {
                   setActionError(null)
                   setSuccessMessage(null)
 
-                  const result = await createSport(context, {
+                  const result = await createSport({
                     org_id: currentOrganization.id,
                     name: sportForm.name.trim(),
                     color: '#137fec',

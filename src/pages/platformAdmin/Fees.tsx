@@ -41,7 +41,7 @@ export default function Fees() {
         setTotalCount(0)
       } else {
         // Map rows to include id field
-        const mapped = (data || []).map(row => mapAdminFeeStatus(row as any))
+        const mapped = (data || []).map(row => mapAdminFeeStatus(row))
         setFees(mapped)
         setTotalCount(count || 0)
       }

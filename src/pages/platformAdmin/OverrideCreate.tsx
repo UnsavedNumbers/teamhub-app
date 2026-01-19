@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { PageHeader, Card, Button, Input, Select, Checkbox } from '../../components/platformAdmin'
 import Badge from '../../components/platformAdmin/Badge'
 import { mapFeatureEntitlement } from '../../utils/domainMappers'
@@ -25,7 +26,6 @@ export default function OverrideCreate() {
   const [expiresAt, setExpiresAt] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [dependencyError, setDependencyError] = useState<string[] | null>(null)
   const [searchResults, setSearchResults] = useState<Array<{ id: string; name: string }>>([])
 
   useEffect(() => {
@@ -41,7 +41,7 @@ export default function OverrideCreate() {
         .order('display_name', { ascending: true })
 
       if (featuresError) throw featuresError
-      setFeatures((data || []).map(row => mapFeatureEntitlement(row)))
+      setFeatures((data || []).map(row => mapFeatureEntitlement(row)) as any)
     } catch (err: any) {
       console.error('Error fetching features:', err)
     }
@@ -62,7 +62,7 @@ export default function OverrideCreate() {
           .limit(20)
 
         if (error) throw error
-        setSearchResults((data || []).map(org => ({ id: org.id, name: org.name })))
+        setSearchResults((data || []).map((org: any) => ({ id: org.id, name: org.name })))
       } else {
         const { data, error } = await supabase
           .from('users')
@@ -71,7 +71,7 @@ export default function OverrideCreate() {
           .limit(20)
 
         if (error) throw error
-        setSearchResults((data || []).map(user => ({ id: user.id, name: user.display_name || user.email || '' })))
+        setSearchResults((data || []).map((user: any) => ({ id: user.id, name: user.display_name || user.email || '' })))
       }
     } catch (err: any) {
       console.error('Error searching targets:', err)
@@ -97,7 +97,6 @@ export default function OverrideCreate() {
 
     // Validate dependencies if enabling
     if (overrideAction === 'enable') {
-      setDependencyError(null)
       const validation = await validateFeatureDependencies(
         selectedTargetId,
         targetType,
@@ -106,7 +105,6 @@ export default function OverrideCreate() {
       )
 
       if (!validation.valid && validation.missingDependencies) {
-        setDependencyError(validation.missingDependencies)
         setError(`Cannot enable feature: Missing required dependencies: ${validation.missingDependencies.join(', ')}`)
         return
       }
@@ -114,7 +112,6 @@ export default function OverrideCreate() {
 
     setSaving(true)
     setError(null)
-    setDependencyError(null)
 
     try {
       const override: CreateEntitlementOverrideRequest = {
@@ -130,9 +127,11 @@ export default function OverrideCreate() {
         expires_at: expiresAt || undefined,
       }
 
+      type OverrideInsert = Database['public']['Tables']['entitlement_overrides']['Insert']
+      const overrideData = override as OverrideInsert
       const { data: createdOverride, error: createError } = await supabase
         .from('entitlement_overrides')
-        .insert(override)
+        .insert(overrideData)
         .select()
         .single()
 
@@ -143,7 +142,7 @@ export default function OverrideCreate() {
         await logAuditEvent({
           action: 'create_entitlement_override',
           targetType: 'override',
-          targetId: createdOverride.id,
+          targetId: (createdOverride as any).id,
           afterState: createdOverride,
           reason: reason.trim(),
         })

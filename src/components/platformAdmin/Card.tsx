@@ -6,13 +6,13 @@ interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
   /** Action buttons/links for card header */
   actions?: ReactNode
   /** Card content */
-  children: ReactNode
+  children?: ReactNode
   /** Remove default padding */
   noPadding?: boolean
 }
 
 interface CardSubComponentProps extends HTMLAttributes<HTMLDivElement> {
-  children: ReactNode
+  children?: ReactNode
 }
 
 /**

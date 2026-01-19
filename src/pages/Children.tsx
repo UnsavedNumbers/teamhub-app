@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '../hooks/useAuth'
 import { useUserContext } from '../hooks/useUserContext'
 import { getChildren } from '../data/services/familyService'
 import PortalLayout from '../components/portal/PortalLayout'
@@ -70,7 +69,7 @@ export default function Children() {
     setSaving(false)
     
     // TODO: Replace with real Supabase insert when migrating
-    // const { error } = await supabase.from('children').insert({ ... })
+    // const { error } = await supabase.from('athletes').insert({ ... })
   }
 
   function calculateAge(birthdate: string | null) {

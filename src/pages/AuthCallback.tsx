@@ -8,6 +8,7 @@ import {
   cleanupStaleFlags,
 } from '../utils/setupOrganization'
 import { getLoginRedirect } from '../utils/loginRedirect'
+import { Database } from '@/lib/database.types'
 
 export default function AuthCallback() {
   const [searchParams] = useSearchParams()
@@ -70,7 +71,7 @@ export default function AuthCallback() {
 
           // Only run org setup flow on the platform host. The admin subdomain
           // is reserved for platform admins and should not auto-route into org onboarding.
-          if (appContext !== 'platform-admin' && !userError && userData?.requires_org_setup) {
+          if (appContext !== 'platform-admin' && !userError && (userData as any)?.requires_org_setup) {
             // Clear any localStorage flag (since database has it)
             clearSetupOrganizationFlag()
             navigate('/admin/onboarding', { replace: true })
@@ -92,9 +93,11 @@ export default function AuthCallback() {
           // Set the database flag for this user (for OAuth flow)
           // The trigger should have set it from metadata, but this is a backup
           try {
+            type UsersUpdate = Database['public']['Tables']['users']['Update']
+
             await supabase
               .from('users')
-              .update({ requires_org_setup: true })
+              .update({ requires_org_setup: true } satisfies UsersUpdate)
               .eq('id', userId)
 
             // Also update auth metadata for consistency
@@ -135,14 +138,18 @@ export default function AuthCallback() {
         try {
           const { data: orgData } = await supabase.rpc('get_user_organizations', {
             check_user_id: userId
-          })
+          } as any)
 
           // Map to Organization format
-          const organizations = (orgData || []).map((org: any) => ({
-            id: org.organization_id,
-            name: org.org_name,
-            roles: org.roles || [],
-          }))
+          const organizations = (orgData || []).map((org: any) => {
+            const roles = org.roles || []
+            return {
+              id: org.organization_id,
+              name: org.org_name,
+              roles,
+              get role() { return this.roles[0] ?? 'parent' }
+            }
+          })
 
           // Determine redirect based on roles
           const finalRedirect = getLoginRedirect(isPlatformAdmin, organizations)

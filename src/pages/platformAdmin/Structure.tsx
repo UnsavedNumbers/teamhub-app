@@ -45,7 +45,7 @@ export default function Structure() {
         console.error('Error fetching structure:', error)
         setStructures([])
       } else {
-        setStructures(data || [])
+        setStructures(data as AdminStructure[])
       }
     } catch (err) {
       console.error('Error:', err)

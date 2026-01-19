@@ -6,13 +6,11 @@ import { useLicense } from '../hooks/useLicense'
 import { LicenseWarningBanner } from '../components/admin/LicenseWarningBanner'
 import AdminLoadingSpinner from '../components/admin/AdminLoadingSpinner'
 import { usePlatformAdminTheme } from '../hooks/usePlatformAdminTheme'
-import { useOrganizationTheme } from '../hooks/useOrganizationTheme'
 import { useT } from '../i18n/useI18n'
 import { useSidebar } from '../contexts/SidebarContext'
 
 export default function AdminLayout() {
   const { loaded: themeLoaded } = usePlatformAdminTheme()
-  const { ready: themeReady } = useOrganizationTheme()
   const t = useT()
   const location = useLocation()
   const navigate = useNavigate()

@@ -15,7 +15,7 @@ type FeeAssignmentRow = SupabaseExtended['public']['Tables']['fee_assignments'][
 type FeeRow = SupabaseExtended['public']['Tables']['fees']['Row']
 type PaymentRow = SupabaseExtended['public']['Tables']['payments']['Row']
 type TeamRow = SupabaseExtended['public']['Tables']['teams']['Row']
-type ChildRow = SupabaseExtended['public']['Tables']['children']['Row']
+type ChildRow = SupabaseExtended['public']['Tables']['athletes']['Row']
 type UserRow = SupabaseExtended['public']['Tables']['users']['Row']
 
 // Fee Assignment Adapter

@@ -46,7 +46,6 @@ export interface FamilyMember {
 // For UI display, often joined with other tables
 export interface FamilyWithDetails extends Family {
     children: Child[]
-    athletes: Athlete[]  // Preferred name going forward
     members: FamilyMember[]
     guardians?: Guardian[]  // Guardians derived from athlete_guardians
     is_derived?: boolean  // True if family is computed from guardian relationships
@@ -157,22 +156,6 @@ export interface GuardianMatch {
         birthdate: string
     }>
     suggestion: 'link' | 'create_invite' | 'already_linked'
-}
-
-export interface ParentInvite {
-    id: string
-    organization_id: string
-    athlete_id: string | null
-    team_id: string | null
-    email: string
-    status: 'pending' | 'accepted' | 'cancelled' | 'expired'
-    token: string
-    expires_at: string
-    created_by_user_id: string | null
-    accepted_by_user_id: string | null
-    accepted_at: string | null
-    created_at: string
-    updated_at: string
 }
 
 // ============================================================================

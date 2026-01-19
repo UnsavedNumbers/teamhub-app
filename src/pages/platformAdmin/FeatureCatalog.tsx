@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { PageHeader, PlatformDataTable, FilterBar, Button, Badge, Select, type ColumnConfig } from '../../components/platformAdmin'
 import type { FeatureEntitlementWithCounts } from '../../types/licenseTiers.types'
 import { FEATURE_CATEGORIES, FEATURE_TYPES } from '../../utils/licenseTierConstants'
+import { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 
 const CATEGORY_OPTIONS = [
   { value: '', label: 'All Categories' },
@@ -44,7 +45,7 @@ export default function FeatureCatalog() {
       }
 
       if (typeFilter) {
-        query = query.eq('feature_type', typeFilter)
+        query = query.eq('feature_type', typeFilter as Database["public"]["Tables"]["feature_entitlements"]["Row"]["feature_type"])
       }
 
       query = query.order('category', { ascending: true }).order('display_name', { ascending: true })
@@ -60,7 +61,7 @@ export default function FeatureCatalog() {
         setFeatures([])
         setTotalCount(0)
       } else {
-        setFeatures(data || [])
+        setFeatures(data as FeatureEntitlementWithCounts[])
         setTotalCount(count || 0)
       }
     } catch (err) {

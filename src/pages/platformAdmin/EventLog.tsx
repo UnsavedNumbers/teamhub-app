@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, Badge, FilterBar, PlatformDataTable, JsonViewer, type ColumnConfig } from '../../components/platformAdmin'
+import { PageHeader, Badge, FilterBar, PlatformDataTable, type ColumnConfig } from '../../components/platformAdmin'
 import { EventLogDetailModal } from '../../components/platformAdmin/EventLogDetailModal'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { AdminEventLog, EventCategory } from '../../types/eventLog.types'
 
 // Category options for filtering
@@ -30,7 +31,7 @@ export default function EventLog() {
   const [rowsPerPage, setRowsPerPage] = useState(50)
   const [totalCount, setTotalCount] = useState(0)
   const [search, setSearch] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState<Database["public"]["Enums"]["event_category"] | null>(null)
   const [eventTypeFilter, setEventTypeFilter] = useState('')
   const [orgFilter, setOrgFilter] = useState('')
   const [dateFrom, setDateFrom] = useState(() => {
@@ -87,7 +88,7 @@ export default function EventLog() {
         setLogs([])
         setTotalCount(0)
       } else {
-        setLogs(data || [])
+        setLogs(data as AdminEventLog[])
         setTotalCount(count || 0)
       }
     } catch (err) {
@@ -259,8 +260,8 @@ export default function EventLog() {
           onSearchChange={(value) => { setSearch(value); setPage(0) }}
           searchPlaceholder="Search by actor email or name..."
           statusOptions={categoryOptions}
-          statusValue={categoryFilter}
-          onStatusChange={(value) => { setCategoryFilter(value); setPage(0) }}
+          statusValue={categoryFilter as string}
+          onStatusChange={(value) => { setCategoryFilter(value as EventCategory); setPage(0) }}
           statusLabel="Category"
           showDateRange
           dateFrom={dateFrom}
@@ -269,7 +270,7 @@ export default function EventLog() {
           onDateToChange={(value) => { setDateTo(value); setPage(0) }}
           onClearAll={() => {
             setSearch('')
-            setCategoryFilter('')
+            setCategoryFilter(null)
             setEventTypeFilter('')
             setOrgFilter('')
             const date = new Date()

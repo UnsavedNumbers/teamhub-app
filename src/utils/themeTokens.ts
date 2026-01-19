@@ -163,7 +163,6 @@ export function generateTokens(theme: Theme, isDark: boolean): ThemeTokens {
   const defaultTheme = getDefaultTheme()
   const fallbackPrimary = defaultTheme.colors.primary
   const fallbackSecondary = defaultTheme.colors.secondary
-  const fallbackAccent = defaultTheme.colors.accent
 
   try {
     // Get theme colors, applying dark mode overrides if available
@@ -180,7 +179,6 @@ export function generateTokens(theme: Theme, isDark: boolean): ThemeTokens {
     // Safely parse colors with fallbacks
     const primary = safeParseColor(primaryColor, fallbackPrimary)
     const secondary = safeParseColor(secondaryColor, fallbackSecondary)
-    const accent = safeParseColor(accentColor, fallbackAccent)
 
     // Adjust colors for dark mode if needed
     const adjustedPrimary = isDark ? adjustForDarkMode(primary) : primary
@@ -189,7 +187,6 @@ export function generateTokens(theme: Theme, isDark: boolean): ThemeTokens {
     // Define base colors for contrast calculations
     // For light mode: use white background, for dark mode: use dark background
     const backgroundBase = isDark ? colord('#0B0F14') : colord('#FFFFFF')
-    const surfaceBase = isDark ? colord('#1A202C') : colord('#F5F6F7')
     const textBase = isDark ? colord('#F8FAFC') : colord('#2B343D')
 
     // Generate action colors

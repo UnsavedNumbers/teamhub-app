@@ -18,6 +18,7 @@
     "@supabase/supabase-js": "^2.49.0",
     "@types/papaparse": "^5.5.2",
     "colord": "^2.9.3",
+    "lucide-react": "^0.562.0",
     "papaparse": "^5.5.3",
     "pg": "^8.17.1",
     "react": "^19.0.0",

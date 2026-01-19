@@ -52,16 +52,16 @@ function normalizeSportName(sportName: string | null | undefined): string | null
  * Convert sport name to folder-safe name
  * "Track & Field" → "track-and-field"
  */
-function sportNameToFolderName(sportName: string): string {
-    return sportName
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, '-')
-        .replace(/&/g, 'and')
-        .replace(/[^a-z0-9-]/g, '')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '')
-}
+// function sportNameToFolderName(sportName: string): string {
+//     return sportName
+//         .trim()
+//         .toLowerCase()
+//         .replace(/\s+/g, '-')
+//         .replace(/&/g, 'and')
+//         .replace(/[^a-z0-9-]/g, '')
+//         .replace(/-+/g, '-')
+//         .replace(/^-|-$/g, '')
+// }
 
 /**
  * Sport name aliases for common variations

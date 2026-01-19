@@ -9,7 +9,7 @@
  * - Remove button
  */
 
-import React, { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { X, User } from 'lucide-react'
 import type { GuardianFormData, GuardianMatch } from '../../types/family'
 import { GuardianMatchIndicator } from './GuardianMatchIndicator'

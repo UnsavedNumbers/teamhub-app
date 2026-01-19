@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { useUserContext } from '../../hooks/useUserContext'
-import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { supabase } from '../../lib/supabase'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { 
   AdminPageHeader, 
   Card, 
@@ -82,7 +82,6 @@ export default function EditEvent() {
 
   const watchTeamId = watch('team_id')
   const watchRSVPEnabled = watch('rsvp_enabled')
-  const watchRecurringEnabled = watch('recurring.enabled')
 
 
   const fetchEvent = useCallback(async () => {
@@ -161,7 +160,7 @@ export default function EditEvent() {
       const endDate = event.end_time ? new Date(event.end_time) : new Date()
       
       setValue('title', event.title || '')
-      setValue('type', event.type || 'practice')
+      setValue('type', (event.type as any) || 'practice')
       setValue('team_id', event.team_id || '')
       setValue('season_id', event.season_id || '')
       setValue('start_time', new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000).toISOString().slice(0, 16))
@@ -174,7 +173,7 @@ export default function EditEvent() {
       setValue('weather_dependent', event.weather_dependent ?? false)
       setValue('external_link', event.external_link || '')
       setValue('rsvp_enabled', event.rsvp_enabled ?? false)
-      setValue('rsvp_type', (event.rsvp_enabled && event.rsvp_type) ? event.rsvp_type : null)
+      setValue('rsvp_type', (event.rsvp_enabled && event.rsvp_type) ? (event.rsvp_type as any) : null)
 
       if (event.event_location) {
         setValue('location.venue_name', event.event_location.venue_name || '')
@@ -228,7 +227,8 @@ export default function EditEvent() {
     
     if (!error && data) {
        // Map season_id to id
-       const mappedSeasons = data.map(s => ({
+       const dataAny = data as any[]
+       const mappedSeasons = dataAny.map((s: any) => ({
           id: s.season_id,
           name: s.name,
           team_id: teamId
@@ -279,7 +279,7 @@ export default function EditEvent() {
             p_rsvp_enabled: data.rsvp_enabled ?? false,
             p_rsvp_type: data.rsvp_type || null,
             p_clear_existing: true // User confirmed if needed
-          })
+          } as any)
 
         if (configError) {
           const configData = (configResult as unknown as { error?: string; has_data?: boolean }) || {}
@@ -293,23 +293,25 @@ export default function EditEvent() {
       }
 
       // Update event
+      type EventUpdate = Database['public']['Tables']['events']['Update']
+      const eventUpdateData = {
+        title: data.title,
+        type: data.type,
+        team_id: data.team_id,
+        season_id: data.season_id,
+        start_time: new Date(data.start_time).toISOString(),
+        end_time: data.end_time ? new Date(data.end_time).toISOString() : undefined,
+        arrival_time: data.arrival_time ? new Date(data.arrival_time).toISOString() : null,
+        timezone: data.timezone,
+        notes: data.notes || null,
+        uniform_notes: data.uniform_notes || null,
+        equipment_notes: data.equipment_notes || null,
+        weather_dependent: data.weather_dependent,
+        external_link: data.external_link || null,
+      } satisfies EventUpdate
       const { error: updateError } = await supabase
         .from('events')
-        .update({
-          title: data.title,
-          type: data.type,
-          team_id: data.team_id,
-          season_id: data.season_id,
-          start_time: new Date(data.start_time).toISOString(),
-          end_time: data.end_time ? new Date(data.end_time).toISOString() : null,
-          arrival_time: data.arrival_time ? new Date(data.arrival_time).toISOString() : null,
-          timezone: data.timezone,
-          notes: data.notes || null,
-          uniform_notes: data.uniform_notes || null,
-          equipment_notes: data.equipment_notes || null,
-          weather_dependent: data.weather_dependent,
-          external_link: data.external_link || null,
-        } as Database['public']['Tables']['events']['Update'])
+        .update(eventUpdateData)
         .eq('id', eventId)
 
       if (updateError) throw updateError
@@ -322,21 +324,24 @@ export default function EditEvent() {
         .single()
 
       if (locationData) {
+        type LocationUpdate = Database['public']['Tables']['event_locations']['Update']
+        const locUpdateData = {
+          venue_name: data.location.venue_name || null,
+          address_line1: data.location.address_line1 || null,
+          city: data.location.city || null,
+          state: data.location.state || null,
+          postal_code: data.location.postal_code || null,
+          is_tbd: data.location.is_tbd,
+          is_virtual: data.location.is_virtual,
+          virtual_link: data.location.virtual_link || null
+        } satisfies LocationUpdate
         await supabase
           .from('event_locations')
-          .update({
-            venue_name: data.location.venue_name || null,
-            address_line1: data.location.address_line1 || null,
-            city: data.location.city || null,
-            state: data.location.state || null,
-            postal_code: data.location.postal_code || null,
-            is_tbd: data.location.is_tbd,
-            is_virtual: data.location.is_virtual,
-            virtual_link: data.location.virtual_link || null
-          })
-          .eq('id', locationData.id)
+          .update(locUpdateData)
+          .eq('id', (locationData as any).id)
       } else {
-        await supabase.from('event_locations').insert({
+        type LocationInsert = Database['public']['Tables']['event_locations']['Insert']
+        const locInsertData = {
           event_id: eventId,
           venue_name: data.location.venue_name || null,
           address_line1: data.location.address_line1 || null,
@@ -346,7 +351,8 @@ export default function EditEvent() {
           is_tbd: data.location.is_tbd,
           is_virtual: data.location.is_virtual,
           virtual_link: data.location.virtual_link || null
-        } as Database['public']['Tables']['event_locations']['Insert'])
+        } satisfies LocationInsert
+        await supabase.from('event_locations').insert(locInsertData)
       }
 
       navigate('/admin/events')

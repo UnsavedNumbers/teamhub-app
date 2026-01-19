@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useAuth } from '../hooks/useAuth'
 import { useUserContext } from '../hooks/useUserContext'
 import { getTeamDetails } from '../data/services/teamsService'
 import { getChildren } from '../data/services/familyService'

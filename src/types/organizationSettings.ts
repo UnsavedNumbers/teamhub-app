@@ -177,7 +177,7 @@ export const DEFAULT_VISIBILITY_SETTINGS: Omit<VisibilitySettings, 'org_id' | 'u
 
 export const notificationSettingsSchema = z.object({
   org_id: z.string().uuid(),
-  default_channels: z.array(z.enum(['email', 'sms', 'push', 'in_app'])).optional(),
+  default_channels: z.array(z.string()).nullable().optional(),
   attendance_reminders_enabled: z.boolean(),
   schedule_change_alerts_enabled: z.boolean(),
   payment_reminder_behavior: z.enum(['immediate', 'daily_digest']),
@@ -238,7 +238,7 @@ export interface OrganizationSettings {
  */
 export function getDefaultSettings(orgId: string, organizationName: string): OrganizationSettings {
   const now = new Date().toISOString()
-  
+
   return {
     general: {
       org_id: orgId,

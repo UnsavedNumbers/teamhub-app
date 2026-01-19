@@ -8,12 +8,9 @@
  * - Red: Error or invalid
  */
 
-import React from 'react'
 import { CheckCircle, Mail, AlertCircle, Loader2 } from 'lucide-react'
 import type { GuardianMatch } from '../../types/family'
 import {
-    getMatchIndicatorColor,
-    getMatchIndicatorText,
     formatLinkedAthletes
 } from '../../utils/guardianMatching'
 

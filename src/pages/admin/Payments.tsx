@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { useUserContext } from '../../hooks/useUserContext'
-import { useOrganization } from '../../contexts/OrganizationContext'
 import { getFeeAssignmentsForUser, getOrgPaymentSummary, formatCurrency } from '../../data/services/paymentsService'
 import { 
   AdminPageHeader, 
