@@ -39,7 +39,7 @@ export function useOrganizationTheme(): { ready: boolean } {
   const { context } = useUserContext()
   const { resolvedTheme } = useTheme()
   const [themeId, setThemeId] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false) // Start as false - theme is ready by default
 
   // Memoize token generation - only recalculate when theme ID or mode changes
   const tokens = useMemo(() => {
@@ -65,11 +65,12 @@ export function useOrganizationTheme(): { ready: boolean } {
 
     const loadAndApplyTheme = async () => {
       if (!context || !currentOrganization) {
-        // No organization - use default theme
-        setIsLoading(false)
+        // No organization - use default theme (already applied)
+        // Theme is ready immediately
         return
       }
 
+      // Only set loading if we're actually going to fetch
       setIsLoading(true)
 
       try {
@@ -105,11 +106,13 @@ export function useOrganizationTheme(): { ready: boolean } {
     }
   }, [context, currentOrganization?.id])
 
-  // Return ready state - theme is ready when loading is complete
+  // Return ready state - theme is always ready (default theme is applied immediately)
+  // Loading state is only for background updates, doesn't block rendering
   const ready = useMemo(() => {
-    // Theme is ready if we have no org (default theme) or if loading is complete
-    return !currentOrganization || !isLoading
-  }, [currentOrganization, isLoading])
+    // Theme is always ready - default theme is applied immediately
+    // Loading only affects background theme updates
+    return true
+  }, [])
 
   return { ready }
 }

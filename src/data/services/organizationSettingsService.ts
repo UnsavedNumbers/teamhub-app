@@ -166,13 +166,19 @@ export async function updateOrganizationThemeSettings(
   themeId: string | null,
   currentUpdatedAt?: string | null
 ): Promise<{ error: Error | null }> {
+  // In fake data mode, just return success (theme is applied via CSS variables in memory)
+  if (USE_FAKE_DATA) {
+    console.log('[organizationSettingsService] Fake data mode - theme update simulated:', themeId)
+    return { error: null }
+  }
+
   try {
     const validated = generalSettingsSchema
       .pick({ theme_id: true })
       .partial()
       .parse({ theme_id: themeId })
 
-    // First, check if row exists to provide better error messages
+    // First, check if row exists
     const { data: existing, error: checkError } = await fromTable('organization_settings')
       .select('org_id, updated_at')
       .eq('org_id', context.orgId)
@@ -182,13 +188,30 @@ export async function updateOrganizationThemeSettings(
       throw checkError
     }
 
-    // If row doesn't exist, return helpful error
+    // If row doesn't exist, create it with the theme_id
     if (!existing) {
-      return {
-        error: new Error(
-          'Organization settings not found. Please save general settings first, then update the theme.'
-        ),
+      // Get organization name for the required field
+      const { data: orgData } = await supabase
+        .from('organizations')
+        .select('name')
+        .eq('id', context.orgId)
+        .single()
+
+      const { error: insertError } = await fromTable('organization_settings')
+        .insert({
+          org_id: context.orgId,
+          organization_name: orgData?.name || 'Organization',
+          timezone: 'America/New_York',
+          status: 'active',
+          theme_id: validated.theme_id ?? null,
+          updated_at: new Date().toISOString(),
+        })
+
+      if (insertError) {
+        throw insertError
       }
+
+      return { error: null }
     }
 
     // Check optimistic locking if currentUpdatedAt is provided
@@ -244,19 +267,17 @@ export async function updateOrganizationThemeSettings(
     // Handle specific error cases
     if (err instanceof Error) {
       // If it's already our custom error, return it
-      if (err.message.includes('Organization settings not found') || 
-          err.message.includes('Settings were modified') ||
+      if (err.message.includes('Settings were modified') ||
           err.message.includes('Permission denied')) {
         return { error: err }
       }
 
-      // Check for RLS or not found errors
+      // Check for RLS errors
       if (err.message.includes('row-level security') || 
-          err.message.includes('no rows') ||
-          (err as any).code === 'PGRST116') {
+          (err as any).code === '42501') {
         return {
           error: new Error(
-            'Organization settings not found. Please save general settings first, then update the theme.'
+            'Permission denied. Please ensure you have permission to update organization settings.'
           ),
         }
       }
