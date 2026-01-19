@@ -4,12 +4,14 @@
  * Master-detail view for sports and programs with contextual actions.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getSports, getPrograms } from '../../data/services/sportsService'
-import type { Sport, Program } from '../../data/types/organization'
+import { getLevels } from '../../data/services/levelsService'
+import { getTeams } from '../../data/services/teamsService'
+import type { Sport, Program, Level, Team } from '../../data/types/organization'
 import { AdminPageHeader } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 
@@ -21,6 +23,8 @@ export default function SportsAndPrograms() {
 
   const [sports, setSports] = useState<Sport[]>([])
   const [programs, setPrograms] = useState<Program[]>([])
+  const [levels, setLevels] = useState<Level[]>([])
+  const [teams, setTeams] = useState<Team[]>([])
   const [expandedSportId, setExpandedSportId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -31,13 +35,17 @@ export default function SportsAndPrograms() {
       setError(null)
 
       try {
-        const [sportsResult, programsResult] = await Promise.all([
+        const [sportsResult, programsResult, levelsResult, teamsResult] = await Promise.all([
           getSports(context), 
-          getPrograms(context)
+          getPrograms(context),
+          getLevels(context),
+          getTeams(context)
         ])
 
         setSports(sportsResult.data as Sport[])
         setPrograms(programsResult.data as Program[])
+        setLevels(levelsResult.data as Level[])
+        setTeams(teamsResult.data as Team[])
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data')
       } finally {
@@ -47,6 +55,32 @@ export default function SportsAndPrograms() {
 
     load()
   }, [context, isReady])
+
+  // Filter out sports that have no teams in their hierarchy
+  // A sport is considered "empty" if it has no programs, or all programs have no levels, or all levels have no teams
+  const sportsWithTeams = useMemo(() => {
+    return sports.filter((sport) => {
+      // Get all programs for this sport
+      const sportPrograms = programs.filter((p) => p.sport_id === sport.id)
+      if (sportPrograms.length === 0) return false
+
+      // Check if any program has levels with teams
+      for (const program of sportPrograms) {
+        const programLevels = levels.filter((l) => l.program_id === program.id)
+        if (programLevels.length === 0) continue
+
+        // Check if any level has teams
+        for (const level of programLevels) {
+          const levelTeams = teams.filter((t) => t.level_id === level.id)
+          if (levelTeams.length > 0) {
+            return true // This sport has at least one team
+          }
+        }
+      }
+
+      return false // No teams found in this sport's hierarchy
+    })
+  }, [sports, programs, levels, teams])
 
   const programsBySport = (sportId: string) => programs.filter((p) => p.sport_id === sportId)
 
@@ -103,10 +137,13 @@ export default function SportsAndPrograms() {
   return (
     <div className="max-w-5xl mx-auto p-8">
       <OfflineBanner />
-      <OrganizationStructurePageHeader
+      <AdminPageHeader
         title="Sports & Programs"
         subtitle="Define the sports your organization offers and the specific programs within them."
-        pageName="Sports & Programs"
+        breadcrumbs={[
+          { label: 'Organizations', path: '/admin/organization/structure' },
+          { label: 'Sports & Programs' },
+        ]}
         actions={
           <Link to="/admin/organization/structure/forms?type=sport">
             <PrimaryButton>Add Sport</PrimaryButton>
@@ -115,17 +152,17 @@ export default function SportsAndPrograms() {
       />
 
       <div className="flex flex-col gap-4">
-        {sports.length === 0 ? (
+        {sportsWithTeams.length === 0 ? (
           <div className="p-12 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50">
             <span className="material-symbols-outlined text-5xl text-slate-300 mb-4">sports</span>
-            <h3 className="text-lg font-semibold text-slate-900 mb-1">No sports yet</h3>
-            <p className="text-slate-500 mb-6">Start by adding your first sport to the platform.</p>
+            <h3 className="text-lg font-semibold text-slate-900 mb-1">No active sports</h3>
+            <p className="text-slate-500 mb-6">Sports with teams will appear here. Start by adding a sport, program, level, and team.</p>
             <Link to="/admin/organization/structure/forms?type=sport">
               <PrimaryButton>Add Sport</PrimaryButton>
             </Link>
           </div>
         ) : (
-          sports.map((sport) => {
+          sportsWithTeams.map((sport) => {
             const sportPrograms = programsBySport(sport.id)
             const isExpanded = expandedSportId === sport.id
 
@@ -156,10 +193,7 @@ export default function SportsAndPrograms() {
                   </div>
                   
                   <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
-                    <Link to={`/admin/organization/structure/forms?edit=sport&id=${sport.id}`}>
-                      <SecondaryButton>Edit</SecondaryButton>
-                    </Link>
-                    <Link to={`/admin/organization/structure/forms?type=program`}>
+                    <Link to={`/admin/organization/structure/forms?type=program&sport_id=${sport.id}`}>
                       <SecondaryButton>Add Program</SecondaryButton>
                     </Link>
                   </div>
@@ -185,7 +219,7 @@ export default function SportsAndPrograms() {
                             <Link to={`/admin/organization/structure/forms?edit=program&id=${program.id}`}>
                               <SecondaryButton>Edit</SecondaryButton>
                             </Link>
-                            <Link to={`/admin/organization/structure/forms?type=level`}>
+                            <Link to={`/admin/organization/structure/forms?type=level&program_id=${program.id}&sport_id=${program.sport_id}`}>
                               <SecondaryButton>Add Level</SecondaryButton>
                             </Link>
                           </div>
@@ -194,7 +228,7 @@ export default function SportsAndPrograms() {
                     ) : (
                       <div className="p-6 text-center border border-dashed border-slate-200 rounded-lg bg-white/50">
                         <p className="text-sm text-slate-500 mb-3">No programs found for {sport.name}.</p>
-                        <Link to={`/admin/organization/structure/forms?type=program`}>
+                        <Link to={`/admin/organization/structure/forms?type=program&sport_id=${sport.id}`}>
                           <button className="text-sm font-semibold text-slate-900 hover:underline">
                             Create a Program
                           </button>

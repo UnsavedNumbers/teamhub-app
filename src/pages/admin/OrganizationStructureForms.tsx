@@ -145,6 +145,11 @@ export default function OrganizationStructureForms() {
   const requestedFormType = isFormType(typeParam) ? typeParam : null
   const activeFormType = editType ?? requestedFormType
   const [editInitialized, setEditInitialized] = useState(false)
+  
+  // Context from query params for pre-populating forms
+  const contextSportId = searchParams.get('sport_id')?.trim() || null
+  const contextProgramId = searchParams.get('program_id')?.trim() || null
+  const contextLevelId = searchParams.get('level_id')?.trim() || null
 
   useEffect(() => {
     if (!isReady) return
@@ -355,6 +360,39 @@ export default function OrganizationStructureForms() {
 
     setEditInitialized(true)
   }, [editType, editId, loading, editInitialized, sports, programs, levels, teams, seasons, t])
+
+  // Pre-populate forms from context query params when creating (not editing)
+  useEffect(() => {
+    // Only pre-populate when creating, not editing, and after data is loaded
+    if (editType || loading || !activeFormType) return
+
+    // Pre-populate program form with sport_id
+    if (activeFormType === 'program' && contextSportId && !programForm.sportId) {
+      // Verify sport exists
+      const sportExists = sports.some(s => s.id === contextSportId)
+      if (sportExists) {
+        setProgramForm((prev) => ({ ...prev, sportId: contextSportId }))
+      }
+    }
+
+    // Pre-populate level form with program_id
+    if (activeFormType === 'level' && contextProgramId && !levelForm.programId) {
+      // Verify program exists
+      const programExists = programs.some(p => p.id === contextProgramId)
+      if (programExists) {
+        setLevelForm((prev) => ({ ...prev, programId: contextProgramId }))
+      }
+    }
+
+    // Pre-populate team form with level_id
+    if (activeFormType === 'team' && contextLevelId && !teamForm.levelId) {
+      // Verify level exists
+      const levelExists = levels.some(l => l.id === contextLevelId)
+      if (levelExists) {
+        setTeamForm((prev) => ({ ...prev, levelId: contextLevelId }))
+      }
+    }
+  }, [activeFormType, editType, loading, contextSportId, contextProgramId, contextLevelId, sports, programs, levels, programForm.sportId, levelForm.programId, teamForm.levelId])
 
   // Get available system sports (exclude ones already linked to this org)
   const availableSystemSports = useMemo(() => {
