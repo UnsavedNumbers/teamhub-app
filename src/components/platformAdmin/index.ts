@@ -6,6 +6,7 @@
 
 // Layout
 export { default as PageHeader } from './PageHeader'
+export { OrganizationStructurePageHeader } from '../admin/OrganizationStructurePageHeader'
 export { default as Card, CardHeader, CardTitle, CardContent } from './Card'
 export { default as EmptyState } from './EmptyState'
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './Tabs'

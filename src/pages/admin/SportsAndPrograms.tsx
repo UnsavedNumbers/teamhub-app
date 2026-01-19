@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getSports, getPrograms } from '../../data/services/sportsService'
 import type { Sport, Program } from '../../data/types/organization'
+import { OrganizationStructurePageHeader } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 
 export default function SportsAndPrograms() {
@@ -55,24 +56,6 @@ export default function SportsAndPrograms() {
 
   // --- Components ---
 
-  const Header = () => (
-    <div className="mb-10">
-      <nav className="flex items-center gap-2 text-xs font-medium text-slate-400 mb-3">
-        <Link to="/admin" className="hover:text-slate-600 transition-colors">Admin</Link>
-        <span>/</span>
-        <Link to="/admin/organization/structure" className="hover:text-slate-600 transition-colors">Structure</Link>
-        <span>/</span>
-        <span className="text-slate-600">Sports & Programs</span>
-      </nav>
-      <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 mb-2">
-        Sports & Programs
-      </h1>
-      <p className="text-lg text-slate-500 max-w-2xl font-light">
-        Define the sports your organization offers and the specific programs within them.
-      </p>
-    </div>
-  )
-
   const PrimaryButton = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
     <button className={`inline-flex items-center justify-center h-10 px-6 font-medium text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 ${className}`}>
       {children}
@@ -102,7 +85,11 @@ export default function SportsAndPrograms() {
   if (error) {
     return (
       <div className="max-w-5xl mx-auto p-8">
-        <Header />
+        <OrganizationStructurePageHeader
+          title="Sports & Programs"
+          subtitle="Define the sports your organization offers and the specific programs within them."
+          pageName="Sports & Programs"
+        />
         <div className="p-6 bg-red-50 text-red-700 rounded-xl border border-red-100">
           {error}
         </div>
@@ -113,12 +100,16 @@ export default function SportsAndPrograms() {
   return (
     <div className="max-w-5xl mx-auto p-8">
       <OfflineBanner />
-      <div className="flex justify-between items-start">
-        <Header />
-        <Link to="/admin/organization/structure/forms?type=sport">
-          <PrimaryButton>Add Sport</PrimaryButton>
-        </Link>
-      </div>
+      <OrganizationStructurePageHeader
+        title="Sports & Programs"
+        subtitle="Define the sports your organization offers and the specific programs within them."
+        pageName="Sports & Programs"
+        actions={
+          <Link to="/admin/organization/structure/forms?type=sport">
+            <PrimaryButton>Add Sport</PrimaryButton>
+          </Link>
+        }
+      />
 
       <div className="flex flex-col gap-4">
         {sports.length === 0 ? (

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useUserContext } from '../../hooks/useUserContext'
-import { PageHeader } from '../../components/platformAdmin'
+import { OrganizationStructurePageHeader } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getSports, getPrograms } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
@@ -121,17 +121,14 @@ export default function OrganizationStructureNew() {
   return (
     <div className="org-structure-page">
       <OfflineBanner />
-      <PageHeader
+      <OrganizationStructurePageHeader
         title={
           <>
             Organization <span className="pa-title-accent">Overview</span>
           </>
         }
         subtitle={`${currentOrganization?.name || 'Organization'} — Structural setup and team management`}
-        breadcrumbs={[
-          { label: 'Organizations', path: '/admin/organization' },
-          { label: currentOrganization?.name || 'Organization' },
-        ]}
+        pageName={currentOrganization?.name || 'Organization'}
       />
 
       <section className="org-stats-section">

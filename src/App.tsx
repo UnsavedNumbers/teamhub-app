@@ -103,6 +103,7 @@ const CreateFamily = lazy(() => import('./pages/admin/CreateFamily'))
 const FamilyDetail = lazy(() => import('./pages/admin/FamilyDetail'))
 const CreateChild = lazy(() => import('./pages/admin/CreateChild'))
 const AdminChildren = lazy(() => import('./pages/admin/AdminChildren'))
+const ImportAthletes = lazy(() => import('./pages/admin/ImportAthletes'))
 
 function HostHomeRoute() {
   const appContext = getHostAppContext()
@@ -257,6 +258,7 @@ function App() {
               <Route path="families/:id" element={<FamilyDetail />} />
               <Route path="families/:familyId/children/new" element={<CreateChild />} />
               <Route path="children" element={<AdminChildren />} />
+              <Route path="children/import" element={<ImportAthletes />} />
             
               {/* Events */}
             

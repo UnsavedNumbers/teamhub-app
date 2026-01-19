@@ -13,6 +13,7 @@ import { getSports, getPrograms } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
 import { getSeasons } from '../../data/services/seasonsService'
 import type { Team, Sport, Program, Level, Season } from '../../data/types/organization'
+import { OrganizationStructurePageHeader } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 
 export default function TeamsManagement() {
@@ -85,24 +86,6 @@ export default function TeamsManagement() {
 
   // --- UI Components ---
 
-  const Header = () => (
-    <div className="mb-10">
-      <nav className="flex items-center gap-2 text-xs font-medium text-slate-400 mb-3">
-        <Link to="/admin" className="hover:text-slate-600 transition-colors">Admin</Link>
-        <span>/</span>
-        <Link to="/admin/organization/structure" className="hover:text-slate-600 transition-colors">Structure</Link>
-        <span>/</span>
-        <span className="text-slate-600">Teams</span>
-      </nav>
-      <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 mb-2">
-        Teams
-      </h1>
-      <p className="text-lg text-slate-500 max-w-2xl font-light">
-        Manage your rostered competition units and their assignments.
-      </p>
-    </div>
-  )
-
   const FilterLabel = ({ children }: { children: ReactNode }) => (
     <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
       {children}
@@ -155,7 +138,11 @@ export default function TeamsManagement() {
   return (
     <div className="max-w-7xl mx-auto p-8">
       <OfflineBanner />
-      <Header />
+      <OrganizationStructurePageHeader
+        title="Teams"
+        subtitle="Manage your rostered competition units and their assignments."
+        pageName="Teams"
+      />
 
       {error && (
         <div className="p-4 mb-6 bg-red-50 text-red-700 rounded-xl border border-red-100">

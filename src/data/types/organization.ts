@@ -5,13 +5,14 @@ export type TeamSkillLevel = 'recreational' | 'competitive' | 'elite' // Depreca
 
 export interface Sport {
     id: string
-    org_id: string
+    org_id: string | null // NULL for system sports, set for organization-specific sports (legacy)
     name: string
     icon: string | null
     color: string
     created_at: string
     updated_at: string
     deleted_at: string | null
+    is_system?: boolean // True for system-wide predefined sports
 }
 
 export interface Program {

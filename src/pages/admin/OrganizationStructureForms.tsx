@@ -3,13 +3,13 @@ import { Link, useLocation } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
-import { getSports, getPrograms, createSport, createProgram, updateSport, updateProgram } from '../../data/services/sportsService'
+import { getSports, getSystemSports, getPrograms, createSport, createProgram, updateProgram } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
 import { createLevel, updateLevel } from '../../data/services/levelsService'
 import { getTeams, createTeam, updateTeam } from '../../data/services/teamsService'
 import { getSeasons, createSeason, updateSeason } from '../../data/services/seasonsService'
 import type { Sport, Program, Level, Team, Season, GenderCategory, LevelType } from '../../data/types/organization'
-import { PageHeader, Card, Button, Input, Select, Checkbox } from '../../components/platformAdmin'
+import { OrganizationStructurePageHeader, Card, Button, Input, Select, Checkbox } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 
 interface RadioOption {
@@ -92,6 +92,7 @@ export default function OrganizationStructureForms() {
   })
 
   const [sports, setSports] = useState<Sport[]>([])
+  const [systemSports, setSystemSports] = useState<Sport[]>([])
   const [programs, setPrograms] = useState<Program[]>([])
   const [levels, setLevels] = useState<Level[]>([])
   const [teams, setTeams] = useState<Team[]>([])
@@ -155,8 +156,9 @@ export default function OrganizationStructureForms() {
       setLoadError(null)
 
       try {
-        const [sportsResult, programsResult, levelsResult, teamsResult, seasonsResult] = await Promise.all([
+        const [sportsResult, systemSportsResult, programsResult, levelsResult, teamsResult, seasonsResult] = await Promise.all([
           getSports(context),
+          getSystemSports(),
           getPrograms(context),
           getLevels(context),
           getTeams(context),
@@ -165,7 +167,15 @@ export default function OrganizationStructureForms() {
 
         if (!isActive) return
 
+        if (sportsResult.error) throw sportsResult.error
+        if (systemSportsResult.error) throw systemSportsResult.error
+        if (programsResult.error) throw programsResult.error
+        if (levelsResult.error) throw levelsResult.error
+        if (teamsResult.error) throw teamsResult.error
+        if (seasonsResult.error) throw seasonsResult.error
+
         setSports(sportsResult.data as Sport[])
+        setSystemSports(systemSportsResult.data as Sport[])
         setPrograms(programsResult.data as Program[])
         setLevels(levelsResult.data as Level[])
         setTeams(teamsResult.data as Team[])
@@ -346,9 +356,17 @@ export default function OrganizationStructureForms() {
     setEditInitialized(true)
   }, [editType, editId, loading, editInitialized, sports, programs, levels, teams, seasons, t])
 
+  // Get available system sports (exclude ones already linked to this org)
+  const availableSystemSports = useMemo(() => {
+    const existingSportIds = new Set(sports.map(s => s.id))
+    return systemSports.filter(sport => !existingSportIds.has(sport.id))
+  }, [sports, systemSports])
+
   const sportNameError = touched['sport.name'] && !sportForm.name.trim()
     ? t('admin.structureForms.validation.sportNameRequired')
     : undefined
+
+  const canCreateSport = !!sportForm.name.trim() && availableSystemSports.length > 0
 
   const programSportError = touched['program.sport'] && !programForm.sportId
     ? t('admin.structureForms.validation.programSportRequired')
@@ -422,7 +440,6 @@ export default function OrganizationStructureForms() {
     ? t('admin.structureForms.validation.seasonRangeInvalid')
     : undefined
 
-  const canCreateSport = !!sportForm.name.trim()
   const canCreateProgram = !!programForm.sportId && !!programForm.gender && !!programForm.name.trim()
   const canCreateLevel = !!levelForm.programId && !!levelForm.name.trim() && !!levelForm.type && (
     (levelForm.type === 'age_based' && !!levelForm.ageMin && !!levelForm.ageMax) ||
@@ -457,13 +474,11 @@ export default function OrganizationStructureForms() {
   return (
     <div className="pa-root">
       <OfflineBanner />
-      <PageHeader
+      <OrganizationStructurePageHeader
         title={pageTitle}
         subtitle={pageSubtitle}
-        breadcrumbs={[
-          { label: t('admin.structureForms.breadcrumbs.organizations'), path: '/admin/organization/structure' },
-          { label: activeFormLabel },
-        ]}
+        pageName={activeFormLabel}
+        breadcrumbLabel={t('admin.structureForms.breadcrumbs.organizations')}
       />
 
       {successMessage && (
@@ -512,52 +527,67 @@ export default function OrganizationStructureForms() {
         className="pa-mb-6"
       >
         <div className="pa-flex pa-flex-col pa-gap-4">
-          <Input
-            label={t('admin.structureForms.fields.sportName.label')}
-            placeholder={t('admin.structureForms.fields.sportName.placeholder')}
-            value={sportForm.name}
-            onChange={(e) => setSportForm((prev) => ({ ...prev, name: e.target.value }))}
-            onBlur={() => markTouched('sport.name')}
-            required
-            error={sportNameError}
-          />
-          <Button
-            disabled={!canCreateSport || submitting.sport}
-            loading={submitting.sport}
-            onClick={async () => {
-              if (!canCreateSport || !currentOrganization?.id) return
-              setSubmitting((prev) => ({ ...prev, sport: true }))
-              setActionError(null)
-              setSuccessMessage(null)
+          {editType === 'sport' && editId ? (
+            // Edit mode: Show read-only display (system sports cannot be edited)
+            <div>
+              <div className="pa-label pa-mb-2">{t('admin.structureForms.fields.sportName.label')}</div>
+              <div className="pa-text-base">{sportForm.name}</div>
+              <div className="pa-text-sm pa-text-muted pa-mt-1">
+                System sports cannot be modified. They are predefined for consistency across all organizations.
+              </div>
+            </div>
+          ) : (
+            // Create mode: Show dropdown of available system sports
+            <>
+              {availableSystemSports.length === 0 ? (
+                <div className="pa-text-muted">
+                  All available sports have been added to your organization.
+                </div>
+              ) : (
+                <Select
+                  label={t('admin.structureForms.fields.sportName.label')}
+                  value={sportForm.name}
+                  onChange={(e) => setSportForm((prev) => ({ ...prev, name: e.target.value }))}
+                  onBlur={() => markTouched('sport.name')}
+                  options={[
+                    { value: '', label: 'Select a sport...' },
+                    ...availableSystemSports.map(sport => ({ value: sport.name, label: sport.name }))
+                  ]}
+                  required
+                  error={sportNameError ? 'Please select a sport' : undefined}
+                />
+              )}
+            </>
+          )}
+          {editType !== 'sport' && (
+            <Button
+              disabled={!canCreateSport || submitting.sport}
+              loading={submitting.sport}
+              onClick={async () => {
+                if (!canCreateSport || !currentOrganization?.id) return
+                setSubmitting((prev) => ({ ...prev, sport: true }))
+                setActionError(null)
+                setSuccessMessage(null)
 
-              if (editType === 'sport' && editId) {
-                const result = await updateSport(context, editId, { name: sportForm.name.trim() })
-                if (result.error) {
-                  setActionError(t('admin.structureForms.errors.saveFailed', { item: formLabels.sport }))
-                } else if (result.data) {
-                  setSports((prev) => prev.map((s) => (s.id === editId ? (result.data as Sport) : s)))
-                  setSuccessMessage(t('admin.structureForms.messages.updated', { item: formLabels.sport }))
-                }
-              } else {
                 const result = await createSport(context, {
                   org_id: currentOrganization.id,
                   name: sportForm.name.trim(),
                   color: '#137fec',
                 })
                 if (result.error) {
-                  setActionError(t('admin.structureForms.errors.saveFailed', { item: formLabels.sport }))
+                  setActionError(result.error.message || t('admin.structureForms.errors.saveFailed', { item: formLabels.sport }))
                 } else if (result.data) {
                   setSports((prev) => [result.data as Sport, ...prev])
                   setSportForm((prev) => ({ ...prev, name: '' }))
                   setSuccessMessage(t('admin.structureForms.messages.created', { item: formLabels.sport }))
                 }
-              }
 
-              setSubmitting((prev) => ({ ...prev, sport: false }))
-            }}
-          >
-            {t(editType === 'sport' ? 'admin.structureForms.actions.updateItem' : 'admin.structureForms.actions.createItem', { item: formLabels.sport })}
-          </Button>
+                setSubmitting((prev) => ({ ...prev, sport: false }))
+              }}
+            >
+              {t('admin.structureForms.actions.createItem', { item: formLabels.sport })}
+            </Button>
+          )}
         </div>
       </Card>
       )}

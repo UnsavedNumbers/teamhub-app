@@ -80,7 +80,7 @@ VALUES
   ('Golf', true, NULL, 'sports_golf', '#065f46', NOW(), NOW()),
   ('Swimming', true, NULL, 'pool', '#0c4a6e', NOW(), NOW()),
   ('Diving', true, NULL, 'pool', '#075985', NOW(), NOW())
-ON CONFLICT (name) WHERE is_system = true AND org_id IS NULL 
+ON CONFLICT (name) WHERE is_system = true AND org_id IS NULL
 DO NOTHING;
 
 -- -----------------------------------------------------------------
@@ -175,7 +175,41 @@ CREATE POLICY "Org admins can unlink sports"
   );
 
 -- -----------------------------------------------------------------
--- 8. Comments
+-- 8. Update RLS Policies for sports to allow viewing system sports
+-- -----------------------------------------------------------------
+-- Update the existing policy to allow viewing system sports
+DROP POLICY IF EXISTS "Org members can view sports" ON sports;
+CREATE POLICY "Org members can view sports"
+  ON sports
+  FOR SELECT
+  USING (
+    deleted_at IS NULL 
+    AND (
+      -- System sports are visible to everyone
+      (is_system = true AND org_id IS NULL)
+      OR
+      -- Org-specific sports are visible to org members
+      org_id IN (
+        SELECT organization_id 
+        FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
+    )
+  );
+
+-- Update insert policy to prevent creating new sports (only system sports allowed)
+DROP POLICY IF EXISTS "Org admins can create sports" ON sports;
+CREATE POLICY "Org admins can create sports"
+  ON sports
+  FOR INSERT
+  WITH CHECK (
+    -- Only allow system sports to be created (via migration/seeding)
+    -- Organizations should link to system sports via organization_sports
+    is_system = true AND org_id IS NULL
+  );
+
+-- -----------------------------------------------------------------
+-- 9. Comments
 -- -----------------------------------------------------------------
 COMMENT ON COLUMN sports.is_system IS 'True for system-wide predefined sports that all organizations can use';
 COMMENT ON COLUMN sports.org_id IS 'NULL for system sports, set for organization-specific sports (legacy)';
