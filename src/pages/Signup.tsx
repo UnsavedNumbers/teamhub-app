@@ -321,7 +321,7 @@ export default function Signup() {
               <button
                 type="submit"
                 disabled={loading || (password !== confirmPassword && confirmPassword.length > 0)}
-                className="bg-[#137fec] hover:bg-[#137fec]/90 text-white px-8 py-3 rounded font-bold text-sm tracking-wide w-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-slate-900 dark:bg-white text-white dark:text-black px-8 py-3 font-black text-sm tracking-widest uppercase w-full hover:bg-[#5468FF] dark:hover:bg-[#5468FF] dark:hover:text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'CREATING ACCOUNT...' : 'CONTINUE'}
               </button>

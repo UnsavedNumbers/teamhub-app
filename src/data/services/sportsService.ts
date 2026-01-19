@@ -58,25 +58,17 @@ function isSystemSport(sport: { org_id: string | null } | null | undefined): boo
  * System sports are identified by org_id IS NULL
  */
 export async function getSystemSports(): Promise<{ data: Sport[]; error: Error | null }> {
-    // #region agent log
-    fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'sportsService.ts:60',message:'getSystemSports called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
     try {
         const { data, error } = await supabase
             .from('sports')
             .select('*')
             .is('org_id', null)
             .order('name')
-        // #region agent log
-        fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'sportsService.ts:68',message:'getSystemSports query result',data:{hasData:!!data,dataCount:data?.length,hasError:!!error,errorCode:error?.code,errorMessage:error?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
+
         if (error) throw error
         return { data: data as Sport[], error: null }
     } catch (err) {
         console.error('[sportsService] Error getting system sports:', err)
-        // #region agent log
-        fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'sportsService.ts:72',message:'getSystemSports error caught',data:{errorMessage:err instanceof Error?err.message:String(err),errorName:err instanceof Error?err.name:'Unknown'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
     }
 }

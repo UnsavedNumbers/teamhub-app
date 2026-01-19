@@ -170,7 +170,7 @@ export default function Login() {
           <button
             type="button"
             onClick={handleSetupOrganization}
-            className="bg-[#137fec] hover:bg-[#137fec]/90 text-white px-8 py-3 rounded font-bold text-sm tracking-wide w-full flex items-center justify-center gap-2 transition-colors mb-4"
+            className="bg-slate-900 dark:bg-white text-white dark:text-black px-8 py-3 font-black text-sm tracking-widest uppercase w-full flex items-center justify-center gap-2 hover:bg-[#5468FF] dark:hover:bg-[#5468FF] dark:hover:text-white transition-all duration-300 mb-4"
           >
             <span className="material-symbols-outlined text-xl">arrow_forward</span>
             GET STARTED FREE
@@ -330,7 +330,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={handleSetupOrganization}
-                className="bg-[#137fec] hover:bg-[#137fec]/90 text-white px-8 py-3 rounded font-bold text-sm tracking-wide w-full flex items-center justify-center gap-2 transition-colors"
+                className="bg-slate-900 dark:bg-white text-white dark:text-black px-8 py-3 font-black text-sm tracking-widest uppercase w-full flex items-center justify-center gap-2 hover:bg-[#5468FF] dark:hover:bg-[#5468FF] dark:hover:text-white transition-all duration-300"
               >
                 <span className="material-symbols-outlined text-xl">corporate_fare</span>
                 SETUP AN ORGANIZATION

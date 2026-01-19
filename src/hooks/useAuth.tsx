@@ -53,9 +53,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { setOrganizations, currentOrganization } = useOrganization()
 
   const fetchProfile = useCallback(async (userId: string) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:53',message:'fetchProfile called',data:{userId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
     try {
       // Fetch user profile
       const { data: userData, error: userError } = await supabase
@@ -63,14 +60,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .select('id, email, phone, display_name, role, family_id, org_id, requires_org_setup')
         .eq('id', userId)
         .single()
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:65',message:'fetchProfile users query result',data:{hasData:!!userData,hasError:!!userError,errorCode:userError?.code,errorMessage:userError?.message,userId:userData?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D,E'})}).catch(()=>{});
-      // #endregion
-
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:60',message:'User query completed',data:{hasData:!!userData,hasError:!!userError,error:userError?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-
       if (userError) {
         console.error('Error fetching profile:', userError)
         
@@ -107,11 +96,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         orgError = err as any
         orgData = []
       }
-
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:85',message:'Org query completed',data:{hasData:!!orgData,orgCount:orgData?.length||0,hasError:!!orgError,errorCode:orgError?.code,errorMessage:orgError?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-
       if (orgError && orgError.code !== 'PGRST202') {
         console.error('Error fetching organizations:', orgError)
         // Continue with empty orgs rather than failing completely
@@ -124,26 +108,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId)
         .single()
 
-      const organizations: Organization[] = (orgData || []).map((org) => {
-        // Normalize roles to always be an array - single point of normalization
-        let roles = org.roles || []
-        if (!Array.isArray(roles)) {
-          console.warn('[useAuth] Invalid roles format for org:', org.organization_id, roles)
-          roles = []
-        }
-        // #region agent log
-        fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:127',message:'Mapping organization',data:{orgId:org.organization_id,orgName:org.org_name,rolesCount:roles.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
-        return {
-          id: org.organization_id,
-          name: org.org_name,
-          roles,
-          // Compatibility getter for deprecated 'role' property
-          get role(): OrgMemberRole {
-            return this.roles[0] ?? 'parent'
-          },
-        }
-      }) ?? []
+      const organizations: Organization[] = (orgData || []).map((org) => ({
+        id: org.organization_id,
+        name: org.org_name,
+        roles: org.roles,
+        // Compatibility getter for deprecated 'role' property
+        get role(): OrgMemberRole {
+          return this.roles[0] ?? 'parent'
+        },
+      })) ?? []
 
       const userProfile: UserProfile = {
         id: userData.id,
@@ -157,22 +130,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isPlatformAdmin: !!adminData,
         requiresOrgSetup: userData.requires_org_setup ?? false,
       }
-
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:110',message:'Setting profile and organizations',data:{profileId:userProfile.id,orgCount:organizations.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
       setProfile(userProfile)
       setOrganizations(organizations)
     } catch (err) {
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:112',message:'Error in fetchProfile catch',data:{error:err instanceof Error?err.message:String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
       console.error('Error in fetchProfile:', err)
       setProfile(null)
     } finally {
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:116',message:'fetchProfile finally: setting loading false',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
       setLoading(false)
     }
   }, [setOrganizations])
@@ -193,9 +156,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state change event:', event)
-        // #region agent log
-        fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:188',message:'Auth state change event',data:{event,hasSession:!!session,userId:session?.user?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D,E'})}).catch(()=>{});
-        // #endregion
         setSession(session)
         setUser(session?.user ?? null)
         
@@ -203,9 +163,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Only refetch profile on specific events to avoid unnecessary fetches
           // TOKEN_REFRESHED happens frequently and shouldn't trigger profile refetch
           if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-            // #region agent log
-            fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:197',message:'About to fetchProfile after auth event',data:{event,userId:session.user.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D,E'})}).catch(()=>{});
-            // #endregion
             await fetchProfile(session.user.id)
           }
           
@@ -268,10 +225,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signUp(email: string, password: string, displayName?: string, requiresOrgSetup?: boolean) {
-    // #region agent log
-    fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:259',message:'signUp called',data:{email,displayName,requiresOrgSetup},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D,E'})}).catch(()=>{});
-    // #endregion
-    const signUpPayload = {
+    const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -282,14 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           requires_org_setup: requiresOrgSetup ?? false,
         },
       },
-    }
-    // #region agent log
-    fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:270',message:'signUp payload prepared',data:{payload:signUpPayload},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D,E'})}).catch(()=>{});
-    // #endregion
-    const { data: signUpData, error } = await supabase.auth.signUp(signUpPayload)
-    // #region agent log
-    fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useAuth.tsx:273',message:'signUp response received',data:{hasData:!!signUpData,hasError:!!error,errorCode:error?.code,errorMessage:error?.message,userId:signUpData?.user?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D,E'})}).catch(()=>{});
-    // #endregion
+    })
     return { error }
   }
 
@@ -318,12 +265,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Updated to support multi-role per org
   function hasRole(orgId: string, role: OrgMemberRole): boolean {
     if (profile?.isPlatformAdmin) return true
-    return profile?.organizations.some(o => o.id === orgId && o.roles?.includes(role)) ?? false
+    return profile?.organizations.some(o => o.id === orgId && o.roles.includes(role)) ?? false
   }
 
   function hasAnyRole(role: OrgMemberRole): boolean {
     if (profile?.isPlatformAdmin) return true
-    return profile?.organizations.some(o => o.roles?.includes(role)) ?? false
+    return profile?.organizations.some(o => o.roles.includes(role)) ?? false
   }
 
   function isOrgAdmin(orgId?: string): boolean {
