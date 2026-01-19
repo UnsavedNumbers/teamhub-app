@@ -14,10 +14,12 @@
 // List of image filenames in /public/images/auth/
 // Add new image filenames here as you add them to the folder
 export const AUTH_IMAGE_FILES: string[] = [
-  // Add your image filenames here, e.g.:
-  // 'hero-1.webp',
-  // 'background.jpg',
-  // 'sports-field.png',
+  'splash-baseball.png',
+  'splash-basketball.png',
+  'splash-flagfootball.png',
+  'splash-soccer.png',
+  'splash-trackandfield.png',
+  'splash-volleyball.png',
 ]
 
 // Build full paths to auth images

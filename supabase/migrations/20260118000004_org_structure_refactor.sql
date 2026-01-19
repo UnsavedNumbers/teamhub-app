@@ -49,7 +49,20 @@ WHERE is_active = true;
 CREATE INDEX IF NOT EXISTS idx_team_seasons_season_id ON team_seasons(season_id);
 CREATE INDEX IF NOT EXISTS idx_team_seasons_team_id ON team_seasons(team_id);
 
--- 5. Backfill Levels (Default 'Unassigned' level for each program)
+-- 5. Add missing columns to seasons table if they don't exist
+ALTER TABLE seasons ADD COLUMN IF NOT EXISTS org_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+ALTER TABLE seasons ADD COLUMN IF NOT EXISTS name TEXT;
+ALTER TABLE seasons ADD COLUMN IF NOT EXISTS start_date DATE;
+ALTER TABLE seasons ADD COLUMN IF NOT EXISTS end_date DATE;
+
+-- Create index on org_id for seasons
+CREATE INDEX IF NOT EXISTS idx_seasons_org_id ON seasons(org_id);
+
+-- 5b. Add missing column to teams table if it doesn't exist
+ALTER TABLE teams ADD COLUMN IF NOT EXISTS program_id UUID REFERENCES programs(id) ON DELETE RESTRICT;
+CREATE INDEX IF NOT EXISTS idx_teams_program_id ON teams(program_id);
+
+-- 5c. Backfill Levels (Default 'Unassigned' level for each program)
 INSERT INTO levels (org_id, program_id, name, level_type)
 SELECT DISTINCT org_id, id, 'Unassigned', 'age_based' 
 FROM programs 
@@ -59,53 +72,67 @@ WHERE id NOT IN (SELECT program_id FROM levels WHERE name = 'Unassigned');
 UPDATE teams 
 SET level_id = (
   SELECT l.id FROM levels l 
-  WHERE l.program_id = teams.program_id AND l.name = 'Unassigned'
+  INNER JOIN programs p ON p.id = l.program_id
+  WHERE teams.program_id IS NOT NULL 
+    AND l.program_id = teams.program_id 
+    AND l.name = 'Unassigned'
   LIMIT 1
 )
-WHERE level_id IS NULL;
+WHERE level_id IS NULL AND program_id IS NOT NULL;
 
--- 7. Deduplicate Seasons and Populate Team Seasons
+-- 7. Deduplicate Seasons and Populate Team Seasons (only if org_id exists and is populated)
 DO $$
 DECLARE
   r RECORD;
   canonical_id UUID;
+  has_org_id BOOLEAN;
 BEGIN
-  -- Identify unique organizations-season definitions currently bound to teams
-  FOR r IN 
-    SELECT DISTINCT org_id, name, start_date, end_date 
-    FROM seasons 
-    WHERE team_id IS NOT NULL 
-  LOOP
-    
-    -- Pick the canonical ID (first created or first found)
-    SELECT id INTO canonical_id 
-    FROM seasons 
-    WHERE org_id = r.org_id 
-      AND name = r.name 
-      AND start_date = r.start_date 
-      AND end_date = r.end_date
-    ORDER BY created_at ASC
-    LIMIT 1;
-
-    -- Insert links into team_seasons for ALL teams that had this season definition
-    INSERT INTO team_seasons (team_id, season_id, is_active)
-    SELECT s.team_id, canonical_id, s.is_active
-    FROM seasons s
-    WHERE s.org_id = r.org_id 
-      AND s.name = r.name 
-      AND s.start_date = r.start_date 
-      AND s.end_date = r.end_date
-    ON CONFLICT (team_id, season_id) DO NOTHING;
-
-    -- Delete duplicates (seasons with same def but different ID)
-    DELETE FROM seasons 
-    WHERE org_id = r.org_id 
-      AND name = r.name 
-      AND start_date = r.start_date 
-      AND end_date = r.end_date
-      AND id != canonical_id;
+  -- Check if seasons has org_id column with data
+  SELECT EXISTS(
+    SELECT 1 FROM seasons WHERE org_id IS NOT NULL LIMIT 1
+  ) INTO has_org_id;
+  
+  IF has_org_id THEN
+    -- Identify unique organizations-season definitions currently bound to teams
+    FOR r IN 
+      SELECT DISTINCT org_id, name, start_date, end_date 
+      FROM seasons 
+      WHERE team_id IS NOT NULL 
+        AND org_id IS NOT NULL
+        AND name IS NOT NULL
+    LOOP
       
-  END LOOP;
+      -- Pick the canonical ID (first created or first found)
+      SELECT id INTO canonical_id 
+      FROM seasons 
+      WHERE org_id = r.org_id 
+        AND name = r.name 
+        AND COALESCE(start_date, '1970-01-01'::date) = COALESCE(r.start_date, '1970-01-01'::date)
+        AND COALESCE(end_date, '9999-12-31'::date) = COALESCE(r.end_date, '9999-12-31'::date)
+      ORDER BY created_at ASC
+      LIMIT 1;
+
+      -- Insert links into team_seasons for ALL teams that had this season definition
+      INSERT INTO team_seasons (team_id, season_id, is_active)
+      SELECT s.team_id, canonical_id, COALESCE(s.is_active, false)
+      FROM seasons s
+      WHERE s.org_id = r.org_id 
+        AND s.name = r.name 
+        AND COALESCE(s.start_date, '1970-01-01'::date) = COALESCE(r.start_date, '1970-01-01'::date)
+        AND COALESCE(s.end_date, '9999-12-31'::date) = COALESCE(r.end_date, '9999-12-31'::date)
+        AND s.team_id IS NOT NULL
+      ON CONFLICT (team_id, season_id) DO NOTHING;
+
+      -- Delete duplicates (seasons with same def but different ID)
+      DELETE FROM seasons 
+      WHERE org_id = r.org_id 
+        AND name = r.name 
+        AND COALESCE(start_date, '1970-01-01'::date) = COALESCE(r.start_date, '1970-01-01'::date)
+        AND COALESCE(end_date, '9999-12-31'::date) = COALESCE(r.end_date, '9999-12-31'::date)
+        AND id != canonical_id;
+        
+    END LOOP;
+  END IF;
 END $$;
 
 -- 8. Alter Seasons Table (Make team_id nullable/deprecated)
