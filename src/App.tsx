@@ -257,8 +257,8 @@ function App() {
               <Route path="families/new" element={<CreateFamily />} />
               <Route path="families/:id" element={<FamilyDetail />} />
               <Route path="families/:familyId/children/new" element={<CreateChild />} />
-              <Route path="children" element={<AdminChildren />} />
-              <Route path="children/import" element={<ImportAthletes />} />
+              <Route path="athletes" element={<AdminChildren />} />
+              <Route path="athletes/import" element={<ImportAthletes />} />
             
               {/* Events */}
             

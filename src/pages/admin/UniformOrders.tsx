@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getAllUniformSubmissions, type UniformSubmission } from '../../data/services/uniformsService'
 import { 
-  PageHeader, 
+  AdminPageHeader, 
   Card, 
   Button, 
   PlatformDataTable, 
@@ -80,7 +80,7 @@ export default function UniformOrders() {
 
   return (
     <div className="pa-root">
-      <PageHeader 
+      <AdminPageHeader 
         title="Uniform Orders" 
         actions={
           <Button onClick={() => navigate('/admin/uniforms/new')}>

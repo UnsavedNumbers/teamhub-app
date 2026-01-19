@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useUserContext } from '../../hooks/useUserContext'
-import { OrganizationStructurePageHeader } from '../../components/platformAdmin'
+import { AdminPageHeader } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getSports, getPrograms } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
@@ -96,7 +96,7 @@ export default function OrganizationStructureNew() {
   if (error) {
     return (
       <div className="org-structure-page">
-        <PageHeader
+        <AdminPageHeader
           title={
             <>
               Organization <span className="pa-title-accent">Overview</span>
@@ -121,14 +121,17 @@ export default function OrganizationStructureNew() {
   return (
     <div className="org-structure-page">
       <OfflineBanner />
-      <OrganizationStructurePageHeader
+      <AdminPageHeader
         title={
           <>
             Organization <span className="pa-title-accent">Overview</span>
           </>
         }
         subtitle={`${currentOrganization?.name || 'Organization'} — Structural setup and team management`}
-        pageName={currentOrganization?.name || 'Organization'}
+        breadcrumbs={[
+          { label: 'Organizations', path: '/admin/organization/structure' },
+          { label: currentOrganization?.name || 'Organization' },
+        ]}
       />
 
       <section className="org-stats-section">
@@ -190,7 +193,7 @@ export default function OrganizationStructureNew() {
             <QuickActionButton
               icon="person_add"
               label="Add Player"
-              onClick={() => navigate('/admin/children')}
+              onClick={() => navigate('/admin/athletes')}
             />
           </div>
         </div>

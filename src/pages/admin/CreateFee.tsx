@@ -6,7 +6,7 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { getTeams, getTeamDetails, getTeamRoster } from '../../data/services/teamsService'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { 
-  PageHeader, 
+  AdminPageHeader, 
   Card, 
   Button, 
   Input, 
@@ -182,7 +182,13 @@ export default function CreateFee() {
 
   return (
     <div className="pa-root">
-      <PageHeader title="Create Fee" />
+      <AdminPageHeader 
+        title="Create Fee" 
+        breadcrumbs={[
+          { label: 'Payments', path: '/admin/payments' },
+          { label: 'Create Fee' },
+        ]}
+      />
       <Card>
         <form onSubmit={handleSubmit(onSubmit)}>
           {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}

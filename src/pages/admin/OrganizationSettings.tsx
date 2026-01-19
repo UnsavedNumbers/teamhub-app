@@ -4,7 +4,7 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { 
-  PageHeader, 
+  AdminPageHeader, 
   Card, 
   Button, 
   Input 
@@ -97,7 +97,7 @@ export default function OrganizationSettings() {
 
   return (
     <div className="pa-root">
-      <PageHeader title="Organization Settings" />
+      <AdminPageHeader title="Organization Settings" />
       
       <Card>
         <form onSubmit={handleSubmit(onSubmit)}>

@@ -6,7 +6,7 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { 
-  PageHeader, 
+  AdminPageHeader, 
   Card, 
   Button, 
   Input, 
@@ -94,7 +94,13 @@ export default function CreateUser() {
 
   return (
     <div className="pa-root">
-      <PageHeader title="Create User" />
+      <AdminPageHeader 
+        title="Create User" 
+        breadcrumbs={[
+          { label: 'Users', path: '/admin/users' },
+          { label: 'Create User' },
+        ]}
+      />
       <Card>
         <form onSubmit={handleSubmit(onSubmit)}>
           {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}

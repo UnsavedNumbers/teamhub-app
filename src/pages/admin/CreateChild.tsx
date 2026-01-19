@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { PageHeader, Card, Input, Button, Select, ErrorState } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Input, Button, Select, ErrorState } from '../../components/platformAdmin'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { useUserContext } from '../../hooks/useUserContext'
 import { createChild, getFamilyDetails } from '../../data/services/familyService'
@@ -84,7 +84,7 @@ export default function CreateChild() {
 
   return (
     <div className="pa-root">
-      <PageHeader
+      <AdminPageHeader
         title={t('admin.createChild.title')}
         subtitle={familyName ? `For ${familyName}` : ''}
         breadcrumbs={[

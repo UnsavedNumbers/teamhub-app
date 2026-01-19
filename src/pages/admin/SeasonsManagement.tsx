@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getSeasons } from '../../data/services/seasonsService'
 import type { Season } from '../../data/types/organization'
-import { OrganizationStructurePageHeader, Card, Button } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 
 export default function SeasonsManagement() {
@@ -55,10 +55,13 @@ export default function SeasonsManagement() {
   return (
     <div className="pa-root">
       <OfflineBanner />
-      <OrganizationStructurePageHeader
+      <AdminPageHeader
         title="Seasons"
         subtitle="Manage organization-wide time periods"
-        pageName="Seasons"
+        breadcrumbs={[
+          { label: 'Organizations', path: '/admin/organization/structure' },
+          { label: 'Seasons' },
+        ]}
       />
 
       {error && (

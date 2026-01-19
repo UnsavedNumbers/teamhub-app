@@ -9,7 +9,7 @@ import { createLevel, updateLevel } from '../../data/services/levelsService'
 import { getTeams, createTeam, updateTeam } from '../../data/services/teamsService'
 import { getSeasons, createSeason, updateSeason } from '../../data/services/seasonsService'
 import type { Sport, Program, Level, Team, Season, GenderCategory, LevelType } from '../../data/types/organization'
-import { OrganizationStructurePageHeader, Card, Button, Input, Select, Checkbox } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, Input, Select, Checkbox } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 
 interface RadioOption {
@@ -474,11 +474,13 @@ export default function OrganizationStructureForms() {
   return (
     <div className="pa-root">
       <OfflineBanner />
-      <OrganizationStructurePageHeader
+      <AdminPageHeader
         title={pageTitle}
         subtitle={pageSubtitle}
-        pageName={activeFormLabel}
-        breadcrumbLabel={t('admin.structureForms.breadcrumbs.organizations')}
+        breadcrumbs={[
+          { label: t('admin.structureForms.breadcrumbs.organizations'), path: '/admin/organization/structure' },
+          { label: activeFormLabel },
+        ]}
       />
 
       {successMessage && (

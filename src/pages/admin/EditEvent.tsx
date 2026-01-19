@@ -7,7 +7,7 @@ import { useT } from '../../i18n/useI18n'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { supabase } from '../../lib/supabase'
 import { 
-  PageHeader, 
+  AdminPageHeader, 
   Card, 
   Button, 
   Input, 
@@ -366,7 +366,13 @@ export default function EditEvent() {
 
   return (
     <div className="pa-root">
-      <PageHeader title="Edit Event" />
+      <AdminPageHeader 
+        title="Edit Event" 
+        breadcrumbs={[
+          { label: 'Events', path: '/admin/events' },
+          { label: 'Edit Event' },
+        ]}
+      />
       <Card>
         <form onSubmit={handleSubmit(onSubmit)}>
           {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}

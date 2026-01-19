@@ -1,6 +1,6 @@
 
 import { useState } from 'react'
-import { PageHeader, Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/platformAdmin'
+import { AdminPageHeader, Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/platformAdmin'
 import AttendanceOverview from './attendance/AttendanceOverview'
 import AttendanceEvents from './attendance/AttendanceEvents'
 import AttendancePeople from './attendance/AttendancePeople'
@@ -12,9 +12,9 @@ export default function Attendance() {
 
   return (
     <div className="pa-root">
-      <PageHeader 
+      <AdminPageHeader 
         title="Attendance" 
-        description="Monitor and manage attendance across your organization"
+        subtitle="Monitor and manage attendance across your organization"
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="pa-tabs">

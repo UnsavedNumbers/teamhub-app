@@ -13,7 +13,7 @@ import { getSports, getPrograms } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
 import { getSeasons } from '../../data/services/seasonsService'
 import type { Team, Sport, Program, Level, Season } from '../../data/types/organization'
-import { OrganizationStructurePageHeader } from '../../components/platformAdmin'
+import { AdminPageHeader } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 
 export default function TeamsManagement() {
@@ -138,10 +138,13 @@ export default function TeamsManagement() {
   return (
     <div className="max-w-7xl mx-auto p-8">
       <OfflineBanner />
-      <OrganizationStructurePageHeader
+      <AdminPageHeader
         title="Teams"
         subtitle="Manage your rostered competition units and their assignments."
-        pageName="Teams"
+        breadcrumbs={[
+          { label: 'Organizations', path: '/admin/organization/structure' },
+          { label: 'Teams' },
+        ]}
       />
 
       {error && (

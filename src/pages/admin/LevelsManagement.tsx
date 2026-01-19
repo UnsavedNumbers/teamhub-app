@@ -10,7 +10,7 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { getLevels } from '../../data/services/levelsService'
 import { getPrograms } from '../../data/services/sportsService'
 import type { Level, Program } from '../../data/types/organization'
-import { OrganizationStructurePageHeader, Card, Button, Select } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, Select } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 
 export default function LevelsManagement() {
@@ -67,10 +67,13 @@ export default function LevelsManagement() {
   return (
     <div className="pa-root">
       <OfflineBanner />
-      <OrganizationStructurePageHeader
+      <AdminPageHeader
         title="Levels"
         subtitle="Define eligibility boundaries (age, grade, or skill)"
-        pageName="Levels"
+        breadcrumbs={[
+          { label: 'Organizations', path: '/admin/organization/structure' },
+          { label: 'Levels' },
+        ]}
       />
 
       {error && (

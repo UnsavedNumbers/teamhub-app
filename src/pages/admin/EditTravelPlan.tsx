@@ -6,7 +6,7 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { getTravelPlanById } from '../../data/services/travelService'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { 
-  PageHeader, 
+  AdminPageHeader, 
   Card, 
   Button, 
   Input 
@@ -122,7 +122,13 @@ export default function EditTravelPlan() {
 
   return (
     <div className="pa-root">
-      <PageHeader title="Edit Travel Plan" />
+      <AdminPageHeader 
+        title="Edit Travel Plan" 
+        breadcrumbs={[
+          { label: 'Travel Plans', path: '/admin/travel' },
+          { label: 'Edit Travel Plan' },
+        ]}
+      />
       <Card>
         <form onSubmit={handleSubmit(onSubmit)}>
           {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}

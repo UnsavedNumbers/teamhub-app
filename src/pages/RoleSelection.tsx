@@ -88,7 +88,7 @@ export function RoleSelection() {
       // Navigate based on selected role
       // Admins and coaches always go to admin section
       if (role === 'org_admin' || role === 'coach') {
-        navigate('/admin/dashboard')
+        navigate('/admin')
       } else {
         // Parents go to portal dashboard
         navigate('/portal/dashboard')

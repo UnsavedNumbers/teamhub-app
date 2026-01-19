@@ -71,12 +71,12 @@ export function getLoginRedirect(
 
   // Priority 3: Admin role -> admin section
   if (hasAdminRole(organizations)) {
-    return '/admin/dashboard'
+    return '/admin'
   }
 
   // Priority 4: Coach role -> admin section
   if (hasCoachRole(organizations)) {
-    return '/admin/dashboard'
+    return '/admin'
   }
 
   // Default: Parent dashboard

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PageHeader, PlatformDataTable, Button } from '../../components/platformAdmin'
+import { AdminPageHeader, PlatformDataTable, Button } from '../../components/platformAdmin'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
 import { useUserContext } from '../../hooks/useUserContext'
@@ -62,10 +62,10 @@ export default function AdminChildren() {
 
   return (
     <div className="pa-root">
-      <PageHeader 
+      <AdminPageHeader 
         title={t('admin.children.title')}
         actions={
-          <Button onClick={() => navigate('/admin/children/import')} icon="upload_file">
+          <Button onClick={() => navigate('/admin/athletes/import')} icon="upload_file">
             Import Athletes
           </Button>
         }

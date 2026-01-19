@@ -65,7 +65,7 @@ export function useFamilyParams() {
 
 /**
  * Extract child ID from route parameters
- * Route: /admin/children/:id (if needed)
+ * Route: /admin/athletes/:id (if needed)
  */
 export function useChildParams() {
   const { id } = useParams<{ id: string }>()

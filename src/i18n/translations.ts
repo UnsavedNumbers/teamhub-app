@@ -319,6 +319,14 @@ export const en = {
         },
     },
     admin: {
+        dashboard: {
+            totalTeams: 'TOTAL TEAMS',
+            totalAthletes: 'TOTAL ATHLETES',
+            activeSeasons: 'ACTIVE SEASONS',
+            unpaidFees: 'UNPAID FEES',
+            upcomingEvents: 'UPCOMING EVENTS',
+            uniformOrders: 'UNIFORM ORDERS',
+        },
         children: {
             title: 'ALL ATHLETES',
             errorLoading: 'Error loading athletes',
@@ -1001,6 +1009,14 @@ export const es: typeof en = {
         },
     },
     admin: {
+        dashboard: {
+            totalTeams: 'TOTAL DE EQUIPOS',
+            totalAthletes: 'TOTAL DE ATLETAS',
+            activeSeasons: 'TEMPORADAS ACTIVAS',
+            unpaidFees: 'PAGOS PENDIENTES',
+            upcomingEvents: 'EVENTOS PRÓXIMOS',
+            uniformOrders: 'PEDIDOS DE UNIFORMES',
+        },
         children: {
             title: 'TODOS LOS ATLETAS',
             errorLoading: 'Error al cargar atletas',

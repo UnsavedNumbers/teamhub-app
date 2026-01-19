@@ -10,7 +10,7 @@ import { getErrorMessage } from '../../utils/errorUtils'
 import { supabase } from '../../lib/supabase'
 import type { Database } from '../../lib/database.types'
 import { 
-  PageHeader, 
+  AdminPageHeader, 
   Card, 
   Button, 
   Input, 
@@ -209,7 +209,13 @@ export default function CreateEvent() {
 
   return (
     <div className="pa-root">
-      <PageHeader title="Create Event" />
+      <AdminPageHeader 
+        title="Create Event" 
+        breadcrumbs={[
+          { label: 'Events', path: '/admin/events' },
+          { label: 'Create Event' },
+        ]}
+      />
       <Card>
         <form onSubmit={handleSubmit(onSubmit)}>
           {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}

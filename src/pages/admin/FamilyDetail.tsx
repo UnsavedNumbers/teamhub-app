@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { 
-    PageHeader, 
+    AdminPageHeader, 
     Card, 
     Button, 
     Badge, 
@@ -131,7 +131,7 @@ export default function FamilyDetail() {
 
     return (
         <div className="pa-root">
-            <PageHeader 
+            <AdminPageHeader 
                 title={family.name?.toUpperCase() || 'FAMILY'} 
                 breadcrumbs={[
                     { label: 'Families', path: '/admin/families' },

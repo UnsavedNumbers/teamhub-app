@@ -51,7 +51,7 @@ export default function AdminLayout() {
       requiresOrg: true,
       children: [
         { text: 'Families', icon: 'home', path: '/admin/families', requiresOrg: true },
-        { text: 'Athletes', icon: 'child_care', path: '/admin/children', requiresOrg: true },
+        { text: 'Athletes', icon: 'child_care', path: '/admin/athletes', requiresOrg: true },
       ],
     },
     {

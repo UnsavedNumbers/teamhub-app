@@ -43,7 +43,7 @@ export default function GlobalNav({ variant }: GlobalNavProps) {
           items: [
             { text: 'Teams', icon: 'groups', path: '/admin/teams', description: 'Manage teams & rosters' },
             { text: 'Families', icon: 'home', path: '/admin/families', description: 'Family management' },
-            { text: t('admin.navigation.children'), icon: 'child_care', path: '/admin/children', description: 'Player registry' },
+            { text: t('admin.navigation.children'), icon: 'child_care', path: '/admin/athletes', description: 'Player registry' },
           ],
         },
       ],
@@ -157,7 +157,7 @@ export default function GlobalNav({ variant }: GlobalNavProps) {
       items: group.items.map(item => {
         // Check if item requires org
         const requiresOrg = [
-          '/admin/teams', '/admin/families', '/admin/children',
+          '/admin/teams', '/admin/families', '/admin/athletes',
           '/admin/payments', '/admin/events', '/admin/attendance',
           '/admin/uniforms', '/admin/travel', '/admin/tryouts',
           '/admin/messages', '/admin/reports'

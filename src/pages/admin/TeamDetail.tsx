@@ -99,18 +99,12 @@ export default function TeamDetail() {
 
   return (
     <div className="pa-root">
-      <PageHeader 
+      <AdminPageHeader 
         title={team.name} 
         breadcrumbs={[
-            { label: 'Teams', onClick: () => navigate('/admin/teams') },
+            { label: 'Teams', path: '/admin/teams' },
             { label: team.name }
         ]}
-        actions={
-            <div className="pa-flex pa-gap-2 pa-text-sm pa-text-muted">
-                {/* Safe access to optional properties we might have attached to team state */}
-                {/* Note: team state here is local Team interface. We need to store extra details if we want to show them. */}
-            </div>
-        }
       />
       {/* Detail Context Banner */}
       <div className="pa-mb-6 pa-p-4 pa-bg-gray-50 pa-border pa-rounded pa-flex pa-gap-6 pa-items-center">

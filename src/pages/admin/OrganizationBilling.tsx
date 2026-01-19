@@ -9,7 +9,7 @@ import { LicenseStatusBadge } from '../../components/admin/LicenseStatusBadge'
 import { LicenseWarningBanner } from '../../components/admin/LicenseWarningBanner'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { 
-  PageHeader, 
+  AdminPageHeader, 
   Card, 
   Button, 
 } from '../../components/platformAdmin'
@@ -76,7 +76,7 @@ export default function OrganizationBilling() {
 
   return (
     <div className="pa-root">
-      <PageHeader title={t('billing.pageTitle')} />
+      <AdminPageHeader title={t('billing.pageTitle')} />
 
       {summary && (
         <LicenseWarningBanner summary={summary} />

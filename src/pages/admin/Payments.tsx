@@ -5,7 +5,7 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { getFeeAssignmentsForUser, getOrgPaymentSummary, formatCurrency } from '../../data/services/paymentsService'
 import { 
-  PageHeader, 
+  AdminPageHeader, 
   Badge, 
   StatCard, 
   PlatformDataTable, 
@@ -136,7 +136,7 @@ export default function Payments() {
 
   return (
     <div className="pa-root">
-      <PageHeader 
+      <AdminPageHeader 
         title="Payments" 
         actions={
           <button className="pa-btn pa-btn--primary" onClick={() => navigate('/admin/payments/create')}>

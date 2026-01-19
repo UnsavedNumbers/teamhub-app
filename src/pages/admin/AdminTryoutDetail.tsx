@@ -52,7 +52,7 @@ export default function AdminTryoutDetail() {
 
   return (
     <div className="pa-root">
-      <PageHeader 
+      <AdminPageHeader 
         title={tryout?.title || 'Tryout Details'} 
         breadcrumbs={[
           { label: 'Tryouts', path: '/admin/tryouts' },

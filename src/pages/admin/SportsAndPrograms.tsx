@@ -10,7 +10,7 @@ import { Link } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getSports, getPrograms } from '../../data/services/sportsService'
 import type { Sport, Program } from '../../data/types/organization'
-import { OrganizationStructurePageHeader } from '../../components/platformAdmin'
+import { AdminPageHeader } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 
 export default function SportsAndPrograms() {
@@ -85,10 +85,13 @@ export default function SportsAndPrograms() {
   if (error) {
     return (
       <div className="max-w-5xl mx-auto p-8">
-        <OrganizationStructurePageHeader
+        <AdminPageHeader
           title="Sports & Programs"
           subtitle="Define the sports your organization offers and the specific programs within them."
-          pageName="Sports & Programs"
+          breadcrumbs={[
+            { label: 'Organizations', path: '/admin/organization/structure' },
+            { label: 'Sports & Programs' },
+          ]}
         />
         <div className="p-6 bg-red-50 text-red-700 rounded-xl border border-red-100">
           {error}

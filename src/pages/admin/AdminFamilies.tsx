@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PageHeader, PlatformDataTable, Button, Badge } from '../../components/platformAdmin'
+import { AdminPageHeader, PlatformDataTable, Button, Badge } from '../../components/platformAdmin'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
 import { useUserContext } from '../../hooks/useUserContext'
@@ -53,7 +53,7 @@ export default function AdminFamilies() {
 
   return (
     <div className="pa-root">
-      <PageHeader 
+      <AdminPageHeader 
         title="FAMILIES" 
         actions={
           <Button onClick={() => navigate('/admin/families/new')}>
