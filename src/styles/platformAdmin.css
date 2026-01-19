@@ -65,6 +65,17 @@
     --pa-glass-border: rgba(0, 0, 0, 0.06);
     --pa-glass-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
     --pa-glass-blur: blur(20px);
+
+    /* Theme-derived Tokens (default values - overridden by useOrganizationTheme) */
+    --pa-theme-action-primary: #003A8F;
+    --pa-theme-action-hover: #0052C7;
+    --pa-theme-action-active: #002866;
+    --pa-theme-surface-accent: rgba(182, 201, 226, 0.1);
+    --pa-theme-surface-highlight: rgba(0, 58, 143, 0.15);
+    --pa-theme-text-accent: #003A8F;
+    --pa-theme-text-on-action: #FFFFFF;
+    --pa-theme-border-accent: rgba(0, 58, 143, 0.3);
+    --pa-theme-focus-ring: rgba(0, 58, 143, 0.5);
 }
 
 /* =====================================================================
@@ -550,7 +561,7 @@
 
 .pa-search-input:focus {
     background: var(--pa-white);
-    outline: 2px solid var(--pa-blue);
+    outline: 2px solid var(--pa-theme-focus-ring);
     box-shadow: var(--pa-shadow-1);
 }
 
@@ -1078,7 +1089,7 @@
 }
 
 .pa-table th.pa-sortable:focus-visible {
-    outline: 2px solid var(--pa-blue);
+    outline: 2px solid var(--pa-theme-focus-ring);
     outline-offset: -2px;
 }
 
@@ -1284,7 +1295,7 @@
 }
 
 .pa-table-action-btn:focus-visible {
-    outline: 2px solid var(--pa-blue);
+    outline: 2px solid var(--pa-theme-focus-ring);
     outline-offset: 2px;
 }
 
@@ -1315,15 +1326,15 @@
 }
 
 .pa-table-checkbox:checked {
-    background: var(--pa-blue);
-    border-color: var(--pa-blue);
+    background: var(--pa-theme-action-primary);
+    border-color: var(--pa-theme-action-primary);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: center;
 }
 
 .pa-table-checkbox:focus-visible {
-    outline: 2px solid var(--pa-blue);
+    outline: 2px solid var(--pa-theme-focus-ring);
     outline-offset: 2px;
 }
 
@@ -1410,8 +1421,8 @@
 }
 
 .pa-table-pagination-select:focus {
-    border-color: var(--pa-blue);
-    outline: 2px solid rgba(26, 115, 232, 0.25);
+    border-color: var(--pa-theme-action-primary);
+    outline: 2px solid var(--pa-theme-focus-ring);
 }
 
 .pa-table-pagination-controls {
@@ -1527,11 +1538,11 @@
 }
 
 .pa-breadcrumb-link:hover {
-    color: var(--pa-blue);
+    color: var(--pa-theme-text-accent);
 }
 
 .pa-breadcrumb-current {
-    color: var(--pa-blue);
+    color: var(--pa-theme-text-accent);
 }
 
 .pa-page-header-row {
@@ -1592,7 +1603,7 @@
     width: 24px;
     height: 24px;
     border: 2px solid var(--pa-n200);
-    border-top-color: var(--pa-blue);
+    border-top-color: var(--pa-theme-action-primary);
     border-radius: 50%;
     animation: pa-spin 0.8s linear infinite;
 }
@@ -2304,7 +2315,7 @@
 }
 
 .org-header-breadcrumb .active {
-    color: #0062FF;
+    color: var(--pa-theme-text-accent);
 }
 
 .org-header-title {
@@ -2332,7 +2343,7 @@
 .org-stats-section {
     background: white;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    border-left: 8px solid #0062FF;
+    border-left: 8px solid var(--pa-theme-action-primary);
     overflow: hidden;
     margin-bottom: 2rem;
 }
@@ -2410,8 +2421,8 @@
     border-radius: 4px;
     font-size: 0.625rem;
     font-weight: 700;
-    background: #0062FF;
-    color: white;
+    background: var(--pa-theme-action-primary);
+    color: var(--pa-theme-text-on-action);
     text-transform: uppercase;
     letter-spacing: -0.02em;
     margin-bottom: 0.25rem;
@@ -2521,11 +2532,11 @@
 }
 
 .org-action-btn:hover {
-    border-color: #0062FF;
+    border-color: var(--pa-theme-action-primary);
 }
 
 .org-action-btn:hover .org-action-icon {
-    color: #0062FF;
+    color: var(--pa-theme-text-accent);
 }
 
 .org-action-content {
@@ -2684,7 +2695,7 @@
 
 .org-hierarchy-step.variant-primary {
     background: #F1F5F9;
-    border-top-color: #0062FF;
+    border-top-color: var(--pa-theme-action-primary);
 }
 
 .org-hierarchy-level {

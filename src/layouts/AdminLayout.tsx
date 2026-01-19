@@ -6,11 +6,13 @@ import { useLicense } from '../hooks/useLicense'
 import { LicenseWarningBanner } from '../components/admin/LicenseWarningBanner'
 import AdminLoadingSpinner from '../components/admin/AdminLoadingSpinner'
 import { usePlatformAdminTheme } from '../hooks/usePlatformAdminTheme'
+import { useOrganizationTheme } from '../hooks/useOrganizationTheme'
 import { useT } from '../i18n/useI18n'
 import { useSidebar } from '../contexts/SidebarContext'
 
 export default function AdminLayout() {
   const { loaded: themeLoaded } = usePlatformAdminTheme()
+  const { ready: themeReady } = useOrganizationTheme()
   const t = useT()
   const location = useLocation()
   const navigate = useNavigate()
@@ -108,7 +110,7 @@ export default function AdminLayout() {
             <span className="pa-sidebar-title">TEAMHUB</span>
           </Link>
           {currentOrganization && (
-            <div style={{ marginTop: '8px', fontSize: '11px', color: '#7A8794', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--pa-n500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               {currentOrganization.name}
             </div>
           )}

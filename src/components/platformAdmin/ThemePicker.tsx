@@ -34,7 +34,7 @@ export default function ThemePicker({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Platform Default Option */}
         <Card
-          className={`cursor-pointer transition-all duration-200 ${
+          className={`cursor-pointer transition-all duration-200 overflow-hidden ${
             selectedThemeId === null
               ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950'
               : hoveredThemeId === 'default'
@@ -45,38 +45,42 @@ export default function ThemePicker({
           onMouseEnter={() => setHoveredThemeId('default')}
           onMouseLeave={() => setHoveredThemeId(null)}
         >
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-medium text-sm">Platform Default</h3>
-              {selectedThemeId === null && (
-                <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                  <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
+          {/* Theme Preview Header */}
+          <div 
+            className="p-3 flex items-center justify-between"
+            style={{ backgroundColor: defaultTheme.colors.primary }}
+          >
+            <span className="text-white font-semibold text-xs">Platform Default</span>
+            {selectedThemeId === null && (
+              <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center">
+                <svg className="w-2.5 h-2.5" style={{ color: defaultTheme.colors.primary }} fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </div>
+            )}
+          </div>
+
+          {/* Theme Preview Body */}
+          <div className="p-4" style={{ backgroundColor: defaultTheme.colors.secondary }}>
+            <div className="space-y-2">
+              <div className="h-2 bg-white/30 rounded w-3/4"></div>
+              <div className="h-2 bg-white/30 rounded w-1/2"></div>
+              
+              {/* Sample Button */}
+              <div className="pt-2">
+                <div 
+                  className="inline-block px-3 py-1.5 rounded text-xs font-medium text-white"
+                  style={{ backgroundColor: defaultTheme.colors.accent }}
+                >
+                  Action Button
                 </div>
-              )}
+              </div>
             </div>
+          </div>
 
-            <div className="flex space-x-2 mb-3">
-              <div
-                className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800 shadow-sm"
-                style={{ backgroundColor: defaultTheme.colors.primary }}
-                title="Primary"
-              />
-              <div
-                className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800 shadow-sm"
-                style={{ backgroundColor: defaultTheme.colors.secondary }}
-                title="Secondary"
-              />
-              <div
-                className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800 shadow-sm"
-                style={{ backgroundColor: defaultTheme.colors.accent }}
-                title="Accent"
-              />
-            </div>
-
+          <div className="px-4 pb-3">
             <p className="text-xs text-gray-600 dark:text-gray-400">
-              Use the platform's default theme ({defaultTheme.name})
+              {defaultTheme.name}
             </p>
           </div>
         </Card>
@@ -85,7 +89,7 @@ export default function ThemePicker({
         {themes.map((theme) => (
           <Card
             key={theme.id}
-            className={`cursor-pointer transition-all duration-200 ${
+            className={`cursor-pointer transition-all duration-200 overflow-hidden ${
               selectedThemeId === theme.id
                 ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950'
                 : hoveredThemeId === theme.id
@@ -96,41 +100,56 @@ export default function ThemePicker({
             onMouseEnter={() => setHoveredThemeId(theme.id)}
             onMouseLeave={() => setHoveredThemeId(null)}
           >
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-medium text-sm">{theme.name}</h3>
-                {selectedThemeId === theme.id && (
-                  <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                    <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                )}
-              </div>
+            {/* Theme Preview Header */}
+            <div 
+              className="p-3 flex items-center justify-between"
+              style={{ backgroundColor: theme.colors.primary }}
+            >
+              <span className="text-white font-semibold text-xs">{theme.name}</span>
+              {selectedThemeId === theme.id && (
+                <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center">
+                  <svg className="w-2.5 h-2.5" style={{ color: theme.colors.primary }} fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              )}
+            </div>
 
-              <div className="flex space-x-2 mb-3">
-                <div
-                  className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800 shadow-sm"
+            {/* Theme Preview Body */}
+            <div className="p-4" style={{ backgroundColor: theme.colors.secondary }}>
+              <div className="space-y-2">
+                <div className="h-2 bg-white/30 rounded w-3/4"></div>
+                <div className="h-2 bg-white/30 rounded w-1/2"></div>
+                
+                {/* Sample Button */}
+                <div className="pt-2">
+                  <div 
+                    className="inline-block px-3 py-1.5 rounded text-xs font-medium text-white"
+                    style={{ backgroundColor: theme.colors.accent }}
+                  >
+                    Action Button
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-4 pb-3">
+              <div className="flex items-center space-x-1.5">
+                <div 
+                  className="w-3 h-3 rounded-full border border-gray-300"
                   style={{ backgroundColor: theme.colors.primary }}
                   title="Primary"
                 />
-                <div
-                  className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800 shadow-sm"
+                <div 
+                  className="w-3 h-3 rounded-full border border-gray-300"
                   style={{ backgroundColor: theme.colors.secondary }}
                   title="Secondary"
                 />
-                <div
-                  className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800 shadow-sm"
+                <div 
+                  className="w-3 h-3 rounded-full border border-gray-300"
                   style={{ backgroundColor: theme.colors.accent }}
                   title="Accent"
                 />
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-white dark:bg-gray-800 rounded-full border border-gray-300 dark:border-gray-600"></div>
-                <span className="text-xs text-gray-600 dark:text-gray-400">Light</span>
-                <div className="w-3 h-3 bg-gray-800 dark:bg-gray-200 rounded-full border border-gray-300 dark:border-gray-600"></div>
-                <span className="text-xs text-gray-600 dark:text-gray-400">Dark</span>
               </div>
             </div>
           </Card>

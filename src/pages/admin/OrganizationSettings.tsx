@@ -682,7 +682,7 @@ function AdvancedForm({ settings, onSave, loading }: { settings: OrgSettingsType
     <Card>
       <form onSubmit={handleSubmit(onSave)}>
         <h3 className="pa-h3 pa-mb-4">Advanced Configuration</h3>
-        <div className="pa-alert pa-alert-warning pa-mb-4" style={{background: '#fff3cd', color: '#856404', padding: '1rem', borderRadius: '4px'}}>
+        <div className="pa-alert pa-alert-warning pa-mb-4">
            Caution: These settings affect data integrity.
         </div>
         

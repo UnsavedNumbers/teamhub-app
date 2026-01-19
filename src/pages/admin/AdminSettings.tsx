@@ -564,19 +564,27 @@ export default function AdminSettings() {
                       display: 'flex', 
                       alignItems: 'center', 
                       gap: '8px',
-                      color: passwordValidation.strength === 'strong' ? '#10b981' : '#f59e0b'
+                      color: passwordValidation.strength === 'strong' 
+                        ? 'var(--pa-success)' 
+                        : passwordValidation.strength === 'medium' 
+                        ? 'var(--pa-warning)' 
+                        : 'var(--pa-danger)'
                     }}>
                       <div style={{ 
                         flex: 1, 
                         height: '4px', 
-                        background: '#e5e7eb', 
+                        background: 'var(--pa-n200)', 
                         borderRadius: '2px', 
                         overflow: 'hidden'
                       }}>
                         <div style={{
                           width: passwordValidation.strength === 'weak' ? '33%' : passwordValidation.strength === 'medium' ? '66%' : '100%',
                           height: '100%',
-                          background: passwordValidation.strength === 'weak' ? '#ef4444' : passwordValidation.strength === 'medium' ? '#f59e0b' : '#10b981',
+                          background: passwordValidation.strength === 'weak' 
+                            ? 'var(--pa-danger)' 
+                            : passwordValidation.strength === 'medium' 
+                            ? 'var(--pa-warning)' 
+                            : 'var(--pa-success)',
                           transition: 'all 0.3s ease'
                         }} />
                       </div>

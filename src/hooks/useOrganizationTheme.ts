@@ -2,73 +2,114 @@
  * Organization Theme Hook
  *
  * Applies organization-specific theme colors to CSS variables.
- * Loads theme from organization settings and applies to :root element.
+ * Loads theme from organization settings and applies semantic tokens to :root element.
  */
 
-import { useEffect } from 'react'
+import { useLayoutEffect, useMemo, useState } from 'react'
 import { useOrganization } from '../contexts/OrganizationContext'
 import { useUserContext } from './useUserContext'
 import { useTheme } from './useTheme'
-import { getOrganizationSettings } from '../data/services/organizationSettingsService'
-import { getTheme, getDefaultTheme, type Theme } from '../config/themes'
+import { getOrganizationThemeSettings } from '../data/services/organizationSettingsService'
+import { getTheme, getDefaultTheme } from '../config/themes'
+import { generateTokens, type ThemeTokens } from '../utils/themeTokens'
 
 /**
- * Apply theme colors to CSS variables on :root element
+ * Apply theme tokens to CSS variables on :root element
+ * Batches all updates in a single DOM operation to prevent flicker
  */
-function applyThemeVariables(theme: Theme, isDark: boolean) {
+function applyThemeTokens(tokens: ThemeTokens): void {
   const root = document.documentElement
-
-  // Get colors, applying dark mode overrides if in dark mode
-  const colors = isDark && theme.darkModeOverrides
-    ? { ...theme.colors, ...theme.darkModeOverrides }
-    : theme.colors
-
-  // Apply organization theme variables (prefixed to avoid conflicts)
-  root.style.setProperty('--org-primary', colors.primary)
-  root.style.setProperty('--org-secondary', colors.secondary)
-  root.style.setProperty('--org-accent', colors.accent)
+  // Apply all tokens in a single synchronous operation
+  Object.entries(tokens).forEach(([key, value]) => {
+    root.style.setProperty(key, value)
+  })
 }
 
 /**
  * Hook to apply organization theme
  *
- * Loads organization's theme_id from settings and applies CSS variables.
+ * Loads organization's theme_id from settings and applies semantic tokens.
  * Falls back to platform default theme if no theme selected or theme not found.
- * Applies theme immediately on mount, then updates when settings load.
+ * Applies default theme immediately on mount to prevent FOUC.
+ * 
+ * @returns { ready: boolean } - Indicates when theme is loaded and ready
  */
-export function useOrganizationTheme() {
+export function useOrganizationTheme(): { ready: boolean } {
   const { currentOrganization } = useOrganization()
   const { context } = useUserContext()
   const { resolvedTheme } = useTheme()
+  const [themeId, setThemeId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    // Apply default theme immediately to prevent FOUC
+  // Memoize token generation - only recalculate when theme ID or mode changes
+  const tokens = useMemo(() => {
+    const theme = themeId ? getTheme(themeId) : getDefaultTheme()
+    return generateTokens(theme, resolvedTheme === 'dark')
+  }, [themeId, resolvedTheme])
+
+  // Apply default theme synchronously on mount to prevent FOUC
+  useLayoutEffect(() => {
     const defaultTheme = getDefaultTheme()
-    applyThemeVariables(defaultTheme, resolvedTheme === 'dark')
+    const defaultTokens = generateTokens(defaultTheme, resolvedTheme === 'dark')
+    applyThemeTokens(defaultTokens)
+  }, []) // Only run once on mount
 
-    // Load organization settings and apply theme
+  // Apply tokens whenever they change
+  useLayoutEffect(() => {
+    applyThemeTokens(tokens)
+  }, [tokens])
+
+  // Load and apply organization theme
+  useLayoutEffect(() => {
+    let cancelled = false
+
     const loadAndApplyTheme = async () => {
-      if (!context || !currentOrganization) return
+      if (!context || !currentOrganization) {
+        // No organization - use default theme
+        setIsLoading(false)
+        return
+      }
+
+      setIsLoading(true)
 
       try {
-        const result = await getOrganizationSettings(context)
-        
-        if (result.data?.general) {
-          // Get theme, with validation and fallback
-          const themeId = result.data.general.theme_id
-          const theme = getTheme(themeId)
+        const result = await getOrganizationThemeSettings(context)
 
-          // Apply the theme
-          applyThemeVariables(theme, resolvedTheme === 'dark')
+        if (cancelled) return
+
+        if (result.error) {
+          console.warn('Failed to load organization theme settings:', result.error)
+          // Keep default theme applied
+          setThemeId(null)
+          setIsLoading(false)
+          return
         }
+
+        // Get theme ID from settings
+        const orgThemeId = result.data?.theme_id || null
+        setThemeId(orgThemeId)
+        setIsLoading(false)
       } catch (error) {
+        if (cancelled) return
         console.warn('Failed to load organization theme settings:', error)
         // Keep default theme applied
+        setThemeId(null)
+        setIsLoading(false)
       }
     }
 
     loadAndApplyTheme()
-  }, [context, currentOrganization?.id, resolvedTheme])
 
-  // No return value - this hook only applies side effects
+    return () => {
+      cancelled = true
+    }
+  }, [context, currentOrganization?.id])
+
+  // Return ready state - theme is ready when loading is complete
+  const ready = useMemo(() => {
+    // Theme is ready if we have no org (default theme) or if loading is complete
+    return !currentOrganization || !isLoading
+  }, [currentOrganization, isLoading])
+
+  return { ready }
 }

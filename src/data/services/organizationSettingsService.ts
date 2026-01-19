@@ -172,19 +172,45 @@ export async function updateOrganizationThemeSettings(
       .partial()
       .parse({ theme_id: themeId })
 
-    let query = fromTable('organization_settings')
-      .upsert(
-        {
-          org_id: context.orgId,
-          ...validated,
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: 'org_id',
+    // First, check if row exists to provide better error messages
+    const { data: existing, error: checkError } = await fromTable('organization_settings')
+      .select('org_id, updated_at')
+      .eq('org_id', context.orgId)
+      .maybeSingle()
+
+    if (checkError) {
+      throw checkError
+    }
+
+    // If row doesn't exist, return helpful error
+    if (!existing) {
+      return {
+        error: new Error(
+          'Organization settings not found. Please save general settings first, then update the theme.'
+        ),
+      }
+    }
+
+    // Check optimistic locking if currentUpdatedAt is provided
+    // But if currentUpdatedAt is null/undefined and existing.updated_at exists, 
+    // that's okay - the row was just created
+    if (currentUpdatedAt !== undefined && currentUpdatedAt !== null) {
+      if (existing.updated_at !== currentUpdatedAt) {
+        return {
+          error: new Error('Settings were modified by another user. Please refresh and try again.'),
         }
-      )
+      }
+    }
+
+    // Update existing row
+    let query = fromTable('organization_settings')
+      .update({
+        theme_id: validated.theme_id ?? null,
+        updated_at: new Date().toISOString(),
+      })
       .eq('org_id', context.orgId)
 
+    // Add optimistic locking check if provided
     if (currentUpdatedAt) {
       query = query.eq('updated_at', currentUpdatedAt)
     }
@@ -192,15 +218,50 @@ export async function updateOrganizationThemeSettings(
     const { error } = await query
 
     if (error) {
-      if (error.message.includes('updated_at')) {
-        throw new Error('Settings were modified by another user. Please refresh and try again.')
+      // Check for RLS errors - might happen if permissions changed
+      if (error.code === '42501' || error.message.includes('row-level security')) {
+        return {
+          error: new Error(
+            'Permission denied. Please ensure you have permission to update organization settings.'
+          ),
+        }
       }
+
+      // Check for optimistic locking failure
+      if (error.message.includes('updated_at')) {
+        return {
+          error: new Error('Settings were modified by another user. Please refresh and try again.'),
+        }
+      }
+
       throw error
     }
 
     return { error: null }
   } catch (err) {
     console.error('[organizationSettingsService] Error updating theme settings:', err)
+    
+    // Handle specific error cases
+    if (err instanceof Error) {
+      // If it's already our custom error, return it
+      if (err.message.includes('Organization settings not found') || 
+          err.message.includes('Settings were modified') ||
+          err.message.includes('Permission denied')) {
+        return { error: err }
+      }
+
+      // Check for RLS or not found errors
+      if (err.message.includes('row-level security') || 
+          err.message.includes('no rows') ||
+          (err as any).code === 'PGRST116') {
+        return {
+          error: new Error(
+            'Organization settings not found. Please save general settings first, then update the theme.'
+          ),
+        }
+      }
+    }
+
     return { error: err instanceof Error ? err : new Error('Unknown error') }
   }
 }
