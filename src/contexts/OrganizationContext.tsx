@@ -91,14 +91,18 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
         // Fetch updated organizations from RPC
         const { data } = await supabase.rpc('get_user_organizations', { check_user_id: userId }) as { data: Array<{ organization_id: string; org_name: string; roles: OrgMemberRole[] }> | null; error: unknown }
         if (data) {
-          const updatedOrgs: Organization[] = data.map((org) => ({
-            id: org.organization_id,
-            name: org.org_name,
-            roles: org.roles,
-            get role() {
-              return this.roles[0] ?? 'parent'
-            },
-          }))
+          const updatedOrgs: Organization[] = data.map((org) => {
+            // Normalize roles to always be an array
+            const roles = org.roles || []
+            return {
+              id: org.organization_id,
+              name: org.org_name,
+              roles: Array.isArray(roles) ? roles : [],
+              get role() {
+                return this.roles[0] ?? 'parent'
+              },
+            }
+          })
           setOrganizationsState(updatedOrgs)
         }
         refreshTimeout = null

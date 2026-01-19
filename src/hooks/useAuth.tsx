@@ -121,15 +121,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId)
         .single()
 
-      const organizations: Organization[] = (orgData || []).map((org) => ({
-        id: org.organization_id,
-        name: org.org_name,
-        roles: org.roles,
-        // Compatibility getter for deprecated 'role' property
-        get role(): OrgMemberRole {
-          return this.roles[0] ?? 'parent'
-        },
-      })) ?? []
+      const organizations: Organization[] = (orgData || []).map((org) => {
+        // Normalize roles to always be an array - single point of normalization
+        let roles = org.roles || []
+        if (!Array.isArray(roles)) {
+          console.warn('[useAuth] Invalid roles format for org:', org.organization_id, roles)
+          roles = []
+        }
+        
+        return {
+          id: org.organization_id,
+          name: org.org_name,
+          roles,
+          // Compatibility getter for deprecated 'role' property
+          get role(): OrgMemberRole {
+            return this.roles[0] ?? 'parent'
+          },
+        }
+      }) ?? []
 
       const userProfile: UserProfile = {
         id: userData.id,
@@ -288,12 +297,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Updated to support multi-role per org
   function hasRole(orgId: string, role: OrgMemberRole): boolean {
     if (profile?.isPlatformAdmin) return true
-    return profile?.organizations.some(o => o.id === orgId && o.roles.includes(role)) ?? false
+    return profile?.organizations.some(o => o.id === orgId && o.roles?.includes(role)) ?? false
   }
 
   function hasAnyRole(role: OrgMemberRole): boolean {
     if (profile?.isPlatformAdmin) return true
-    return profile?.organizations.some(o => o.roles.includes(role)) ?? false
+    return profile?.organizations.some(o => o.roles?.includes(role)) ?? false
   }
 
   function isOrgAdmin(orgId?: string): boolean {

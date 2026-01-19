@@ -3,7 +3,9 @@
  *
  * Provides CRUD operations for sports and programs.
  * Supports both fake data (demo mode) and real Supabase queries.
- * Implements soft delete for sports and programs.
+ * 
+ * Note: System sports are identified by org_id IS NULL.
+ * The deleted_at column does not exist in the schema, so deletes are hard deletes.
  */
 
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
@@ -37,21 +39,30 @@ async function simulateDelay(): Promise<void> {
     }
 }
 
+/**
+ * Check if a sport is a system sport
+ * System sports are identified by having org_id = NULL
+ * @param sport - Sport object to check
+ * @returns true if the sport is a system sport
+ */
+function isSystemSport(sport: { org_id: string | null } | null | undefined): boolean {
+    return sport?.org_id === null || sport?.org_id === undefined
+}
+
 // ============================================================================
 // Sports CRUD Operations
 // ============================================================================
 
 /**
  * Get all system sports (predefined sports available to all organizations)
+ * System sports are identified by org_id IS NULL
  */
 export async function getSystemSports(): Promise<{ data: Sport[]; error: Error | null }> {
     try {
         const { data, error } = await supabase
             .from('sports')
             .select('*')
-            .eq('is_system', true)
             .is('org_id', null)
-            .is('deleted_at', null)
             .order('name')
 
         if (error) throw error
@@ -89,7 +100,7 @@ export async function getSports(
         // Extract sports from the joined data
         const sports = (data || [])
             .map((row: any) => row.sport)
-            .filter((sport: any) => sport && !sport.deleted_at)
+            .filter((sport: any) => sport)
             .sort((a: Sport, b: Sport) => a.name.localeCompare(b.name))
 
         return { data: sports as Sport[], error: null }
@@ -118,7 +129,6 @@ export async function getSport(
             .select('*')
             .eq('id', sportId)
             .eq('org_id', context.orgId)
-            .is('deleted_at', null)
             .single()
 
         if (error) throw error
@@ -152,11 +162,10 @@ export async function createSport(
             return { data: null, error: new Error('Invalid sport name: must be between 1 and 100 characters') }
         }
 
-        // Find the system sport
+        // Find the system sport (org_id IS NULL)
         const { data: systemSports, error: findError } = await supabase
             .from('sports')
             .select('*')
-            .eq('is_system', true)
             .is('org_id', null)
             .ilike('name', normalizedName)
             .limit(1)
@@ -215,17 +224,17 @@ export async function updateSport(
     }
 
     try {
-        // Check if this is a system sport
+        // Check if this is a system sport (org_id IS NULL)
         const { data: sport, error: fetchError } = await supabase
             .from('sports')
-            .select('is_system, org_id')
+            .select('org_id')
             .eq('id', sportId)
             .single()
 
         if (fetchError) throw fetchError
 
-        // System sports cannot be updated
-        if (sport?.is_system) {
+        // System sports cannot be updated (system sports have org_id = NULL)
+        if (isSystemSport(sport)) {
             return { data: null, error: new Error('System sports cannot be modified. They are predefined for consistency.') }
         }
 
@@ -246,7 +255,6 @@ export async function updateSport(
             .update(updateData as any)
             .eq('id', sportId)
             .eq('org_id', context.orgId)
-            .is('deleted_at', null)
             .select()
             .single()
 
@@ -260,7 +268,8 @@ export async function updateSport(
 
 /**
  * Unlink a sport from an organization
- * For system sports, this removes the link. For legacy org sports, it soft deletes.
+ * For system sports (org_id IS NULL), this removes the link.
+ * For org-specific sports, this performs a hard delete.
  */
 export async function deleteSport(
     context: UserContext,
@@ -272,17 +281,17 @@ export async function deleteSport(
     }
 
     try {
-        // Check if this is a system sport
+        // Check if this is a system sport (org_id IS NULL)
         const { data: sport, error: fetchError } = await supabase
             .from('sports')
-            .select('is_system')
+            .select('org_id')
             .eq('id', sportId)
             .single()
 
         if (fetchError) throw fetchError
 
         // For system sports, remove the organization link
-        if (sport?.is_system) {
+        if (isSystemSport(sport)) {
             const { error: unlinkError } = await supabase
                 .from('organization_sports')
                 .delete()
@@ -293,10 +302,10 @@ export async function deleteSport(
             return { error: null }
         }
 
-        // For legacy org-specific sports, soft delete
+        // For org-specific sports, hard delete (deleted_at column doesn't exist)
         const { error } = await supabase
             .from('sports')
-            .update({ deleted_at: new Date().toISOString() } as Database['public']['Tables']['sports']['Update'])
+            .delete()
             .eq('id', sportId)
             .eq('org_id', context.orgId)
 
@@ -313,7 +322,7 @@ export async function deleteSport(
 // ============================================================================
 
 /**
- * Get all programs for an organization (excluding deleted)
+ * Get all programs for an organization
  */
 export async function getPrograms(
     context: UserContext,
@@ -333,7 +342,6 @@ export async function getPrograms(
             .from('programs')
             .select('*')
             .eq('org_id', context.orgId)
-            .is('deleted_at', null)
             .order('name')
 
         if (sportId) {
@@ -369,7 +377,6 @@ export async function getProgram(
             .select('*')
             .eq('id', programId)
             .eq('org_id', context.orgId)
-            .is('deleted_at', null)
             .single()
 
         if (error) throw error
@@ -447,7 +454,6 @@ export async function updateProgram(
             .update(updateData as Database['public']['Tables']['programs']['Update'])
             .eq('id', programId)
             .eq('org_id', _context.orgId)
-            .is('deleted_at', null)
             .select()
             .single()
 
@@ -460,7 +466,8 @@ export async function updateProgram(
 }
 
 /**
- * Soft delete a program
+ * Delete a program
+ * Note: deleted_at column doesn't exist, so this performs a hard delete
  */
 export async function deleteProgram(
     context: UserContext,
@@ -474,7 +481,7 @@ export async function deleteProgram(
     try {
         const { error } = await supabase
             .from('programs')
-            .update({ deleted_at: new Date().toISOString() } as Database['public']['Tables']['programs']['Update'])
+            .delete()
             .eq('id', programId)
             .eq('org_id', _context.orgId)
 

@@ -121,7 +121,7 @@ export default function UserContextDropdown() {
                                     <div className="flex flex-col">
                                         <span>{org.name}</span>
                                         <span className="text-xs text-slate-400 font-normal">
-                                            {org.roles.join(', ')}
+                                            {org.roles?.join(', ') || 'No roles'}
                                         </span>
                                     </div>
                                     {isActive && <span className="material-symbols-outlined text-lg">check</span>}

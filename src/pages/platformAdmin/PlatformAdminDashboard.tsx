@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { StatCard, PageHeader, Card, Badge, EmptyState } from '../../components/platformAdmin'
 import { formatCurrency } from '../../utils/platformAdminMasking'
 import type { AdminPlatformHealth, AdminAuditLog } from '../../types/platformAdmin.types'
+import { mapEventLogsToAuditLogs, type AdminEventLog } from '../../utils/auditLogMapper'
 
 // Loading skeleton for stats
 function StatsSkeleton() {
@@ -63,7 +64,7 @@ export default function PlatformAdminDashboard() {
 
       // Fetch recent audit log entries
       const { data: activityData, error: activityError } = await supabase
-        .from('admin_audit_log')
+        .from('admin_event_logs')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(10)
@@ -74,7 +75,9 @@ export default function PlatformAdminDashboard() {
         }
         setRecentActivity([])
       } else {
-        setRecentActivity(activityData || [])
+        // Map event logs to audit log format for UI compatibility
+        const mappedLogs = mapEventLogsToAuditLogs((activityData || []) as AdminEventLog[])
+        setRecentActivity(mappedLogs)
       }
     } catch (err) {
       console.error('Dashboard error:', err)
