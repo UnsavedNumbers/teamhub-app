@@ -134,7 +134,7 @@ supabase/.temp
 designs/
 docs
 *.md
-*.sql
+#*.sql
 *.txt
 
 # Logs

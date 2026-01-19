@@ -16,6 +16,7 @@ export { default as StatCard } from './StatCard'
 export { default as Badge } from './Badge'
 export { default as Table, type TableColumn } from './Table'
 export { default as PlatformDataTable, type ColumnConfig } from './PlatformDataTable'
+export { default as StandardTable, type StandardTableProps } from './StandardTable'
 
 // Controls
 export { default as Button } from './Button'

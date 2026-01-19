@@ -11,51 +11,62 @@ export interface CheckboxProps {
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void
   label?: string
   disabled?: boolean
+  helperText?: string
   className?: string
 }
 
-export default function Checkbox({ 
+export function Checkbox({ 
   checked, 
   onChange, 
   label, 
   disabled = false,
+  helperText,
   className = ''
 }: CheckboxProps) {
   return (
-    <label 
-      className={`pa-checkbox ${disabled ? 'pa-checkbox-disabled' : ''} ${className}`}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 'var(--pa-space-2)',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        userSelect: 'none'
-      }}
-    >
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onChange}
-        disabled={disabled}
+    <div className={className}>
+      <label 
+        className={`pa-checkbox ${disabled ? 'pa-checkbox-disabled' : ''}`}
         style={{
-          width: '18px',
-          height: '18px',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 'var(--pa-space-2)',
           cursor: disabled ? 'not-allowed' : 'pointer',
-          accentColor: 'var(--pa-n900)'
+          userSelect: 'none'
         }}
-      />
-      {label && (
-        <span 
-          className="pa-label"
+      >
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={onChange}
+          disabled={disabled}
           style={{
-            fontSize: '13px',
-            fontWeight: 600,
-            color: disabled ? 'var(--pa-text-muted)' : 'var(--pa-text-primary)'
+            width: '18px',
+            height: '18px',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            accentColor: 'var(--pa-n900)'
           }}
-        >
-          {label}
-        </span>
+        />
+        {label && (
+          <span 
+            className="pa-label"
+            style={{
+              fontSize: '13px',
+              fontWeight: 600,
+              color: disabled ? 'var(--pa-text-muted)' : 'var(--pa-text-primary)'
+            }}
+          >
+            {label}
+          </span>
+        )}
+      </label>
+      {helperText && (
+        <p className="pa-helper-text" style={{ marginTop: 'var(--pa-space-1)', marginLeft: 'calc(18px + var(--pa-space-2))' }}>
+          {helperText}
+        </p>
       )}
-    </label>
+    </div>
   )
 }
+
+export default Checkbox

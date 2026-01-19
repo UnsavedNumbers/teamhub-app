@@ -66,6 +66,15 @@ export default function AdminLayout() {
         { text: 'Uniforms', icon: 'checkroom', path: '/admin/uniforms', requiresOrg: true },
       ],
     },
+    {
+      label: 'Account',
+      icon: 'account_circle',
+      path: '/admin/account',
+      requiresOrg: false,
+      children: [
+        { text: 'Settings', icon: 'settings', path: '/admin/settings', requiresOrg: false },
+      ],
+    },
   ], [t])
 
 

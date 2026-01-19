@@ -13,11 +13,13 @@ import type {
 // Fake data stores (internal to module for demo mode)
 let FAKE_SETTINGS: AttendanceSettings = {
     org_id: 'org-1',
-    reminder_enabled: true,
-    lock_after_hours: 24,
+    enable_coach_reminders: true,
+    submission_deadline_hours: 24,
+    lock_after_days: 7,
     required_for_practice: true,
     required_for_game: true,
     required_for_meeting: false,
+    parent_visibility: {},
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
 }
@@ -37,7 +39,7 @@ export async function getAttendanceSettings(context: UserContext): Promise<{ dat
 
     try {
         const { data, error } = await supabase
-            .from('attendance_settings')
+            .from('organization_attendance_settings' as any)
             .select('*')
             .eq('org_id', context.orgId)
             .single()
@@ -47,11 +49,17 @@ export async function getAttendanceSettings(context: UserContext): Promise<{ dat
             return {
                 data: {
                     org_id: context.orgId,
-                    reminder_enabled: false,
-                    lock_after_hours: 24,
+                    enable_coach_reminders: false,
+                    submission_deadline_hours: 24,
+                    lock_after_days: null,
                     required_for_practice: true,
                     required_for_game: true,
                     required_for_meeting: false,
+                    parent_visibility: {
+                        can_view_own_child: true,
+                        can_view_team_attendance: false,
+                        can_submit_attendance: false
+                    },
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                 },
@@ -74,12 +82,12 @@ export async function updateAttendanceSettings(context: UserContext, settings: P
 
     try {
         const { error } = await supabase
-            .from('attendance_settings')
+            .from('organization_attendance_settings' as any)
             .upsert({
                 org_id: context.orgId,
                 ...settings,
                 updated_at: new Date().toISOString()
-            } as Database['public']['Tables']['attendance_settings']['Insert'])
+            } as Database['public']['Tables']['organization_attendance_settings']['Insert'])
         return { error: error ? new Error(error.message) : null }
     } catch (e: any) {
         return { error: e }

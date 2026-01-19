@@ -83,9 +83,260 @@ export type Database = {
           },
         ]
       }
+      athlete_guardians: {
+        Row: {
+          athlete_id: string
+          created_at: string | null
+          id: string
+          organization_id: string
+          status: Database["public"]["Enums"]["athlete_guardian_status"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          athlete_id: string
+          created_at?: string | null
+          id?: string
+          organization_id: string
+          status?: Database["public"]["Enums"]["athlete_guardian_status"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          athlete_id?: string
+          created_at?: string | null
+          id?: string
+          organization_id?: string
+          status?: Database["public"]["Enums"]["athlete_guardian_status"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_guardians_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "admin_payments"
+            referencedColumns: ["child_id"]
+          },
+          {
+            foreignKeyName: "athlete_guardians_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athletes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_guardians_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "athlete_guardians_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_guardians_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "athlete_guardians_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_guardians_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_guardians_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_guardians_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_legacy"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      athlete_imports: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          created_by_user_id: string
+          error_count: number
+          error_summary: Json | null
+          file_name: string
+          file_path: string | null
+          file_size_bytes: number | null
+          id: string
+          imported_count: number
+          org_id: string
+          results_json: Json | null
+          skipped_count: number
+          started_at: string | null
+          status: string
+          total_rows: number
+          updated_at: string | null
+          updated_count: number
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          created_by_user_id: string
+          error_count?: number
+          error_summary?: Json | null
+          file_name: string
+          file_path?: string | null
+          file_size_bytes?: number | null
+          id?: string
+          imported_count?: number
+          org_id: string
+          results_json?: Json | null
+          skipped_count?: number
+          started_at?: string | null
+          status?: string
+          total_rows?: number
+          updated_at?: string | null
+          updated_count?: number
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          created_by_user_id?: string
+          error_count?: number
+          error_summary?: Json | null
+          file_name?: string
+          file_path?: string | null
+          file_size_bytes?: number | null
+          id?: string
+          imported_count?: number
+          org_id?: string
+          results_json?: Json | null
+          skipped_count?: number
+          started_at?: string | null
+          status?: string
+          total_rows?: number
+          updated_at?: string | null
+          updated_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_imports_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_imports_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_imports_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users_legacy"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_imports_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "athlete_imports_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_imports_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "athlete_imports_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      athletes: {
+        Row: {
+          birthdate: string | null
+          created_at: string | null
+          deleted_at: string | null
+          family_id: string | null
+          first_name: string
+          gender: string | null
+          id: string
+          last_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          birthdate?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          family_id?: string | null
+          first_name: string
+          gender?: string | null
+          id?: string
+          last_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          birthdate?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          family_id?: string | null
+          first_name?: string
+          gender?: string | null
+          id?: string
+          last_name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "children_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance: {
         Row: {
-          child_id: string
+          athlete_id: string
           created_at: string | null
           event_id: string
           id: string
@@ -94,7 +345,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          child_id: string
+          athlete_id: string
           created_at?: string | null
           event_id: string
           id?: string
@@ -103,7 +354,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          child_id?: string
+          athlete_id?: string
           created_at?: string | null
           event_id?: string
           id?: string
@@ -114,16 +365,16 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "attendance_child_id_fkey"
-            columns: ["child_id"]
+            columns: ["athlete_id"]
             isOneToOne: false
             referencedRelation: "admin_payments"
             referencedColumns: ["child_id"]
           },
           {
             foreignKeyName: "attendance_child_id_fkey"
-            columns: ["child_id"]
+            columns: ["athlete_id"]
             isOneToOne: false
-            referencedRelation: "children"
+            referencedRelation: "athletes"
             referencedColumns: ["id"]
           },
           {
@@ -137,36 +388,57 @@ export type Database = {
       }
       attendance_settings: {
         Row: {
-          org_id: string
-          reminder_enabled: boolean
+          created_at: string
           lock_after_hours: number | null
-          required_for_practice: boolean
-          required_for_game: boolean
-          required_for_meeting: boolean
-          created_at: string | null
-          updated_at: string | null
+          org_id: string
+          reminder_enabled: boolean | null
+          required_for_game: boolean | null
+          required_for_meeting: boolean | null
+          required_for_practice: boolean | null
+          updated_at: string
         }
         Insert: {
-          org_id: string
-          reminder_enabled?: boolean
+          created_at?: string
           lock_after_hours?: number | null
-          required_for_practice?: boolean
-          required_for_game?: boolean
-          required_for_meeting?: boolean
-          created_at?: string | null
-          updated_at?: string | null
+          org_id: string
+          reminder_enabled?: boolean | null
+          required_for_game?: boolean | null
+          required_for_meeting?: boolean | null
+          required_for_practice?: boolean | null
+          updated_at?: string
         }
         Update: {
-          org_id?: string
-          reminder_enabled?: boolean
+          created_at?: string
           lock_after_hours?: number | null
-          required_for_practice?: boolean
-          required_for_game?: boolean
-          required_for_meeting?: boolean
-          created_at?: string | null
-          updated_at?: string | null
+          org_id?: string
+          reminder_enabled?: boolean | null
+          required_for_game?: boolean | null
+          required_for_meeting?: boolean | null
+          required_for_practice?: boolean | null
+          updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "attendance_settings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "attendance_settings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_settings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "admin_structure"
+            referencedColumns: ["organization_id"]
+          },
           {
             foreignKeyName: "attendance_settings_org_id_fkey"
             columns: ["org_id"]
@@ -569,7 +841,7 @@ export type Database = {
       }
       child_claim_tokens: {
         Row: {
-          child_id: string
+          athlete_id: string
           created_at: string | null
           created_by_user_id: string | null
           expires_at: string
@@ -583,7 +855,7 @@ export type Database = {
           used_by_user_id: string | null
         }
         Insert: {
-          child_id: string
+          athlete_id: string
           created_at?: string | null
           created_by_user_id?: string | null
           expires_at: string
@@ -597,7 +869,7 @@ export type Database = {
           used_by_user_id?: string | null
         }
         Update: {
-          child_id?: string
+          athlete_id?: string
           created_at?: string | null
           created_by_user_id?: string | null
           expires_at?: string
@@ -613,16 +885,16 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "child_claim_tokens_child_id_fkey"
-            columns: ["child_id"]
+            columns: ["athlete_id"]
             isOneToOne: false
             referencedRelation: "admin_payments"
             referencedColumns: ["child_id"]
           },
           {
             foreignKeyName: "child_claim_tokens_child_id_fkey"
-            columns: ["child_id"]
+            columns: ["athlete_id"]
             isOneToOne: false
-            referencedRelation: "children"
+            referencedRelation: "athletes"
             referencedColumns: ["id"]
           },
           {
@@ -689,6 +961,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "child_claim_tokens_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "team_seasons_view"
+            referencedColumns: ["season_id"]
+          },
+          {
             foreignKeyName: "child_claim_tokens_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
@@ -721,138 +1000,6 @@ export type Database = {
             columns: ["used_by_user_id"]
             isOneToOne: false
             referencedRelation: "users_legacy"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      child_guardians: {
-        Row: {
-          child_id: string
-          created_at: string | null
-          id: string
-          organization_id: string
-          status: Database["public"]["Enums"]["child_guardian_status"]
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          child_id: string
-          created_at?: string | null
-          id?: string
-          organization_id: string
-          status?: Database["public"]["Enums"]["child_guardian_status"]
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          child_id?: string
-          created_at?: string | null
-          id?: string
-          organization_id?: string
-          status?: Database["public"]["Enums"]["child_guardian_status"]
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "child_guardians_child_id_fkey"
-            columns: ["child_id"]
-            isOneToOne: false
-            referencedRelation: "admin_payments"
-            referencedColumns: ["child_id"]
-          },
-          {
-            foreignKeyName: "child_guardians_child_id_fkey"
-            columns: ["child_id"]
-            isOneToOne: false
-            referencedRelation: "children"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "child_guardians_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "admin_fees_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "child_guardians_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "admin_organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "child_guardians_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "admin_structure"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "child_guardians_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "child_guardians_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "admin_users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "child_guardians_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "child_guardians_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_legacy"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      children: {
-        Row: {
-          birthdate: string | null
-          created_at: string | null
-          family_id: string | null
-          first_name: string
-          id: string
-          last_name: string
-          updated_at: string | null
-        }
-        Insert: {
-          birthdate?: string | null
-          created_at?: string | null
-          family_id?: string | null
-          first_name: string
-          id?: string
-          last_name: string
-          updated_at?: string | null
-        }
-        Update: {
-          birthdate?: string | null
-          created_at?: string | null
-          family_id?: string | null
-          first_name?: string
-          id?: string
-          last_name?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "children_family_id_fkey"
-            columns: ["family_id"]
-            isOneToOne: false
-            referencedRelation: "families"
             referencedColumns: ["id"]
           },
         ]
@@ -934,6 +1081,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "seasons"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discount_codes_applies_to_season_id_fkey"
+            columns: ["applies_to_season_id"]
+            isOneToOne: false
+            referencedRelation: "team_seasons_view"
+            referencedColumns: ["season_id"]
           },
           {
             foreignKeyName: "discount_codes_organization_id_fkey"
@@ -1081,7 +1235,7 @@ export type Database = {
             foreignKeyName: "event_attendance_child_id_fkey"
             columns: ["child_id"]
             isOneToOne: false
-            referencedRelation: "children"
+            referencedRelation: "athletes"
             referencedColumns: ["id"]
           },
           {
@@ -1396,54 +1550,6 @@ export type Database = {
         }
         Relationships: []
       }
-      event_general_rsvps: {
-        Row: {
-          id: string
-          event_id: string
-          user_id: string | null
-          status: Database["public"]["Enums"]["general_rsvp_status"]
-          note: string | null
-          responded_at: string | null
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          event_id: string
-          user_id?: string | null
-          status?: Database["public"]["Enums"]["general_rsvp_status"]
-          note?: string | null
-          responded_at?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          event_id?: string
-          user_id?: string | null
-          status?: Database["public"]["Enums"]["general_rsvp_status"]
-          note?: string | null
-          responded_at?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "event_general_rsvps_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "event_general_rsvps_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       event_rsvps: {
         Row: {
           child_id: string
@@ -1490,7 +1596,7 @@ export type Database = {
             foreignKeyName: "event_rsvps_child_id_fkey"
             columns: ["child_id"]
             isOneToOne: false
-            referencedRelation: "children"
+            referencedRelation: "athletes"
             referencedColumns: ["id"]
           },
           {
@@ -1694,6 +1800,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "seasons"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "team_seasons_view"
+            referencedColumns: ["season_id"]
           },
           {
             foreignKeyName: "events_team_id_fkey"
@@ -2284,7 +2397,7 @@ export type Database = {
             foreignKeyName: "fee_assignments_child_id_fkey"
             columns: ["child_id"]
             isOneToOne: false
-            referencedRelation: "children"
+            referencedRelation: "athletes"
             referencedColumns: ["id"]
           },
           {
@@ -2513,6 +2626,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "seasons"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fees_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "team_seasons_view"
+            referencedColumns: ["season_id"]
           },
         ]
       }
@@ -2785,7 +2905,7 @@ export type Database = {
       }
       join_requests: {
         Row: {
-          child_id: string
+          athlete_id: string
           created_at: string | null
           decision_reason: string | null
           id: string
@@ -2800,7 +2920,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          child_id: string
+          athlete_id: string
           created_at?: string | null
           decision_reason?: string | null
           id?: string
@@ -2815,7 +2935,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          child_id?: string
+          athlete_id?: string
           created_at?: string | null
           decision_reason?: string | null
           id?: string
@@ -2832,16 +2952,16 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "join_requests_child_id_fkey"
-            columns: ["child_id"]
+            columns: ["athlete_id"]
             isOneToOne: false
             referencedRelation: "admin_payments"
             referencedColumns: ["child_id"]
           },
           {
             foreignKeyName: "join_requests_child_id_fkey"
-            columns: ["child_id"]
+            columns: ["athlete_id"]
             isOneToOne: false
-            referencedRelation: "children"
+            referencedRelation: "athletes"
             referencedColumns: ["id"]
           },
           {
@@ -2936,6 +3056,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "join_requests_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "team_seasons_view"
+            referencedColumns: ["season_id"]
+          },
+          {
             foreignKeyName: "join_requests_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
@@ -2947,6 +3074,96 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      levels: {
+        Row: {
+          age_max: number | null
+          age_min: number | null
+          created_at: string | null
+          deleted_at: string | null
+          description: string | null
+          grade_max: number | null
+          grade_min: number | null
+          id: string
+          level_type: string
+          name: string
+          org_id: string
+          program_id: string
+          skill_max: number | null
+          skill_min: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          age_max?: number | null
+          age_min?: number | null
+          created_at?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          grade_max?: number | null
+          grade_min?: number | null
+          id?: string
+          level_type?: string
+          name: string
+          org_id: string
+          program_id: string
+          skill_max?: number | null
+          skill_min?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          age_max?: number | null
+          age_min?: number | null
+          created_at?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          grade_max?: number | null
+          grade_min?: number | null
+          id?: string
+          level_type?: string
+          name?: string
+          org_id?: string
+          program_id?: string
+          skill_max?: number | null
+          skill_min?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "levels_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "levels_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "levels_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "levels_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "levels_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
             referencedColumns: ["id"]
           },
         ]
@@ -3004,75 +3221,6 @@ export type Database = {
           version?: number | null
         }
         Relationships: []
-      }
-      levels: {
-        Row: {
-          id: string
-          org_id: string
-          program_id: string
-          name: string
-          level_type: string
-          description: string | null
-          age_min: number | null
-          age_max: number | null
-          grade_min: number | null
-          grade_max: number | null
-          skill_min: number | null
-          skill_max: number | null
-          created_at: string | null
-          updated_at: string | null
-          deleted_at: string | null
-        }
-        Insert: {
-          id?: string
-          org_id: string
-          program_id: string
-          name: string
-          level_type?: Database["public"]["Enums"]["level_type"]
-          description?: string | null
-          age_min?: number | null
-          age_max?: number | null
-          grade_min?: number | null
-          grade_max?: number | null
-          skill_min?: number | null
-          skill_max?: number | null
-          created_at?: string | null
-          updated_at?: string | null
-          deleted_at?: string | null
-        }
-        Update: {
-          id?: string
-          org_id?: string
-          program_id?: string
-          name?: string
-          level_type?: Database["public"]["Enums"]["level_type"]
-          description?: string | null
-          age_min?: number | null
-          age_max?: number | null
-          grade_min?: number | null
-          grade_max?: number | null
-          skill_min?: number | null
-          skill_max?: number | null
-          created_at?: string | null
-          updated_at?: string | null
-          deleted_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "levels_org_id_fkey"
-            columns: ["org_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "levels_program_id_fkey"
-            columns: ["program_id"]
-            isOneToOne: false
-            referencedRelation: "programs"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       messages: {
         Row: {
@@ -3261,7 +3409,7 @@ export type Database = {
             foreignKeyName: "offline_payments_child_id_fkey"
             columns: ["child_id"]
             isOneToOne: false
-            referencedRelation: "children"
+            referencedRelation: "athletes"
             referencedColumns: ["id"]
           },
           {
@@ -3670,6 +3818,66 @@ export type Database = {
           },
         ]
       }
+      organization_sports: {
+        Row: {
+          created_at: string | null
+          id: string
+          organization_id: string
+          sport_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          organization_id: string
+          sport_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          organization_id?: string
+          sport_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_sports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "organization_sports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_sports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "organization_sports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_sports_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "sports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           billing_mode: Database["public"]["Enums"]["billing_mode"] | null
@@ -3773,7 +3981,7 @@ export type Database = {
         Row: {
           accepted_at: string | null
           accepted_by_user_id: string | null
-          child_id: string | null
+          athlete_id: string | null
           created_at: string | null
           created_by_user_id: string | null
           email: string
@@ -3788,7 +3996,7 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           accepted_by_user_id?: string | null
-          child_id?: string | null
+          athlete_id?: string | null
           created_at?: string | null
           created_by_user_id?: string | null
           email: string
@@ -3803,7 +4011,7 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           accepted_by_user_id?: string | null
-          child_id?: string | null
+          athlete_id?: string | null
           created_at?: string | null
           created_by_user_id?: string | null
           email?: string
@@ -3839,16 +4047,16 @@ export type Database = {
           },
           {
             foreignKeyName: "parent_invites_child_id_fkey"
-            columns: ["child_id"]
+            columns: ["athlete_id"]
             isOneToOne: false
             referencedRelation: "admin_payments"
             referencedColumns: ["child_id"]
           },
           {
             foreignKeyName: "parent_invites_child_id_fkey"
-            columns: ["child_id"]
+            columns: ["athlete_id"]
             isOneToOne: false
-            referencedRelation: "children"
+            referencedRelation: "athletes"
             referencedColumns: ["id"]
           },
           {
@@ -4207,6 +4415,7 @@ export type Database = {
       programs: {
         Row: {
           created_at: string | null
+          gender_category: string
           id: string
           name: string
           org_id: string
@@ -4215,6 +4424,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          gender_category?: string
           id?: string
           name: string
           org_id: string
@@ -4223,6 +4433,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          gender_category?: string
           id?: string
           name?: string
           org_id?: string
@@ -4614,6 +4825,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          org_id: string | null
           organization_id: string
           program_id: string | null
           sport_id: string | null
@@ -4627,6 +4839,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          org_id?: string | null
           organization_id: string
           program_id?: string | null
           sport_id?: string | null
@@ -4640,6 +4853,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          org_id?: string | null
           organization_id?: string
           program_id?: string | null
           sport_id?: string | null
@@ -4648,6 +4862,34 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "seasons_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "seasons_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seasons_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "seasons_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "seasons_organization_id_fkey"
             columns: ["organization_id"]
@@ -4708,24 +4950,36 @@ export type Database = {
       }
       sports: {
         Row: {
+          color: string | null
           created_at: string | null
+          deleted_at: string | null
+          icon: string | null
           id: string
+          is_system: boolean | null
           name: string
-          org_id: string
+          org_id: string | null
           updated_at: string | null
         }
         Insert: {
+          color?: string | null
           created_at?: string | null
+          deleted_at?: string | null
+          icon?: string | null
           id?: string
+          is_system?: boolean | null
           name: string
-          org_id: string
+          org_id?: string | null
           updated_at?: string | null
         }
         Update: {
+          color?: string | null
           created_at?: string | null
+          deleted_at?: string | null
+          icon?: string | null
           id?: string
+          is_system?: boolean | null
           name?: string
-          org_id?: string
+          org_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -4761,7 +5015,7 @@ export type Database = {
       }
       team_memberships: {
         Row: {
-          child_id: string
+          athlete_id: string
           created_at: string | null
           id: string
           season_id: string
@@ -4770,7 +5024,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          child_id: string
+          athlete_id: string
           created_at?: string | null
           id?: string
           season_id: string
@@ -4779,7 +5033,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          child_id?: string
+          athlete_id?: string
           created_at?: string | null
           id?: string
           season_id?: string
@@ -4790,16 +5044,16 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "team_memberships_child_id_fkey"
-            columns: ["child_id"]
+            columns: ["athlete_id"]
             isOneToOne: false
             referencedRelation: "admin_payments"
             referencedColumns: ["child_id"]
           },
           {
             foreignKeyName: "team_memberships_child_id_fkey"
-            columns: ["child_id"]
+            columns: ["athlete_id"]
             isOneToOne: false
-            referencedRelation: "children"
+            referencedRelation: "athletes"
             referencedColumns: ["id"]
           },
           {
@@ -4817,6 +5071,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "team_memberships_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "team_seasons_view"
+            referencedColumns: ["season_id"]
+          },
+          {
             foreignKeyName: "team_memberships_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
@@ -4832,44 +5093,111 @@ export type Database = {
           },
         ]
       }
+      team_seasons: {
+        Row: {
+          created_at: string | null
+          is_active: boolean | null
+          season_id: string
+          team_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          is_active?: boolean | null
+          season_id: string
+          team_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          is_active?: boolean | null
+          season_id?: string
+          team_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_seasons_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["season_id"]
+          },
+          {
+            foreignKeyName: "team_seasons_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_seasons_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "team_seasons_view"
+            referencedColumns: ["season_id"]
+          },
+          {
+            foreignKeyName: "team_seasons_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["team_id"]
+          },
+          {
+            foreignKeyName: "team_seasons_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teams: {
         Row: {
           created_at: string | null
           id: string
+          invite_code: string
           level_id: string | null
           name: string
           org_id: string
+          program: string | null
           program_id: string | null
-          sport_id: string | null
-          max_roster_size: number | null
-          is_active: boolean | null
+          sport: string | null
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           id?: string
+          invite_code: string
           level_id?: string | null
           name: string
           org_id: string
+          program?: string | null
           program_id?: string | null
-          sport_id?: string | null
-          max_roster_size?: number | null
-          is_active?: boolean | null
+          sport?: string | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           id?: string
+          invite_code?: string
           level_id?: string | null
           name?: string
           org_id?: string
+          program?: string | null
           program_id?: string | null
-          sport_id?: string | null
-          max_roster_size?: number | null
-          is_active?: boolean | null
+          sport?: string | null
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "teams_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "teams_org_id_fkey"
             columns: ["org_id"]
@@ -4896,6 +5224,13 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
             referencedColumns: ["id"]
           },
         ]
@@ -4969,6 +5304,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "seasons"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "travel_plans_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "team_seasons_view"
+            referencedColumns: ["season_id"]
           },
           {
             foreignKeyName: "travel_plans_team_id_fkey"
@@ -5128,7 +5470,7 @@ export type Database = {
       }
       tryout_registrations: {
         Row: {
-          child_id: string
+          athlete_id: string
           created_at: string | null
           family_id: string
           id: string
@@ -5140,7 +5482,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          child_id: string
+          athlete_id: string
           created_at?: string | null
           family_id: string
           id?: string
@@ -5152,7 +5494,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          child_id?: string
+          athlete_id?: string
           created_at?: string | null
           family_id?: string
           id?: string
@@ -5166,16 +5508,16 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "tryout_registrations_child_id_fkey"
-            columns: ["child_id"]
+            columns: ["athlete_id"]
             isOneToOne: false
             referencedRelation: "admin_payments"
             referencedColumns: ["child_id"]
           },
           {
             foreignKeyName: "tryout_registrations_child_id_fkey"
-            columns: ["child_id"]
+            columns: ["athlete_id"]
             isOneToOne: false
-            referencedRelation: "children"
+            referencedRelation: "athletes"
             referencedColumns: ["id"]
           },
           {
@@ -5492,6 +5834,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "uniform_kits_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "team_seasons_view"
+            referencedColumns: ["season_id"]
+          },
+          {
             foreignKeyName: "uniform_kits_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
@@ -5509,7 +5858,7 @@ export type Database = {
       }
       uniform_orders: {
         Row: {
-          child_id: string
+          athlete_id: string
           created_at: string | null
           id: string
           jersey_size: string
@@ -5522,7 +5871,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          child_id: string
+          athlete_id: string
           created_at?: string | null
           id?: string
           jersey_size: string
@@ -5535,7 +5884,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          child_id?: string
+          athlete_id?: string
           created_at?: string | null
           id?: string
           jersey_size?: string
@@ -5550,16 +5899,16 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "uniform_orders_child_id_fkey"
-            columns: ["child_id"]
+            columns: ["athlete_id"]
             isOneToOne: false
             referencedRelation: "admin_payments"
             referencedColumns: ["child_id"]
           },
           {
             foreignKeyName: "uniform_orders_child_id_fkey"
-            columns: ["child_id"]
+            columns: ["athlete_id"]
             isOneToOne: false
-            referencedRelation: "children"
+            referencedRelation: "athletes"
             referencedColumns: ["id"]
           },
           {
@@ -5575,6 +5924,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "seasons"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "uniform_orders_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "team_seasons_view"
+            referencedColumns: ["season_id"]
           },
           {
             foreignKeyName: "uniform_orders_team_id_fkey"
@@ -5680,7 +6036,7 @@ export type Database = {
             foreignKeyName: "uniform_submissions_child_id_fkey"
             columns: ["child_id"]
             isOneToOne: false
-            referencedRelation: "children"
+            referencedRelation: "athletes"
             referencedColumns: ["id"]
           },
           {
@@ -5704,7 +6060,7 @@ export type Database = {
           phone: string | null
           preferences: Json | null
           requires_org_setup: boolean
-          role: Database["public"]["Enums"]["user_role"]
+          role: Database["public"]["Enums"]["user_role"] | null
           updated_at: string | null
         }
         Insert: {
@@ -5718,7 +6074,7 @@ export type Database = {
           phone?: string | null
           preferences?: Json | null
           requires_org_setup?: boolean
-          role?: Database["public"]["Enums"]["user_role"]
+          role?: Database["public"]["Enums"]["user_role"] | null
           updated_at?: string | null
         }
         Update: {
@@ -5732,7 +6088,7 @@ export type Database = {
           phone?: string | null
           preferences?: Json | null
           requires_org_setup?: boolean
-          role?: Database["public"]["Enums"]["user_role"]
+          role?: Database["public"]["Enums"]["user_role"] | null
           updated_at?: string | null
         }
         Relationships: [
@@ -5769,80 +6125,6 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_notifications: {
-        Row: {
-          id: string
-          user_id: string
-          org_id: string
-          team_id: string | null
-          type: string
-          kit_id: string | null
-          title: string
-          body: string
-          payload: Json | null
-          dedupe_key: string
-          read_at: string | null
-          created_at: string | null
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          org_id: string
-          team_id?: string | null
-          type: string
-          kit_id?: string | null
-          title: string
-          body: string
-          payload?: Json | null
-          dedupe_key: string
-          read_at?: string | null
-          created_at?: string | null
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          org_id?: string
-          team_id?: string | null
-          type?: string
-          kit_id?: string | null
-          title?: string
-          body?: string
-          payload?: Json | null
-          dedupe_key?: string
-          read_at?: string | null
-          created_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_notifications_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_notifications_org_id_fkey"
-            columns: ["org_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_notifications_team_id_fkey"
-            columns: ["team_id"]
-            isOneToOne: false
-            referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_notifications_kit_id_fkey"
-            columns: ["kit_id"]
-            isOneToOne: false
-            referencedRelation: "uniform_kits"
             referencedColumns: ["id"]
           },
         ]
@@ -6387,6 +6669,44 @@ export type Database = {
         }
         Relationships: []
       }
+      derived_families_mv: {
+        Row: {
+          athlete_count: number | null
+          athlete_ids: string[] | null
+          family_group_id: string | null
+          organization_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_guardians_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "athlete_guardians_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_guardians_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "athlete_guardians_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_logs_recent: {
         Row: {
           actor_email: string | null
@@ -6453,6 +6773,62 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_seasons_view: {
+        Row: {
+          end_date: string | null
+          is_active: boolean | null
+          name: string | null
+          org_id: string | null
+          season_id: string | null
+          season_is_active: boolean | null
+          start_date: string | null
+          team_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seasons_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "seasons_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seasons_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "seasons_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_seasons_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["team_id"]
+          },
+          {
+            foreignKeyName: "team_seasons_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -6673,6 +7049,10 @@ export type Database = {
         }
         Returns: string
       }
+      create_athlete_with_guardians: {
+        Args: { p_athlete_data: Json; p_guardians?: Json[]; p_org_id: string }
+        Returns: Json
+      }
       create_child_claim_token: {
         Args: {
           p_child_id: string
@@ -6733,6 +7113,16 @@ export type Database = {
         }
         Returns: string
       }
+      find_guardian_by_email: {
+        Args: { p_email: string; p_org_id: string }
+        Returns: {
+          display_name: string
+          email: string
+          linked_athletes: Json
+          phone: string
+          user_id: string
+        }[]
+      }
       format_event_location_address: {
         Args: { p_location_id: string }
         Returns: string
@@ -6744,6 +7134,23 @@ export type Database = {
           p_template_event_id: string
         }
         Returns: number
+      }
+      get_athlete_guardians: {
+        Args: { p_athlete_id: string; p_org_id: string }
+        Returns: {
+          created_at: string
+          display_name: string
+          email: string
+          guardian_id: string
+          phone: string
+          relationship_type: string
+          status: Database["public"]["Enums"]["athlete_guardian_status"]
+          user_id: string
+        }[]
+      }
+      get_derived_family_for_athlete: {
+        Args: { p_athlete_id: string; p_org_id: string }
+        Returns: Json
       }
       get_environment_from_url: {
         Args: never
@@ -6764,18 +7171,23 @@ export type Database = {
           unknown_count: number
         }[]
       }
-      is_child_eligible_for_event: {
-        Args: { p_child_id: string; p_event_id: string }
-        Returns: boolean
+      get_family_athletes_via_guardians: {
+        Args: { p_athlete_id: string; p_org_id: string }
+        Returns: {
+          athlete_id: string
+        }[]
       }
-      update_event_rsvp_config: {
-        Args: {
-          p_event_id: string
-          p_rsvp_enabled: boolean
-          p_rsvp_type: string | null
-          p_clear_existing?: boolean
-        }
-        Returns: { error?: string; has_data?: boolean }
+      get_guardian_athletes: {
+        Args: { p_org_id: string; p_user_id: string }
+        Returns: {
+          athlete_id: string
+          birthdate: string
+          first_name: string
+          gender: string
+          last_name: string
+          relationship_type: string
+          status: Database["public"]["Enums"]["athlete_guardian_status"]
+        }[]
       }
       get_invite_details: {
         Args: { p_token: string }
@@ -6788,6 +7200,16 @@ export type Database = {
           organization_name: string
           role: Database["public"]["Enums"]["org_member_role"]
           valid: boolean
+        }[]
+      }
+      get_orphaned_athletes: {
+        Args: { p_org_id: string }
+        Returns: {
+          athlete_id: string
+          birthdate: string
+          created_at: string
+          first_name: string
+          last_name: string
         }[]
       }
       get_pending_invites_for_user: {
@@ -6853,6 +7275,20 @@ export type Database = {
         Args: { check_org_id: string; check_user_id: string }
         Returns: Database["public"]["Enums"]["org_member_role"][]
       }
+      import_athletes_from_spreadsheet: {
+        Args: {
+          p_assign_teams_from_spreadsheet?: boolean
+          p_create_families?: boolean
+          p_import_id: string
+          p_import_mode: string
+          p_link_existing_families?: boolean
+          p_org_id: string
+          p_rows: Json
+          p_season_id?: string
+          p_team_id?: string
+        }
+        Returns: Json
+      }
       is_org_license_active: { Args: { org_id: string }; Returns: boolean }
       is_org_license_readonly_allowed: {
         Args: { org_id: string }
@@ -6864,6 +7300,16 @@ export type Database = {
       }
       is_platform_admin: { Args: { check_user_id: string }; Returns: boolean }
       is_travel_event: { Args: { p_event_id: string }; Returns: boolean }
+      link_guardian_to_athlete: {
+        Args: {
+          p_athlete_id: string
+          p_created_by_user_id?: string
+          p_email: string
+          p_org_id: string
+          p_relationship_type?: string
+        }
+        Returns: Json
+      }
       lock_uniform_kit: { Args: { p_kit_id: string }; Returns: undefined }
       log_event: {
         Args: {
@@ -6885,6 +7331,7 @@ export type Database = {
         Args: { p_submission_id: string }
         Returns: undefined
       }
+      normalize_email: { Args: { email: string }; Returns: string }
       parent_can_access_team_via_membership: {
         Args: {
           check_season_id: string
@@ -6910,6 +7357,10 @@ export type Database = {
       register_child_for_tryout: {
         Args: { p_child_id: string; p_tryout_id: string }
         Returns: string
+      }
+      remove_guardian_from_athlete: {
+        Args: { p_athlete_id: string; p_org_id: string; p_user_id: string }
+        Returns: Json
       }
       remove_org_role: {
         Args: {
@@ -6981,6 +7432,10 @@ export type Database = {
       }
       sync_org_license_summary: { Args: { org_id: string }; Returns: undefined }
       sync_rsvp_to_attendance: { Args: { p_event_id: string }; Returns: number }
+      user_can_access_athlete: {
+        Args: { p_athlete_id: string; p_user_id: string }
+        Returns: boolean
+      }
       user_has_all_org_roles: {
         Args: {
           check_org_id: string
@@ -7040,6 +7495,7 @@ export type Database = {
         | "MARK_DISPUTE"
         | "RESEND_VERIFICATION"
         | "FORCE_LOGOUT"
+      athlete_guardian_status: "active" | "pending" | "removed"
       attendance_status: "going" | "late" | "not_going"
       auth_event_type:
         | "USER_SIGNED_UP"
@@ -7078,7 +7534,6 @@ export type Database = {
         | "CHILD_UPDATED"
         | "CHILD_DELETED"
         | "CHILD_PROFILE_UPDATED"
-      child_guardian_status: "active" | "pending" | "removed"
       discount_code_status: "active" | "inactive"
       discount_type: "percent" | "fixed"
       event_actor_role:
@@ -7139,7 +7594,6 @@ export type Database = {
         | "fundraiser"
         | "misc"
       fee_visibility: "all_parents" | "assigned_only"
-      general_rsvp_status: "going" | "not_going" | "maybe"
       installment_frequency: "weekly" | "biweekly" | "monthly"
       installment_schedule_status:
         | "active"
@@ -7154,7 +7608,6 @@ export type Database = {
         | "skipped"
         | "waived"
       join_request_status: "pending" | "approved" | "denied"
-      level_type: "age" | "grade" | "skill" | "custom"
       license_plan: "starter" | "standard" | "pro"
       license_status: "trial" | "active" | "past_due" | "canceled" | "expired"
       membership_status: "active" | "invited" | "removed"
@@ -7440,6 +7893,7 @@ export const Constants = {
         "RESEND_VERIFICATION",
         "FORCE_LOGOUT",
       ],
+      athlete_guardian_status: ["active", "pending", "removed"],
       attendance_status: ["going", "late", "not_going"],
       auth_event_type: [
         "USER_SIGNED_UP",
@@ -7483,7 +7937,6 @@ export const Constants = {
         "CHILD_DELETED",
         "CHILD_PROFILE_UPDATED",
       ],
-      child_guardian_status: ["active", "pending", "removed"],
       discount_code_status: ["active", "inactive"],
       discount_type: ["percent", "fixed"],
       event_actor_role: [
@@ -7550,7 +8003,6 @@ export const Constants = {
         "misc",
       ],
       fee_visibility: ["all_parents", "assigned_only"],
-      general_rsvp_status: ["going", "not_going", "maybe"],
       installment_frequency: ["weekly", "biweekly", "monthly"],
       installment_schedule_status: [
         "active",
@@ -7567,7 +8019,6 @@ export const Constants = {
         "waived",
       ],
       join_request_status: ["pending", "approved", "denied"],
-      level_type: ["age", "grade", "skill", "custom"],
       license_plan: ["starter", "standard", "pro"],
       license_status: ["trial", "active", "past_due", "canceled", "expired"],
       membership_status: ["active", "invited", "removed"],

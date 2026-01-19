@@ -98,6 +98,7 @@ const OrganizationBilling = lazy(() => import('./pages/admin/OrganizationBilling
 const PlanSelection = lazy(() => import('./pages/admin/PlanSelection'))
 const CheckoutSuccess = lazy(() => import('./pages/admin/CheckoutSuccess'))
 const CheckoutCancel = lazy(() => import('./pages/admin/CheckoutCancel'))
+const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'))
 const AdminFamilies = lazy(() => import('./pages/admin/AdminFamilies'))
 const CreateFamily = lazy(() => import('./pages/admin/CreateFamily'))
 const FamilyDetail = lazy(() => import('./pages/admin/FamilyDetail'))
@@ -205,8 +206,9 @@ function App() {
             {/* Redirect root portal to dashboard */}
             <Route index element={<Navigate to="/portal/dashboard" replace />} />
 
-            {/* Catch-all to prevent blank/\"blue\" screens on unknown portal routes */}
-            <Route path="*" element={<Navigate to="/portal/dashboard" replace />} />
+            {/* Catch-all to prevent blank/"blue" screens on unknown portal routes */}
+            {/* Use replace: false to preserve browser history for back button navigation */}
+            <Route path="*" element={<Navigate to="/portal/dashboard" replace={false} />} />
           </Route>
 
           {/* Organization Onboarding - Standalone route outside AdminLayout */}
@@ -302,6 +304,9 @@ function App() {
               <Route path="organization/billing/plan-selection" element={<PlanSelection />} />
               <Route path="organization/billing/checkout/success" element={<CheckoutSuccess />} />
               <Route path="organization/billing/checkout/cancel" element={<CheckoutCancel />} />
+              
+              {/* Personal Settings */}
+              <Route path="settings" element={<AdminSettings />} />
             </Route>
           </Route>
 

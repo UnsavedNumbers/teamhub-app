@@ -116,57 +116,57 @@ export default function LevelsManagement() {
             </div>
           </Card>
 
-          <Card noPadding>
-            <table className="pa-table" style={{ width: '100%' }}>
-              <thead>
-                <tr>
-                  <th className="pa-p-4">Level Name</th>
-                  <th className="pa-p-4">Program</th>
-                  <th className="pa-p-4">Type</th>
-                  <th className="pa-p-4">Eligibility</th>
-                  <th className="pa-p-4">Status</th>
-                  <th className="pa-p-4">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredLevels.map((level) => {
-                  const program = programById.get(level.program_id)
-                  const eligibility = level.age_min && level.age_max ? `${level.age_min}-${level.age_max} years` : level.grade_min && level.grade_max ? `Grades ${level.grade_min}-${level.grade_max}` : level.description || '—'
+          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Level Name</th>
+                    <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Program</th>
+                    <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Type</th>
+                    <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Eligibility</th>
+                    <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                    <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredLevels.map((level) => {
+                    const program = programById.get(level.program_id)
+                    const eligibility = level.age_min && level.age_max ? `${level.age_min}-${level.age_max} years` : level.grade_min && level.grade_max ? `Grades ${level.grade_min}-${level.grade_max}` : level.description || '—'
 
-                  return (
-                    <tr key={level.id} style={{ borderTop: '1px solid var(--pa-n200)' }}>
-                      <td className="pa-p-4 pa-font-medium">{level.name}</td>
-                      <td className="pa-p-4 pa-text-muted">{program?.name || '—'}</td>
-                      <td className="pa-p-4 pa-text-muted">{levelTypeLabel(level.level_type)}</td>
-                      <td className="pa-p-4 pa-text-muted">{eligibility}</td>
-                      <td className="pa-p-4">
-                        <span
-                          style={{
-                            display: 'inline-block',
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            backgroundColor: level.deleted_at ? 'var(--pa-n200)' : 'var(--pa-success-bg)',
-                            color: level.deleted_at ? 'var(--pa-n600)' : 'var(--pa-success)',
-                          }}
-                        >
-                          {level.deleted_at ? 'Archived' : 'Active'}
-                        </span>
-                      </td>
-                      <td className="pa-p-4">
-                        <Link to={`/admin/organization/structure/forms?edit=level&id=${level.id}`}>
-                          <Button variant="secondary">
-                            Edit
-                          </Button>
-                        </Link>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </Card>
+                    return (
+                      <tr key={level.id} className="hover:bg-slate-50/80 transition-colors group">
+                        <td className="py-4 px-6">
+                          <div className="font-bold text-slate-900">{level.name}</div>
+                        </td>
+                        <td className="py-4 px-6 text-sm text-slate-700">{program?.name || '—'}</td>
+                        <td className="py-4 px-6 text-sm text-slate-500">{levelTypeLabel(level.level_type)}</td>
+                        <td className="py-4 px-6 text-sm text-slate-500">{eligibility}</td>
+                        <td className="py-4 px-6">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                              level.deleted_at
+                                ? 'bg-slate-100 text-slate-600 border border-slate-200'
+                                : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                            }`}
+                          >
+                            {level.deleted_at ? 'Archived' : 'Active'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 text-right">
+                          <Link to={`/admin/organization/structure/forms?edit=level&id=${level.id}`} className="invisible group-hover:visible focus:visible">
+                            <button className="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors">
+                              Edit
+                            </button>
+                          </Link>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </>
       )}
     </div>
