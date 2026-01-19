@@ -24,6 +24,7 @@ export { default as Input } from './Input'
 export { default as Select } from './Select'
 export { default as Checkbox } from './Checkbox'
 export { default as FilterBar } from './FilterBar'
+export { default as ThemePicker } from './ThemePicker'
 
 // Feedback
 export { default as ConfirmDialog } from './ConfirmDialog'

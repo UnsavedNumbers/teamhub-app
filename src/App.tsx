@@ -6,6 +6,7 @@ import { SidebarProvider } from './contexts/SidebarContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import AdminLoadingSpinner from './components/admin/AdminLoadingSpinner'
 import { getHostAppContext } from './utils/host'
+import { useOrganizationTheme } from './hooks/useOrganizationTheme'
 
 // Marketing Page
 import Marketing from './pages/Marketing'
@@ -168,7 +169,18 @@ function App() {
   return (
     <OrganizationProvider>
       <AuthProvider>
-        <Routes>
+        <AppWithTheme />
+      </AuthProvider>
+    </OrganizationProvider>
+  )
+}
+
+function AppWithTheme() {
+  // Apply organization theme globally - must be inside both OrganizationProvider and AuthProvider
+  useOrganizationTheme()
+
+  return (
+    <Routes>
           {/* Marketing Landing Page - Public */}
           <Route path="/" element={<HostHomeRoute />} />
 
@@ -368,8 +380,6 @@ function App() {
             </Route>
           </Route>
         </Routes>
-      </AuthProvider>
-    </OrganizationProvider>
   )
 }
 

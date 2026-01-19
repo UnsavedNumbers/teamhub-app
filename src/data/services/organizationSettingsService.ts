@@ -113,6 +113,7 @@ async function getGeneralSettings(
       organization_name: data.organization_name,
       timezone: data.timezone,
       default_language: data.default_language,
+      theme_id: data.theme_id || null,
       status: data.status,
       updated_at: data.updated_at,
     }

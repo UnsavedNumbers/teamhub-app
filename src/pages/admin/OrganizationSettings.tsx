@@ -11,9 +11,13 @@ import {
   Button, 
   Input,
   Select,
-  Checkbox
+  Checkbox,
+  ThemePicker,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent
 } from '../../components/platformAdmin'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/platformAdmin/Tabs'
 
 import { 
   getOrganizationDetails, 
@@ -190,6 +194,7 @@ export default function OrganizationSettings() {
         <TabsList className="pa-mb-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="general">Configuration</TabsTrigger>
+          <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
           <TabsTrigger value="registration">Registration</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
@@ -203,6 +208,10 @@ export default function OrganizationSettings() {
 
         <TabsContent value="general">
           {settings && <GeneralConfigForm settings={settings.general} onSave={(d) => handleSaveSettings('general', d)} loading={saving} />}
+        </TabsContent>
+
+        <TabsContent value="appearance">
+          {settings && <AppearanceForm settings={settings.general} onSave={(d) => handleSaveSettings('general', d)} loading={saving} />}
         </TabsContent>
 
         <TabsContent value="attendance">
@@ -250,13 +259,17 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
   return (
     <Card>
       <form onSubmit={handleSubmit((data) => onSave(data, logoFile))}>
-        <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-6">
-          <div>
-            <h3 className="pa-h3 pa-mb-4">Basic Info</h3>
-            <Controller name="name" control={control} rules={{required: 'Name is required'}} render={({field}) => (
-               <Input {...field} label="Organization Name" required />
-            )} />
-            <div className="pa-grid pa-grid-2 pa-gap-4 pa-mt-4">
+        <div className="pa-form-grid pa-form-grid-2">
+          {/* Left Column: Basic Info */}
+          <div className="pa-flex pa-flex-col pa-gap-4">
+            <h3 className="pa-h3 pa-mb-2">Basic Info</h3>
+            <div className="pa-form-group">
+              <Controller name="name" control={control} rules={{required: 'Name is required'}} render={({field}) => (
+                 <Input {...field} label="Organization Name" required />
+              )} />
+            </div>
+            
+            <div className="pa-form-grid pa-form-grid-2">
               <Controller name="email" control={control} render={({field}) => (
                 <Input {...field} value={field.value || ''} label="Contact Email" type="email" />
               )} />
@@ -264,14 +277,17 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
                 <Input {...field} value={field.value || ''} label="Phone" type="tel" />
               )} />
             </div>
-            <div className="pa-mt-4">
+            
+            <div className="pa-form-group">
                <Controller name="website" control={control} render={({field}) => (
                 <Input {...field} value={field.value || ''} label="Website" type="url" />
               )} />
             </div>
           </div>
+          
+          {/* Right Column: Logo */}
           <div>
-            <h3 className="pa-h3 pa-mb-4">Logo</h3>
+            <h3 className="pa-h3 pa-mb-2">Logo</h3>
             <div className="pa-upload-box pa-p-4 pa-border pa-rounded pa-text-center">
                <input type="file" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0])} />
                <p className="pa-text-sm pa-text-muted pa-mt-2">Upload a PNG or JPG logo</p>
@@ -279,26 +295,28 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
           </div>
         </div>
         
-        <h3 className="pa-h3 pa-mb-4">Location</h3>
-        <div className="pa-mb-4">
-          <Controller name="address" control={control} render={({field}) => (
-             <Input {...field} value={field.value || ''} label="Address" />
-          )} />
-        </div>
-        <div className="pa-grid pa-grid-3 pa-gap-4 pa-mb-6">
-           <Controller name="city" control={control} render={({field}) => (
-             <Input {...field} value={field.value || ''} label="City" />
-          )} />
-           <Controller name="state" control={control} render={({field}) => (
-             <Input {...field} value={field.value || ''} label="State" />
-          )} />
-           <Controller name="zip" control={control} render={({field}) => (
-             <Input {...field} value={field.value || ''} label="Zip Code" />
-          )} />
+        <div className="pa-mt-6">
+          <h3 className="pa-h3 pa-mb-4">Location</h3>
+          <div className="pa-form-group pa-mb-4">
+            <Controller name="address" control={control} render={({field}) => (
+               <Input {...field} value={field.value || ''} label="Address" />
+            )} />
+          </div>
+          <div className="pa-form-grid pa-form-grid-3">
+             <Controller name="city" control={control} render={({field}) => (
+               <Input {...field} value={field.value || ''} label="City" />
+            )} />
+             <Controller name="state" control={control} render={({field}) => (
+               <Input {...field} value={field.value || ''} label="State" />
+            )} />
+             <Controller name="zip" control={control} render={({field}) => (
+               <Input {...field} value={field.value || ''} label="Zip Code" />
+            )} />
+          </div>
         </div>
 
-        <div className="pa-flex pa-justify-end">
-          <Button type="submit" loading={loading}>Save Profile</Button>
+        <div className="pa-form-actions">
+          <Button type="submit" loading={loading} variant="primary">Save Profile</Button>
         </div>
       </form>
     </Card>
@@ -314,7 +332,6 @@ function GeneralConfigForm({ settings, onSave, loading }: { settings: OrgSetting
     }
   })
 
-  // Basic timezone options
   const timezones = [
     { value: 'America/New_York', label: 'Eastern Time' },
     { value: 'America/Chicago', label: 'Central Time' },
@@ -326,18 +343,62 @@ function GeneralConfigForm({ settings, onSave, loading }: { settings: OrgSetting
     <Card>
       <form onSubmit={handleSubmit(onSave)}>
         <h3 className="pa-h3 pa-mb-4">System Defaults</h3>
-        <div className="pa-form-group pa-mb-4">
-          <Controller name="timezone" control={control} render={({field}) => (
-             <Select {...field} label="Organization Timezone" options={timezones} />
-          )} />
+        <div className="pa-form-grid pa-form-grid-2">
+          <div className="pa-form-group">
+            <Controller name="timezone" control={control} render={({field}) => (
+               <Select {...field} label="Organization Timezone" options={timezones} />
+            )} />
+          </div>
+           <div className="pa-form-group">
+            <Controller name="default_language" control={control} render={({field}) => (
+               <Select {...field} label="Default Language" options={[{value: 'en', label: 'English'}, {value: 'es', label: 'Spanish'}]} />
+            )} />
+          </div>
         </div>
-         <div className="pa-form-group pa-mb-6">
-          <Controller name="default_language" control={control} render={({field}) => (
-             <Select {...field} label="Default Language" options={[{value: 'en', label: 'English'}, {value: 'es', label: 'Spanish'}]} />
-          )} />
+        <div className="pa-form-actions">
+          <Button type="submit" loading={loading} variant="primary">Save Configuration</Button>
         </div>
-        <div className="pa-flex pa-justify-end">
-          <Button type="submit" loading={loading}>Save Configuration</Button>
+      </form>
+    </Card>
+  )
+}
+
+function AppearanceForm({ settings, onSave, loading }: { settings: OrgSettingsType['general'], onSave: (d: any) => void, loading: boolean }) {
+  const [selectedThemeId, setSelectedThemeId] = useState<string | null>(settings.theme_id || null)
+
+  // Sync selectedThemeId when settings change (e.g., after reload)
+  useEffect(() => {
+    setSelectedThemeId(settings.theme_id || null)
+  }, [settings.theme_id])
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSave({ theme_id: selectedThemeId })
+  }
+
+  return (
+    <Card>
+      <form onSubmit={handleSubmit}>
+        <h3 className="pa-h3 pa-mb-4">Appearance Settings</h3>
+        <p className="pa-text-muted pa-mb-6">
+          Customize your organization's visual theme and branding colors
+        </p>
+
+        <div className="pa-form-group pa-mb-6">
+          <label className="pa-label pa-mb-3 block">Organization Theme</label>
+          <p className="pa-text-muted pa-mb-4">
+            Choose a theme that will be applied across your organization's interface.
+            Themes include primary, secondary, and accent colors that work in both light and dark modes.
+          </p>
+          <ThemePicker
+            selectedThemeId={selectedThemeId}
+            onChange={setSelectedThemeId}
+            disabled={loading}
+          />
+        </div>
+
+        <div className="pa-form-actions">
+          <Button type="submit" loading={loading} variant="primary">Save Appearance Settings</Button>
         </div>
       </form>
     </Card>
@@ -353,7 +414,7 @@ function AttendanceForm({ settings, onSave, loading }: { settings: OrgSettingsTy
     <Card>
       <form onSubmit={handleSubmit(onSave)}>
         <h3 className="pa-h3 pa-mb-4">Attendance Rules</h3>
-        <div className="pa-grid pa-grid-3 pa-gap-4 pa-mb-6">
+        <div className="pa-form-grid pa-form-grid-3 pa-mb-6">
           <Controller name="required_for_game" control={control} render={({field}) => (
             <Checkbox label="Required for Games" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
@@ -365,7 +426,7 @@ function AttendanceForm({ settings, onSave, loading }: { settings: OrgSettingsTy
           )} />
         </div>
 
-        <div className="pa-form-group pa-mb-6">
+        <div className="pa-form-group pa-max-w-md pa-mb-6">
           <Controller name="submission_deadline_hours" control={control} render={({field}) => (
              <Input {...field} type="number" label="Submission Deadline (Hours before event)" onChange={e => field.onChange(parseInt(e.target.value))} />
           )} />
@@ -378,8 +439,8 @@ function AttendanceForm({ settings, onSave, loading }: { settings: OrgSettingsTy
           )} />
         </div>
 
-         <div className="pa-flex pa-justify-end">
-          <Button type="submit" loading={loading}>Save Attendance Rules</Button>
+         <div className="pa-form-actions">
+          <Button type="submit" loading={loading} variant="primary">Save Attendance Rules</Button>
         </div>
       </form>
     </Card>
@@ -396,23 +457,19 @@ function RegistrationForm({ settings, onSave, loading }: { settings: OrgSettings
     <Card>
       <form onSubmit={handleSubmit(onSave)}>
         <h3 className="pa-h3 pa-mb-4">Registration Policies</h3>
-        <div className="pa-mb-4">
+        <div className="pa-flex pa-flex-col pa-gap-4 pa-mb-6">
            <Controller name="allow_guardian_self_invite" control={control} render={({field}) => (
             <Checkbox label="Allow guardians to invite other guardians" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
-        </div>
-         <div className="pa-mb-4">
            <Controller name="allow_players_without_guardians" control={control} render={({field}) => (
             <Checkbox label="Allow players without guardians (e.g. Adult leagues)" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
-        </div>
-         <div className="pa-mb-6">
            <Controller name="medical_form_required" control={control} render={({field}) => (
             <Checkbox label="Require Medical Clearance form" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
         </div>
-         <div className="pa-flex pa-justify-end">
-          <Button type="submit" loading={loading}>Save Policies</Button>
+         <div className="pa-form-actions">
+          <Button type="submit" loading={loading} variant="primary">Save Policies</Button>
         </div>
       </form>
     </Card>
@@ -428,23 +485,21 @@ function NotificationsForm({ settings, onSave, loading }: { settings: OrgSetting
     <Card>
       <form onSubmit={handleSubmit(onSave)}>
         <h3 className="pa-h3 pa-mb-4">Automated Notifications</h3>
-         <div className="pa-mb-4">
+         <div className="pa-flex pa-flex-col pa-gap-4 pa-mb-6">
            <Controller name="attendance_reminders_enabled" control={control} render={({field}) => (
             <Checkbox label="Send Attendance Reminders to Coaches" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
-        </div>
-         <div className="pa-mb-4">
            <Controller name="schedule_change_alerts_enabled" control={control} render={({field}) => (
             <Checkbox label="Alert Parents on Schedule Changes" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
         </div>
-        <div className="pa-mb-6">
+        <div className="pa-form-group pa-max-w-md pa-mb-6">
           <Controller name="payment_reminder_behavior" control={control} render={({field}) => (
              <Select {...field} label="Payment Reminders" options={[{value: 'immediate', label: 'Send Immediately'}, {value: 'daily_digest', label: 'Daily Digest'}]} />
           )} />
         </div>
-        <div className="pa-flex pa-justify-end">
-          <Button type="submit" loading={loading}>Save Notification Settings</Button>
+        <div className="pa-form-actions">
+          <Button type="submit" loading={loading} variant="primary">Save Notification Settings</Button>
         </div>
       </form>
     </Card>
@@ -452,8 +507,6 @@ function NotificationsForm({ settings, onSave, loading }: { settings: OrgSetting
 }
 
 function PermissionsForm({ settings, onSave, loading }: { settings: OrgSettingsType['visibility'], onSave: (d: any) => void, loading: boolean }) {
-    // Flattened view for simplicity in this demo. Real app might iterate roles.
-    // For now we assume standard roles exist.
     const { control, handleSubmit } = useForm({
     defaultValues: { ...settings }
   })
@@ -466,7 +519,7 @@ function PermissionsForm({ settings, onSave, loading }: { settings: OrgSettingsT
         
         {/* Parent Permissions */}
         <h4 className="pa-h4 pa-mb-2">Parent Role</h4>
-        <div className="pa-grid pa-grid-3 pa-gap-4 pa-mb-6">
+        <div className="pa-form-grid pa-form-grid-3 pa-mb-6">
            <Controller name="role_permissions.parent.can_view_roster" control={control} render={({field}) => (
             <Checkbox label="View Team Roster" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
@@ -480,7 +533,7 @@ function PermissionsForm({ settings, onSave, loading }: { settings: OrgSettingsT
 
         {/* Coach Permissions */}
         <h4 className="pa-h4 pa-mb-2">Coach Role</h4>
-        <div className="pa-grid pa-grid-3 pa-gap-4 pa-mb-6">
+        <div className="pa-form-grid pa-form-grid-2 pa-mb-6">
            <Controller name="role_permissions.coach.can_view_payments" control={control} render={({field}) => (
             <Checkbox label="View Financials" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
@@ -489,8 +542,8 @@ function PermissionsForm({ settings, onSave, loading }: { settings: OrgSettingsT
           )} />
         </div>
 
-         <div className="pa-flex pa-justify-end">
-          <Button type="submit" loading={loading}>Update Permissions</Button>
+         <div className="pa-form-actions">
+          <Button type="submit" loading={loading} variant="primary">Update Permissions</Button>
         </div>
       </form>
     </Card>
@@ -510,19 +563,19 @@ function AdvancedForm({ settings, onSave, loading }: { settings: OrgSettingsType
            Caution: These settings affect data integrity.
         </div>
         
-        <div className="pa-mb-4">
+        <div className="pa-form-group pa-mb-4">
            <Controller name="allow_data_export" control={control} render={({field}) => (
             <Checkbox label="Allow Data Export (CSV/Excel) for Admins" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
         </div>
 
-         <div className="pa-mb-6">
+         <div className="pa-form-group pa-mb-6">
            <Controller name="enable_api_access" control={control} render={({field}) => (
             <Checkbox label="Enable API Access (Requires Enterprise License)" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
         </div>
 
-         <div className="pa-flex pa-justify-end">
+         <div className="pa-form-actions">
           <Button type="submit" loading={loading} variant="danger" style={{background: 'var(--pa-secondary-bg)', color: 'var(--pa-text)'}}>Save Advanced Settings</Button>
         </div>
       </form>

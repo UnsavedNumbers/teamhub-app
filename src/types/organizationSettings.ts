@@ -16,16 +16,17 @@ export const generalSettingsSchema = z.object({
   organization_name: z.string().min(1, 'Organization name is required'),
   timezone: z.string().min(1, 'Timezone is required'),
   default_language: z.string().nullable().optional(),
+  theme_id: z.string().nullable().optional(),
   status: z.enum(['active', 'inactive']),
   updated_at: z.string(),
 })
 
 export type GeneralSettings = z.infer<typeof generalSettingsSchema>
 
-export const DEFAULT_GENERAL_SETTINGS: Omit<GeneralSettings, 'org_id' | 'updated_at'> = {
-  organization_name: '',
+export const DEFAULT_GENERAL_SETTINGS: Omit<GeneralSettings, 'org_id' | 'organization_name' | 'updated_at'> = {
   timezone: 'America/New_York',
   default_language: null,
+  theme_id: null,
   status: 'active',
 }
 
