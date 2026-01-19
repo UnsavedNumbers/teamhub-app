@@ -95,7 +95,7 @@ export default function TeamsManagement() {
   const SelectInput = ({ ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) => (
     <div className="relative">
       <select
-        className="w-full h-11 pl-3 pr-10 text-sm font-medium text-slate-900 bg-white border border-slate-200 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all hover:border-slate-300"
+        className="w-full h-12 md:h-11 pl-3 pr-10 text-sm font-medium text-slate-900 bg-white border border-slate-200 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all hover:border-slate-300"
         {...props}
       />
       <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-400">

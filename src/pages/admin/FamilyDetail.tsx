@@ -144,48 +144,50 @@ export default function FamilyDetail() {
                 }
             />
 
-            <div className="pa-grid pa-grid-12 pa-gap-6">
-                
-                {/* Children Section */}
-                <div className="pa-col-8">
-                    <Card>
-                        <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
-                            <h3 className="pa-h3">{t('admin.families.children')}</h3>
-                            <Button size="compact" variant="secondary" onClick={() => navigate(`/admin/families/${family.id}/children/new`)}>
-                                <span className="material-symbols-outlined">add</span>
-                                {t('admin.families.addChild')}
-                            </Button>
-                        </div>
-                        <PlatformDataTable
-                            data={family.children || []}
-                            columns={childColumns}
-                            page={0}
-                            rowsPerPage={family.children?.length || 0}
-                            totalCount={family.children?.length || 0}
-                            onPageChange={() => {}}
-                            onRowsPerPageChange={() => {}}
-                            emptyMessage={t('admin.families.noChildren')}
-                        />
-                    </Card>
-                </div>
+            <div className="pa-form-container">
+                <div className="pa-grid pa-grid-12 pa-gap-6">
+                    
+                    {/* Children Section */}
+                    <div className="pa-col-8">
+                        <Card>
+                            <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
+                                <h3 className="pa-h3">{t('admin.families.children')}</h3>
+                                <Button size="compact" variant="secondary" onClick={() => navigate(`/admin/families/${family.id}/children/new`)}>
+                                    <span className="material-symbols-outlined">add</span>
+                                    {t('admin.families.addChild')}
+                                </Button>
+                            </div>
+                            <PlatformDataTable
+                                data={family.children || []}
+                                columns={childColumns}
+                                page={0}
+                                rowsPerPage={family.children?.length || 0}
+                                totalCount={family.children?.length || 0}
+                                onPageChange={() => {}}
+                                onRowsPerPageChange={() => {}}
+                                emptyMessage={t('admin.families.noChildren')}
+                            />
+                        </Card>
+                    </div>
 
-                {/* Members Section */}
-                <div className="pa-col-4">
-                    <Card>
-                        <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
-                            <h3 className="pa-h3">Guardians</h3>
-                        </div>
-                         <PlatformDataTable
-                            data={family.members || []}
-                            columns={memberColumns}
-                            page={0}
-                            rowsPerPage={family.members?.length || 0}
-                            totalCount={family.members?.length || 0}
-                            onPageChange={() => {}}
-                            onRowsPerPageChange={() => {}}
-                            emptyMessage="No guardians found."
-                        />
-                    </Card>
+                    {/* Members Section */}
+                    <div className="pa-col-4">
+                        <Card>
+                            <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
+                                <h3 className="pa-h3">Guardians</h3>
+                            </div>
+                             <PlatformDataTable
+                                data={family.members || []}
+                                columns={memberColumns}
+                                page={0}
+                                rowsPerPage={family.members?.length || 0}
+                                totalCount={family.members?.length || 0}
+                                onPageChange={() => {}}
+                                onRowsPerPageChange={() => {}}
+                                emptyMessage="No guardians found."
+                            />
+                        </Card>
+                    </div>
                 </div>
             </div>
 

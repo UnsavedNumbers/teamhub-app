@@ -249,12 +249,12 @@ export default function OrganizationStructureNew() {
             descriptor="The sport you offer"
             example={
               exampleType === 'school'
-                ? 'Boys Soccer'
+                ? 'Soccer'
                 : exampleType === 'club'
-                  ? 'Boys Soccer'
+                  ? 'Soccer'
                   : exampleType === 'aau'
-                    ? 'Boys Basketball'
-                    : 'Girls Basketball'
+                    ? 'Basketball'
+                    : 'Basketball'
             }
             variant="primary"
           />

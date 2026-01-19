@@ -609,6 +609,11 @@
     padding: 0 var(--pa-space-5);
     border: none;
     border-radius: var(--pa-radius-pill);
+
+    @media (max-width: 768px) {
+        height: 48px;
+    }
+
     font: var(--pa-text-body-m);
     font-weight: 600;
     letter-spacing: 0.01em;
@@ -838,6 +843,11 @@
 .pa-input {
     width: 100%;
     height: 44px;
+
+    @media (max-width: 768px) {
+        height: 48px;
+    }
+
     padding: 0 var(--pa-space-3);
     border: 1px solid var(--pa-n200);
     border-radius: var(--pa-radius-s);

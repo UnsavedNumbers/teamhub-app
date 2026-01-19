@@ -98,18 +98,20 @@ export default function LevelsManagement() {
       ) : (
         <>
           <Card className="pa-mb-4">
-            <div className="pa-flex pa-justify-between pa-items-center">
-              <Select
-                label="Filter by program"
-                value={filterProgramId}
-                onChange={(e) => setFilterProgramId(e.target.value)}
-                options={[
-                  { value: '', label: 'All programs' },
-                  ...programs.map((p) => ({ value: p.id, label: p.name })),
-                ]}
-              />
-              <Link to="/admin/organization/structure/forms?type=level">
-                <Button>Add Level</Button>
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+              <div className="w-full md:w-auto md:min-w-[200px]">
+                <Select
+                  label="Filter by program"
+                  value={filterProgramId}
+                  onChange={(e) => setFilterProgramId(e.target.value)}
+                  options={[
+                    { value: '', label: 'All programs' },
+                    ...programs.map((p) => ({ value: p.id, label: p.name })),
+                  ]}
+                />
+              </div>
+              <Link to="/admin/organization/structure/forms?type=level" className="w-full md:w-auto">
+                <Button style={{ width: '100%' }}>Add Level</Button>
               </Link>
             </div>
           </Card>

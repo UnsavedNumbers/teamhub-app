@@ -99,133 +99,135 @@ export default function OrganizationSettings() {
     <div className="pa-root">
       <AdminPageHeader title="Organization Settings" />
       
-      <Card>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          {error && (
-            <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>
-              {error}
+      <div className="pa-form-container">
+        <Card>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            {error && (
+              <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>
+                {error}
+              </div>
+            )}
+            
+            {success && (
+              <div className="pa-card pa-mb-4" style={{ background: 'var(--pa-success-bg)', border: 'none', color: 'var(--pa-success)' }}>
+                Settings updated successfully!
+              </div>
+            )}
+
+            <h3 className="pa-h3 pa-mb-4">BASIC INFORMATION</h3>
+            
+            <div className="pa-mb-4">
+              <Controller 
+                name="name" 
+                control={control} 
+                rules={{ required: 'Organization name is required' }} 
+                render={({ field }) => (
+                  <Input 
+                    {...field} 
+                    label="Organization Name" 
+                    required 
+                    error={errors.name?.message || undefined} 
+                  />
+                )} 
+              />
             </div>
-          )}
-          
-          {success && (
-            <div className="pa-card pa-mb-4" style={{ background: 'var(--pa-success-bg)', border: 'none', color: 'var(--pa-success)' }}>
-              Settings updated successfully!
+
+            <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+              <Controller 
+                name="email" 
+                control={control} 
+                render={({ field }) => (
+                  <Input 
+                    {...field} 
+                    label="Contact Email" 
+                    type="email" 
+                  />
+                )} 
+              />
+              <Controller 
+                name="phone" 
+                control={control} 
+                render={({ field }) => (
+                  <Input 
+                    {...field} 
+                    label="Contact Phone" 
+                    type="tel" 
+                  />
+                )} 
+              />
             </div>
-          )}
 
-          <h3 className="pa-h3 pa-mb-4">BASIC INFORMATION</h3>
-          
-          <div className="pa-mb-4">
-            <Controller 
-              name="name" 
-              control={control} 
-              rules={{ required: 'Organization name is required' }} 
-              render={({ field }) => (
-                <Input 
-                  {...field} 
-                  label="Organization Name" 
-                  required 
-                  error={errors.name?.message || undefined} 
-                />
-              )} 
-            />
-          </div>
+            <div className="pa-mb-6">
+              <Controller 
+                name="website" 
+                control={control} 
+                render={({ field }) => (
+                  <Input 
+                    {...field} 
+                    label="Website" 
+                    type="url" 
+                    placeholder="https://example.com" 
+                  />
+                )} 
+              />
+            </div>
 
-          <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
-            <Controller 
-              name="email" 
-              control={control} 
-              render={({ field }) => (
-                <Input 
-                  {...field} 
-                  label="Contact Email" 
-                  type="email" 
-                />
-              )} 
-            />
-            <Controller 
-              name="phone" 
-              control={control} 
-              render={({ field }) => (
-                <Input 
-                  {...field} 
-                  label="Contact Phone" 
-                  type="tel" 
-                />
-              )} 
-            />
-          </div>
+            <h3 className="pa-h3 pa-mb-4 pa-mt-6">ADDRESS</h3>
 
-          <div className="pa-mb-6">
-            <Controller 
-              name="website" 
-              control={control} 
-              render={({ field }) => (
-                <Input 
-                  {...field} 
-                  label="Website" 
-                  type="url" 
-                  placeholder="https://example.com" 
-                />
-              )} 
-            />
-          </div>
+            <div className="pa-mb-4">
+              <Controller 
+                name="address" 
+                control={control} 
+                render={({ field }) => (
+                  <Input 
+                    {...field} 
+                    label="Street Address" 
+                  />
+                )} 
+              />
+            </div>
 
-          <h3 className="pa-h3 pa-mb-4 pa-mt-6">ADDRESS</h3>
+            <div className="pa-grid pa-grid-3 pa-gap-4 pa-mb-6">
+              <Controller 
+                name="city" 
+                control={control} 
+                render={({ field }) => (
+                  <Input 
+                    {...field} 
+                    label="City" 
+                  />
+                )} 
+              />
+              <Controller 
+                name="state" 
+                control={control} 
+                render={({ field }) => (
+                  <Input 
+                    {...field} 
+                    label="State" 
+                    placeholder="CA" 
+                  />
+                )} 
+              />
+              <Controller 
+                name="zip" 
+                control={control} 
+                render={({ field }) => (
+                  <Input 
+                    {...field} 
+                    label="ZIP Code" 
+                  />
+                )} 
+              />
+            </div>
 
-          <div className="pa-mb-4">
-            <Controller 
-              name="address" 
-              control={control} 
-              render={({ field }) => (
-                <Input 
-                  {...field} 
-                  label="Street Address" 
-                />
-              )} 
-            />
-          </div>
-
-          <div className="pa-grid pa-grid-3 pa-gap-4 pa-mb-6">
-            <Controller 
-              name="city" 
-              control={control} 
-              render={({ field }) => (
-                <Input 
-                  {...field} 
-                  label="City" 
-                />
-              )} 
-            />
-            <Controller 
-              name="state" 
-              control={control} 
-              render={({ field }) => (
-                <Input 
-                  {...field} 
-                  label="State" 
-                  placeholder="CA" 
-                />
-              )} 
-            />
-            <Controller 
-              name="zip" 
-              control={control} 
-              render={({ field }) => (
-                <Input 
-                  {...field} 
-                  label="ZIP Code" 
-                />
-              )} 
-            />
-          </div>
-
-          <div className="pa-flex pa-justify-end pa-gap-3">
-            <Button variant="secondary" onClick={() => reset()}>Reset</Button>
-            <Button type="submit" loading={saving}>Save Changes</Button>
-          </div>
-        </form>
-      </Card>
+            <div className="pa-flex pa-justify-end pa-gap-3">
+              <Button variant="secondary" onClick={() => reset()}>Reset</Button>
+              <Button type="submit" loading={saving}>Save Changes</Button>
+            </div>
+          </form>
+        </Card>
+      </div>
     </div>
   )
 }

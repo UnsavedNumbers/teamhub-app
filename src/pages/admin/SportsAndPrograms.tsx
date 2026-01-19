@@ -91,13 +91,13 @@ export default function SportsAndPrograms() {
   // --- Components ---
 
   const PrimaryButton = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
-    <button className={`inline-flex items-center justify-center h-10 px-6 font-medium text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 ${className}`}>
+    <button className={`inline-flex items-center justify-center h-12 md:h-10 px-6 font-medium text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 ${className}`}>
       {children}
     </button>
   )
 
   const SecondaryButton = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
-    <button className={`inline-flex items-center justify-center h-9 px-4 font-medium text-xs text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 hover:border-slate-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-200 ${className}`}>
+    <button className={`inline-flex items-center justify-center h-12 md:h-9 px-4 font-medium text-xs text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 hover:border-slate-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-200 ${className}`}>
       {children}
     </button>
   )
@@ -173,10 +173,10 @@ export default function SportsAndPrograms() {
               >
                 {/* Sport Header */}
                 <div
-                  className="p-6 flex items-center justify-between cursor-pointer hover:bg-slate-50/50 transition-colors"
+                  className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer hover:bg-slate-50/50 transition-colors"
                   onClick={() => toggleSportExpand(sport.id)}
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 w-full sm:w-auto">
                     <span 
                       className={`material-symbols-outlined text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-slate-600' : ''}`}
                     >
@@ -192,9 +192,9 @@ export default function SportsAndPrograms() {
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
-                    <Link to={`/admin/organization/structure/forms?type=program&sport_id=${sport.id}`}>
-                      <SecondaryButton>Add Program</SecondaryButton>
+                  <div className="flex items-center gap-3 w-full sm:w-auto sm:justify-end" onClick={e => e.stopPropagation()}>
+                    <Link to={`/admin/organization/structure/forms?type=program&sport_id=${sport.id}`} className="w-full sm:w-auto">
+                      <SecondaryButton className="w-full sm:w-auto">Add Program</SecondaryButton>
                     </Link>
                   </div>
                 </div>
