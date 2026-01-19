@@ -295,5 +295,7 @@ export function requiresImpactCheck(
   section: keyof typeof HIGH_IMPACT_SETTINGS,
   field: string
 ): boolean {
-  return HIGH_IMPACT_SETTINGS[section]?.includes(field as any) ?? false
+  // TS can infer the `includes()` argument as `never` when indexing a union of tuples.
+  const sectionFields = HIGH_IMPACT_SETTINGS[section] as readonly string[]
+  return sectionFields.includes(field)
 }

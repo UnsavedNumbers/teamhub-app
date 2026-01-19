@@ -1,9 +1,8 @@
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
-import { supabase } from '../../lib/supabase'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { 
   AdminPageHeader, 
@@ -22,6 +21,7 @@ import {
 import { 
   getOrganizationDetails, 
   updateOrganizationDetails,
+  uploadOrganizationLogo,
   type OrganizationUpdateDTO 
 } from '../../data/services/organizationService'
 
@@ -33,6 +33,9 @@ import {
   updateNotificationSettings,
   updateVisibilitySettings,
   updateAdvancedSettings,
+  getOrganizationThemeSettings,
+  updateOrganizationThemeSettings,
+  type OrganizationThemeSettings,
   type OrganizationSettings as OrgSettingsType
 } from '../../data/services/organizationSettingsService'
 
@@ -51,6 +54,7 @@ export default function OrganizationSettings() {
   // Data State
   const [orgDetails, setOrgDetails] = useState<Organization | null>(null)
   const [settings, setSettings] = useState<OrgSettingsType | null>(null)
+  const [themeSettings, setThemeSettings] = useState<OrganizationThemeSettings | null>(null)
 
   // Load Data
   const loadData = useCallback(async () => {
@@ -60,16 +64,19 @@ export default function OrganizationSettings() {
     setError(null)
 
     try {
-      const [detailsResult, settingsResult] = await Promise.all([
+      const [detailsResult, settingsResult, themeResult] = await Promise.all([
         getOrganizationDetails(currentOrganization.id),
-        getOrganizationSettings(context)
+        getOrganizationSettings(context),
+        getOrganizationThemeSettings(context)
       ])
 
       if (detailsResult.error) throw detailsResult.error
       if (settingsResult.error) throw settingsResult.error
+      if (themeResult.error) throw themeResult.error
 
       setOrgDetails(detailsResult.data)
       setSettings(settingsResult.data)
+      setThemeSettings(themeResult.data)
     } catch (err) {
       setError(getErrorMessage(err) || 'Failed to load organization settings')
     } finally {
@@ -89,26 +96,29 @@ export default function OrganizationSettings() {
     setSuccess(null)
 
     try {
-      let logoPath = data.logo_path
+      if (!navigator.onLine) {
+        throw new Error('You appear to be offline. Please reconnect and try again.')
+      }
+
+      let logoPath: string | undefined
 
       // Handle Logo Upload
       if (logoFile) {
-        const fileExt = logoFile.name.split('.').pop()
-        const fileName = `logo-${Date.now()}.${fileExt}`
-        const filePath = `${currentOrganization.id}/${fileName}`
-        
-        const { error: uploadError } = await supabase.storage
-          .from('organization-assets')
-          .upload(filePath, logoFile, { upsert: true })
-
+        const { path, error: uploadError } = await uploadOrganizationLogo(currentOrganization.id, logoFile)
         if (uploadError) throw uploadError
-        logoPath = filePath
+        if (!path) throw new Error('Failed to upload logo')
+        logoPath = path
       }
 
-      const { data: updatedOrg, error: updateError } = await updateOrganizationDetails(currentOrganization.id, {
+      const updates: OrganizationUpdateDTO = {
         ...data,
-        logo_path: logoPath
-      })
+        ...(logoPath ? { logo_path: logoPath } : {}),
+      }
+
+      const { data: updatedOrg, error: updateError } = await updateOrganizationDetails(
+        currentOrganization.id,
+        updates
+      )
 
       if (updateError) throw updateError
       
@@ -129,8 +139,11 @@ export default function OrganizationSettings() {
     setSuccess(null)
 
     try {
+      if (!navigator.onLine) {
+        throw new Error('You appear to be offline. Please reconnect and try again.')
+      }
+
       let result: { error: Error | null } = { error: null }
-      const currentUpdatedAt = new Date().toISOString() // Optimistic, ideally from loaded data but simplified here
 
       switch (section) {
         case 'general':
@@ -160,6 +173,33 @@ export default function OrganizationSettings() {
       setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
       setError(getErrorMessage(err) || 'Failed to update settings')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSaveTheme = async (themeId: string | null) => {
+    if (!context || !themeSettings) return
+    setSaving(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const result = await updateOrganizationThemeSettings(
+        context,
+        themeId,
+        themeSettings.updated_at
+      )
+
+      if (result.error) throw result.error
+
+      setSuccess('Theme updated successfully')
+      const refreshedTheme = await getOrganizationThemeSettings(context)
+      if (refreshedTheme.error) throw refreshedTheme.error
+      setThemeSettings(refreshedTheme.data)
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      setError(getErrorMessage(err) || 'Failed to update theme')
     } finally {
       setSaving(false)
     }
@@ -211,7 +251,13 @@ export default function OrganizationSettings() {
         </TabsContent>
 
         <TabsContent value="appearance">
-          {settings && <AppearanceForm settings={settings.general} onSave={(d) => handleSaveSettings('general', d)} loading={saving} />}
+          {themeSettings && (
+            <AppearanceForm
+              settings={themeSettings}
+              onSave={(d) => handleSaveTheme(d.theme_id ?? null)}
+              loading={saving}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="attendance">
@@ -255,10 +301,37 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
     }
   })
   const [logoFile, setLogoFile] = useState<File | undefined>(undefined)
+  const [logoError, setLogoError] = useState<string | null>(null)
+
+  const validateLogoFile = (file?: File) => {
+    if (!file) {
+      setLogoError(null)
+      return true
+    }
+
+    const allowedTypes = ['image/png', 'image/jpeg']
+    const maxSizeMb = 2
+
+    if (!allowedTypes.includes(file.type)) {
+      setLogoError('Logo must be a PNG or JPG image.')
+      return false
+    }
+
+    if (file.size > maxSizeMb * 1024 * 1024) {
+      setLogoError('Logo must be 2MB or smaller.')
+      return false
+    }
+
+    setLogoError(null)
+    return true
+  }
 
   return (
     <Card>
-      <form onSubmit={handleSubmit((data) => onSave(data, logoFile))}>
+      <form onSubmit={handleSubmit((data) => {
+        if (!validateLogoFile(logoFile)) return
+        onSave(data, logoFile)
+      })}>
         <div className="pa-form-grid pa-form-grid-2">
           {/* Left Column: Basic Info */}
           <div className="pa-flex pa-flex-col pa-gap-4">
@@ -289,8 +362,22 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
           <div>
             <h3 className="pa-h3 pa-mb-2">Logo</h3>
             <div className="pa-upload-box pa-p-4 pa-border pa-rounded pa-text-center">
-               <input type="file" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0])} />
+               <input
+                 type="file"
+                 accept="image/png,image/jpeg"
+                 onChange={(e) => {
+                   const file = e.target.files?.[0]
+                   setLogoFile(file)
+                   validateLogoFile(file)
+                 }}
+                 disabled={loading}
+               />
                <p className="pa-text-sm pa-text-muted pa-mt-2">Upload a PNG or JPG logo</p>
+               {logoError && (
+                 <p className="pa-text-sm" style={{ color: 'var(--pa-danger)', marginTop: '4px' }}>
+                   {logoError}
+                 </p>
+               )}
             </div>
           </div>
         </div>
@@ -324,13 +411,21 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
 }
 
 function GeneralConfigForm({ settings, onSave, loading }: { settings: OrgSettingsType['general'], onSave: (d: any) => void, loading: boolean }) {
-  const { control, handleSubmit } = useForm({
+  const { control, handleSubmit, reset } = useForm({
     defaultValues: {
       organization_name: settings.organization_name,
       timezone: settings.timezone,
       default_language: settings.default_language || 'en',
     }
   })
+
+  useEffect(() => {
+    reset({
+      organization_name: settings.organization_name,
+      timezone: settings.timezone,
+      default_language: settings.default_language || 'en',
+    })
+  }, [reset, settings.organization_name, settings.timezone, settings.default_language])
 
   const timezones = [
     { value: 'America/New_York', label: 'Eastern Time' },
@@ -363,7 +458,7 @@ function GeneralConfigForm({ settings, onSave, loading }: { settings: OrgSetting
   )
 }
 
-function AppearanceForm({ settings, onSave, loading }: { settings: OrgSettingsType['general'], onSave: (d: any) => void, loading: boolean }) {
+function AppearanceForm({ settings, onSave, loading }: { settings: OrganizationThemeSettings, onSave: (d: { theme_id: string | null }) => void, loading: boolean }) {
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(settings.theme_id || null)
 
   // Sync selectedThemeId when settings change (e.g., after reload)
@@ -406,9 +501,13 @@ function AppearanceForm({ settings, onSave, loading }: { settings: OrgSettingsTy
 }
 
 function AttendanceForm({ settings, onSave, loading }: { settings: OrgSettingsType['attendance'], onSave: (d: any) => void, loading: boolean }) {
-  const { control, handleSubmit } = useForm({
+  const { control, handleSubmit, reset } = useForm({
     defaultValues: { ...settings }
   })
+
+  useEffect(() => {
+    reset({ ...settings })
+  }, [reset, settings])
 
   return (
     <Card>
@@ -428,7 +527,15 @@ function AttendanceForm({ settings, onSave, loading }: { settings: OrgSettingsTy
 
         <div className="pa-form-group pa-max-w-md pa-mb-6">
           <Controller name="submission_deadline_hours" control={control} render={({field}) => (
-             <Input {...field} type="number" label="Submission Deadline (Hours before event)" onChange={e => field.onChange(parseInt(e.target.value))} />
+             <Input
+               {...field}
+               type="number"
+               label="Submission Deadline (Hours before event)"
+               onChange={e => {
+                 const value = e.target.value
+                 field.onChange(value === '' ? 0 : parseInt(value, 10))
+               }}
+             />
           )} />
         </div>
 
@@ -449,9 +556,13 @@ function AttendanceForm({ settings, onSave, loading }: { settings: OrgSettingsTy
 
 
 function RegistrationForm({ settings, onSave, loading }: { settings: OrgSettingsType['registration'], onSave: (d: any) => void, loading: boolean }) {
-  const { control, handleSubmit } = useForm({
+  const { control, handleSubmit, reset } = useForm({
     defaultValues: { ...settings }
   })
+
+  useEffect(() => {
+    reset({ ...settings })
+  }, [reset, settings])
 
   return (
     <Card>
@@ -477,9 +588,13 @@ function RegistrationForm({ settings, onSave, loading }: { settings: OrgSettings
 }
 
 function NotificationsForm({ settings, onSave, loading }: { settings: OrgSettingsType['notifications'], onSave: (d: any) => void, loading: boolean }) {
-   const { control, handleSubmit } = useForm({
+   const { control, handleSubmit, reset } = useForm({
     defaultValues: { ...settings }
   })
+
+  useEffect(() => {
+    reset({ ...settings })
+  }, [reset, settings])
 
   return (
     <Card>
@@ -507,9 +622,13 @@ function NotificationsForm({ settings, onSave, loading }: { settings: OrgSetting
 }
 
 function PermissionsForm({ settings, onSave, loading }: { settings: OrgSettingsType['visibility'], onSave: (d: any) => void, loading: boolean }) {
-    const { control, handleSubmit } = useForm({
+    const { control, handleSubmit, reset } = useForm({
     defaultValues: { ...settings }
   })
+
+  useEffect(() => {
+    reset({ ...settings })
+  }, [reset, settings])
 
   return (
     <Card>
@@ -551,9 +670,13 @@ function PermissionsForm({ settings, onSave, loading }: { settings: OrgSettingsT
 }
 
 function AdvancedForm({ settings, onSave, loading }: { settings: OrgSettingsType['advanced'], onSave: (d: any) => void, loading: boolean }) {
-   const { control, handleSubmit } = useForm({
+   const { control, handleSubmit, reset } = useForm({
     defaultValues: { ...settings }
   })
+
+  useEffect(() => {
+    reset({ ...settings })
+  }, [reset, settings])
 
   return (
     <Card>

@@ -87,7 +87,9 @@ function validateConfiguration(): void {
 }
 
 // Run validation on module load (only in development)
-if (USE_FAKE_DATA && import.meta.env?.DEV) {
+// NOTE: Avoid relying on `ImportMetaEnv.DEV` typing (varies by tooling).
+const __isDev = !!(import.meta as any)?.env?.DEV
+if (USE_FAKE_DATA && __isDev) {
     validateConfiguration()
 }
 

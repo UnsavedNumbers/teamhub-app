@@ -11,7 +11,7 @@
         "module": "ESNext",
         "skipLibCheck": true,
         /* Bundler mode */
-        "moduleResolution": "bundler",
+        "moduleResolution": "node16",
         "allowImportingTsExtensions": true,
         "isolatedModules": true,
         "moduleDetection": "force",

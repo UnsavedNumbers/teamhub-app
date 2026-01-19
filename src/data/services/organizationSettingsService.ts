@@ -8,6 +8,7 @@
 import { supabase } from '../../lib/supabase'
 import { USE_FAKE_DATA } from '../config'
 import type { UserContext } from '../fake/userContext'
+import type { SupabaseExtended } from '../../lib/supabase.extended.types'
 import type {
   OrganizationSettings,
   GeneralSettings,
@@ -28,6 +29,29 @@ import {
   notificationSettingsSchema,
   advancedSettingsSchema,
 } from '../../types/organizationSettings'
+import {
+  getOrganizationSettings as getFakeOrganizationSettings,
+  updateGeneralSettings as updateFakeGeneralSettings,
+  updateDefaultsSettings as updateFakeDefaultsSettings,
+  updateAttendanceSettings as updateFakeAttendanceSettings,
+  updateRegistrationSettings as updateFakeRegistrationSettings,
+  updateVisibilitySettings as updateFakeVisibilitySettings,
+  updateNotificationSettings as updateFakeNotificationSettings,
+  updateAdvancedSettings as updateFakeAdvancedSettings,
+  checkImpactedRecords as checkFakeImpactedRecords,
+} from '../fake/organizationSettingsFakeService'
+
+type OrgSettingsContext = UserContext
+type PublicTableName = keyof SupabaseExtended['public']['Tables']
+const fromTable = <T extends PublicTableName>(table: T) => supabase.from(table)
+
+type OrganizationSettingsRow = SupabaseExtended['public']['Tables']['organization_settings']['Row']
+type DefaultsSettingsRow = SupabaseExtended['public']['Tables']['organization_defaults']['Row']
+type AttendanceSettingsRow = SupabaseExtended['public']['Tables']['organization_attendance_settings']['Row']
+type RegistrationSettingsRow = SupabaseExtended['public']['Tables']['organization_registration_settings']['Row']
+type VisibilitySettingsRow = SupabaseExtended['public']['Tables']['organization_visibility_settings']['Row']
+type NotificationSettingsRow = SupabaseExtended['public']['Tables']['organization_notification_settings']['Row']
+type AdvancedSettingsRow = SupabaseExtended['public']['Tables']['organization_advanced_settings']['Row']
 
 // ============================================================================
 // Get Operations
@@ -38,8 +62,11 @@ import {
  * Returns default values if records don't exist (Issue 9)
  */
 export async function getOrganizationSettings(
-  context: UserContext
+  context: OrgSettingsContext
 ): Promise<{ data: OrganizationSettings | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    return getFakeOrganizationSettings(context)
+  }
   try {
     // Fetch all settings tables in parallel
     const [general, defaults, attendance, registration, visibility, notifications, advanced] =
@@ -88,12 +115,101 @@ export async function getOrganizationSettings(
   }
 }
 
+// ============================================================================
+// Theme Settings (always real database CRUD)
+// ============================================================================
+
+export interface OrganizationThemeSettings {
+  org_id: string
+  theme_id: string | null
+  updated_at: string | null
+}
+
+export async function getOrganizationThemeSettings(
+  context: OrgSettingsContext
+): Promise<{ data: OrganizationThemeSettings | null; error: Error | null }> {
+  try {
+    const { data, error } = await fromTable('organization_settings')
+      .select('org_id, theme_id, updated_at')
+      .eq('org_id', context.orgId)
+      .maybeSingle()
+
+    if (error) throw error
+
+    if (!data) {
+      return {
+        data: {
+          org_id: context.orgId,
+          theme_id: null,
+          updated_at: null,
+        },
+        error: null,
+      }
+    }
+
+    return {
+      data: {
+        org_id: data.org_id,
+        theme_id: data.theme_id ?? null,
+        updated_at: data.updated_at ?? null,
+      },
+      error: null,
+    }
+  } catch (err) {
+    console.error('[organizationSettingsService] Error getting theme settings:', err)
+    return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+  }
+}
+
+export async function updateOrganizationThemeSettings(
+  context: OrgSettingsContext,
+  themeId: string | null,
+  currentUpdatedAt?: string | null
+): Promise<{ error: Error | null }> {
+  try {
+    const validated = generalSettingsSchema
+      .pick({ theme_id: true })
+      .partial()
+      .parse({ theme_id: themeId })
+
+    let query = fromTable('organization_settings')
+      .upsert(
+        {
+          org_id: context.orgId,
+          ...validated,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'org_id',
+        }
+      )
+      .eq('org_id', context.orgId)
+
+    if (currentUpdatedAt) {
+      query = query.eq('updated_at', currentUpdatedAt)
+    }
+
+    const { error } = await query
+
+    if (error) {
+      if (error.message.includes('updated_at')) {
+        throw new Error('Settings were modified by another user. Please refresh and try again.')
+      }
+      throw error
+    }
+
+    return { error: null }
+  } catch (err) {
+    console.error('[organizationSettingsService] Error updating theme settings:', err)
+    return { error: err instanceof Error ? err : new Error('Unknown error') }
+  }
+}
+
 async function getGeneralSettings(
-  context: UserContext
+  context: OrgSettingsContext
 ): Promise<{ data: GeneralSettings | null; error: Error | null }> {
   try {
-    const { data, error } = await supabase
-      .from('organization_settings' as any)
+    const { data, error } = await fromTable('organization_settings')
       .select('*')
       .eq('org_id', context.orgId)
       .maybeSingle()
@@ -108,14 +224,16 @@ async function getGeneralSettings(
     }
 
     // Map database columns to type
+    const row = data as OrganizationSettingsRow
+
     const settings: GeneralSettings = {
-      org_id: data.org_id,
-      organization_name: data.organization_name,
-      timezone: data.timezone,
-      default_language: data.default_language,
-      theme_id: data.theme_id || null,
-      status: data.status,
-      updated_at: data.updated_at,
+      org_id: row.org_id,
+      organization_name: row.organization_name,
+      timezone: row.timezone,
+      default_language: row.default_language,
+      theme_id: row.theme_id || null,
+      status: row.status,
+      updated_at: row.updated_at || new Date().toISOString(),
     }
 
     return { data: settings, error: null }
@@ -126,11 +244,10 @@ async function getGeneralSettings(
 }
 
 async function getDefaultsSettings(
-  context: UserContext
+  context: OrgSettingsContext
 ): Promise<{ data: DefaultsSettings | null; error: Error | null }> {
   try {
-    const { data, error } = await supabase
-      .from('organization_defaults' as any)
+    const { data, error } = await fromTable('organization_defaults')
       .select('*')
       .eq('org_id', context.orgId)
       .maybeSingle()
@@ -142,14 +259,16 @@ async function getDefaultsSettings(
       return { data: defaults.defaults, error: null }
     }
 
+    const row = data as DefaultsSettingsRow
+
     const settings: DefaultsSettings = {
-      org_id: data.org_id,
-      default_season_id: data.default_season_id,
-      default_sport_id: data.default_sport_id,
-      default_program_id: data.default_program_id,
-      default_level_id: data.default_level_id,
-      default_event_types: data.default_event_types,
-      updated_at: data.updated_at,
+      org_id: row.org_id,
+      default_season_id: row.default_season_id,
+      default_sport_id: row.default_sport_id,
+      default_program_id: row.default_program_id,
+      default_level_id: row.default_level_id,
+      default_event_types: row.default_event_types || undefined,
+      updated_at: row.updated_at || new Date().toISOString(),
     }
 
     return { data: settings, error: null }
@@ -160,11 +279,10 @@ async function getDefaultsSettings(
 }
 
 async function getAttendanceSettings(
-  context: UserContext
+  context: OrgSettingsContext
 ): Promise<{ data: AttendanceSettings | null; error: Error | null }> {
   try {
-    const { data, error } = await supabase
-      .from('organization_attendance_settings' as any)
+    const { data, error } = await fromTable('organization_attendance_settings')
       .select('*')
       .eq('org_id', context.orgId)
       .maybeSingle()
@@ -176,17 +294,19 @@ async function getAttendanceSettings(
       return { data: defaults.attendance, error: null }
     }
 
+    const row = data as AttendanceSettingsRow
+
     const settings: AttendanceSettings = {
-      org_id: data.org_id,
-      required_for_practice: data.required_for_practice,
-      required_for_game: data.required_for_game,
-      required_for_meeting: data.required_for_meeting,
-      submission_deadline_hours: data.submission_deadline_hours,
-      lock_after_days: data.lock_after_days,
-      allow_admin_override: data.allow_admin_override,
-      enable_coach_reminders: data.enable_coach_reminders,
-      parent_visibility: data.parent_visibility,
-      updated_at: data.updated_at,
+      org_id: row.org_id,
+      required_for_practice: row.required_for_practice,
+      required_for_game: row.required_for_game,
+      required_for_meeting: row.required_for_meeting,
+      submission_deadline_hours: row.submission_deadline_hours,
+      lock_after_days: row.lock_after_days,
+      allow_admin_override: row.allow_admin_override,
+      enable_coach_reminders: row.enable_coach_reminders,
+      parent_visibility: row.parent_visibility as AttendanceSettings['parent_visibility'],
+      updated_at: row.updated_at || new Date().toISOString(),
     }
 
     return { data: settings, error: null }
@@ -197,11 +317,10 @@ async function getAttendanceSettings(
 }
 
 async function getRegistrationSettings(
-  context: UserContext
+  context: OrgSettingsContext
 ): Promise<{ data: RegistrationSettings | null; error: Error | null }> {
   try {
-    const { data, error } = await supabase
-      .from('organization_registration_settings' as any)
+    const { data, error } = await fromTable('organization_registration_settings')
       .select('*')
       .eq('org_id', context.orgId)
       .maybeSingle()
@@ -213,13 +332,15 @@ async function getRegistrationSettings(
       return { data: defaults.registration, error: null }
     }
 
+    const row = data as RegistrationSettingsRow
+
     const settings: RegistrationSettings = {
-      org_id: data.org_id,
-      required_fields: data.required_fields,
-      allow_players_without_guardians: data.allow_players_without_guardians,
-      allow_guardian_self_invite: data.allow_guardian_self_invite,
-      medical_form_required: data.medical_form_required,
-      updated_at: data.updated_at,
+      org_id: row.org_id,
+      required_fields: row.required_fields || undefined,
+      allow_players_without_guardians: row.allow_players_without_guardians,
+      allow_guardian_self_invite: row.allow_guardian_self_invite,
+      medical_form_required: row.medical_form_required,
+      updated_at: row.updated_at || new Date().toISOString(),
     }
 
     return { data: settings, error: null }
@@ -230,11 +351,10 @@ async function getRegistrationSettings(
 }
 
 async function getVisibilitySettings(
-  context: UserContext
+  context: OrgSettingsContext
 ): Promise<{ data: VisibilitySettings | null; error: Error | null }> {
   try {
-    const { data, error } = await supabase
-      .from('organization_visibility_settings' as any)
+    const { data, error } = await fromTable('organization_visibility_settings')
       .select('*')
       .eq('org_id', context.orgId)
       .maybeSingle()
@@ -246,10 +366,12 @@ async function getVisibilitySettings(
       return { data: defaults.visibility, error: null }
     }
 
+    const row = data as VisibilitySettingsRow
+
     const settings: VisibilitySettings = {
-      org_id: data.org_id,
-      role_permissions: data.role_permissions,
-      updated_at: data.updated_at,
+      org_id: row.org_id,
+      role_permissions: row.role_permissions as VisibilitySettings['role_permissions'],
+      updated_at: row.updated_at || new Date().toISOString(),
     }
 
     return { data: settings, error: null }
@@ -260,11 +382,10 @@ async function getVisibilitySettings(
 }
 
 async function getNotificationSettings(
-  context: UserContext
+  context: OrgSettingsContext
 ): Promise<{ data: NotificationSettings | null; error: Error | null }> {
   try {
-    const { data, error } = await supabase
-      .from('organization_notification_settings' as any)
+    const { data, error } = await fromTable('organization_notification_settings')
       .select('*')
       .eq('org_id', context.orgId)
       .maybeSingle()
@@ -276,13 +397,15 @@ async function getNotificationSettings(
       return { data: defaults.notifications, error: null }
     }
 
+    const row = data as NotificationSettingsRow
+
     const settings: NotificationSettings = {
-      org_id: data.org_id,
-      default_channels: data.default_channels,
-      attendance_reminders_enabled: data.attendance_reminders_enabled,
-      schedule_change_alerts_enabled: data.schedule_change_alerts_enabled,
-      payment_reminder_behavior: data.payment_reminder_behavior,
-      updated_at: data.updated_at,
+      org_id: row.org_id,
+      default_channels: row.default_channels || undefined,
+      attendance_reminders_enabled: row.attendance_reminders_enabled,
+      schedule_change_alerts_enabled: row.schedule_change_alerts_enabled,
+      payment_reminder_behavior: row.payment_reminder_behavior,
+      updated_at: row.updated_at || new Date().toISOString(),
     }
 
     return { data: settings, error: null }
@@ -293,11 +416,10 @@ async function getNotificationSettings(
 }
 
 async function getAdvancedSettings(
-  context: UserContext
+  context: OrgSettingsContext
 ): Promise<{ data: AdvancedSettings | null; error: Error | null }> {
   try {
-    const { data, error } = await supabase
-      .from('organization_advanced_settings' as any)
+    const { data, error } = await fromTable('organization_advanced_settings')
       .select('*')
       .eq('org_id', context.orgId)
       .maybeSingle()
@@ -309,13 +431,15 @@ async function getAdvancedSettings(
       return { data: defaults.advanced, error: null }
     }
 
+    const row = data as AdvancedSettingsRow
+
     const settings: AdvancedSettings = {
-      org_id: data.org_id,
-      data_retention_days: data.data_retention_days,
-      enable_api_access: data.enable_api_access,
-      api_rate_limit: data.api_rate_limit,
-      allow_data_export: data.allow_data_export,
-      updated_at: data.updated_at,
+      org_id: row.org_id,
+      data_retention_days: row.data_retention_days,
+      enable_api_access: row.enable_api_access,
+      api_rate_limit: row.api_rate_limit,
+      allow_data_export: row.allow_data_export,
+      updated_at: row.updated_at || new Date().toISOString(),
     }
 
     return { data: settings, error: null }
@@ -330,17 +454,18 @@ async function getAdvancedSettings(
 // ============================================================================
 
 export async function updateGeneralSettings(
-  context: UserContext,
+  context: OrgSettingsContext,
   settings: Partial<GeneralSettings>,
   currentUpdatedAt: string
 ): Promise<{ error: Error | null }> {
-  if (USE_FAKE_DATA) return { error: null }
+  if (USE_FAKE_DATA) {
+    return updateFakeGeneralSettings(context, settings, currentUpdatedAt)
+  }
   try {
     // Validate with Zod
     const validated = generalSettingsSchema.partial().parse(settings)
 
-    const { error } = await supabase
-      .from('organization_settings' as any)
+    const { error } = await fromTable('organization_settings')
       .upsert(
         {
           org_id: context.orgId,
@@ -370,16 +495,17 @@ export async function updateGeneralSettings(
 }
 
 export async function updateDefaultsSettings(
-  context: UserContext,
+  context: OrgSettingsContext,
   settings: Partial<DefaultsSettings>,
   currentUpdatedAt: string
 ): Promise<{ error: Error | null }> {
-  if (USE_FAKE_DATA) return { error: null }
+  if (USE_FAKE_DATA) {
+    return updateFakeDefaultsSettings(context, settings, currentUpdatedAt)
+  }
   try {
     const validated = defaultsSettingsSchema.partial().parse(settings)
 
-    const { error } = await supabase
-      .from('organization_defaults' as any)
+    const { error } = await fromTable('organization_defaults')
       .upsert(
         {
           org_id: context.orgId,
@@ -408,16 +534,17 @@ export async function updateDefaultsSettings(
 }
 
 export async function updateAttendanceSettings(
-  context: UserContext,
+  context: OrgSettingsContext,
   settings: Partial<AttendanceSettings>,
   currentUpdatedAt: string
 ): Promise<{ error: Error | null }> {
-  if (USE_FAKE_DATA) return { error: null }
+  if (USE_FAKE_DATA) {
+    return updateFakeAttendanceSettings(context, settings, currentUpdatedAt)
+  }
   try {
     const validated = attendanceSettingsSchema.partial().parse(settings)
 
-    const { error } = await supabase
-      .from('organization_attendance_settings' as any)
+    const { error } = await fromTable('organization_attendance_settings')
       .upsert(
         {
           org_id: context.orgId,
@@ -446,16 +573,17 @@ export async function updateAttendanceSettings(
 }
 
 export async function updateRegistrationSettings(
-  context: UserContext,
+  context: OrgSettingsContext,
   settings: Partial<RegistrationSettings>,
   currentUpdatedAt: string
 ): Promise<{ error: Error | null }> {
-  if (USE_FAKE_DATA) return { error: null }
+  if (USE_FAKE_DATA) {
+    return updateFakeRegistrationSettings(context, settings, currentUpdatedAt)
+  }
   try {
     const validated = registrationSettingsSchema.partial().parse(settings)
 
-    const { error } = await supabase
-      .from('organization_registration_settings' as any)
+    const { error } = await fromTable('organization_registration_settings')
       .upsert(
         {
           org_id: context.orgId,
@@ -484,16 +612,17 @@ export async function updateRegistrationSettings(
 }
 
 export async function updateVisibilitySettings(
-  context: UserContext,
+  context: OrgSettingsContext,
   settings: Partial<VisibilitySettings>,
   currentUpdatedAt: string
 ): Promise<{ error: Error | null }> {
-  if (USE_FAKE_DATA) return { error: null }
+  if (USE_FAKE_DATA) {
+    return updateFakeVisibilitySettings(context, settings, currentUpdatedAt)
+  }
   try {
     const validated = visibilitySettingsSchema.partial().parse(settings)
 
-    const { error } = await supabase
-      .from('organization_visibility_settings' as any)
+    const { error } = await fromTable('organization_visibility_settings')
       .upsert(
         {
           org_id: context.orgId,
@@ -522,16 +651,17 @@ export async function updateVisibilitySettings(
 }
 
 export async function updateNotificationSettings(
-  context: UserContext,
+  context: OrgSettingsContext,
   settings: Partial<NotificationSettings>,
   currentUpdatedAt: string
 ): Promise<{ error: Error | null }> {
-  if (USE_FAKE_DATA) return { error: null }
+  if (USE_FAKE_DATA) {
+    return updateFakeNotificationSettings(context, settings, currentUpdatedAt)
+  }
   try {
     const validated = notificationSettingsSchema.partial().parse(settings)
 
-    const { error } = await supabase
-      .from('organization_notification_settings' as any)
+    const { error } = await fromTable('organization_notification_settings')
       .upsert(
         {
           org_id: context.orgId,
@@ -560,16 +690,17 @@ export async function updateNotificationSettings(
 }
 
 export async function updateAdvancedSettings(
-  context: UserContext,
+  context: OrgSettingsContext,
   settings: Partial<AdvancedSettings>,
   currentUpdatedAt: string
 ): Promise<{ error: Error | null }> {
-  if (USE_FAKE_DATA) return { error: null }
+  if (USE_FAKE_DATA) {
+    return updateFakeAdvancedSettings(context, settings, currentUpdatedAt)
+  }
   try {
     const validated = advancedSettingsSchema.partial().parse(settings)
 
-    const { error } = await supabase
-      .from('organization_advanced_settings' as any)
+    const { error } = await fromTable('organization_advanced_settings')
       .upsert(
         {
           org_id: context.orgId,
@@ -605,17 +736,19 @@ export async function updateAdvancedSettings(
  * Check how many records would be impacted by a setting change
  */
 export async function checkImpactedRecords(
-  context: UserContext,
+  context: OrgSettingsContext,
   settingType: 'registration' | 'attendance' | 'general',
   field: string
 ): Promise<{ count: number; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    return checkFakeImpactedRecords(context, settingType, field)
+  }
   try {
     let count = 0
 
     if (settingType === 'registration' && field === 'required_fields') {
       // Check how many existing players might be affected
-      const { count: playerCount, error } = await supabase
-        .from('children')
+      const { count: playerCount, error } = await fromTable('children')
         .select('*', { count: 'exact', head: true })
         .eq('organization_id', context.orgId)
 
@@ -623,8 +756,7 @@ export async function checkImpactedRecords(
       count = playerCount || 0
     } else if (settingType === 'attendance' && field.startsWith('required_for_')) {
       // Check how many events might be affected
-      const { count: eventCount, error } = await supabase
-        .from('events')
+      const { count: eventCount, error } = await fromTable('events')
         .select('*', { count: 'exact', head: true })
         .eq('organization_id', context.orgId)
 
@@ -632,8 +764,7 @@ export async function checkImpactedRecords(
       count = eventCount || 0
     } else if (settingType === 'general' && field === 'status') {
       // Check all teams in org
-      const { count: teamCount, error } = await supabase
-        .from('teams')
+      const { count: teamCount, error } = await fromTable('teams')
         .select('*', { count: 'exact', head: true })
         .eq('organization_id', context.orgId)
 

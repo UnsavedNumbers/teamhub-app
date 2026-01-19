@@ -1,6 +1,12 @@
 
 import { supabase } from '../../lib/supabase'
+import { USE_FAKE_DATA } from '../config'
 import type { Organization } from '../../types/domain/Organization'
+import {
+    getOrganizationDetails as getFakeOrganizationDetails,
+    updateOrganizationDetails as updateFakeOrganizationDetails,
+    uploadOrganizationLogo as uploadFakeOrganizationLogo,
+} from '../fake/organizationFakeService'
 
 export interface OrganizationUpdateDTO {
     name?: string
@@ -32,6 +38,14 @@ interface OrganizationRow {
 
 export async function getOrganizationDetails(orgId: string): Promise<{ data: Organization | null; error: Error | null }> {
     try {
+        if (USE_FAKE_DATA) {
+            return getFakeOrganizationDetails(orgId)
+        }
+
+        if (!orgId) {
+            return { data: null, error: new Error('Organization ID is required') }
+        }
+
         const { data: rawData, error } = await supabase
             .from('organizations')
             .select('*')
@@ -88,6 +102,18 @@ export async function updateOrganizationDetails(
     updates: OrganizationUpdateDTO
 ): Promise<{ data: Organization | null; error: Error | null }> {
     try {
+        if (USE_FAKE_DATA) {
+            return updateFakeOrganizationDetails(orgId, updates)
+        }
+
+        if (!orgId) {
+            return { data: null, error: new Error('Organization ID is required') }
+        }
+
+        if (updates.name !== undefined && updates.name.trim().length === 0) {
+            return { data: null, error: new Error('Organization name is required') }
+        }
+
         const { data: rawData, error } = await supabase
             .from('organizations')
             .update({
@@ -137,5 +163,34 @@ export async function updateOrganizationDetails(
     } catch (err) {
         console.error('[organizationService] Error updating organization:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+    }
+}
+
+export async function uploadOrganizationLogo(
+    orgId: string,
+    file: File
+): Promise<{ path: string | null; error: Error | null }> {
+    try {
+        if (USE_FAKE_DATA) {
+            return uploadFakeOrganizationLogo(orgId, file)
+        }
+
+        if (!orgId) {
+            return { path: null, error: new Error('Organization ID is required') }
+        }
+
+        const fileExt = file.name.split('.').pop() || 'png'
+        const filePath = `${orgId}/logo.${fileExt}`
+
+        const { error: uploadError } = await supabase.storage
+            .from('organization-assets')
+            .upload(filePath, file, { upsert: true })
+
+        if (uploadError) throw uploadError
+
+        return { path: filePath, error: null }
+    } catch (err) {
+        console.error('[organizationService] Error uploading logo:', err)
+        return { path: null, error: err instanceof Error ? err : new Error('Unknown error') }
     }
 }
