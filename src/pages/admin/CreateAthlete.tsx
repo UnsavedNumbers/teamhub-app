@@ -122,8 +122,7 @@ export default function CreateAthlete() {
                 ]}
             />
 
-            <div className="pa-grid pa-grid-12">
-                <div className="pa-col-8 pa-offset-2">
+            <div className="pa-form-container">
                     <form onSubmit={handleSubmit}>
                         {/* Athlete Information */}
                         <Card>
@@ -292,7 +291,6 @@ export default function CreateAthlete() {
                             </Button>
                         </div>
                     </form>
-                </div>
             </div>
         </div>
     )

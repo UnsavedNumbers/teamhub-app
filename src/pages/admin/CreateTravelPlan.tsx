@@ -156,61 +156,63 @@ export default function CreateTravelPlan() {
           { label: 'Create Travel Plan' },
         ]}
       />
-      <Card>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
-          
-          <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
-            <Controller name="team_id" control={control} rules={{ required: 'Team is required' }} render={({ field }) => <Select {...field} label="Team" options={teams.map(t => ({value:t.id, label:t.name}))} required />} />
-            <Controller name="season_id" control={control} rules={{ required: 'Season is required' }} render={({ field }) => <Select {...field} label="Season" options={seasons.map(s => ({value:s.id, label:s.name}))} required disabled={!watchTeamId} />} />
-          </div>
+      <div className="pa-form-container">
+        <Card>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
+            
+            <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+              <Controller name="team_id" control={control} rules={{ required: 'Team is required' }} render={({ field }) => <Select {...field} label="Team" options={teams.map(t => ({value:t.id, label:t.name}))} required />} />
+              <Controller name="season_id" control={control} rules={{ required: 'Season is required' }} render={({ field }) => <Select {...field} label="Season" options={seasons.map(s => ({value:s.id, label:s.name}))} required disabled={!watchTeamId} />} />
+            </div>
 
-          <div className="pa-mb-4">
-            <Controller name="title" control={control} rules={{ required: 'Title is required' }} render={({ field }) => <Input {...field} label="Trip Title" required />} />
-          </div>
+            <div className="pa-mb-4">
+              <Controller name="title" control={control} rules={{ required: 'Title is required' }} render={({ field }) => <Input {...field} label="Trip Title" required />} />
+            </div>
 
-          <div className="pa-mb-4">
-            <Controller name="location" control={control} rules={{ required: 'Location is required' }} render={({ field }) => <Input {...field} label="Location (city/state or details)" required />} />
-          </div>
+            <div className="pa-mb-4">
+              <Controller name="location" control={control} rules={{ required: 'Location is required' }} render={({ field }) => <Input {...field} label="Location (city/state or details)" required />} />
+            </div>
 
-          <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
-            <Controller name="destination_city" control={control} render={({ field }) => <Input {...field} label="Destination City" />} />
-            <Controller name="destination_state" control={control} render={({ field }) => <Input {...field} label="Destination State" />} />
-            <Controller name="start_date" control={control} rules={{ required: 'Start date is required' }} render={({ field }) => <Input {...field} label="Start Date" type="date" required />} />
-            <Controller name="end_date" control={control} rules={{ required: 'End date is required' }} render={({ field }) => <Input {...field} label="End Date" type="date" required />} />
-          </div>
+            <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+              <Controller name="destination_city" control={control} render={({ field }) => <Input {...field} label="Destination City" />} />
+              <Controller name="destination_state" control={control} render={({ field }) => <Input {...field} label="Destination State" />} />
+              <Controller name="start_date" control={control} rules={{ required: 'Start date is required' }} render={({ field }) => <Input {...field} label="Start Date" type="date" required />} />
+              <Controller name="end_date" control={control} rules={{ required: 'End date is required' }} render={({ field }) => <Input {...field} label="End Date" type="date" required />} />
+            </div>
 
-          <h3 className="pa-h3 pa-mb-4 pa-mt-6">VENUE & HOTEL</h3>
-          <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
-            <Controller name="venue_name" control={control} render={({ field }) => <Input {...field} label="Venue Name" />} />
-            <Controller name="venue_address" control={control} render={({ field }) => <Input {...field} label="Venue Address" />} />
-            <Controller name="hotel_name" control={control} render={({ field }) => <Input {...field} label="Hotel Name" />} />
-            <Controller name="hotel_address" control={control} render={({ field }) => <Input {...field} label="Hotel Address" />} />
-            <Controller name="hotel_phone" control={control} render={({ field }) => <Input {...field} label="Hotel Phone" />} />
-            <Controller name="hotel_confirmation" control={control} render={({ field }) => <Input {...field} label="Hotel Confirmation" />} />
-          </div>
+            <h3 className="pa-h3 pa-mb-4 pa-mt-6">VENUE & HOTEL</h3>
+            <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+              <Controller name="venue_name" control={control} render={({ field }) => <Input {...field} label="Venue Name" />} />
+              <Controller name="venue_address" control={control} render={({ field }) => <Input {...field} label="Venue Address" />} />
+              <Controller name="hotel_name" control={control} render={({ field }) => <Input {...field} label="Hotel Name" />} />
+              <Controller name="hotel_address" control={control} render={({ field }) => <Input {...field} label="Hotel Address" />} />
+              <Controller name="hotel_phone" control={control} render={({ field }) => <Input {...field} label="Hotel Phone" />} />
+              <Controller name="hotel_confirmation" control={control} render={({ field }) => <Input {...field} label="Hotel Confirmation" />} />
+            </div>
 
-          <div className="pa-mb-6">
-            <Controller name="maps_url" control={control} render={({ field }) => <Input {...field} label="Map Link URL" />} />
-          </div>
+            <div className="pa-mb-6">
+              <Controller name="maps_url" control={control} render={({ field }) => <Input {...field} label="Map Link URL" />} />
+            </div>
 
-          <h3 className="pa-h3 pa-mb-4">ITINERARY FILE</h3>
-          <div className="pa-mb-6">
-            <input type="file" onChange={e => setItineraryFile(e.target.files?.[0] ?? null)} className="pa-mb-2" />
-            {itineraryFile && <div className="pa-body-s">Selected: {itineraryFile.name}</div>}
-          </div>
+            <h3 className="pa-h3 pa-mb-4">ITINERARY FILE</h3>
+            <div className="pa-mb-6">
+              <input type="file" onChange={e => setItineraryFile(e.target.files?.[0] ?? null)} className="pa-mb-2" />
+              {itineraryFile && <div className="pa-body-s">Selected: {itineraryFile.name}</div>}
+            </div>
 
-          <div className="pa-mb-8">
-            <textarea className="pa-input pa-textarea" placeholder="Trip Notes..." style={{ minHeight: '120px' }} value={watch('notes')} onChange={e => setValue('notes', e.target.value)} />
-            <div className="pa-label">Notes</div>
-          </div>
+            <div className="pa-mb-8">
+              <textarea className="pa-input pa-textarea" placeholder="Trip Notes..." style={{ minHeight: '120px' }} value={watch('notes')} onChange={e => setValue('notes', e.target.value)} />
+              <div className="pa-label">Notes</div>
+            </div>
 
-          <div className="pa-flex pa-justify-end pa-gap-3">
-            <Button variant="secondary" onClick={() => navigate('/admin/travel')}>Cancel</Button>
-            <Button type="submit" loading={saving}>Create Draft Plan</Button>
-          </div>
-        </form>
-      </Card>
+            <div className="pa-flex pa-justify-end pa-gap-3">
+              <Button variant="secondary" onClick={() => navigate('/admin/travel')}>Cancel</Button>
+              <Button type="submit" loading={saving}>Create Draft Plan</Button>
+            </div>
+          </form>
+        </Card>
+      </div>
     </div>
   )
 }

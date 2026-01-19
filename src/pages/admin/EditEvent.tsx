@@ -373,29 +373,33 @@ export default function EditEvent() {
           { label: 'Edit Event' },
         ]}
       />
-      <Card>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
-          {hasExistingRSVPs && watchRSVPEnabled && (
-            <div className="pa-card pa-mb-4 pa-text-warning" style={{ background: 'var(--pa-warning-bg)', border: 'none' }}>
-              Warning: This event has existing RSVP responses. Changing RSVP type will delete them.
+      <div className="pa-form-container">
+        <Card>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
+            {hasExistingRSVPs && watchRSVPEnabled && (
+              <div className="pa-card pa-mb-4 pa-text-warning" style={{ background: 'var(--pa-warning-bg)', border: 'none' }}>
+                Warning: This event has existing RSVP responses. Changing RSVP type will delete them.
+              </div>
+            )}
+            
+            {/* SECTION 1: EVENT BASICS */}
+            <div className="pa-mb-4">
+              <Controller name="title" control={control} rules={{ required: 'Title is required' }} render={({ field }) => <Input {...field} label="Event Title" required error={errors.title?.message || undefined} />} />
             </div>
-          )}
-          
-          {/* SECTION 1: EVENT BASICS */}
-          <div className="pa-grid pa-grid-2 pa-mb-4 pa-gap-4">
-            <Controller name="title" control={control} rules={{ required: 'Title is required' }} render={({ field }) => <Input {...field} label="Event Title" required error={errors.title?.message || undefined} />} />
-            <Controller name="type" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label="Event Type" options={eventTypeOptions} />} />
-            <Controller name="team_id" control={control} rules={{ required: 'Team is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label="Team" options={teams.map(t => ({value:t.id, label:t.name}))} required error={errors.team_id?.message || undefined} />} />
-            <Controller name="season_id" control={control} rules={{ required: 'Season is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label="Season" options={seasons.map(s => ({value:s.id, label:s.name}))} required disabled={!watchTeamId} />} />
-          </div>
 
-          {/* SECTION 2: DATE + TIME */}
-          <div className="pa-grid pa-grid-3 pa-mb-4 pa-gap-4">
-            <Controller name="start_time" control={control} rules={{ required: 'Start time is required' }} render={({ field }) => <Input {...field} label="Start Time" type="datetime-local" required />} />
-            <Controller name="end_time" control={control} render={({ field }) => <Input {...field} label="End Time" type="datetime-local" />} />
-            <Controller name="arrival_time" control={control} render={({ field }) => <Input {...field} label="Arrival Time" type="datetime-local" />} />
-          </div>
+            <div className="pa-grid pa-grid-3 pa-mb-4 pa-gap-4">
+              <Controller name="type" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label="Event Type" options={eventTypeOptions} />} />
+              <Controller name="team_id" control={control} rules={{ required: 'Team is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label="Team" options={teams.map(t => ({value:t.id, label:t.name}))} required error={errors.team_id?.message || undefined} />} />
+              <Controller name="season_id" control={control} rules={{ required: 'Season is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label="Season" options={seasons.map(s => ({value:s.id, label:s.name}))} required disabled={!watchTeamId} />} />
+            </div>
+
+            {/* SECTION 2: DATE + TIME */}
+            <div className="pa-grid pa-grid-3 pa-mb-4 pa-gap-4">
+              <Controller name="start_time" control={control} rules={{ required: 'Start time is required' }} render={({ field }) => <Input {...field} label="Start Time" type="datetime-local" required />} />
+              <Controller name="end_time" control={control} render={({ field }) => <Input {...field} label="End Time" type="datetime-local" />} />
+              <Controller name="arrival_time" control={control} render={({ field }) => <Input {...field} label="Arrival Time" type="datetime-local" />} />
+            </div>
 
           {/* SECTION 3: LOCATION */}
           <div className="pa-mb-4">
@@ -496,6 +500,7 @@ export default function EditEvent() {
           </div>
         </form>
       </Card>
+      </div>
     </div>
   )
 }

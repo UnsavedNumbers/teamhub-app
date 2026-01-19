@@ -94,8 +94,7 @@ export default function CreateChild() {
         ]}
       />
 
-      <div className="pa-grid pa-grid-12">
-        <div className="pa-col-8 pa-offset-2">
+      <div className="pa-form-container">
           <form onSubmit={handleSubmit}>
             <Card>
               <h2 className="pa-h2 pa-mb-6">Player Details</h2>
@@ -138,7 +137,7 @@ export default function CreateChild() {
               </div>
 
               <div className="pa-mb-6">
-                 <Input
+                  <Input
                     label="Jersey Number (Optional)"
                     value={formData.jersey_number}
                     onChange={(e) => setFormData({ ...formData, jersey_number: e.target.value })}
@@ -167,7 +166,7 @@ export default function CreateChild() {
               </div>
 
               <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
-                 <Input
+                  <Input
                     label="Emergency Contact Name"
                     value={formData.emergency_contact_name}
                     onChange={(e) => setFormData({ ...formData, emergency_contact_name: e.target.value })}
@@ -197,7 +196,6 @@ export default function CreateChild() {
               </div>
             </Card>
           </form>
-        </div>
       </div>
     </div>
   )

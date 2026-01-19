@@ -2716,3 +2716,22 @@
 .org-hierarchy-step:last-child .org-hierarchy-arrow {
     display: none;
 }
+
+/* =====================================================================
+   FORM LAYOUT UTILITIES (Breakpoint-Specific)
+   ===================================================================== */
+
+/* Constrain form width on desktop for readability */
+.pa-form-container {
+    max-width: 960px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* On mobile, ensure full width */
+@media (max-width: 768px) {
+    .pa-form-container {
+        max-width: 100%;
+        padding: 0;
+    }
+}

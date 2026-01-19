@@ -4,6 +4,7 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { getTryoutById, getAdminTryoutRegistrations } from '../../data/services/tryoutsService'
 import type { Tryout, TryoutRegistration } from '../../data/services/tryoutsService'
 import { 
+  AdminPageHeader,
   PageHeader, 
   Card, 
   PlatformDataTable, 
