@@ -9,6 +9,12 @@
 ALTER TABLE sports 
   ADD COLUMN IF NOT EXISTS is_system BOOLEAN DEFAULT false;
 
+-- Add icon and color columns if they don't exist
+ALTER TABLE sports
+  ADD COLUMN IF NOT EXISTS icon TEXT,
+  ADD COLUMN IF NOT EXISTS color TEXT,
+  ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+
 CREATE INDEX IF NOT EXISTS idx_sports_is_system ON sports(is_system) WHERE is_system = true;
 
 -- -----------------------------------------------------------------
@@ -19,7 +25,10 @@ ALTER TABLE sports
   ALTER COLUMN org_id DROP NOT NULL;
 
 -- Update the unique constraint to allow system sports (org_id can be NULL)
+-- First drop the constraint, then the index
+ALTER TABLE sports DROP CONSTRAINT IF EXISTS sports_org_id_name_key;
 DROP INDEX IF EXISTS sports_org_id_name_key;
+
 CREATE UNIQUE INDEX IF NOT EXISTS sports_org_id_name_key 
   ON sports(org_id, name) 
   WHERE org_id IS NOT NULL;
@@ -153,7 +162,7 @@ CREATE POLICY "Org admins can link system sports"
       SELECT organization_id 
       FROM organization_members 
       WHERE user_id = auth.uid() 
-      AND role IN ('org_admin', 'admin')
+      AND role = 'org_admin'
     )
     AND sport_id IN (
       SELECT id FROM sports WHERE is_system = true
@@ -170,7 +179,7 @@ CREATE POLICY "Org admins can unlink sports"
       SELECT organization_id 
       FROM organization_members 
       WHERE user_id = auth.uid() 
-      AND role IN ('org_admin', 'admin')
+      AND role = 'org_admin'
     )
   );
 
