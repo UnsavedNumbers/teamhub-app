@@ -8,7 +8,7 @@
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
 import { getTeamWithOrg, getOrgMembers, getOrgMember, getUserEmail } from '../../lib/supabase-helpers'
-import type { Database } from '../../lib/database.types'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { UserContext } from '../fake/userContext'
 import {
     getAnnouncementById as getFakeAnnouncementById,
@@ -148,7 +148,6 @@ export async function getAnnouncements(
 
         const announcements = data as any[]
 
-        // 3. Fetch Roles Manually
         if (announcements.length > 0 && orgId) {
             const authorIds = [...new Set(announcements.map(a => a.author_id))]
             const members = await getOrgMembers(orgId, authorIds)
@@ -215,15 +214,20 @@ export async function getAnnouncementById(
         if (error) throw error
 
         // Provide safe defaults for author and team
-        if (!data.author) {
-            data.author = { email: '', role: 'parent' }
+        const dataAny = data as unknown as {
+            team?: { org_id?: string; name?: string }
+            author_id?: string
+            author?: { email?: string; role?: string }
+            team_id?: string
         }
-        if (!data.team && data.team_id) {
-            data.team = { name: 'Team' }
+        if (!dataAny.author) {
+            dataAny.author = { email: '', role: 'parent' }
+        }
+        if (!dataAny.team && dataAny.team_id) {
+            dataAny.team = { name: 'Team' }
         }
 
         // Fetch author role from organization_members
-        const dataAny = data as unknown as { team?: { org_id?: string }; author_id?: string; author?: { email?: string; role?: string } }
         if (dataAny && dataAny.team?.org_id && dataAny.author_id) {
             const memberData = await getOrgMember(dataAny.team.org_id, dataAny.author_id)
 
@@ -241,12 +245,11 @@ export async function getAnnouncementById(
             }
         }
 
-        return { data: data as Announcement, error: null }
+        return { data: dataAny as unknown as Announcement, error: null }
     } catch (err) {
-        // Check error type for better handling
         const error = err instanceof Error ? err : new Error('Unknown error')
-        if (error.message?.includes('No rows') || (err as any)?.code === 'PGRST116') {
-            // 404 - announcement not found
+        type PostgrestError = { code?: string }
+        if (error.message?.includes('No rows') || (err as PostgrestError)?.code === 'PGRST116') {
             return { data: null, error: new Error('Announcement not found') }
         }
         console.error('Error fetching announcement:', err)
@@ -268,34 +271,35 @@ export async function createAnnouncement(
 
     try {
         // Fetch Org ID from team first to ensure we know where to book creation (if needed) but DB handles Insert.
-        // We just insert.
+        type AnnouncementInsert = Database['public']['Tables']['announcements']['Insert']
+        const insertData = {
+            title,
+            content,
+            priority,
+            team_id: teamId,
+            author_id: authorId
+        } satisfies AnnouncementInsert
         const { data, error } = await supabase
             .from('announcements')
-            .insert({
-                title,
-                content,
-                priority,
-                team_id: teamId,
-                author_id: authorId
-            } as any)
-            .select(`*, author:users(email)`) // Can't easily get role in one shot if it's in another table
+            .insert(insertData)
+            .select(`*, author:users(email)`)
             .single()
 
         if (error) throw error
 
         // Manually fetch role for consistent return
-        if (data) {
+        let result = data as unknown as { author?: { email?: string; role?: string } }
+        if (result) {
             const teamData = await getTeamWithOrg(teamId)
             let role = 'parent'
             if (teamData) {
                 const memberData = await getOrgMember(teamData.org_id, authorId)
                 if (memberData) role = memberData.role
             }
-            const dataAny = data as unknown as { author?: { email?: string; role?: string } }
-            dataAny.author = { ...dataAny.author, role }
+            result.author = { ...result.author, role }
         }
 
-        return { data: data as any as Announcement, error: null }
+        return { data: result as unknown as Announcement, error: null }
     } catch (err) {
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
     }
@@ -327,7 +331,6 @@ export async function getMessages(
 
         const messages = data as any[]
 
-        // Fetch Roles
         if (messages.length > 0) {
             // All messages in same team -> same org
             const firstMessage = messages[0] as unknown as { team?: { org_id?: string }; author_id?: string; author?: { email?: string; role?: string } }
@@ -375,20 +378,23 @@ export async function createMessage(
     }
 
     try {
+        type MessageInsert = Database['public']['Tables']['messages']['Insert']
+        const insertData = {
+            content,
+            team_id: teamId,
+            author_id: authorId
+        } satisfies MessageInsert
         const { data, error } = await supabase
             .from('messages')
-            .insert({
-                content,
-                team_id: teamId,
-                author_id: authorId
-            })
+            .insert(insertData)
             .select(`*, author:users(email)`)
             .single()
 
         if (error) throw error
 
-        if (data) {
-            const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', teamId).single() as { data: any; error: any }
+        let result = data as unknown as { author?: { email?: string; role?: string } }
+        if (result) {
+            const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', teamId).single()
             let role = 'parent'
             if (teamData) {
                 const { data: memberData } = await supabase
@@ -396,13 +402,13 @@ export async function createMessage(
                     .select('role')
                     .eq('organization_id', teamData.org_id)
                     .eq('user_id', authorId)
-                    .single() as { data: any; error: any }
-                if (memberData) role = memberData.role
+                    .single()
+                if (memberData) role = memberData.role as string
             }
-            (data as any).author = { ...(data as any).author, role }
+            result.author = { ...result.author, role }
         }
 
-        return { data: data as any as Message, error: null }
+        return { data: result as unknown as Message, error: null }
     } catch (err) {
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
     }
@@ -519,9 +525,11 @@ export async function markNotificationRead(
     }
 
     try {
+        type NotificationUpdate = Database['public']['Tables']['user_notifications']['Update']
+        const updateData = { read_at: new Date().toISOString() } satisfies NotificationUpdate
         const { error } = await supabase
             .from('user_notifications')
-            .update({ read_at: new Date().toISOString() } as Database['public']['Tables']['user_notifications']['Update'])
+            .update(updateData)
             .eq('id', notificationId)
             .eq('user_id', context.userId)
 
@@ -540,9 +548,11 @@ export async function markAllNotificationsRead(
     }
 
     try {
+        type NotificationUpdate = Database['public']['Tables']['user_notifications']['Update']
+        const updateData = { read_at: new Date().toISOString() } satisfies NotificationUpdate
         const { error } = await supabase
             .from('user_notifications')
-            .update({ read_at: new Date().toISOString() } as any)
+            .update(updateData)
             .eq('user_id', context.userId)
             .is('read_at', null)
 

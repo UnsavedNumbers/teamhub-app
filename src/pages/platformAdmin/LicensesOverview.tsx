@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { StatCard, PageHeader, Card, Button } from '../../components/platformAdmin'
-import { mapLicenseMetrics } from '../../utils/domainMappers'
 import type { LicenseMetrics, LicenseAlert } from '../../types/licenseTiers.types'
 
 // Loading skeleton for stats
@@ -62,27 +61,27 @@ export default function LicensesOverview() {
       const newAlerts: LicenseAlert[] = []
       
       if (metrics) {
-        if (metrics.tiersMissingPriceId > 0) {
+        if (metrics.tiers_missing_price_id > 0) {
           newAlerts.push({
             type: 'error',
-            message: `${metrics.tiersMissingPriceId} license tier(s) missing Stripe Price ID`,
+            message: `${metrics.tiers_missing_price_id} license tier(s) missing Stripe Price ID`,
             details: 'Each tier must have a valid Stripe Price ID linked.',
           })
         }
 
-        if (metrics.featuresWithoutAssignment > 0) {
+        if (metrics.features_without_assignment > 0) {
           newAlerts.push({
             type: 'warning',
-            message: `${metrics.featuresWithoutAssignment} feature(s) not assigned to any tier`,
+            message: `${metrics.features_without_assignment} feature(s) not assigned to any tier`,
             details: 'Features should be assigned to at least one license tier.',
           })
         }
 
         // Check for tiers with archived features
-        if (metrics.tiersWithArchivedFeatures > 0) {
+        if (metrics.tiers_with_archived_features && metrics.tiers_with_archived_features > 0) {
           newAlerts.push({
             type: 'warning',
-            message: `${metrics.tiersWithArchivedFeatures} tier(s) include archived features`,
+            message: `${metrics.tiers_with_archived_features} tier(s) include archived features`,
             details: 'Consider removing archived features from tiers to avoid confusion.',
           })
         }
@@ -95,7 +94,7 @@ export default function LicensesOverview() {
           .neq('stripe_price_id', '')
 
         if (tiersData) {
-          const priceIdCounts = tiersData.reduce((acc, tier) => {
+          const priceIdCounts = tiersData.reduce((acc, tier: any) => {
             acc[tier.stripe_price_id] = (acc[tier.stripe_price_id] || 0) + 1
             return acc
           }, {} as Record<string, number>)

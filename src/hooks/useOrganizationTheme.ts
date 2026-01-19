@@ -39,7 +39,7 @@ export function useOrganizationTheme(): { ready: boolean } {
   const { context } = useUserContext()
   const { resolvedTheme } = useTheme()
   const [themeId, setThemeId] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false) // Start as false - theme is ready by default
+  const [_, setIsLoading] = useState(false) // Start as false - theme is ready by default
 
   // Memoize token generation - only recalculate when theme ID or mode changes
   const tokens = useMemo(() => {

@@ -6,8 +6,8 @@
  */
 
 import { useState } from 'react'
-import { Card, Button } from './index'
-import { getActiveThemes, getDefaultTheme, type Theme } from '../../config/themes'
+import { Card } from './index'
+import { getActiveThemes, getDefaultTheme } from '../../config/themes'
 
 interface ThemePickerProps {
   selectedThemeId: string | null

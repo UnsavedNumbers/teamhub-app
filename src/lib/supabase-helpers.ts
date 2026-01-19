@@ -6,7 +6,6 @@
  */
 
 import { supabase } from './supabase'
-import type { Database } from './database.types'
 
 // Type for organization member with user_id and role
 export interface OrgMember {

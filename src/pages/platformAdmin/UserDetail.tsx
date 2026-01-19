@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, Badge, Card, ConfirmDialog, Button } from '../../components/platformAdmin'
+import { Badge, Card, ConfirmDialog } from '../../components/platformAdmin'
 import { canPerformAction } from '../../utils/platformAdminPermissions'
 import { getDisplayEmail } from '../../utils/platformAdminMasking'
 import { isRpcSuccessResponse } from '../../utils/typeAdapters'
-import type { AdminUser, PlatformAdminRole } from '../../types/platformAdmin.types'
+import type { AdminUser, AdminRpcResponse, PlatformAdminRole } from '../../types/platformAdmin.types'
 
 export default function UserDetail() {
   const { id } = useParams<{ id: string }>()
@@ -47,7 +47,7 @@ export default function UserDetail() {
         console.error('Error fetching user:', error)
         setUser(null)
       } else {
-        setUser(data)
+        setUser(data as AdminUser)
       }
     } catch (err) {
       console.error('Error:', err)
@@ -97,15 +97,15 @@ export default function UserDetail() {
           return
       }
 
-      const { data, error } = await supabase.rpc(rpcName, { target_user_id: targetUserId, reason })
+      const { data, error } = await supabase.rpc(rpcName, { target_user_id: targetUserId ?? '', reason })
 
       if (error) {
         setDialogError(error.message)
         return
       }
 
-      if (!isRpcSuccessResponse(data) || !data.success) {
-        setDialogError(data?.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !(data as AdminRpcResponse).success) {
+        setDialogError((data as AdminRpcResponse)?.error || 'Unknown error')
         return
       }
 

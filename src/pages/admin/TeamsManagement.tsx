@@ -263,9 +263,9 @@ export default function TeamsManagement() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredTeams.map((team) => {
-                  const sport = sportById.get(team.sport_id)
+                  const sport = sportById.get(team.sport_id ?? '')
                   const program = programById.get(team.program_id || '')
-                  const level = levelById.get(team.level_id)
+                  const level = levelById.get(team.level_id ?? '')
 
                   return (
                     <tr key={team.id} className="hover:bg-slate-50/80 transition-colors group">
@@ -287,7 +287,7 @@ export default function TeamsManagement() {
                         {team.max_roster_size ? `${team.max_roster_size} max` : '—'}
                       </td>
                       <td className="py-4 px-6">
-                        <StatusBadge active={team.is_active} />
+                        <StatusBadge active={team.is_active ?? false} />
                       </td>
                       <td className="py-4 px-6 text-right">
                         <Link to={`/admin/teams/${team.id}`} className="invisible group-hover:visible focus:visible">

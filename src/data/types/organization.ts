@@ -60,6 +60,7 @@ export interface Team {
     is_active?: boolean
     created_at: string
     updated_at: string
+    deleted_at?: string | null
 
     // Deprecated fields - derived from Program/Level now
     age_group?: string | null

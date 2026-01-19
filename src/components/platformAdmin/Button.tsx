@@ -20,6 +20,8 @@ type ButtonProps<E extends ElementType = 'button'> = {
   as?: E
   /** Disabled state */
   disabled?: boolean
+  /** CSS class name */
+  className?: string
 } & Omit<ComponentPropsWithoutRef<E>, 'children' | 'className'>
 
 /**

@@ -3,11 +3,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 import { AdminPageHeader } from '../../components/platformAdmin'
-import { Button, Card, Input, Select } from '../../components/platformAdmin'
 import { useUserContext } from '../../hooks/useUserContext'
 import { supabase } from '../../lib/supabase'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
-import { useT } from '../../i18n/useI18n'
 
 // Template column definitions
 const TEMPLATE_COLUMNS = {
@@ -61,7 +59,6 @@ export default function ImportAthletes() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { context, isReady } = useUserContext()
-  const t = useT()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const preSelectedTeamId = searchParams.get('teamId') || null
@@ -83,26 +80,25 @@ export default function ImportAthletes() {
     createFamilies: true,
     linkExistingFamilies: true,
   })
-  const [importResult, setImportResult] = useState<ImportResult | null>(null)
+  const [_, setImportResult] = useState<ImportResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showMappingModal, setShowMappingModal] = useState(false)
 
   // Download CSV template
-  const downloadCSVTemplate = useCallback(() => {
-    const headers = [
-      ...TEMPLATE_COLUMNS.required.map(c => c.key),
-      ...TEMPLATE_COLUMNS.optional.map(c => c.key),
-    ]
-    const csv = headers.join(',') + '\n'
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'athlete_import_template.csv'
-    a.click()
-    URL.revokeObjectURL(url)
-  }, [])
+  // const downloadCSVTemplate = useCallback(() => {
+  //   const headers = [
+  //     ...TEMPLATE_COLUMNS.required.map(c => c.key),
+  //     ...TEMPLATE_COLUMNS.optional.map(c => c.key),
+  //   ]
+  //   const csv = headers.join(',') + '\n'
+  //   const blob = new Blob([csv], { type: 'text/csv' })
+  //   const url = URL.createObjectURL(blob)
+  //   const a = document.createElement('a')
+  //   a.href = url
+  //   a.download = 'athlete_import_template.csv'
+  //   a.click()
+  //   URL.revokeObjectURL(url)
+  // }, [])
 
   // Handle file upload
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -286,7 +282,7 @@ export default function ImportAthletes() {
       const fileExt = file!.name.substring(file!.name.lastIndexOf('.'))
       const fileName = `imports/${context.orgId}/${Date.now()}${fileExt}`
       
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { data: _, error: uploadError } = await supabase.storage
         .from('athlete-imports')
         .upload(fileName, file!, {
           contentType: file!.type,
@@ -653,7 +649,7 @@ export default function ImportAthletes() {
                       if (droppedFile) {
                         const fakeEvent = {
                           target: { files: [droppedFile] },
-                        } as React.ChangeEvent<HTMLInputElement>
+                        } as unknown as React.ChangeEvent<HTMLInputElement>
                         handleFileUpload(fakeEvent)
                       }
                     }}

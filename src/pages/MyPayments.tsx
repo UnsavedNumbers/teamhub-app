@@ -72,14 +72,14 @@ export default function MyPayments() {
         amount_cents: fa.amount_due_cents,
         balance_cents: fa.amount_due_cents - fa.amount_paid_cents,
         paid_cents_total: fa.amount_paid_cents,
-        due_date: fa.due_date,
+        due_date: fa.due_date ?? null,
         status: fa.status as FeeAssignmentStatus,
         fee: fa.fee ? {
           id: fa.fee.id,
           title: fa.fee.title,
           description: fa.fee.description ?? null,
           due_date: fa.fee.due_date,
-          fee_type: fa.fee.fee_type,
+          fee_type: fa.fee.fee_type ?? '',
           season: fa.fee.team_id ? { 
             team: { 
               id: fa.fee.team_id, 

@@ -38,15 +38,15 @@ export default function SeasonsManagement() {
     load()
   }, [context, isReady])
 
-  const statusBadgeStyle = (status: string) => {
-    const styles = {
-      upcoming: { background: 'var(--pa-n300)', color: 'var(--pa-n700)' },
-      active: { background: 'var(--pa-success-bg)', color: 'var(--pa-success)' },
-      locked: { background: 'var(--pa-warning-bg)', color: 'var(--pa-warning)' },
-      archived: { background: 'var(--pa-n200)', color: 'var(--pa-n600)' },
-    }
-    return styles[status as keyof typeof styles] || styles.upcoming
-  }
+  // const statusBadgeStyle = (status: string) => {
+  //   const styles = {
+  //     upcoming: { background: 'var(--pa-n300)', color: 'var(--pa-n700)' },
+  //     active: { background: 'var(--pa-success-bg)', color: 'var(--pa-success)' },
+  //     locked: { background: 'var(--pa-warning-bg)', color: 'var(--pa-warning)' },
+  //     archived: { background: 'var(--pa-n200)', color: 'var(--pa-n600)' },
+  //   }
+  //   return styles[status as keyof typeof styles] || styles.upcoming
+  // }
 
   if (loading) {
     return <div className="pa-skeleton" style={{ height: '500px' }} />

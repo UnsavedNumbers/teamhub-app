@@ -38,9 +38,9 @@ export function mapEvent(row: EventRow): Event {
 
   // Map RSVP config - handle both old and new schema
   const rsvpConfig: RSVPConfig = {
-    enabled: (row as any).rsvp_enabled ?? false,
-    type: (row as any).rsvp_enabled && (row as any).rsvp_type
-      ? (row as any).rsvp_type as 'general' | 'athlete'
+    enabled: row.rsvp_enabled ?? false,
+    type: row.rsvp_enabled && row.rsvp_type
+      ? row.rsvp_type as 'general' | 'athlete'
       : null
   }
 
@@ -49,13 +49,13 @@ export function mapEvent(row: EventRow): Event {
     title: row.title,
     type: row.type as Event['type'],
     startTime: row.start_time,
-    endTime: row.end_time,
+    endTime: row.end_time ?? new Date().toISOString(),
     arrivalTime: row.arrival_time,
-    isCancelled: row.is_cancelled,
+    isCancelled: row.is_cancelled ?? false,
     cancelledAt: row.cancelled_at,
     cancelledByUserId: row.cancelled_by_user_id,
     cancellationReason: row.cancellation_reason,
-    createdByUserId: row.created_by_user_id,
+    createdByUserId: row.created_by_user_id ?? '',
     createdAt: row.created_at ?? new Date().toISOString(),
     updatedAt: row.updated_at ?? new Date().toISOString(),
     teamId: row.team_id,
@@ -82,14 +82,14 @@ export function mapEventLocation(row: Database['public']['Tables']['event_locati
   return {
     id: row.id,
     venueName: row.venue_name,
-    address: row.address,
+    address: row.address_line1 || null,
     city: row.city,
     state: row.state,
-    zip: row.zip,
+    zip: row.postal_code || null,
     country: row.country,
-    latitude: row.latitude,
-    longitude: row.longitude,
-    mapsUrl: row.maps_url,
+    latitude: row.latitude || null,
+    longitude: row.longitude || null,
+    mapsUrl: row.maps_url || null,
     isVirtual: row.is_virtual ?? false,
     isTbd: row.is_tbd ?? false,
   }
@@ -99,10 +99,10 @@ function mapRecurringPattern(row: Database['public']['Tables']['recurring_event_
   return {
     id: row.id,
     frequency: row.frequency as RecurringPattern['frequency'],
-    interval: row.interval,
+    interval: row.interval || 1,
     daysOfWeek: row.days_of_week as number[] | null,
     endDate: row.end_date,
-    occurrenceCount: row.occurrence_count,
+    occurrenceCount: row.max_occurrences || null,
     exceptionDates: row.exception_dates ?? [],
   }
 }
@@ -116,11 +116,10 @@ type OrganizationRow = SupabaseExtended['public']['Views']['admin_organizations'
 
 export function mapOrganization(row: OrganizationRow): Organization {
   // Handle both admin view and table row
-  const isAdminView = 'license_status' in row || 'team_count' in row
   
   return {
-    id: row.id,
-    name: row.name,
+    id: row.id ?? '',
+    name: row.name ?? '',
     orgType: 'org_type' in row ? row.org_type : null,
     status: ('status' in row && row.status) ? row.status as Organization['status'] : 'active',
     createdAt: row.created_at ?? new Date().toISOString(),
@@ -131,17 +130,17 @@ export function mapOrganization(row: OrganizationRow): Organization {
     licenseCurrentPeriodEnd: 'license_current_period_end' in row ? row.license_current_period_end : null,
     payoutAccountId: 'payout_account_id' in row ? row.payout_account_id : null,
     payoutsEnabled: 'payouts_enabled' in row ? (row.payouts_enabled ?? false) : false,
-    stripeConnected: 'stripe_connected' in row ? row.stripe_connected : false,
-    teamCount: 'team_count' in row ? row.team_count : 0,
-    sportCount: 'sport_count' in row ? row.sport_count : 0,
-    userCount: 'user_count' in row ? row.user_count : 0,
-    website: 'website' in row ? row.website : null,
-    phone: 'phone' in row ? row.phone : null,
-    email: 'email' in row ? row.email : null,
-    address: 'address' in row ? row.address : null,
-    city: 'city' in row ? row.city : null,
-    state: 'state' in row ? row.state : null,
-    zip: 'zip' in row ? row.zip : null,
+    stripeConnected: 'stripe_connected' in row ? (row.stripe_connected ?? false) : false,
+    teamCount: 'team_count' in row ? (row.team_count ?? 0) : 0,
+    sportCount: 'sport_count' in row ? (row.sport_count ?? 0) : 0,
+    userCount: 'user_count' in row ? (row.user_count ?? 0) : 0,
+    website: 'website' in row ? (row.website as string | null) : null,
+    phone: 'phone' in row ? (row.phone as string | null) : null,
+    email: 'email' in row ? (row.email as string | null) : null,
+    address: 'address' in row ? (row.address as string | null) : null,
+    city: 'city' in row ? (row.city as string | null) : null,
+    state: 'state' in row ? (row.state as string | null) : null,
+    zip: 'zip' in row ? (row.zip as string | null) : null,
   }
 }
 
@@ -176,7 +175,7 @@ export function mapUser(row: UserRow): User {
   }
 
   return {
-    id: row.id,
+    id: row.id ?? '',
     email: row.email ?? '',
     phone: 'phone' in row ? row.phone : null,
     displayName: 'display_name' in row ? row.display_name : null,

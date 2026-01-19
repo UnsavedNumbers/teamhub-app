@@ -540,29 +540,20 @@ export async function updateGeneralSettings(
   settings: Partial<GeneralSettings>,
   currentUpdatedAt: string
 ): Promise<{ error: Error | null }> {
-  if (USE_FAKE_DATA) {
-    return updateFakeGeneralSettings(context, settings, currentUpdatedAt)
-  }
+  if (USE_FAKE_DATA) return updateFakeGeneralSettings(context, settings, currentUpdatedAt)
+
   try {
-    // Validate with Zod
     const validated = generalSettingsSchema.partial().parse(settings)
 
     const { error } = await fromTable('organization_settings')
-      .upsert(
-        {
-          org_id: context.orgId,
-          ...validated,
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: 'org_id',
-        }
-      )
+      .update({
+        ...validated,
+        updated_at: new Date().toISOString(),
+      })
       .eq('org_id', context.orgId)
       .eq('updated_at', currentUpdatedAt)
 
     if (error) {
-      // Check for optimistic locking failure
       if (error.message.includes('updated_at')) {
         throw new Error('Settings were modified by another user. Please refresh and try again.')
       }
@@ -830,7 +821,7 @@ export async function checkImpactedRecords(
 
     if (settingType === 'registration' && field === 'required_fields') {
       // Check how many existing players might be affected
-      const { count: playerCount, error } = await fromTable('children')
+      const { count: playerCount, error } = await fromTable('athletes')
         .select('*', { count: 'exact', head: true })
         .eq('organization_id', context.orgId)
 

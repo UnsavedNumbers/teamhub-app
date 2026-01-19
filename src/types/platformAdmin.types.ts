@@ -52,17 +52,17 @@ export interface AdminUserOrganization {
  * admin_users view row
  */
 export interface AdminUser {
-    id: string
-    email: string | null
-    phone: string | null
-    display_name: string | null
     created_at: string | null
-    updated_at: string | null
-    organizations: AdminUserOrganization[]
-    roles: string[]
-    is_platform_admin: boolean
+    display_name: string | null
+    email: string | null
+    email_confirmed: boolean | null
+    id: string | null
+    is_platform_admin: boolean | null
     last_sign_in_at: string | null
-    email_confirmed: boolean
+    organizations: AdminUserOrganization[] | null
+    phone: string | null
+    roles: string[] | null
+    updated_at: string | null
 }
 
 /**
@@ -138,16 +138,16 @@ export interface AdminAuditLog {
  * admin_platform_health view row (singleton)
  */
 export interface AdminPlatformHealth {
-    active_organizations: number
-    trial_organizations: number
-    suspended_organizations: number
-    total_users: number
-    platform_admin_count: number
-    successful_payments: number
-    failed_payments: number
-    total_payment_volume_cents: number
-    total_teams: number
-    total_children: number
+    active_organizations: number | null
+    trial_organizations: number | null
+    suspended_organizations: number | null
+    total_users: number | null
+    platform_admin_count: number | null
+    successful_payments: number | null
+    failed_payments: number | null
+    total_payment_volume_cents: number | null
+    total_teams: number | null
+    total_children: number | null
 }
 
 /**

@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, Badge, Card, ConfirmDialog, PlatformDataTable, type ColumnConfig } from '../../components/platformAdmin'
+import { Badge, Card, ConfirmDialog, PlatformDataTable, type ColumnConfig } from '../../components/platformAdmin'
 import { canPerformAction } from '../../utils/platformAdminPermissions'
 import { isRpcSuccessResponse } from '../../utils/typeAdapters'
+import type { AdminRpcResponse } from '../../types/platformAdmin.types'
 import type { 
   AdminOrganization, 
   AdminFeatureFlag, 
@@ -53,7 +54,7 @@ export default function OrganizationDetail() {
         console.error('Error fetching organization:', error)
         setOrganization(null)
       } else {
-        setOrganization(data)
+        setOrganization(data as AdminOrganization)
       }
 
       const { data: flags, error: flagsError } = await supabase
@@ -62,7 +63,7 @@ export default function OrganizationDetail() {
         .eq('organization_id', id)
 
       if (!flagsError) {
-        setFeatureFlags(flags || [])
+        setFeatureFlags(flags as AdminFeatureFlag[])
       }
     } catch (err) {
       console.error('Error:', err)
@@ -97,15 +98,15 @@ export default function OrganizationDetail() {
       const { data, error } = await supabase.rpc(rpcName, {
         target_org_id: organization.id,
         reason,
-      })
+      } as any)
 
       if (error) {
         setDialogError(error.message)
         return
       }
 
-      if (!isRpcSuccessResponse(data) || !data.success) {
-        setDialogError(data?.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !(data as AdminRpcResponse).success) {
+        setDialogError((data as AdminRpcResponse)?.error || 'Unknown error')
         return
       }
 

@@ -41,6 +41,7 @@ export interface FakeFee {
     amount_cents: number
     currency: string
     due_date: string | null
+    fee_type?: string | null
     status: FeeStatus
     allow_partial: boolean
     created_at: string
@@ -58,6 +59,7 @@ export interface FakeFeeAssignment {
     discount_reason: string | null
     waived_at: string | null
     waived_reason: string | null
+    due_date?: string | null
     created_at: string
     updated_at: string
 }

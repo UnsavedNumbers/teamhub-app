@@ -6,7 +6,6 @@ import { useTeamParams } from '../../hooks/useRouteParams'
 import { getTeamDetails, getTeamRoster } from '../../data/services/teamsService'
 import { 
   AdminPageHeader,
-  PageHeader, 
   Card, 
   Button, 
   Select, 

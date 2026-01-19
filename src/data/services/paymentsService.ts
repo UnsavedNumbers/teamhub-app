@@ -131,7 +131,7 @@ export async function getFeeDetails(
  *   .select(`
  *     *,
  *     fee:fees(*),
- *     child:children(id, first_name, last_name),
+ *     athlete:athletes(id, first_name, last_name),
  *     payments:payments(*)
  *   `)
  *   .in('child_id', childIds)
@@ -212,7 +212,7 @@ export async function getUnpaidFeeAssignments(
  *   .from('fee_assignments')
  *   .select(`
  *     *,
- *     child:children(id, first_name, last_name, family:families(id, name))
+ *     athlete:athletes(id, first_name, last_name, family:families(id, name))
  *   `)
  *   .eq('fee_id', feeId)
  * ```
@@ -255,7 +255,7 @@ export async function getFeeAssignmentsByFee(
  *     *,
  *     fee_assignment:fee_assignments(
  *       fee:fees(title),
- *       child:children(first_name, last_name)
+ *       athlete:athletes(first_name, last_name)
  *     )
  *   `)
  *   .eq('org_id', context.orgId)

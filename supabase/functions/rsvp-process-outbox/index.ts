@@ -84,7 +84,7 @@ serve(async (req) => {
           const { data: memberships, error: membershipsError } = await supabase
             .from('team_memberships')
             .select(`
-              child:children!inner(
+              athlete:athletes!inner(
                 family_id,
                 families!inner(
                   users!inner(id, email, role)
@@ -113,7 +113,7 @@ serve(async (req) => {
           const { data: memberships, error: membershipsError } = await supabase
             .from('team_memberships')
             .select(`
-              child:children!inner(
+              athlete:athletes!inner(
                 family_id,
                 families!inner(
                   users!inner(id, email, role)

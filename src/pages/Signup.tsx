@@ -4,7 +4,6 @@ import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
 import {
   getSetupOrganizationFlag,
-  setSetupOrganizationFlag,
   cleanupStaleFlags,
 } from '../utils/setupOrganization'
 import { AUTH_HERO_IMAGES } from '../utils/authImages'
@@ -18,10 +17,9 @@ export default function Signup() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [googleLoading, setGoogleLoading] = useState(false)
   const [heroImage, setHeroImage] = useState<string>('')
 
-  const { signUp, signInWithGoogle } = useAuth()
+  const { signUp } = useAuth()
   const { resolvedTheme } = useTheme()
   const navigate = useNavigate()
   const location = useLocation()

@@ -5,10 +5,9 @@ import { useForm, Controller } from 'react-hook-form'
 
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
-import { getTeams, getTeamDetails } from '../../data/services/teamsService'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { supabase } from '../../lib/supabase'
-import type { Database } from '../../lib/database.types'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { 
   AdminPageHeader, 
   Card, 
@@ -106,18 +105,14 @@ export default function CreateEvent() {
   const fetchSeasons = useCallback(async (teamId: string) => {
     if (!isReady) return
     
-    // Use view to get seasons associated with the team
     const { data, error } = await supabase
         .from('team_seasons_view')
         .select('season_id, name')
         .eq('team_id', teamId)
         .eq('is_active', true)
-        // .order('start_date', { ascending: false }) // View might not sort implicitly, usually need to enable querying ordered col
 
     if (!error && data) {
-      // Map season_id to id for the select component
-      const dataTyped = data as Array<{ season_id: string; name: string }>
-      const mappedSeasons = dataTyped.map(s => ({
+      const mappedSeasons = data.map(s => ({
           id: s.season_id,
           name: s.name,
           team_id: teamId
@@ -141,14 +136,15 @@ export default function CreateEvent() {
     
     try {
       // 1. Insert Event
-      const { data: eventData, error: insertError } = await supabase.from('events').insert({
+      type EventInsert = Database['public']['Tables']['events']['Insert']
+      const eventInsertData = {
         title: data.title,
         type: data.type,
         team_id: data.team_id,
         season_id: data.season_id,
         start_time: new Date(data.start_time).toISOString(),
-        end_time: data.end_time ? new Date(data.end_time).toISOString() : null,
-        arrival_time: data.arrival_time ? new Date(data.arrival_time).toISOString() : null,
+        end_time: data.end_time ? new Date(data.end_time).toISOString() : '',
+        arrival_time: data.arrival_time ? new Date(data.arrival_time).toISOString() : '',
         timezone: data.timezone,
         notes: data.notes,
         uniform_notes: data.uniform_notes,
@@ -158,14 +154,17 @@ export default function CreateEvent() {
         rsvp_enabled: data.rsvp_enabled,
         rsvp_type: data.rsvp_enabled ? data.rsvp_type : null,
         created_by_user_id: context.userId
-      }).select().single()
+      } satisfies EventInsert
+      const { data: eventData, error: insertError } = await supabase.from('events').insert(eventInsertData).select().single()
       
       if (insertError) throw insertError
       if (!eventData) throw new Error('No data returned')
 
       // 2. Insert Location
+      type LocationInsert = Database['public']['Tables']['event_locations']['Insert']
+      const eventDataAny = eventData as any
       const locationData = {
-          event_id: eventData.id,
+          event_id: eventDataAny.id,
           venue_name: data.location.venue_name || null,
           address_line1: data.location.address_line1 || null,
           city: data.location.city || null,
@@ -174,20 +173,21 @@ export default function CreateEvent() {
           is_tbd: data.location.is_tbd,
           is_virtual: data.location.is_virtual,
           virtual_link: data.location.virtual_link || null
-      }
+      } satisfies LocationInsert
       
       const { error: locError } = await supabase.from('event_locations').insert(locationData)
       if (locError) console.error('Location save error', locError) // Don't block flow
 
       // 3. Handle Recurring
       if (data.recurring?.enabled) {
+          type RecurringPatternInsert = Database['public']['Tables']['recurring_event_patterns']['Insert']
           const recurData = {
-              parent_event_id: eventData.id,
-              frequency: data.recurring.frequency,
+              parent_event_id: eventDataAny.id,
+              frequency: data.recurring.frequency as Database['public']['Enums']['recurrence_frequency'],
               days_of_week: data.recurring.days_of_week.length > 0 ? data.recurring.days_of_week : [new Date(data.start_time).getDay()],
               end_date: data.recurring.end_date || null,
               max_occurrences: data.recurring.max_occurrences ? parseInt(data.recurring.max_occurrences) : null
-          }
+          } satisfies RecurringPatternInsert
            const { error: recurError } = await supabase.from('recurring_event_patterns').insert(recurData)
            if (recurError) throw recurError
       }

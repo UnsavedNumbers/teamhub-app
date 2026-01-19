@@ -54,7 +54,7 @@ export default function PaymentSuccess() {
           amount_cents,
           fee_assignment:fee_assignments (
             fee:fees ( title ),
-            child:children ( first_name, last_name )
+            athlete:athletes ( first_name, last_name )
           )
         )
       `)

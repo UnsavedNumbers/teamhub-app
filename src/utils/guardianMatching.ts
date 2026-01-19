@@ -5,8 +5,8 @@
  * and form handling during athlete creation.
  */
 
-import type { GuardianMatch, GuardianFormData } from '../../types/family'
-import { findGuardianByEmail, normalizeEmail, validateGuardianEmail } from '../../data/services/guardianService'
+import type { GuardianMatch, GuardianFormData } from "@/types/family"
+import { findGuardianByEmail, normalizeEmail, validateGuardianEmail } from '@/data/services/guardianService'
 
 // ============================================================================
 // Email Validation & Normalization (Re-export from service)

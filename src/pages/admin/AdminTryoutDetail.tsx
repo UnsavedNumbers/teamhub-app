@@ -5,7 +5,6 @@ import { getTryoutById, getAdminTryoutRegistrations } from '../../data/services/
 import type { Tryout, TryoutRegistration } from '../../data/services/tryoutsService'
 import { 
   AdminPageHeader,
-  PageHeader, 
   Card, 
   PlatformDataTable, 
   Badge,

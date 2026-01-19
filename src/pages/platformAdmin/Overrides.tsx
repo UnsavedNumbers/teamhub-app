@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { PageHeader, PlatformDataTable, FilterBar, Button, Badge, Select, type ColumnConfig } from '../../components/platformAdmin'
-import type { EntitlementOverrideWithDetails } from '../../types/licenseTiers.types'
+import type { EntitlementOverrideWithDetails, OverrideStatus, OverrideTargetType } from '../../types/licenseTiers.types'
 
 export default function Overrides() {
   const [overrides, setOverrides] = useState<EntitlementOverrideWithDetails[]>([])
@@ -28,11 +28,11 @@ export default function Overrides() {
       }
 
       if (targetTypeFilter) {
-        query = query.eq('target_type', targetTypeFilter)
+        query = query.eq('target_type', targetTypeFilter as OverrideTargetType)
       }
 
       if (statusFilter) {
-        query = query.eq('status', statusFilter)
+        query = query.eq('status', statusFilter as OverrideStatus)
       }
 
       query = query.order('created_at', { ascending: false })

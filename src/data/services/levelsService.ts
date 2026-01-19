@@ -7,7 +7,7 @@
 
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
-import type { Database } from '../../lib/database.types'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { UserContext } from '../fake/userContext'
 import type { Level, CreateLevelDTO, UpdateLevelDTO } from '../types/organization'
 import { getLevelById, fakeLevels } from '../fake/fakeTeams'
@@ -113,21 +113,23 @@ export async function createLevel(
     }
 
     try {
+        type LevelInsert = Database['public']['Tables']['levels']['Insert']
+        const insertData = {
+            org_id: dto.org_id,
+            program_id: dto.program_id,
+            name: dto.name,
+            level_type: dto.level_type,
+            description: dto.description || null,
+            age_min: dto.age_min || null,
+            age_max: dto.age_max || null,
+            grade_min: dto.grade_min || null,
+            grade_max: dto.grade_max || null,
+            skill_min: dto.skill_min || null,
+            skill_max: dto.skill_max || null,
+        } satisfies LevelInsert
         const { data, error } = await supabase
             .from('levels')
-            .insert({
-                org_id: dto.org_id,
-                program_id: dto.program_id,
-                name: dto.name,
-                level_type: dto.level_type,
-                description: dto.description || null,
-                age_min: dto.age_min || null,
-                age_max: dto.age_max || null,
-                grade_min: dto.grade_min || null,
-                grade_max: dto.grade_max || null,
-                skill_min: dto.skill_min || null,
-                skill_max: dto.skill_max || null,
-            } as Database['public']['Tables']['levels']['Insert'])
+            .insert(insertData)
             .select()
             .single()
 
@@ -156,7 +158,8 @@ export async function updateLevel(
     }
 
     try {
-        const updateData: any = {}
+        type LevelUpdate = Database['public']['Tables']['levels']['Update']
+        const updateData: LevelUpdate = {}
         if (dto.name !== undefined) updateData.name = dto.name
         if (dto.description !== undefined) updateData.description = dto.description
         if (dto.level_type !== undefined) updateData.level_type = dto.level_type
@@ -169,7 +172,7 @@ export async function updateLevel(
 
         const { data, error } = await supabase
             .from('levels')
-            .update(updateData as any)
+            .update(updateData)
             .eq('id', levelId)
             .eq('org_id', context.orgId)
             .is('deleted_at', null)
@@ -197,9 +200,11 @@ export async function deleteLevel(
     }
 
     try {
+        type LevelUpdate = Database['public']['Tables']['levels']['Update']
+        const updateData = { deleted_at: new Date().toISOString() } satisfies LevelUpdate
         const { error } = await supabase
             .from('levels')
-            .update({ deleted_at: new Date().toISOString() } as Database['public']['Tables']['levels']['Update'])
+            .update(updateData)
             .eq('id', levelId)
             .eq('org_id', context.orgId)
 

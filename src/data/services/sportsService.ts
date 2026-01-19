@@ -10,8 +10,8 @@
 
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
-import type { UserContext } from '../fake/userContext'
 import type { Database } from '../../lib/database.types'
+import type { UserContext } from '../fake/userContext'
 import {
     getSportById,
     getSportsForOrg,
@@ -144,7 +144,6 @@ export async function getSport(
  * Organizations can only link to predefined system sports
  */
 export async function createSport(
-    context: UserContext,
     dto: CreateSportDTO
 ): Promise<{ data: Sport | null; error: Error | null }> {
     if (USE_FAKE_DATA) {
@@ -188,7 +187,7 @@ export async function createSport(
         }
 
         // Link the system sport to the organization
-        const { data: linkData, error: linkError } = await supabase
+        const { data: _, error: linkError } = await supabase
             .from('organization_sports')
             .insert({
                 organization_id: dto.org_id,
@@ -252,7 +251,7 @@ export async function updateSport(
 
         const { data, error } = await supabase
             .from('sports')
-            .update(updateData as any)
+            .update(updateData)
             .eq('id', sportId)
             .eq('org_id', context.orgId)
             .select()
@@ -403,22 +402,24 @@ export async function createProgram(
     }
 
     try {
+        type ProgramInsert = Database['public']['Tables']['programs']['Insert']
+        const insertData = {
+            org_id: dto.org_id,
+            sport_id: dto.sport_id,
+            name: dto.name,
+            gender_category: dto.gender_category,
+            description: dto.description || null,
+            age_min: dto.age_min || null,
+            age_max: dto.age_max || null,
+        } satisfies ProgramInsert
         const { data, error } = await supabase
             .from('programs')
-            .insert({
-                org_id: dto.org_id,
-                sport_id: dto.sport_id,
-                name: dto.name,
-                gender_category: dto.gender_category,
-                description: dto.description || null,
-                age_min: dto.age_min || null,
-                age_max: dto.age_max || null,
-            } as Database['public']['Tables']['programs']['Insert'])
+            .insert(insertData)
             .select()
             .single()
 
         if (error) throw error
-        return { data: data as Program, error: null }
+        return { data: data as unknown as Program, error: null }
     } catch (err) {
         console.error('[sportsService] Error creating program:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
@@ -442,18 +443,19 @@ export async function updateProgram(
     }
 
     try {
-        const updateData: any = {}
+        type ProgramUpdate = Database['public']['Tables']['programs']['Update']
+        const updateData: ProgramUpdate = {}
         if (dto.name !== undefined) updateData.name = dto.name
         if (dto.gender_category !== undefined) updateData.gender_category = dto.gender_category
         if (dto.description !== undefined) updateData.description = dto.description
         if (dto.age_min !== undefined) updateData.age_min = dto.age_min
         if (dto.age_max !== undefined) updateData.age_max = dto.age_max
 
-        const { data, error } = await supabase
+        const { data, error} = await supabase
             .from('programs')
-            .update(updateData as Database['public']['Tables']['programs']['Update'])
+            .update(updateData)
             .eq('id', programId)
-            .eq('org_id', _context.orgId)
+            .eq('org_id', context.orgId)
             .select()
             .single()
 
@@ -483,7 +485,7 @@ export async function deleteProgram(
             .from('programs')
             .delete()
             .eq('id', programId)
-            .eq('org_id', _context.orgId)
+            .eq('org_id', context.orgId)
 
         if (error) throw error
         return { error: null }
