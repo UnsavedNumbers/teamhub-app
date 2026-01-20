@@ -152,15 +152,23 @@ export default function Login() {
           <h2 className="text-5xl font-black tracking-tighter leading-none text-white mb-4 font-impact">
             CREATE YOUR ORGANIZATION
           </h2>
-          <p className="text-lg font-light tracking-wide text-white/80 max-w-lg leading-relaxed">
+          <p className="text-lg font-light tracking-wide text-white/80 max-w-lg leading-relaxed mb-6">
             Start managing your youth sports organization with professional tools for registration, scheduling, payments, and communication.
           </p>
+          <button
+            type="button"
+            onClick={handleSetupOrganization}
+            className="bg-white text-slate-900 px-8 py-3 font-black text-sm tracking-widest uppercase flex items-center justify-center gap-2 hover:bg-slate-100 transition-all duration-300"
+          >
+            <span className="material-symbols-outlined text-xl">corporate_fare</span>
+            GET STARTED
+          </button>
         </div>
       </div>
 
       {/* Right side - Login Form */}
-      <div className="flex-1 flex flex-col px-6 py-8 lg:px-20 xl:px-24 bg-white dark:bg-slate-900/50 overflow-hidden">
-        <div className="mx-auto w-full max-w-sm lg:w-96 flex flex-col min-h-0">
+      <div className="flex-1 flex flex-col px-6 py-8 lg:px-20 xl:px-24 bg-white dark:bg-slate-900/50 overflow-y-auto">
+        <div className="mx-auto w-full max-w-sm lg:w-96 flex flex-col">
           {/* Logo */}
           <div className="mb-8 pt-4">
             <img 
@@ -278,17 +286,31 @@ export default function Login() {
             </div>
           </form>
 
-          {/* Sign up link */}
-          <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800">
-            <p className="text-center text-sm text-slate-500 dark:text-slate-400">
-              NEW TO YOUTHSPORTS?{' '}
+          {/* Sign up links */}
+          <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800 space-y-4">
+            <div>
+              <p className="text-center text-sm text-slate-500 dark:text-slate-400 mb-2">
+                NEW PARENT TO YOUTHSPORTS?
+              </p>
               <Link 
                 to="/portal/signup" 
-                className="font-bold text-[#137fec] hover:text-[#137fec]/80 transition-colors"
+                className="block text-center font-bold text-[#137fec] hover:text-[#137fec]/80 transition-colors"
               >
                 CREATE AN ACCOUNT
               </Link>
-            </p>
+            </div>
+            <div>
+              <p className="text-center text-sm text-slate-500 dark:text-slate-400 mb-2">
+                SETTING UP YOUR TEAM(S)?
+              </p>
+              <button
+                type="button"
+                onClick={handleSetupOrganization}
+                className="w-full text-center font-bold text-[#137fec] hover:text-[#137fec]/80 transition-colors"
+              >
+                CREATE AN ORGANIZATION
+              </button>
+            </div>
           </div>
 
           {/* Mobile-only: Organization Setup CTA */}
