@@ -155,7 +155,7 @@ export default function AuthCallback() {
           const organizations = (orgData || []).map((org: any) => {
             const roles = org.roles || []
             return {
-              id: org.organization_id,
+              id: org.org_id,
               name: org.org_name,
               roles,
               get role() { return this.roles[0] ?? 'parent' }

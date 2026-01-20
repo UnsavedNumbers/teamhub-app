@@ -332,7 +332,7 @@ export async function getAthleteInvites(
             .from('parent_invites')
             .select('*')
             .eq('athlete_id', athleteId)
-            .eq('organization_id', orgId)
+            .eq('org_id', orgId)
             .eq('status', 'pending')
             .order('created_at', { ascending: false })
 

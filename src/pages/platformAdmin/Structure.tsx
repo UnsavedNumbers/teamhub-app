@@ -64,15 +64,15 @@ export default function Structure() {
     const orgMap = new Map<string, OrganizationWithStructure>()
 
     for (const row of structures) {
-      if (!orgMap.has(row.organization_id)) {
-        orgMap.set(row.organization_id, {
-          id: row.organization_id,
+      if (!orgMap.has(row.org_id)) {
+        orgMap.set(row.org_id, {
+          id: row.org_id,
           name: row.organization_name,
           teams: [],
         })
       }
 
-      const org = orgMap.get(row.organization_id)!
+      const org = orgMap.get(row.org_id)!
       
       if (row.team_id) {
         let team = org.teams.find(t => t.id === row.team_id)

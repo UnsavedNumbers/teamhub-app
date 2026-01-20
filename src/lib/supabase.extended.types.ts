@@ -515,7 +515,7 @@ type AdditionalViews = {
       currency: string | null
       due_date: string | null
       fee_status: Database['public']['Enums']['fee_status']
-      organization_id: string
+      org_id: string
       organization_name: string
       assigned_count: number
       paid_count: number
@@ -737,7 +737,7 @@ type AdditionalFunctions = {
       check_user_id: string
     }
     Returns: {
-      organization_id: string
+      org_id: string
       org_name: string
       roles: string[]
     }[]

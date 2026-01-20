@@ -105,7 +105,7 @@ serve(async (req) => {
   // org_admin (new org membership model): verify via RPC if available
   if (!allowed && orgId) {
     const { data: orgs } = await supabase.rpc("get_user_organizations", { check_user_id: user.id })
-    const hasOrgAdmin = (orgs as any[] | null)?.some((m) => m.organization_id === orgId && m.role === "org_admin")
+    const hasOrgAdmin = (orgs as any[] | null)?.some((m) => m.org_id === orgId && m.role === "org_admin")
     if (hasOrgAdmin) allowed = true
   }
 
