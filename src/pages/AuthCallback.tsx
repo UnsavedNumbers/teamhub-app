@@ -136,9 +136,20 @@ export default function AuthCallback() {
         // Default: redirect based on user roles
         // Fetch user's organizations to determine redirect
         try {
-          const { data: orgData } = await supabase.rpc('get_user_organizations', {
+          const { data: orgData, error: orgError } = await supabase.rpc('get_user_organizations', {
             check_user_id: userId
           } as any)
+
+          if (orgError) {
+            console.error('Error fetching user organizations for redirect:', orgError)
+            // Fallback to host-based redirect if org fetch fails
+            if (appContext === 'platform-admin') {
+              navigate('/platform-admin', { replace: true })
+            } else {
+              navigate('/portal/dashboard', { replace: true })
+            }
+            return
+          }
 
           // Map to Organization format
           const organizations = (orgData || []).map((org: any) => {
@@ -156,7 +167,7 @@ export default function AuthCallback() {
           navigate(finalRedirect, { replace: true })
         } catch (err) {
           // Fallback to host-based redirect if org fetch fails
-          console.error('Error fetching organizations for redirect:', err)
+          console.error('Exception fetching organizations for redirect:', err)
           if (appContext === 'platform-admin') {
             navigate('/platform-admin', { replace: true })
           } else {

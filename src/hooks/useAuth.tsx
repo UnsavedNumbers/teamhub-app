@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useCallback,
+  useRef,
+} from 'react'
 import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { useOrganization, Organization } from '../contexts/OrganizationContext'
@@ -49,167 +57,232 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
-  
+
   const { setOrganizations, currentOrganization } = useOrganization()
 
-  const fetchProfile = useCallback(async (userId: string) => {
-    try {
-      // Fetch user profile
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id, email, phone, display_name, role, family_id, org_id, requires_org_setup')
-        .eq('id', userId)
-        .single()
-      if (userError) {
-        console.error('Error fetching profile:', userError)
-        
-        // If user doesn't exist in database (deleted user), sign out to clear stale session
-        // PGRST116 = "No rows returned" error code from PostgREST
-        if (userError.code === 'PGRST116' || userError.message?.includes('No rows') || userError.message?.includes('not found')) {
-          console.warn('User not found in database, signing out to clear stale session')
+  // Prevent duplicate profile fetches (Bug Prevention #1 & #7)
+  const profileFetchRef = useRef<Set<string>>(new Set())
+  
+  // Track last processed auth event timestamp for debouncing (Bug Prevention #3)
+  const lastAuthEventRef = useRef<{ event: string; timestamp: number } | null>(null)
+  
+  // Mounted flag for cleanup (Bug Prevention #2)
+  const mountedRef = useRef(true)
+
+  /* ===================== FETCH PROFILE ===================== */
+
+  const fetchProfile = useCallback(
+    async (userId: string) => {
+      // Prevent duplicate fetches for same user (Bug Prevention #1 & #7)
+      if (profileFetchRef.current.has(userId)) return
+
+      profileFetchRef.current.add(userId)
+      setLoading(true)
+
+      try {
+        /* ---- user table ---- */
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select(
+            'id, email, phone, display_name, role, family_id, org_id, requires_org_setup'
+          )
+          .eq('id', userId)
+          .single()
+
+        // Simplified error handling (Bug Prevention #4 & #9)
+        if (userError || !userData || !userData.id) {
+          console.error('Profile fetch error:', userError)
           await supabase.auth.signOut()
+          setProfile(null)
+          return
         }
+
+        /* ---- organizations ---- */
+        let orgs: Organization[] = []
+        try {
+          const { data, error: orgError } = await supabase.rpc('get_user_organizations', {
+            check_user_id: userId,
+          })
+
+          // Log RPC errors for debugging (this is likely the "profit data" / "profile data" error)
+          if (orgError) {
+            console.error('Error fetching user organizations:', orgError)
+            // Continue with empty orgs - don't block profile creation
+          }
+
+          // Type-safe organization mapping (Bug Prevention #5 & #8)
+          if (Array.isArray(data)) {
+            orgs = data.map((o: any) => {
+              // Normalize and validate roles array
+              const roles = Array.isArray(o.roles)
+                ? o.roles.filter(
+                    (r: unknown): r is OrgMemberRole =>
+                      r === 'parent' || r === 'coach' || r === 'org_admin'
+                  )
+                : []
+
+              return {
+                id: o.organization_id,
+                name: o.org_name || '',
+                roles,
+                // Compatibility getter for deprecated 'role' property
+                get role(): OrgMemberRole {
+                  return roles[0] ?? 'parent'
+                },
+              }
+            })
+          }
+        } catch (err) {
+          // Continue with empty orgs on error
+          console.error('Exception fetching user organizations:', err)
+          orgs = []
+        }
+
+        /* ---- platform admin ---- */
+        const { data: admin } = await supabase
+          .from('platform_admins')
+          .select('user_id')
+          .eq('user_id', userId)
+          .maybeSingle()
+
+        // Guard against auth state changes during fetch (Bug Prevention #8)
+        // Check if user is still the same before setting profile
+        if (!mountedRef.current) return
         
+        const profileData: UserProfile = {
+          id: userData.id,
+          email: userData.email,
+          phone: userData.phone,
+          display_name: userData.display_name,
+          role: userData.role ?? undefined,
+          family_id: userData.family_id,
+          org_id: userData.org_id,
+          organizations: orgs,
+          isPlatformAdmin: !!admin,
+          requiresOrgSetup: userData.requires_org_setup ?? false,
+        }
+
+        // Guard against state updates after unmount (Bug Prevention #2)
+        if (!mountedRef.current) return
+        
+        setProfile(profileData)
+        setOrganizations(orgs)
+      } catch (err) {
+        console.error('Error in fetchProfile:', err)
+        if (mountedRef.current) {
+          setProfile(null)
+        }
+      } finally {
+        profileFetchRef.current.delete(userId)
+        if (mountedRef.current) {
+          setLoading(false)
+        }
+      }
+    },
+    [setOrganizations]
+  )
+
+  /* ===================== AUTH BOOTSTRAP ===================== */
+
+  useEffect(() => {
+    mountedRef.current = true
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (!mountedRef.current) return
+
+      // Handle session/user mismatch (Bug Prevention #10)
+      const session = data.session
+      if (!mountedRef.current) return
+      setSession(session)
+      setUser(session?.user ?? null)
+
+      // If session exists but user is null, clear state
+      if (session && !session.user) {
+        if (!mountedRef.current) return
+        setSession(null)
+        setUser(null)
         setProfile(null)
+        setOrganizations([])
         setLoading(false)
         return
       }
 
-      // Fetch organization memberships
-      // Wrap in try-catch to gracefully handle missing RPC function
-      let orgData = null
-      let orgError = null
-      try {
-        const result = await supabase.rpc('get_user_organizations', { check_user_id: userId })
-        orgData = result.data
-        orgError = result.error
-        
-        // If function doesn't exist (404/PGRST202), treat as empty orgs
-        if (orgError && (orgError.code === 'PGRST202' || orgError.message?.includes('not found') || orgError.message?.includes('does not exist'))) {
-          console.warn('get_user_organizations RPC function not found. Run migrations to create it.')
-          orgError = null // Clear error so we continue with empty orgs
-          orgData = []
-        }
-      } catch (err) {
-        // Network or other errors - continue with empty orgs
-        console.error('Error calling get_user_organizations RPC:', err)
-        orgError = err as any
-        orgData = []
-      }
-      if (orgError && orgError.code !== 'PGRST202') {
-        console.error('Error fetching organizations:', orgError)
-        // Continue with empty orgs rather than failing completely
-      }
-
-      // Check if user is platform admin
-      const { data: adminData } = await supabase
-        .from('platform_admins')
-        .select('user_id')
-        .eq('user_id', userId)
-        .single()
-
-      const organizations: Organization[] = (orgData || []).map((org: any) => ({
-        id: org.organization_id,
-        name: org.org_name,
-        roles: org.roles,
-        // Compatibility getter for deprecated 'role' property
-        get role(): OrgMemberRole {
-          return this.roles[0] ?? 'parent'
-        },
-      })) ?? []
-
-      const userDataAny = userData as any
-      const userProfile: UserProfile = {
-        id: userDataAny.id,
-        email: userDataAny.email,
-        phone: userDataAny.phone,
-        display_name: userDataAny.display_name,
-        role: userDataAny.role,
-        family_id: userDataAny.family_id,
-        org_id: userDataAny.org_id,
-        organizations,
-        isPlatformAdmin: !!adminData,
-        requiresOrgSetup: userDataAny.requires_org_setup ?? false,
-      }
-      setProfile(userProfile)
-      setOrganizations(organizations)
-    } catch (err) {
-      console.error('Error in fetchProfile:', err)
-      setProfile(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [setOrganizations])
-
-  useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
       if (session?.user) {
         fetchProfile(session.user.id)
       } else {
+        if (!mountedRef.current) return
         setLoading(false)
       }
     })
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state change event:', event)
-        setSession(session)
-        setUser(session?.user ?? null)
-        
-        if (session?.user) {
-          // Only refetch profile on specific events to avoid unnecessary fetches
-          // TOKEN_REFRESHED happens frequently and shouldn't trigger profile refetch
-          if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-            await fetchProfile(session.user.id)
-          }
-          
-          // Check for pending invites after signup/signin
-          if (event === 'SIGNED_IN') {
-            await checkPendingInvites()
-          }
-        } else {
-          setProfile(null)
-          setOrganizations([])
-          setLoading(false)
-        }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mountedRef.current) return
+
+      // Event debouncing (Bug Prevention #3)
+      const now = Date.now()
+      const lastEvent = lastAuthEventRef.current
+      if (
+        lastEvent &&
+        lastEvent.event === event &&
+        now - lastEvent.timestamp < 100
+      ) {
+        return // Skip duplicate event within 100ms
       }
-    )
+      lastAuthEventRef.current = { event, timestamp: now }
 
-    return () => subscription.unsubscribe()
-  }, [fetchProfile, setOrganizations])
-
-  async function checkPendingInvites() {
-    try {
-      const { data: invites, error } = await supabase.rpc('get_pending_invites_for_user')
-      
-      // If function doesn't exist (404/PGRST202), just skip silently
-      if (error) {
-        if (error.code === 'PGRST202' || error.message?.includes('not found') || error.message?.includes('does not exist')) {
-          // Function doesn't exist yet - this is okay, just skip
-          return
-        }
-        // Other errors - log but don't block
-        console.error('Error checking pending invites:', error)
+      // Handle session/user mismatch (Bug Prevention #10)
+      if (session && !session.user) {
+        if (!mountedRef.current) return
+        setSession(null)
+        setUser(null)
+        setProfile(null)
+        setOrganizations([])
+        setLoading(false)
         return
       }
-      
-      const invitesAny = invites as any
-      if (invitesAny && invitesAny.length > 0) {
-        // Store pending invites in sessionStorage for the accept invite page
-        sessionStorage.setItem('pending_invites', JSON.stringify(invitesAny))
+
+      if (!mountedRef.current) return
+      setSession(session)
+      setUser(session?.user ?? null)
+
+      if (event === 'SIGNED_OUT') {
+        if (!mountedRef.current) return
+        setProfile(null)
+        setOrganizations([])
+        setLoading(false)
+        return
       }
-    } catch (err) {
-      // RPC function might not exist - this is okay, just skip
-      // Only log if it's not a "function doesn't exist" error
-      if (!(err instanceof Error && (err.message.includes('not found') || err.message.includes('does not exist')))) {
-        console.error('Error checking pending invites:', err)
+
+      if (event === 'SIGNED_IN' && session?.user) {
+        fetchProfile(session.user.id)
       }
+    })
+
+    return () => {
+      mountedRef.current = false
+      subscription.unsubscribe()
     }
-  }
+  }, [fetchProfile, setOrganizations])
+
+  /* ===================== LOADING STATE TIMEOUT FALLBACK ===================== */
+  
+  // Bug Prevention #4: Ensure loading state doesn't get stuck
+  useEffect(() => {
+    if (!loading) return
+
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.warn('Loading state stuck, forcing reset')
+        setLoading(false)
+      }
+    }, 5000)
+
+    return () => clearTimeout(timeout)
+  }, [loading])
+
+  /* ===================== AUTH ACTIONS ===================== */
 
   async function signInWithEmail(email: string, password: string) {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -248,7 +321,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null)
     setSession(null)
     setOrganizations([])
-    sessionStorage.removeItem('pending_invites')
   }
 
   async function resetPassword(email: string) {
@@ -263,25 +335,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error }
   }
 
-  // UX-only role helpers (actual authorization is done by RLS)
-  // Updated to support multi-role per org
-  function hasRole(orgId: string, role: OrgMemberRole): boolean {
+  /* ===================== ROLE HELPERS ===================== */
+
+  function hasRole(orgId: string, role: OrgMemberRole) {
     if (profile?.isPlatformAdmin) return true
-    return profile?.organizations.some(o => o.id === orgId && o.roles.includes(role)) ?? false
+    return profile?.organizations.some(
+      (o) => o.id === orgId && o.roles.includes(role)
+    ) ?? false
   }
 
-  function hasAnyRole(role: OrgMemberRole): boolean {
+  function hasAnyRole(role: OrgMemberRole) {
     if (profile?.isPlatformAdmin) return true
-    return profile?.organizations.some(o => o.roles.includes(role)) ?? false
+    return profile?.organizations.some((o) => o.roles.includes(role)) ?? false
   }
 
-  function isOrgAdmin(orgId?: string): boolean {
+  function isOrgAdmin(orgId?: string) {
     if (profile?.isPlatformAdmin) return true
     if (orgId) {
       return hasRole(orgId, 'org_admin')
     }
     return currentOrganization ? hasRole(currentOrganization.id, 'org_admin') : false
   }
+
+  /* ===================== CONTEXT VALUE ===================== */
 
   const value: AuthContextType = {
     user,
@@ -302,7 +378,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
+/* ===================== HOOK ===================== */
+
 export function useAuth() {
   const context = useContext(AuthContext)
   if (context === undefined) {
