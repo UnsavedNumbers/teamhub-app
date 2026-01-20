@@ -30,6 +30,7 @@ import {
     type FakePayment,
 } from '../fake/fakePayments'
 import { getChildrenForUserId, getAssignedTeamsForCoach } from '../fake/relationships'
+import { supabase } from '../../lib/supabase'
 
 // ============================================================================
 // Helper Functions
@@ -74,21 +75,44 @@ export { formatCurrency }
  *   .order('due_date', { ascending: true })
  * ```
  */
+// ----------------------------------------------------------------------------
+// Real Supabase Implementation
+// ----------------------------------------------------------------------------
 export async function getFees(
     context: UserContext,
     activeOnly: boolean = true
 ): Promise<{ data: FakeFee[]; error: Error | null }> {
-    if (!USE_FAKE_DATA) {
-        return { data: [], error: new Error('Real data not implemented') }
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+            const fees = activeOnly ? getActiveFeesForOrg(context.orgId) : getFeesForOrg(context.orgId)
+            return { data: fees, error: null }
+        } catch (err) {
+            return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        }
     }
 
     try {
-        await simulateDelay()
+        let query = supabase
+            .from('fees')
+            .select('*')
+            .eq('org_id', context.orgId)
+            .order('due_date', { ascending: true })
 
-        const fees = activeOnly ? getActiveFeesForOrg(context.orgId) : getFeesForOrg(context.orgId)
-        return { data: fees, error: null }
+        if (activeOnly) {
+            query = query.neq('status', 'archived')
+        }
+
+        const { data, error } = await query
+
+        if (error) throw error
+
+        // Transform if necessary to match FakeFee interface (assuming DB type is compatible or similar)
+        // FakeFee might differ slightly from DB types.
+        // Let's assume for now they are close enough or cast.
+        return { data: (data as unknown) as FakeFee[], error: null }
     } catch (err) {
-        return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch fees') }
     }
 }
 
@@ -99,21 +123,34 @@ export async function getFeeDetails(
     context: UserContext,
     feeId: string
 ): Promise<{ data: FakeFee | null; error: Error | null }> {
-    if (!USE_FAKE_DATA) {
-        return { data: null, error: new Error('Real data not implemented') }
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+            const fee = getFeeById(feeId)
+            if (!fee || fee.org_id !== context.orgId) {
+                return { data: null, error: null }
+            }
+            return { data: fee, error: null }
+        } catch (err) {
+            return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        }
     }
 
     try {
-        await simulateDelay()
+        const { data, error } = await supabase
+            .from('fees')
+            .select(`
+                *,
+                season:seasons(id, name)
+            `)
+            .eq('id', feeId)
+            .eq('org_id', context.orgId)
+            .single()
 
-        const fee = getFeeById(feeId)
-        if (!fee || fee.org_id !== context.orgId) {
-            return { data: null, error: null }
-        }
-
-        return { data: fee, error: null }
+        if (error) throw error
+        return { data: (data as unknown) as FakeFee, error: null }
     } catch (err) {
-        return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        return { data: null, error: err instanceof Error ? err : new Error('Failed to fetch fee details') }
     }
 }
 
@@ -221,22 +258,40 @@ export async function getFeeAssignmentsByFee(
     context: UserContext,
     feeId: string
 ): Promise<{ data: FakeFeeAssignment[]; error: Error | null }> {
-    if (!USE_FAKE_DATA) {
-        return { data: [], error: new Error('Real data not implemented') }
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+            const permissions = buildPermissions(context)
+            if (!permissions.canViewAllOrgData) {
+                return { data: [], error: new Error('Access denied: Admin only') }
+            }
+            const assignments = getFeeAssignmentsForFee(feeId)
+            return { data: assignments, error: null }
+        } catch (err) {
+            return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        }
     }
 
     try {
-        await simulateDelay()
+        // Verify permissions effectively? RLS should handle it.
+        // We fetching full details including athlete and parent
+        const { data, error } = await supabase
+            .from('fee_assignments')
+            .select(`
+                *,
+                athlete:athletes(id, first_name, last_name, family:families(id, name)),
+                parent:users!parent_id(id, email, display_name) 
+            `) // Note: 'users' might need explicit ON clause or proper relationship name if ambiguous
+            // database.types shows fee_assignments.parent_id -> users
+            // If ambiguous, use parent:users!fee_assignments_parent_id_fkey
 
-        const permissions = buildPermissions(context)
-        if (!permissions.canViewAllOrgData) {
-            return { data: [], error: new Error('Access denied: Admin only') }
-        }
+            .eq('fee_id', feeId)
+            .eq('org_id', context.orgId)
 
-        const assignments = getFeeAssignmentsForFee(feeId)
-        return { data: assignments, error: null }
+        if (error) throw error
+        return { data: (data as unknown) as FakeFeeAssignment[], error: null }
     } catch (err) {
-        return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch assignments') }
     }
 }
 

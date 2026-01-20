@@ -30,13 +30,13 @@ export async function getSeasons(
     const { data, error } = await supabase
       .from('seasons')
       .select('*')
-      .eq('organization_id', context.orgId)
+      .eq('org_id', context.orgId)
       .order('start_date', { ascending: false })
 
     if (error) throw error
     const mapped = (data || []).map((row: any) => ({
       id: row.id,
-      org_id: row.organization_id,
+      org_id: row.org_id,
       team_id: row.team_id ?? null,
       name: row.name,
       start_date: row.start_date,
@@ -66,7 +66,7 @@ export async function getSeason(
       .from('seasons')
       .select('*')
       .eq('id', seasonId)
-      .eq('organization_id', context.orgId)
+      .eq('org_id', context.orgId)
       .single()
 
     if (error) throw error
@@ -75,7 +75,7 @@ export async function getSeason(
     return {
       data: {
         id: row.id,
-        org_id: row.organization_id,
+        org_id: row.org_id,
         team_id: row.team_id ?? null,
         name: row.name,
         start_date: row.start_date,
@@ -117,7 +117,7 @@ export async function createSeason(
   try {
     type SeasonInsert = Database['public']['Tables']['seasons']['Insert']
     const insertData = {
-      organization_id: dto.org_id,
+      org_id: dto.org_id,
       name: dto.name,
       start_date: dto.start_date,
       end_date: dto.end_date,
@@ -138,7 +138,7 @@ export async function createSeason(
     return {
       data: {
         id: row.id,
-        org_id: row.organization_id,
+        org_id: row.org_id,
         team_id: row.team_id ?? null,
         name: row.name,
         start_date: row.start_date,
@@ -179,7 +179,7 @@ export async function updateSeason(
       .from('seasons')
       .update(updateData)
       .eq('id', seasonId)
-      .eq('organization_id', context.orgId)
+      .eq('org_id', context.orgId)
       .select()
       .single()
 
@@ -189,7 +189,7 @@ export async function updateSeason(
     return {
       data: {
         id: row.id,
-        org_id: row.organization_id,
+        org_id: row.org_id,
         team_id: row.team_id ?? null,
         name: row.name,
         start_date: row.start_date,
@@ -219,7 +219,7 @@ export async function deleteSeason(
       .from('seasons')
       .delete()
       .eq('id', seasonId)
-      .eq('organization_id', context.orgId)
+      .eq('org_id', context.orgId)
 
     if (error) throw error
     return { error: null }

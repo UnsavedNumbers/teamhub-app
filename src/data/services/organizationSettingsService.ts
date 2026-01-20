@@ -823,7 +823,7 @@ export async function checkImpactedRecords(
       // Check how many existing players might be affected
       const { count: playerCount, error } = await fromTable('athletes')
         .select('*', { count: 'exact', head: true })
-        .eq('organization_id', context.orgId)
+        .eq('org_id', context.orgId)
 
       if (error) throw error
       count = playerCount || 0
@@ -831,7 +831,7 @@ export async function checkImpactedRecords(
       // Check how many events might be affected
       const { count: eventCount, error } = await fromTable('events')
         .select('*', { count: 'exact', head: true })
-        .eq('organization_id', context.orgId)
+        .eq('org_id', context.orgId)
 
       if (error) throw error
       count = eventCount || 0
@@ -839,7 +839,7 @@ export async function checkImpactedRecords(
       // Check all teams in org
       const { count: teamCount, error } = await fromTable('teams')
         .select('*', { count: 'exact', head: true })
-        .eq('organization_id', context.orgId)
+        .eq('org_id', context.orgId)
 
       if (error) throw error
       count = teamCount || 0

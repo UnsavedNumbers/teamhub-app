@@ -111,7 +111,7 @@ export default function OrganizationOnboarding() {
         if (createError || !newOrg) throw createError || new Error('Failed to create organization')
         orgId = newOrg.id
         type MemberInsert = Database['public']['Tables']['organization_members']['Insert']
-        const memberInsertData = { organization_id: orgId, user_id: profile.id, role: 'org_admin' } satisfies MemberInsert
+        const memberInsertData = { org_id: orgId, user_id: profile.id, role: 'org_admin' } satisfies MemberInsert
         const { error: memberError } = await supabase.from('organization_members').insert(memberInsertData)
         if (memberError) { await supabase.from('organizations').delete().eq('id', orgId); throw memberError }
 
