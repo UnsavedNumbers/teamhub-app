@@ -32,7 +32,7 @@ export default function OrganizationOnboarding() {
   const hasLoadedOrgData = useRef<string | null>(null)
   
   const navigate = useNavigate()
-  const { profile, loading: authLoading, user } = useAuth()
+  const { profile, loading: authLoading, user, refreshProfile } = useAuth()
   const { currentOrganization, setCurrentOrganization, setOrganizations } = useOrganization()
 
   const { control, handleSubmit, watch, formState: { errors }, setValue } = useForm<OrganizationFormData>({
@@ -57,6 +57,8 @@ export default function OrganizationOnboarding() {
               if (profile?.requiresOrgSetup) {
                 type UsersUpdate = Database['public']['Tables']['users']['Update']
                 await supabase.from('users').update({ requires_org_setup: false } satisfies UsersUpdate).eq('id', profile.id)
+                // Refresh profile to update requiresOrgSetup flag
+                await refreshProfile()
               }
             } catch (err) {
               console.error('Error clearing DB flag:', err)
@@ -131,6 +133,8 @@ export default function OrganizationOnboarding() {
       try {
         type UsersUpdate = Database['public']['Tables']['users']['Update']
         await supabase.from('users').update({ requires_org_setup: false } satisfies UsersUpdate).eq('id', profile.id)
+        // Refresh profile to update requiresOrgSetup flag and organizations
+        await refreshProfile()
       } catch (err) {
         console.error('Error clearing DB flag:', err)
       }

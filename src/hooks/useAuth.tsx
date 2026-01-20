@@ -44,6 +44,7 @@ interface AuthContextType {
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>
   updatePassword: (password: string) => Promise<{ error: AuthError | null }>
+  refreshProfile: () => Promise<void>
   // Role helpers (UX-only, not security - RLS handles authorization)
   hasRole: (orgId: string, role: OrgMemberRole) => boolean
   hasAnyRole: (role: OrgMemberRole) => boolean
@@ -335,6 +336,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error }
   }
 
+  async function refreshProfile() {
+    if (user?.id) {
+      await fetchProfile(user.id)
+    }
+  }
+
   /* ===================== ROLE HELPERS ===================== */
 
   function hasRole(orgId: string, role: OrgMemberRole) {
@@ -370,6 +377,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signOut,
     resetPassword,
     updatePassword,
+    refreshProfile,
     hasRole,
     hasAnyRole,
     isOrgAdmin,

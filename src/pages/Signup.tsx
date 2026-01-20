@@ -138,8 +138,8 @@ export default function Signup() {
       </div>
 
       {/* Right side - Signup Form */}
-      <div className="flex-1 flex flex-col px-6 py-8 lg:px-20 xl:px-24 bg-white dark:bg-slate-900/50 overflow-hidden">
-        <div className="mx-auto w-full max-w-sm lg:w-96 flex flex-col min-h-0">
+      <div className="flex-1 flex flex-col px-6 py-8 lg:px-20 xl:px-24 bg-white dark:bg-slate-900/50 overflow-y-auto">
+        <div className="mx-auto w-full max-w-sm lg:w-96 flex flex-col">
           {/* Logo */}
           <div className="mb-8 pt-4">
             <img 
