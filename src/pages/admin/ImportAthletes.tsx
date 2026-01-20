@@ -7,6 +7,17 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { supabase } from '../../lib/supabase'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 
+// Type for RPC result
+interface ImportAthletesResult {
+  success: boolean
+  error?: string
+  imported_count: number
+  updated_count: number
+  skipped_count: number
+  error_count: number
+  errors: Array<{ row: number; message: string }>
+}
+
 // Template column definitions
 const TEMPLATE_COLUMNS = {
   required: [
@@ -327,8 +338,8 @@ export default function ImportAthletes() {
           p_import_id: importRecord.id,
           p_rows: rowsForRpc,
           p_import_mode: importOptions.importMode,
-          p_team_id: importOptions.destinationTeam || null,
-          p_season_id: preSelectedSeasonId || null,
+          p_team_id: importOptions.destinationTeam || undefined,
+          p_season_id: preSelectedSeasonId || undefined,
           p_assign_teams_from_spreadsheet: importOptions.autoAssignTeams,
           p_create_families: importOptions.createFamilies,
           p_link_existing_families: importOptions.linkExistingFamilies,
@@ -339,16 +350,19 @@ export default function ImportAthletes() {
         throw new Error(`Import failed: ${rpcError.message}`)
       }
 
-      if (!rpcResult?.success) {
-        throw new Error(rpcResult?.error || 'Import failed')
+      // Cast the result to the expected type
+      const result = rpcResult as unknown as ImportAthletesResult
+
+      if (!result?.success) {
+        throw new Error(result?.error || 'Import failed')
       }
 
       setImportResult({
-        imported_count: rpcResult.imported_count || 0,
-        updated_count: rpcResult.updated_count || 0,
-        skipped_count: rpcResult.skipped_count || 0,
-        error_count: rpcResult.error_count || 0,
-        errors: rpcResult.errors || [],
+        imported_count: result.imported_count || 0,
+        updated_count: result.updated_count || 0,
+        skipped_count: result.skipped_count || 0,
+        error_count: result.error_count || 0,
+        errors: result.errors || [],
       })
 
       navigate('/admin/athletes', { state: { importSuccess: true } })

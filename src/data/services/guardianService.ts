@@ -197,7 +197,7 @@ export async function linkGuardianToAthlete(
 
         if (error) throw error
 
-        return { data, error: null }
+        return { data: data as AthleteGuardian | ParentInvite | null, error: null }
     } catch (err) {
         console.error('Error linking guardian to athlete:', err)
         return {
