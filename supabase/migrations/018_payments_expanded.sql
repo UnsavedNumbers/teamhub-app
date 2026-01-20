@@ -99,16 +99,18 @@ CREATE INDEX IF NOT EXISTS idx_organizations_billing_mode ON organizations(billi
 -- Update seasons table with new fields
 DO $$ 
 BEGIN
-  -- Add organization_id if it doesn't exist (seasons should link to org)
+  -- Add org_id if it doesn't exist (seasons should link to org)
+  -- Note: Checking for organization_id for backward compatibility, but creating as org_id
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                 WHERE table_name = 'seasons' AND column_name = 'organization_id') THEN
-    ALTER TABLE seasons ADD COLUMN organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
-    -- Backfill: set organization_id from team's org_id
-    UPDATE seasons s SET organization_id = t.org_id 
+                 WHERE table_name = 'seasons' AND (column_name = 'organization_id' OR column_name = 'org_id')) THEN
+    ALTER TABLE seasons ADD COLUMN org_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+    -- Backfill: set org_id from team's org_id
+    UPDATE seasons s SET org_id = t.org_id 
     FROM teams t WHERE s.team_id = t.id;
     -- Only set NOT NULL if all rows have values (safety check)
-    IF NOT EXISTS (SELECT 1 FROM seasons WHERE organization_id IS NULL) THEN
-      ALTER TABLE seasons ALTER COLUMN organization_id SET NOT NULL;
+    -- Note: After normalization migration, this will be org_id
+    IF NOT EXISTS (SELECT 1 FROM seasons WHERE org_id IS NULL) THEN
+      ALTER TABLE seasons ALTER COLUMN org_id SET NOT NULL;
     END IF;
   END IF;
   
@@ -133,7 +135,7 @@ BEGIN
 END $$;
 
 -- Add indexes for new season fields
-CREATE INDEX IF NOT EXISTS idx_seasons_organization_id ON seasons(organization_id);
+CREATE INDEX IF NOT EXISTS idx_seasons_org_id ON seasons(org_id);
 CREATE INDEX IF NOT EXISTS idx_seasons_is_active ON seasons(is_active);
 
 -- =================================================================
@@ -291,7 +293,7 @@ DROP TABLE IF EXISTS payments CASCADE;
 -- Installment Plans (needed by fees)
 CREATE TABLE IF NOT EXISTS installment_plans (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   
   name TEXT NOT NULL,
   num_installments INTEGER NOT NULL,
@@ -307,7 +309,7 @@ CREATE TABLE IF NOT EXISTS installment_plans (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_installment_plans_organization_id ON installment_plans(organization_id);
+CREATE INDEX idx_installment_plans_org_id ON installment_plans(org_id);
 
 CREATE TRIGGER update_installment_plans_updated_at
   BEFORE UPDATE ON installment_plans
@@ -319,7 +321,7 @@ ALTER TABLE installment_plans ENABLE ROW LEVEL SECURITY;
 -- Fees (what admins create)
 CREATE TABLE IF NOT EXISTS fees (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   season_id UUID REFERENCES seasons(id) ON DELETE SET NULL,
   
   title TEXT NOT NULL,
@@ -358,7 +360,7 @@ CREATE TABLE IF NOT EXISTS fees (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_fees_organization_id ON fees(organization_id);
+CREATE INDEX idx_fees_org_id ON fees(org_id);
 CREATE INDEX idx_fees_season_id ON fees(season_id);
 CREATE INDEX idx_fees_status ON fees(status);
 CREATE INDEX idx_fees_fee_type ON fees(fee_type);
@@ -374,10 +376,10 @@ ALTER TABLE fees ENABLE ROW LEVEL SECURITY;
 -- Fee Assignments (who owes)
 CREATE TABLE IF NOT EXISTS fee_assignments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   fee_id UUID NOT NULL REFERENCES fees(id) ON DELETE CASCADE,
   
-  child_id UUID NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+  athlete_id UUID NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
   parent_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, -- parent is a user with role='parent'
   
   amount_cents INTEGER NOT NULL,
@@ -399,9 +401,9 @@ CREATE TABLE IF NOT EXISTS fee_assignments (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_fee_assignments_organization_id ON fee_assignments(organization_id);
+CREATE INDEX idx_fee_assignments_org_id ON fee_assignments(org_id);
 CREATE INDEX idx_fee_assignments_fee_id ON fee_assignments(fee_id);
-CREATE INDEX idx_fee_assignments_child_id ON fee_assignments(child_id);
+CREATE INDEX idx_fee_assignments_athlete_id ON fee_assignments(athlete_id);
 CREATE INDEX idx_fee_assignments_parent_id ON fee_assignments(parent_id);
 CREATE INDEX idx_fee_assignments_status ON fee_assignments(status);
 
@@ -419,7 +421,7 @@ ALTER TABLE fee_assignments ENABLE ROW LEVEL SECURITY;
 -- Charges (line items for checkout and ledger)
 CREATE TABLE IF NOT EXISTS charges (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   
   charge_type charge_type NOT NULL,
   fee_assignment_id UUID REFERENCES fee_assignments(id) ON DELETE SET NULL,
@@ -437,7 +439,7 @@ CREATE TABLE IF NOT EXISTS charges (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_charges_organization_id ON charges(organization_id);
+CREATE INDEX idx_charges_org_id ON charges(org_id);
 CREATE INDEX idx_charges_fee_assignment_id ON charges(fee_assignment_id);
 CREATE INDEX idx_charges_fee_id ON charges(fee_id);
 CREATE INDEX idx_charges_charge_type ON charges(charge_type);
@@ -454,7 +456,7 @@ ALTER TABLE charges ENABLE ROW LEVEL SECURITY;
 -- Checkout Sessions (multi-fee single checkout)
 CREATE TABLE IF NOT EXISTS checkout_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   
   parent_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   status checkout_session_status NOT NULL DEFAULT 'created',
@@ -471,7 +473,7 @@ CREATE TABLE IF NOT EXISTS checkout_sessions (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_checkout_sessions_organization_id ON checkout_sessions(organization_id);
+CREATE INDEX idx_checkout_sessions_org_id ON checkout_sessions(org_id);
 CREATE INDEX idx_checkout_sessions_parent_id ON checkout_sessions(parent_id);
 CREATE INDEX idx_checkout_sessions_status ON checkout_sessions(status);
 CREATE INDEX idx_checkout_sessions_stripe_checkout_session_id ON checkout_sessions(stripe_checkout_session_id);
@@ -509,7 +511,7 @@ ALTER TABLE checkout_session_items ENABLE ROW LEVEL SECURITY;
 -- Payments (online, Stripe-backed)
 CREATE TABLE IF NOT EXISTS payments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   
   checkout_session_id UUID REFERENCES checkout_sessions(id) ON DELETE SET NULL,
   parent_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -528,7 +530,7 @@ CREATE TABLE IF NOT EXISTS payments (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_payments_organization_id ON payments(organization_id);
+CREATE INDEX idx_payments_org_id ON payments(org_id);
 CREATE INDEX idx_payments_checkout_session_id ON payments(checkout_session_id);
 CREATE INDEX idx_payments_parent_id ON payments(parent_id);
 CREATE INDEX idx_payments_status ON payments(status);
@@ -561,7 +563,7 @@ ALTER TABLE payment_allocations ENABLE ROW LEVEL SECURITY;
 -- Offline Payments (check/cash tracking)
 CREATE TABLE IF NOT EXISTS offline_payments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   
   fee_assignment_id UUID NOT NULL REFERENCES fee_assignments(id) ON DELETE CASCADE,
   parent_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -581,7 +583,7 @@ CREATE TABLE IF NOT EXISTS offline_payments (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_offline_payments_organization_id ON offline_payments(organization_id);
+CREATE INDEX idx_offline_payments_org_id ON offline_payments(org_id);
 CREATE INDEX idx_offline_payments_fee_assignment_id ON offline_payments(fee_assignment_id);
 CREATE INDEX idx_offline_payments_parent_id ON offline_payments(parent_id);
 CREATE INDEX idx_offline_payments_child_id ON offline_payments(child_id);
@@ -667,7 +669,7 @@ ALTER TABLE installments ENABLE ROW LEVEL SECURITY;
 -- Discount Codes
 CREATE TABLE IF NOT EXISTS discount_codes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   
   code TEXT NOT NULL,
   description TEXT,
@@ -686,11 +688,11 @@ CREATE TABLE IF NOT EXISTS discount_codes (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   
-  UNIQUE(organization_id, code) -- unique per org
+  UNIQUE(org_id, code) -- unique per org
 );
 
-CREATE INDEX idx_discount_codes_organization_id ON discount_codes(organization_id);
-CREATE INDEX idx_discount_codes_code ON discount_codes(organization_id, code);
+CREATE INDEX idx_discount_codes_org_id ON discount_codes(org_id);
+CREATE INDEX idx_discount_codes_code ON discount_codes(org_id, code);
 CREATE INDEX idx_discount_codes_status ON discount_codes(status);
 
 CREATE TRIGGER update_discount_codes_updated_at
@@ -727,7 +729,7 @@ ALTER TABLE discount_redemptions ENABLE ROW LEVEL SECURITY;
 -- Waivers (admin-controlled comp)
 CREATE TABLE IF NOT EXISTS waivers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   fee_assignment_id UUID NOT NULL REFERENCES fee_assignments(id) ON DELETE CASCADE,
   
   amount_cents INTEGER NOT NULL,
@@ -737,7 +739,7 @@ CREATE TABLE IF NOT EXISTS waivers (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_waivers_organization_id ON waivers(organization_id);
+CREATE INDEX idx_waivers_org_id ON waivers(org_id);
 CREATE INDEX idx_waivers_fee_assignment_id ON waivers(fee_assignment_id);
 CREATE INDEX idx_waivers_created_by_admin_id ON waivers(created_by_admin_id);
 
@@ -750,7 +752,7 @@ ALTER TABLE waivers ENABLE ROW LEVEL SECURITY;
 -- Scholarship Programs
 CREATE TABLE IF NOT EXISTS scholarship_programs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   
   name TEXT NOT NULL,
   description TEXT,
@@ -765,7 +767,7 @@ CREATE TABLE IF NOT EXISTS scholarship_programs (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_scholarship_programs_organization_id ON scholarship_programs(organization_id);
+CREATE INDEX idx_scholarship_programs_org_id ON scholarship_programs(org_id);
 CREATE INDEX idx_scholarship_programs_status ON scholarship_programs(status);
 
 CREATE TRIGGER update_scholarship_programs_updated_at
@@ -802,7 +804,7 @@ ALTER TABLE scholarship_awards ENABLE ROW LEVEL SECURITY;
 -- Refunds
 CREATE TABLE IF NOT EXISTS refunds (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   
   payment_id UUID REFERENCES payments(id) ON DELETE SET NULL,
   offline_payment_id UUID REFERENCES offline_payments(id) ON DELETE SET NULL,
@@ -818,7 +820,7 @@ CREATE TABLE IF NOT EXISTS refunds (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_refunds_organization_id ON refunds(organization_id);
+CREATE INDEX idx_refunds_org_id ON refunds(org_id);
 CREATE INDEX idx_refunds_payment_id ON refunds(payment_id);
 CREATE INDEX idx_refunds_offline_payment_id ON refunds(offline_payment_id);
 CREATE INDEX idx_refunds_created_by_admin_id ON refunds(created_by_admin_id);
@@ -832,7 +834,7 @@ ALTER TABLE refunds ENABLE ROW LEVEL SECURITY;
 -- Org Payment Policies (edge cases: school vs club)
 CREATE TABLE IF NOT EXISTS org_payment_policies (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL UNIQUE REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL UNIQUE REFERENCES organizations(id) ON DELETE CASCADE,
   
   require_offline_only BOOLEAN DEFAULT false,
   allow_partial_payments BOOLEAN DEFAULT true,
@@ -847,7 +849,7 @@ CREATE TABLE IF NOT EXISTS org_payment_policies (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_org_payment_policies_organization_id ON org_payment_policies(organization_id);
+CREATE INDEX idx_org_payment_policies_org_id ON org_payment_policies(org_id);
 
 CREATE TRIGGER update_org_payment_policies_updated_at
   BEFORE UPDATE ON org_payment_policies
@@ -863,7 +865,7 @@ ALTER TABLE org_payment_policies ENABLE ROW LEVEL SECURITY;
 -- Payment Events (audit log)
 CREATE TABLE IF NOT EXISTS payment_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   
   entity_type payment_event_entity_type NOT NULL,
   entity_id UUID NOT NULL,
@@ -876,7 +878,7 @@ CREATE TABLE IF NOT EXISTS payment_events (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_payment_events_organization_id ON payment_events(organization_id);
+CREATE INDEX idx_payment_events_org_id ON payment_events(org_id);
 CREATE INDEX idx_payment_events_entity_type ON payment_events(entity_type);
 CREATE INDEX idx_payment_events_entity_id ON payment_events(entity_id);
 CREATE INDEX idx_payment_events_created_at ON payment_events(created_at);

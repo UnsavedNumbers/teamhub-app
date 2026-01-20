@@ -98,14 +98,14 @@ DO NOTHING;
 -- This allows organizations to "enable" system sports
 CREATE TABLE IF NOT EXISTS organization_sports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   sport_id UUID NOT NULL REFERENCES sports(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (organization_id, sport_id)
+  UNIQUE (org_id, sport_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_organization_sports_org_id ON organization_sports(organization_id);
+CREATE INDEX IF NOT EXISTS idx_organization_sports_org_id ON organization_sports(org_id);
 CREATE INDEX IF NOT EXISTS idx_organization_sports_sport_id ON organization_sports(sport_id);
 
 DROP TRIGGER IF EXISTS update_organization_sports_updated_at ON organization_sports;
@@ -118,7 +118,7 @@ CREATE TRIGGER update_organization_sports_updated_at
 -- 6. Migrate existing org sports to organization_sports
 -- -----------------------------------------------------------------
 -- For existing organizations that have created sports, link them to system sports if they match
-INSERT INTO organization_sports (organization_id, sport_id, created_at, updated_at)
+INSERT INTO organization_sports (org_id, sport_id, created_at, updated_at)
 SELECT DISTINCT
   s.org_id,
   ss.id,
@@ -130,9 +130,9 @@ WHERE s.is_system = false
   AND s.org_id IS NOT NULL
   AND NOT EXISTS (
     SELECT 1 FROM organization_sports os 
-    WHERE os.organization_id = s.org_id AND os.sport_id = ss.id
+    WHERE os.org_id = s.org_id AND os.sport_id = ss.id
   )
-ON CONFLICT (organization_id, sport_id) DO NOTHING;
+ON CONFLICT (org_id, sport_id) DO NOTHING;
 
 -- -----------------------------------------------------------------
 -- 7. RLS Policies for organization_sports
@@ -145,8 +145,8 @@ CREATE POLICY "Org members can view organization sports"
   ON organization_sports
   FOR SELECT
   USING (
-    organization_id IN (
-      SELECT organization_id 
+    org_id IN (
+      SELECT org_id 
       FROM organization_members 
       WHERE user_id = auth.uid()
     )
@@ -158,8 +158,8 @@ CREATE POLICY "Org admins can link system sports"
   ON organization_sports
   FOR INSERT
   WITH CHECK (
-    organization_id IN (
-      SELECT organization_id 
+    org_id IN (
+      SELECT org_id 
       FROM organization_members 
       WHERE user_id = auth.uid() 
       AND role = 'org_admin'
@@ -175,8 +175,8 @@ CREATE POLICY "Org admins can unlink sports"
   ON organization_sports
   FOR DELETE
   USING (
-    organization_id IN (
-      SELECT organization_id 
+    org_id IN (
+      SELECT org_id 
       FROM organization_members 
       WHERE user_id = auth.uid() 
       AND role = 'org_admin'
@@ -199,7 +199,7 @@ CREATE POLICY "Org members can view sports"
       OR
       -- Org-specific sports are visible to org members
       org_id IN (
-        SELECT organization_id 
+        SELECT org_id 
         FROM organization_members 
         WHERE user_id = auth.uid()
       )

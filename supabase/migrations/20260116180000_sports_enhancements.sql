@@ -21,7 +21,7 @@ CREATE POLICY "Org members can view sports"
   USING (
     deleted_at IS NULL 
     AND org_id IN (
-      SELECT organization_id 
+      SELECT org_id 
       FROM organization_members 
       WHERE user_id = auth.uid()
     )
@@ -34,7 +34,7 @@ CREATE POLICY "Org admins can create sports"
   FOR INSERT
   WITH CHECK (
     org_id IN (
-      SELECT organization_id 
+      SELECT org_id 
       FROM organization_members 
       WHERE user_id = auth.uid() 
       AND role IN ('org_admin', 'admin')
@@ -48,7 +48,7 @@ CREATE POLICY "Org admins can update sports"
   FOR UPDATE
   USING (
     org_id IN (
-      SELECT organization_id 
+      SELECT org_id 
       FROM organization_members 
       WHERE user_id = auth.uid() 
       AND role IN ('org_admin', 'admin')
@@ -62,7 +62,7 @@ CREATE POLICY "Org admins can soft delete sports"
   FOR UPDATE
   USING (
     org_id IN (
-      SELECT organization_id 
+      SELECT org_id 
       FROM organization_members 
       WHERE user_id = auth.uid() 
       AND role IN ('org_admin', 'admin')
@@ -87,7 +87,7 @@ CREATE POLICY "Org members can view programs"
   USING (
     deleted_at IS NULL 
     AND org_id IN (
-      SELECT organization_id 
+      SELECT org_id 
       FROM organization_members 
       WHERE user_id = auth.uid()
     )
@@ -100,7 +100,7 @@ CREATE POLICY "Org admins can create programs"
   FOR INSERT
   WITH CHECK (
     org_id IN (
-      SELECT organization_id 
+      SELECT org_id 
       FROM organization_members 
       WHERE user_id = auth.uid() 
       AND role IN ('org_admin', 'admin')
@@ -114,7 +114,7 @@ CREATE POLICY "Org admins can update programs"
   FOR UPDATE
   USING (
     org_id IN (
-      SELECT organization_id 
+      SELECT org_id 
       FROM organization_members 
       WHERE user_id = auth.uid() 
       AND role IN ('org_admin', 'admin')

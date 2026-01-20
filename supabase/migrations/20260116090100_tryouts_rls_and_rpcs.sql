@@ -481,13 +481,13 @@ BEGIN
     RAISE EXCEPTION 'Team does not belong to organization';
   END IF;
 
-  -- Verify season belongs to org via seasons.organization_id when available, or via team
+  -- Verify season belongs to org via seasons.org_id when available, or via team
   IF NOT EXISTS (
     SELECT 1
     FROM seasons s
     WHERE s.id = p_season_id
       AND (
-        (s.organization_id IS NOT NULL AND s.organization_id = v_org_id)
+        (s.org_id IS NOT NULL AND s.org_id = v_org_id)
         OR (s.team_id = p_team_id)
       )
   ) THEN

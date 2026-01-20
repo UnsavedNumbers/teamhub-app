@@ -16,14 +16,14 @@ AS $$
   SELECT ARRAY_AGG(role ORDER BY role)
   FROM organization_members
   WHERE user_id = check_user_id
-    AND organization_id = check_org_id;
+    AND org_id = check_org_id;
 $$;
 
 -- Return all organizations for a user along with the roles they hold per org.
 DROP FUNCTION IF EXISTS get_user_organizations(UUID);
 CREATE OR REPLACE FUNCTION get_user_organizations(check_user_id UUID)
 RETURNS TABLE(
-  organization_id UUID,
+  org_id UUID,
   org_name TEXT,
   roles org_member_role[]
 )
@@ -32,13 +32,13 @@ STABLE
 SECURITY DEFINER
 AS $$
   SELECT
-    om.organization_id,
+    om.org_id,
     o.name AS org_name,
     ARRAY_AGG(DISTINCT om.role ORDER BY om.role) AS roles
   FROM organization_members om
-  JOIN organizations o ON o.id = om.organization_id
+  JOIN organizations o ON o.id = om.org_id
   WHERE om.user_id = check_user_id
-  GROUP BY om.organization_id, o.name
+  GROUP BY om.org_id, o.name
   ORDER BY o.name;
 $$;
 
@@ -58,7 +58,7 @@ AS $$
     EXISTS (
       SELECT 1 FROM organization_members
       WHERE user_id = check_user_id
-        AND organization_id = check_org_id
+        AND org_id = check_org_id
         AND role = ANY(check_roles)
     );
 $$;
@@ -81,7 +81,7 @@ AS $$
       WHERE NOT EXISTS (
         SELECT 1 FROM organization_members
         WHERE user_id = check_user_id
-          AND organization_id = check_org_id
+          AND org_id = check_org_id
           AND role = missing.role
       )
     );

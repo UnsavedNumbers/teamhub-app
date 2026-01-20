@@ -38,7 +38,7 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM organization_members om
     JOIN users u ON u.id = om.user_id
-    WHERE om.organization_id = p_org_id
+    WHERE om.org_id = p_org_id
       AND LOWER(u.email) = LOWER(p_email)
   ) THEN
     RAISE EXCEPTION 'User is already a member of this organization';
@@ -46,7 +46,7 @@ BEGIN
 
   IF EXISTS (
     SELECT 1 FROM organization_invites
-    WHERE organization_id = p_org_id
+    WHERE org_id = p_org_id
       AND LOWER(email) = LOWER(p_email)
       AND accepted_at IS NULL
       AND expires_at > NOW()
@@ -58,7 +58,7 @@ BEGIN
   v_expires_at := NOW() + (p_expires_in_days || ' days')::interval;
 
   INSERT INTO organization_invites (
-    organization_id,
+    org_id,
     email,
     role,
     roles,
@@ -83,7 +83,7 @@ $$;
 CREATE OR REPLACE FUNCTION accept_organization_invite(p_token TEXT)
 RETURNS TABLE(
   success BOOLEAN,
-  organization_id UUID,
+  org_id UUID,
   organization_name TEXT,
   role org_member_role,
   message TEXT
@@ -111,7 +111,7 @@ BEGIN
   BEGIN
     SELECT 
       oi.id,
-      oi.organization_id,
+      oi.org_id,
       o.name AS org_name,
       oi.email,
       oi.role,
@@ -120,7 +120,7 @@ BEGIN
       oi.accepted_at
     INTO v_invite
     FROM organization_invites oi
-    JOIN organizations o ON o.id = oi.organization_id
+    JOIN organizations o ON o.id = oi.org_id
     WHERE oi.token = p_token
     FOR UPDATE NOWAIT;
   EXCEPTION
@@ -166,12 +166,12 @@ BEGIN
   WHERE id = v_invite.id;
 
   FOREACH v_role IN ARRAY v_roles LOOP
-    PERFORM add_org_role(v_current_user_id, v_invite.organization_id, v_role);
+    PERFORM add_org_role(v_current_user_id, v_invite.org_id, v_role);
   END LOOP;
 
   UPDATE users
   SET
-    org_id = COALESCE(org_id, v_invite.organization_id),
+    org_id = COALESCE(org_id, v_invite.org_id),
     role = CASE
       WHEN v_primary_role = 'org_admin' THEN 'admin'::user_role
       WHEN v_primary_role = 'coach' THEN 'coach'::user_role
@@ -180,6 +180,6 @@ BEGIN
   WHERE id = v_current_user_id
     AND org_id IS NULL;
 
-  RETURN QUERY SELECT true, v_invite.organization_id, v_invite.org_name, v_primary_role, 'Successfully joined organization';
+  RETURN QUERY SELECT true, v_invite.org_id, v_invite.org_name, v_primary_role, 'Successfully joined organization';
 END;
 $$;

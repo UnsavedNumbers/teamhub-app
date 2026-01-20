@@ -42,7 +42,7 @@ CREATE POLICY "Admins can manage installment plans" ON installment_plans
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
       AND users.role = 'admin'
-      AND users.org_id = installment_plans.organization_id
+      AND users.org_id = installment_plans.org_id
     )
   );
 
@@ -53,7 +53,7 @@ CREATE POLICY "Users can view installment plans" ON installment_plans
     EXISTS (
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
-      AND users.org_id = installment_plans.organization_id
+      AND users.org_id = installment_plans.org_id
     )
   );
 
@@ -69,7 +69,7 @@ CREATE POLICY "Admins can manage fees" ON fees
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
       AND users.role = 'admin'
-      AND users.org_id = fees.organization_id
+      AND users.org_id = fees.org_id
     )
   );
 
@@ -95,7 +95,7 @@ CREATE POLICY "Parents can view published fees" ON fees
     AND EXISTS (
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
-      AND users.org_id = fees.organization_id
+      AND users.org_id = fees.org_id
     )
   );
 
@@ -108,7 +108,7 @@ CREATE POLICY "Coaches can view published fees" ON fees
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
       AND users.role = 'coach'
-      AND users.org_id = fees.organization_id
+      AND users.org_id = fees.org_id
     )
   );
 
@@ -152,7 +152,7 @@ CREATE POLICY "Admins can manage fee assignments" ON fee_assignments
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
       AND users.role = 'admin'
-      AND users.org_id = fee_assignments.organization_id
+      AND users.org_id = fee_assignments.org_id
     )
   );
 
@@ -180,7 +180,7 @@ CREATE POLICY "Parents can view their charges" ON charges
         JOIN fees f ON f.id = charges.fee_id
         WHERE u.id = auth.uid()
         AND u.role = 'parent'
-        AND u.org_id = f.organization_id
+        AND u.org_id = f.org_id
       )
     )
   );
@@ -193,7 +193,7 @@ CREATE POLICY "Admins can manage charges" ON charges
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
       AND users.role = 'admin'
-      AND users.org_id = charges.organization_id
+      AND users.org_id = charges.org_id
     )
   );
 
@@ -231,7 +231,7 @@ CREATE POLICY "Admins can view checkout sessions" ON checkout_sessions
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
       AND users.role = 'admin'
-      AND users.org_id = checkout_sessions.organization_id
+      AND users.org_id = checkout_sessions.org_id
     )
   );
 
@@ -263,7 +263,7 @@ CREATE POLICY "Admins can view checkout session items" ON checkout_session_items
       JOIN checkout_sessions cs ON cs.id = checkout_session_items.checkout_session_id
       WHERE u.id = auth.uid()
       AND u.role = 'admin'
-      AND u.org_id = cs.organization_id
+      AND u.org_id = cs.org_id
     )
   );
 
@@ -291,7 +291,7 @@ CREATE POLICY "Admins can view payments" ON payments
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
       AND users.role = 'admin'
-      AND users.org_id = payments.organization_id
+      AND users.org_id = payments.org_id
     )
   );
 
@@ -323,7 +323,7 @@ CREATE POLICY "Admins can view payment allocations" ON payment_allocations
       JOIN payments p ON p.id = payment_allocations.payment_id
       WHERE u.id = auth.uid()
       AND u.role = 'admin'
-      AND u.org_id = p.organization_id
+      AND u.org_id = p.org_id
     )
   );
 
@@ -351,7 +351,7 @@ CREATE POLICY "Admins can manage offline payments" ON offline_payments
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
       AND users.role = 'admin'
-      AND users.org_id = offline_payments.organization_id
+      AND users.org_id = offline_payments.org_id
     )
   );
 
@@ -383,7 +383,7 @@ CREATE POLICY "Admins can view offline payment allocations" ON offline_payment_a
       JOIN offline_payments op ON op.id = offline_payment_allocations.offline_payment_id
       WHERE u.id = auth.uid()
       AND u.role = 'admin'
-      AND u.org_id = op.organization_id
+      AND u.org_id = op.org_id
     )
   );
 
@@ -413,7 +413,7 @@ CREATE POLICY "Admins can manage installment schedules" ON installment_schedules
       JOIN fee_assignments fa ON fa.id = installment_schedules.fee_assignment_id
       WHERE u.id = auth.uid()
       AND u.role = 'admin'
-      AND u.org_id = fa.organization_id
+      AND u.org_id = fa.org_id
     )
   );
 
@@ -447,7 +447,7 @@ CREATE POLICY "Admins can manage installments" ON installments
       JOIN fee_assignments fa ON fa.id = isch.fee_assignment_id
       WHERE u.id = auth.uid()
       AND u.role = 'admin'
-      AND u.org_id = fa.organization_id
+      AND u.org_id = fa.org_id
     )
   );
 
@@ -465,7 +465,7 @@ CREATE POLICY "Admins can manage discount codes" ON discount_codes
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
       AND users.role = 'admin'
-      AND users.org_id = discount_codes.organization_id
+      AND users.org_id = discount_codes.org_id
     )
   );
 
@@ -478,7 +478,7 @@ CREATE POLICY "Parents can view active discount codes" ON discount_codes
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
       AND users.role = 'parent'
-      AND users.org_id = discount_codes.organization_id
+      AND users.org_id = discount_codes.org_id
     )
   );
 
@@ -490,7 +490,7 @@ CREATE POLICY "Coaches can view discount codes" ON discount_codes
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
       AND users.role = 'coach'
-      AND users.org_id = discount_codes.organization_id
+      AND users.org_id = discount_codes.org_id
     )
   );
 
@@ -519,7 +519,7 @@ CREATE POLICY "Admins can view discount redemptions" ON discount_redemptions
       JOIN discount_codes dc ON dc.id = discount_redemptions.discount_code_id
       WHERE u.id = auth.uid()
       AND u.role = 'admin'
-      AND u.org_id = dc.organization_id
+      AND u.org_id = dc.org_id
     )
   );
 
@@ -550,7 +550,7 @@ CREATE POLICY "Admins can manage waivers" ON waivers
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
       AND users.role = 'admin'
-      AND users.org_id = waivers.organization_id
+      AND users.org_id = waivers.org_id
     )
   );
 
@@ -568,7 +568,7 @@ CREATE POLICY "Admins can manage scholarship programs" ON scholarship_programs
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
       AND users.role = 'admin'
-      AND users.org_id = scholarship_programs.organization_id
+      AND users.org_id = scholarship_programs.org_id
     )
   );
 
@@ -581,7 +581,7 @@ CREATE POLICY "Parents can view active scholarship programs" ON scholarship_prog
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
       AND users.role = 'parent'
-      AND users.org_id = scholarship_programs.organization_id
+      AND users.org_id = scholarship_programs.org_id
     )
   );
 
@@ -593,7 +593,7 @@ CREATE POLICY "Coaches can view scholarship programs" ON scholarship_programs
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
       AND users.role = 'coach'
-      AND users.org_id = scholarship_programs.organization_id
+      AND users.org_id = scholarship_programs.org_id
     )
   );
 
@@ -623,7 +623,7 @@ CREATE POLICY "Admins can manage scholarship awards" ON scholarship_awards
       JOIN scholarship_programs sp ON sp.id = scholarship_awards.scholarship_program_id
       WHERE u.id = auth.uid()
       AND u.role = 'admin'
-      AND u.org_id = sp.organization_id
+      AND u.org_id = sp.org_id
     )
   );
 
@@ -659,7 +659,7 @@ CREATE POLICY "Admins can manage refunds" ON refunds
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
       AND users.role = 'admin'
-      AND users.org_id = refunds.organization_id
+      AND users.org_id = refunds.org_id
     )
   );
 
@@ -677,7 +677,7 @@ CREATE POLICY "Admins can manage payment policies" ON org_payment_policies
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
       AND users.role = 'admin'
-      AND users.org_id = org_payment_policies.organization_id
+      AND users.org_id = org_payment_policies.org_id
     )
   );
 
@@ -688,7 +688,7 @@ CREATE POLICY "Users can view payment policies" ON org_payment_policies
     EXISTS (
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
-      AND users.org_id = org_payment_policies.organization_id
+      AND users.org_id = org_payment_policies.org_id
     )
   );
 
@@ -707,7 +707,7 @@ CREATE POLICY "Admins can view payment events" ON payment_events
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
       AND users.role = 'admin'
-      AND users.org_id = payment_events.organization_id
+      AND users.org_id = payment_events.org_id
     )
   );
 

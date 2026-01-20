@@ -44,16 +44,16 @@ BEGIN
 
     IF v_user_id IS NOT NULL THEN
       PERFORM add_org_role(v_user_id, p_org_id, 'parent');
-      INSERT INTO child_guardians (child_id, user_id, organization_id, status)
+      INSERT INTO athlete_guardians (athlete_id, user_id, org_id, status)
       VALUES (p_child_id, v_user_id, p_org_id, 'active')
-      ON CONFLICT (child_id, user_id, organization_id)
+      ON CONFLICT (athlete_id, user_id, org_id)
       DO UPDATE SET status = 'active', updated_at = NOW();
       RETURN QUERY SELECT v_email, 'active'::parent_invite_status, NULL::TEXT, v_user_id, 'Parent attached immediately'::TEXT;
     ELSE
       v_token := gen_random_uuid()::text;
       INSERT INTO parent_invites (
-        organization_id,
-        child_id,
+        org_id,
+        athlete_id,
         team_id,
         email,
         token,
@@ -80,8 +80,8 @@ $$;
 CREATE OR REPLACE FUNCTION accept_parent_invite(p_token TEXT)
 RETURNS TABLE(
   success BOOLEAN,
-  organization_id UUID,
-  child_id UUID,
+  org_id UUID,
+  athlete_id UUID,
   message TEXT
 )
 LANGUAGE plpgsql
@@ -102,8 +102,8 @@ BEGIN
   BEGIN
     SELECT
       id,
-      organization_id,
-      child_id,
+      org_id,
+      athlete_id,
       email,
       token,
       expires_at,
@@ -124,26 +124,26 @@ BEGIN
   END IF;
 
   IF v_invite.status <> 'pending' THEN
-    RETURN QUERY SELECT false, v_invite.organization_id, v_invite.child_id, 'Invite already processed';
+    RETURN QUERY SELECT false, v_invite.org_id, v_invite.athlete_id, 'Invite already processed';
     RETURN;
   END IF;
 
   IF v_invite.expires_at < NOW() THEN
-    RETURN QUERY SELECT false, v_invite.organization_id, v_invite.child_id, 'Invite expired';
+    RETURN QUERY SELECT false, v_invite.org_id, v_invite.athlete_id, 'Invite expired';
     RETURN;
   END IF;
 
   IF LOWER(v_invite.email) <> LOWER(v_user_email) THEN
-    RETURN QUERY SELECT false, v_invite.organization_id, v_invite.child_id, 'Email mismatch';
+    RETURN QUERY SELECT false, v_invite.org_id, v_invite.athlete_id, 'Email mismatch';
     RETURN;
   END IF;
 
-  INSERT INTO child_guardians (child_id, user_id, organization_id, status)
-  VALUES (v_invite.child_id, v_current_user, v_invite.organization_id, 'active')
-  ON CONFLICT (child_id, user_id, organization_id)
+  INSERT INTO athlete_guardians (athlete_id, user_id, org_id, status)
+  VALUES (v_invite.athlete_id, v_current_user, v_invite.org_id, 'active')
+  ON CONFLICT (athlete_id, user_id, org_id)
   DO UPDATE SET status = 'active', updated_at = NOW();
 
-  PERFORM add_org_role(v_current_user, v_invite.organization_id, 'parent');
+  PERFORM add_org_role(v_current_user, v_invite.org_id, 'parent');
 
   UPDATE parent_invites
   SET status = 'accepted',
@@ -151,7 +151,7 @@ BEGIN
       accepted_by_user_id = v_current_user
   WHERE id = v_invite.id;
 
-  RETURN QUERY SELECT true, v_invite.organization_id, v_invite.child_id, 'Parent attached';
+  RETURN QUERY SELECT true, v_invite.org_id, v_invite.athlete_id, 'Parent attached';
 END;
 $$;
 
@@ -179,7 +179,7 @@ BEGIN
   END IF;
 
   INSERT INTO join_links (
-    organization_id,
+    org_id,
     team_id,
     token,
     auto_approve,
@@ -227,7 +227,7 @@ BEGIN
 
   SELECT
     id,
-    organization_id,
+    org_id,
     team_id,
     auto_approve,
     expires_at
@@ -255,15 +255,15 @@ BEGIN
   v_status := CASE WHEN v_link.auto_approve THEN 'approved' ELSE 'pending' END;
 
   INSERT INTO join_requests (
-    organization_id,
+    org_id,
     team_id,
     season_id,
-    child_id,
+      athlete_id,
     requested_by_user_id,
     join_link_id,
     status
   ) VALUES (
-    v_link.organization_id,
+    v_link.org_id,
     v_target_team,
     p_season_id,
     p_child_id,
@@ -274,16 +274,16 @@ BEGIN
   RETURNING id INTO v_request_id;
 
   IF v_link.auto_approve THEN
-    INSERT INTO team_memberships (child_id, team_id, season_id, status)
+    INSERT INTO team_memberships (athlete_id, team_id, season_id, status)
     VALUES (p_child_id, v_target_team, p_season_id, 'active')
-    ON CONFLICT (child_id, team_id, season_id) DO NOTHING;
+    ON CONFLICT (athlete_id, team_id, season_id) DO NOTHING;
 
-    INSERT INTO child_guardians (child_id, user_id, organization_id, status)
-    VALUES (p_child_id, v_current_user, v_link.organization_id, 'active')
-    ON CONFLICT (child_id, user_id, organization_id)
+    INSERT INTO athlete_guardians (athlete_id, user_id, org_id, status)
+    VALUES (p_child_id, v_current_user, v_link.org_id, 'active')
+    ON CONFLICT (athlete_id, user_id, org_id)
     DO UPDATE SET status = 'active', updated_at = NOW();
 
-    PERFORM add_org_role(v_current_user, v_link.organization_id, 'parent');
+    PERFORM add_org_role(v_current_user, v_link.org_id, 'parent');
   END IF;
 
   RETURN QUERY SELECT v_request_id, v_status, 'Join request submitted';
@@ -320,7 +320,7 @@ BEGIN
     RETURN;
   END IF;
 
-  IF NOT (user_is_org_admin(v_current_user, v_request.organization_id) OR is_platform_admin(v_current_user)) THEN
+  IF NOT (user_is_org_admin(v_current_user, v_request.org_id) OR is_platform_admin(v_current_user)) THEN
     RETURN QUERY SELECT p_request_id, 'denied', 'Unauthorized';
     RETURN;
   END IF;
@@ -331,16 +331,16 @@ BEGIN
   END IF;
 
   IF p_approve THEN
-    INSERT INTO team_memberships (child_id, team_id, season_id, status)
-    VALUES (v_request.child_id, v_request.team_id, v_request.season_id, 'active')
-    ON CONFLICT (child_id, team_id, season_id) DO NOTHING;
+    INSERT INTO team_memberships (athlete_id, team_id, season_id, status)
+    VALUES (v_request.athlete_id, v_request.team_id, v_request.season_id, 'active')
+    ON CONFLICT (athlete_id, team_id, season_id) DO NOTHING;
 
-    INSERT INTO child_guardians (child_id, user_id, organization_id, status)
-    VALUES (v_request.child_id, v_request.requested_by_user_id, v_request.organization_id, 'active')
-    ON CONFLICT (child_id, user_id, organization_id)
+    INSERT INTO athlete_guardians (athlete_id, user_id, org_id, status)
+    VALUES (v_request.athlete_id, v_request.requested_by_user_id, v_request.org_id, 'active')
+    ON CONFLICT (athlete_id, user_id, org_id)
     DO UPDATE SET status = 'active', updated_at = NOW();
 
-    PERFORM add_org_role(v_request.requested_by_user_id, v_request.organization_id, 'parent');
+    PERFORM add_org_role(v_request.requested_by_user_id, v_request.org_id, 'parent');
 
     v_new_status := 'approved';
   ELSE
@@ -383,10 +383,10 @@ BEGIN
   END IF;
 
   INSERT INTO child_claim_tokens (
-    organization_id,
+    org_id,
     team_id,
     season_id,
-    child_id,
+      athlete_id,
     token,
     expires_at,
     created_by_user_id
@@ -408,8 +408,8 @@ $$;
 CREATE OR REPLACE FUNCTION redeem_child_claim_token(p_token TEXT)
 RETURNS TABLE(
   success BOOLEAN,
-  child_id UUID,
-  organization_id UUID,
+  athlete_id UUID,
+  org_id UUID,
   message TEXT
 )
 LANGUAGE plpgsql
@@ -436,26 +436,26 @@ BEGIN
   END IF;
 
   IF v_token.expires_at < NOW() THEN
-    RETURN QUERY SELECT false, v_token.child_id, v_token.organization_id, 'Token expired';
+    RETURN QUERY SELECT false, v_token.athlete_id, v_token.org_id, 'Token expired';
     RETURN;
   END IF;
 
   IF v_token.used_at IS NOT NULL THEN
-    RETURN QUERY SELECT false, v_token.child_id, v_token.organization_id, 'Token already used';
+    RETURN QUERY SELECT false, v_token.athlete_id, v_token.org_id, 'Token already used';
     RETURN;
   END IF;
 
-  INSERT INTO child_guardians (child_id, user_id, organization_id, status)
-  VALUES (v_token.child_id, v_current_user, v_token.organization_id, 'active')
-  ON CONFLICT (child_id, user_id, organization_id)
+  INSERT INTO athlete_guardians (athlete_id, user_id, org_id, status)
+  VALUES (v_token.athlete_id, v_current_user, v_token.org_id, 'active')
+  ON CONFLICT (athlete_id, user_id, org_id)
   DO UPDATE SET status = 'active', updated_at = NOW();
 
-  PERFORM add_org_role(v_current_user, v_token.organization_id, 'parent');
+  PERFORM add_org_role(v_current_user, v_token.org_id, 'parent');
 
   IF v_token.team_id IS NOT NULL THEN
-    INSERT INTO team_memberships (child_id, team_id, season_id, status)
-    VALUES (v_token.child_id, v_token.team_id, v_token.season_id, 'active')
-    ON CONFLICT (child_id, team_id, season_id) DO NOTHING;
+    INSERT INTO team_memberships (athlete_id, team_id, season_id, status)
+    VALUES (v_token.athlete_id, v_token.team_id, v_token.season_id, 'active')
+    ON CONFLICT (athlete_id, team_id, season_id) DO NOTHING;
   END IF;
 
   UPDATE child_claim_tokens
@@ -463,6 +463,6 @@ BEGIN
       used_by_user_id = v_current_user
   WHERE id = v_token.id;
 
-  RETURN QUERY SELECT true, v_token.child_id, v_token.organization_id, 'Child claimed';
+  RETURN QUERY SELECT true, v_token.athlete_id, v_token.org_id, 'Child claimed';
 END;
 $$;
