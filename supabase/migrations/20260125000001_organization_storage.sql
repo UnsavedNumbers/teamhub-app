@@ -26,7 +26,7 @@ WITH CHECK (
         SELECT 1 FROM organization_members om
         WHERE om.user_id = auth.uid()
         AND om.role = 'org_admin'
-        AND (storage.foldername(name))[1] = om.organization_id::text
+        AND (storage.foldername(name))[1] = om.org_id::text
     )
     OR
     -- Or platform admin
@@ -49,7 +49,7 @@ USING (
         SELECT 1 FROM organization_members om
         WHERE om.user_id = auth.uid()
         AND om.role = 'org_admin'
-        AND (storage.foldername(name))[1] = om.organization_id::text
+        AND (storage.foldername(name))[1] = om.org_id::text
     )
     OR
     EXISTS (
@@ -70,7 +70,7 @@ USING (
         SELECT 1 FROM organization_members om
         WHERE om.user_id = auth.uid()
         AND om.role = 'org_admin'
-        AND (storage.foldername(name))[1] = om.organization_id::text
+        AND (storage.foldername(name))[1] = om.org_id::text
     )
     OR
     EXISTS (

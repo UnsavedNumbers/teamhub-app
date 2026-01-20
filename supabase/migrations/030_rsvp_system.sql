@@ -13,7 +13,7 @@ END $$;
 CREATE TABLE IF NOT EXISTS event_rsvps (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-  child_id UUID NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+  athlete_id UUID NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
   status rsvp_status NOT NULL DEFAULT 'unknown',
   responded_at TIMESTAMPTZ,
   responded_by_user_id UUID REFERENCES users(id),
@@ -21,8 +21,8 @@ CREATE TABLE IF NOT EXISTS event_rsvps (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   
-  -- Ensure one RSVP per child per event
-  UNIQUE(event_id, child_id),
+  -- Ensure one RSVP per athlete per event
+  UNIQUE(event_id, athlete_id),
   
   -- Ensure responded_at is set when status is not unknown
   CONSTRAINT rsvp_response_tracking CHECK (
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS event_rsvps (
 
 -- Add indexes for efficient querying
 CREATE INDEX IF NOT EXISTS idx_event_rsvps_event_id ON event_rsvps(event_id);
-CREATE INDEX IF NOT EXISTS idx_event_rsvps_child_id ON event_rsvps(child_id);
+CREATE INDEX IF NOT EXISTS idx_event_rsvps_athlete_id ON event_rsvps(athlete_id);
 CREATE INDEX IF NOT EXISTS idx_event_rsvps_status ON event_rsvps(status);
 CREATE INDEX IF NOT EXISTS idx_event_rsvps_responded_at ON event_rsvps(responded_at DESC);
 
@@ -77,19 +77,19 @@ CREATE POLICY "Parents can manage their children's RSVPs" ON event_rsvps
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      JOIN children c ON c.family_id = u.family_id
+      JOIN athletes c ON c.family_id = u.family_id
       WHERE u.id = auth.uid()
       AND u.role = 'parent'
-      AND c.id = event_rsvps.child_id
+      AND c.id = event_rsvps.athlete_id
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM users u
-      JOIN children c ON c.family_id = u.family_id
+      JOIN athletes c ON c.family_id = u.family_id
       WHERE u.id = auth.uid()
       AND u.role = 'parent'
-      AND c.id = event_rsvps.child_id
+      AND c.id = event_rsvps.athlete_id
     )
   );
 
@@ -153,16 +153,16 @@ CREATE OR REPLACE FUNCTION create_rsvps_for_event()
 RETURNS TRIGGER AS $$
 BEGIN
   -- Create RSVP records for all active team members
-  INSERT INTO event_rsvps (event_id, child_id, status)
+  INSERT INTO event_rsvps (event_id, athlete_id, status)
   SELECT 
     NEW.id,
-    tm.child_id,
+    tm.athlete_id,
     'unknown'
   FROM team_memberships tm
   WHERE tm.team_id = NEW.team_id
   AND tm.season_id = NEW.season_id
   AND tm.status = 'active'
-  ON CONFLICT (event_id, child_id) DO NOTHING;
+  ON CONFLICT (event_id, athlete_id) DO NOTHING;
   
   RETURN NEW;
 END;
@@ -182,10 +182,10 @@ DECLARE
   v_count INTEGER := 0;
 BEGIN
   -- Insert or update attendance records based on RSVP status
-  INSERT INTO attendance (event_id, child_id, status, note)
+  INSERT INTO attendance (event_id, athlete_id, status, note)
   SELECT 
     r.event_id,
-    r.child_id,
+    r.athlete_id,
     CASE 
       WHEN r.status = 'going' THEN 'going'::attendance_status
       WHEN r.status = 'late' THEN 'late'::attendance_status
@@ -196,7 +196,7 @@ BEGIN
   FROM event_rsvps r
   WHERE r.event_id = p_event_id
   AND r.status != 'unknown'
-  ON CONFLICT (event_id, child_id) DO UPDATE
+  ON CONFLICT (event_id, athlete_id) DO UPDATE
   SET 
     status = EXCLUDED.status,
     note = EXCLUDED.note,

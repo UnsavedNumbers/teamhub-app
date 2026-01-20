@@ -93,8 +93,8 @@ BEGIN
     FROM athlete_guardians ag1
     JOIN athlete_guardians ag2 ON ag1.user_id = ag2.user_id
     WHERE ag1.athlete_id = p_athlete_id
-      AND ag1.organization_id = p_org_id
-      AND ag2.organization_id = p_org_id
+      AND ag1.org_id = p_org_id
+      AND ag2.org_id = p_org_id
       AND ag1.status = 'active'
       AND ag2.status = 'active'
     
@@ -105,8 +105,8 @@ BEGIN
     FROM family_athletes fa
     JOIN athlete_guardians ag2 ON fa.athlete_id = ag2.athlete_id
     JOIN athlete_guardians ag3 ON ag2.user_id = ag3.user_id
-    WHERE ag2.organization_id = p_org_id
-      AND ag3.organization_id = p_org_id
+    WHERE ag2.org_id = p_org_id
+      AND ag3.org_id = p_org_id
       AND ag2.status = 'active'
       AND ag3.status = 'active'
   )
@@ -150,7 +150,7 @@ BEGIN
   INTO v_guardian_ids
   FROM athlete_guardians ag
   WHERE ag.athlete_id = ANY(v_family_athletes)
-    AND ag.organization_id = p_org_id
+    AND ag.org_id = p_org_id
     AND ag.status = 'active';
   
   -- Build athlete details
@@ -225,7 +225,7 @@ AS $$
     a.created_at
   FROM athletes a
   LEFT JOIN athlete_guardians ag ON ag.athlete_id = a.id 
-    AND ag.organization_id = p_org_id 
+    AND ag.org_id = p_org_id 
     AND ag.status = 'active'
   WHERE ag.id IS NULL
     AND a.deleted_at IS NULL
@@ -247,7 +247,7 @@ COMMENT ON FUNCTION get_orphaned_athletes IS 'Returns athletes in an organizatio
 CREATE MATERIALIZED VIEW IF NOT EXISTS derived_families_mv AS
 WITH family_groups AS (
   SELECT DISTINCT
-    ag1.organization_id,
+    ag1.org_id,
     ag1.athlete_id,
     -- Create a consistent family identifier from sorted guardian IDs
     MD5(ARRAY_TO_STRING(
@@ -258,21 +258,21 @@ WITH family_groups AS (
   JOIN athlete_guardians ag2 ON ag1.user_id = ag2.user_id
   WHERE ag1.status = 'active'
     AND ag2.status = 'active'
-  GROUP BY ag1.organization_id, ag1.athlete_id
+  GROUP BY ag1.org_id, ag1.athlete_id
 )
 SELECT 
-  organization_id,
+  org_id,
   family_group_id,
   ARRAY_AGG(athlete_id ORDER BY athlete_id) AS athlete_ids,
   COUNT(*) AS athlete_count
 FROM family_groups
-GROUP BY organization_id, family_group_id;
+GROUP BY org_id, family_group_id;
 
 -- Create indexes on materialized view
 CREATE UNIQUE INDEX IF NOT EXISTS idx_derived_families_mv_org_family 
-  ON derived_families_mv(organization_id, family_group_id);
+  ON derived_families_mv(org_id, family_group_id);
 CREATE INDEX IF NOT EXISTS idx_derived_families_mv_org 
-  ON derived_families_mv(organization_id);
+  ON derived_families_mv(org_id);
 
 COMMENT ON MATERIALIZED VIEW derived_families_mv IS 'Precomputed family groups for performance. Refreshed automatically when athlete_guardians changes.';
 
@@ -306,11 +306,11 @@ COMMENT ON FUNCTION refresh_derived_families IS 'Refreshes the derived_families_
 -- ==============================================
 -- These indexes optimize the recursive family derivation queries
 CREATE INDEX IF NOT EXISTS idx_athlete_guardians_user_org_status 
-  ON athlete_guardians(user_id, organization_id, status) 
+  ON athlete_guardians(user_id, org_id, status) 
   WHERE status = 'active';
 
 CREATE INDEX IF NOT EXISTS idx_athlete_guardians_athlete_org_status 
-  ON athlete_guardians(athlete_id, organization_id, status) 
+  ON athlete_guardians(athlete_id, org_id, status) 
   WHERE status = 'active';
 
 CREATE INDEX IF NOT EXISTS idx_athletes_deleted 

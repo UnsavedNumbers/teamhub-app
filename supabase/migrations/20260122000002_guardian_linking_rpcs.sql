@@ -54,7 +54,7 @@ BEGIN
     ) AS linked_athletes
   FROM users u
   LEFT JOIN athlete_guardians ag ON ag.user_id = u.id 
-    AND ag.organization_id = p_org_id 
+    AND ag.org_id = p_org_id 
     AND ag.status = 'active'
   LEFT JOIN athletes a ON a.id = ag.athlete_id 
     AND a.deleted_at IS NULL
@@ -106,7 +106,7 @@ BEGIN
     INSERT INTO athlete_guardians (
       athlete_id,
       user_id,
-      organization_id,
+      org_id,
       status
     )
     VALUES (
@@ -115,7 +115,7 @@ BEGIN
       p_org_id,
       'active'
     )
-    ON CONFLICT (athlete_id, user_id, organization_id)
+    ON CONFLICT (athlete_id, user_id, org_id)
     DO UPDATE SET
       status = 'active',
       updated_at = NOW()
@@ -131,7 +131,7 @@ BEGIN
       status = 'accepted',
       accepted_by_user_id = v_user_id,
       accepted_at = NOW()
-    WHERE organization_id = p_org_id
+    WHERE org_id = p_org_id
       AND athlete_id = p_athlete_id
       AND LOWER(email) = v_normalized_email
       AND status = 'pending';
@@ -150,7 +150,7 @@ BEGIN
     v_token := gen_random_uuid()::text;
     
     INSERT INTO parent_invites (
-      organization_id,
+      org_id,
       athlete_id,
       email,
       status,
@@ -167,7 +167,7 @@ BEGIN
       NOW() + INTERVAL '30 days',
       COALESCE(p_created_by_user_id, auth.uid())
     )
-    ON CONFLICT (organization_id, athlete_id, LOWER(email))
+    ON CONFLICT (org_id, athlete_id, LOWER(email))
     WHERE status = 'pending'
     DO UPDATE SET
       expires_at = NOW() + INTERVAL '30 days',
@@ -278,7 +278,7 @@ BEGIN
       athlete_id,
       team_id,
       season_id,
-      organization_id,
+      org_id,
       status,
       created_at
     )
@@ -343,7 +343,7 @@ AS $$
   FROM athlete_guardians ag
   JOIN users u ON u.id = ag.user_id
   WHERE ag.athlete_id = p_athlete_id
-    AND ag.organization_id = p_org_id
+    AND ag.org_id = p_org_id
   ORDER BY ag.created_at ASC;
 $$;
 
@@ -380,7 +380,7 @@ AS $$
   FROM athlete_guardians ag
   JOIN athletes a ON a.id = ag.athlete_id
   WHERE ag.user_id = p_user_id
-    AND ag.organization_id = p_org_id
+    AND ag.org_id = p_org_id
     AND a.deleted_at IS NULL
   ORDER BY a.first_name, a.last_name;
 $$;
@@ -409,7 +409,7 @@ BEGIN
     updated_at = NOW()
   WHERE athlete_id = p_athlete_id
     AND user_id = p_user_id
-    AND organization_id = p_org_id
+    AND org_id = p_org_id
     AND status = 'active';
   
   v_updated := FOUND;
@@ -435,7 +435,7 @@ COMMENT ON FUNCTION remove_guardian_from_athlete IS 'Removes a guardian from an 
 -- Ensures we don't create duplicate pending invites for same email/athlete/org
 DROP INDEX IF EXISTS idx_parent_invites_pending_unique;
 CREATE UNIQUE INDEX idx_parent_invites_pending_unique 
-  ON parent_invites(organization_id, athlete_id, LOWER(email))
+  ON parent_invites(org_id, athlete_id, LOWER(email))
   WHERE status = 'pending';
 
 COMMENT ON INDEX idx_parent_invites_pending_unique IS 'Prevents duplicate pending invites for same organization, athlete, and email. Uses partial index on pending status only.';

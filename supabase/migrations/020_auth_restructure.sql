@@ -21,19 +21,19 @@ END $$;
 -- ============================================
 CREATE TABLE IF NOT EXISTS organization_members (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   role org_member_role NOT NULL DEFAULT 'parent',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   
   -- Unique constraint: user can only have one role per org
-  CONSTRAINT uq_org_member_user_org UNIQUE (organization_id, user_id)
+  CONSTRAINT uq_org_member_user_org UNIQUE (org_id, user_id)
 );
 
 -- Create indexes for performance
-CREATE INDEX IF NOT EXISTS idx_org_members_user_org ON organization_members(user_id, organization_id, role);
-CREATE INDEX IF NOT EXISTS idx_org_members_org ON organization_members(organization_id);
+CREATE INDEX IF NOT EXISTS idx_org_members_user_org ON organization_members(user_id, org_id, role);
+CREATE INDEX IF NOT EXISTS idx_org_members_org ON organization_members(org_id);
 CREATE INDEX IF NOT EXISTS idx_org_members_user ON organization_members(user_id);
 
 -- Add updated_at trigger
@@ -65,7 +65,7 @@ ALTER TABLE platform_admins ENABLE ROW LEVEL SECURITY;
 -- ============================================
 CREATE TABLE IF NOT EXISTS organization_invites (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
   role org_member_role NOT NULL DEFAULT 'parent',
   token TEXT UNIQUE NOT NULL DEFAULT gen_random_uuid()::text,
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS organization_invites (
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_org_invites_token ON organization_invites(token) WHERE accepted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_org_invites_email ON organization_invites(email);
-CREATE INDEX IF NOT EXISTS idx_org_invites_org ON organization_invites(organization_id);
+CREATE INDEX IF NOT EXISTS idx_org_invites_org ON organization_invites(org_id);
 
 -- Enable RLS
 ALTER TABLE organization_invites ENABLE ROW LEVEL SECURITY;
@@ -129,7 +129,7 @@ AS $$
     EXISTS (
       SELECT 1 FROM organization_members 
       WHERE user_id = check_user_id 
-      AND organization_id = check_org_id
+      AND org_id = check_org_id
     );
 $$;
 
@@ -145,7 +145,7 @@ AS $$
     EXISTS (
       SELECT 1 FROM organization_members 
       WHERE user_id = check_user_id 
-      AND organization_id = check_org_id
+      AND org_id = check_org_id
       AND role = check_role
     );
 $$;
@@ -162,17 +162,17 @@ $$;
 
 -- Get all organizations for a user
 CREATE OR REPLACE FUNCTION get_user_organizations(check_user_id UUID)
-RETURNS TABLE(organization_id UUID, org_name TEXT, role org_member_role)
+RETURNS TABLE(org_id UUID, org_name TEXT, role org_member_role)
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
 AS $$
   SELECT 
-    om.organization_id,
+    om.org_id,
     o.name as org_name,
     om.role
   FROM organization_members om
-  JOIN organizations o ON o.id = om.organization_id
+  JOIN organizations o ON o.id = om.org_id
   WHERE om.user_id = check_user_id
   ORDER BY o.name;
 $$;
@@ -195,7 +195,7 @@ BEGIN
   END IF;
   
   -- Migrate with conflict handling
-  INSERT INTO organization_members (organization_id, user_id, role)
+  INSERT INTO organization_members (org_id, user_id, role)
   SELECT 
     org_id,
     id,
@@ -206,7 +206,7 @@ BEGIN
     END
   FROM users
   WHERE org_id IS NOT NULL
-  ON CONFLICT (organization_id, user_id) DO NOTHING;
+  ON CONFLICT (org_id, user_id) DO NOTHING;
   
   -- Verify migration
   SELECT COUNT(*) INTO migrated_count FROM organization_members;
@@ -252,7 +252,7 @@ SELECT
   u.created_at,
   u.updated_at,
   -- Get first org membership for backward compatibility
-  COALESCE(u.org_id, om.organization_id) as org_id,
+  COALESCE(u.org_id, om.org_id) as org_id,
   COALESCE(
     CASE 
       WHEN u.role::text IS NOT NULL THEN u.role::text
@@ -263,7 +263,7 @@ SELECT
   ) as role
 FROM users u
 LEFT JOIN LATERAL (
-  SELECT organization_id, role 
+  SELECT org_id, role 
   FROM organization_members 
   WHERE user_id = u.id 
   ORDER BY created_at 

@@ -19,7 +19,7 @@ alter table if exists organizations
 -- Canonical licenses table
 create table if not exists org_licenses (
   id uuid primary key default gen_random_uuid(),
-  organization_id uuid references organizations(id) on delete cascade unique,
+  org_id uuid references organizations(id) on delete cascade unique,
   status license_status default 'trial',
   plan license_plan,
   current_period_start timestamptz,
@@ -35,7 +35,7 @@ create table if not exists org_licenses (
   updated_at timestamptz default now()
 );
 
-create index if not exists idx_org_licenses_organization_id on org_licenses(organization_id);
+create index if not exists idx_org_licenses_org_id on org_licenses(org_id);
 create index if not exists idx_org_licenses_stripe_subscription_id on org_licenses(stripe_subscription_id);
 
 create or replace function update_org_licenses_updated_at()
@@ -60,7 +60,7 @@ end $$;
 -- Billing events audit table
 create table if not exists billing_events (
   id uuid primary key default gen_random_uuid(),
-  organization_id uuid references organizations(id) on delete set null,
+  org_id uuid references organizations(id) on delete set null,
   event_type text,
   stripe_event_id text unique,
   stripe_object_id text,
@@ -71,7 +71,7 @@ create table if not exists billing_events (
 );
 
 create index if not exists idx_billing_events_stripe_event_id on billing_events(stripe_event_id);
-create index if not exists idx_billing_events_organization_id on billing_events(organization_id);
+create index if not exists idx_billing_events_org_id on billing_events(org_id);
 
 -- License helper functions
 create or replace function is_org_license_active(org_id uuid)
@@ -81,7 +81,7 @@ as $$
 declare
   lic record;
 begin
-  select * into lic from org_licenses where organization_id = org_id;
+  select * into lic from org_licenses where org_id = org_id;
   if lic is null then
     return false;
   end if;
@@ -109,7 +109,7 @@ as $$
 declare
   lic record;
 begin
-  select * into lic from org_licenses where organization_id = org_id;
+  select * into lic from org_licenses where org_id = org_id;
   if lic is null then
     return false;
   end if;
@@ -137,7 +137,7 @@ as $$
 declare
   lic record;
 begin
-  select * into lic from org_licenses where organization_id = org_id;
+  select * into lic from org_licenses where org_id = org_id;
 
   if lic is null then
     return;
@@ -168,8 +168,8 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'org_admins_can_create_fees_if_license_active') THEN
       CREATE POLICY org_admins_can_create_fees_if_license_active ON fees FOR INSERT TO authenticated
       WITH CHECK (
-        user_has_org_role(auth.uid(), organization_id, 'org_admin')
-        AND is_org_license_active(organization_id)
+        user_has_org_role(auth.uid(), org_id, 'org_admin')
+        AND is_org_license_active(org_id)
       );
     END IF;
   END IF;
@@ -178,8 +178,8 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'org_admins_can_create_seasons_if_license_active') THEN
       CREATE POLICY org_admins_can_create_seasons_if_license_active ON seasons FOR INSERT TO authenticated
       WITH CHECK (
-        user_has_org_role(auth.uid(), organization_id, 'org_admin')
-        AND is_org_license_active(organization_id)
+        user_has_org_role(auth.uid(), org_id, 'org_admin')
+        AND is_org_license_active(org_id)
       );
     END IF;
   END IF;

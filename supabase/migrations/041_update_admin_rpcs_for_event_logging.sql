@@ -290,9 +290,9 @@ BEGIN
   END IF;
   
   -- Upsert feature flag
-  INSERT INTO feature_flags (organization_id, feature_key, enabled)
+  INSERT INTO feature_flags (org_id, feature_key, enabled)
   VALUES (target_org_id, target_feature_key, target_enabled)
-  ON CONFLICT (organization_id, feature_key)
+  ON CONFLICT (org_id, feature_key)
   DO UPDATE SET enabled = target_enabled, updated_at = NOW();
   
   -- Log event using new system

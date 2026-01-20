@@ -10,13 +10,13 @@ end $$;
 create table if not exists event_attendance (
   id uuid default gen_random_uuid() primary key,
   event_id uuid references events(id) on delete cascade not null,
-  child_id uuid references children(id) on delete cascade not null,
+  athlete_id uuid references athletes(id) on delete cascade not null,
   status event_attendance_status not null default 'present',
   notes text,
   recorded_by_user_id uuid references users(id),
   created_at timestamptz default now() not null,
   updated_at timestamptz default now() not null,
-  unique(event_id, child_id)
+  unique(event_id, athlete_id)
 );
 
 -- 2. Create attendance_settings table
@@ -46,7 +46,7 @@ create policy "Org admins can manage attendance"
       join teams t on t.id = e.team_id
       where e.id = event_attendance.event_id
       and t.org_id in (
-        select organization_id from organization_members 
+        select org_id from organization_members 
         where user_id = auth.uid() and role = 'org_admin'
       )
     )
@@ -62,7 +62,7 @@ create policy "Coaches can manage attendance for their teams"
       join teams t on t.id = e.team_id
       where e.id = event_attendance.event_id
       and t.org_id in (
-        select organization_id from organization_members 
+        select org_id from organization_members 
         where user_id = auth.uid() and role = 'coach'
       )
     )
@@ -73,8 +73,8 @@ create policy "Parents can view attendance for their children"
   on event_attendance
   for select
   using (
-    child_id in (
-      select id from children
+    athlete_id in (
+      select id from athletes
       where family_id in (
         select family_id from family_members where user_id = auth.uid()
       )
@@ -88,7 +88,7 @@ create policy "Org admins can manage changes"
   for all
   using (
     org_id in (
-      select organization_id from organization_members 
+      select org_id from organization_members 
       where user_id = auth.uid() and role = 'org_admin'
     )
   );
@@ -99,6 +99,6 @@ create policy "Everyone can view settings"
   for select
   using (
     org_id in (
-      select organization_id from organization_members where user_id = auth.uid()
+      select org_id from organization_members where user_id = auth.uid()
     )
   );

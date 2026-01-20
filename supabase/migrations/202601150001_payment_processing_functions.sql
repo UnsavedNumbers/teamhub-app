@@ -231,7 +231,7 @@ returns trigger
 language plpgsql
 as $$
 begin
-  perform sync_org_license_summary(new.organization_id);
+  perform sync_org_license_summary(new.org_id);
   return new;
 end;
 $$;

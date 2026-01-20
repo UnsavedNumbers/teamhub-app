@@ -13,7 +13,7 @@ END $$;
 CREATE TABLE IF NOT EXISTS attendance (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-  child_id UUID NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+  athlete_id UUID NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
   status attendance_status NOT NULL DEFAULT 'going',
   note TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS attendance (
 
 -- Add indexes
 CREATE INDEX idx_attendance_event_id ON attendance(event_id);
-CREATE INDEX idx_attendance_child_id ON attendance(child_id);
+CREATE INDEX idx_attendance_athlete_id ON attendance(athlete_id);
 
 -- Add trigger for updated_at
 CREATE TRIGGER update_attendance_updated_at

@@ -339,7 +339,7 @@ CREATE POLICY "Org admins can view org feature flags" ON feature_flags
   USING (
     EXISTS (
       SELECT 1 FROM organization_members om
-      JOIN feature_flag_org_overrides ffo ON ffo.org_id = om.organization_id
+      JOIN feature_flag_org_overrides ffo ON ffo.org_id = om.org_id
       WHERE om.user_id = auth.uid()
       AND om.role = 'org_admin'
       AND ffo.feature_flag_id = feature_flags.id
@@ -368,7 +368,7 @@ CREATE POLICY "Org admins can view org overrides" ON feature_flag_org_overrides
     EXISTS (
       SELECT 1 FROM organization_members om
       WHERE om.user_id = auth.uid()
-      AND om.organization_id = feature_flag_org_overrides.org_id
+      AND om.org_id = feature_flag_org_overrides.org_id
       AND om.role = 'org_admin'
     )
   );

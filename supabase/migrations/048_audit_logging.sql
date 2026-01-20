@@ -35,7 +35,7 @@ BEGIN
   -- Generate idempotency key based on operation and data
   v_idempotency_key := TG_OP || ':' ||
     COALESCE(NEW.user_id, OLD.user_id)::text || ':' ||
-    COALESCE(NEW.organization_id, OLD.organization_id)::text || ':' ||
+    COALESCE(NEW.org_id, OLD.org_id)::text || ':' ||
     COALESCE(NEW.role, OLD.role)::text || ':' ||
     statement_timestamp()::text;
   
@@ -52,7 +52,7 @@ BEGIN
   SELECT 
     CASE 
       WHEN is_platform_admin(auth.uid()) THEN 'platform_admin'
-      WHEN user_has_any_org_roles(auth.uid(), COALESCE(NEW.organization_id, OLD.organization_id), ARRAY['org_admin']::org_member_role[]) THEN 'org_admin'
+      WHEN user_has_any_org_roles(auth.uid(), COALESCE(NEW.org_id, OLD.org_id), ARRAY['org_admin']::org_member_role[]) THEN 'org_admin'
       ELSE 'system'
     END INTO v_actor_role;
   
@@ -61,7 +61,7 @@ BEGIN
     SELECT NOT EXISTS (
       SELECT 1 FROM organization_members
       WHERE user_id = NEW.user_id
-        AND organization_id = NEW.organization_id
+        AND org_id = NEW.org_id
         AND id != NEW.id
     ) INTO v_is_first_role;
     
@@ -71,7 +71,7 @@ BEGIN
       'ROLE_ADDED',
       COALESCE(auth.uid(), NEW.user_id), -- actor (may be self-add or admin-add)
       v_actor_role::text,
-      NEW.organization_id,
+      NEW.org_id,
       'user',
       NEW.user_id::text,
       jsonb_build_object(
@@ -87,9 +87,9 @@ BEGIN
         'ORG_JOINED',
         COALESCE(auth.uid(), NEW.user_id),
         v_actor_role::text,
-        NEW.organization_id,
+        NEW.org_id,
         'organization',
-        NEW.organization_id::text,
+        NEW.org_id::text,
         jsonb_build_object(
           'first_role', NEW.role,
           'user_id', NEW.user_id,
@@ -105,7 +105,7 @@ BEGIN
     SELECT NOT EXISTS (
       SELECT 1 FROM organization_members
       WHERE user_id = OLD.user_id
-        AND organization_id = OLD.organization_id
+        AND org_id = OLD.org_id
         AND id != OLD.id
     ) INTO v_is_last_role;
     
@@ -115,7 +115,7 @@ BEGIN
       'ROLE_REMOVED',
       COALESCE(auth.uid(), OLD.user_id),
       v_actor_role::text,
-      OLD.organization_id,
+      OLD.org_id,
       'user',
       OLD.user_id::text,
       jsonb_build_object(
@@ -131,9 +131,9 @@ BEGIN
         'ORG_LEFT',
         COALESCE(auth.uid(), OLD.user_id),
         v_actor_role::text,
-        OLD.organization_id,
+        OLD.org_id,
         'organization',
-        OLD.organization_id::text,
+        OLD.org_id::text,
         jsonb_build_object(
           'last_role', OLD.role,
           'user_id', OLD.user_id,
@@ -188,12 +188,12 @@ BEGIN
       'PARENT_INVITED',
       COALESCE(NEW.created_by_user_id, auth.uid()),
       'org_admin',
-      NEW.organization_id,
+      NEW.org_id,
       'parent_invite',
       NEW.id::text,
       jsonb_build_object(
         'email', NEW.email,
-        'child_id', NEW.child_id,
+        'athlete_id', NEW.athlete_id,
         'team_id', NEW.team_id,
         'expires_at', NEW.expires_at,
         'idempotency_key', v_idempotency_key
@@ -208,12 +208,12 @@ BEGIN
       'PARENT_ATTACHED',
       NEW.accepted_by_user_id,
       'parent',
-      NEW.organization_id,
+      NEW.org_id,
       'parent_invite',
       NEW.id::text,
       jsonb_build_object(
         'email', NEW.email,
-        'child_id', NEW.child_id,
+        'athlete_id', NEW.athlete_id,
         'team_id', NEW.team_id,
         'accepted_by_user_id', NEW.accepted_by_user_id,
         'idempotency_key', v_idempotency_key
@@ -263,7 +263,7 @@ BEGIN
       'JOIN_LINK_CREATED',
       COALESCE(NEW.created_by_user_id, auth.uid()),
       'org_admin',
-      NEW.organization_id,
+      NEW.org_id,
       'join_link',
       NEW.id::text,
       jsonb_build_object(
@@ -318,11 +318,11 @@ BEGIN
       'JOIN_REQUEST_SUBMITTED',
       NEW.requested_by_user_id,
       'parent',
-      NEW.organization_id,
+      NEW.org_id,
       'join_request',
       NEW.id::text,
       jsonb_build_object(
-        'child_id', NEW.child_id,
+        'athlete_id', NEW.athlete_id,
         'team_id', NEW.team_id,
         'season_id', NEW.season_id,
         'join_link_id', NEW.join_link_id,
@@ -338,11 +338,11 @@ BEGIN
       'JOIN_REQUEST_APPROVED',
       NEW.reviewed_by_user_id,
       'org_admin',
-      NEW.organization_id,
+      NEW.org_id,
       'join_request',
       NEW.id::text,
       jsonb_build_object(
-        'child_id', NEW.child_id,
+        'athlete_id', NEW.athlete_id,
         'team_id', NEW.team_id,
         'season_id', NEW.season_id,
         'requested_by_user_id', NEW.requested_by_user_id,
@@ -359,11 +359,11 @@ BEGIN
       'JOIN_REQUEST_DENIED',
       NEW.reviewed_by_user_id,
       'org_admin',
-      NEW.organization_id,
+      NEW.org_id,
       'join_request',
       NEW.id::text,
       jsonb_build_object(
-        'child_id', NEW.child_id,
+        'athlete_id', NEW.athlete_id,
         'team_id', NEW.team_id,
         'season_id', NEW.season_id,
         'requested_by_user_id', NEW.requested_by_user_id,
@@ -417,11 +417,11 @@ BEGIN
       'CHILD_CLAIM_TOKEN_CREATED',
       COALESCE(NEW.created_by_user_id, auth.uid()),
       'org_admin',
-      NEW.organization_id,
+      NEW.org_id,
       'claim_token',
       NEW.id::text,
       jsonb_build_object(
-        'child_id', NEW.child_id,
+        'athlete_id', NEW.athlete_id,
         'team_id', NEW.team_id,
         'expires_at', NEW.expires_at,
         'idempotency_key', v_idempotency_key
@@ -436,11 +436,11 @@ BEGIN
       'CHILD_CLAIMED',
       NEW.used_by_user_id,
       'parent',
-      NEW.organization_id,
+      NEW.org_id,
       'claim_token',
       NEW.id::text,
       jsonb_build_object(
-        'child_id', NEW.child_id,
+        'athlete_id', NEW.athlete_id,
         'team_id', NEW.team_id,
         'used_by_user_id', NEW.used_by_user_id,
         'idempotency_key', v_idempotency_key

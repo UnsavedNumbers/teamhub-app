@@ -108,7 +108,7 @@ BEGIN
       USING (
         EXISTS (
           SELECT 1 FROM organization_members om
-          WHERE om.organization_id = %I.org_id
+          WHERE om.org_id = %I.org_id
           AND om.user_id = auth.uid()
         )
       )
@@ -121,7 +121,7 @@ BEGIN
       USING (
         EXISTS (
           SELECT 1 FROM organization_members om
-          WHERE om.organization_id = %I.org_id
+          WHERE om.org_id = %I.org_id
           AND om.user_id = auth.uid()
           AND om.role = ''org_admin''
         )
@@ -135,7 +135,7 @@ BEGIN
       WITH CHECK (
         EXISTS (
           SELECT 1 FROM organization_members om
-          WHERE om.organization_id = %I.org_id
+          WHERE om.org_id = %I.org_id
           AND om.user_id = auth.uid()
           AND om.role = ''org_admin''
         )

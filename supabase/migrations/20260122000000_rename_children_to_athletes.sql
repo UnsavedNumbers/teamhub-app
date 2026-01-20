@@ -210,7 +210,75 @@ BEGIN
   END IF;
 END $$;
 
--- Step 12: Add comments for documentation
+-- Step 12: Update event_rsvps table
+-- ==================================
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'event_rsvps'
+    AND column_name = 'child_id'
+  ) THEN
+    ALTER TABLE event_rsvps RENAME COLUMN child_id TO athlete_id;
+    
+    -- Update foreign key constraint if it exists
+    IF EXISTS (
+      SELECT FROM pg_constraint 
+      WHERE conrelid = 'event_rsvps'::regclass 
+      AND conname LIKE '%child_id%'
+    ) THEN
+      -- Rename the foreign key constraint
+      ALTER TABLE event_rsvps RENAME CONSTRAINT event_rsvps_child_id_fkey TO event_rsvps_athlete_id_fkey;
+    END IF;
+    
+    -- Update unique constraint if it exists
+    IF EXISTS (
+      SELECT FROM pg_constraint 
+      WHERE conrelid = 'event_rsvps'::regclass 
+      AND conname LIKE '%event_id%child_id%' OR conname LIKE '%child_id%event_id%'
+    ) THEN
+      -- Drop and recreate with new column name
+      ALTER TABLE event_rsvps DROP CONSTRAINT IF EXISTS event_rsvps_event_id_child_id_key;
+      ALTER TABLE event_rsvps ADD CONSTRAINT event_rsvps_event_id_athlete_id_key UNIQUE(event_id, athlete_id);
+    END IF;
+    
+    -- Rename index if it exists
+    IF EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'idx_event_rsvps_child_id') THEN
+      ALTER INDEX idx_event_rsvps_child_id RENAME TO idx_event_rsvps_athlete_id;
+    END IF;
+  END IF;
+END $$;
+
+-- Step 13: Update fee_assignments table
+-- ======================================
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'fee_assignments'
+    AND column_name = 'child_id'
+  ) THEN
+    ALTER TABLE fee_assignments RENAME COLUMN child_id TO athlete_id;
+    
+    -- Update foreign key constraint if it exists
+    IF EXISTS (
+      SELECT FROM pg_constraint 
+      WHERE conrelid = 'fee_assignments'::regclass 
+      AND conname LIKE '%child_id%'
+    ) THEN
+      ALTER TABLE fee_assignments RENAME CONSTRAINT fee_assignments_child_id_fkey TO fee_assignments_athlete_id_fkey;
+    END IF;
+    
+    -- Rename index if it exists
+    IF EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'idx_fee_assignments_child_id') THEN
+      ALTER INDEX idx_fee_assignments_child_id RENAME TO idx_fee_assignments_athlete_id;
+    END IF;
+  END IF;
+END $$;
+
+-- Step 14: Add comments for documentation
 -- ========================================
 COMMENT ON TABLE athletes IS 'Athletes in the system. Each athlete can have multiple guardians via athlete_guardians. Families are derived from shared guardian relationships.';
 COMMENT ON TABLE athlete_guardians IS 'Links athletes to their guardians (parents/legal guardians). Multiple athletes sharing guardians form a family.';

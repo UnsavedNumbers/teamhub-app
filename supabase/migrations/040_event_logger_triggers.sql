@@ -184,7 +184,7 @@ BEGIN
   PERFORM set_config('app.logging_disabled', 'true', true);
 
   -- Get organization ID from payment
-  v_org_id := COALESCE(NEW.organization_id, OLD.organization_id);
+  v_org_id := COALESCE(NEW.org_id, OLD.org_id);
 
   -- Determine event type based on status changes
   IF TG_OP = 'INSERT' THEN
@@ -287,7 +287,7 @@ BEGIN
     v_event_type,
     auth.uid(),
     v_actor_role,
-    COALESCE(NEW.organization_id, OLD.organization_id),
+    COALESCE(NEW.org_id, OLD.org_id),
     'fee',
     COALESCE(NEW.id, OLD.id),
     jsonb_build_object(

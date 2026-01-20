@@ -10,20 +10,20 @@ ALTER TABLE organization_members
 -- Enforce uniqueness at the (org, user, role) level.
 ALTER TABLE organization_members
   ADD CONSTRAINT uq_org_member_user_org_role
-  UNIQUE (organization_id, user_id, role);
+  UNIQUE (org_id, user_id, role);
 
 -- Create an index that covers the common multi-role lookup path.
 CREATE INDEX IF NOT EXISTS idx_org_members_user_org_role
-  ON organization_members (user_id, organization_id, role);
+  ON organization_members (user_id, org_id, role);
 
 CREATE INDEX IF NOT EXISTS idx_org_members_user_org
-  ON organization_members (user_id, organization_id);
+  ON organization_members (user_id, org_id);
 
 CREATE INDEX IF NOT EXISTS idx_org_members_org_role
-  ON organization_members (organization_id, role);
+  ON organization_members (org_id, role);
 
 CREATE INDEX IF NOT EXISTS idx_org_members_user_org_role_covering
-  ON organization_members (user_id, organization_id, role)
+  ON organization_members (user_id, org_id, role)
   INCLUDE (created_at, updated_at);
 
 -- Advisory-lock-backed helpers for role changes to prevent race conditions.
@@ -41,9 +41,9 @@ DECLARE
 BEGIN
   PERFORM pg_advisory_xact_lock(v_lock_key);
 
-  INSERT INTO organization_members (user_id, organization_id, role)
+  INSERT INTO organization_members (user_id, org_id, role)
   VALUES (p_user_id, p_org_id, p_role)
-  ON CONFLICT (organization_id, user_id, role) DO NOTHING;
+  ON CONFLICT (org_id, user_id, role) DO NOTHING;
 
   RETURN FOUND;
 END;
@@ -65,7 +65,7 @@ BEGIN
 
   DELETE FROM organization_members
   WHERE user_id = p_user_id
-    AND organization_id = p_org_id
+      AND org_id = p_org_id
     AND role = p_role;
 
   RETURN FOUND;
