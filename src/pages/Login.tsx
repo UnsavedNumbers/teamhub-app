@@ -67,9 +67,17 @@ export default function Login() {
 
         // Fetch user's organizations to determine redirect
         try {
-          const { data: orgData } = await supabase.rpc('get_user_organizations', {
+          const { data: orgData, error: orgError } = await supabase.rpc('get_user_organizations', {
             check_user_id: user.id
           } as any)
+
+          if (orgError) {
+            console.error('Error fetching user organizations:', orgError)
+            // Fallback to default redirect if org fetch fails
+            const appContext = getHostAppContext()
+            navigate(appContext === 'platform-admin' ? '/platform-admin' : '/portal/dashboard')
+            return
+          }
 
           // Map to Organization format
           const organizations = (orgData || []).map((org: any) => {
@@ -87,7 +95,7 @@ export default function Login() {
           navigate(redirectTo)
         } catch (err) {
           // Fallback to default redirect if org fetch fails
-          console.error('Error fetching organizations:', err)
+          console.error('Exception fetching organizations:', err)
           const appContext = getHostAppContext()
           navigate(appContext === 'platform-admin' ? '/platform-admin' : '/portal/dashboard')
         }
