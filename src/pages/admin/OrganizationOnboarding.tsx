@@ -135,17 +135,30 @@ export default function OrganizationOnboarding() {
         await supabase.from('users').update({ requires_org_setup: false } satisfies UsersUpdate).eq('id', profile.id)
         // Refresh profile to update requiresOrgSetup flag and organizations
         await refreshProfile()
+        // Wait a moment for state to update, then verify
+        await new Promise(resolve => setTimeout(resolve, 300))
+        await refreshProfile()
       } catch (err) {
         console.error('Error clearing DB flag:', err)
+        // Don't throw here - let the step proceed, ProtectedRoute will handle if flag isn't cleared
       }
       setCurrentStep(2)
     } catch (err: unknown) { setError(getErrorMessage(err) || 'Failed to save organization') } finally { setCreating(false) }
   }
 
-  if (loading || authLoading) return <div className="pa-root pa-flex pa-justify-center pa-items-center" style={{ minHeight: '100vh' }}><div className="pa-skeleton" style={{ width: '400px', height: '300px' }} /></div>
+  if (loading || authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-slate-900 mx-auto"></div>
+          <p className="mt-4 text-slate-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="pa-root" style={{ background: 'var(--pa-bg)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="min-h-screen bg-white overflow-x-hidden">
       {currentStep === 1 ? (
         <OrganizationIdentityStep
           control={control}
@@ -159,7 +172,15 @@ export default function OrganizationOnboarding() {
       ) : (
         <LicenseActivationStep
           organizationId={currentOrganization?.id}
-          onComplete={() => navigate('/admin')}
+          onComplete={async () => {
+            // Refresh profile to ensure latest state
+            await refreshProfile()
+            // Wait a moment for state to update
+            await new Promise(resolve => setTimeout(resolve, 300))
+            await refreshProfile()
+            // Navigate - ProtectedRoute will redirect back to onboarding if flag is still set
+            navigate('/admin', { replace: true })
+          }}
           onBack={() => setCurrentStep(1)}
         />
       )}
