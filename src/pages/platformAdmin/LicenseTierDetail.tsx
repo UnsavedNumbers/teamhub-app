@@ -164,20 +164,13 @@ export default function LicenseTierDetail() {
 
     setVerifying(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error('Not authenticated')
-
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      const response = await fetch(`${supabaseUrl}/functions/v1/stripe-verify-price`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ price_id: priceId }),
+      const { data, error } = await supabase.functions.invoke('stripe-verify-price', {
+        body: { price_id: priceId },
       })
 
-      const result: StripePriceVerification = await response.json()
+      if (error) throw error
+      
+      const result: StripePriceVerification = data
       setStripeVerification(result)
 
       // Update tier with verification data if valid

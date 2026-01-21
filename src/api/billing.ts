@@ -81,7 +81,7 @@ export async function getBillingHistory(organizationId: string): Promise<Billing
   const { data, error } = await supabase
     .from('billing_events')
     .select('id, event_type, stripe_event_id, stripe_object_id, processed_at, created_at')
-    .eq('organization_id', organizationId)
+    .eq('org_id', organizationId)
     .order('created_at', { ascending: false })
 
   if (error) {

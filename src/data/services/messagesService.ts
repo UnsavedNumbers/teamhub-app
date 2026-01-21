@@ -400,7 +400,7 @@ export async function createMessage(
                 const { data: memberData } = await supabase
                     .from('organization_members')
                     .select('role')
-                    .eq('organization_id', teamData.org_id)
+                    .eq('org_id', teamData.org_id)
                     .eq('user_id', authorId)
                     .single()
                 if (memberData) role = memberData.role as string

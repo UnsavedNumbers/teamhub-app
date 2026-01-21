@@ -60,7 +60,7 @@ export default function OrganizationDetail() {
       const { data: flags, error: flagsError } = await supabase
         .from('admin_feature_flags')
         .select('*')
-        .eq('organization_id', id)
+        .eq('org_id', id)
 
       if (!flagsError) {
         setFeatureFlags(flags as AdminFeatureFlag[])

@@ -43,7 +43,7 @@ export interface AdminOrganization {
  * Organization membership info for admin_users view
  */
 export interface AdminUserOrganization {
-    organization_id: string
+    org_id: string
     org_name: string
     role: string
 }
@@ -69,7 +69,7 @@ export interface AdminUser {
  * admin_structure view row
  */
 export interface AdminStructure {
-    organization_id: string
+    org_id: string
     organization_name: string
     team_id: string | null
     team_name: string | null
@@ -89,7 +89,7 @@ export interface AdminPayment {
     stripe_payment_intent_id: string | null
     status: string
     created_at: string | null
-    organization_id: string
+    org_id: string
     organization_name: string
     fee_assignment_id: string | null
     fee_id: string | null
@@ -111,7 +111,7 @@ export interface AdminFeeStatus {
     currency: string | null
     due_date: string | null
     fee_status: string
-    organization_id: string
+    org_id: string
     organization_name: string
     assigned_count: number
     paid_count: number
@@ -155,7 +155,7 @@ export interface AdminPlatformHealth {
  */
 export interface AdminFeatureFlag {
     id: string
-    organization_id: string
+    org_id: string
     organization_name: string
     feature_key: string
     enabled: boolean

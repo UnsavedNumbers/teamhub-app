@@ -16,7 +16,7 @@ const stripe = new Stripe(stripeSecretKey, { apiVersion: "2024-06-20" })
 interface FeeAssignmentRow {
   id: string
   fee_id: string | null
-  organization_id: string
+  org_id: string
   parent_id: string
   amount_cents: number
   balance_cents: number
@@ -26,7 +26,7 @@ interface FeeAssignmentRow {
 
 async function logError(supabase: any, organizationId: string | null, message: string, payload: any) {
   await supabase.from("billing_events").insert({
-    organization_id: organizationId,
+    org_id: organizationId,
     event_type: "parent_checkout_error",
     error_message: message,
     payload,
@@ -76,7 +76,7 @@ serve(async (req) => {
     const { data: assignments, error: assignmentError } = await supabase
       .from("fee_assignments")
       .select(
-        `id, fee_id, organization_id, parent_id, amount_cents, balance_cents, currency, fee:fees(title, description)`,
+        `id, fee_id, org_id, parent_id, amount_cents, balance_cents, currency, fee:fees(title, description)`,
       )
       .in("id", feeAssignmentIds)
       .eq("parent_id", user.id)
@@ -89,8 +89,8 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 })
     }
 
-    organizationId = assignments[0].organization_id
-    const allSameOrg = assignments.every((a) => a.organization_id === organizationId)
+    organizationId = assignments[0].org_id
+    const allSameOrg = assignments.every((a) => a.org_id === organizationId)
     if (!allSameOrg) {
       return new Response(JSON.stringify({ error: "Mixed organization fees not allowed" }), { status: 400 })
     }
@@ -108,10 +108,10 @@ serve(async (req) => {
       const { data: discountRow, error: discountError } = await supabase
         .from("discount_codes")
         .select(
-          "id, discount_type, percent_off, amount_off_cents, status, redeem_by, max_redemptions, applies_to_fee_id, organization_id",
+          "id, discount_type, percent_off, amount_off_cents, status, redeem_by, max_redemptions, applies_to_fee_id, org_id",
         )
         .eq("code", discountCode)
-        .eq("organization_id", organizationId)
+        .eq("org_id", organizationId)
         .maybeSingle()
 
       if (discountError || !discountRow) {
@@ -155,7 +155,7 @@ serve(async (req) => {
     const baseCharges = (assignments as FeeAssignmentRow[]).map((a) => ({
       fee_assignment_id: a.id,
       fee_id: a.fee_id,
-      organization_id: a.organization_id,
+      org_id: a.org_id,
       description: a.fee?.title || "Fee payment",
       amount_cents: a.balance_cents ?? a.amount_cents ?? 0,
       currency: a.currency || "usd",
@@ -182,7 +182,7 @@ serve(async (req) => {
     const { data: checkout, error: checkoutError } = await supabase
       .from("checkout_sessions")
       .insert({
-        organization_id: organizationId,
+        org_id: organizationId,
         parent_id: user.id,
         status: "created",
         currency: payableCharges[0]?.currency || "usd",
@@ -201,7 +201,7 @@ serve(async (req) => {
       .from("charges")
       .insert(
         payableCharges.map((c) => ({
-          organization_id: c.organization_id,
+          org_id: c.org_id,
           charge_type: "fee_payment",
           fee_assignment_id: c.fee_assignment_id,
           fee_id: c.fee_id,

@@ -55,7 +55,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: membershipError.message }), { status: 400 })
   }
 
-  const hasAdminRole = (memberships as any[] | null)?.some((m) => m.organization_id === organizationId && m.role === "org_admin")
+  const hasAdminRole = (memberships as any[] | null)?.some((m) => m.org_id === organizationId && m.role === "org_admin")
   if (!hasAdminRole) {
     return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 })
   }

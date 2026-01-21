@@ -115,7 +115,7 @@ export interface AthleteGuardian {
     id: string
     athlete_id: string
     user_id: string
-    organization_id: string
+    org_id: string
     status: GuardianStatus
     relationship_type?: RelationshipType
     created_at: string

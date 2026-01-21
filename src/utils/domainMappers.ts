@@ -157,7 +157,7 @@ export function mapUser(row: UserRow): User {
   if ('organizations' in row) {
     if (Array.isArray(row.organizations)) {
       organizations = row.organizations.map((org: any) => ({
-        organizationId: org.organization_id ?? org.id,
+        organizationId: org.org_id ?? org.id,
         orgName: org.org_name ?? org.name,
         role: org.role ?? '',
       }))
@@ -166,7 +166,7 @@ export function mapUser(row: UserRow): User {
       const orgs = row.organizations as Json
       if (Array.isArray(orgs)) {
         organizations = orgs.map((org: any) => ({
-          organizationId: org.organization_id ?? org.id,
+          organizationId: org.org_id ?? org.id,
           orgName: org.org_name ?? org.name,
           role: org.role ?? '',
         }))
