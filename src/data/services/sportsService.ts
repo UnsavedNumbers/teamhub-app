@@ -93,7 +93,7 @@ export async function getSports(
             .select(`
                 sport:sports(*)
             `)
-            .eq('organization_id', context.orgId)
+            .eq('org_id', context.orgId)
 
         if (error) throw error
 
@@ -178,7 +178,7 @@ export async function createSport(
         const { data: existingLink } = await supabase
             .from('organization_sports')
             .select('*')
-            .eq('organization_id', dto.org_id)
+            .eq('org_id', dto.org_id)
             .eq('sport_id', systemSports.id)
             .single()
 
@@ -190,7 +190,7 @@ export async function createSport(
         const { data: _, error: linkError } = await supabase
             .from('organization_sports')
             .insert({
-                organization_id: dto.org_id,
+                org_id: dto.org_id,
                 sport_id: systemSports.id,
             })
             .select()
@@ -295,7 +295,7 @@ export async function deleteSport(
                 .from('organization_sports')
                 .delete()
                 .eq('sport_id', sportId)
-                .eq('organization_id', context.orgId)
+                .eq('org_id', context.orgId)
 
             if (unlinkError) throw unlinkError
             return { error: null }

@@ -123,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 : []
 
               return {
-                id: o.organization_id,
+                id: o.org_id,
                 name: o.org_name || '',
                 roles,
                 // Compatibility getter for deprecated 'role' property

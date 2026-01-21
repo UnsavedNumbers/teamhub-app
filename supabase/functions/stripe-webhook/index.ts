@@ -48,7 +48,7 @@ async function upsertLicense(supabase: any, orgId: string, payload: {
   const graceEndsAt = payload.current_period_end ? new Date(payload.current_period_end * 1000 + graceDays * 24 * 60 * 60 * 1000) : null
 
   const record = {
-    organization_id: orgId,
+    org_id: orgId,
     status: payload.status,
     plan: payload.plan,
     current_period_start: payload.current_period_start ? new Date(payload.current_period_start * 1000).toISOString() : null,
@@ -92,7 +92,7 @@ serve(async (req) => {
   const organizationId = (event.data.object as any)?.client_reference_id || (event.data.object as any)?.metadata?.organization_id || null
 
   await supabase.from("billing_events").insert({
-    organization_id: organizationId,
+    org_id: organizationId,
     event_type: event.type,
     stripe_event_id: event.id,
     stripe_object_id: (event.data.object as any)?.id,
@@ -110,7 +110,7 @@ serve(async (req) => {
 
           const { data: checkout } = await supabase
             .from("checkout_sessions")
-            .select("id, organization_id, parent_id")
+            .select("id, org_id, parent_id")
             .eq("id", checkoutSessionId)
             .maybeSingle()
           if (!checkout) break
@@ -123,7 +123,7 @@ serve(async (req) => {
 
           if (!existingPayment.data) {
             await supabase.from("payments").insert({
-              organization_id: checkout.organization_id,
+              org_id: checkout.org_id,
               checkout_session_id: checkout.id,
               parent_id: checkout.parent_id,
               amount_cents: session.amount_total ?? 0,
@@ -174,11 +174,11 @@ serve(async (req) => {
         if (!subId) break
         const { data: lic } = await supabase
           .from("org_licenses")
-          .select("organization_id")
+          .select("org_id")
           .eq("stripe_subscription_id", subId)
           .maybeSingle()
-        if (!lic?.organization_id) break
-        await upsertLicense(supabase, lic.organization_id, {
+        if (!lic?.org_id) break
+        await upsertLicense(supabase, lic.org_id, {
           status: "active",
           current_period_end: invoice.lines.data[0]?.period?.end ?? invoice.period_end ?? null,
           stripe_subscription_id: subId,
@@ -192,11 +192,11 @@ serve(async (req) => {
         if (!subId) break
         const { data: lic } = await supabase
           .from("org_licenses")
-          .select("organization_id")
+          .select("org_id")
           .eq("stripe_subscription_id", subId)
           .maybeSingle()
-        if (!lic?.organization_id) break
-        await upsertLicense(supabase, lic.organization_id, {
+        if (!lic?.org_id) break
+        await upsertLicense(supabase, lic.org_id, {
           status: "past_due",
           current_period_end: invoice.lines.data[0]?.period?.end ?? invoice.period_end ?? null,
           stripe_subscription_id: subId,

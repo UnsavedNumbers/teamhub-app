@@ -283,7 +283,7 @@ export default function UserDetail() {
             <div className="pa-flex pa-flex-col pa-gap-2">
               {user.organizations.map((org) => (
                 <div
-                  key={org.organization_id}
+                  key={org.org_id}
                   className="pa-flex pa-items-center pa-justify-between"
                   style={{ padding: 'var(--pa-space-2) 0', borderBottom: '1px solid var(--pa-n100)' }}
                 >

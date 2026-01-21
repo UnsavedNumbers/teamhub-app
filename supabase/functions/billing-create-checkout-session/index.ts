@@ -83,7 +83,7 @@ serve(async (req) => {
   }
 
   const hasAdminRole = (memberships as any[] | null)?.some((m) =>
-    m.organization_id === organizationId && m.role === "org_admin"
+    m.org_id === organizationId && m.role === "org_admin"
   )
 
   if (!hasAdminRole) {
@@ -94,7 +94,7 @@ serve(async (req) => {
   const { data: existingLicense } = await supabase
     .from("org_licenses")
     .select("id, stripe_customer_id")
-    .eq("organization_id", organizationId)
+    .eq("org_id", organizationId)
     .maybeSingle()
 
   let stripeCustomerId = existingLicense?.stripe_customer_id as string | null
@@ -115,7 +115,7 @@ serve(async (req) => {
     stripeCustomerId = customer.id
 
     await supabase.from("org_licenses").upsert({
-      organization_id: organizationId,
+      org_id: organizationId,
       stripe_customer_id: stripeCustomerId,
     })
 
