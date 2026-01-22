@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
+import { getLink, RouteKeys } from '@/utils/routes'
 
 export default function UserContextDropdown() {
   const { user, profile, signOut } = useAuth()
@@ -34,15 +35,15 @@ export default function UserContextDropdown() {
 
   const handleLogout = async () => {
     await signOut()
-    navigate('/portal/login')
+    navigate(getLink(RouteKeys.AUTH_LOGIN))
   }
 
   const handleSwitchOrg = (orgId: string) => {
     switchOrganization(orgId)
     setIsOpen(false)
-    // Avoid full page reload (keeps SPA routing + avoids \"blue screen\" on bad paths)
+    // Avoid full page reload (keeps SPA routing + avoids "blue screen" on bad paths)
     // Navigate to a known-good portal route after switching org.
-    navigate('/portal/dashboard')
+    navigate(getLink(RouteKeys.PORTAL_DASHBOARD))
   }
 
   const initials = profile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'
@@ -54,10 +55,10 @@ export default function UserContextDropdown() {
   
   // Role-based links configuration
   const roleLinks = [
-    { role: 'parent', label: t('portal.navigation.myChildren'), path: '/portal/children', icon: 'family_restroom' as const },
-    { role: 'parent', label: 'Payments', path: '/portal/payments', icon: 'receipt_long' as const },
-    { role: 'coach', label: 'Teams', path: '/portal/children', icon: 'sports_soccer' as const },
-    { role: 'org_admin', label: 'Organization Settings', path: '/admin/organization', icon: 'admin_panel_settings' as const },
+    { role: 'parent', label: t('portal.navigation.myChildren'), path: getLink(RouteKeys.PORTAL_ATHLETES), icon: 'family_restroom' as const },
+    { role: 'parent', label: 'Payments', path: getLink(RouteKeys.PORTAL_PAYMENTS), icon: 'receipt_long' as const },
+    { role: 'coach', label: 'Teams', path: getLink(RouteKeys.PORTAL_ATHLETES), icon: 'sports_soccer' as const },
+    { role: 'org_admin', label: 'Organization Settings', path: getLink(RouteKeys.ADMIN_ORGANIZATION), icon: 'admin_panel_settings' as const },
   ]
 
   // Filter links based on current roles
@@ -138,7 +139,7 @@ export default function UserContextDropdown() {
                 {/* 3. Personal Settings */}
                 <div className="py-1 border-b border-slate-100 dark:border-slate-800">
                      <Link 
-                        to="/portal/settings"
+                        to={getLink(RouteKeys.PORTAL_SETTINGS)}
                         onClick={() => setIsOpen(false)}
                         className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                     >
@@ -166,7 +167,7 @@ export default function UserContextDropdown() {
 
                 {/* 5. Support */}
                 <div className="py-1 border-b border-slate-100 dark:border-slate-800">
-                    <Link to="/portal/settings" onClick={() => setIsOpen(false)} className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
+                    <Link to={getLink(RouteKeys.PORTAL_SETTINGS)} onClick={() => setIsOpen(false)} className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
                         <span className="material-symbols-outlined mr-3 text-lg text-slate-400">help</span>
                         Help & Support
                     </Link>

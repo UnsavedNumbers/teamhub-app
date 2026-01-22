@@ -265,12 +265,13 @@ export default function TravelDetail() {
           {/* Navigation & Timing */}
           {plan.venue_name && plan.venue_address && (
             <div>
-              <SectionHeader className="mb-4 flex items-center gap-2">
-                <Icon name="location_on" size="text-2xl" className="text-[#137fec]" />
-                Venue Location
-              </SectionHeader>
-              <Card className="p-6">
-                <CardTitle className="text-xl mb-2">{plan.venue_name}</CardTitle>
+              <Card className="p-6 relative">
+                <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
+                  <Icon name="location_on" size="text-2xl" />
+                  Venue Location
+                </div>
+                <div className="pt-12">
+                  <CardTitle className="text-xl mb-2">{plan.venue_name}</CardTitle>
                 <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-4">{plan.venue_address}</p>
                 
                 {/* Smart Map Links */}
@@ -324,6 +325,7 @@ export default function TravelDetail() {
                     </a>
                   </div>
                 </div>
+                </div>
               </Card>
             </div>
           )}
@@ -331,12 +333,13 @@ export default function TravelDetail() {
           {/* Hotel Information */}
           {plan.hotel_name && (
             <div>
-              <SectionHeader className="mb-4 flex items-center gap-2">
-                <Icon name="hotel" size="text-2xl" className="text-[#137fec]" />
-                Lodging
-              </SectionHeader>
-              <Card className="p-6">
-                <CardTitle className="text-xl mb-2">{plan.hotel_name}</CardTitle>
+              <Card className="p-6 relative">
+                <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
+                  <Icon name="hotel" size="text-2xl" />
+                  Lodging
+                </div>
+                <div className="pt-12">
+                  <CardTitle className="text-xl mb-2">{plan.hotel_name}</CardTitle>
                 {plan.hotel_address && <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-4">{plan.hotel_address}</p>}
                 
                 <div className="grid sm:grid-cols-2 gap-3 mb-4">
@@ -384,6 +387,7 @@ export default function TravelDetail() {
                     </Button>
                   )}
                 </div>
+                </div>
               </Card>
             </div>
           )}
@@ -391,10 +395,12 @@ export default function TravelDetail() {
           {/* Meeting Locations */}
           {meetingLocations.length > 0 && (
             <div>
-              <SectionHeader className="mb-4 flex items-center gap-2">
-                <Icon name="group" size="text-2xl" className="text-[#137fec]" />
-                Meeting Locations
-              </SectionHeader>
+              <div className="mb-4">
+                <div className="inline-block bg-black text-white px-4 py-2 flex items-center gap-2 text-xl font-black uppercase tracking-wider">
+                  <Icon name="group" size="text-2xl" />
+                  Meeting Locations
+                </div>
+              </div>
               <div className="space-y-4">
                 {meetingLocations.map((meeting, idx) => (
                   <Card key={idx} className="p-6">
@@ -436,11 +442,12 @@ export default function TravelDetail() {
 
           {/* Event Schedule */}
           <div>
-            <SectionHeader className="mb-4 flex items-center gap-2">
-              <Icon name="event" size="text-2xl" className="text-[#137fec]" />
-              Event Schedule
-            </SectionHeader>
-            <Card className="p-6">
+            <Card className="p-6 relative">
+              <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
+                <Icon name="event" size="text-2xl" />
+                Event Schedule
+              </div>
+              <div className="pt-12">
               {eventsLoading ? (
                 <div className="flex justify-center py-8">
                   <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-[#137fec]"></div>
@@ -489,20 +496,23 @@ export default function TravelDetail() {
                   ))}
                 </div>
               )}
+              </div>
             </Card>
           </div>
 
           {/* Additional Notes */}
           {plan.notes && (
             <div>
-              <SectionHeader className="mb-4 flex items-center gap-2">
-                <Icon name="notes" size="text-2xl" className="text-[#137fec]" />
-                Additional Notes
-              </SectionHeader>
-              <Card className="p-6">
-                <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
-                  {plan.notes}
-                </p>
+              <Card className="p-6 relative">
+                <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
+                  <Icon name="notes" size="text-2xl" />
+                  Additional Notes
+                </div>
+                <div className="pt-12">
+                  <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                    {plan.notes}
+                  </p>
+                </div>
               </Card>
             </div>
           )}
@@ -541,7 +551,7 @@ export default function TravelDetail() {
               <Icon name="calendar_add_on" size="text-xl" />
               Add to Calendar
             </CardTitle>
-            <div className="space-y-2">
+            <div>
               <a
                 href={googleCalendarLink({
                   title: plan.title,
@@ -552,6 +562,7 @@ export default function TravelDetail() {
                 })}
                 target="_blank"
                 rel="noreferrer"
+                className="block mb-3"
               >
                 <Button variant="secondary" className="w-full text-sm justify-start">
                   <Icon name="event" size="text-sm" className="mr-2" />
@@ -566,6 +577,7 @@ export default function TravelDetail() {
                   location: plan.location,
                 })}
                 download={`${plan.title}.ics`}
+                className="block"
               >
                 <Button variant="secondary" className="w-full text-sm justify-start">
                   <Icon name="event" size="text-sm" className="mr-2" />
@@ -596,11 +608,12 @@ export default function TravelDetail() {
               <Icon name="store" size="text-xl" />
               Nearby Services
             </CardTitle>
-            <div className="space-y-2">
+            <div>
               <a
                 href={`https://www.google.com/maps/search/restaurants+near+${encodeURIComponent(plan.location)}`}
                 target="_blank"
                 rel="noreferrer"
+                className="block mb-3"
               >
                 <Button variant="secondary" className="w-full text-sm justify-start">
                   <Icon name="restaurant" size="text-sm" className="mr-2" />
@@ -611,6 +624,7 @@ export default function TravelDetail() {
                 href={`https://www.google.com/maps/search/grocery+near+${encodeURIComponent(plan.location)}`}
                 target="_blank"
                 rel="noreferrer"
+                className="block mb-3"
               >
                 <Button variant="secondary" className="w-full text-sm justify-start">
                   <Icon name="local_grocery_store" size="text-sm" className="mr-2" />
@@ -621,6 +635,7 @@ export default function TravelDetail() {
                 href={`https://www.google.com/maps/search/pharmacy+near+${encodeURIComponent(plan.location)}`}
                 target="_blank"
                 rel="noreferrer"
+                className="block mb-3"
               >
                 <Button variant="secondary" className="w-full text-sm justify-start">
                   <Icon name="local_pharmacy" size="text-sm" className="mr-2" />
@@ -631,6 +646,7 @@ export default function TravelDetail() {
                 href={`https://www.google.com/maps/search/hospital+near+${encodeURIComponent(plan.location)}`}
                 target="_blank"
                 rel="noreferrer"
+                className="block"
               >
                 <Button variant="secondary" className="w-full text-sm justify-start">
                   <Icon name="local_hospital" size="text-sm" className="mr-2" />

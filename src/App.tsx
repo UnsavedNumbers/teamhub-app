@@ -7,6 +7,7 @@ import { ProtectedRoute } from './components/ProtectedRoute'
 import AdminLoadingSpinner from './components/admin/AdminLoadingSpinner'
 import { getHostAppContext } from './utils/host'
 import { useOrganizationTheme } from './hooks/useOrganizationTheme'
+import { getLink, getPath, RouteKeys } from './utils/routes'
 
 // Marketing Page
 import Marketing from './pages/Marketing'
@@ -110,8 +111,8 @@ const ImportAthletes = lazy(() => import('./pages/admin/ImportAthletes'))
 
 function HostHomeRoute() {
   const appContext = getHostAppContext()
-  if (appContext === 'platform') return <Navigate to="/portal/dashboard" replace />
-  if (appContext === 'platform-admin') return <Navigate to="/platform-admin" replace />
+  if (appContext === 'platform') return <Navigate to={getLink(RouteKeys.PORTAL_DASHBOARD)} replace />
+  if (appContext === 'platform-admin') return <Navigate to={getLink(RouteKeys.PLATFORM_DASHBOARD)} replace />
   return <Marketing />
 }
 
@@ -120,9 +121,9 @@ function PlatformAdminRoute({ children }: { children: React.ReactNode }) {
   const location = useLocation()
 
   if (loading) return <AdminLoadingSpinner />
-  if (!user) return <Navigate to="/portal/login" state={{ from: location }} replace />
+  if (!user) return <Navigate to={getLink(RouteKeys.AUTH_LOGIN)} state={{ from: location }} replace />
   if (!profile) return <AdminLoadingSpinner />
-  if (!profile.isPlatformAdmin) return <Navigate to="/portal/unauthorized" replace />
+  if (!profile.isPlatformAdmin) return <Navigate to={getLink(RouteKeys.AUTH_UNAUTHORIZED)} replace />
 
   return <>{children}</>
 }
@@ -142,22 +143,22 @@ function HostGateLayout() {
   // Allow a small set of portal routes on admin.* for authentication flows only.
   if (isPortal) {
     const allowlisted = [
-      '/portal/login',
-      '/portal/signup',
-      '/portal/forgot-password',
-      '/portal/reset-password',
-      '/portal/auth/callback',
-      '/portal/confirm-email',
-      '/portal/unauthorized',
-      '/portal/accept-invite',
+      getPath(RouteKeys.AUTH_LOGIN),
+      getPath(RouteKeys.AUTH_SIGNUP),
+      getPath(RouteKeys.AUTH_FORGOT_PASSWORD),
+      getPath(RouteKeys.AUTH_RESET_PASSWORD),
+      getLink('auth.authCallback'),
+      getLink('auth.confirmEmail'),
+      getPath(RouteKeys.AUTH_UNAUTHORIZED),
+      getPath(RouteKeys.AUTH_ACCEPT_INVITE),
     ]
 
     if (allowlisted.some((p) => path.startsWith(p))) return <Outlet />
-    return <Navigate to="/platform-admin" replace />
+    return <Navigate to={getLink(RouteKeys.PLATFORM_DASHBOARD)} replace />
   }
 
   // Never allow org-admin UI on admin.* (platform admin host).
-  if (isOrgAdmin) return <Navigate to="/platform-admin" replace />
+  if (isOrgAdmin) return <Navigate to={getLink(RouteKeys.PLATFORM_DASHBOARD)} replace />
 
   // Allow platform-admin routes.
   if (isPlatformAdmin) return <Outlet />
@@ -200,7 +201,7 @@ function AppWithTheme() {
             <Route path="role-selection" element={<ProtectedRoute><RoleSelection /></ProtectedRoute>} />
             <Route path="dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-            <Route path="children" element={<ProtectedRoute><Children /></ProtectedRoute>} />
+            <Route path="athletes" element={<ProtectedRoute><Children /></ProtectedRoute>} />
             <Route path="join" element={<ProtectedRoute><JoinTeam /></ProtectedRoute>} />
             <Route path="calendar/events/:eventId" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />
             <Route path="calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
@@ -216,11 +217,11 @@ function AppWithTheme() {
             <Route path="messages/:announcementId" element={<ProtectedRoute><AnnouncementDetail /></ProtectedRoute>} />
             
             {/* Redirect root portal to dashboard */}
-            <Route index element={<Navigate to="/portal/dashboard" replace />} />
+            <Route index element={<Navigate to={getLink(RouteKeys.PORTAL_DASHBOARD)} replace />} />
 
             {/* Catch-all to prevent blank/"blue" screens on unknown portal routes */}
             {/* Use replace: false to preserve browser history for back button navigation */}
-            <Route path="*" element={<Navigate to="/portal/dashboard" replace={false} />} />
+            <Route path="*" element={<Navigate to={getLink(RouteKeys.PORTAL_DASHBOARD)} replace={false} />} />
           </Route>
 
           {/* Organization Onboarding - Standalone route outside AdminLayout */}
@@ -271,7 +272,7 @@ function AppWithTheme() {
               <Route path="families" element={<AdminFamilies />} />
               <Route path="families/new" element={<CreateFamily />} />
               <Route path="families/:id" element={<FamilyDetail />} />
-              <Route path="families/:familyId/children/new" element={<CreateChild />} />
+              <Route path="families/:familyId/athletes/new" element={<CreateChild />} />
               
               {/* Athletes */}
               <Route path="athletes" element={<AdminChildren />} />

@@ -124,12 +124,12 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
     },
     {
       label: 'Teams',
-      route: '/portal/children',
+      route: '/portal/athletes',
       groups: [
         {
           label: 'Teams',
           items: [
-            { text: 'Teams', icon: 'groups', path: '/portal/children', description: 'Teams and roster access' },
+            { text: 'Teams', icon: 'groups', path: '/portal/athletes', description: 'Teams and roster access' },
           ],
         },
       ],
@@ -242,7 +242,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Programs',
           items: [
-            { text: 'My Teams', icon: 'groups', path: '/portal/children', description: t('portal.navigation.yourChildrenTeams') },
+            { text: 'My Teams', icon: 'groups', path: '/portal/athletes', description: t('portal.navigation.yourChildrenTeams') },
             { text: 'Join a Team', icon: 'group_add', path: '/portal/join', description: 'Enter an invite code' },
             { text: 'Tryouts', icon: 'emoji_events', path: '/portal/tryouts', description: 'Tryout sessions' },
           ],

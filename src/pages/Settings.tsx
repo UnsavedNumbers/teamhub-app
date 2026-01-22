@@ -155,7 +155,7 @@ export default function Settings() {
           <section>
             <div className="flex items-center justify-between mb-4">
               <SectionHeader>{t('portal.settings.family.title')}</SectionHeader>
-              <Link to="/portal/children" className="text-xs font-bold text-[#137fec] uppercase tracking-widest hover:underline">
+              <Link to="/portal/athletes" className="text-xs font-bold text-[#137fec] uppercase tracking-widest hover:underline">
                 {t('portal.settings.family.manageChildren')}
               </Link>
             </div>

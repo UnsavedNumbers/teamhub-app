@@ -9,6 +9,7 @@ import {
 import type { PlatformAdminRole } from '../types/platformAdmin.types'
 import { usePlatformAdminTheme } from '../hooks/usePlatformAdminTheme'
 import GlobalNav from '../components/common/GlobalNav'
+import { getLink, getPath, RouteKeys } from '@/utils/routes'
 
 // Navigation structure per design spec
 type NavSection = {
@@ -25,50 +26,50 @@ const navSections: NavSection[] = [
   {
     label: 'Overview',
     items: [
-      { text: 'Dashboard', icon: 'dashboard', path: '/platform-admin', requiredAction: 'view_dashboard' },
+      { text: 'Dashboard', icon: 'dashboard', path: getPath(RouteKeys.PLATFORM_DASHBOARD), requiredAction: 'view_dashboard' },
     ],
   },
   {
     label: 'Organizations',
     items: [
-      { text: 'Organizations', icon: 'apartment', path: '/platform-admin/organizations', requiredAction: 'view_organizations' },
+      { text: 'Organizations', icon: 'apartment', path: getPath(RouteKeys.PLATFORM_ORGANIZATIONS), requiredAction: 'view_organizations' },
     ],
   },
   {
     label: 'Users',
     items: [
-      { text: 'Users', icon: 'group', path: '/platform-admin/users', requiredAction: 'view_users' },
-      { text: 'Platform Admins', icon: 'admin_panel_settings', path: '/platform-admin/admins', requiredAction: 'view_platform_admins' },
+      { text: 'Users', icon: 'group', path: getPath(RouteKeys.PLATFORM_USERS), requiredAction: 'view_users' },
+      { text: 'Platform Admins', icon: 'admin_panel_settings', path: getPath(RouteKeys.PLATFORM_ADMINS), requiredAction: 'view_platform_admins' },
     ],
   },
   {
     label: 'Payments',
     items: [
-      { text: 'Payments', icon: 'credit_card', path: '/platform-admin/payments', requiredAction: 'view_payments' },
-      { text: 'Fees', icon: 'receipt_long', path: '/platform-admin/fees', requiredAction: 'view_fees' },
+      { text: 'Payments', icon: 'credit_card', path: getPath(RouteKeys.PLATFORM_PAYMENTS), requiredAction: 'view_payments' },
+      { text: 'Fees', icon: 'receipt_long', path: getPath(RouteKeys.PLATFORM_FEES), requiredAction: 'view_fees' },
     ],
   },
   {
     label: 'Compliance',
     items: [
-      { text: 'Event Log', icon: 'history', path: '/platform-admin/audit', requiredAction: 'view_audit_log' },
-      { text: 'Feature Flags', icon: 'flag', path: '/platform-admin/feature-flags', requiredAction: 'view_feature_flags' },
+      { text: 'Event Log', icon: 'history', path: getPath(RouteKeys.PLATFORM_AUDIT), requiredAction: 'view_audit_log' },
+      { text: 'Feature Flags', icon: 'flag', path: getPath(RouteKeys.PLATFORM_FEATURE_FLAGS), requiredAction: 'view_feature_flags' },
     ],
   },
   {
     label: 'Licenses & Entitlements',
     items: [
-      { text: 'Overview', icon: 'dashboard', path: '/platform-admin/licenses', requiredAction: 'view_licenses' },
-      { text: 'License Tiers', icon: 'workspace_premium', path: '/platform-admin/licenses/tiers', requiredAction: 'manage_license_tiers' },
-      { text: 'Feature Catalog', icon: 'inventory_2', path: '/platform-admin/licenses/features', requiredAction: 'manage_features' },
-      { text: 'Rules & Overrides', icon: 'rule', path: '/platform-admin/licenses/overrides', requiredAction: 'manage_overrides' },
-      { text: 'Audit & History', icon: 'history', path: '/platform-admin/licenses/audit', requiredAction: 'view_licenses_audit' },
+      { text: 'Overview', icon: 'dashboard', path: getPath(RouteKeys.PLATFORM_LICENSES), requiredAction: 'view_licenses' },
+      { text: 'License Tiers', icon: 'workspace_premium', path: getLink('platformAdmin.licenses.tiers'), requiredAction: 'manage_license_tiers' },
+      { text: 'Feature Catalog', icon: 'inventory_2', path: getLink('platformAdmin.licenses.features'), requiredAction: 'manage_features' },
+      { text: 'Rules & Overrides', icon: 'rule', path: getLink('platformAdmin.licenses.overrides'), requiredAction: 'manage_overrides' },
+      { text: 'Audit & History', icon: 'history', path: getLink('platformAdmin.licenses.audit'), requiredAction: 'view_licenses_audit' },
     ],
   },
   {
     label: 'System',
     items: [
-      { text: 'Structure', icon: 'account_tree', path: '/platform-admin/structure', requiredAction: 'view_structure' },
+      { text: 'Structure', icon: 'account_tree', path: getLink('platformAdmin.structure'), requiredAction: 'view_structure' },
     ],
   },
 ]
@@ -119,11 +120,12 @@ export default function PlatformAdminLayout() {
 
   const handleSignOut = async () => {
     await signOut()
-    navigate('/portal/login')
+    navigate(getLink(RouteKeys.AUTH_LOGIN))
   }
 
+  const platformDashboardPath = getPath(RouteKeys.PLATFORM_DASHBOARD)
   const isActive = (path: string) => {
-    if (path === '/platform-admin') {
+    if (path === platformDashboardPath) {
       return location.pathname === path
     }
     return location.pathname.startsWith(path)
@@ -140,7 +142,7 @@ export default function PlatformAdminLayout() {
       <aside className={`pa-sidebar ${mobileOpen ? 'open' : ''}`}>
         {/* Brand */}
         <div className="pa-sidebar-header">
-          <Link to="/platform-admin" className="pa-sidebar-brand" onClick={() => setMobileOpen(false)}>
+          <Link to={getLink(RouteKeys.PLATFORM_DASHBOARD)} className="pa-sidebar-brand" onClick={() => setMobileOpen(false)}>
             <img 
               src="/images/logo-dark.png" 
               alt="Youth Sports" 

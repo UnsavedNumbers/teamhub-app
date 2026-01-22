@@ -1,10 +1,12 @@
 /**
  * Login Redirect Utilities
  * 
- * Determines where to redirect users after login based on their roles
+ * Determines where to redirect users after login based on their roles.
+ * Uses centralized route manager for consistent path generation.
  */
 
 import type { Organization } from '../contexts/OrganizationContext'
+import { getLink, RouteKeys } from './routes'
 
 /**
  * Check if user has multiple roles (across all organizations or within a single org)
@@ -51,8 +53,8 @@ export function hasCoachRole(organizations: Organization[]): boolean {
  * Rules:
  * 1. Platform admins -> /platform-admin
  * 2. Users with multiple roles -> /portal/role-selection
- * 3. Users with admin role -> /admin/dashboard
- * 4. Users with coach role -> /admin/dashboard
+ * 3. Users with admin role -> /admin
+ * 4. Users with coach role -> /admin
  * 5. Otherwise -> /portal/dashboard
  */
 export function getLoginRedirect(
@@ -61,24 +63,24 @@ export function getLoginRedirect(
 ): string {
   // Priority 1: Platform admins
   if (isPlatformAdmin) {
-    return '/platform-admin'
+    return getLink(RouteKeys.PLATFORM_DASHBOARD)
   }
 
   // Priority 2: Multiple roles -> role selection
   if (hasMultipleRoles(organizations)) {
-    return '/portal/role-selection'
+    return getLink(RouteKeys.PORTAL_ROLE_SELECTION)
   }
 
   // Priority 3: Admin role -> admin section
   if (hasAdminRole(organizations)) {
-    return '/admin'
+    return getLink(RouteKeys.ADMIN_DASHBOARD)
   }
 
   // Priority 4: Coach role -> admin section
   if (hasCoachRole(organizations)) {
-    return '/admin'
+    return getLink(RouteKeys.ADMIN_DASHBOARD)
   }
 
   // Default: Parent dashboard
-  return '/portal/dashboard'
+  return getLink(RouteKeys.PORTAL_DASHBOARD)
 }
