@@ -1909,6 +1909,13 @@
     text-decoration: none;
 }
 
+/* Ensure logo image displays correctly - no filters that might invert colors */
+.gn-brand img {
+    display: block;
+    filter: none !important;
+    mix-blend-mode: normal !important;
+}
+
 .gn-logo {
     width: 32px;
     height: 32px;

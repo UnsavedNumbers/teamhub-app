@@ -81,18 +81,21 @@ const SPORT_NAME_ALIASES: Record<string, string> = {
  * All images are WebP format for optimal performance
  * Keys are normalized (lowercase) for case-insensitive matching
  */
-const SPORT_IMAGE_MAP: Record<string, { hero: string; card: string }> = {
+const SPORT_IMAGE_MAP: Record<string, { hero: string; card: string; travel?: string }> = {
     'soccer': {
         hero: '/images/sports/soccer/hero-bg.webp',
         card: '/images/sports/soccer/card-bg.webp',
+        travel: '/images/sports/soccer/travel.png',
     },
     'basketball': {
         hero: '/images/sports/basketball/hero-bg.webp',
         card: '/images/sports/basketball/card-bg.webp',
+        travel: '/images/sports/basketball/travel.png',
     },
     'baseball': {
         hero: '/images/sports/baseball/hero-bg.webp',
         card: '/images/sports/baseball/card-bg.webp',
+        travel: '/images/sports/baseball/travel.png',
     },
     'softball': {
         hero: '/images/sports/softball/hero-bg.webp',
@@ -101,6 +104,7 @@ const SPORT_IMAGE_MAP: Record<string, { hero: string; card: string }> = {
     'football': {
         hero: '/images/sports/football/hero-bg.webp',
         card: '/images/sports/football/card-bg.webp',
+        travel: '/images/sports/football/travel-football.png',
     },
     'flag football': {
         hero: '/images/sports/flag-football/hero-bg.webp',
@@ -174,6 +178,7 @@ const SPORT_IMAGE_MAP: Record<string, { hero: string; card: string }> = {
 const DEFAULT_IMAGE_PATHS = {
     hero: '/images/sports/default/hero-bg.webp',
     card: '/images/sports/default/card-bg.webp',
+    travel: '/images/sports/default/card-bg.webp', // Fallback to card bg for travel
 }
 
 /**
@@ -181,12 +186,12 @@ const DEFAULT_IMAGE_PATHS = {
  * Defines how many numbered variants exist for each sport
  * Example: Soccer card: 3 means card-bg.webp, card-bg2.webp, card-bg3.webp exist
  */
-const SPORT_IMAGE_VARIANTS: Record<string, { hero: number; card: number }> = {
-    'soccer': { hero: 1, card: 1 },
-    'basketball': { hero: 1, card: 1 },
-    'baseball': { hero: 1, card: 1 },
+const SPORT_IMAGE_VARIANTS: Record<string, { hero: number; card: number; travel?: number }> = {
+    'soccer': { hero: 1, card: 1, travel: 1 },
+    'basketball': { hero: 1, card: 1, travel: 1 },
+    'baseball': { hero: 1, card: 1, travel: 1 },
     'softball': { hero: 1, card: 1 },
-    'football': { hero: 1, card: 1 },
+    'football': { hero: 1, card: 1, travel: 1 },
     'flag football': { hero: 1, card: 1 },
     'volleyball': { hero: 1, card: 1 },
     'lacrosse': { hero: 1, card: 1 },
@@ -211,7 +216,7 @@ const SPORT_IMAGE_VARIANTS: Record<string, { hero: number; card: number }> = {
  */
 export function getRandomSportImagePath(
     sportName: string | null | undefined,
-    type: 'hero' | 'card',
+    type: 'hero' | 'card' | 'travel',
     darkMode: boolean = false
 ): string {
     if (!sportName || typeof sportName !== 'string') {
@@ -237,6 +242,16 @@ export function getRandomSportImagePath(
     }
 
     const basePath = sportImages[type]
+    
+    // If travel image doesn't exist for this sport, fall back to card image
+    if (type === 'travel' && !basePath) {
+        return sportImages['card'] || DEFAULT_IMAGE_PATHS['card']
+    }
+    
+    // If card or hero image doesn't exist, fall back to default
+    if (!basePath) {
+        return DEFAULT_IMAGE_PATHS[type]
+    }
 
     // Determine random variant number
     const maxVariants = variants?.[type] || 1
@@ -246,13 +261,13 @@ export function getRandomSportImagePath(
     let imagePath = basePath
     if (variantNumber > 1) {
         // Insert number before file extension: hero-bg.webp -> hero-bg2.webp
-        imagePath = basePath.replace(/\.webp$/i, `${variantNumber}.webp`)
+        imagePath = basePath.replace(/\.(webp|png|jpg|jpeg)$/i, `${variantNumber}.$1`)
     }
 
     // Handle dark mode variants
     if (darkMode) {
         try {
-            const darkPath = imagePath.replace(/\.webp$/i, '-dark.webp')
+            const darkPath = imagePath.replace(/\.(webp|png|jpg|jpeg)$/i, '-dark.$1')
             return darkPath
         } catch (err) {
             return imagePath
@@ -267,14 +282,14 @@ export function getRandomSportImagePath(
  * Used for Dashboard to always show default images
  */
 export function getDefaultImagePath(
-    type: 'hero' | 'card',
+    type: 'hero' | 'card' | 'travel',
     darkMode: boolean = false
 ): string {
     const basePath = DEFAULT_IMAGE_PATHS[type]
 
     if (darkMode) {
         try {
-            return basePath.replace(/\.webp$/i, '-dark.webp')
+            return basePath.replace(/\.(webp|png|jpg|jpeg)$/i, '-dark.$1')
         } catch (err) {
             return basePath
         }
@@ -289,7 +304,7 @@ export function getDefaultImagePath(
  */
 export function getSportImagePath(
     sportName: string | null | undefined,
-    type: 'hero' | 'card',
+    type: 'hero' | 'card' | 'travel',
     darkMode: boolean = false
 ): string {
     if (!sportName || typeof sportName !== 'string') {
@@ -314,6 +329,11 @@ export function getSportImagePath(
     }
 
     const basePath = sportImages[type]
+    
+    // If travel image doesn't exist for this sport, fall back to card image
+    if (type === 'travel' && !basePath) {
+        return sportImages['card'] || DEFAULT_IMAGE_PATHS['card']
+    }
 
     // For dark mode, try dark variant first
     if (darkMode) {
@@ -336,7 +356,7 @@ export function getSportImagePath(
  */
 export function getImagePathsWithFallback(
     sportName: string | null | undefined,
-    type: 'hero' | 'card',
+    type: 'hero' | 'card' | 'travel',
     darkMode: boolean = false
 ): string[] {
     const sportPath = getSportImagePath(sportName, type, darkMode)
@@ -385,8 +405,8 @@ export function isDefaultImagePath(path: string): boolean {
 /**
  * Get alt text for sport image
  */
-export function getSportImageAlt(sportName: string | null | undefined, type: 'hero' | 'card'): string {
+export function getSportImageAlt(sportName: string | null | undefined, type: 'hero' | 'card' | 'travel'): string {
     const sport = sportName || 'sport'
-    const typeLabel = type === 'hero' ? 'hero background' : 'card background'
+    const typeLabel = type === 'hero' ? 'hero background' : type === 'travel' ? 'travel background' : 'card background'
     return `${sport} ${typeLabel} image`
 }
