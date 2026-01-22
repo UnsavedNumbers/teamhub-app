@@ -29,7 +29,7 @@ export default function CreateAthletePortal() {
         last_name: '',
         date_of_birth: '',
         gender: '' as Gender | '',
-        jersey_number: '',
+        preferred_name: '',
         medical_notes: '',
         allergies: '',
         emergency_contact_name: '',
@@ -189,7 +189,7 @@ export default function CreateAthletePortal() {
                 last_name: formData.last_name,
                 date_of_birth: formData.date_of_birth,
                 gender: formData.gender || null,
-                jersey_number: formData.jersey_number.trim() || null,
+                preferred_name: formData.preferred_name.trim() || null,
                 medical_notes: formData.medical_notes.trim() || null,
                 allergies: formData.allergies.trim() || null,
                 emergency_contact_name: formData.emergency_contact_name.trim() || null,
@@ -359,14 +359,14 @@ export default function CreateAthletePortal() {
 
                     <div>
                         <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
-                            Jersey Number
+                            Preferred Name / Goes By
                         </label>
                         <input
                             type="text"
-                            value={formData.jersey_number}
-                            onChange={(e) => setFormData({ ...formData, jersey_number: e.target.value })}
+                            value={formData.preferred_name}
+                            onChange={(e) => setFormData({ ...formData, preferred_name: e.target.value })}
                             className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
-                            placeholder="e.g. 23"
+                            placeholder="e.g. Mike, Johnny, etc."
                         />
                     </div>
                 </Card>

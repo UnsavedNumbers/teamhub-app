@@ -491,6 +491,7 @@ export async function createAthleteWithGuardians(
             last_name: dto.last_name,
             birthdate: dto.date_of_birth,
             gender: dto.gender || null,
+            preferred_name: dto.preferred_name || null,
             jersey_number: dto.jersey_number || null,
             medical_notes: dto.medical_notes || null,
             allergies: dto.allergies || null,
