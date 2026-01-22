@@ -27,10 +27,10 @@ export default function OrganizationOnboarding() {
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   const hasRedirected = useRef(false)
   const hasLoadedOrgData = useRef<string | null>(null)
-  
+
   const navigate = useNavigate()
   const { profile, loading: authLoading, user, refreshProfile } = useAuth()
   const { currentOrganization, setCurrentOrganization, setOrganizations } = useOrganization()
@@ -85,7 +85,7 @@ export default function OrganizationOnboarding() {
     }
     if (!profile) return
     if (profile.email) setValue('contact_email', profile.email)
-    
+
     if (currentOrganization) {
       if (hasLoadedOrgData.current !== currentOrganization.id) {
         hasLoadedOrgData.current = currentOrganization.id; loadOrganizationData()
@@ -106,19 +106,35 @@ export default function OrganizationOnboarding() {
         if (existingOrg) { setError('This URL slug is already taken. Please choose a different one.'); setCreating(false); return }
 
         type OrgInsert = Database['public']['Tables']['organizations']['Insert']
-        const orgInsertData = { name: data.name, slug: data.slug, org_type: data.org_type || undefined, contact_email: data.contact_email } satisfies OrgInsert
-        const { data: newOrg, error: createError } = await supabase.from('organizations').insert(orgInsertData).select().single() as { data: { id: string; name: string; slug: string | null } | null; error: { message?: string } | null }
+        const orgInsertData = {
+          name: data.name,
+          slug: data.slug,
+          org_type: data.org_type || undefined,
+          contact_email: data.contact_email,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        } satisfies OrgInsert
+
+        console.log(orgInsertData);
+
+        const { data: newOrg, error: createError } = await supabase
+          .from('organizations')
+          .insert(orgInsertData)
+          .select()
+          .single() as { data: { id: string; name: string; slug: string | null } | null; error: { message?: string } | null }
+
         if (createError || !newOrg) throw createError || new Error('Failed to create organization')
+        
         orgId = newOrg.id
         type MemberInsert = Database['public']['Tables']['organization_members']['Insert']
         const memberInsertData = { org_id: orgId, user_id: profile.id, role: 'org_admin' } satisfies MemberInsert
         const { error: memberError } = await supabase.from('organization_members').insert(memberInsertData)
         if (memberError) { await supabase.from('organizations').delete().eq('id', orgId); throw memberError }
 
-        const nextOrg: Organization = { 
-          id: newOrg.id, 
-          name: newOrg.name, 
-          slug: newOrg.slug ?? undefined, 
+        const nextOrg: Organization = {
+          id: newOrg.id,
+          name: newOrg.name,
+          slug: newOrg.slug ?? undefined,
           roles: ['org_admin'],
           get role() { return this.roles[0] ?? 'parent' }
         }
