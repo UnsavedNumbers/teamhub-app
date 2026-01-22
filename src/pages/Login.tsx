@@ -24,11 +24,17 @@ export default function Login() {
   const { signInWithEmail, user } = useAuth()
   const { resolvedTheme } = useTheme()
   const navigate = useNavigate()
+  const [logoVersion, setLogoVersion] = useState(0)
 
   // Clean up stale localStorage flags on mount
   useEffect(() => {
     cleanupStaleFlags()
   }, [])
+
+  // Update logo version when theme changes to force reload
+  useEffect(() => {
+    setLogoVersion(prev => prev + 1)
+  }, [resolvedTheme])
 
   // Select random hero image on mount
   useEffect(() => {
@@ -172,7 +178,8 @@ export default function Login() {
           {/* Logo */}
           <div className="mb-8 pt-4">
             <img 
-              src={resolvedTheme === 'dark' ? '/images/logo-dark.png' : '/images/logo-light.png'}
+              key={resolvedTheme}
+              src={`${resolvedTheme === 'dark' ? '/images/logo-dark.png' : '/images/logo-light.png'}?theme=${resolvedTheme}&v=${logoVersion}`}
               alt="YouthSports" 
               className="h-24 w-auto object-contain"
             />

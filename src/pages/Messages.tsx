@@ -228,7 +228,7 @@ export default function Messages() {
   return (
     <>
       <PortalHeader />
-      <div className="min-h-screen bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-slate-100 antialiased relative">
+      <div className="h-[calc(100vh-4rem)] bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-slate-100 antialiased relative overflow-hidden">
         <div 
           className="fixed inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.02] z-[-1]"
           style={{
@@ -236,7 +236,7 @@ export default function Messages() {
             backgroundSize: '100px 100px',
           }}
         />
-        <div className="flex h-screen pt-16">
+        <div className="flex h-full">
           <div className="w-64 bg-white dark:bg-slate-900/50 border-r border-slate-100 dark:border-slate-800 flex flex-col">
             <div className="p-6 border-b border-slate-100 dark:border-slate-800">
               <PageTitle className="text-2xl mb-2">Messages</PageTitle>
