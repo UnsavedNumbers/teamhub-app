@@ -32,6 +32,7 @@ export default function CreateAthlete() {
         last_name: '',
         date_of_birth: '',
         gender: '' as Gender | '',
+        preferred_name: '',
         jersey_number: '',
         medical_notes: '',
         allergies: '',
@@ -79,6 +80,7 @@ export default function CreateAthlete() {
                 last_name: formData.last_name,
                 date_of_birth: formData.date_of_birth,
                 gender: formData.gender || null,
+                preferred_name: formData.preferred_name || null,
                 jersey_number: formData.jersey_number || null,
                 medical_notes: formData.medical_notes || null,
                 allergies: formData.allergies || null,
@@ -187,6 +189,15 @@ export default function CreateAthlete() {
                                         { value: 'female', label: 'Female' },
                                         { value: 'other', label: 'Other/Prefer not to say' }
                                     ]}
+                                />
+                            </div>
+
+                            <div className="pa-mb-6">
+                                <Input
+                                    label="Preferred Name / Goes By (Optional)"
+                                    value={formData.preferred_name}
+                                    onChange={(e) => setFormData({ ...formData, preferred_name: e.target.value })}
+                                    placeholder="e.g. Mike, Johnny, etc."
                                 />
                             </div>
 

@@ -17,6 +17,7 @@ export interface Athlete {
     last_name: string
     date_of_birth: string
     gender: Gender | null
+    preferred_name: string | null  // Name the athlete prefers to go by (nickname, etc.)
     jersey_number: string | null
     medical_notes: string | null
     allergies: string | null
@@ -76,6 +77,7 @@ export interface CreateAthleteDTO {
     last_name: string
     date_of_birth: string
     gender?: Gender | null
+    preferred_name?: string | null
     jersey_number?: string | null
     medical_notes?: string | null
     allergies?: string | null
@@ -95,6 +97,7 @@ export interface UpdateAthleteDTO {
     last_name?: string
     date_of_birth?: string
     gender?: Gender | null
+    preferred_name?: string | null
     jersey_number?: string | null
     medical_notes?: string | null
     allergies?: string | null
