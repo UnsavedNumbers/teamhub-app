@@ -6,6 +6,44 @@
  */
 
 import { DEMO_ORG_A_ID, DEMO_USER_IDS } from '../config'
+
+// ============================================================================
+// Dynamic Year Helpers
+// ============================================================================
+
+const getCurrentYear = () => new Date().getFullYear()
+const getPreviousYear = () => getCurrentYear() - 1
+const getNextYear = () => getCurrentYear() + 1
+
+// Helper to format season name with current year
+const getSpringSeasonName = () => `Spring ${getCurrentYear()}`
+const getFallSeasonName = () => `Fall ${getPreviousYear()}`
+const getFallUpcomingSeasonName = () => `Fall ${getNextYear()}`
+
+// Helper to get season dates
+const getSpringSeasonDates = () => {
+    const year = getCurrentYear()
+    return {
+        start_date: `${year}-03-01`,
+        end_date: `${year}-06-30`,
+    }
+}
+
+const getFallSeasonDates = () => {
+    const year = getPreviousYear()
+    return {
+        start_date: `${year}-09-01`,
+        end_date: `${year}-12-15`,
+    }
+}
+
+const getFallUpcomingSeasonDates = () => {
+    const year = getNextYear()
+    return {
+        start_date: `${year}-09-01`,
+        end_date: `${year}-12-15`,
+    }
+}
 import {
     CHILD_EMMA_JOHNSON_ID,
     CHILD_LIAM_JOHNSON_ID,
@@ -113,9 +151,10 @@ export const TEAM_U10_VOLLEYBALL_ID = 'team-u10-volleyball-006'
 export const TEAM_U8_BASEBALL_ID = 'team-u8-baseball-007'
 export const TEAM_U12_BASEBALL_ID = 'team-u12-baseball-008'
 
-// Seasons (Org-scoped now)
-export const SEASON_SPRING_2024_ID = 'season-spring-2024'
-export const SEASON_FALL_2023_ID = 'season-fall-2023'
+// Seasons (Org-scoped now) - IDs are stable but names/dates are dynamic
+export const SEASON_SPRING_CURRENT_ID = 'season-spring-current'
+export const SEASON_FALL_PREVIOUS_ID = 'season-fall-previous'
+export const SEASON_FALL_UPCOMING_ID = 'season-fall-upcoming'
 
 // ============================================================================
 // Reference to demo user IDs
@@ -578,62 +617,69 @@ export const fakeTeams: FakeTeam[] = [
 
 export const fakeSeasons: FakeSeason[] = [
     {
-        id: SEASON_SPRING_2024_ID,
+        id: SEASON_SPRING_CURRENT_ID,
         org_id: DEMO_ORG_A_ID,
-        name: 'Spring 2024',
-        start_date: '2024-03-01',
-        end_date: '2024-06-30',
+        name: getSpringSeasonName(),
+        ...getSpringSeasonDates(),
         is_active: true,
-        created_at: '2024-01-15T00:00:00Z',
-        updated_at: '2024-03-01T00:00:00Z',
+        created_at: `${getCurrentYear()}-01-15T00:00:00Z`,
+        updated_at: `${getCurrentYear()}-03-01T00:00:00Z`,
     },
     {
-        id: SEASON_FALL_2023_ID,
+        id: SEASON_FALL_PREVIOUS_ID,
         org_id: DEMO_ORG_A_ID,
-        name: 'Fall 2023',
-        start_date: '2023-09-01',
-        end_date: '2023-12-15',
+        name: getFallSeasonName(),
+        ...getFallSeasonDates(),
         is_active: false,
-        created_at: '2023-07-01T00:00:00Z',
-        updated_at: '2023-12-15T00:00:00Z',
+        created_at: `${getPreviousYear()}-07-01T00:00:00Z`,
+        updated_at: `${getPreviousYear()}-12-15T00:00:00Z`,
+    },
+    {
+        id: SEASON_FALL_UPCOMING_ID,
+        org_id: DEMO_ORG_A_ID,
+        name: getFallUpcomingSeasonName(),
+        ...getFallUpcomingSeasonDates(),
+        is_active: false, // Upcoming season is not yet active
+        created_at: `${getCurrentYear()}-06-01T00:00:00Z`,
+        updated_at: `${getCurrentYear()}-06-01T00:00:00Z`,
     },
 ]
 
 export const fakeTeamSeasons: FakeTeamSeason[] = [
     // Link Spring 2024
-    { team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_2024_ID, is_active: true, created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
-    { team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_2024_ID, is_active: true, created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
-    { team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_2024_ID, is_active: true, created_at: '2024-02-10T00:00:00Z', updated_at: '2024-02-10T00:00:00Z' },
-    { team_id: TEAM_U12_BASKETBALL_ID, season_id: SEASON_SPRING_2024_ID, is_active: true, created_at: '2024-02-15T00:00:00Z', updated_at: '2024-02-15T00:00:00Z' },
-    { team_id: TEAM_U14_SOCCER_ELITE_ID, season_id: SEASON_SPRING_2024_ID, is_active: true, created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
+    { team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, is_active: true, created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
+    { team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, is_active: true, created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
+    { team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, is_active: true, created_at: '2024-02-10T00:00:00Z', updated_at: '2024-02-10T00:00:00Z' },
+    { team_id: TEAM_U12_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, is_active: true, created_at: '2024-02-15T00:00:00Z', updated_at: '2024-02-15T00:00:00Z' },
+    { team_id: TEAM_U14_SOCCER_ELITE_ID, season_id: SEASON_SPRING_CURRENT_ID, is_active: true, created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
     // Past Season
-    { team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_FALL_2023_ID, is_active: false, created_at: '2023-08-01T00:00:00Z', updated_at: '2023-12-15T00:00:00Z' },
+    { team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_FALL_PREVIOUS_ID, is_active: false, created_at: '2023-08-01T00:00:00Z', updated_at: '2023-12-15T00:00:00Z' },
 ]
 
 export const fakeTeamMembers: FakeTeamMember[] = [
     // Need to use new unified season IDs
-    { id: 'tm-001', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_2024_ID, child_id: CHILD_EMMA_JOHNSON_ID, role: 'player', status: 'active', jersey_number: '7', position: 'Forward', joined_at: '2024-02-01T00:00:00Z', created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
-    { id: 'tm-002', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_2024_ID, child_id: CHILD_SOPHIA_CHEN_ID, role: 'captain', status: 'active', jersey_number: '10', position: 'Midfielder', joined_at: '2024-02-01T00:00:00Z', created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
-    { id: 'tm-003', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_2024_ID, child_id: CHILD_AIDEN_PATEL_ID, role: 'player', status: 'active', jersey_number: '5', position: 'Defender', joined_at: '2024-02-05T00:00:00Z', created_at: '2024-02-05T00:00:00Z', updated_at: '2024-02-05T00:00:00Z' },
+    { id: 'tm-001', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_EMMA_JOHNSON_ID, role: 'player', status: 'active', jersey_number: '7', position: 'Forward', joined_at: '2024-02-01T00:00:00Z', created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
+    { id: 'tm-002', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_SOPHIA_CHEN_ID, role: 'captain', status: 'active', jersey_number: '10', position: 'Midfielder', joined_at: '2024-02-01T00:00:00Z', created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
+    { id: 'tm-003', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_AIDEN_PATEL_ID, role: 'player', status: 'active', jersey_number: '5', position: 'Defender', joined_at: '2024-02-05T00:00:00Z', created_at: '2024-02-05T00:00:00Z', updated_at: '2024-02-05T00:00:00Z' },
 
-    { id: 'tm-004', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_2024_ID, child_id: CHILD_OLIVIA_SMITH_ID, role: 'player', status: 'active', jersey_number: '23', position: 'Goalkeeper', joined_at: '2024-02-01T00:00:00Z', created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
-    { id: 'tm-005', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_2024_ID, child_id: CHILD_MASON_RODRIGUEZ_ID, role: 'captain', status: 'active', jersey_number: '22', position: 'Forward', joined_at: '2024-02-01T00:00:00Z', created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
-    { id: 'tm-006', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_2024_ID, child_id: CHILD_AVA_WILLIAMS_ID, role: 'player', status: 'active', jersey_number: '15', position: 'Midfielder', joined_at: '2024-02-03T00:00:00Z', created_at: '2024-02-03T00:00:00Z', updated_at: '2024-02-03T00:00:00Z' },
+    { id: 'tm-004', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_OLIVIA_SMITH_ID, role: 'player', status: 'active', jersey_number: '23', position: 'Goalkeeper', joined_at: '2024-02-01T00:00:00Z', created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
+    { id: 'tm-005', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_MASON_RODRIGUEZ_ID, role: 'captain', status: 'active', jersey_number: '22', position: 'Forward', joined_at: '2024-02-01T00:00:00Z', created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
+    { id: 'tm-006', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_AVA_WILLIAMS_ID, role: 'player', status: 'active', jersey_number: '15', position: 'Midfielder', joined_at: '2024-02-03T00:00:00Z', created_at: '2024-02-03T00:00:00Z', updated_at: '2024-02-03T00:00:00Z' },
 
-    { id: 'tm-007', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_2024_ID, child_id: CHILD_LIAM_JOHNSON_ID, role: 'player', status: 'active', jersey_number: '12', position: 'Guard', joined_at: '2024-02-10T00:00:00Z', created_at: '2024-02-10T00:00:00Z', updated_at: '2024-02-10T00:00:00Z' },
-    { id: 'tm-008', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_2024_ID, child_id: CHILD_NOAH_SMITH_ID, role: 'player', status: 'active', jersey_number: '8', position: 'Forward', joined_at: '2024-02-10T00:00:00Z', created_at: '2024-02-10T00:00:00Z', updated_at: '2024-02-10T00:00:00Z' },
-    { id: 'tm-009', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_2024_ID, child_id: CHILD_ETHAN_WILLIAMS_ID, role: 'player', status: 'active', jersey_number: '3', position: 'Center', joined_at: '2024-02-12T00:00:00Z', created_at: '2024-02-12T00:00:00Z', updated_at: '2024-02-12T00:00:00Z' },
+    { id: 'tm-007', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_LIAM_JOHNSON_ID, role: 'player', status: 'active', jersey_number: '12', position: 'Guard', joined_at: '2024-02-10T00:00:00Z', created_at: '2024-02-10T00:00:00Z', updated_at: '2024-02-10T00:00:00Z' },
+    { id: 'tm-008', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_NOAH_SMITH_ID, role: 'player', status: 'active', jersey_number: '8', position: 'Forward', joined_at: '2024-02-10T00:00:00Z', created_at: '2024-02-10T00:00:00Z', updated_at: '2024-02-10T00:00:00Z' },
+    { id: 'tm-009', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_ETHAN_WILLIAMS_ID, role: 'player', status: 'active', jersey_number: '3', position: 'Center', joined_at: '2024-02-12T00:00:00Z', created_at: '2024-02-12T00:00:00Z', updated_at: '2024-02-12T00:00:00Z' },
 
-    { id: 'tm-010', team_id: TEAM_U12_BASKETBALL_ID, season_id: SEASON_SPRING_2024_ID, child_id: CHILD_ISABELLA_RODRIGUEZ_ID, role: 'player', status: 'active', jersey_number: '17', position: 'Guard', joined_at: '2024-02-15T00:00:00Z', created_at: '2024-02-15T00:00:00Z', updated_at: '2024-02-15T00:00:00Z' },
+    { id: 'tm-010', team_id: TEAM_U12_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_ISABELLA_RODRIGUEZ_ID, role: 'player', status: 'active', jersey_number: '17', position: 'Guard', joined_at: '2024-02-15T00:00:00Z', created_at: '2024-02-15T00:00:00Z', updated_at: '2024-02-15T00:00:00Z' },
 ]
 
 export const fakeCoachAssignments: FakeCoachAssignment[] = [
-    { id: 'ca-001', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_2024_ID, user_id: COACH_ONLY_ID, role: 'head_coach', created_at: '2024-02-01T00:00:00Z' },
-    { id: 'ca-002', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_2024_ID, user_id: COACH_ONLY_ID, role: 'head_coach', created_at: '2024-02-01T00:00:00Z' },
-    { id: 'ca-003', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_2024_ID, user_id: PARENT_COACH_ID, role: 'head_coach', created_at: '2024-02-10T00:00:00Z' },
-    { id: 'ca-004', team_id: TEAM_U12_BASKETBALL_ID, season_id: SEASON_SPRING_2024_ID, user_id: USER_COACH_MARTINEZ_ID, role: 'head_coach', created_at: '2024-02-15T00:00:00Z' },
-    { id: 'ca-005', team_id: TEAM_U14_SOCCER_ELITE_ID, season_id: SEASON_SPRING_2024_ID, user_id: USER_COACH_THOMPSON_ID, role: 'head_coach', created_at: '2024-02-01T00:00:00Z' },
-    { id: 'ca-006', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_2024_ID, user_id: USER_COACH_MARTINEZ_ID, role: 'assistant_coach', created_at: '2024-02-05T00:00:00Z' },
+    { id: 'ca-001', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: COACH_ONLY_ID, role: 'head_coach', created_at: '2024-02-01T00:00:00Z' },
+    { id: 'ca-002', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: COACH_ONLY_ID, role: 'head_coach', created_at: '2024-02-01T00:00:00Z' },
+    { id: 'ca-003', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: PARENT_COACH_ID, role: 'head_coach', created_at: '2024-02-10T00:00:00Z' },
+    { id: 'ca-004', team_id: TEAM_U12_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: USER_COACH_MARTINEZ_ID, role: 'head_coach', created_at: '2024-02-15T00:00:00Z' },
+    { id: 'ca-005', team_id: TEAM_U14_SOCCER_ELITE_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: USER_COACH_THOMPSON_ID, role: 'head_coach', created_at: '2024-02-01T00:00:00Z' },
+    { id: 'ca-006', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: USER_COACH_MARTINEZ_ID, role: 'assistant_coach', created_at: '2024-02-05T00:00:00Z' },
 ]
 
 // ============================================================================

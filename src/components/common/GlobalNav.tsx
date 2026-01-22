@@ -240,7 +240,7 @@ export default function GlobalNav({ variant }: GlobalNavProps) {
 
   const brandPath = isAdmin ? '/admin' : '/platform-admin'
   const brandIcon = isAdmin ? 'sports' : 'shield_person'
-  const brandText = isAdmin ? 'TEAMHUB' : 'ADMIN'
+  const brandText = isAdmin ? 'YOUTH SPORTS' : 'ADMIN'
 
   return (
     <nav className="gn-root" role="navigation" aria-label="Main navigation">

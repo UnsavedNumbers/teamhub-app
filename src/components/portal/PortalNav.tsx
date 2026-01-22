@@ -392,7 +392,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
               <div className="gn-logo">
                 <span className="material-symbols-outlined">{brandIcon}</span>
               </div>
-              <span className="gn-brand-text">TEAMHUB</span>
+              <span className="gn-brand-text">YOUTH SPORTS</span>
             </>
           )}
         </Link>

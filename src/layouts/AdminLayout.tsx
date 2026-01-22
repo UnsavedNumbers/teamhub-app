@@ -102,10 +102,12 @@ export default function AdminLayout() {
         {/* Brand */}
         <div className="pa-sidebar-header">
           <Link to="/admin" className="pa-sidebar-brand">
-            <div className="pa-sidebar-logo">
-              <span className="material-symbols-outlined">sports</span>
-            </div>
-            <span className="pa-sidebar-title">TEAMHUB</span>
+            <img 
+              src="/images/logo-dark.png" 
+              alt="Youth Sports" 
+              className="pa-sidebar-logo-img"
+              style={{ height: '32px', width: 'auto' }}
+            />
           </Link>
           {currentOrganization && (
             <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--pa-n500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -139,11 +141,15 @@ export default function AdminLayout() {
                 )
               }
 
+              // Dashboard should never show as active (always white like unselected items)
+              const isDashboard = item.label === 'Dashboard'
+              const shouldShowActive = !isDashboard && active
+
               return (
                 <div key={item.label} className="pa-nav-item-top">
                   <Link
                     to={item.path}
-                    className={`pa-nav-link-top ${active ? 'active' : ''}`}
+                    className={`pa-nav-link-top ${shouldShowActive ? 'active' : ''} ${isDashboard ? 'pa-nav-dashboard' : ''}`}
                   >
                     <span className="material-symbols-outlined">{item.icon}</span>
                     <span>{item.label}</span>

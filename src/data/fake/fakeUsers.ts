@@ -7,6 +7,7 @@
 
 import { DEMO_USER_IDS, DEMO_ORG_A_ID, DEMO_ORG_B_ID } from '../config'
 import type { OrgMemberRole } from '../../contexts/OrganizationContext'
+import { getOrganizationById } from './fakeOrganizations'
 
 // ============================================================================
 // Types
@@ -618,6 +619,40 @@ export function getOrganizationMembershipForUser(
 export function getUserRolesInOrg(userId: string, orgId: string): OrgMemberRole[] {
     const membership = getOrganizationMembershipForUser(userId, orgId)
     return membership?.roles ?? []
+}
+
+/**
+ * Get all organizations for a user (mimics get_user_organizations RPC)
+ * Returns organizations with their roles, matching the RPC return type
+ */
+export function getUserOrganizations(userId: string): Array<{
+    org_id: string
+    org_name: string
+    roles: OrgMemberRole[]
+}> {
+    const memberships = fakeOrganizationMembers.filter((om) => om.user_id === userId)
+    
+    // Group by org_id and aggregate roles
+    const orgMap = new Map<string, OrgMemberRole[]>()
+    
+    for (const membership of memberships) {
+        const existing = orgMap.get(membership.org_id) || []
+        // Merge roles, avoiding duplicates
+        const combined = [...new Set([...existing, ...membership.roles])]
+        orgMap.set(membership.org_id, combined)
+    }
+    
+    // Get organization names from fakeOrganizations
+    return Array.from(orgMap.entries())
+        .map(([orgId, roles]) => {
+            const org = getOrganizationById(orgId)
+            return {
+                org_id: orgId,
+                org_name: org?.name || 'Unknown Organization',
+                roles: roles.sort(), // Sort for consistency
+            }
+        })
+        .sort((a, b) => a.org_name.localeCompare(b.org_name)) // Sort by name
 }
 
 export function getAllChildIds(): string[] {

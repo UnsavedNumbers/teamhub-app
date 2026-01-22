@@ -8,8 +8,12 @@
 import { DEMO_ORG_A_ID } from '../config'
 import {
     TEAM_U12_SOCCER_ID,
-    SEASON_SPRING_2024_ID,
+    SEASON_SPRING_CURRENT_ID,
 } from './fakeTeams'
+
+// Dynamic year helpers
+const getCurrentYear = () => new Date().getFullYear()
+const getSpringSeasonName = () => `Spring ${getCurrentYear()}`
 import {
     CHILD_EMMA_JOHNSON_ID,
     CHILD_LIAM_JOHNSON_ID,
@@ -100,11 +104,11 @@ export const fakeFees: FakeFee[] = [
         org_id: DEMO_ORG_A_ID,
         team_id: null, // All soccer teams
         season_id: null,
-        title: 'Spring 2024 Soccer Registration',
+        title: `${getSpringSeasonName()} Soccer Registration`,
         description: 'Season registration fee covers league fees, referee costs, and field maintenance.',
         amount_cents: 15000, // $150.00
         currency: 'usd',
-        due_date: '2024-02-28',
+        due_date: `${getCurrentYear()}-02-28`,
         status: 'active',
         allow_partial: true,
         created_at: '2024-01-15T00:00:00Z',
@@ -129,12 +133,12 @@ export const fakeFees: FakeFee[] = [
         id: FEE_TOURNAMENT_U12_ID,
         org_id: DEMO_ORG_A_ID,
         team_id: TEAM_U12_SOCCER_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'Spring Cup Tournament Fee',
         description: 'Tournament entry fee. Covers 3 guaranteed games.',
         amount_cents: 4500, // $45.00
         currency: 'usd',
-        due_date: '2024-03-15',
+        due_date: `${getCurrentYear()}-03-15`,
         status: 'active',
         allow_partial: false,
         created_at: '2024-02-15T00:00:00Z',
@@ -164,7 +168,7 @@ export const fakeFees: FakeFee[] = [
         description: 'Practice basketball and team equipment.',
         amount_cents: 2500, // $25.00
         currency: 'usd',
-        due_date: '2024-02-15',
+        due_date: `${getCurrentYear()}-02-15`,
         status: 'active',
         allow_partial: false,
         created_at: '2024-01-25T00:00:00Z',
