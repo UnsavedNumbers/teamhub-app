@@ -24,7 +24,7 @@ import Unauthorized from './pages/Unauthorized'
 
 // Main Pages (keep unchanged - Tailwind CSS)
 import Dashboard from './pages/Dashboard'
-import Children from './pages/Children'
+import Athletes from './pages/Athletes'
 import JoinTeam from './pages/JoinTeam'
 import Calendar from './pages/Calendar'
 import EventDetail from './pages/EventDetail'
@@ -40,6 +40,9 @@ import TryoutDetail from './pages/TryoutDetail'
 import Messages from './pages/Messages'
 import AnnouncementDetail from './pages/AnnouncementDetail'
 import { RoleSelection } from './pages/RoleSelection'
+
+// Portal Pages - Lazy loaded
+const CreateAthletePortal = lazy(() => import('./pages/CreateAthletePortal'))
 
 // Admin Layout (Material Dashboard)
 import AdminLayout from './layouts/AdminLayout'
@@ -201,7 +204,8 @@ function AppWithTheme() {
             <Route path="role-selection" element={<ProtectedRoute><RoleSelection /></ProtectedRoute>} />
             <Route path="dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-            <Route path="athletes" element={<ProtectedRoute><Children /></ProtectedRoute>} />
+            <Route path="athletes" element={<ProtectedRoute><Athletes /></ProtectedRoute>} />
+            <Route path="athletes/new" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><CreateAthletePortal /></Suspense></ProtectedRoute>} />
             <Route path="join" element={<ProtectedRoute><JoinTeam /></ProtectedRoute>} />
             <Route path="calendar/events/:eventId" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />
             <Route path="calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
