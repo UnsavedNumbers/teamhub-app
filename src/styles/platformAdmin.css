@@ -408,6 +408,31 @@
     opacity: 1;
 }
 
+/* Dashboard should always appear as unselected (white icon and text) */
+.pa-nav-link-top.pa-nav-dashboard,
+.pa-nav-link-top.pa-nav-dashboard.active {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: var(--pa-white) !important;
+}
+
+.pa-nav-link-top.pa-nav-dashboard:hover,
+.pa-nav-link-top.pa-nav-dashboard.active:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: var(--pa-white) !important;
+}
+
+.pa-nav-link-top.pa-nav-dashboard .material-symbols-outlined,
+.pa-nav-link-top.pa-nav-dashboard.active .material-symbols-outlined {
+    color: var(--pa-white) !important;
+    opacity: 1;
+}
+
+.pa-nav-link-top.pa-nav-dashboard:hover .material-symbols-outlined,
+.pa-nav-link-top.pa-nav-dashboard.active:hover .material-symbols-outlined {
+    color: var(--pa-white) !important;
+    opacity: 1;
+}
+
 .pa-nav-link-top .pa-nav-toggle-icon {
     margin-left: auto;
     font-size: 20px;
@@ -1542,6 +1567,20 @@
 }
 
 .pa-breadcrumb-current {
+    color: var(--pa-theme-text-accent);
+}
+
+/* Ensure breadcrumb current is dark in light mode */
+.pa-root:not(.dark) .pa-breadcrumb-current,
+.pa-root:not(.dark) .pa-breadcrumb-current a {
+    color: var(--pa-n900);
+}
+
+/* Dark mode: use theme accent */
+.dark .pa-breadcrumb-current,
+.pa-root.dark .pa-breadcrumb-current,
+.dark .pa-breadcrumb-current a,
+.pa-root.dark .pa-breadcrumb-current a {
     color: var(--pa-theme-text-accent);
 }
 

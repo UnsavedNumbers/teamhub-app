@@ -93,12 +93,12 @@ export default function OrganizationIdentityStep({
         className="relative flex flex-col justify-between p-12 hidden lg:block bg-slate-900"
         style={heroBackgroundStyle}
       >
-        {/* TeamHub Logo */}
+        {/* Youth Sports Logo */}
         <div className="flex items-center gap-3 text-white">
           <svg className="size-8" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
             <path d="M13.8261 17.4264C16.7203 18.1174 20.2244 18.5217 24 18.5217C27.7756 18.5217 31.2797 18.1174 34.1739 17.4264C36.9144 16.7722 39.9967 15.2331 41.3563 14.1648L24.8486 40.6391C24.4571 41.267 23.5429 41.267 23.1514 40.6391L6.64374 14.1648C8.00331 15.2331 11.0856 16.7722 13.8261 17.4264Z" fill="currentColor"></path>
           </svg>
-          <span className="text-xl font-black tracking-tighter uppercase font-impact">TeamHub</span>
+          <span className="text-xl font-black tracking-tighter uppercase font-impact">Youth Sports</span>
         </div>
 
         {/* Tagline */}

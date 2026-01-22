@@ -439,24 +439,17 @@ export default function ImportAthletes() {
   if (step === 'mapping' && file && rawRows.length > 0) {
     return (
       <div className="pa-root" style={{ backgroundColor: '#f5f7f8', minHeight: '100vh' }}>
-        <style>{`
-          .field-grid {
-            background-image: 
-              linear-gradient(to right, rgba(148, 163, 184, 0.05) 1px, transparent 1px),
-              linear-gradient(to bottom, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
-            background-size: 40px 40px;
-          }
-        `}</style>
-        <div className="relative flex min-h-screen w-full flex-col field-grid overflow-x-hidden">
+        <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden">
           <main className="flex-1 flex flex-col items-center py-10 px-6">
             <div className="w-full max-w-[1000px] flex flex-col gap-10">
-              {/* Page Heading */}
-              <div className="flex flex-col gap-2">
-                <p className="text-4xl font-black leading-tight tracking-[-0.033em] uppercase">Import Athletes</p>
-                <p className="text-[#4c739a] text-base font-normal">
-                  Follow the linear process to bring your roster into TeamHub. Supported formats: CSV, XLSX.
-                </p>
-              </div>
+              <AdminPageHeader
+                title="Import Athletes"
+                subtitle="Follow the linear process to bring your roster into Youth Sports. Supported formats: CSV, XLSX."
+                breadcrumbs={[
+                  { label: 'Athletes', path: '/admin/athletes' },
+                  { label: 'Import Athletes' },
+                ]}
+              />
 
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -497,7 +490,7 @@ export default function ImportAthletes() {
                     <thead>
                       <tr className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-100">
                         <th className="px-6 py-3">Source Column (From File)</th>
-                        <th className="px-6 py-3">TeamHub Field (Target)</th>
+                        <th className="px-6 py-3">Youth Sports Field (Target)</th>
                         <th className="px-6 py-3">Sample Data</th>
                         <th className="px-6 py-3 text-right">Status</th>
                       </tr>
@@ -613,20 +606,12 @@ export default function ImportAthletes() {
   if (step === 'upload' || !file) {
     return (
       <div className="pa-root" style={{ backgroundColor: '#f6f7f8', minHeight: '100vh' }}>
-        <style>{`
-          .field-grid {
-            background-image: 
-              linear-gradient(to right, rgba(19, 127, 236, 0.05) 1px, transparent 1px),
-              linear-gradient(to bottom, rgba(19, 127, 236, 0.05) 1px, transparent 1px);
-            background-size: 40px 40px;
-          }
-        `}</style>
-        <div className="relative flex min-h-screen w-full flex-col field-grid overflow-x-hidden">
+        <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden">
           <main className="flex-1 flex flex-col items-center py-10 px-6">
             <div className="w-full max-w-[1000px] flex flex-col gap-10">
               <AdminPageHeader
                 title="Import Athletes"
-                subtitle="Follow the linear process to bring your roster into TeamHub. Supported formats: CSV, XLSX."
+                subtitle="Follow the linear process to bring your roster into Youth Sports. Supported formats: CSV, XLSX."
                 breadcrumbs={[
                   { label: 'Athletes', path: '/admin/athletes' },
                   { label: 'Import Athletes' },
@@ -706,7 +691,7 @@ export default function ImportAthletes() {
                       <thead>
                         <tr className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-100">
                           <th className="px-6 py-3">Source Column (From File)</th>
-                          <th className="px-6 py-3">TeamHub Field (Target)</th>
+                          <th className="px-6 py-3">Youth Sports Field (Target)</th>
                           <th className="px-6 py-3">Sample Data</th>
                           <th className="px-6 py-3 text-right">Status</th>
                         </tr>
@@ -824,39 +809,16 @@ export default function ImportAthletes() {
   // Main validation view using import-athletes2 light design
   return (
     <div className="pa-root" style={{ backgroundColor: '#f5f7f8', minHeight: '100vh' }}>
-      <style>{`
-        .field-grid {
-          background-image: 
-            linear-gradient(to right, rgba(148, 163, 184, 0.05) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
-          background-size: 40px 40px;
-        }
-      `}</style>
-      <div className="relative flex min-h-screen w-full flex-col field-grid overflow-x-hidden">
+      <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden">
         <main className="flex flex-col flex-1 px-10 py-8 max-w-[1400px] mx-auto w-full">
-          {/* Breadcrumbs & Heading */}
-          <div className="mb-6">
-            <div className="flex flex-wrap gap-2 mb-2">
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault()
-                  navigate('/admin/athletes')
-                }}
-                className="text-slate-400 text-sm font-medium leading-normal hover:text-slate-900"
-              >
-                Athletes
-              </a>
-              <span className="text-slate-400 text-sm font-medium leading-normal">/</span>
-              <span className="text-slate-900 text-sm font-medium leading-normal">Import Athletes</span>
-            </div>
-            <div className="flex flex-wrap justify-between items-end gap-3">
-              <div className="flex flex-col gap-1">
-                <p className="text-slate-900 text-4xl font-black leading-tight tracking-[-0.033em]">Import Athletes</p>
-                <p className="text-slate-400 text-base font-normal leading-normal">
-                  Validation Hero - Review and fix data before final import
-                </p>
-              </div>
+          <AdminPageHeader
+            title="Import Athletes"
+            subtitle="Review and fix data before final import"
+            breadcrumbs={[
+              { label: 'Athletes', path: '/admin/athletes' },
+              { label: 'Import Athletes' },
+            ]}
+            actions={
               <div className="flex gap-3">
                 <button
                   onClick={() => fileInputRef.current?.click()}
@@ -875,8 +837,8 @@ export default function ImportAthletes() {
                   {loading ? 'Importing...' : 'Complete Import'}
                 </button>
               </div>
-            </div>
-          </div>
+            }
+          />
 
       <input
         ref={fileInputRef}

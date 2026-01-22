@@ -141,10 +141,12 @@ export default function PlatformAdminLayout() {
         {/* Brand */}
         <div className="pa-sidebar-header">
           <Link to="/platform-admin" className="pa-sidebar-brand" onClick={() => setMobileOpen(false)}>
-            <div className="pa-sidebar-logo">
-              <span className="material-symbols-outlined">shield_person</span>
-            </div>
-            <span className="pa-sidebar-title">ADMIN</span>
+            <img 
+              src="/images/logo-dark.png" 
+              alt="Youth Sports" 
+              className="pa-sidebar-logo-img"
+              style={{ height: '32px', width: 'auto' }}
+            />
           </Link>
           {adminRole && (
             <span className="pa-badge pa-badge--info pa-mt-2" style={{ fontSize: '10px' }}>

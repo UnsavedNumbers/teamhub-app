@@ -13,8 +13,13 @@ import {
     TEAM_U10_BASKETBALL_ID,
     TEAM_U12_BASKETBALL_ID,
     TEAM_U14_SOCCER_ELITE_ID,
-    SEASON_SPRING_2024_ID,
+    SEASON_SPRING_CURRENT_ID,
 } from './fakeTeams'
+
+// Dynamic year helpers
+const getCurrentYear = () => new Date().getFullYear()
+const getSpringSeasonName = () => `Spring ${getCurrentYear()}`
+
 import {
     CHILD_EMMA_JOHNSON_ID,
     CHILD_LIAM_JOHNSON_ID,
@@ -72,7 +77,7 @@ export const fakeEvents: CalendarEvent[] = [
     {
         id: EVENT_U10_SOCCER_PRACTICE_1_ID,
         team_id: TEAM_U10_SOCCER_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'U10 Soccer Practice',
         type: 'practice' as EventType,
         start_time: setTime(today, 17, 0), // 5:00 PM today
@@ -93,13 +98,13 @@ export const fakeEvents: CalendarEvent[] = [
         created_at: '2024-03-01T00:00:00Z',
         updated_at: '2024-03-01T00:00:00Z',
         team: { id: TEAM_U10_SOCCER_ID, name: 'U10 Lightning', org_id: DEMO_ORG_A_ID },
-        season: { id: SEASON_SPRING_2024_ID, name: 'Spring 2024' },
+        season: { id: SEASON_SPRING_CURRENT_ID, name: getSpringSeasonName() },
     },
     // U10 Soccer - Practice in 2 days
     {
         id: EVENT_U10_SOCCER_PRACTICE_2_ID,
         team_id: TEAM_U10_SOCCER_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'U10 Soccer Practice',
         type: 'practice' as EventType,
         start_time: setTime(addDays(today, 2), 17, 0),
@@ -120,13 +125,13 @@ export const fakeEvents: CalendarEvent[] = [
         created_at: '2024-03-01T00:00:00Z',
         updated_at: '2024-03-01T00:00:00Z',
         team: { id: TEAM_U10_SOCCER_ID, name: 'U10 Lightning', org_id: DEMO_ORG_A_ID },
-        season: { id: SEASON_SPRING_2024_ID, name: 'Spring 2024' },
+        season: { id: SEASON_SPRING_CURRENT_ID, name: getSpringSeasonName() },
     },
     // U10 Soccer - Game this weekend
     {
         id: EVENT_U10_SOCCER_GAME_1_ID,
         team_id: TEAM_U10_SOCCER_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'Game vs. Eastside Eagles',
         type: 'game' as EventType,
         start_time: setTime(addDays(today, 5), 10, 0), // Saturday 10 AM
@@ -147,13 +152,13 @@ export const fakeEvents: CalendarEvent[] = [
         created_at: '2024-03-01T00:00:00Z',
         updated_at: '2024-03-01T00:00:00Z',
         team: { id: TEAM_U10_SOCCER_ID, name: 'U10 Lightning', org_id: DEMO_ORG_A_ID },
-        season: { id: SEASON_SPRING_2024_ID, name: 'Spring 2024' },
+        season: { id: SEASON_SPRING_CURRENT_ID, name: getSpringSeasonName() },
     },
     // U12 Soccer - Practice tomorrow
     {
         id: EVENT_U12_SOCCER_PRACTICE_1_ID,
         team_id: TEAM_U12_SOCCER_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'U12 Soccer Practice',
         type: 'practice' as EventType,
         start_time: setTime(addDays(today, 1), 18, 0),
@@ -174,13 +179,13 @@ export const fakeEvents: CalendarEvent[] = [
         created_at: '2024-03-01T00:00:00Z',
         updated_at: '2024-03-01T00:00:00Z',
         team: { id: TEAM_U12_SOCCER_ID, name: 'U12 Thunder', org_id: DEMO_ORG_A_ID },
-        season: { id: SEASON_SPRING_2024_ID, name: 'Spring 2024' },
+        season: { id: SEASON_SPRING_CURRENT_ID, name: getSpringSeasonName() },
     },
     // U12 Soccer - Tournament next week
     {
         id: EVENT_U12_SOCCER_TOURNAMENT_ID,
         team_id: TEAM_U12_SOCCER_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'Spring Cup Tournament',
         type: 'tournament' as EventType,
         start_time: setTime(addDays(today, 10), 8, 0),
@@ -201,13 +206,13 @@ export const fakeEvents: CalendarEvent[] = [
         created_at: '2024-02-15T00:00:00Z',
         updated_at: '2024-02-15T00:00:00Z',
         team: { id: TEAM_U12_SOCCER_ID, name: 'U12 Thunder', org_id: DEMO_ORG_A_ID },
-        season: { id: SEASON_SPRING_2024_ID, name: 'Spring 2024' },
+        season: { id: SEASON_SPRING_CURRENT_ID, name: getSpringSeasonName() },
     },
     // U10 Basketball - Practice
     {
         id: EVENT_U10_BB_PRACTICE_1_ID,
         team_id: TEAM_U10_BASKETBALL_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'U10 Hawks Practice',
         type: 'practice' as EventType,
         start_time: setTime(addDays(today, 1), 16, 30),
@@ -228,13 +233,13 @@ export const fakeEvents: CalendarEvent[] = [
         created_at: '2024-03-01T00:00:00Z',
         updated_at: '2024-03-01T00:00:00Z',
         team: { id: TEAM_U10_BASKETBALL_ID, name: 'U10 Hawks', org_id: DEMO_ORG_A_ID },
-        season: { id: SEASON_SPRING_2024_ID, name: 'Spring 2024' },
+        season: { id: SEASON_SPRING_CURRENT_ID, name: getSpringSeasonName() },
     },
     // U10 Basketball - Game
     {
         id: EVENT_U10_BB_GAME_1_ID,
         team_id: TEAM_U10_BASKETBALL_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'Game vs. Valley Vipers',
         type: 'game' as EventType,
         start_time: setTime(addDays(today, 6), 14, 0), // Sunday 2 PM
@@ -255,13 +260,13 @@ export const fakeEvents: CalendarEvent[] = [
         created_at: '2024-03-01T00:00:00Z',
         updated_at: '2024-03-01T00:00:00Z',
         team: { id: TEAM_U10_BASKETBALL_ID, name: 'U10 Hawks', org_id: DEMO_ORG_A_ID },
-        season: { id: SEASON_SPRING_2024_ID, name: 'Spring 2024' },
+        season: { id: SEASON_SPRING_CURRENT_ID, name: getSpringSeasonName() },
     },
     // U12 Basketball - Practice
     {
         id: EVENT_U12_BB_PRACTICE_1_ID,
         team_id: TEAM_U12_BASKETBALL_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'U12 Eagles Practice',
         type: 'practice' as EventType,
         start_time: setTime(addDays(today, 3), 17, 0),
@@ -282,13 +287,13 @@ export const fakeEvents: CalendarEvent[] = [
         created_at: '2024-03-01T00:00:00Z',
         updated_at: '2024-03-01T00:00:00Z',
         team: { id: TEAM_U12_BASKETBALL_ID, name: 'U12 Eagles', org_id: DEMO_ORG_A_ID },
-        season: { id: SEASON_SPRING_2024_ID, name: 'Spring 2024' },
+        season: { id: SEASON_SPRING_CURRENT_ID, name: getSpringSeasonName() },
     },
     // U14 Elite Soccer - Travel event
     {
         id: EVENT_U14_SOCCER_TRAVEL_ID,
         team_id: TEAM_U14_SOCCER_ELITE_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'State Championship - Travel',
         type: 'travel' as EventType,
         start_time: setTime(addDays(today, 14), 6, 0),
@@ -309,13 +314,13 @@ export const fakeEvents: CalendarEvent[] = [
         created_at: '2024-02-01T00:00:00Z',
         updated_at: '2024-02-01T00:00:00Z',
         team: { id: TEAM_U14_SOCCER_ELITE_ID, name: 'U14 Elite Storm', org_id: DEMO_ORG_A_ID },
-        season: { id: SEASON_SPRING_2024_ID, name: 'Spring 2024' },
+        season: { id: SEASON_SPRING_CURRENT_ID, name: getSpringSeasonName() },
     },
     // Team Meeting
     {
         id: EVENT_TEAM_MEETING_ID,
         team_id: TEAM_U10_SOCCER_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'Parent Meeting - Season Overview',
         type: 'meeting' as EventType,
         start_time: setTime(addDays(today, 7), 19, 0),
@@ -336,13 +341,13 @@ export const fakeEvents: CalendarEvent[] = [
         created_at: '2024-03-01T00:00:00Z',
         updated_at: '2024-03-01T00:00:00Z',
         team: { id: TEAM_U10_SOCCER_ID, name: 'U10 Lightning', org_id: DEMO_ORG_A_ID },
-        season: { id: SEASON_SPRING_2024_ID, name: 'Spring 2024' },
+        season: { id: SEASON_SPRING_CURRENT_ID, name: getSpringSeasonName() },
     },
     // Cancelled Event
     {
         id: EVENT_CANCELLED_ID,
         team_id: TEAM_U10_SOCCER_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'U10 Soccer Practice (CANCELLED)',
         type: 'practice' as EventType,
         start_time: setTime(addDays(today, -2), 17, 0), // 2 days ago
@@ -363,7 +368,7 @@ export const fakeEvents: CalendarEvent[] = [
         created_at: '2024-03-01T00:00:00Z',
         updated_at: addDays(today, -2).toISOString(),
         team: { id: TEAM_U10_SOCCER_ID, name: 'U10 Lightning', org_id: DEMO_ORG_A_ID },
-        season: { id: SEASON_SPRING_2024_ID, name: 'Spring 2024' },
+        season: { id: SEASON_SPRING_CURRENT_ID, name: getSpringSeasonName() },
     },
 ]
 

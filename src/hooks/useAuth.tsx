@@ -10,6 +10,8 @@ import {
 import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { useOrganization, Organization } from '../contexts/OrganizationContext'
+import { USE_FAKE_DATA } from '../data/config'
+import { getUserOrganizations } from '../data/fake/fakeUsers'
 
 // Role types - now per organization
 type OrgMemberRole = 'parent' | 'coach' | 'org_admin'
@@ -101,14 +103,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         /* ---- organizations ---- */
         let orgs: Organization[] = []
         try {
-          const { data, error: orgError } = await supabase.rpc('get_user_organizations', {
-            check_user_id: userId,
-          })
+          let data: Array<{ org_id: string; org_name: string; roles: OrgMemberRole[] }> | null = null
+          let orgError: any = null
 
-          // Log RPC errors for debugging (this is likely the "profit data" / "profile data" error)
-          if (orgError) {
-            console.error('Error fetching user organizations:', orgError)
-            // Continue with empty orgs - don't block profile creation
+          if (USE_FAKE_DATA) {
+            // Use fake data when enabled
+            data = getUserOrganizations(userId)
+          } else {
+            // Use real Supabase RPC
+            const result = await supabase.rpc('get_user_organizations', {
+              check_user_id: userId,
+            })
+            data = result.data
+            orgError = result.error
+
+            // Log RPC errors for debugging (this is likely the "profit data" / "profile data" error)
+            if (orgError) {
+              console.error('Error fetching user organizations:', orgError)
+              // Continue with empty orgs - don't block profile creation
+            }
           }
 
           // Type-safe organization mapping (Bug Prevention #5 & #8)

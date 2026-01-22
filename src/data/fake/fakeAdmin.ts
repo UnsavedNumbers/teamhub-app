@@ -17,6 +17,10 @@ import type {
     PlatformAdmin,
 } from '../../types/platformAdmin.types'
 
+// Dynamic year helpers
+const getCurrentYear = () => new Date().getFullYear()
+const getSpringSeasonName = () => `Spring ${getCurrentYear()}`
+
 // ============================================================================
 // Platform Admin Users
 // ============================================================================
@@ -330,7 +334,7 @@ export const fakeAdminPayments: AdminPayment[] = [
         organization_name: 'Riverside Youth Athletics',
         fee_assignment_id: 'fa-001',
         fee_id: 'fee-spring-soccer-reg-001',
-        fee_title: 'Spring 2024 Soccer Registration',
+        fee_title: `${getSpringSeasonName()} Soccer Registration`,
         child_id: 'child-emma-johnson-001',
         child_name: 'Emma Johnson',
         parent_email: 'parent-only@example.com',
@@ -380,7 +384,7 @@ export const fakeAdminFeesStatus: AdminFeeStatus[] = [
     {
         id: 'fee-spring-soccer-reg-001',
         fee_id: 'fee-spring-soccer-reg-001',
-        fee_name: 'Spring 2024 Soccer Registration',
+        fee_name: `${getSpringSeasonName()} Soccer Registration`,
         amount_cents: 15000,
         currency: 'usd',
         due_date: '2024-02-28',
@@ -395,7 +399,7 @@ export const fakeAdminFeesStatus: AdminFeeStatus[] = [
     {
         id: 'fee-spring-bb-reg-002',
         fee_id: 'fee-spring-bb-reg-002',
-        fee_name: 'Spring 2024 Basketball Registration',
+        fee_name: `${getSpringSeasonName()} Basketball Registration`,
         amount_cents: 12500,
         currency: 'usd',
         due_date: '2024-02-28',
