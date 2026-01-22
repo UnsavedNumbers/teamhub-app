@@ -152,7 +152,7 @@ export default function FamilyDetail() {
                         <Card>
                             <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
                                 <h3 className="pa-h3">{t('admin.families.children')}</h3>
-                                <Button size="compact" variant="secondary" onClick={() => navigate(`/admin/families/${family.id}/children/new`)}>
+                                <Button size="compact" variant="secondary" onClick={() => navigate(`/admin/families/${family.id}/athletes/new`)}>
                                     <span className="material-symbols-outlined">add</span>
                                     {t('admin.families.addChild')}
                                 </Button>

@@ -73,7 +73,7 @@ export default function Uniforms() {
         ) : children.length === 0 ? (
           <Card className="text-center py-12">
             <p className="text-slate-500 dark:text-slate-400 mb-6">{t('portal.uniforms.addChildrenFirst')}</p>
-            <Link to="/portal/children">
+            <Link to="/portal/athletes">
               <Button variant="primary">
                 {t('portal.uniforms.add')}
               </Button>

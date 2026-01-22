@@ -187,7 +187,7 @@ export default function JoinTeam() {
                 {children.length === 0 ? (
                   <div className="text-center py-4">
                     <p className="text-slate-500 dark:text-slate-400 mb-6">{t('portal.joinTeam.addChildFirst')}</p>
-                    <Link to="/portal/children">
+                    <Link to="/portal/athletes">
                       <Button variant="primary">
                         {t('portal.joinTeam.add')}
                       </Button>

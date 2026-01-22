@@ -4,6 +4,7 @@ import { useOrganization } from '../contexts/OrganizationContext'
 import { useLicense } from '../hooks/useLicense'
 import { NoOrganizationEmptyState } from './admin/NoOrganizationEmptyState'
 import { hasAnyRole } from '@/utils/roleHelpers'
+import { getLink, getPath, RouteKeys } from '@/utils/routes'
 import type { OrgMemberRole } from '@/contexts/OrganizationContext'
 
 interface ProtectedRouteProps {
@@ -56,7 +57,7 @@ export function ProtectedRoute({
 
   // Redirect to login if not authenticated
   if (!user) {
-    return <Navigate to="/portal/login" state={{ from: location }} replace />
+    return <Navigate to={getLink(RouteKeys.AUTH_LOGIN)} state={{ from: location }} replace />
   }
 
   // Wait for profile to load
@@ -74,9 +75,10 @@ export function ProtectedRoute({
   // Check organization setup requirement flag
   // Platform admins bypass this check
   // Allow access to onboarding route even with flag set
-  const isOnboardingRoute = location.pathname === '/admin/onboarding'
+  const onboardingPath = getPath(RouteKeys.ADMIN_ONBOARDING)
+  const isOnboardingRoute = location.pathname === onboardingPath
   if (!profile.isPlatformAdmin && profile.requiresOrgSetup && !isOnboardingRoute) {
-    return <Navigate to="/admin/onboarding" replace />
+    return <Navigate to={getLink(RouteKeys.ADMIN_ONBOARDING)} replace />
   }
 
   // Global no-org gate for /admin/* routes
@@ -84,9 +86,9 @@ export function ProtectedRoute({
   // This prevents pages from rendering skeleton loops when currentOrganization is null
   // Allow-list: onboarding, billing, and organization routes (user needs these to get started)
   const adminRouteAllowList = [
-    '/admin/onboarding',
-    '/admin/organization/billing',
-    '/admin/organization',
+    getPath(RouteKeys.ADMIN_ONBOARDING),
+    getPath(RouteKeys.ADMIN_ORGANIZATION_BILLING),
+    getPath(RouteKeys.ADMIN_ORGANIZATION),
   ]
   const isAllowedAdminRoute = adminRouteAllowList.some(route => 
     location.pathname === route || location.pathname.startsWith(route + '/')
@@ -115,7 +117,7 @@ export function ProtectedRoute({
             Contact your team administrator for an invite.
           </p>
           <a 
-            href="/portal/dashboard"
+            href={getLink(RouteKeys.PORTAL_DASHBOARD)}
             className="inline-block btn-primary"
           >
             Go to Dashboard
@@ -144,14 +146,14 @@ export function ProtectedRoute({
     )
     
     if (!hasAllowedRole && !hasLegacyRole) {
-      return <Navigate to="/portal/unauthorized" replace />
+      return <Navigate to={getLink(RouteKeys.AUTH_UNAUTHORIZED)} replace />
     }
   }
 
   // License gating for admin routes (platform admins bypass)
   if (isAdminRoute && !profile.isPlatformAdmin) {
     if (!licenseActive && isPastGracePeriod) {
-      return <Navigate to="/admin/organization/billing" state={{ from: location }} replace />
+      return <Navigate to={getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING)} state={{ from: location }} replace />
     }
   }
 

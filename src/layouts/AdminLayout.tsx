@@ -8,6 +8,7 @@ import AdminLoadingSpinner from '../components/admin/AdminLoadingSpinner'
 import { usePlatformAdminTheme } from '../hooks/usePlatformAdminTheme'
 import { useT } from '../i18n/useI18n'
 import { useSidebar } from '../contexts/SidebarContext'
+import { getLink, getPath, RouteKeys } from '@/utils/routes'
 
 export default function AdminLayout() {
   const { loaded: themeLoaded } = usePlatformAdminTheme()
@@ -26,53 +27,53 @@ export default function AdminLayout() {
     {
       label: 'Dashboard',
       icon: 'dashboard',
-      path: '/admin',
+      path: getPath(RouteKeys.ADMIN_DASHBOARD),
       requiresOrg: false,
       children: null,
     },
     {
       label: 'Organization',
       icon: 'business',
-      path: '/admin/organization',
+      path: getPath(RouteKeys.ADMIN_ORGANIZATION),
       requiresOrg: false,
       children: [
-        { text: 'Overview', icon: 'info', path: '/admin/organization/structure', requiresOrg: true },
-        { text: 'Sports & Programs', icon: 'sports', path: '/admin/organization/structure/sports-programs', requiresOrg: true },
-        { text: 'Levels', icon: 'grade', path: '/admin/organization/structure/levels', requiresOrg: true },
-        { text: 'Teams', icon: 'groups', path: '/admin/organization/structure/teams', requiresOrg: true },
-        { text: 'Seasons', icon: 'calendar_month', path: '/admin/organization/structure/seasons', requiresOrg: true },
-        { text: 'People', icon: 'person', path: '/admin/organization/structure/people', requiresOrg: true },
+        { text: 'Overview', icon: 'info', path: getPath(RouteKeys.ADMIN_ORGANIZATION_STRUCTURE), requiresOrg: true },
+        { text: 'Sports & Programs', icon: 'sports', path: getLink('admin.organization.sportsPrograms'), requiresOrg: true },
+        { text: 'Levels', icon: 'grade', path: getLink('admin.organization.levels'), requiresOrg: true },
+        { text: 'Teams', icon: 'groups', path: getLink('admin.organization.teamsManagement'), requiresOrg: true },
+        { text: 'Seasons', icon: 'calendar_month', path: getLink('admin.organization.seasons'), requiresOrg: true },
+        { text: 'People', icon: 'person', path: getPath(RouteKeys.ADMIN_ORGANIZATION_USERS), requiresOrg: true },
       ],
     },
     {
       label: 'Management',
       icon: 'groups',
-      path: '/admin/management',
+      path: getPath(RouteKeys.ADMIN_FAMILIES),
       requiresOrg: true,
       children: [
-        { text: 'Families', icon: 'home', path: '/admin/families', requiresOrg: true },
-        { text: 'Athletes', icon: 'child_care', path: '/admin/athletes', requiresOrg: true },
+        { text: 'Families', icon: 'home', path: getPath(RouteKeys.ADMIN_FAMILIES), requiresOrg: true },
+        { text: 'Athletes', icon: 'child_care', path: getPath(RouteKeys.ADMIN_ATHLETES), requiresOrg: true },
       ],
     },
     {
       label: 'Operations',
       icon: 'settings',
-      path: '/admin/operations',
+      path: getPath(RouteKeys.ADMIN_PAYMENTS),
       requiresOrg: true,
       children: [
-        { text: 'Payments', icon: 'credit_card', path: '/admin/payments', requiresOrg: true },
-        { text: 'Events', icon: 'event', path: '/admin/events', requiresOrg: true },
-        { text: 'Attendance', icon: 'how_to_reg', path: '/admin/attendance', requiresOrg: true },
-        { text: 'Uniforms', icon: 'checkroom', path: '/admin/uniforms', requiresOrg: true },
+        { text: 'Payments', icon: 'credit_card', path: getPath(RouteKeys.ADMIN_PAYMENTS), requiresOrg: true },
+        { text: 'Events', icon: 'event', path: getPath(RouteKeys.ADMIN_EVENTS), requiresOrg: true },
+        { text: 'Attendance', icon: 'how_to_reg', path: getLink('admin.attendance'), requiresOrg: true },
+        { text: 'Uniforms', icon: 'checkroom', path: getPath(RouteKeys.ADMIN_UNIFORMS), requiresOrg: true },
       ],
     },
     {
       label: 'Account',
       icon: 'account_circle',
-      path: '/admin/account',
+      path: getPath(RouteKeys.ADMIN_SETTINGS),
       requiresOrg: false,
       children: [
-        { text: 'Settings', icon: 'settings', path: '/admin/settings', requiresOrg: false },
+        { text: 'Settings', icon: 'settings', path: getPath(RouteKeys.ADMIN_SETTINGS), requiresOrg: false },
       ],
     },
   ], [t])
@@ -81,12 +82,13 @@ export default function AdminLayout() {
 
   const handleSignOut = async () => {
     await signOut()
-    navigate('/login')
+    navigate(getLink(RouteKeys.AUTH_LOGIN))
   }
 
+  const adminDashboardPath = getPath(RouteKeys.ADMIN_DASHBOARD)
   const isActive = (path: string) => {
-    if (path === '/admin') {
-      return location.pathname === '/admin'
+    if (path === adminDashboardPath) {
+      return location.pathname === adminDashboardPath
     }
     return location.pathname.startsWith(path)
   }
@@ -101,7 +103,7 @@ export default function AdminLayout() {
       <aside className="pa-sidebar">
         {/* Brand */}
         <div className="pa-sidebar-header">
-          <Link to="/admin" className="pa-sidebar-brand">
+          <Link to={getLink(RouteKeys.ADMIN_DASHBOARD)} className="pa-sidebar-brand">
             <img 
               src="/images/logo-dark.png" 
               alt="Youth Sports" 

@@ -233,7 +233,7 @@ export default function EventDetail() {
         {children.length === 0 ? (
           <Card className="text-center py-12">
             <p className="text-slate-500 dark:text-slate-400 mb-6">{t('portal.events.noChildren')}</p>
-            <Button variant="primary" onClick={() => navigate('/portal/children')}>
+            <Button variant="primary" onClick={() => navigate('/portal/athletes')}>
               {t('portal.events.add')}
             </Button>
           </Card>
