@@ -7,10 +7,19 @@
 
 import { DEMO_ORG_A_ID } from '../config'
 import {
-    TEAM_U12_SOCCER_ID,
-    TEAM_U14_SOCCER_ELITE_ID,
+    TEAM_U10_BASKETBALL_ID,
+    TEAM_U12_BASKETBALL_ID,
     SEASON_SPRING_CURRENT_ID,
 } from './fakeTeams'
+
+// Dynamic year helpers
+const getCurrentYear = () => new Date().getFullYear()
+
+// Helper functions for date generation relative to current year
+const getDateInCurrentYear = (month: number, day: number): string => {
+    const year = getCurrentYear()
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00Z`
+}
 
 // ============================================================================
 // Types
@@ -83,11 +92,11 @@ function addDays(date: Date, days: number): string {
 // ============================================================================
 
 export const fakeTravelPlans: FakeTravelPlan[] = [
-    // Spring Cup Tournament - U12 Soccer (upcoming)
+    // Spring Cup Tournament - U12 Basketball (upcoming)
     {
         id: TRAVEL_SPRING_CUP_ID,
         org_id: DEMO_ORG_A_ID,
-        team_id: TEAM_U12_SOCCER_ID,
+        team_id: TEAM_U12_BASKETBALL_ID,
         season_id: SEASON_SPRING_CURRENT_ID,
         title: 'Spring Cup Tournament',
         location: 'San Diego, CA',
@@ -118,7 +127,7 @@ GAME SCHEDULE (tentative):
 - Saturday 9:00 AM: Pool play game 1
 - Saturday 2:00 PM: Pool play game 2
 - Sunday 10:00 AM: Bracket play (if qualify)`,
-        itinerary_file_path: 'travel/spring-cup-2024/itinerary.pdf',
+        itinerary_file_path: 'travel/spring-cup-${getCurrentYear()}/itinerary.pdf',
         meeting_locations: [
             {
                 name: 'Team Bus Pickup',
@@ -138,15 +147,15 @@ GAME SCHEDULE (tentative):
         status: 'published',
         published_at: '2024-02-20T00:00:00Z',
         cancelled_at: null,
-        created_at: '2024-02-15T00:00:00Z',
+        created_at: getDateInCurrentYear(2, 15),
         updated_at: '2024-02-20T00:00:00Z',
     },
 
-    // State Championship - U14 Elite Soccer
+    // State Championship - U10 Basketball
     {
         id: TRAVEL_STATE_CHAMPIONSHIP_ID,
         org_id: DEMO_ORG_A_ID,
-        team_id: TEAM_U14_SOCCER_ELITE_ID,
+        team_id: TEAM_U10_BASKETBALL_ID,
         season_id: SEASON_SPRING_CURRENT_ID,
         title: 'State Championship',
         location: 'Sacramento, CA',
@@ -180,7 +189,7 @@ WHAT TO BRING:
 TEAM DINNER: Friday 7 PM - Venue TBD
 
 Players must travel with the team. No exceptions.`,
-        itinerary_file_path: 'travel/state-championship-2024/itinerary.pdf',
+        itinerary_file_path: 'travel/state-championship-${getCurrentYear()}/itinerary.pdf',
         meeting_locations: [
             {
                 name: 'Carpool Meeting Point',
@@ -193,7 +202,7 @@ Players must travel with the team. No exceptions.`,
         status: 'published',
         published_at: '2024-02-01T00:00:00Z',
         cancelled_at: null,
-        created_at: '2024-01-25T00:00:00Z',
+        created_at: getDateInCurrentYear(1, 25),
         updated_at: '2024-02-01T00:00:00Z',
     },
 
@@ -201,7 +210,7 @@ Players must travel with the team. No exceptions.`,
     {
         id: TRAVEL_REGIONAL_SHOWCASE_ID,
         org_id: DEMO_ORG_A_ID,
-        team_id: TEAM_U14_SOCCER_ELITE_ID,
+        team_id: TEAM_U12_BASKETBALL_ID,
         season_id: SEASON_SPRING_CURRENT_ID,
         title: 'Regional Showcase Cup',
         location: 'Las Vegas, NV',
@@ -224,15 +233,15 @@ Players must travel with the team. No exceptions.`,
         status: 'draft',
         published_at: null,
         cancelled_at: null,
-        created_at: '2024-02-28T00:00:00Z',
-        updated_at: '2024-02-28T00:00:00Z',
+        created_at: getDateInCurrentYear(2, 28),
+        updated_at: getDateInCurrentYear(2, 28),
     },
 
     // Cancelled travel plan example
     {
         id: TRAVEL_CANCELLED_ID,
         org_id: DEMO_ORG_A_ID,
-        team_id: TEAM_U12_SOCCER_ID,
+        team_id: TEAM_U12_BASKETBALL_ID,
         season_id: SEASON_SPRING_CURRENT_ID,
         title: 'Winter Invitational',
         location: 'Phoenix, AZ',
@@ -255,7 +264,7 @@ Players must travel with the team. No exceptions.`,
         status: 'cancelled',
         published_at: '2024-01-15T00:00:00Z',
         cancelled_at: addDays(today, -25),
-        created_at: '2024-01-10T00:00:00Z',
+        created_at: getDateInCurrentYear(1, 10),
         updated_at: addDays(today, -25),
     },
 ]

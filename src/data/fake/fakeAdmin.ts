@@ -19,7 +19,24 @@ import type {
 
 // Dynamic year helpers
 const getCurrentYear = () => new Date().getFullYear()
+const getPreviousYear = () => getCurrentYear() - 1
 const getSpringSeasonName = () => `Spring ${getCurrentYear()}`
+
+// Helper functions for date generation relative to current year
+const getDateInCurrentYear = (month: number, day: number, hour: number = 0, minute: number = 0): string => {
+    const year = getCurrentYear()
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00Z`
+}
+
+const getDateInPreviousYear = (month: number, day: number, hour: number = 0, minute: number = 0): string => {
+    const year = getPreviousYear()
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00Z`
+}
+
+const getDateString = (month: number, day: number): string => {
+    const year = getCurrentYear()
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
 
 // ============================================================================
 // Platform Admin Users
@@ -36,7 +53,7 @@ export const fakePlatformAdmins: PlatformAdmin[] = [
     {
         user_id: 'platform-admin-002',
         role: 'support_admin',
-        created_at: '2023-06-15T00:00:00Z',
+        created_at: getDateInPreviousYear(6, 15),
         email: 'support@youthsports.team',
         display_name: 'Support Team',
     },
@@ -66,7 +83,7 @@ export const fakeAdminOrganizations: AdminOrganization[] = [
         payout_account_id: 'acct_demo_riverside',
         payouts_enabled: true,
         created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2024-01-15T00:00:00Z',
+        updated_at: getDateInCurrentYear(1, 15),
         team_count: 8,
         sport_count: 4,
         user_count: 45,
@@ -83,7 +100,7 @@ export const fakeAdminOrganizations: AdminOrganization[] = [
         license_current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         payout_account_id: 'acct_demo_lincoln',
         payouts_enabled: true,
-        created_at: '2023-06-15T00:00:00Z',
+        created_at: getDateInPreviousYear(6, 15),
         updated_at: '2024-02-01T00:00:00Z',
         team_count: 12,
         sport_count: 6,
@@ -101,8 +118,8 @@ export const fakeAdminOrganizations: AdminOrganization[] = [
         license_current_period_end: null,
         payout_account_id: null,
         payouts_enabled: false,
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-03-01T00:00:00Z',
+        created_at: getDateInCurrentYear(1, 1),
+        updated_at: getDateInCurrentYear(3, 1),
         team_count: 25,
         sport_count: 1,
         user_count: 200,
@@ -120,7 +137,7 @@ export const fakeAdminOrganizations: AdminOrganization[] = [
         payout_account_id: 'acct_demo_elite',
         payouts_enabled: false,
         created_at: '2023-03-15T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
+        updated_at: getDateInCurrentYear(1, 1),
         team_count: 6,
         sport_count: 1,
         user_count: 35,
@@ -156,8 +173,8 @@ export const fakeAdminUsers: AdminUser[] = [
         email: 'admin-only@example.com',
         phone: '+1 (555) 345-6789',
         display_name: 'Admin Sarah Wilson',
-        created_at: '2023-12-01T08:00:00Z',
-        updated_at: '2023-12-01T08:00:00Z',
+        created_at: getDateInPreviousYear(12, 1, 8),
+        updated_at: getDateInPreviousYear(12, 1, 8),
         organizations: [{ org_id: DEMO_ORG_A_ID, org_name: 'Riverside Youth Athletics', role: 'org_admin' }],
         roles: ['org_admin'],
         is_platform_admin: false,
@@ -185,8 +202,8 @@ export const fakeAdminUsers: AdminUser[] = [
         email: 'coach-only@example.com',
         phone: '+1 (555) 234-5678',
         display_name: 'Coach Michael Davis',
-        created_at: '2024-01-10T09:00:00Z',
-        updated_at: '2024-01-10T09:00:00Z',
+        created_at: getDateInCurrentYear(1, 10, 9),
+        updated_at: getDateInCurrentYear(1, 10, 9),
         organizations: [{ org_id: DEMO_ORG_A_ID, org_name: 'Riverside Youth Athletics', role: 'coach' }],
         roles: ['coach'],
         is_platform_admin: false,
@@ -314,8 +331,8 @@ export const fakeAdminFeatureFlags: AdminFeatureFlag[] = [
     { id: 'ff-001', org_id: DEMO_ORG_A_ID, organization_name: 'Riverside Youth Athletics', feature_key: 'payments_enabled', enabled: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
     { id: 'ff-002', org_id: DEMO_ORG_A_ID, organization_name: 'Riverside Youth Athletics', feature_key: 'tryouts_enabled', enabled: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
     { id: 'ff-003', org_id: DEMO_ORG_A_ID, organization_name: 'Riverside Youth Athletics', feature_key: 'travel_enabled', enabled: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
-    { id: 'ff-004', org_id: DEMO_ORG_B_ID, organization_name: 'Lincoln High School Athletics', feature_key: 'payments_enabled', enabled: true, created_at: '2023-06-15T00:00:00Z', updated_at: '2023-06-15T00:00:00Z' },
-    { id: 'ff-005', org_id: DEMO_ORG_B_ID, organization_name: 'Lincoln High School Athletics', feature_key: 'tryouts_enabled', enabled: false, created_at: '2023-06-15T00:00:00Z', updated_at: '2023-06-15T00:00:00Z' },
+    { id: 'ff-004', org_id: DEMO_ORG_B_ID, organization_name: 'Lincoln High School Athletics', feature_key: 'payments_enabled', enabled: true, created_at: getDateInPreviousYear(6, 15), updated_at: getDateInPreviousYear(6, 15) },
+    { id: 'ff-005', org_id: DEMO_ORG_B_ID, organization_name: 'Lincoln High School Athletics', feature_key: 'tryouts_enabled', enabled: false, created_at: getDateInPreviousYear(6, 15), updated_at: getDateInPreviousYear(6, 15) },
 ]
 
 // ============================================================================
@@ -351,7 +368,7 @@ export const fakeAdminPayments: AdminPayment[] = [
         organization_name: 'Riverside Youth Athletics',
         fee_assignment_id: 'fa-007',
         fee_id: 'fee-spring-bb-reg-002',
-        fee_title: 'Spring 2024 Basketball Registration',
+        fee_title: `${getSpringSeasonName()} Basketball Registration`,
         child_id: 'child-liam-johnson-002',
         child_name: 'Liam Johnson',
         parent_email: 'parent-only@example.com',
@@ -368,7 +385,7 @@ export const fakeAdminPayments: AdminPayment[] = [
         organization_name: 'Riverside Youth Athletics',
         fee_assignment_id: 'fa-009',
         fee_id: 'fee-spring-bb-reg-002',
-        fee_title: 'Spring 2024 Basketball Registration',
+        fee_title: `${getSpringSeasonName()} Basketball Registration`,
         child_id: 'child-ethan-williams-006',
         child_name: 'Ethan Williams',
         parent_email: 'parent-admin@example.com',
@@ -387,7 +404,7 @@ export const fakeAdminFeesStatus: AdminFeeStatus[] = [
         fee_name: `${getSpringSeasonName()} Soccer Registration`,
         amount_cents: 15000,
         currency: 'usd',
-        due_date: '2024-02-28',
+        due_date: getDateString(2, 28),
         fee_status: 'active',
         org_id: DEMO_ORG_A_ID,
         organization_name: 'Riverside Youth Athletics',
@@ -402,7 +419,7 @@ export const fakeAdminFeesStatus: AdminFeeStatus[] = [
         fee_name: `${getSpringSeasonName()} Basketball Registration`,
         amount_cents: 12500,
         currency: 'usd',
-        due_date: '2024-02-28',
+        due_date: getDateString(2, 28),
         fee_status: 'active',
         org_id: DEMO_ORG_A_ID,
         organization_name: 'Riverside Youth Athletics',

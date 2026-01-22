@@ -284,6 +284,8 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
       : parentNavSections
 
   // Logo based on theme
+  // Light mode needs dark text logo, dark mode needs light text logo
+  // Note: If logo appears white in light mode, the files may be misnamed
   const logoSrc = resolvedTheme === 'dark' 
     ? '/images/logo-dark.png' 
     : '/images/logo-light.png'

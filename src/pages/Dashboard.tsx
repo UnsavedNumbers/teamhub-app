@@ -268,7 +268,7 @@ export default function Dashboard() {
             <div className="flex gap-4">
               <div className="px-6 py-3 border border-white/20 rounded-lg flex flex-col bg-black/20 backdrop-blur-sm">
                 <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest">Active Season</span>
-                <span className="font-bold text-white">Spring 2024</span>
+                <span className="font-bold text-white">Spring {new Date().getFullYear()}</span>
               </div>
               <div className="px-6 py-3 border border-white/20 rounded-lg flex flex-col bg-black/20 backdrop-blur-sm">
                 <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest">Players</span>

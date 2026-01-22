@@ -44,6 +44,25 @@ const getFallUpcomingSeasonDates = () => {
         end_date: `${year}-12-15`,
     }
 }
+
+// Helper functions for date generation relative to current year
+const getDateInCurrentYear = (month: number, day: number): string => {
+    const year = getCurrentYear()
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00Z`
+}
+
+const getDateInPreviousYear = (month: number, day: number): string => {
+    const year = getPreviousYear()
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00Z`
+}
+
+const getDateInNextYear = (month: number, day: number): string => {
+    const year = getNextYear()
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00Z`
+}
+
+// For "base" dates (like when sports/programs were first created), use previous year
+const getBaseDate = () => getDateInPreviousYear(1, 1)
 import {
     CHILD_EMMA_JOHNSON_ID,
     CHILD_LIAM_JOHNSON_ID,
@@ -174,8 +193,8 @@ export const fakeSports: FakeSport[] = [
         name: 'Soccer',
         icon: 'sports_soccer',
         color: '#16a34a',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -184,8 +203,8 @@ export const fakeSports: FakeSport[] = [
         name: 'Basketball',
         icon: 'sports_basketball',
         color: '#ea580c',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -194,8 +213,8 @@ export const fakeSports: FakeSport[] = [
         name: 'Baseball',
         icon: 'sports_baseball',
         color: '#dc2626',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -204,8 +223,8 @@ export const fakeSports: FakeSport[] = [
         name: 'Softball',
         icon: 'sports_baseball',
         color: '#f59e0b',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -214,8 +233,8 @@ export const fakeSports: FakeSport[] = [
         name: 'Football',
         icon: 'sports_football',
         color: '#991b1b',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -224,8 +243,8 @@ export const fakeSports: FakeSport[] = [
         name: 'Flag Football',
         icon: 'sports_football',
         color: '#b91c1c',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -234,8 +253,8 @@ export const fakeSports: FakeSport[] = [
         name: 'Volleyball',
         icon: 'sports_volleyball',
         color: '#7c3aed',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -244,8 +263,8 @@ export const fakeSports: FakeSport[] = [
         name: 'Lacrosse',
         icon: 'sports',
         color: '#059669',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -254,8 +273,8 @@ export const fakeSports: FakeSport[] = [
         name: 'Field Hockey',
         icon: 'sports_hockey',
         color: '#0d9488',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -264,8 +283,8 @@ export const fakeSports: FakeSport[] = [
         name: 'Ice Hockey',
         icon: 'sports_hockey',
         color: '#0891b2',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -274,8 +293,8 @@ export const fakeSports: FakeSport[] = [
         name: 'Wrestling',
         icon: 'sports_martial_arts',
         color: '#1e40af',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -284,8 +303,8 @@ export const fakeSports: FakeSport[] = [
         name: 'Track & Field',
         icon: 'sports',
         color: '#7c2d12',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -294,8 +313,8 @@ export const fakeSports: FakeSport[] = [
         name: 'Gymnastics',
         icon: 'sports_gymnastics',
         color: '#be185d',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -304,8 +323,8 @@ export const fakeSports: FakeSport[] = [
         name: 'Cross Country',
         icon: 'directions_run',
         color: '#92400e',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -314,8 +333,8 @@ export const fakeSports: FakeSport[] = [
         name: 'Tennis',
         icon: 'sports_tennis',
         color: '#166534',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -324,8 +343,8 @@ export const fakeSports: FakeSport[] = [
         name: 'Cheerleading',
         icon: 'celebration',
         color: '#c026d3',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -334,8 +353,8 @@ export const fakeSports: FakeSport[] = [
         name: 'Poms',
         icon: 'celebration',
         color: '#a21caf',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -344,8 +363,8 @@ export const fakeSports: FakeSport[] = [
         name: 'Dance',
         icon: 'music_note',
         color: '#9f1239',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -354,8 +373,8 @@ export const fakeSports: FakeSport[] = [
         name: 'Golf',
         icon: 'sports_golf',
         color: '#065f46',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -364,8 +383,8 @@ export const fakeSports: FakeSport[] = [
         name: 'Swimming',
         icon: 'pool',
         color: '#0c4a6e',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -374,8 +393,8 @@ export const fakeSports: FakeSport[] = [
         name: 'Diving',
         icon: 'pool',
         color: '#075985',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
 ]
@@ -388,8 +407,8 @@ export const fakePrograms: FakeProgram[] = [
         name: 'Recreational Soccer',
         description: 'Fun, skill-building soccer for all ability levels',
         gender_category: 'coed',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null,
         // Deprecated mapping
         age_min: 5,
@@ -402,8 +421,8 @@ export const fakePrograms: FakeProgram[] = [
         name: 'Competitive Soccer',
         description: 'Travel teams for advanced players',
         gender_category: 'coed',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null,
         age_min: 8,
         age_max: 18,
@@ -415,8 +434,8 @@ export const fakePrograms: FakeProgram[] = [
         name: 'Youth Basketball',
         description: 'Introduction to basketball fundamentals',
         gender_category: 'coed',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null,
         age_min: 6,
         age_max: 14,
@@ -428,8 +447,8 @@ export const fakePrograms: FakeProgram[] = [
         name: 'Elite Basketball Academy',
         description: 'Advanced training for serious players',
         gender_category: 'coed',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null,
         age_min: 10,
         age_max: 18,
@@ -450,8 +469,8 @@ export const fakeLevels: FakeLevel[] = [
         grade_max: null,
         skill_min: null,
         skill_max: null,
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -467,8 +486,8 @@ export const fakeLevels: FakeLevel[] = [
         grade_max: null,
         skill_min: null,
         skill_max: null,
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -484,8 +503,8 @@ export const fakeLevels: FakeLevel[] = [
         grade_max: null,
         skill_min: 8,
         skill_max: 10,
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -501,8 +520,8 @@ export const fakeLevels: FakeLevel[] = [
         grade_max: null,
         skill_min: null,
         skill_max: null,
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -518,8 +537,8 @@ export const fakeLevels: FakeLevel[] = [
         grade_max: null,
         skill_min: null,
         skill_max: null,
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     // For volleyball/baseball, we'll create implied programs or just attach levels if we had programs.
@@ -540,8 +559,8 @@ const EXTRA_PROGRAMS: FakeProgram[] = [
         name: 'Rec Volleyball',
         description: 'Recreational',
         gender_category: 'girls', // VB team was female
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     },
     {
@@ -551,8 +570,8 @@ const EXTRA_PROGRAMS: FakeProgram[] = [
         name: 'Rec Baseball',
         description: 'Recreational',
         gender_category: 'coed',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
+        created_at: getBaseDate(),
+        updated_at: getBaseDate(),
         deleted_at: null
     }
 ]
@@ -575,42 +594,42 @@ fakeLevels.push(...EXTRA_LEVELS)
 export const fakeTeams: FakeTeam[] = [
     {
         id: TEAM_U10_SOCCER_ID, org_id: DEMO_ORG_A_ID, program_id: PROGRAM_SOCCER_REC_ID, level_id: LEVEL_SOCCER_REC_U10_ID, sport_id: SPORT_SOCCER_ID,
-        name: 'U10 Lightning', max_roster_size: 15, is_active: true, created_at: '2023-08-01T00:00:00Z', updated_at: '2024-01-15T00:00:00Z',
+        name: 'U10 Lightning', max_roster_size: 15, is_active: true, created_at: getDateInPreviousYear(8, 1), updated_at: getDateInCurrentYear(1, 15),
         age_group: 'U10', gender: 'coed', skill_level: 'recreational' // Deprecated
     },
     {
         id: TEAM_U12_SOCCER_ID, org_id: DEMO_ORG_A_ID, program_id: PROGRAM_SOCCER_REC_ID, level_id: LEVEL_SOCCER_REC_U12_ID, sport_id: SPORT_SOCCER_ID,
-        name: 'U12 Thunder', max_roster_size: 18, is_active: true, created_at: '2023-08-01T00:00:00Z', updated_at: '2024-01-15T00:00:00Z',
+        name: 'U12 Thunder', max_roster_size: 18, is_active: true, created_at: getDateInPreviousYear(8, 1), updated_at: getDateInCurrentYear(1, 15),
         age_group: 'U12', gender: 'coed', skill_level: 'recreational'
     },
     {
         id: TEAM_U14_SOCCER_ELITE_ID, org_id: DEMO_ORG_A_ID, program_id: PROGRAM_SOCCER_COMP_ID, level_id: LEVEL_SOCCER_COMP_U14_ID, sport_id: SPORT_SOCCER_ID,
-        name: 'U14 Elite Storm', max_roster_size: 16, is_active: true, created_at: '2023-06-01T00:00:00Z', updated_at: '2024-01-15T00:00:00Z',
+        name: 'U14 Elite Storm', max_roster_size: 16, is_active: true, created_at: getDateInPreviousYear(6, 1), updated_at: getDateInCurrentYear(1, 15),
         age_group: 'U14', gender: 'coed', skill_level: 'elite'
     },
     {
         id: TEAM_U10_BASKETBALL_ID, org_id: DEMO_ORG_A_ID, program_id: PROGRAM_BASKETBALL_REC_ID, level_id: LEVEL_BB_REC_U10_ID, sport_id: SPORT_BASKETBALL_ID,
-        name: 'U10 Hawks', max_roster_size: 12, is_active: true, created_at: '2023-09-01T00:00:00Z', updated_at: '2024-01-15T00:00:00Z',
+        name: 'U10 Hawks', max_roster_size: 12, is_active: true, created_at: getDateInPreviousYear(9, 1), updated_at: getDateInCurrentYear(1, 15),
         age_group: 'U10', gender: 'coed', skill_level: 'recreational'
     },
     {
         id: TEAM_U12_BASKETBALL_ID, org_id: DEMO_ORG_A_ID, program_id: PROGRAM_BASKETBALL_REC_ID, level_id: LEVEL_BB_REC_U12_ID, sport_id: SPORT_BASKETBALL_ID,
-        name: 'U12 Eagles', max_roster_size: 12, is_active: true, created_at: '2023-09-01T00:00:00Z', updated_at: '2024-01-15T00:00:00Z',
+        name: 'U12 Eagles', max_roster_size: 12, is_active: true, created_at: getDateInPreviousYear(9, 1), updated_at: getDateInCurrentYear(1, 15),
         age_group: 'U12', gender: 'coed', skill_level: 'competitive'
     },
     {
         id: TEAM_U10_VOLLEYBALL_ID, org_id: DEMO_ORG_A_ID, program_id: 'program-vb-rec', level_id: LEVEL_VB_U10_ID, sport_id: SPORT_VOLLEYBALL_ID,
-        name: 'U10 Spikers', max_roster_size: 12, is_active: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-15T00:00:00Z',
+        name: 'U10 Spikers', max_roster_size: 12, is_active: true, created_at: getDateInCurrentYear(1, 1), updated_at: getDateInCurrentYear(1, 15),
         age_group: 'U10', gender: 'female', skill_level: 'recreational'
     },
     {
         id: TEAM_U8_BASEBALL_ID, org_id: DEMO_ORG_A_ID, program_id: 'program-bb-rec', level_id: LEVEL_BASEBALL_U8_ID, sport_id: SPORT_BASEBALL_ID,
-        name: 'U8 Cubs', max_roster_size: 14, is_active: true, created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z',
+        name: 'U8 Cubs', max_roster_size: 14, is_active: true, created_at: getDateInCurrentYear(2, 1), updated_at: getDateInCurrentYear(2, 1),
         age_group: 'U8', gender: 'coed', skill_level: 'recreational'
     },
     {
         id: TEAM_U12_BASEBALL_ID, org_id: DEMO_ORG_A_ID, program_id: 'program-bb-rec', level_id: LEVEL_BASEBALL_U12_ID, sport_id: SPORT_BASEBALL_ID,
-        name: 'U12 Rangers', max_roster_size: 15, is_active: true, created_at: '2023-03-01T00:00:00Z', updated_at: '2024-01-15T00:00:00Z',
+        name: 'U12 Rangers', max_roster_size: 15, is_active: true, created_at: getDateInPreviousYear(3, 1), updated_at: getDateInCurrentYear(1, 15),
         age_group: 'U12', gender: 'male', skill_level: 'competitive'
     },
 ]
@@ -647,39 +666,39 @@ export const fakeSeasons: FakeSeason[] = [
 
 export const fakeTeamSeasons: FakeTeamSeason[] = [
     // Link Spring 2024
-    { team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, is_active: true, created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
-    { team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, is_active: true, created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
-    { team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, is_active: true, created_at: '2024-02-10T00:00:00Z', updated_at: '2024-02-10T00:00:00Z' },
-    { team_id: TEAM_U12_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, is_active: true, created_at: '2024-02-15T00:00:00Z', updated_at: '2024-02-15T00:00:00Z' },
-    { team_id: TEAM_U14_SOCCER_ELITE_ID, season_id: SEASON_SPRING_CURRENT_ID, is_active: true, created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
+    { team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, is_active: true, created_at: getDateInCurrentYear(2, 1), updated_at: getDateInCurrentYear(2, 1) },
+    { team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, is_active: true, created_at: getDateInCurrentYear(2, 1), updated_at: getDateInCurrentYear(2, 1) },
+    { team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, is_active: true, created_at: getDateInCurrentYear(2, 10), updated_at: getDateInCurrentYear(2, 10) },
+    { team_id: TEAM_U12_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, is_active: true, created_at: getDateInCurrentYear(2, 15), updated_at: getDateInCurrentYear(2, 15) },
+    { team_id: TEAM_U14_SOCCER_ELITE_ID, season_id: SEASON_SPRING_CURRENT_ID, is_active: true, created_at: getDateInCurrentYear(2, 1), updated_at: getDateInCurrentYear(2, 1) },
     // Past Season
-    { team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_FALL_PREVIOUS_ID, is_active: false, created_at: '2023-08-01T00:00:00Z', updated_at: '2023-12-15T00:00:00Z' },
+    { team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_FALL_PREVIOUS_ID, is_active: false, created_at: getDateInPreviousYear(8, 1), updated_at: getDateInPreviousYear(12, 15) },
 ]
 
 export const fakeTeamMembers: FakeTeamMember[] = [
     // Need to use new unified season IDs
-    { id: 'tm-001', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_EMMA_JOHNSON_ID, role: 'player', status: 'active', jersey_number: '7', position: 'Forward', joined_at: '2024-02-01T00:00:00Z', created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
-    { id: 'tm-002', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_SOPHIA_CHEN_ID, role: 'captain', status: 'active', jersey_number: '10', position: 'Midfielder', joined_at: '2024-02-01T00:00:00Z', created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
-    { id: 'tm-003', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_AIDEN_PATEL_ID, role: 'player', status: 'active', jersey_number: '5', position: 'Defender', joined_at: '2024-02-05T00:00:00Z', created_at: '2024-02-05T00:00:00Z', updated_at: '2024-02-05T00:00:00Z' },
+    { id: 'tm-001', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_EMMA_JOHNSON_ID, role: 'player', status: 'active', jersey_number: '7', position: 'Forward', joined_at: getDateInCurrentYear(2, 1), created_at: getDateInCurrentYear(2, 1), updated_at: getDateInCurrentYear(2, 1) },
+    { id: 'tm-002', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_SOPHIA_CHEN_ID, role: 'captain', status: 'active', jersey_number: '10', position: 'Midfielder', joined_at: getDateInCurrentYear(2, 1), created_at: getDateInCurrentYear(2, 1), updated_at: getDateInCurrentYear(2, 1) },
+    { id: 'tm-003', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_AIDEN_PATEL_ID, role: 'player', status: 'active', jersey_number: '5', position: 'Defender', joined_at: getDateInCurrentYear(2, 5), created_at: getDateInCurrentYear(2, 5), updated_at: getDateInCurrentYear(2, 5) },
 
-    { id: 'tm-004', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_OLIVIA_SMITH_ID, role: 'player', status: 'active', jersey_number: '23', position: 'Goalkeeper', joined_at: '2024-02-01T00:00:00Z', created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
-    { id: 'tm-005', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_MASON_RODRIGUEZ_ID, role: 'captain', status: 'active', jersey_number: '22', position: 'Forward', joined_at: '2024-02-01T00:00:00Z', created_at: '2024-02-01T00:00:00Z', updated_at: '2024-02-01T00:00:00Z' },
-    { id: 'tm-006', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_AVA_WILLIAMS_ID, role: 'player', status: 'active', jersey_number: '15', position: 'Midfielder', joined_at: '2024-02-03T00:00:00Z', created_at: '2024-02-03T00:00:00Z', updated_at: '2024-02-03T00:00:00Z' },
+    { id: 'tm-004', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_OLIVIA_SMITH_ID, role: 'player', status: 'active', jersey_number: '23', position: 'Goalkeeper', joined_at: getDateInCurrentYear(2, 1), created_at: getDateInCurrentYear(2, 1), updated_at: getDateInCurrentYear(2, 1) },
+    { id: 'tm-005', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_MASON_RODRIGUEZ_ID, role: 'captain', status: 'active', jersey_number: '22', position: 'Forward', joined_at: getDateInCurrentYear(2, 1), created_at: getDateInCurrentYear(2, 1), updated_at: getDateInCurrentYear(2, 1) },
+    { id: 'tm-006', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_AVA_WILLIAMS_ID, role: 'player', status: 'active', jersey_number: '15', position: 'Midfielder', joined_at: getDateInCurrentYear(2, 3), created_at: getDateInCurrentYear(2, 3), updated_at: getDateInCurrentYear(2, 3) },
 
-    { id: 'tm-007', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_LIAM_JOHNSON_ID, role: 'player', status: 'active', jersey_number: '12', position: 'Guard', joined_at: '2024-02-10T00:00:00Z', created_at: '2024-02-10T00:00:00Z', updated_at: '2024-02-10T00:00:00Z' },
-    { id: 'tm-008', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_NOAH_SMITH_ID, role: 'player', status: 'active', jersey_number: '8', position: 'Forward', joined_at: '2024-02-10T00:00:00Z', created_at: '2024-02-10T00:00:00Z', updated_at: '2024-02-10T00:00:00Z' },
-    { id: 'tm-009', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_ETHAN_WILLIAMS_ID, role: 'player', status: 'active', jersey_number: '3', position: 'Center', joined_at: '2024-02-12T00:00:00Z', created_at: '2024-02-12T00:00:00Z', updated_at: '2024-02-12T00:00:00Z' },
+    { id: 'tm-007', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_LIAM_JOHNSON_ID, role: 'player', status: 'active', jersey_number: '12', position: 'Guard', joined_at: getDateInCurrentYear(2, 10), created_at: getDateInCurrentYear(2, 10), updated_at: getDateInCurrentYear(2, 10) },
+    { id: 'tm-008', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_NOAH_SMITH_ID, role: 'player', status: 'active', jersey_number: '8', position: 'Forward', joined_at: getDateInCurrentYear(2, 10), created_at: getDateInCurrentYear(2, 10), updated_at: getDateInCurrentYear(2, 10) },
+    { id: 'tm-009', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_ETHAN_WILLIAMS_ID, role: 'player', status: 'active', jersey_number: '3', position: 'Center', joined_at: getDateInCurrentYear(2, 12), created_at: getDateInCurrentYear(2, 12), updated_at: getDateInCurrentYear(2, 12) },
 
-    { id: 'tm-010', team_id: TEAM_U12_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_ISABELLA_RODRIGUEZ_ID, role: 'player', status: 'active', jersey_number: '17', position: 'Guard', joined_at: '2024-02-15T00:00:00Z', created_at: '2024-02-15T00:00:00Z', updated_at: '2024-02-15T00:00:00Z' },
+    { id: 'tm-010', team_id: TEAM_U12_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_ISABELLA_RODRIGUEZ_ID, role: 'player', status: 'active', jersey_number: '17', position: 'Guard', joined_at: getDateInCurrentYear(2, 15), created_at: getDateInCurrentYear(2, 15), updated_at: getDateInCurrentYear(2, 15) },
 ]
 
 export const fakeCoachAssignments: FakeCoachAssignment[] = [
-    { id: 'ca-001', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: COACH_ONLY_ID, role: 'head_coach', created_at: '2024-02-01T00:00:00Z' },
-    { id: 'ca-002', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: COACH_ONLY_ID, role: 'head_coach', created_at: '2024-02-01T00:00:00Z' },
-    { id: 'ca-003', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: PARENT_COACH_ID, role: 'head_coach', created_at: '2024-02-10T00:00:00Z' },
-    { id: 'ca-004', team_id: TEAM_U12_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: USER_COACH_MARTINEZ_ID, role: 'head_coach', created_at: '2024-02-15T00:00:00Z' },
-    { id: 'ca-005', team_id: TEAM_U14_SOCCER_ELITE_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: USER_COACH_THOMPSON_ID, role: 'head_coach', created_at: '2024-02-01T00:00:00Z' },
-    { id: 'ca-006', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: USER_COACH_MARTINEZ_ID, role: 'assistant_coach', created_at: '2024-02-05T00:00:00Z' },
+    { id: 'ca-001', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: COACH_ONLY_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 1) },
+    { id: 'ca-002', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: COACH_ONLY_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 1) },
+    { id: 'ca-003', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: PARENT_COACH_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 10) },
+    { id: 'ca-004', team_id: TEAM_U12_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: USER_COACH_MARTINEZ_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 15) },
+    { id: 'ca-005', team_id: TEAM_U14_SOCCER_ELITE_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: USER_COACH_THOMPSON_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 1) },
+    { id: 'ca-006', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: USER_COACH_MARTINEZ_ID, role: 'assistant_coach', created_at: getDateInCurrentYear(2, 5) },
 ]
 
 // ============================================================================

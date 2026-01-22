@@ -105,13 +105,23 @@ export default function Travel() {
                 className="overflow-hidden cursor-pointer hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300"
               >
                 <Card className="p-0">
-                  <SportCardImage sport={planSports[plan.id] || null} height="h-48">
+                  <SportCardImage sport={planSports[plan.id] || null} height="h-48" type="travel">
                     <div className="relative z-10 w-full">
-                      {plan.status === 'cancelled' ? (
-                        <span className="inline-block px-3 py-1 bg-red-500 text-white text-xs font-bold uppercase tracking-widest rounded mb-3">Cancelled</span>
-                      ) : (
-                        <span className="inline-block px-3 py-1 bg-[#137fec] text-white text-xs font-bold uppercase tracking-widest rounded mb-3">Upcoming Trip</span>
-                      )}
+                      <div className="flex gap-2 mb-3">
+                        {plan.status === 'cancelled' ? (
+                          <span className="inline-block px-3 py-1 bg-red-500 text-white text-xs font-bold uppercase tracking-widest rounded">Cancelled</span>
+                        ) : (
+                          <span className="inline-block px-3 py-1 bg-[#137fec] text-white text-xs font-bold uppercase tracking-widest rounded">Upcoming Trip</span>
+                        )}
+                        {planSports[plan.id] && (
+                          <span 
+                            className="inline-block px-3 py-1 text-white text-xs font-bold uppercase tracking-widest rounded"
+                            style={{ backgroundColor: planSports[plan.id]!.color || '#137fec' }}
+                          >
+                            {planSports[plan.id]!.name}
+                          </span>
+                        )}
+                      </div>
                       <CardTitle className="mb-2 text-white">{plan.title}</CardTitle>
                       <p className="text-xs font-bold uppercase tracking-widest text-white/80">
                         {plan.location} • {formatDateRange(plan.start_date, plan.end_date)}
