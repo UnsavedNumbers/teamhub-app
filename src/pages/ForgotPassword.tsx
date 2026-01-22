@@ -13,6 +13,7 @@ export default function ForgotPassword() {
 
   const { resetPassword } = useAuth()
   const { resolvedTheme } = useTheme()
+  const [logoVersion, setLogoVersion] = useState(0)
 
   // Select random hero image on mount
   useEffect(() => {
@@ -21,6 +22,11 @@ export default function ForgotPassword() {
       setHeroImage(randomImage)
     }
   }, [])
+
+  // Update logo version when theme changes to force reload
+  useEffect(() => {
+    setLogoVersion(prev => prev + 1)
+  }, [resolvedTheme])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -75,7 +81,8 @@ export default function ForgotPassword() {
           {/* Logo */}
           <div className="mb-8 pt-4">
             <img 
-              src={resolvedTheme === 'dark' ? '/images/logo-dark.png' : '/images/logo-light.png'}
+              key={resolvedTheme}
+              src={`${resolvedTheme === 'dark' ? '/images/logo-dark.png' : '/images/logo-light.png'}?theme=${resolvedTheme}&v=${logoVersion}`}
               alt="YouthSports" 
               className="h-24 w-auto object-contain"
             />

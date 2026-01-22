@@ -261,6 +261,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [logoError, setLogoError] = useState(false)
+  const [logoVersion, setLogoVersion] = useState(0)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -290,9 +291,13 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
     ? '/images/logo-dark.png' 
     : '/images/logo-light.png'
 
-  // Reset logo error when theme changes
+  // Add cache-busting query parameter to force reload on theme change
+  const logoSrcWithCacheBust = `${logoSrc}?theme=${resolvedTheme}&v=${logoVersion}`
+
+  // Reset logo error and increment version when theme changes to force reload
   useEffect(() => {
     setLogoError(false)
+    setLogoVersion(prev => prev + 1)
   }, [resolvedTheme])
 
   const handleMenuOpen = (menuId: string) => {
@@ -348,6 +353,38 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
     }
   }
 
+  // Close menus immediately on mount
+  useEffect(() => {
+    // Clear any pending timeouts that might open menus
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
+    }
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current)
+      closeTimeoutRef.current = null
+    }
+    // Close menus immediately on mount
+    setOpenMenuId(null)
+    setMobileMenuOpen(false)
+  }, [])
+
+  // Close menus on route change
+  useEffect(() => {
+    // Clear any pending timeouts that might open menus
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
+    }
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current)
+      closeTimeoutRef.current = null
+    }
+    // Close menus immediately on route change
+    setOpenMenuId(null)
+    setMobileMenuOpen(false)
+  }, [location.pathname])
+
   // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
@@ -355,12 +392,6 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
       if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current)
     }
   }, [])
-
-  // Close menus on route change
-  useEffect(() => {
-    handleMenuClose()
-    setMobileMenuOpen(false)
-  }, [location.pathname])
 
   const brandPath = '/portal/dashboard'
   const brandIcon = 'sports'
@@ -381,7 +412,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
           {!logoError ? (
             <img 
               key={logoSrc}
-              src={logoSrc} 
+              src={logoSrcWithCacheBust} 
               alt="AthleticPortal" 
               className="h-8 w-auto transition-opacity duration-200"
               onError={() => {

@@ -15,6 +15,7 @@ export default function ConfirmEmail() {
   const state = location.state as ConfirmEmailState | null
   const { resolvedTheme } = useTheme()
   const [heroImage, setHeroImage] = useState<string>('')
+  const [logoVersion, setLogoVersion] = useState(0)
 
   // Check for org setup intent from both state and localStorage
   const isOrgSetupFlow =
@@ -49,7 +50,8 @@ export default function ConfirmEmail() {
           {/* Logo */}
           <div className="mb-8 pt-4">
             <img 
-              src={resolvedTheme === 'dark' ? '/images/logo-dark.png' : '/images/logo-light.png'}
+              key={resolvedTheme}
+              src={`${resolvedTheme === 'dark' ? '/images/logo-dark.png' : '/images/logo-light.png'}?theme=${resolvedTheme}&v=${logoVersion}`}
               alt="YouthSports" 
               className="h-24 w-auto object-contain"
             />
