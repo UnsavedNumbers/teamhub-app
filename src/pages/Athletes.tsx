@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
-import { getChildren } from '../data/services/familyService'
+import { getAthletes } from '../data/services/familyService'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
@@ -36,14 +36,28 @@ export default function Athletes() {
     
     const currentRequestId = ++requestIdRef.current
     setLoading(true)
-    const { data, error } = await getChildren(context)
+    
+    try {
+      const { data, error } = await getAthletes(context)
 
-    // Only update state if this is the latest request and component is still mounted
-    if (currentRequestId === requestIdRef.current && isMountedRef.current) {
-      if (!error && data) {
-        setAthletes(data)
+      // Only update state if this is the latest request and component is still mounted
+      if (currentRequestId === requestIdRef.current && isMountedRef.current) {
+        if (error) {
+          console.error('[Athletes] Error fetching athletes:', error)
+          setAthletes([])
+        } else if (data) {
+          setAthletes(data)
+        } else {
+          setAthletes([])
+        }
+        setLoading(false)
       }
-      setLoading(false)
+    } catch (err) {
+      console.error('[Athletes] Exception fetching athletes:', err)
+      if (currentRequestId === requestIdRef.current && isMountedRef.current) {
+        setAthletes([])
+        setLoading(false)
+      }
     }
   }, [context, isReady])
 

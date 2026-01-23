@@ -411,10 +411,9 @@ export async function deleteChild(
 }
 
 /**
- * Get children for the current user
- * Maintains backward compatibility with dashboard
+ * Get athletes for the current user
  */
-export async function getChildren(
+export async function getAthletes(
     context: UserContext
 ): Promise<{ data: Child[]; error: Error | null }> {
     if (USE_FAKE_DATA) {
@@ -436,51 +435,46 @@ export async function getChildren(
 
     // Real Data
     try {
-        // Warning: This query logic needs correct RLS on Supabase side
-        // Typically: users can see children they are linked to via family_members
-        // Admins can see all in org.
-        // For now, this query relies on RLS to filter.
+        // Query athletes directly - RLS policies will filter based on guardian relationships
+        // The new system uses athlete_guardians, not families
+        console.log('[getAthletes] Fetching athletes for org:', context.orgId)
+        
         const { data, error } = await supabase
             .from('athletes')
-            .select(`
-                *,
-                family:families!inner(org_id),
-                athlete_sports(
-                    sport_id,
-                    sport_type,
-                    sport:sports(name)
-                )
-            `)
-            .eq('family.org_id', context.orgId || '')
+            .select('*')
             .is('deleted_at', null)
+            .order('first_name', { ascending: true })
 
-        if (error) throw error
+        console.log('[getAthletes] Query result:', { data, error, count: data?.length })
+
+        if (error) {
+            console.error('[getAthletes] Query error:', error)
+            throw error
+        }
         
-        // Transform the data to match Athlete type with sports array
-        const transformed = (data || []).map((d: any) => {
-            const athlete = { ...d, family: undefined } as any
-            
-            // Transform athlete_sports to sports array format
-            if (athlete.athlete_sports && Array.isArray(athlete.athlete_sports)) {
-                athlete.sports = athlete.athlete_sports.map((as: any) => ({
-                    sport_id: as.sport_id,
-                    sport_name: as.sport?.name || 'Unknown Sport',
-                    sport_type: as.sport_type
-                }))
-            } else {
-                athlete.sports = []
-            }
-            
-            // Remove the raw athlete_sports field
-            delete athlete.athlete_sports
-            
-            return athlete as Child
-        })
+        // Transform the data to match Athlete type with empty sports array
+        // Sports can be fetched separately if needed
+        const transformed = (data || []).map((d: any) => ({
+            ...d,
+            sports: [] // Sports will be fetched separately if needed
+        } as Child))
         
+        console.log('[getAthletes] Returning athletes:', transformed.length)
         return { data: transformed, error: null }
     } catch (err) {
+        console.error('[getAthletes] Error fetching athletes:', err)
         return { data: [], error: err instanceof Error ? err : new Error('Fetch failed') }
     }
+}
+
+/**
+ * Legacy alias for getAthletes
+ * Maintains backward compatibility with existing code
+ */
+export async function getChildren(
+    context: UserContext
+): Promise<{ data: Child[]; error: Error | null }> {
+    return getAthletes(context)
 }
 
 // ============================================================================
@@ -520,25 +514,24 @@ export async function getAthleteById(
 
     // Real Data
     try {
+        console.log('[getAthleteById] Fetching athlete:', athleteId)
+        
         const { data, error } = await supabase
             .from('athletes')
-            .select(`
-                *,
-                athlete_sports(
-                    sport_id,
-                    sport_type,
-                    sport:sports(name)
-                )
-            `)
+            .select('*')
             .eq('id', athleteId)
             .is('deleted_at', null)
             .single()
 
+        console.log('[getAthleteById] Query result:', { data, error })
+
         if (error) {
             if (error.code === 'PGRST116') {
                 // Not found
+                console.log('[getAthleteById] Athlete not found')
                 return { data: null, error: null }
             }
+            console.error('[getAthleteById] Query error:', error)
             throw error
         }
 
@@ -546,23 +539,15 @@ export async function getAthleteById(
             return { data: null, error: null }
         }
 
-        // Transform athlete_sports to sports array format
-        const athlete = { ...data } as any
-        if (athlete.athlete_sports && Array.isArray(athlete.athlete_sports)) {
-            athlete.sports = athlete.athlete_sports.map((as: any) => ({
-                sport_id: as.sport_id,
-                sport_name: as.sport?.name || 'Unknown Sport',
-                sport_type: as.sport_type
-            }))
-        } else {
-            athlete.sports = []
-        }
-        
-        // Remove the raw athlete_sports field
-        delete athlete.athlete_sports
+        // Return athlete with empty sports array (sports will be fetched separately if needed)
+        const athlete = {
+            ...data,
+            sports: []
+        } as Child
 
-        return { data: athlete as Child, error: null }
+        return { data: athlete, error: null }
     } catch (err) {
+        console.error('[getAthleteById] Error:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Fetch failed') }
     }
 }
