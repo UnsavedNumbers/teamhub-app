@@ -1,5 +1,7 @@
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext } from '../fake/userContext'
+import { supabase } from '../../lib/supabase'
+import type { Database, Json } from '../../lib/database.types'
 import {
     fakeUniformKits,
     fakeUniformItems,
@@ -33,20 +35,32 @@ export async function getUniformKits(
 ): Promise<{ data: UniformKit[]; error: Error | null }> {
     await simulateDelay()
 
-    if (!USE_FAKE_DATA) {
-        return { data: [], error: null }
+    if (USE_FAKE_DATA) {
+        let kits = getUniformKitsForOrg(context.orgId)
+        if (teamIds && teamIds.length > 0) {
+            kits = kits.filter(k => !k.team_id || teamIds.includes(k.team_id))
+        }
+        return { data: kits, error: null }
     }
 
-    // In a real app, we'd filter by teamIds. 
-    // For demo, we return all active kits for the org to ensure visibility.
-    let kits = getUniformKitsForOrg(context.orgId)
+    try {
+        let query = supabase
+            .from('uniform_kits')
+            .select('*, team:teams(org_id)')
+            .order('created_at', { ascending: false })
 
-    // Simple filter if teamIds provided, but generally permissive for demo
-    if (teamIds && teamIds.length > 0) {
-        kits = kits.filter(k => !k.team_id || teamIds.includes(k.team_id))
+        if (teamIds && teamIds.length > 0) {
+            query = query.in('team_id', teamIds)
+        }
+
+        const { data, error } = await query
+        if (error) throw error
+
+        const filtered = (data ?? []).filter((row: any) => !row.team || row.team.org_id === context.orgId)
+        return { data: (filtered as unknown) as UniformKit[], error: null }
+    } catch (err) {
+        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch uniform kits') }
     }
-
-    return { data: kits, error: null }
 }
 
 /**
@@ -58,12 +72,23 @@ export async function getUniformKitItems(
 ): Promise<{ data: UniformItem[]; error: Error | null }> {
     await simulateDelay()
 
-    if (!USE_FAKE_DATA) {
-        return { data: [], error: null }
+    if (USE_FAKE_DATA) {
+        const items = fakeUniformItems.filter(i => kitIds.includes(i.kit_id))
+        return { data: items, error: null }
     }
 
-    const items = fakeUniformItems.filter(i => kitIds.includes(i.kit_id))
-    return { data: items, error: null }
+    try {
+        const { data, error } = await supabase
+            .from('uniform_kit_items')
+            .select('*')
+            .in('kit_id', kitIds)
+            .order('sort_order', { ascending: true })
+
+        if (error) throw error
+        return { data: (data as unknown) as UniformItem[], error: null }
+    } catch (err) {
+        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch kit items') }
+    }
 }
 
 /**
@@ -75,19 +100,30 @@ export async function getUniformSubmissions(
 ): Promise<{ data: UniformSubmission[]; error: Error | null }> {
     await simulateDelay()
 
-    if (!USE_FAKE_DATA) {
-        return { data: [], error: null }
+    if (USE_FAKE_DATA) {
+        let submissions = fakeUniformSubmissions
+        if (childIds && childIds.length > 0) {
+            submissions = submissions.filter(s => childIds.includes(s.child_id))
+        }
+        return { data: submissions, error: null }
     }
 
-    let submissions = fakeUniformSubmissions
+    try {
+        let query = supabase
+            .from('uniform_submissions')
+            .select('*, items:uniform_submission_items(*)')
 
-    if (childIds && childIds.length > 0) {
-        submissions = submissions.filter(s => childIds.includes(s.child_id))
+        if (childIds && childIds.length > 0) {
+            query = query.in('child_id', childIds)
+        }
+
+        const { data, error } = await query
+        if (error) throw error
+
+        return { data: (data as unknown) as UniformSubmission[], error: null }
+    } catch (err) {
+        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch submissions') }
     }
-
-    // In a real app we might also filter by user if they are the submitter
-
-    return { data: submissions, error: null }
 }
 
 /**
@@ -99,18 +135,34 @@ export async function getAllUniformSubmissions(
 ): Promise<{ data: UniformSubmission[]; error: Error | null }> {
     await simulateDelay()
 
-    if (!USE_FAKE_DATA) {
-        return { data: [], error: null }
+    if (USE_FAKE_DATA) {
+        const orgKits = fakeUniformKits.filter(k => k.org_id === context.orgId)
+        const orgKitIds = orgKits.map(k => k.id)
+        const submissions = fakeUniformSubmissions.filter(s => orgKitIds.includes(s.kit_id))
+        return { data: submissions, error: null }
     }
 
-    // Get all kits for the org
-    const orgKits = fakeUniformKits.filter(k => k.org_id === context.orgId)
-    const orgKitIds = orgKits.map(k => k.id)
+    try {
+        // Get kits scoped to org first
+        const { data: kits, error: kitError } = await supabase
+            .from('uniform_kits')
+            .select('id')
+            .eq('org_id', context.orgId)
 
-    // Get all submissions for those kits
-    const submissions = fakeUniformSubmissions.filter(s => orgKitIds.includes(s.kit_id))
+        if (kitError) throw kitError
+        const kitIds = (kits ?? []).map(k => k.id)
+        if (kitIds.length === 0) return { data: [], error: null }
 
-    return { data: submissions, error: null }
+        const { data, error } = await supabase
+            .from('uniform_submissions')
+            .select('*, items:uniform_submission_items(*)')
+            .in('kit_id', kitIds)
+
+        if (error) throw error
+        return { data: (data as unknown) as UniformSubmission[], error: null }
+    } catch (err) {
+        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch org submissions') }
+    }
 }
 
 /**
@@ -122,12 +174,22 @@ export async function getUniformSizeSelections(
 ): Promise<{ data: UniformSizeSelection[]; error: Error | null }> {
     await simulateDelay()
 
-    if (!USE_FAKE_DATA) {
-        return { data: [], error: null }
+    if (USE_FAKE_DATA) {
+        const selections = fakeUniformSizeSelections.filter(s => s.submission_id === submissionId)
+        return { data: selections, error: null }
     }
 
-    const selections = fakeUniformSizeSelections.filter(s => s.submission_id === submissionId)
-    return { data: selections, error: null }
+    try {
+        const { data, error } = await supabase
+            .from('uniform_submission_items')
+            .select('*')
+            .eq('submission_id', submissionId)
+
+        if (error) throw error
+        return { data: (data as unknown) as UniformSizeSelection[], error: null }
+    } catch (err) {
+        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch size selections') }
+    }
 }
 
 /**
@@ -140,9 +202,52 @@ export async function submitUniformSizes(
     items: { item_id: string, size: string }[]
 ): Promise<{ error: Error | null }> {
     await simulateDelay()
-    if (!USE_FAKE_DATA) return { error: null }
+    if (USE_FAKE_DATA) return { error: null }
 
-    // In fake mode we don't persist, just return success
-    console.log('Mock submitting uniform sizes:', { kitId, childId, items })
-    return { error: null }
+    try {
+        // Upsert submission header
+        const { data: existing, error: fetchError } = await supabase
+            .from('uniform_submissions')
+            .select('id')
+            .eq('kit_id', kitId)
+            .eq('child_id', childId)
+            .single()
+
+        if (fetchError && fetchError.code !== 'PGRST116') throw fetchError
+
+        const now = new Date().toISOString()
+        const { data: submission, error: upsertError } = await supabase
+            .from('uniform_submissions')
+            .upsert({
+                id: existing?.id,
+                kit_id: kitId,
+                child_id: childId,
+                status: 'submitted',
+                submitted_at: now,
+                updated_at: now,
+            } satisfies Database['public']['Tables']['uniform_submissions']['Insert'])
+            .select('id')
+            .single()
+
+        if (upsertError) throw upsertError
+
+        const submissionId = submission?.id ?? existing?.id
+        if (!submissionId) throw new Error('Submission not created')
+
+        // Replace item selections
+        await supabase.from('uniform_submission_items').delete().eq('submission_id', submissionId)
+
+        const insertRows = items.map((item) => ({
+            submission_id: submissionId,
+            item_id: item.item_id,
+            size: item.size,
+        }) satisfies Database['public']['Tables']['uniform_submission_items']['Insert'])
+
+        const { error: insertError } = await supabase.from('uniform_submission_items').insert(insertRows)
+        if (insertError) throw insertError
+
+        return { error: null }
+    } catch (err) {
+        return { error: err instanceof Error ? err : new Error('Failed to submit uniform sizes') }
+    }
 }

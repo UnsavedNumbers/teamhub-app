@@ -31,6 +31,7 @@ import {
 } from '../fake/relationships'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
+import type { Database as Generated } from '../../lib/database.types'
 import type { Team, CreateTeamDTO, UpdateTeamDTO } from '../types/organization'
 
 // ============================================================================
@@ -50,6 +51,32 @@ function buildPermissions(context: UserContext): PermissionSet {
         : []
 
     return calculatePermissions(context, assignedTeamIds, childIds, [])
+}
+
+function isOrgAdmin(context: UserContext): boolean {
+    return context.roles.includes('admin') || context.roles.includes('org_admin')
+}
+
+async function getFamilyIdForUser(userId: string): Promise<string | null> {
+    const { data, error } = await supabase
+        .from('users')
+        .select('family_id')
+        .eq('id', userId)
+        .single()
+
+    if (error) return null
+    return data?.family_id ?? null
+}
+
+async function getChildIdsForFamily(familyId: string | null): Promise<string[]> {
+    if (!familyId) return []
+    const { data, error } = await supabase
+        .from('athletes')
+        .select('id')
+        .eq('family_id', familyId)
+
+    if (error) return []
+    return (data ?? []).map((row) => row.id)
 }
 
 // ============================================================================
@@ -298,26 +325,43 @@ export async function getTeamDetails(
     context: UserContext,
     teamId: string
 ): Promise<{ data: ReturnType<typeof getTeamWithDetails> | null; error: Error | null }> {
-    if (!USE_FAKE_DATA) {
-        return { data: null, error: new Error('Real data not implemented') }
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+
+            const team = getTeamWithDetails(teamId)
+            if (!team) {
+                return { data: null, error: null }
+            }
+
+            if (team.org_id !== context.orgId) {
+                return { data: null, error: new Error('Access denied') }
+            }
+
+            return { data: team, error: null }
+        } catch (err) {
+            return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        }
     }
 
     try {
-        await simulateDelay()
+        const { data, error } = await supabase
+            .from('teams')
+            .select(
+                `*,
+                sport:sports(*),
+                program:programs(*),
+                level:levels(*),
+                active_season:team_seasons(is_active, season:seasons(*))`
+            )
+            .eq('id', teamId)
+            .eq('org_id', context.orgId)
+            .single()
 
-        const team = getTeamWithDetails(teamId)
-        if (!team) {
-            return { data: null, error: null }
-        }
-
-        // Verify org access
-        if (team.org_id !== context.orgId) {
-            return { data: null, error: new Error('Access denied') }
-        }
-
-        return { data: team, error: null }
+        if (error) throw error
+        return { data: data as unknown as ReturnType<typeof getTeamWithDetails>, error: null }
     } catch (err) {
-        return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        return { data: null, error: err instanceof Error ? err : new Error('Failed to fetch team details') }
     }
 }
 
@@ -353,17 +397,30 @@ export async function getActiveSeason(
     _context: UserContext,
     teamId: string
 ): Promise<{ data: FakeSeason | null; error: Error | null }> {
-    if (!USE_FAKE_DATA) {
-        return { data: null, error: new Error('Real data not implemented') }
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+
+            const season = getActiveSeasonForTeam(teamId)
+            return { data: season ?? null, error: null }
+        } catch (err) {
+            return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        }
     }
 
     try {
-        await simulateDelay()
+        const { data, error } = await supabase
+            .from('team_seasons')
+            .select('is_active, season:seasons(*)')
+            .eq('team_id', teamId)
+            .eq('is_active', true)
+            .single()
 
-        const season = getActiveSeasonForTeam(teamId)
+        if (error) throw error
+        const season = (data as any)?.season as FakeSeason | undefined
         return { data: season ?? null, error: null }
     } catch (err) {
-        return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        return { data: null, error: err instanceof Error ? err : new Error('Failed to fetch active season') }
     }
 }
 
@@ -396,32 +453,53 @@ export async function getTeamRoster(
     teamId: string,
     seasonId: string
 ): Promise<{ data: FakeTeamMember[]; error: Error | null }> {
-    if (!USE_FAKE_DATA) {
-        return { data: [], error: new Error('Real data not implemented') }
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+
+            const permissions = buildPermissions(context)
+
+            if (
+                permissions.canViewAllOrgData ||
+                (permissions.canViewAssignedTeams && permissions.assignedTeamIds.includes(teamId))
+            ) {
+                const members = getTeamMembersForSeason(teamId, seasonId)
+                return { data: members, error: null }
+            }
+
+            const members = getTeamMembersForSeason(teamId, seasonId)
+            const childIds = getChildrenForUserId(context.userId)
+            const filtered = members.filter((m) => childIds.includes(m.child_id))
+
+            return { data: filtered, error: null }
+        } catch (err) {
+            return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        }
     }
 
     try {
-        await simulateDelay()
+        const { data, error } = await supabase
+            .from('team_memberships')
+            .select('*, athlete:athletes(id, first_name, last_name, family:families(id, name))')
+            .eq('team_id', teamId)
+            .eq('season_id', seasonId)
+            .eq('status', 'active')
 
-        const permissions = buildPermissions(context)
+        if (error) throw error
 
-        // Coaches and admins can see full roster
-        if (
-            permissions.canViewAllOrgData ||
-            (permissions.canViewAssignedTeams && permissions.assignedTeamIds.includes(teamId))
-        ) {
-            const members = getTeamMembersForSeason(teamId, seasonId)
-            return { data: members, error: null }
-        }
+        const familyId = await getFamilyIdForUser(context.userId)
+        const childIds = await getChildIdsForFamily(familyId)
+        const isAdmin = isOrgAdmin(context)
 
-        // Parents can only see their own children on the roster
-        const members = getTeamMembersForSeason(teamId, seasonId)
-        const childIds = getChildrenForUserId(context.userId)
-        const filtered = members.filter((m) => childIds.includes(m.child_id))
+        const mapped = (data ?? []).map((row: any) => ({
+            ...(row as FakeTeamMember),
+            child_id: row.athlete_id ?? row.athlete?.id,
+        }))
 
-        return { data: filtered, error: null }
+        const visible = isAdmin ? mapped : mapped.filter((m) => childIds.includes((m as any).child_id))
+        return { data: visible, error: null }
     } catch (err) {
-        return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch roster') }
     }
 }
 
@@ -445,17 +523,40 @@ export async function getTeamCoaches(
     teamId: string,
     seasonId: string
 ): Promise<{ data: FakeCoachAssignment[]; error: Error | null }> {
-    if (!USE_FAKE_DATA) {
-        return { data: [], error: new Error('Real data not implemented') }
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+
+            const coaches = getCoachAssignmentsForTeam(teamId, seasonId)
+            return { data: coaches, error: null }
+        } catch (err) {
+            return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        }
     }
 
     try {
-        await simulateDelay()
+        // Schema does not expose a dedicated coach assignment table; fall back to org coaches.
+        const { data, error } = await supabase
+            .from('organization_members')
+            .select('user:users(id, email, display_name, phone), role')
+            .eq('role', 'coach')
+            .eq('org_id', _context.orgId)
 
-        const coaches = getCoachAssignmentsForTeam(teamId, seasonId)
-        return { data: coaches, error: null }
+        if (error) throw error
+
+        const mapped: FakeCoachAssignment[] = (data ?? []).map((row: any) => ({
+            id: row.user?.id ?? '',
+            team_id: teamId,
+            season_id: seasonId,
+            user_id: row.user?.id ?? '',
+            role: 'coach',
+            created_at: null,
+            updated_at: null,
+        }))
+
+        return { data: mapped, error: null }
     } catch (err) {
-        return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch coaches') }
     }
 }
 
@@ -469,21 +570,46 @@ export async function getTeamCoaches(
 export async function getTeamsForParent(
     context: UserContext
 ): Promise<{ data: FakeTeam[]; error: Error | null }> {
-    if (!USE_FAKE_DATA) {
-        return { data: [], error: new Error('Real data not implemented') }
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+
+            const teamIds = getTeamsForUserChildren(context.userId)
+            const teams = teamIds
+                .map((id) => getTeamById(id))
+                .filter((t): t is FakeTeam => t !== undefined)
+
+            return { data: teams, error: null }
+        } catch (err) {
+            return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        }
     }
 
     try {
-        await simulateDelay()
+        const familyId = await getFamilyIdForUser(context.userId)
+        const childIds = await getChildIdsForFamily(familyId)
+        if (childIds.length === 0) return { data: [], error: null }
 
-        const teamIds = getTeamsForUserChildren(context.userId)
-        const teams = teamIds
-            .map((id) => getTeamById(id))
-            .filter((t): t is FakeTeam => t !== undefined)
+        const { data: memberships, error: memErr } = await supabase
+            .from('team_memberships')
+            .select('team_id')
+            .in('athlete_id', childIds)
+            .eq('status', 'active')
 
-        return { data: teams, error: null }
+        if (memErr) throw memErr
+        const teamIds = Array.from(new Set((memberships ?? []).map((m) => m.team_id)))
+        if (teamIds.length === 0) return { data: [], error: null }
+
+        const { data: teams, error: teamErr } = await supabase
+            .from('teams')
+            .select('*')
+            .in('id', teamIds)
+            .eq('org_id', context.orgId)
+
+        if (teamErr) throw teamErr
+        return { data: (teams as unknown) as FakeTeam[], error: null }
     } catch (err) {
-        return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch parent teams') }
     }
 }
 
@@ -493,20 +619,32 @@ export async function getTeamsForParent(
 export async function getTeamsForCoach(
     context: UserContext
 ): Promise<{ data: FakeTeam[]; error: Error | null }> {
-    if (!USE_FAKE_DATA) {
-        return { data: [], error: new Error('Real data not implemented') }
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+
+            const teamIds = getAssignedTeamsForCoach(context.userId)
+            const teams = teamIds
+                .map((id) => getTeamById(id))
+                .filter((t): t is FakeTeam => t !== undefined)
+
+            return { data: teams, error: null }
+        } catch (err) {
+            return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        }
     }
 
     try {
-        await simulateDelay()
+        // Without a dedicated coach assignment table, return all org teams for now.
+        const { data, error } = await supabase
+            .from('teams')
+            .select('*')
+            .eq('org_id', context.orgId)
+            .order('name')
 
-        const teamIds = getAssignedTeamsForCoach(context.userId)
-        const teams = teamIds
-            .map((id) => getTeamById(id))
-            .filter((t): t is FakeTeam => t !== undefined)
-
-        return { data: teams, error: null }
+        if (error) throw error
+        return { data: (data as unknown) as FakeTeam[], error: null }
     } catch (err) {
-        return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch coach teams') }
     }
 }

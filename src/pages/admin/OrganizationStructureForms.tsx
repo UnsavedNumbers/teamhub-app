@@ -153,6 +153,11 @@ export default function OrganizationStructureForms() {
 
   useEffect(() => {
     if (!isReady) return
+    if (!context.orgId) {
+      setLoadError(t('admin.structureForms.errors.loadFailed'))
+      setLoading(false)
+      return
+    }
 
     let isActive = true
 
@@ -185,8 +190,9 @@ export default function OrganizationStructureForms() {
         setLevels(levelsResult.data as Level[])
         setTeams(teamsResult.data as Team[])
         setSeasons(seasonsResult.data as Season[])
-      } catch (_err) {
+      } catch (err) {
         if (!isActive) return
+        console.error('[OrganizationStructureForms] Error loading data:', err)
         setLoadError(t('admin.structureForms.errors.loadFailed'))
       } finally {
         if (isActive) setLoading(false)
