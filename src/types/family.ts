@@ -23,9 +23,15 @@ export interface Athlete {
     allergies: string | null
     emergency_contact_name: string | null
     emergency_contact_phone: string | null
+    photo_url: string | null  // URL to athlete's photo/avatar image
     created_at: string
     updated_at: string
     deleted_at: string | null
+    sports?: Array<{
+        sport_id: string
+        sport_name: string
+        sport_type: 'plays' | 'interested'
+    }>
 }
 
 // Legacy alias for backward compatibility
@@ -87,6 +93,10 @@ export interface CreateAthleteDTO {
     team_id?: string | null  // Optional - can assign to team during creation
     season_id?: string | null  // Optional - required if team_id provided
     guardians?: GuardianFormData[]  // Guardians to link during creation
+    sports?: Array<{
+        sport_id: string
+        sport_type: 'plays' | 'interested'
+    }>
 }
 
 // Legacy alias
