@@ -33,7 +33,15 @@ export async function getSeasons(
       .eq('org_id', context.orgId)
       .order('start_date', { ascending: false })
 
-    if (error) throw error
+    if (error) {
+      console.error('[seasonsService] Supabase error getting seasons:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      })
+      throw error
+    }
     const mapped = (data || []).map((row: any) => ({
       id: row.id,
       org_id: row.org_id,
@@ -48,7 +56,12 @@ export async function getSeasons(
     return { data: mapped, error: null }
   } catch (err) {
     console.error('[seasonsService] Error getting seasons:', err)
-    return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+    const errorDetails = err && typeof err === 'object' && 'details' in err ? (err as any).details : undefined
+    return { 
+      data: [], 
+      error: err instanceof Error ? err : new Error(errorMessage + (errorDetails ? `: ${errorDetails}` : ''))
+    }
   }
 }
 

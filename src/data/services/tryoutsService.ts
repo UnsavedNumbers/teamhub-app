@@ -1,5 +1,7 @@
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext } from '../fake/userContext'
+import { supabase } from '../../lib/supabase'
+import type { Database } from '../../lib/database.types'
 
 export interface Tryout {
     id: string
@@ -72,8 +74,21 @@ export async function getTryouts(
     _orgId?: string
 ): Promise<{ data: Tryout[]; error: Error | null }> {
     await simulateDelay()
-    if (!USE_FAKE_DATA) return { data: [], error: null }
-    return { data: MOCK_TRYOUTS, error: null }
+    if (USE_FAKE_DATA) return { data: MOCK_TRYOUTS, error: null }
+
+    try {
+        const orgId = _orgId ?? _context.orgId
+        const { data, error } = await supabase
+            .from('tryouts')
+            .select('*')
+            .eq('org_id', orgId)
+            .order('tryout_date', { ascending: true })
+
+        if (error) throw error
+        return { data: (data as unknown) as Tryout[], error: null }
+    } catch (err) {
+        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch tryouts') }
+    }
 }
 
 export async function getTryoutById(
@@ -81,18 +96,41 @@ export async function getTryoutById(
     tryoutId: string
 ): Promise<{ data: Tryout | null; error: Error | null }> {
     await simulateDelay()
-    if (!USE_FAKE_DATA) return { data: null, error: null }
-    const found = MOCK_TRYOUTS.find(t => t.id === tryoutId)
-    return { data: found || null, error: null }
+    if (USE_FAKE_DATA) {
+        const found = MOCK_TRYOUTS.find(t => t.id === tryoutId)
+        return { data: found || null, error: null }
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('tryouts')
+            .select('*')
+            .eq('id', tryoutId)
+            .single()
+
+        if (error) throw error
+        return { data: (data as unknown) as Tryout, error: null }
+    } catch (err) {
+        return { data: null, error: err instanceof Error ? err : new Error('Failed to fetch tryout') }
+    }
 }
 
 export async function getTryoutRegistrations(
     _context: UserContext
 ): Promise<{ data: TryoutRegistration[]; error: Error | null }> {
     await simulateDelay()
-    if (!USE_FAKE_DATA) return { data: [], error: null }
-    // Mock some registrations if needed, return empty for now
-    return { data: [], error: null }
+    if (USE_FAKE_DATA) return { data: [], error: null }
+
+    try {
+        const { data, error } = await supabase
+            .from('tryout_registrations')
+            .select('*, child:athletes(id, first_name, last_name), tryout:tryouts(*)')
+
+        if (error) throw error
+        return { data: (data as unknown) as TryoutRegistration[], error: null }
+    } catch (err) {
+        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch registrations') }
+    }
 }
 
 export async function registerChildForTryout(
@@ -101,8 +139,31 @@ export async function registerChildForTryout(
     _childId: string
 ): Promise<{ error: Error | null }> {
     await simulateDelay()
-    if (!USE_FAKE_DATA) return { error: null }
-    return { error: null }
+    if (USE_FAKE_DATA) return { error: null }
+
+    try {
+        const { data: childRow, error: childErr } = await supabase
+            .from('athletes')
+            .select('family_id')
+            .eq('id', _childId)
+            .single()
+
+        if (childErr) throw childErr
+
+        const { error } = await supabase
+            .from('tryout_registrations')
+            .insert({
+                tryout_id: _tryoutId,
+                athlete_id: _childId,
+                family_id: childRow?.family_id ?? '',
+                status: 'registered',
+            } satisfies Database['public']['Tables']['tryout_registrations']['Insert'])
+
+        if (error) throw error
+        return { error: null }
+    } catch (err) {
+        return { error: err instanceof Error ? err : new Error('Failed to register child for tryout') }
+    }
 }
 
 export async function createTryout(
@@ -110,8 +171,35 @@ export async function createTryout(
     tryout: Partial<Tryout>
 ): Promise<{ data: Tryout | null; error: Error | null }> {
     await simulateDelay()
-    if (!USE_FAKE_DATA) return { data: null, error: null }
-    return { data: { ...MOCK_TRYOUTS[0], ...tryout }, error: null }
+    if (USE_FAKE_DATA) return { data: { ...MOCK_TRYOUTS[0], ...tryout }, error: null }
+
+    try {
+        const insertRow: Database['public']['Tables']['tryouts']['Insert'] = {
+            title: tryout.title ?? 'Tryout',
+            org_id: tryout.org_id ?? _context.orgId,
+            tryout_date: tryout.tryout_date ?? new Date().toISOString().slice(0, 10),
+            start_time: tryout.start_time ?? '09:00',
+            end_time: tryout.end_time ?? null,
+            location: tryout.location ?? 'TBD',
+            age_group: tryout.age_group ?? 'U12',
+            entry_fee: tryout.entry_fee ?? 0,
+            sport: tryout.type ?? 'general',
+            requirements: null,
+            what_to_bring: null,
+            max_spots: null,
+        }
+
+        const { data, error } = await supabase
+            .from('tryouts')
+            .insert(insertRow)
+            .select('*')
+            .single()
+
+        if (error) throw error
+        return { data: (data as unknown) as Tryout, error: null }
+    } catch (err) {
+        return { data: null, error: err instanceof Error ? err : new Error('Failed to create tryout') }
+    }
 }
 
 export async function getAdminTryoutRegistrations(
@@ -119,6 +207,17 @@ export async function getAdminTryoutRegistrations(
     _tryoutId: string
 ): Promise<{ data: TryoutRegistration[]; error: Error | null }> {
     await simulateDelay()
-    if (!USE_FAKE_DATA) return { data: [], error: null }
-    return { data: [], error: null }
+    if (USE_FAKE_DATA) return { data: [], error: null }
+
+    try {
+        const { data, error } = await supabase
+            .from('tryout_registrations')
+            .select('*, child:athletes(id, first_name, last_name), tryout:tryouts(*)')
+            .eq('tryout_id', _tryoutId)
+
+        if (error) throw error
+        return { data: (data as unknown) as TryoutRegistration[], error: null }
+    } catch (err) {
+        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch admin registrations') }
+    }
 }
