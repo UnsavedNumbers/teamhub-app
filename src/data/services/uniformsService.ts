@@ -2,6 +2,7 @@ import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
 import type { Database, Json } from '../../lib/database.types'
+import type { CreateUniformKitDTO, UpdateUniformKitDTO } from '../../types/uniforms'
 import {
     fakeUniformKits,
     fakeUniformItems,
@@ -249,5 +250,219 @@ export async function submitUniformSizes(
         return { error: null }
     } catch (err) {
         return { error: err instanceof Error ? err : new Error('Failed to submit uniform sizes') }
+    }
+}
+
+/**
+ * Create a uniform kit (team-level or org-level)
+ */
+export async function createUniformKit(
+    context: UserContext,
+    dto: CreateUniformKitDTO
+): Promise<{ data: { id: string } | null; error: Error | null }> {
+    await simulateDelay()
+
+    if (USE_FAKE_DATA) {
+        // In fake mode, just return a mock ID
+        return { data: { id: `kit-${Date.now()}` }, error: null }
+    }
+
+    try {
+        const insertData: Database['public']['Tables']['uniform_kits']['Insert'] = {
+            team_id: dto.team_id || null,
+            season_id: dto.season_id || null,
+            name: dto.name,
+            sport_id: dto.sport_id,
+            program_id: dto.program_id || null,
+            org_id: dto.org_id,
+            deadline_at: dto.deadline_at || null,
+            primary_color: dto.primary_color || null,
+            secondary_color: dto.secondary_color || null,
+            accent_color: dto.accent_color || null,
+            vendor: dto.vendor || null,
+            notes: dto.notes || null,
+            status: dto.status || 'active',
+            sport_specific_fields: (dto.sport_specific_fields || {}) as Json,
+            created_by: context.userId,
+        }
+
+        const { data, error } = await supabase
+            .from('uniform_kits')
+            .insert(insertData)
+            .select('id')
+            .single()
+
+        if (error) throw error
+
+        // Create items if provided
+        if (dto.items && dto.items.length > 0) {
+            const itemRows = dto.items.map((item, index) => ({
+                kit_id: data.id,
+                name: item.name,
+                required: item.required ?? true,
+                size_options: (item.size_options || []) as Json,
+                sort_order: item.sort_order ?? index * 10,
+                sport_specific_fields: (item.sport_specific_fields || {}) as Json,
+            }))
+
+            const { error: itemsError } = await supabase
+                .from('uniform_kit_items')
+                .insert(itemRows)
+
+            if (itemsError) throw itemsError
+        }
+
+        return { data: { id: data.id }, error: null }
+    } catch (err) {
+        console.error('[uniformsService] Error creating uniform kit:', err)
+        return { 
+            data: null, 
+            error: err instanceof Error ? err : new Error('Failed to create uniform kit') 
+        }
+    }
+}
+
+/**
+ * Update a uniform kit
+ */
+export async function updateUniformKit(
+    context: UserContext,
+    kitId: string,
+    dto: UpdateUniformKitDTO
+): Promise<{ error: Error | null }> {
+    await simulateDelay()
+
+    if (USE_FAKE_DATA) {
+        return { error: null }
+    }
+
+    try {
+        const updateData: Database['public']['Tables']['uniform_kits']['Update'] = {}
+
+        if (dto.name !== undefined) updateData.name = dto.name
+        if (dto.sport_id !== undefined) updateData.sport_id = dto.sport_id
+        if (dto.program_id !== undefined) updateData.program_id = dto.program_id
+        if (dto.season_id !== undefined) updateData.season_id = dto.season_id
+        if (dto.deadline_at !== undefined) updateData.deadline_at = dto.deadline_at
+        if (dto.primary_color !== undefined) updateData.primary_color = dto.primary_color
+        if (dto.secondary_color !== undefined) updateData.secondary_color = dto.secondary_color
+        if (dto.accent_color !== undefined) updateData.accent_color = dto.accent_color
+        if (dto.vendor !== undefined) updateData.vendor = dto.vendor
+        if (dto.notes !== undefined) updateData.notes = dto.notes
+        if (dto.status !== undefined) updateData.status = dto.status
+        if (dto.sport_specific_fields !== undefined) {
+            updateData.sport_specific_fields = dto.sport_specific_fields as Json
+        }
+
+        const { error } = await supabase
+            .from('uniform_kits')
+            .update(updateData)
+            .eq('id', kitId)
+            .eq('org_id', context.orgId)
+
+        if (error) throw error
+
+        return { error: null }
+    } catch (err) {
+        console.error('[uniformsService] Error updating uniform kit:', err)
+        return { 
+            error: err instanceof Error ? err : new Error('Failed to update uniform kit') 
+        }
+    }
+}
+
+/**
+ * Get uniform kits by sport
+ */
+export async function getUniformKitsBySport(
+    context: UserContext,
+    sportId: string
+): Promise<{ data: UniformKit[]; error: Error | null }> {
+    await simulateDelay()
+
+    if (USE_FAKE_DATA) {
+        const kits = getUniformKitsForOrg(context.orgId)
+        return { data: kits.filter(k => (k as any).sport_id === sportId), error: null }
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('uniform_kits')
+            .select('*')
+            .eq('sport_id', sportId)
+            .eq('org_id', context.orgId)
+            .order('created_at', { ascending: false })
+
+        if (error) throw error
+        return { data: (data as unknown) as UniformKit[], error: null }
+    } catch (err) {
+        return { 
+            data: [], 
+            error: err instanceof Error ? err : new Error('Failed to fetch uniform kits by sport') 
+        }
+    }
+}
+
+/**
+ * Get org-level uniform templates (team_id IS NULL)
+ */
+export async function getOrgUniformTemplates(
+    context: UserContext
+): Promise<{ data: UniformKit[]; error: Error | null }> {
+    await simulateDelay()
+
+    if (USE_FAKE_DATA) {
+        const kits = getUniformKitsForOrg(context.orgId)
+        return { data: kits.filter(k => !k.team_id), error: null }
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('uniform_kits')
+            .select('*')
+            .is('team_id', null)
+            .eq('org_id', context.orgId)
+            .order('created_at', { ascending: false })
+
+        if (error) throw error
+        return { data: (data as unknown) as UniformKit[], error: null }
+    } catch (err) {
+        return { 
+            data: [], 
+            error: err instanceof Error ? err : new Error('Failed to fetch org uniform templates') 
+        }
+    }
+}
+
+/**
+ * Get a single uniform kit by ID
+ */
+export async function getUniformKit(
+    context: UserContext,
+    kitId: string
+): Promise<{ data: UniformKit | null; error: Error | null }> {
+    await simulateDelay()
+
+    if (USE_FAKE_DATA) {
+        const kits = getUniformKitsForOrg(context.orgId)
+        const kit = kits.find(k => k.id === kitId)
+        return { data: kit || null, error: null }
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('uniform_kits')
+            .select('*')
+            .eq('id', kitId)
+            .eq('org_id', context.orgId)
+            .single()
+
+        if (error) throw error
+        return { data: (data as unknown) as UniformKit, error: null }
+    } catch (err) {
+        return { 
+            data: null, 
+            error: err instanceof Error ? err : new Error('Failed to fetch uniform kit') 
+        }
     }
 }

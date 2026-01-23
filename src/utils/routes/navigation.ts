@@ -117,13 +117,13 @@ export const coachNavSections: NavigationSection[] = [
         ],
     },
     {
-        label: 'Teams',
+        label: 'My Athletes',
         route: '/portal/athletes',
         groups: [
             {
-                label: 'Teams',
+                label: 'My Athletes',
                 items: [
-                    { routeKey: 'portal.athletes', text: 'Teams', icon: 'groups', description: 'Teams and roster access' },
+                    { routeKey: 'portal.athletes', text: 'My Athletes', icon: 'groups', description: 'Your children\'s profiles' },
                 ],
             },
         ],

@@ -348,7 +348,7 @@ export default function CreateAthletePortal() {
         <PortalLayout
             breadcrumbs={[
                 { label: 'Home', path: '/portal/dashboard' },
-                { label: 'Teams', path: '/portal/athletes' },
+                { label: 'My Athletes', path: '/portal/athletes' },
                 { label: 'Add Athlete' }
             ]}
         >

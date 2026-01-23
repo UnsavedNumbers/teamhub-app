@@ -91,6 +91,8 @@ const AdminAttendance = lazy(() => import('./pages/admin/AdminAttendance'))
 const Payments = lazy(() => import('./pages/admin/Payments'))
 const CreateFee = lazy(() => import('./pages/admin/CreateFee'))
 const UniformOrders = lazy(() => import('./pages/admin/UniformOrders'))
+const CreateUniform = lazy(() => import('./pages/admin/CreateUniform'))
+const EditUniform = lazy(() => import('./pages/admin/EditUniform'))
 const TravelPlans = lazy(() => import('./pages/admin/TravelPlans'))
 const CreateTravelPlan = lazy(() => import('./pages/admin/CreateTravelPlan'))
 const EditTravelPlan = lazy(() => import('./pages/admin/EditTravelPlan'))
@@ -301,6 +303,8 @@ function AppWithTheme() {
             
               {/* Uniforms */}
               <Route path="uniforms" element={<UniformOrders />} />
+              <Route path="uniforms/new" element={<CreateUniform />} />
+              <Route path="uniforms/:id/edit" element={<EditUniform />} />
               <Route path="uniforms/:kitId" element={<UniformOrders />} />
             
               {/* Travel */}

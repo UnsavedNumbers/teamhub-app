@@ -12,6 +12,7 @@ import { supabase } from '../lib/supabase'
 import { useOrganization, Organization } from '../contexts/OrganizationContext'
 import { USE_FAKE_DATA } from '../data/config'
 import { getUserOrganizations } from '../data/fake/fakeUsers'
+import type { PlatformAdminRole } from '../types/platformAdmin.types'
 
 // Role types - now per organization
 type OrgMemberRole = 'parent' | 'coach' | 'org_admin'
@@ -31,6 +32,7 @@ interface UserProfile {
   // New multi-org fields
   organizations: Organization[]
   isPlatformAdmin: boolean
+  platformAdminRole: PlatformAdminRole | null
   // Organization setup requirement flag
   requiresOrgSetup: boolean
 }
@@ -155,9 +157,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         /* ---- platform admin ---- */
         const { data: admin } = await supabase
           .from('platform_admins')
-          .select('user_id')
+          .select('role')
           .eq('user_id', userId)
           .maybeSingle()
+
+        // Bug Prevention #10: Default to 'support_admin' if NULL
+        let platformAdminRole: PlatformAdminRole | null = null
+        if (admin) {
+          platformAdminRole = admin.role ?? 'support_admin'
+          if (!admin.role) {
+            console.warn(`Platform admin ${userId} has NULL role, defaulting to support_admin`)
+          }
+        }
 
         // Guard against auth state changes during fetch (Bug Prevention #8)
         // Check if user is still the same before setting profile
@@ -173,6 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           org_id: userData.org_id,
           organizations: orgs,
           isPlatformAdmin: !!admin,
+          platformAdminRole,
           requiresOrgSetup: userData.requires_org_setup ?? false,
         }
 
