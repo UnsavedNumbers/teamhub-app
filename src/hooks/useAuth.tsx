@@ -65,10 +65,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Prevent duplicate profile fetches (Bug Prevention #1 & #7)
   const profileFetchRef = useRef<Set<string>>(new Set())
-  
+
   // Track last processed auth event timestamp for debouncing (Bug Prevention #3)
   const lastAuthEventRef = useRef<{ event: string; timestamp: number } | null>(null)
-  
+
   // Mounted flag for cleanup (Bug Prevention #2)
   const mountedRef = useRef(true)
 
@@ -102,26 +102,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         /* ---- organizations ---- */
         let orgs: Organization[] = []
+        let data: Array<{ org_id: string; org_name: string; roles: OrgMemberRole[] }> | null = null
+
         try {
-          let data: Array<{ org_id: string; org_name: string; roles: OrgMemberRole[] }> | null = null
           let orgError: any = null
+          // Use real Supabase RPC
+          const result = await supabase.rpc('get_user_organizations', {
+            check_user_id: userId,
+          })
+          data = result.data
+          orgError = result.error
 
-          if (USE_FAKE_DATA) {
-            // Use fake data when enabled
-            data = getUserOrganizations(userId)
-          } else {
-            // Use real Supabase RPC
-            const result = await supabase.rpc('get_user_organizations', {
-              check_user_id: userId,
-            })
-            data = result.data
-            orgError = result.error
-
-            // Log RPC errors for debugging (this is likely the "profit data" / "profile data" error)
-            if (orgError) {
-              console.error('Error fetching user organizations:', orgError)
-              // Continue with empty orgs - don't block profile creation
-            }
+          // Log RPC errors for debugging (this is likely the "profit data" / "profile data" error)
+          if (orgError) {
+            console.error('Error fetching user organizations:', orgError)
+            // Continue with empty orgs - don't block profile creation
           }
 
           // Type-safe organization mapping (Bug Prevention #5 & #8)
@@ -130,9 +125,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               // Normalize and validate roles array
               const roles = Array.isArray(o.roles)
                 ? o.roles.filter(
-                    (r: unknown): r is OrgMemberRole =>
-                      r === 'parent' || r === 'coach' || r === 'org_admin'
-                  )
+                  (r: unknown): r is OrgMemberRole =>
+                    r === 'parent' || r === 'coach' || r === 'org_admin'
+                )
                 : []
 
               return {
@@ -162,7 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Guard against auth state changes during fetch (Bug Prevention #8)
         // Check if user is still the same before setting profile
         if (!mountedRef.current) return
-        
+
         const profileData: UserProfile = {
           id: userData.id,
           email: userData.email,
@@ -178,7 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Guard against state updates after unmount (Bug Prevention #2)
         if (!mountedRef.current) return
-        
+
         setProfile(profileData)
         setOrganizations(orgs)
       } catch (err) {
@@ -281,7 +276,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchProfile, setOrganizations])
 
   /* ===================== LOADING STATE TIMEOUT FALLBACK ===================== */
-  
+
   // Bug Prevention #4: Ensure loading state doesn't get stuck
   useEffect(() => {
     if (!loading) return
