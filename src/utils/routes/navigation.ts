@@ -84,7 +84,7 @@ export const parentNavSections: NavigationSection[] = [
             {
                 label: 'Programs',
                 items: [
-                    { routeKey: 'portal.athletes', text: 'My Teams', icon: 'groups', description: 'Your children\'s teams' },
+                    { routeKey: 'portal.athletes', text: 'My Athletes', icon: 'groups', description: 'Your children\'s profiles' },
                     { routeKey: 'portal.join', text: 'Join a Team', icon: 'group_add', description: 'Enter an invite code' },
                     { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', description: 'Tryout sessions' },
                 ],
@@ -117,13 +117,13 @@ export const coachNavSections: NavigationSection[] = [
         ],
     },
     {
-        label: 'Teams',
+        label: 'My Athletes',
         route: '/portal/athletes',
         groups: [
             {
-                label: 'Teams',
+                label: 'My Athletes',
                 items: [
-                    { routeKey: 'portal.athletes', text: 'Teams', icon: 'groups', description: 'Teams and roster access' },
+                    { routeKey: 'portal.athletes', text: 'My Athletes', icon: 'groups', description: 'Your children\'s profiles' },
                 ],
             },
         ],
@@ -478,6 +478,6 @@ export const platformAdminGlobalNavSections: NavigationSection[] = [
 export const userDropdownRoleLinks = [
     { role: 'parent', label: 'My Children', routeKey: 'portal.athletes', icon: 'family_restroom' },
     { role: 'parent', label: 'Payments', routeKey: 'portal.payments', icon: 'receipt_long' },
-    { role: 'coach', label: 'Teams', routeKey: 'portal.athletes', icon: 'sports_soccer' },
+    { role: 'coach', label: 'My Athletes', routeKey: 'portal.athletes', icon: 'sports_soccer' },
     { role: 'org_admin', label: 'Organization Settings', routeKey: 'admin.organization.base', icon: 'admin_panel_settings' },
 ] as const

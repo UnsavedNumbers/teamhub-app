@@ -11,6 +11,11 @@
 
 export type PlatformAdminRole = 'super_admin' | 'support_admin' | 'finance_admin' | 'ops_admin'
 
+/**
+ * Valid platform admin roles array for runtime validation (Technical Bug #6)
+ */
+export const VALID_ROLES: PlatformAdminRole[] = ['super_admin', 'support_admin', 'finance_admin', 'ops_admin']
+
 export type OrganizationStatus = 'trial' | 'active' | 'suspended' | 'expired'
 
 // ============================================================================

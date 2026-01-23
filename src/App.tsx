@@ -43,6 +43,7 @@ import { RoleSelection } from './pages/RoleSelection'
 
 // Portal Pages - Lazy loaded
 const CreateAthletePortal = lazy(() => import('./pages/CreateAthletePortal'))
+const EditAthletePortal = lazy(() => import('./pages/EditAthletePortal'))
 
 // Admin Layout (Material Dashboard)
 import AdminLayout from './layouts/AdminLayout'
@@ -90,6 +91,8 @@ const AdminAttendance = lazy(() => import('./pages/admin/AdminAttendance'))
 const Payments = lazy(() => import('./pages/admin/Payments'))
 const CreateFee = lazy(() => import('./pages/admin/CreateFee'))
 const UniformOrders = lazy(() => import('./pages/admin/UniformOrders'))
+const CreateUniform = lazy(() => import('./pages/admin/CreateUniform'))
+const EditUniform = lazy(() => import('./pages/admin/EditUniform'))
 const TravelPlans = lazy(() => import('./pages/admin/TravelPlans'))
 const CreateTravelPlan = lazy(() => import('./pages/admin/CreateTravelPlan'))
 const EditTravelPlan = lazy(() => import('./pages/admin/EditTravelPlan'))
@@ -206,6 +209,7 @@ function AppWithTheme() {
             <Route path="settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="athletes" element={<ProtectedRoute><Athletes /></ProtectedRoute>} />
             <Route path="athletes/new" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><CreateAthletePortal /></Suspense></ProtectedRoute>} />
+            <Route path="athletes/:id/edit" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><EditAthletePortal /></Suspense></ProtectedRoute>} />
             <Route path="join" element={<ProtectedRoute><JoinTeam /></ProtectedRoute>} />
             <Route path="calendar/events/:eventId" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />
             <Route path="calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
@@ -299,6 +303,8 @@ function AppWithTheme() {
             
               {/* Uniforms */}
               <Route path="uniforms" element={<UniformOrders />} />
+              <Route path="uniforms/new" element={<CreateUniform />} />
+              <Route path="uniforms/:id/edit" element={<EditUniform />} />
               <Route path="uniforms/:kitId" element={<UniformOrders />} />
             
               {/* Travel */}

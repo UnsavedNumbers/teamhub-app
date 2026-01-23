@@ -480,6 +480,13 @@ export const en = {
             },
             empty: {
                 missingOrganization: 'Finish organization setup to unlock these forms.',
+                noSportsForProgram: 'You need to create at least one sport before you can add programs.',
+                noProgramsForLevel: 'You need to create at least one program before you can add levels.',
+                noLevelsForTeam: 'You need to create at least one level before you can add teams.',
+                createSportFirst: 'Add a Sport',
+                createProgramFirst: 'Add a Program',
+                createLevelFirst: 'Add a Level',
+                prerequisiteMissing: 'Please create the required parent entity first.',
             },
         },
         createChild: {
@@ -1021,6 +1028,13 @@ export const es: typeof en = {
             },
             empty: {
                 missingOrganization: 'Finalice la configuración de la organización para habilitar estos formularios.',
+                noSportsForProgram: 'Necesita crear al menos un deporte antes de poder agregar programas.',
+                noProgramsForLevel: 'Necesita crear al menos un programa antes de poder agregar niveles.',
+                noLevelsForTeam: 'Necesita crear al menos un nivel antes de poder agregar equipos.',
+                createSportFirst: 'Agregar un Deporte',
+                createProgramFirst: 'Agregar un Programa',
+                createLevelFirst: 'Agregar un Nivel',
+                prerequisiteMissing: 'Por favor cree primero la entidad principal requerida.',
             },
         },
         createChild: {

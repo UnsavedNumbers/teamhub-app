@@ -81,11 +81,11 @@ export default function UniformOrders() {
   return (
     <div className="pa-root">
       <AdminPageHeader 
-        title="Uniform Orders" 
+        title="Uniforms" 
         actions={
           <Button onClick={() => navigate('/admin/uniforms/new')}>
             <span className="material-symbols-outlined">add</span>
-            Create Kit
+            Create Uniform
           </Button>
         }
       />

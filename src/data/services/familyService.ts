@@ -314,10 +314,14 @@ export async function deleteFamily(
 }
 
 // ============================================================================
-// Child Service Functions
+// Athlete Service Functions (Core CRUD)
 // ============================================================================
 
-export async function createChild(
+/**
+ * Create a basic athlete (without guardians)
+ * For creating athletes with guardians, use createAthleteWithGuardians
+ */
+export async function createAthleteBasic(
     _context: UserContext,
     dto: CreateChildDTO
 ): Promise<{ data: Child | null; error: Error | null }> {
@@ -354,14 +358,17 @@ export async function createChild(
         if (error) throw error
         return { data: data as unknown as Child, error: null }
     } catch (err) {
-        return { data: null, error: err instanceof Error ? err : new Error('Create child failed') }
+        return { data: null, error: err instanceof Error ? err : new Error('Create athlete failed') }
     }
 }
 
-export async function updateChild(
+/**
+ * Update an athlete
+ */
+export async function updateAthlete(
     _context: UserContext,
-    childId: string,
-    dto: UpdateChildDTO
+    athleteId: string,
+    dto: UpdateAthleteDTO
 ): Promise<{ data: Child | null; error: Error | null }> {
     if (USE_FAKE_DATA) {
         await simulateDelay()
@@ -377,20 +384,23 @@ export async function updateChild(
         const { data, error } = await supabase
             .from('athletes')
             .update(updateData)
-            .eq('id', childId)
+            .eq('id', athleteId)
             .select()
             .single()
 
         if (error) throw error
         return { data: data as unknown as Child, error: null }
     } catch (err) {
-        return { data: null, error: err instanceof Error ? err : new Error('Update child failed') }
+        return { data: null, error: err instanceof Error ? err : new Error('Update athlete failed') }
     }
 }
 
-export async function deleteChild(
+/**
+ * Delete an athlete
+ */
+export async function deleteAthlete(
     _context: UserContext,
-    childId: string
+    athleteId: string
 ): Promise<{ error: Error | null }> {
     if (USE_FAKE_DATA) {
         await simulateDelay()
@@ -401,20 +411,19 @@ export async function deleteChild(
         const { error } = await supabase
             .from('athletes')
             .delete()
-            .eq('id', childId)
+            .eq('id', athleteId)
 
         if (error) throw error
         return { error: null }
     } catch (err) {
-        return { error: err instanceof Error ? err : new Error('Delete child failed') }
+        return { error: err instanceof Error ? err : new Error('Delete athlete failed') }
     }
 }
 
 /**
- * Get children for the current user
- * Maintains backward compatibility with dashboard
+ * Get athletes for the current user
  */
-export async function getChildren(
+export async function getAthletes(
     context: UserContext
 ): Promise<{ data: Child[]; error: Error | null }> {
     if (USE_FAKE_DATA) {
@@ -436,29 +445,122 @@ export async function getChildren(
 
     // Real Data
     try {
-        // Warning: This query logic needs correct RLS on Supabase side
-        // Typically: users can see children they are linked to via family_members
-        // Admins can see all in org.
-        // For now, this query relies on RLS to filter.
+        // Query athletes directly - RLS policies will filter based on guardian relationships
+        // The new system uses athlete_guardians, not families
+        console.log('[getAthletes] Fetching athletes for org:', context.orgId)
+        
         const { data, error } = await supabase
             .from('athletes')
-            .select(`
-                *,
-                family:families!inner(org_id)
-            `)
-            .eq('family.org_id', context.orgId || '')
+            .select('*')
             .is('deleted_at', null)
+            .order('first_name', { ascending: true })
 
-        if (error) throw error
-        return { data: (data || []).map((d: any) => ({ ...d, family: undefined }) as Child), error: null }
+        console.log('[getAthletes] Query result:', { data, error, count: data?.length })
+
+        if (error) {
+            console.error('[getAthletes] Query error:', error)
+            throw error
+        }
+        
+        // Transform the data to match Athlete type with empty sports array
+        // Sports can be fetched separately if needed
+        const transformed = (data || []).map((d: any) => ({
+            ...d,
+            sports: [] // Sports will be fetched separately if needed
+        } as Child))
+        
+        console.log('[getAthletes] Returning athletes:', transformed.length)
+        return { data: transformed, error: null }
     } catch (err) {
+        console.error('[getAthletes] Error fetching athletes:', err)
         return { data: [], error: err instanceof Error ? err : new Error('Fetch failed') }
     }
 }
 
+/**
+ * Legacy alias for getAthletes
+ * Maintains backward compatibility with existing code
+ */
+export async function getChildren(
+    context: UserContext
+): Promise<{ data: Child[]; error: Error | null }> {
+    return getAthletes(context)
+}
+
 // ============================================================================
-// Athlete Service Functions (New Athlete-Centric Model)
+// Athlete Service Functions (Guardian-Aware Operations)
 // ============================================================================
+
+/**
+ * Get a single athlete by ID with sports data
+ */
+export async function getAthleteById(
+    context: UserContext,
+    athleteId: string
+): Promise<{ data: Child | null; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+            const permissions = buildPermissions(context)
+            const child = fakeChildren.find(c => c.id === athleteId)
+            
+            if (!child) {
+                return { data: null, error: null }
+            }
+            
+            // Check access
+            if (!permissions.canViewAllOrgData) {
+                const ownedChildIds = getChildrenForUserId(context.userId)
+                if (!ownedChildIds.includes(athleteId)) {
+                    return { data: null, error: new Error('Access denied') }
+                }
+            }
+            
+            return { data: mapFakeChild(child), error: null }
+        } catch (err) {
+            return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        }
+    }
+
+    // Real Data
+    try {
+        console.log('[getAthleteById] Fetching athlete:', athleteId)
+        
+        const { data, error } = await supabase
+            .from('athletes')
+            .select('*')
+            .eq('id', athleteId)
+            .is('deleted_at', null)
+            .single()
+
+        console.log('[getAthleteById] Query result:', { data, error })
+
+        if (error) {
+            if (error.code === 'PGRST116') {
+                // Not found
+                console.log('[getAthleteById] Athlete not found')
+                return { data: null, error: null }
+            }
+            console.error('[getAthleteById] Query error:', error)
+            throw error
+        }
+
+        if (!data) {
+            return { data: null, error: null }
+        }
+
+        // Return athlete with empty sports array (sports will be fetched separately if needed)
+        const athlete = {
+            ...data,
+            sports: []
+        } as Child
+
+        return { data: athlete, error: null }
+    } catch (err) {
+        console.error('[getAthleteById] Error:', err)
+        return { data: null, error: err instanceof Error ? err : new Error('Fetch failed') }
+    }
+}
 
 /**
  * Create athlete with guardians atomically
@@ -508,12 +610,28 @@ export async function createAthleteWithGuardians(
             relationship_type: g.relationship_type || 'parent'
         }))
 
+        // Prepare sports array - filter empty entries, remove duplicates, validate types
+        const sports = (dto.sports || [])
+            .filter(s => s.sport_id && s.sport_id.trim()) // Filter empty sport_id
+            .map(s => ({
+                sport_id: s.sport_id.trim(),
+                sport_type: (s.sport_type === 'plays' || s.sport_type === 'interested') 
+                    ? s.sport_type 
+                    : 'plays' as 'plays' | 'interested' // Default to 'plays' if invalid
+            }))
+        
+        // Remove duplicates using Map (defense-in-depth)
+        const uniqueSports = [...new Map(
+            sports.map(s => [`${s.sport_id}-${s.sport_type}`, s])
+        ).values()]
+
         // Call RPC function
         const { data, error } = await supabase
             .rpc('create_athlete_with_guardians', {
                 p_org_id: context.orgId,
                 p_athlete_data: athleteData,
-                p_guardians: guardians
+                p_guardians: guardians,
+                p_athlete_sports: uniqueSports.length > 0 ? uniqueSports : []
             })
 
         if (error) throw error
@@ -600,8 +718,8 @@ export async function getOrphanedAthletes(
 }
 
 /**
- * Legacy alias for createAthleteWithGuardians
- * Maintains backward compatibility
+ * Create athlete with guardians atomically
+ * This is the recommended method for creating athletes
  */
 export async function createAthlete(
     context: UserContext,
@@ -610,23 +728,40 @@ export async function createAthlete(
     return createAthleteWithGuardians(context, dto)
 }
 
+// ============================================================================
+// Backward Compatibility Aliases
+// ============================================================================
+
 /**
- * Update athlete (same as updateChild, just renamed for clarity)
+ * Legacy alias for createAthleteBasic
+ * @deprecated Use createAthleteBasic or createAthlete instead
  */
-export async function updateAthlete(
+export async function createChild(
     context: UserContext,
-    athleteId: string,
-    dto: UpdateAthleteDTO
+    dto: CreateChildDTO
 ): Promise<{ data: Child | null; error: Error | null }> {
-    return updateChild(context, athleteId, dto)
+    return createAthleteBasic(context, dto)
 }
 
 /**
- * Delete athlete (same as deleteChild, just renamed for clarity)
+ * Legacy alias for updateAthlete
+ * @deprecated Use updateAthlete instead
  */
-export async function deleteAthlete(
+export async function updateChild(
     context: UserContext,
-    athleteId: string
+    childId: string,
+    dto: UpdateChildDTO
+): Promise<{ data: Child | null; error: Error | null }> {
+    return updateAthlete(context, childId, dto)
+}
+
+/**
+ * Legacy alias for deleteAthlete
+ * @deprecated Use deleteAthlete instead
+ */
+export async function deleteChild(
+    context: UserContext,
+    childId: string
 ): Promise<{ error: Error | null }> {
-    return deleteChild(context, athleteId)
+    return deleteAthlete(context, childId)
 }
