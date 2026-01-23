@@ -43,6 +43,7 @@ import { RoleSelection } from './pages/RoleSelection'
 
 // Portal Pages - Lazy loaded
 const CreateAthletePortal = lazy(() => import('./pages/CreateAthletePortal'))
+const EditAthletePortal = lazy(() => import('./pages/EditAthletePortal'))
 
 // Admin Layout (Material Dashboard)
 import AdminLayout from './layouts/AdminLayout'
@@ -206,6 +207,7 @@ function AppWithTheme() {
             <Route path="settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="athletes" element={<ProtectedRoute><Athletes /></ProtectedRoute>} />
             <Route path="athletes/new" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><CreateAthletePortal /></Suspense></ProtectedRoute>} />
+            <Route path="athletes/:id/edit" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><EditAthletePortal /></Suspense></ProtectedRoute>} />
             <Route path="join" element={<ProtectedRoute><JoinTeam /></ProtectedRoute>} />
             <Route path="calendar/events/:eventId" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />
             <Route path="calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />

@@ -1,21 +1,21 @@
 /**
- * CreateAthletePortal Component
+ * EditAthletePortal Component
  *
- * Portal version of athlete creation for parents/guardians.
- * Automatically links current user as guardian and allows adding one additional guardian.
+ * Portal version of athlete editing for parents/guardians.
+ * Allows updating athlete information and sports preferences.
  */
 
 import { useState, useEffect, useRef, useCallback, memo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import { useUserContext } from '../hooks/useUserContext'
-import { createAthleteWithGuardians } from '../data/services/familyService'
-import { checkGuardianMatch, normalizeEmail, validateGuardianEmail } from '../utils/guardianMatching'
+import { getAthleteById, updateAthlete } from '../data/services/familyService'
+import { updateAthleteSports } from '../data/services/athleteSportsService'
 import { getSystemSports } from '../data/services/sportsService'
-import type { Gender, CreateAthleteDTO, GuardianMatch, RelationshipType } from '../types/family'
+import type { Gender, UpdateAthleteDTO } from '../types/family'
 import type { Sport } from '../data/types/organization'
 
 type SportType = 'plays' | 'interested'
@@ -62,32 +62,30 @@ const SportItem = memo(({
 
 SportItem.displayName = 'SportItem'
 
-export default function CreateAthletePortal() {
+const initialFormData = {
+    first_name: '',
+    last_name: '',
+    date_of_birth: '',
+    gender: '' as Gender | '',
+    preferred_name: '',
+    medical_notes: '',
+    allergies: '',
+    emergency_contact_name: '',
+    emergency_contact_phone: '',
+}
+
+export default function EditAthletePortal() {
     const navigate = useNavigate()
+    const { id: athleteId } = useParams<{ id: string }>()
     const { context, isReady } = useUserContext()
+    const [loading, setLoading] = useState(true)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [validationErrors, setValidationErrors] = useState<string[]>([])
+    const [notFound, setNotFound] = useState(false)
 
-    // Form state - single object for all fields
-    const [formData, setFormData] = useState({
-        first_name: '',
-        last_name: '',
-        date_of_birth: '',
-        gender: '' as Gender | '',
-        preferred_name: '',
-        medical_notes: '',
-        allergies: '',
-        emergency_contact_name: '',
-        emergency_contact_phone: '',
-        additionalGuardianEmail: '',
-        additionalGuardianRelationship: 'parent' as RelationshipType
-    })
-
-    // Guardian matching state
-    const [isCheckingGuardian, setIsCheckingGuardian] = useState(false)
-    const [guardianMatch, setGuardianMatch] = useState<GuardianMatch | null>(null)
-    const [emailTouched, setEmailTouched] = useState(false)
+    // Form state
+    const [formData, setFormData] = useState(initialFormData)
 
     // Sports state
     const [sports, setSports] = useState<Sport[]>([])
@@ -96,78 +94,89 @@ export default function CreateAthletePortal() {
 
     // Refs for race condition and memory leak prevention
     const requestIdRef = useRef(0)
-    const timeoutRef = useRef<NodeJS.Timeout | null>(null)
     const isMountedRef = useRef(true)
-    const isCheckingRef = useRef(false)
     const isLoadingSportsRef = useRef(false)
+    const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
     // Cleanup on unmount
     useEffect(() => {
         return () => {
             isMountedRef.current = false
-            if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current)
+            if (redirectTimeoutRef.current) {
+                clearTimeout(redirectTimeoutRef.current)
             }
         }
     }, [])
 
-    // Debounced guardian lookup
-    const debouncedGuardianLookup = useCallback(
-        (email: string) => {
-            // Clear previous timeout
-            if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current)
-            }
-
-            // Skip if already checking (React Strict Mode double render prevention)
-            if (isCheckingRef.current) return
-
-            // Skip if email is empty or invalid
-            if (!email || !validateGuardianEmail(email)) {
-                setGuardianMatch(null)
-                setIsCheckingGuardian(false)
-                return
-            }
-
-            // Skip if not touched yet
-            if (!emailTouched) return
-
-            // Set checking state
-            setIsCheckingGuardian(true)
-            isCheckingRef.current = true
-
-            // Debounce the lookup
-            timeoutRef.current = setTimeout(async () => {
-                const currentRequestId = ++requestIdRef.current
-
-                try {
-                    const match = await checkGuardianMatch(email, context.orgId || '')
-
-                    // Only update state if this is the latest request and component is still mounted
-                    if (currentRequestId === requestIdRef.current && isMountedRef.current) {
-                        setGuardianMatch(match)
-                        setIsCheckingGuardian(false)
-                        isCheckingRef.current = false
-                    }
-                } catch (err) {
-                    console.error('Error checking guardian match:', err)
-                    if (currentRequestId === requestIdRef.current && isMountedRef.current) {
-                        setGuardianMatch(null)
-                        setIsCheckingGuardian(false)
-                        isCheckingRef.current = false
-                    }
-                }
-            }, 300)
-        },
-        [context.orgId, emailTouched]
-    )
-
-    // Trigger guardian lookup when email changes
+    // Reset form state and load athlete data when athleteId changes
     useEffect(() => {
-        if (emailTouched) {
-            debouncedGuardianLookup(formData.additionalGuardianEmail)
-        }
-    }, [formData.additionalGuardianEmail, emailTouched, debouncedGuardianLookup])
+        if (!isReady || !athleteId) return
+
+        // Reset all form state
+        setFormData(initialFormData)
+        setSelectedSports([])
+        setValidationErrors([])
+        setError(null)
+        setNotFound(false)
+        setLoading(true)
+
+        const currentRequestId = ++requestIdRef.current
+
+        // Load athlete data
+        getAthleteById(context, athleteId)
+            .then(({ data, error: fetchError }) => {
+                // Only update if this is the latest request and component is mounted
+                if (currentRequestId !== requestIdRef.current || !isMountedRef.current) return
+
+                if (fetchError) {
+                    setError(fetchError.message)
+                    setLoading(false)
+                    return
+                }
+
+                if (!data) {
+                    setNotFound(true)
+                    setLoading(false)
+                    // Auto-redirect after 3 seconds
+                    redirectTimeoutRef.current = setTimeout(() => {
+                        if (isMountedRef.current) {
+                            navigate('/portal/athletes')
+                        }
+                    }, 3000)
+                    return
+                }
+
+                // Pre-populate form with athlete data
+                setFormData({
+                    first_name: data.first_name || '',
+                    last_name: data.last_name || '',
+                    date_of_birth: data.date_of_birth || '',
+                    gender: data.gender || '',
+                    preferred_name: data.preferred_name || '',
+                    medical_notes: data.medical_notes || '',
+                    allergies: data.allergies || '',
+                    emergency_contact_name: data.emergency_contact_name || '',
+                    emergency_contact_phone: data.emergency_contact_phone || '',
+                })
+
+                // Pre-populate sports
+                if (data.sports && data.sports.length > 0) {
+                    setSelectedSports(data.sports.map(s => ({
+                        sport_id: s.sport_id,
+                        sport_type: s.sport_type
+                    })))
+                }
+
+                setLoading(false)
+            })
+            .catch((err) => {
+                if (currentRequestId === requestIdRef.current && isMountedRef.current) {
+                    console.error('Error loading athlete:', err)
+                    setError(err instanceof Error ? err.message : 'Failed to load athlete')
+                    setLoading(false)
+                }
+            })
+    }, [context, isReady, athleteId, navigate])
 
     // Load system sports on mount
     useEffect(() => {
@@ -194,17 +203,33 @@ export default function CreateAthletePortal() {
             })
     }, [isReady])
 
+    // Memoized toggle handler for sports (functional update to prevent stale closures)
+    const handleSportToggle = useCallback((sportId: string, sportType: SportType) => {
+        setSelectedSports(prev => {
+            const exists = prev.some(s => s.sport_id === sportId && s.sport_type === sportType)
+            if (exists) {
+                return prev.filter(s => !(s.sport_id === sportId && s.sport_type === sportType))
+            } else {
+                return [...prev, { sport_id: sportId, sport_type: sportType }]
+            }
+        })
+    }, [])
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        
-        // Early return check: if no email, show error
-        if (!context.email) {
-            setError('Unable to create athlete: Your account email is missing. Please contact support.')
-            return
-        }
 
         // Validate form
         const errors: string[] = []
+
+        if (!formData.first_name.trim()) {
+            errors.push('First name is required.')
+        }
+        if (!formData.last_name.trim()) {
+            errors.push('Last name is required.')
+        }
+        if (!formData.date_of_birth) {
+            errors.push('Date of birth is required.')
+        }
 
         // Date of birth validation
         if (formData.date_of_birth) {
@@ -219,23 +244,13 @@ export default function CreateAthletePortal() {
             }
         }
 
-        // Duplicate guardian email validation
-        if (formData.additionalGuardianEmail.trim()) {
-            const normalizedAdditional = normalizeEmail(formData.additionalGuardianEmail)
-            const normalizedCurrent = normalizeEmail(context.email)
-
-            if (normalizedAdditional === normalizedCurrent) {
-                errors.push('You are already linked as a guardian. Please enter a different email address.')
-            }
-
-            // Validate email format
-            if (!validateGuardianEmail(formData.additionalGuardianEmail)) {
-                errors.push('Additional guardian email is invalid.')
-            }
-        }
-
         if (errors.length > 0) {
             setValidationErrors(errors)
+            return
+        }
+
+        if (!athleteId || !context.orgId) {
+            setError('Missing required information. Please refresh and try again.')
             return
         }
 
@@ -244,83 +259,44 @@ export default function CreateAthletePortal() {
         setValidationErrors([])
 
         try {
-            // Build guardians array
-            const guardians = [
-                {
-                    email: context.email,
-                    relationship_type: 'parent' as RelationshipType
-                }
-            ]
-
-            // Add additional guardian if provided
-            if (formData.additionalGuardianEmail.trim()) {
-                guardians.push({
-                    email: formData.additionalGuardianEmail.trim(),
-                    relationship_type: formData.additionalGuardianRelationship
-                })
-            }
-
-            // Build DTO
-            const dto: CreateAthleteDTO = {
-                first_name: formData.first_name,
-                last_name: formData.last_name,
-                date_of_birth: formData.date_of_birth,
+            // Normalize form data before submission
+            const normalizedData: UpdateAthleteDTO = {
+                first_name: formData.first_name.trim(),
+                last_name: formData.last_name.trim(),
+                date_of_birth: formData.date_of_birth || undefined,
                 gender: formData.gender || null,
                 preferred_name: formData.preferred_name.trim() || null,
                 medical_notes: formData.medical_notes.trim() || null,
                 allergies: formData.allergies.trim() || null,
                 emergency_contact_name: formData.emergency_contact_name.trim() || null,
                 emergency_contact_phone: formData.emergency_contact_phone.trim() || null,
-                guardians,
-                sports: selectedSports.length > 0 ? selectedSports : undefined
             }
 
-            const { error: createError } = await createAthleteWithGuardians(context, dto)
+            // Sequential updates: athlete first, then sports
+            const { error: athleteError } = await updateAthlete(context, athleteId, normalizedData)
+            if (athleteError) throw athleteError
 
-            if (createError) throw createError
+            // Then update sports
+            const { error: sportsError } = await updateAthleteSports(athleteId, context.orgId, selectedSports)
+            if (sportsError) throw sportsError
 
             // Success - navigate back to athletes list
             navigate('/portal/athletes')
         } catch (err) {
-            console.error('Error creating athlete:', err)
-            setError(err instanceof Error ? err.message : 'Failed to create athlete')
+            console.error('Error updating athlete:', err)
+            setError(err instanceof Error ? err.message : 'Failed to update athlete')
             setIsSubmitting(false)
         }
     }
 
-    // Show error if context email is missing
-    if (isReady && !context.email) {
-        return (
-            <PortalLayout
-                breadcrumbs={[
-                    { label: 'Home', path: '/portal/dashboard' },
-                    { label: 'My Athletes', path: '/portal/athletes' },
-                    { label: 'Add Athlete' }
-                ]}
-            >
-                <PageTitle>Add Athlete</PageTitle>
-                <Card className="p-6 mt-6">
-                    <div className="text-center py-12">
-                        <p className="text-red-600 dark:text-red-400 font-bold mb-4">
-                            Unable to create athlete: Your account email is missing.
-                        </p>
-                        <p className="text-slate-500 dark:text-slate-400">
-                            Please contact support to resolve this issue.
-                        </p>
-                    </div>
-                </Card>
-            </PortalLayout>
-        )
-    }
-
     // Loading state
-    if (!isReady) {
+    if (!isReady || loading) {
         return (
             <PortalLayout
                 breadcrumbs={[
                     { label: 'Home', path: '/portal/dashboard' },
                     { label: 'My Athletes', path: '/portal/athletes' },
-                    { label: 'Add Athlete' }
+                    { label: 'Edit Athlete' }
                 ]}
             >
                 <div className="flex justify-center py-12">
@@ -330,32 +306,47 @@ export default function CreateAthletePortal() {
         )
     }
 
-    const isFormValid = formData.first_name.trim() && formData.last_name.trim() && formData.date_of_birth
+    // Not found or access denied
+    if (notFound) {
+        return (
+            <PortalLayout
+                breadcrumbs={[
+                    { label: 'Home', path: '/portal/dashboard' },
+                    { label: 'My Athletes', path: '/portal/athletes' },
+                    { label: 'Edit Athlete' }
+                ]}
+            >
+                <Card className="p-6 mt-6">
+                    <div className="text-center py-12">
+                        <p className="text-red-600 dark:text-red-400 font-bold mb-4">
+                            Athlete not found or you don't have access.
+                        </p>
+                        <p className="text-slate-500 dark:text-slate-400 mb-6">
+                            Redirecting to My Athletes...
+                        </p>
+                        <Button variant="primary" onClick={() => navigate('/portal/athletes')}>
+                            Back to My Athletes
+                        </Button>
+                    </div>
+                </Card>
+            </PortalLayout>
+        )
+    }
 
-    // Memoized toggle handler for sports
-    const handleSportToggle = useCallback((sportId: string, sportType: SportType) => {
-        setSelectedSports(prev => {
-            const exists = prev.some(s => s.sport_id === sportId && s.sport_type === sportType)
-            if (exists) {
-                return prev.filter(s => !(s.sport_id === sportId && s.sport_type === sportType))
-            } else {
-                return [...prev, { sport_id: sportId, sport_type: sportType }]
-            }
-        })
-    }, [])
+    const isFormValid = formData.first_name.trim() && formData.last_name.trim() && formData.date_of_birth
 
     return (
         <PortalLayout
             breadcrumbs={[
                 { label: 'Home', path: '/portal/dashboard' },
-                { label: 'Teams', path: '/portal/athletes' },
-                { label: 'Add Athlete' }
+                { label: 'My Athletes', path: '/portal/athletes' },
+                { label: 'Edit Athlete' }
             ]}
         >
             <div className="mb-12">
-                <PageTitle>Add Athlete</PageTitle>
+                <PageTitle>Edit Athlete</PageTitle>
                 <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
-                    Create a new athlete profile. You will be automatically linked as a guardian.
+                    Update athlete information and preferences.
                 </p>
             </div>
 
@@ -525,82 +516,6 @@ export default function CreateAthletePortal() {
                     </div>
                 </Card>
 
-                {/* Guardians */}
-                <Card className="p-6 mb-6">
-                    <h2 className="text-xl font-black text-slate-900 dark:text-white mb-2">Guardians</h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-                        You will be automatically linked as a guardian. You can add one additional guardian below.
-                    </p>
-
-                    {/* Current User Info */}
-                    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
-                        <p className="text-sm text-blue-800 dark:text-blue-300 font-bold">
-                            You ({context.email}) will be linked as a guardian (Parent)
-                        </p>
-                    </div>
-
-                    {/* Additional Guardian */}
-                    <div className="mb-4">
-                        <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
-                            Additional Guardian Email (Optional)
-                        </label>
-                        <div className="relative">
-                            <input
-                                type="email"
-                                value={formData.additionalGuardianEmail}
-                                onChange={(e) => {
-                                    setFormData({ ...formData, additionalGuardianEmail: e.target.value })
-                                    if (!emailTouched) setEmailTouched(true)
-                                }}
-                                className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
-                                placeholder="guardian@example.com"
-                            />
-                            {isCheckingGuardian && (
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-[#137fec]"></div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Guardian Match Indicator */}
-                        {guardianMatch && formData.additionalGuardianEmail.trim() && (
-                            <div className="mt-2">
-                                {guardianMatch.exists ? (
-                                    <p className="text-sm text-green-600 dark:text-green-400 font-bold">
-                                        ✓ Account exists - will link
-                                    </p>
-                                ) : (
-                                    <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded p-3 mt-2">
-                                        <p className="text-sm text-yellow-800 dark:text-yellow-300">
-                                            This email doesn't have an account. An invitation will be sent to link them as a guardian.
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
-                            Relationship Type
-                        </label>
-                        <select
-                            value={formData.additionalGuardianRelationship}
-                            onChange={(e) =>
-                                setFormData({
-                                    ...formData,
-                                    additionalGuardianRelationship: e.target.value as RelationshipType
-                                })
-                            }
-                            className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white"
-                        >
-                            <option value="parent">Parent</option>
-                            <option value="guardian">Guardian</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-                </Card>
-
                 {/* Sports Interests */}
                 <Card className="p-6 mb-6">
                     <h2 className="text-xl font-black text-slate-900 dark:text-white mb-2">Sports Interests</h2>
@@ -639,7 +554,7 @@ export default function CreateAthletePortal() {
                         Cancel
                     </Button>
                     <Button type="submit" variant="primary" disabled={isSubmitting || !isFormValid}>
-                        {isSubmitting ? 'Creating...' : 'Create Athlete'}
+                        {isSubmitting ? 'Saving...' : 'Save Changes'}
                     </Button>
                 </div>
             </form>

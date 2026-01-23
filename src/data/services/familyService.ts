@@ -444,13 +444,40 @@ export async function getChildren(
             .from('athletes')
             .select(`
                 *,
-                family:families!inner(org_id)
+                family:families!inner(org_id),
+                athlete_sports(
+                    sport_id,
+                    sport_type,
+                    sport:sports(name)
+                )
             `)
             .eq('family.org_id', context.orgId || '')
             .is('deleted_at', null)
 
         if (error) throw error
-        return { data: (data || []).map((d: any) => ({ ...d, family: undefined }) as Child), error: null }
+        
+        // Transform the data to match Athlete type with sports array
+        const transformed = (data || []).map((d: any) => {
+            const athlete = { ...d, family: undefined } as any
+            
+            // Transform athlete_sports to sports array format
+            if (athlete.athlete_sports && Array.isArray(athlete.athlete_sports)) {
+                athlete.sports = athlete.athlete_sports.map((as: any) => ({
+                    sport_id: as.sport_id,
+                    sport_name: as.sport?.name || 'Unknown Sport',
+                    sport_type: as.sport_type
+                }))
+            } else {
+                athlete.sports = []
+            }
+            
+            // Remove the raw athlete_sports field
+            delete athlete.athlete_sports
+            
+            return athlete as Child
+        })
+        
+        return { data: transformed, error: null }
     } catch (err) {
         return { data: [], error: err instanceof Error ? err : new Error('Fetch failed') }
     }
@@ -459,6 +486,86 @@ export async function getChildren(
 // ============================================================================
 // Athlete Service Functions (New Athlete-Centric Model)
 // ============================================================================
+
+/**
+ * Get a single athlete by ID with sports data
+ */
+export async function getAthleteById(
+    context: UserContext,
+    athleteId: string
+): Promise<{ data: Child | null; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+            const permissions = buildPermissions(context)
+            const child = fakeChildren.find(c => c.id === athleteId)
+            
+            if (!child) {
+                return { data: null, error: null }
+            }
+            
+            // Check access
+            if (!permissions.canViewAllOrgData) {
+                const ownedChildIds = getChildrenForUserId(context.userId)
+                if (!ownedChildIds.includes(athleteId)) {
+                    return { data: null, error: new Error('Access denied') }
+                }
+            }
+            
+            return { data: mapFakeChild(child), error: null }
+        } catch (err) {
+            return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        }
+    }
+
+    // Real Data
+    try {
+        const { data, error } = await supabase
+            .from('athletes')
+            .select(`
+                *,
+                athlete_sports(
+                    sport_id,
+                    sport_type,
+                    sport:sports(name)
+                )
+            `)
+            .eq('id', athleteId)
+            .is('deleted_at', null)
+            .single()
+
+        if (error) {
+            if (error.code === 'PGRST116') {
+                // Not found
+                return { data: null, error: null }
+            }
+            throw error
+        }
+
+        if (!data) {
+            return { data: null, error: null }
+        }
+
+        // Transform athlete_sports to sports array format
+        const athlete = { ...data } as any
+        if (athlete.athlete_sports && Array.isArray(athlete.athlete_sports)) {
+            athlete.sports = athlete.athlete_sports.map((as: any) => ({
+                sport_id: as.sport_id,
+                sport_name: as.sport?.name || 'Unknown Sport',
+                sport_type: as.sport_type
+            }))
+        } else {
+            athlete.sports = []
+        }
+        
+        // Remove the raw athlete_sports field
+        delete athlete.athlete_sports
+
+        return { data: athlete as Child, error: null }
+    } catch (err) {
+        return { data: null, error: err instanceof Error ? err : new Error('Fetch failed') }
+    }
+}
 
 /**
  * Create athlete with guardians atomically
@@ -508,12 +615,28 @@ export async function createAthleteWithGuardians(
             relationship_type: g.relationship_type || 'parent'
         }))
 
+        // Prepare sports array - filter empty entries, remove duplicates, validate types
+        const sports = (dto.sports || [])
+            .filter(s => s.sport_id && s.sport_id.trim()) // Filter empty sport_id
+            .map(s => ({
+                sport_id: s.sport_id.trim(),
+                sport_type: (s.sport_type === 'plays' || s.sport_type === 'interested') 
+                    ? s.sport_type 
+                    : 'plays' as 'plays' | 'interested' // Default to 'plays' if invalid
+            }))
+        
+        // Remove duplicates using Map (defense-in-depth)
+        const uniqueSports = [...new Map(
+            sports.map(s => [`${s.sport_id}-${s.sport_type}`, s])
+        ).values()]
+
         // Call RPC function
         const { data, error } = await supabase
             .rpc('create_athlete_with_guardians', {
                 p_org_id: context.orgId,
                 p_athlete_data: athleteData,
-                p_guardians: guardians
+                p_guardians: guardians,
+                p_athlete_sports: uniqueSports.length > 0 ? uniqueSports : []
             })
 
         if (error) throw error

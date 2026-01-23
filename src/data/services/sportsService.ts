@@ -59,10 +59,11 @@ function isSystemSport(sport: { org_id: string | null } | null | undefined): boo
  */
 export async function getSystemSports(): Promise<{ data: Sport[]; error: Error | null }> {
     try {
+        // Use a more explicit query to avoid potential issues with .is() method
         const { data, error } = await supabase
             .from('sports')
             .select('*')
-            .is('org_id', null)
+            .filter('org_id', 'is', null)
             .order('name')
 
         if (error) throw error
