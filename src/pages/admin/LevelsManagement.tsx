@@ -4,7 +4,7 @@
  * Table view with filtering and contextual creation.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getLevels } from '../../data/services/levelsService'
@@ -32,8 +32,8 @@ export default function LevelsManagement() {
       try {
         const [levelsResult, programsResult] = await Promise.all([getLevels(context), getPrograms(context)])
 
-        setLevels(levelsResult.data as Level[])
-        setPrograms(programsResult.data as Program[])
+        setLevels(Array.isArray(levelsResult.data) ? levelsResult.data : [])
+        setPrograms(Array.isArray(programsResult.data) ? programsResult.data : [])
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data')
       } finally {
@@ -111,7 +111,9 @@ export default function LevelsManagement() {
                 />
               </div>
               <Link to="/admin/organization/structure/forms?type=level" className="w-full md:w-auto">
-                <Button style={{ width: '100%' }}>Add Level</Button>
+                <Button style={{ width: '100%' }} disabled={!canCreateLevel} title={!canCreateLevel ? 'Add a Program first' : undefined}>
+                  Add Level
+                </Button>
               </Link>
             </div>
           </Card>

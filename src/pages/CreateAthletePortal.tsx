@@ -5,7 +5,7 @@
  * Automatically links current user as guardian and allows adding one additional guardian.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle } from '../components/portal/Typography'
@@ -14,7 +14,53 @@ import Button from '../components/portal/Button'
 import { useUserContext } from '../hooks/useUserContext'
 import { createAthleteWithGuardians } from '../data/services/familyService'
 import { checkGuardianMatch, normalizeEmail, validateGuardianEmail } from '../utils/guardianMatching'
+import { getSystemSports } from '../data/services/sportsService'
 import type { Gender, CreateAthleteDTO, GuardianMatch, RelationshipType } from '../types/family'
+import type { Sport } from '../data/types/organization'
+
+type SportType = 'plays' | 'interested'
+
+// Memoized Sport Item Component
+const SportItem = memo(({ 
+    sport, 
+    selectedSports, 
+    onToggle 
+}: { 
+    sport: Sport
+    selectedSports: Array<{ sport_id: string; sport_type: SportType }>
+    onToggle: (sportId: string, sportType: SportType) => void
+}) => {
+    const isPlaysSelected = selectedSports.some(s => s.sport_id === sport.id && s.sport_type === 'plays')
+    const isInterestedSelected = selectedSports.some(s => s.sport_id === sport.id && s.sport_type === 'interested')
+
+    return (
+        <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
+            <span className="text-sm font-medium text-slate-900 dark:text-white">{sport.name}</span>
+            <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                        type="checkbox"
+                        checked={isPlaysSelected}
+                        onChange={() => onToggle(sport.id, 'plays')}
+                        className="w-4 h-4 text-[#137fec] border-slate-300 rounded focus:ring-[#137fec]"
+                    />
+                    <span className="text-sm text-slate-700 dark:text-slate-300">Plays</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                        type="checkbox"
+                        checked={isInterestedSelected}
+                        onChange={() => onToggle(sport.id, 'interested')}
+                        className="w-4 h-4 text-[#137fec] border-slate-300 rounded focus:ring-[#137fec]"
+                    />
+                    <span className="text-sm text-slate-700 dark:text-slate-300">Interested</span>
+                </label>
+            </div>
+        </div>
+    )
+})
+
+SportItem.displayName = 'SportItem'
 
 export default function CreateAthletePortal() {
     const navigate = useNavigate()
@@ -43,11 +89,17 @@ export default function CreateAthletePortal() {
     const [guardianMatch, setGuardianMatch] = useState<GuardianMatch | null>(null)
     const [emailTouched, setEmailTouched] = useState(false)
 
+    // Sports state
+    const [sports, setSports] = useState<Sport[]>([])
+    const [isLoadingSports, setIsLoadingSports] = useState(false)
+    const [selectedSports, setSelectedSports] = useState<Array<{ sport_id: string; sport_type: SportType }>>([])
+
     // Refs for race condition and memory leak prevention
     const requestIdRef = useRef(0)
     const timeoutRef = useRef<NodeJS.Timeout | null>(null)
     const isMountedRef = useRef(true)
     const isCheckingRef = useRef(false)
+    const isLoadingSportsRef = useRef(false)
 
     // Cleanup on unmount
     useEffect(() => {
@@ -116,6 +168,31 @@ export default function CreateAthletePortal() {
             debouncedGuardianLookup(formData.additionalGuardianEmail)
         }
     }, [formData.additionalGuardianEmail, emailTouched, debouncedGuardianLookup])
+
+    // Load system sports on mount
+    useEffect(() => {
+        if (!isReady || isLoadingSportsRef.current) return
+
+        isLoadingSportsRef.current = true
+        setIsLoadingSports(true)
+
+        getSystemSports()
+            .then(({ data, error }) => {
+                if (error) {
+                    console.error('Error loading sports:', error)
+                    return
+                }
+                if (isMountedRef.current && data) {
+                    setSports(data)
+                }
+            })
+            .finally(() => {
+                if (isMountedRef.current) {
+                    setIsLoadingSports(false)
+                    isLoadingSportsRef.current = false
+                }
+            })
+    }, [isReady])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -194,7 +271,8 @@ export default function CreateAthletePortal() {
                 allergies: formData.allergies.trim() || null,
                 emergency_contact_name: formData.emergency_contact_name.trim() || null,
                 emergency_contact_phone: formData.emergency_contact_phone.trim() || null,
-                guardians
+                guardians,
+                sports: selectedSports.length > 0 ? selectedSports : undefined
             }
 
             const { error: createError } = await createAthleteWithGuardians(context, dto)
@@ -216,7 +294,7 @@ export default function CreateAthletePortal() {
             <PortalLayout
                 breadcrumbs={[
                     { label: 'Home', path: '/portal/dashboard' },
-                    { label: 'Teams', path: '/portal/athletes' },
+                    { label: 'My Athletes', path: '/portal/athletes' },
                     { label: 'Add Athlete' }
                 ]}
             >
@@ -241,7 +319,7 @@ export default function CreateAthletePortal() {
             <PortalLayout
                 breadcrumbs={[
                     { label: 'Home', path: '/portal/dashboard' },
-                    { label: 'Teams', path: '/portal/athletes' },
+                    { label: 'My Athletes', path: '/portal/athletes' },
                     { label: 'Add Athlete' }
                 ]}
             >
@@ -254,11 +332,23 @@ export default function CreateAthletePortal() {
 
     const isFormValid = formData.first_name.trim() && formData.last_name.trim() && formData.date_of_birth
 
+    // Memoized toggle handler for sports
+    const handleSportToggle = useCallback((sportId: string, sportType: SportType) => {
+        setSelectedSports(prev => {
+            const exists = prev.some(s => s.sport_id === sportId && s.sport_type === sportType)
+            if (exists) {
+                return prev.filter(s => !(s.sport_id === sportId && s.sport_type === sportType))
+            } else {
+                return [...prev, { sport_id: sportId, sport_type: sportType }]
+            }
+        })
+    }, [])
+
     return (
         <PortalLayout
             breadcrumbs={[
                 { label: 'Home', path: '/portal/dashboard' },
-                { label: 'Teams', path: '/portal/athletes' },
+                { label: 'My Athletes', path: '/portal/athletes' },
                 { label: 'Add Athlete' }
             ]}
         >
@@ -509,6 +599,33 @@ export default function CreateAthletePortal() {
                             <option value="other">Other</option>
                         </select>
                     </div>
+                </Card>
+
+                {/* Sports Interests */}
+                <Card className="p-6 mb-6">
+                    <h2 className="text-xl font-black text-slate-900 dark:text-white mb-2">Sports Interests</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                        Select sports this athlete plays or is interested in playing. This is optional.
+                    </p>
+
+                    {isLoadingSports ? (
+                        <div className="flex justify-center py-8">
+                            <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+                        </div>
+                    ) : sports.length === 0 ? (
+                        <p className="text-sm text-slate-500 dark:text-slate-400">No sports available.</p>
+                    ) : (
+                        <div className="space-y-3">
+                            {sports.map((sport) => (
+                                <SportItem
+                                    key={sport.id}
+                                    sport={sport}
+                                    selectedSports={selectedSports}
+                                    onToggle={handleSportToggle}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </Card>
 
                 {/* Submit Buttons */}

@@ -104,19 +104,12 @@ function LoadingSpinner() {
 export default function PlatformAdminLayout() {
   const { loaded: themeLoaded } = usePlatformAdminTheme()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [adminRole, setAdminRole] = useState<PlatformAdminRole | null>(null)
   const location = useLocation()
   const navigate = useNavigate()
   const { profile, signOut } = useAuth()
 
-  // Fetch the admin's role
-  useEffect(() => {
-    if (profile?.isPlatformAdmin) {
-      // Default to super_admin for backwards compatibility
-      // TODO: Fetch actual role from platform_admins table after migration
-      setAdminRole('super_admin')
-    }
-  }, [profile])
+  // Get admin role from profile (Bug Prevention #1, Technical Bug #4)
+  const adminRole = profile?.platformAdminRole ?? null
 
   const handleSignOut = async () => {
     await signOut()
@@ -131,8 +124,8 @@ export default function PlatformAdminLayout() {
     return location.pathname.startsWith(path)
   }
 
-  // Show loading while theme loads
-  if (!themeLoaded) {
+  // Show loading while theme loads or profile is loading
+  if (!themeLoaded || !profile) {
     return <LoadingSpinner />
   }
 

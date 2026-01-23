@@ -57,7 +57,7 @@ export default function UserContextDropdown() {
   const roleLinks = [
     { role: 'parent', label: t('portal.navigation.myChildren'), path: getLink(RouteKeys.PORTAL_ATHLETES), icon: 'family_restroom' as const },
     { role: 'parent', label: 'Payments', path: getLink(RouteKeys.PORTAL_PAYMENTS), icon: 'receipt_long' as const },
-    { role: 'coach', label: 'Teams', path: getLink(RouteKeys.PORTAL_ATHLETES), icon: 'sports_soccer' as const },
+    { role: 'coach', label: 'My Athletes', path: getLink(RouteKeys.PORTAL_ATHLETES), icon: 'sports_soccer' as const },
     { role: 'org_admin', label: 'Organization Settings', path: getLink(RouteKeys.ADMIN_ORGANIZATION), icon: 'admin_panel_settings' as const },
   ]
 

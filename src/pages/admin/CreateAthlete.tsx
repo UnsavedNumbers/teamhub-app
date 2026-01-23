@@ -9,16 +9,62 @@
  * Replaces the old family-first CreateChild flow.
  */
 
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AdminPageHeader, Card, Input, Button, Select, ErrorState } from '../../components/platformAdmin'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { useUserContext } from '../../hooks/useUserContext'
 import { createAthleteWithGuardians } from '../../data/services/familyService'
 import { GuardianList } from '../../components/admin/GuardianInput'
+import { getSystemSports } from '../../data/services/sportsService'
 import type { Gender, GuardianFormData, CreateAthleteDTO } from '../../types/family'
+import type { Sport } from '../../data/types/organization'
 import { createDefaultGuardians, validateGuardians, findDuplicateEmails } from '../../utils/guardianMatching'
 import { AlertCircle } from 'lucide-react'
+
+type SportType = 'plays' | 'interested'
+
+// Memoized Sport Item Component
+const SportItem = memo(({ 
+    sport, 
+    selectedSports, 
+    onToggle 
+}: { 
+    sport: Sport
+    selectedSports: Array<{ sport_id: string; sport_type: SportType }>
+    onToggle: (sportId: string, sportType: SportType) => void
+}) => {
+    const isPlaysSelected = selectedSports.some(s => s.sport_id === sport.id && s.sport_type === 'plays')
+    const isInterestedSelected = selectedSports.some(s => s.sport_id === sport.id && s.sport_type === 'interested')
+
+    return (
+        <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700">
+            <span className="text-sm font-medium text-gray-900 dark:text-white">{sport.name}</span>
+            <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                        type="checkbox"
+                        checked={isPlaysSelected}
+                        onChange={() => onToggle(sport.id, 'plays')}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Plays</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                        type="checkbox"
+                        checked={isInterestedSelected}
+                        onChange={() => onToggle(sport.id, 'interested')}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Interested</span>
+                </label>
+            </div>
+        </div>
+    )
+})
+
+SportItem.displayName = 'SportItem'
 
 export default function CreateAthlete() {
     const navigate = useNavigate()
@@ -41,6 +87,54 @@ export default function CreateAthlete() {
     })
 
     const [guardians, setGuardians] = useState<GuardianFormData[]>(createDefaultGuardians())
+
+    // Sports state
+    const [sports, setSports] = useState<Sport[]>([])
+    const [isLoadingSports, setIsLoadingSports] = useState(false)
+    const [selectedSports, setSelectedSports] = useState<Array<{ sport_id: string; sport_type: SportType }>>([])
+    const isLoadingSportsRef = useRef(false)
+    const isMountedRef = useRef(true)
+
+    // Load system sports on mount
+    useEffect(() => {
+        if (!isReady || isLoadingSportsRef.current) return
+
+        isLoadingSportsRef.current = true
+        setIsLoadingSports(true)
+
+        getSystemSports()
+            .then(({ data, error }) => {
+                if (error) {
+                    console.error('Error loading sports:', error)
+                    return
+                }
+                if (isMountedRef.current && data) {
+                    setSports(data)
+                }
+            })
+            .finally(() => {
+                if (isMountedRef.current) {
+                    setIsLoadingSports(false)
+                    isLoadingSportsRef.current = false
+                }
+            })
+
+        return () => {
+            isMountedRef.current = false
+        }
+    }, [isReady])
+
+    // Memoized toggle handler for sports
+    const handleSportToggle = useCallback((sportId: string, sportType: SportType) => {
+        setSelectedSports(prev => {
+            const exists = prev.some(s => s.sport_id === sportId && s.sport_type === sportType)
+            if (exists) {
+                return prev.filter(s => !(s.sport_id === sportId && s.sport_type === sportType))
+            } else {
+                return [...prev, { sport_id: sportId, sport_type: sportType }]
+            }
+        })
+    }, [])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -86,7 +180,8 @@ export default function CreateAthlete() {
                 allergies: formData.allergies || null,
                 emergency_contact_name: formData.emergency_contact_name || null,
                 emergency_contact_phone: formData.emergency_contact_phone || null,
-                guardians: guardians.filter(g => g.email.trim() !== '') // Only include guardians with emails
+                guardians: guardians.filter(g => g.email.trim() !== ''), // Only include guardians with emails
+                sports: selectedSports.length > 0 ? selectedSports : undefined
             }
 
             const { data, error: createError } = await createAthleteWithGuardians(context, dto)
@@ -282,6 +377,33 @@ export default function CreateAthlete() {
                                 orgId={context.orgId || ''}
                                 minGuardians={0}
                             />
+                        </Card>
+
+                        {/* Sports Interests */}
+                        <Card className="mt-6">
+                            <h2 className="pa-h2 pa-mb-2">Sports Interests</h2>
+                            <p className="text-sm text-gray-600 mb-6">
+                                Select sports this athlete plays or is interested in playing. This is optional.
+                            </p>
+
+                            {isLoadingSports ? (
+                                <div className="flex justify-center py-8">
+                                    <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
+                                </div>
+                            ) : sports.length === 0 ? (
+                                <p className="text-sm text-gray-500 dark:text-gray-400">No sports available.</p>
+                            ) : (
+                                <div className="space-y-3">
+                                    {sports.map((sport) => (
+                                        <SportItem
+                                            key={sport.id}
+                                            sport={sport}
+                                            selectedSports={selectedSports}
+                                            onToggle={handleSportToggle}
+                                        />
+                                    ))}
+                                </div>
+                            )}
                         </Card>
 
                         {/* Submit Buttons */}

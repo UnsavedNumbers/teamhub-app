@@ -195,7 +195,8 @@ COMMENT ON FUNCTION link_guardian_to_athlete IS 'Links a guardian to an athlete 
 CREATE OR REPLACE FUNCTION create_athlete_with_guardians(
   p_org_id UUID,
   p_athlete_data JSONB,
-  p_guardians JSONB[] DEFAULT '{}'
+  p_guardians JSONB[] DEFAULT '{}',
+  p_athlete_sports JSONB[] DEFAULT '{}'
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -207,6 +208,10 @@ DECLARE
   v_result JSONB;
   v_guardian_results JSONB[] := '{}';
   v_created_by UUID;
+  v_sport JSONB;
+  v_sport_id UUID;
+  v_sport_type TEXT;
+  v_sport_exists BOOLEAN;
 BEGIN
   -- Get current user
   v_created_by := auth.uid();
@@ -273,6 +278,49 @@ BEGIN
     v_guardian_results := array_append(v_guardian_results, v_result);
   END LOOP;
   
+  -- Link each sport (all must succeed or transaction rolls back)
+  FOREACH v_sport IN ARRAY p_athlete_sports LOOP
+    -- Extract sport_id and sport_type
+    v_sport_id := (v_sport->>'sport_id')::UUID;
+    v_sport_type := COALESCE(v_sport->>'sport_type', 'plays');
+    
+    -- Validate sport_id is provided
+    IF v_sport_id IS NULL THEN
+      RAISE EXCEPTION 'sport_id is required for each sport';
+    END IF;
+    
+    -- Validate sport_type is valid
+    IF v_sport_type NOT IN ('plays', 'interested') THEN
+      RAISE EXCEPTION 'sport_type must be "plays" or "interested", got: %', v_sport_type;
+    END IF;
+    
+    -- Validate sport exists and is a system sport
+    SELECT EXISTS (
+      SELECT 1 FROM sports 
+      WHERE id = v_sport_id 
+        AND (org_id IS NULL OR is_system = true)
+    ) INTO v_sport_exists;
+    
+    IF NOT v_sport_exists THEN
+      RAISE EXCEPTION 'Invalid sport_id: % (must be a system sport)', v_sport_id;
+    END IF;
+    
+    -- Insert athlete sport relationship
+    INSERT INTO athlete_sports (
+      athlete_id,
+      sport_id,
+      org_id,
+      sport_type
+    )
+    VALUES (
+      v_athlete_id,
+      v_sport_id,
+      p_org_id,
+      v_sport_type
+    )
+    ON CONFLICT (athlete_id, sport_id, org_id, sport_type) DO NOTHING;
+  END LOOP;
+  
   -- If team_id and season_id provided, create team membership
   IF p_athlete_data->>'team_id' IS NOT NULL 
      AND p_athlete_data->>'season_id' IS NOT NULL THEN
@@ -300,7 +348,8 @@ BEGIN
     'success', true,
     'athlete_id', v_athlete_id,
     'guardians', v_guardian_results,
-    'guardian_count', ARRAY_LENGTH(v_guardian_results, 1)
+    'guardian_count', ARRAY_LENGTH(v_guardian_results, 1),
+    'sport_count', ARRAY_LENGTH(p_athlete_sports, 1)
   );
   
 EXCEPTION
@@ -310,7 +359,7 @@ EXCEPTION
 END;
 $$;
 
-COMMENT ON FUNCTION create_athlete_with_guardians IS 'Atomically creates an athlete and links guardians. All operations succeed or fail together. Returns athlete_id and guardian linking results.';
+COMMENT ON FUNCTION create_athlete_with_guardians IS 'Atomically creates an athlete, links guardians, and links sports. All operations succeed or fail together. Returns athlete_id, guardian linking results, and sport count.';
 
 -- ==============================================
 -- Get Athlete Guardians

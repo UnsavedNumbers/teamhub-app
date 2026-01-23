@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useUserContext } from '../../hooks/useUserContext'
@@ -85,6 +85,22 @@ export default function OrganizationStructureNew() {
 
   const activeSeasons = Array.isArray(seasons) ? seasons.filter((s) => s.is_active) : []
   const currentSeason = activeSeasons.length > 0 ? activeSeasons[0] : null
+
+  // Compute prerequisite flags using useMemo for consistency
+  const canCreateProgram = useMemo(
+    () => !loading && Array.isArray(sports) && sports.length > 0,
+    [loading, sports.length]
+  )
+
+  const canCreateLevel = useMemo(
+    () => !loading && Array.isArray(programs) && programs.length > 0,
+    [loading, programs.length]
+  )
+
+  const canCreateTeam = useMemo(
+    () => !loading && Array.isArray(levels) && levels.length > 0,
+    [loading, levels.length]
+  )
 
   if (!isReady || loading) {
     return (
@@ -175,16 +191,22 @@ export default function OrganizationStructureNew() {
               icon="category"
               label="Add Program"
               onClick={() => navigate('/admin/organization/structure/forms?type=program')}
+              disabled={!canCreateProgram}
+              tooltip={!canCreateProgram ? 'Add a Sport first' : undefined}
             />
             <QuickActionButton
               icon="stairs"
               label="Add Level"
               onClick={() => navigate('/admin/organization/structure/forms?type=level')}
+              disabled={!canCreateLevel}
+              tooltip={!canCreateLevel ? 'Add a Program first' : undefined}
             />
             <QuickActionButton
               icon="groups"
               label="Add Team"
               onClick={() => navigate('/admin/organization/structure/forms?type=team')}
+              disabled={!canCreateTeam}
+              tooltip={!canCreateTeam ? 'Add a Level first' : undefined}
             />
             <QuickActionButton
               icon="calendar_today"
@@ -339,13 +361,26 @@ function QuickActionButton({
   icon,
   label,
   onClick,
+  disabled = false,
+  tooltip,
 }: {
   icon: string
   label: string
   onClick: () => void
+  disabled?: boolean
+  tooltip?: string
 }) {
   return (
-    <button className="org-action-btn" onClick={onClick}>
+    <button
+      className="org-action-btn"
+      onClick={onClick}
+      disabled={disabled}
+      title={tooltip}
+      style={{
+        opacity: disabled ? 0.5 : 1,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+      }}
+    >
       <div className="org-action-content">
         <span className="material-symbols-outlined org-action-icon">{icon}</span>
         <span className="org-action-label">{label}</span>

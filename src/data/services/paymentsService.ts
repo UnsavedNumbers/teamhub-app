@@ -31,6 +31,7 @@ import {
 } from '../fake/fakePayments'
 import { getChildrenForUserId, getAssignedTeamsForCoach } from '../fake/relationships'
 import { supabase } from '../../lib/supabase'
+import type { Database } from '../../lib/database.types'
 
 // ============================================================================
 // Helper Functions
@@ -49,6 +50,28 @@ function buildPermissions(context: UserContext): PermissionSet {
         : []
 
     return calculatePermissions(context, assignedTeamIds, childIds, [])
+}
+
+async function getChildIdsForUser(userId: string): Promise<string[]> {
+    const { data: userRow, error: userError } = await supabase
+        .from('users')
+        .select('family_id')
+        .eq('id', userId)
+        .single()
+
+    if (userError || !userRow?.family_id) return []
+
+    const { data: athletes, error: athleteError } = await supabase
+        .from('athletes')
+        .select('id')
+        .eq('family_id', userRow.family_id)
+
+    if (athleteError) return []
+    return (athletes ?? []).map((a) => a.id)
+}
+
+function isOrgAdmin(context: UserContext): boolean {
+    return context.roles.includes('admin') || context.roles.includes('org_admin')
 }
 
 // Re-export for convenience
@@ -178,38 +201,69 @@ export async function getFeeDetails(
 export async function getFeeAssignmentsForUser(
     context: UserContext
 ): Promise<{ data: Array<FakeFeeAssignment & { fee?: FakeFee; payments?: FakePayment[] }>; error: Error | null }> {
-    if (!USE_FAKE_DATA) {
-        return { data: [], error: new Error('Real data not implemented') }
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+
+            const permissions = buildPermissions(context)
+
+            if (permissions.canViewAllOrgData) {
+                const fees = getFeesForOrg(context.orgId)
+                const feeIds = fees.map((f) => f.id)
+                const allAssignments = fakeFeeAssignments.filter((fa) => feeIds.includes(fa.fee_id))
+
+                return {
+                    data: allAssignments.map((fa) => ({
+                        ...fa,
+                        fee: getFeeById(fa.fee_id),
+                        payments: getPaymentsForAssignment(fa.id),
+                    })),
+                    error: null,
+                }
+            }
+
+            const childIds = getChildrenForUserId(context.userId)
+            const assignments = childIds.flatMap((childId) => getFeeAssignmentsWithDetailsForChild(childId))
+
+            return { data: assignments, error: null }
+        } catch (err) {
+            return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        }
     }
 
     try {
-        await simulateDelay()
+        const isAdmin = isOrgAdmin(context)
+        const childIds = isAdmin ? [] : await getChildIdsForUser(context.userId)
 
-        const permissions = buildPermissions(context)
+        let query = supabase
+            .from('fee_assignments')
+            .select(
+                `*,
+                fee:fees(*),
+                athlete:athletes(id, first_name, last_name),
+                payments:payment_allocations(payment:payments(*))`
+            )
+            .eq('org_id', context.orgId)
 
-        // Admin sees all fee assignments
-        if (permissions.canViewAllOrgData) {
-            const fees = getFeesForOrg(context.orgId)
-            const feeIds = fees.map((f) => f.id)
-            const allAssignments = fakeFeeAssignments.filter((fa) => feeIds.includes(fa.fee_id))
-
-            return {
-                data: allAssignments.map((fa) => ({
-                    ...fa,
-                    fee: getFeeById(fa.fee_id),
-                    payments: getPaymentsForAssignment(fa.id),
-                })),
-                error: null,
-            }
+        if (!isAdmin) {
+            if (childIds.length === 0) return { data: [], error: null }
+            query = query.in('athlete_id', childIds)
         }
 
-        // Parents see only their children's assignments
-        const childIds = getChildrenForUserId(context.userId)
-        const assignments = childIds.flatMap((childId) => getFeeAssignmentsWithDetailsForChild(childId))
+        const { data, error } = await query.order('created_at', { ascending: false })
+        if (error) throw error
+
+        const assignments = (data ?? []).map((row: any) => ({
+            ...(row as FakeFeeAssignment),
+            fee: row.fee as FakeFee,
+            payments: ((row.payments as any[]) ?? [])
+                .map((p) => p.payment)
+                .filter(Boolean) as FakePayment[],
+        }))
 
         return { data: assignments, error: null }
     } catch (err) {
-        return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch fee assignments') }
     }
 }
 
@@ -219,24 +273,46 @@ export async function getFeeAssignmentsForUser(
 export async function getUnpaidFeeAssignments(
     context: UserContext
 ): Promise<{ data: Array<FakeFeeAssignment & { fee?: FakeFee }>; error: Error | null }> {
-    if (!USE_FAKE_DATA) {
-        return { data: [], error: new Error('Real data not implemented') }
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+
+            const childIds = getChildrenForUserId(context.userId)
+            const unpaid = childIds.flatMap((childId) =>
+                getUnpaidFeeAssignmentsForChild(childId).map((fa) => ({
+                    ...fa,
+                    fee: getFeeById(fa.fee_id),
+                }))
+            )
+
+            return { data: unpaid, error: null }
+        } catch (err) {
+            return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        }
     }
 
     try {
-        await simulateDelay()
+        const childIds = await getChildIdsForUser(context.userId)
+        if (childIds.length === 0) return { data: [], error: null }
 
-        const childIds = getChildrenForUserId(context.userId)
-        const unpaid = childIds.flatMap((childId) =>
-            getUnpaidFeeAssignmentsForChild(childId).map((fa) => ({
-                ...fa,
-                fee: getFeeById(fa.fee_id),
-            }))
-        )
+        const { data, error } = await supabase
+            .from('fee_assignments')
+            .select('*, fee:fees(*)')
+            .eq('org_id', context.orgId)
+            .in('athlete_id', childIds)
+            .in('status', ['unpaid', 'partial', 'overdue'])
+            .order('created_at', { ascending: false })
+
+        if (error) throw error
+
+        const unpaid = (data ?? []).map((row: any) => ({
+            ...(row as FakeFeeAssignment),
+            fee: row.fee as FakeFee,
+        }))
 
         return { data: unpaid, error: null }
     } catch (err) {
-        return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch unpaid assignments') }
     }
 }
 
@@ -321,28 +397,47 @@ export async function getPayments(
     context: UserContext,
     limit?: number
 ): Promise<{ data: FakePayment[]; error: Error | null }> {
-    if (!USE_FAKE_DATA) {
-        return { data: [], error: new Error('Real data not implemented') }
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+
+            const permissions = buildPermissions(context)
+            if (!permissions.canViewAllOrgData) {
+                return { data: [], error: new Error('Access denied: Admin only') }
+            }
+
+            let payments = getPaymentsForOrg(context.orgId)
+            payments.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+            if (limit && limit > 0) {
+                payments = payments.slice(0, limit)
+            }
+
+            return { data: payments, error: null }
+        } catch (err) {
+            return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        }
     }
 
     try {
-        await simulateDelay()
-
-        const permissions = buildPermissions(context)
-        if (!permissions.canViewAllOrgData) {
+        if (!isOrgAdmin(context)) {
             return { data: [], error: new Error('Access denied: Admin only') }
         }
 
-        let payments = getPaymentsForOrg(context.orgId)
-        payments.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        let query = supabase
+            .from('payments')
+            .select('*, allocations:payment_allocations(fee_assignment_id, amount_cents)')
+            .eq('org_id', context.orgId)
+            .order('created_at', { ascending: false })
 
-        if (limit && limit > 0) {
-            payments = payments.slice(0, limit)
-        }
+        if (limit && limit > 0) query = query.limit(limit)
 
-        return { data: payments, error: null }
+        const { data, error } = await query
+        if (error) throw error
+
+        return { data: (data as unknown) as FakePayment[], error: null }
     } catch (err) {
-        return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch payments') }
     }
 }
 
@@ -353,17 +448,32 @@ export async function getPaymentsForFeeAssignment(
     _context: UserContext,
     assignmentId: string
 ): Promise<{ data: FakePayment[]; error: Error | null }> {
-    if (!USE_FAKE_DATA) {
-        return { data: [], error: new Error('Real data not implemented') }
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+
+            const payments = getPaymentsForAssignment(assignmentId)
+            return { data: payments, error: null }
+        } catch (err) {
+            return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        }
     }
 
     try {
-        await simulateDelay()
+        const { data, error } = await supabase
+            .from('payment_allocations')
+            .select('payment:payments(*)')
+            .eq('fee_assignment_id', assignmentId)
 
-        const payments = getPaymentsForAssignment(assignmentId)
+        if (error) throw error
+
+        const payments = ((data as any[]) ?? [])
+            .map((row) => row.payment)
+            .filter(Boolean) as FakePayment[]
+
         return { data: payments, error: null }
     } catch (err) {
-        return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch payments') }
     }
 }
 
@@ -386,28 +496,63 @@ export interface PaymentSummary {
 export async function getOrgPaymentSummary(
     context: UserContext
 ): Promise<{ data: PaymentSummary | null; error: Error | null }> {
-    if (!USE_FAKE_DATA) {
-        return { data: null, error: new Error('Real data not implemented') }
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+
+            const permissions = buildPermissions(context)
+            if (!permissions.canViewAllOrgData) {
+                return { data: null, error: new Error('Access denied: Admin only') }
+            }
+
+            const totalPaidCents = getTotalPaidForOrg(context.orgId)
+            const totalOutstandingCents = getTotalOutstandingForOrg(context.orgId)
+
+            const fees = getFeesForOrg(context.orgId)
+            const feeIds = fees.map((f) => f.id)
+            const assignments = fakeFeeAssignments.filter((fa) => feeIds.includes(fa.fee_id))
+            const unpaidCount = assignments.filter(
+                (a) => a.status === 'unpaid' || a.status === 'partial' || a.status === 'overdue'
+            ).length
+            const paidCount = assignments.filter((a) => a.status === 'paid').length
+
+            return {
+                data: {
+                    totalPaidCents,
+                    totalOutstandingCents,
+                    totalPaidFormatted: formatCurrency(totalPaidCents),
+                    totalOutstandingFormatted: formatCurrency(totalOutstandingCents),
+                    unpaidCount,
+                    paidCount,
+                },
+                error: null,
+            }
+        } catch (err) {
+            return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        }
     }
 
     try {
-        await simulateDelay()
-
-        const permissions = buildPermissions(context)
-        if (!permissions.canViewAllOrgData) {
+        if (!isOrgAdmin(context)) {
             return { data: null, error: new Error('Access denied: Admin only') }
         }
 
-        const totalPaidCents = getTotalPaidForOrg(context.orgId)
-        const totalOutstandingCents = getTotalOutstandingForOrg(context.orgId)
+        const { data: totals, error: feeError } = await supabase
+            .from('fee_assignments')
+            .select('status, amount_due_cents, amount_paid_cents')
+            .eq('org_id', context.orgId)
 
-        const fees = getFeesForOrg(context.orgId)
-        const feeIds = fees.map((f) => f.id)
-        const assignments = fakeFeeAssignments.filter((fa) => feeIds.includes(fa.fee_id))
-        const unpaidCount = assignments.filter(
+        if (feeError) throw feeError
+
+        const totalPaidCents = (totals ?? []).reduce((sum, row) => sum + (row.amount_paid_cents ?? 0), 0)
+        const totalOutstandingCents = (totals ?? [])
+            .filter((r) => r.status !== 'paid' && r.status !== 'waived')
+            .reduce((sum, row) => sum + ((row.amount_due_cents ?? 0) - (row.amount_paid_cents ?? 0)), 0)
+
+        const unpaidCount = (totals ?? []).filter(
             (a) => a.status === 'unpaid' || a.status === 'partial' || a.status === 'overdue'
         ).length
-        const paidCount = assignments.filter((a) => a.status === 'paid').length
+        const paidCount = (totals ?? []).filter((a) => a.status === 'paid').length
 
         return {
             data: {
@@ -421,7 +566,7 @@ export async function getOrgPaymentSummary(
             error: null,
         }
     } catch (err) {
-        return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        return { data: null, error: err instanceof Error ? err : new Error('Failed to fetch summary') }
     }
 }
 
@@ -431,20 +576,56 @@ export async function getOrgPaymentSummary(
 export async function getParentPaymentSummary(
     context: UserContext
 ): Promise<{ data: PaymentSummary | null; error: Error | null }> {
-    if (!USE_FAKE_DATA) {
-        return { data: null, error: new Error('Real data not implemented') }
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+
+            const childIds = getChildrenForUserId(context.userId)
+            const assignments = childIds.flatMap((childId) => getFeeAssignmentsForChild(childId))
+
+            const totalPaidCents = assignments.reduce((sum, a) => sum + a.amount_paid_cents, 0)
+            const totalOutstandingCents = assignments
+                .filter((a) => a.status !== 'paid' && a.status !== 'waived')
+                .reduce((sum, a) => sum + (a.amount_due_cents - a.amount_paid_cents), 0)
+
+            const unpaidCount = assignments.filter(
+                (a) => a.status === 'unpaid' || a.status === 'partial' || a.status === 'overdue'
+            ).length
+            const paidCount = assignments.filter((a) => a.status === 'paid').length
+
+            return {
+                data: {
+                    totalPaidCents,
+                    totalOutstandingCents,
+                    totalPaidFormatted: formatCurrency(totalPaidCents),
+                    totalOutstandingFormatted: formatCurrency(totalOutstandingCents),
+                    unpaidCount,
+                    paidCount,
+                },
+                error: null,
+            }
+        } catch (err) {
+            return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        }
     }
 
     try {
-        await simulateDelay()
+        const childIds = await getChildIdsForUser(context.userId)
+        if (childIds.length === 0) return { data: null, error: null }
 
-        const childIds = getChildrenForUserId(context.userId)
-        const assignments = childIds.flatMap((childId) => getFeeAssignmentsForChild(childId))
+        const { data, error } = await supabase
+            .from('fee_assignments')
+            .select('status, amount_due_cents, amount_paid_cents')
+            .eq('org_id', context.orgId)
+            .in('athlete_id', childIds)
 
-        const totalPaidCents = assignments.reduce((sum, a) => sum + a.amount_paid_cents, 0)
+        if (error) throw error
+
+        const assignments = data ?? []
+        const totalPaidCents = assignments.reduce((sum, a) => sum + (a.amount_paid_cents ?? 0), 0)
         const totalOutstandingCents = assignments
             .filter((a) => a.status !== 'paid' && a.status !== 'waived')
-            .reduce((sum, a) => sum + (a.amount_due_cents - a.amount_paid_cents), 0)
+            .reduce((sum, a) => sum + ((a.amount_due_cents ?? 0) - (a.amount_paid_cents ?? 0)), 0)
 
         const unpaidCount = assignments.filter(
             (a) => a.status === 'unpaid' || a.status === 'partial' || a.status === 'overdue'
@@ -463,6 +644,6 @@ export async function getParentPaymentSummary(
             error: null,
         }
     } catch (err) {
-        return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        return { data: null, error: err instanceof Error ? err : new Error('Failed to fetch parent summary') }
     }
 }

@@ -8,7 +8,7 @@
 
 // Toggle fake data mode
 // TODO: Replace with environment variable in production (e.g., import.meta.env.VITE_USE_FAKE_DATA)
-export const USE_FAKE_DATA = true
+export const USE_FAKE_DATA = false
 
 // Simulate network delay for realistic loading states (milliseconds)
 export const FAKE_DATA_DELAY_MS = 300

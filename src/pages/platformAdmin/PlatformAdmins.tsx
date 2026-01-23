@@ -1,9 +1,13 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../hooks/useAuth'
 import { PageHeader, Badge, Card, PlatformDataTable, ConfirmDialog, type ColumnConfig } from '../../components/platformAdmin'
 import { canPerformAction, ROLE_LABELS, ROLE_DESCRIPTIONS } from '../../utils/platformAdminPermissions'
-import { isRpcSuccessResponse } from '../../utils/typeAdapters'
+import { isAdminRpcResponse } from '../../utils/typeAdapters'
+import { normalizeSupabaseError } from '../../utils/errorUtils'
+import { getPlatformAdmins } from '../../data/services/platformAdminsService'
 import type { AdminRpcResponse, PlatformAdminRole } from '../../types/platformAdmin.types'
+import { VALID_ROLES } from '../../types/platformAdmin.types'
 import { Database } from '@/lib/database.types'
 
 interface PlatformAdminWithUser {
@@ -15,7 +19,29 @@ interface PlatformAdminWithUser {
   id: string // For table key
 }
 
+/**
+ * Validate add admin parameters (Technical Bug #6, #10)
+ */
+function validateAddAdminParams(email: string, role: PlatformAdminRole, reason: string): string | null {
+  if (!email || !email.trim()) {
+    return 'Email is required'
+  }
+  if (!email.includes('@')) {
+    return 'Invalid email format'
+  }
+  if (!VALID_ROLES.includes(role)) {
+    return 'Invalid role'
+  }
+  if (!reason || reason.trim().length === 0) {
+    return 'Reason is required'
+  }
+  return null // Valid
+}
+
 export default function PlatformAdmins() {
+  const { profile, refreshProfile } = useAuth()
+  const adminRole = profile?.platformAdminRole ?? null // Bug Prevention #1, Technical Bug #4
+
   const [admins, setAdmins] = useState<PlatformAdminWithUser[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)
@@ -44,46 +70,54 @@ export default function PlatformAdmins() {
     message: '',
     variant: 'success',
   })
-  
-  // TODO: Fetch actual role
-  const [adminRole] = useState<PlatformAdminRole>('super_admin')
 
+  // Technical Bug #3: Mounted ref to prevent state updates after unmount
+  const mountedRef = useRef(true)
+  // Technical Bug #8: Toast timeout ref for cleanup
+  const toastTimeoutRef = useRef<NodeJS.Timeout>()
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  // Technical Bug #2: Wrap fetchAdmins in useCallback with stable dependencies
   const fetchAdmins = useCallback(async () => {
+    if (!mountedRef.current) return
+
     setLoading(true)
 
     try {
-      const { data, error, count } = await supabase
-        .from('platform_admins')
-        .select(`
-          user_id,
-          role,
-          created_at,
-          users (email, display_name)
-        `, { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range(page * rowsPerPage, (page + 1) * rowsPerPage - 1)
+      // Use service function (Bug Prevention #3)
+      const { admins: fetchedAdmins, totalCount: fetchedCount } = await getPlatformAdmins(page, rowsPerPage)
 
-      if (error) {
-        console.error('Error fetching platform admins:', error)
-        setAdmins([])
-        setTotalCount(0)
-      } else {
-        const adminsWithUser = (data || []).map((admin: any) => ({
-          id: admin.user_id, // Use user_id as id for table key
-          user_id: admin.user_id,
-          role: admin.role,
-          created_at: admin.created_at,
-          email: admin.users?.email || null,
-          display_name: admin.users?.display_name || null,
-        }))
-        setAdmins(adminsWithUser)
-        setTotalCount(count || 0)
-      }
+      if (!mountedRef.current) return
+
+      const adminsWithUser: PlatformAdminWithUser[] = fetchedAdmins.map((admin) => ({
+        id: admin.user_id,
+        user_id: admin.user_id,
+        role: admin.role,
+        created_at: admin.created_at,
+        email: admin.email ?? null,
+        display_name: admin.display_name ?? null,
+      }))
+
+      setAdmins(adminsWithUser)
+      setTotalCount(fetchedCount)
     } catch (err) {
-      console.error('Error:', err)
+      console.error('Error fetching platform admins:', err)
+      if (!mountedRef.current) return
       setAdmins([])
+      setTotalCount(0)
     } finally {
-      setLoading(false)
+      if (mountedRef.current) {
+        setLoading(false)
+      }
     }
   }, [page, rowsPerPage])
 
@@ -91,17 +125,39 @@ export default function PlatformAdmins() {
     fetchAdmins()
   }, [fetchAdmins])
 
-  // Auto-hide toast
+  // Technical Bug #8: Auto-hide toast with proper cleanup
   useEffect(() => {
     if (toast.show) {
-      const timer = setTimeout(() => setToast({ ...toast, show: false }), 5000)
-      return () => clearTimeout(timer)
+      // Clear any existing timeout
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current)
+      }
+      
+      toastTimeoutRef.current = setTimeout(() => {
+        if (mountedRef.current) {
+          setToast((prev) => ({ ...prev, show: false }))
+        }
+      }, 5000)
+      
+      return () => {
+        if (toastTimeoutRef.current) {
+          clearTimeout(toastTimeoutRef.current)
+        }
+      }
     }
-  }, [toast])
+  }, [toast.show])
 
   const handleAddAdmin = async () => {
     if (!addEmail || !addReason) return
 
+    // Technical Bug #10: Validate parameters before RPC call
+    const validationError = validateAddAdminParams(addEmail.trim(), addRole, addReason.trim())
+    if (validationError) {
+      setAddError(validationError)
+      return
+    }
+
+    if (!mountedRef.current) return
     setAddLoading(true)
     setAddError(null)
 
@@ -109,20 +165,36 @@ export default function PlatformAdmins() {
       type AdminRpcArgs = Database['public']['Functions']['admin_add_platform_admin']['Args']
       
       const { data, error } = await supabase.rpc('admin_add_platform_admin', {
-        target_email: addEmail,
+        target_email: addEmail.trim(),
         target_role: addRole,
-        reason: addReason,
+        reason: addReason.trim(),
       } as AdminRpcArgs)
 
+      if (!mountedRef.current) return
+
+      // Technical Bug #9: Normalize Supabase errors
       if (error) {
-        setAddError(error.message)
+        setAddError(normalizeSupabaseError(error))
         return
       }
 
-      if (data && !(data as AdminRpcResponse).success) {
-        setAddError((data as AdminRpcResponse).error || 'Unknown error')
+      // Technical Bug #1: Use type guard for RPC response
+      if (!isAdminRpcResponse(data)) {
+        setAddError('Invalid response from server')
         return
       }
+
+      if (!data.success) {
+        setAddError(data.error || 'Unknown error')
+        return
+      }
+
+      // Bug Prevention #8: Refresh profile if current user might be affected
+      // (Note: We can't easily check if target user is current user from email,
+      // but refreshing is safe and ensures consistency)
+      await refreshProfile()
+
+      if (!mountedRef.current) return
 
       setAddDialog(false)
       setAddEmail('')
@@ -130,38 +202,59 @@ export default function PlatformAdmins() {
       setAddReason('')
       setToast({
         show: true,
-        message: `Platform admin ${(data as AdminRpcResponse)?.action === 'updated' ? 'updated' : 'added'} successfully`,
+        message: `Platform admin ${data.action === 'updated' ? 'updated' : 'added'} successfully`,
         variant: 'success',
       })
       fetchAdmins()
     } catch (err) {
-      setAddError(err instanceof Error ? err.message : 'Unknown error')
+      if (!mountedRef.current) return
+      setAddError(normalizeSupabaseError(err))
     } finally {
-      setAddLoading(false)
+      if (mountedRef.current) {
+        setAddLoading(false)
+      }
     }
   }
 
   const handleRemoveAdmin = async (reason: string) => {
     if (!removeDialog.admin) return
 
+    if (!mountedRef.current) return
     setRemoveLoading(true)
     setRemoveError(null)
 
     try {
       const { data, error } = await supabase.rpc('admin_remove_platform_admin', {
         target_user_id: removeDialog.admin.user_id,
-        reason,
-      } as any)
+        reason: reason.trim(),
+      })
 
+      if (!mountedRef.current) return
+
+      // Technical Bug #9: Normalize Supabase errors
       if (error) {
-        setRemoveError(error.message)
+        setRemoveError(normalizeSupabaseError(error))
         return
       }
 
-      if (!isRpcSuccessResponse(data) || !(data as AdminRpcResponse).success) {
-        setRemoveError((data as AdminRpcResponse)?.error || 'Unknown error')
+      // Technical Bug #1: Use type guard for RPC response
+      if (!isAdminRpcResponse(data)) {
+        setRemoveError('Invalid response from server')
         return
       }
+
+      if (!data.success) {
+        setRemoveError(data.error || 'Unknown error')
+        return
+      }
+
+      // Bug Prevention #8: Refresh profile if current user might be affected
+      // Check if removed user is current user
+      if (removeDialog.admin.user_id === profile?.id) {
+        await refreshProfile()
+      }
+
+      if (!mountedRef.current) return
 
       setRemoveDialog({ open: false, admin: null })
       setToast({
@@ -171,9 +264,12 @@ export default function PlatformAdmins() {
       })
       fetchAdmins()
     } catch (err) {
-      setRemoveError(err instanceof Error ? err.message : 'Unknown error')
+      if (!mountedRef.current) return
+      setRemoveError(normalizeSupabaseError(err))
     } finally {
-      setRemoveLoading(false)
+      if (mountedRef.current) {
+        setRemoveLoading(false)
+      }
     }
   }
 
@@ -226,7 +322,7 @@ export default function PlatformAdmins() {
       render: (row) => (
         <button
           className="pa-btn pa-btn--ghost pa-btn--dense"
-          disabled={!canPerformAction(adminRole, 'remove_platform_admin')}
+          disabled={!adminRole || !canPerformAction(adminRole, 'remove_platform_admin')}
           onClick={() => setRemoveDialog({ open: true, admin: row })}
           style={{ color: 'var(--pa-danger)' }}
         >
@@ -237,7 +333,7 @@ export default function PlatformAdmins() {
     },
   ]
 
-  const canManageAdmins = canPerformAction(adminRole, 'add_platform_admin')
+  const canManageAdmins = adminRole ? canPerformAction(adminRole, 'add_platform_admin') : false
 
   return (
     <div>
@@ -247,7 +343,7 @@ export default function PlatformAdmins() {
         actions={
           <button
             className="pa-btn pa-btn--primary pa-btn--compact"
-            disabled={!canManageAdmins}
+            disabled={!canManageAdmins || addLoading || removeLoading}
             onClick={() => setAddDialog(true)}
           >
             <span className="material-symbols-outlined">add</span>
@@ -292,7 +388,11 @@ export default function PlatformAdmins() {
             justifyContent: 'center',
             zIndex: 1000,
           }}
-          onClick={() => setAddDialog(false)}
+          onClick={() => {
+            if (!addLoading) {
+              setAddDialog(false)
+            }
+          }}
         >
           <Card
             style={{ width: '100%', maxWidth: '480px' }}
@@ -317,6 +417,7 @@ export default function PlatformAdmins() {
                 value={addEmail}
                 onChange={(e) => setAddEmail(e.target.value)}
                 placeholder="user@example.com"
+                disabled={addLoading}
               />
               <div className="pa-helper">User must already exist in the system</div>
             </div>
@@ -327,8 +428,9 @@ export default function PlatformAdmins() {
                 className="pa-input pa-select"
                 value={addRole}
                 onChange={(e) => setAddRole(e.target.value as PlatformAdminRole)}
+                disabled={addLoading}
               >
-                {(Object.keys(ROLE_LABELS) as PlatformAdminRole[]).map((role) => (
+                {VALID_ROLES.map((role) => (
                   <option key={role} value={role}>
                     {ROLE_LABELS[role]} — {ROLE_DESCRIPTIONS[role]}
                   </option>
@@ -344,6 +446,7 @@ export default function PlatformAdmins() {
                 onChange={(e) => setAddReason(e.target.value)}
                 placeholder="Why is this user being granted admin access?"
                 rows={2}
+                disabled={addLoading}
               />
             </div>
             
@@ -358,7 +461,7 @@ export default function PlatformAdmins() {
               <button
                 className="pa-btn pa-btn--primary"
                 onClick={handleAddAdmin}
-                disabled={addLoading || !addEmail || !addReason}
+                disabled={addLoading || !addEmail.trim() || !addReason.trim()}
               >
                 {addLoading ? 'Adding...' : 'Add Admin'}
               </button>

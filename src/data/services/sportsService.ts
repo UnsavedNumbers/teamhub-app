@@ -59,6 +59,7 @@ function isSystemSport(sport: { org_id: string | null } | null | undefined): boo
  */
 export async function getSystemSports(): Promise<{ data: Sport[]; error: Error | null }> {
     try {
+        // System sports are identified by org_id IS NULL
         const { data, error } = await supabase
             .from('sports')
             .select('*')
