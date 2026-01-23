@@ -264,6 +264,24 @@ serve(async (req) => {
       }
     })
 
+    const { data: checkout, error: checkoutErr } = await supabase
+      .from("checkout_sessions")
+      .insert({
+        org_id: organizationId,
+        parent_id: user.id,          // ✅ required by schema
+        status: "created",           // default is created; optional
+        currency: "usd",             // optional
+        subtotal_cents: 0,           // optional
+        platform_fee_cents: 0,       // optional
+        total_cents: 0,              // optional
+      })
+      .select("id")
+      .single()
+
+    if (checkoutErr) {
+      return json(req, { error: checkoutErr.message }, 400)
+    }
+
     const stripeSession = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],

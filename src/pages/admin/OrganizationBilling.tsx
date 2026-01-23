@@ -38,6 +38,8 @@ export default function OrganizationBilling() {
     if (orgId) loadHistory(orgId)
   }, [orgId, loadHistory])
 
+  console.log(summary)
+
   const currentPlanLabel = useMemo(() => {
     if (!summary?.plan) return t('license.planLabel').toUpperCase()
     switch (summary.plan) {
