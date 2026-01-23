@@ -254,62 +254,66 @@ export default function GlobalNav({ variant }: GlobalNavProps) {
           <span className="gn-brand-text">{brandText}</span>
         </Link>
 
-        {/* Mobile toggle */}
-        <button
-          className="gn-util-btn gn-mobile-toggle"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          aria-expanded={mobileMenuOpen}
-          aria-label="Toggle navigation menu"
-        >
-          <span className="material-symbols-outlined">
-            {mobileMenuOpen ? 'close' : 'menu'}
-          </span>
-        </button>
+        {/* Mobile toggle - only show for admin variant */}
+        {isAdmin && (
+          <button
+            className="gn-util-btn gn-mobile-toggle"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-expanded={mobileMenuOpen}
+            aria-label="Toggle navigation menu"
+          >
+            <span className="material-symbols-outlined">
+              {mobileMenuOpen ? 'close' : 'menu'}
+            </span>
+          </button>
+        )}
 
-        {/* Navigation items */}
-        <ul className="gn-nav" role="menubar">
-          {navSections.map((section) => {
-            const menuId = `menu-${section.label.toLowerCase().replace(/\s+/g, '-')}`
-            const isOpen = openMenuId === menuId
-            const filteredGroups = getFilteredGroups(section.groups)
-            const isWide = section.groups.length > 1 || 
-                          section.groups.some(g => g.items.length > 3)
+        {/* Navigation items - only show for admin variant */}
+        {isAdmin && (
+          <ul className="gn-nav" role="menubar">
+            {navSections.map((section) => {
+              const menuId = `menu-${section.label.toLowerCase().replace(/\s+/g, '-')}`
+              const isOpen = openMenuId === menuId
+              const filteredGroups = getFilteredGroups(section.groups)
+              const isWide = section.groups.length > 1 || 
+                            section.groups.some(g => g.items.length > 3)
 
-            return (
-              <li 
-                key={section.label} 
-                className="gn-nav-item"
-                onMouseEnter={() => handleTriggerMouseEnter(menuId)}
-                onMouseLeave={handleTriggerMouseLeave}
-              >
-                <button
-                  className="gn-nav-trigger"
-                  aria-haspopup="true"
-                  aria-expanded={isOpen}
-                  aria-controls={menuId}
-                  onClick={() => handleTriggerClick(menuId)}
+              return (
+                <li 
+                  key={section.label} 
+                  className="gn-nav-item"
+                  onMouseEnter={() => handleTriggerMouseEnter(menuId)}
+                  onMouseLeave={handleTriggerMouseLeave}
                 >
-                  {section.label}
-                  <span className="material-symbols-outlined gn-chevron">
-                    expand_more
-                  </span>
-                </button>
-                <div
-                  onMouseEnter={handleMenuMouseEnter}
-                  onMouseLeave={handleMenuMouseLeave}
-                >
-                  <MegaMenu
-                    id={menuId}
-                    isOpen={isOpen}
-                    onClose={handleMenuClose}
-                    groups={filteredGroups}
-                    wide={isWide}
-                  />
-                </div>
-              </li>
-            )
-          })}
-        </ul>
+                  <button
+                    className="gn-nav-trigger"
+                    aria-haspopup="true"
+                    aria-expanded={isOpen}
+                    aria-controls={menuId}
+                    onClick={() => handleTriggerClick(menuId)}
+                  >
+                    {section.label}
+                    <span className="material-symbols-outlined gn-chevron">
+                      expand_more
+                    </span>
+                  </button>
+                  <div
+                    onMouseEnter={handleMenuMouseEnter}
+                    onMouseLeave={handleMenuMouseLeave}
+                  >
+                    <MegaMenu
+                      id={menuId}
+                      isOpen={isOpen}
+                      onClose={handleMenuClose}
+                      groups={filteredGroups}
+                      wide={isWide}
+                    />
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        )}
       </div>
 
       {/* Right section */}
