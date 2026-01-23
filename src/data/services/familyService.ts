@@ -314,10 +314,14 @@ export async function deleteFamily(
 }
 
 // ============================================================================
-// Child Service Functions
+// Athlete Service Functions (Core CRUD)
 // ============================================================================
 
-export async function createChild(
+/**
+ * Create a basic athlete (without guardians)
+ * For creating athletes with guardians, use createAthleteWithGuardians
+ */
+export async function createAthleteBasic(
     _context: UserContext,
     dto: CreateChildDTO
 ): Promise<{ data: Child | null; error: Error | null }> {
@@ -354,14 +358,17 @@ export async function createChild(
         if (error) throw error
         return { data: data as unknown as Child, error: null }
     } catch (err) {
-        return { data: null, error: err instanceof Error ? err : new Error('Create child failed') }
+        return { data: null, error: err instanceof Error ? err : new Error('Create athlete failed') }
     }
 }
 
-export async function updateChild(
+/**
+ * Update an athlete
+ */
+export async function updateAthlete(
     _context: UserContext,
-    childId: string,
-    dto: UpdateChildDTO
+    athleteId: string,
+    dto: UpdateAthleteDTO
 ): Promise<{ data: Child | null; error: Error | null }> {
     if (USE_FAKE_DATA) {
         await simulateDelay()
@@ -377,20 +384,23 @@ export async function updateChild(
         const { data, error } = await supabase
             .from('athletes')
             .update(updateData)
-            .eq('id', childId)
+            .eq('id', athleteId)
             .select()
             .single()
 
         if (error) throw error
         return { data: data as unknown as Child, error: null }
     } catch (err) {
-        return { data: null, error: err instanceof Error ? err : new Error('Update child failed') }
+        return { data: null, error: err instanceof Error ? err : new Error('Update athlete failed') }
     }
 }
 
-export async function deleteChild(
+/**
+ * Delete an athlete
+ */
+export async function deleteAthlete(
     _context: UserContext,
-    childId: string
+    athleteId: string
 ): Promise<{ error: Error | null }> {
     if (USE_FAKE_DATA) {
         await simulateDelay()
@@ -401,12 +411,12 @@ export async function deleteChild(
         const { error } = await supabase
             .from('athletes')
             .delete()
-            .eq('id', childId)
+            .eq('id', athleteId)
 
         if (error) throw error
         return { error: null }
     } catch (err) {
-        return { error: err instanceof Error ? err : new Error('Delete child failed') }
+        return { error: err instanceof Error ? err : new Error('Delete athlete failed') }
     }
 }
 
@@ -478,7 +488,7 @@ export async function getChildren(
 }
 
 // ============================================================================
-// Athlete Service Functions (New Athlete-Centric Model)
+// Athlete Service Functions (Guardian-Aware Operations)
 // ============================================================================
 
 /**
@@ -708,8 +718,8 @@ export async function getOrphanedAthletes(
 }
 
 /**
- * Legacy alias for createAthleteWithGuardians
- * Maintains backward compatibility
+ * Create athlete with guardians atomically
+ * This is the recommended method for creating athletes
  */
 export async function createAthlete(
     context: UserContext,
@@ -718,23 +728,40 @@ export async function createAthlete(
     return createAthleteWithGuardians(context, dto)
 }
 
+// ============================================================================
+// Backward Compatibility Aliases
+// ============================================================================
+
 /**
- * Update athlete (same as updateChild, just renamed for clarity)
+ * Legacy alias for createAthleteBasic
+ * @deprecated Use createAthleteBasic or createAthlete instead
  */
-export async function updateAthlete(
+export async function createChild(
     context: UserContext,
-    athleteId: string,
-    dto: UpdateAthleteDTO
+    dto: CreateChildDTO
 ): Promise<{ data: Child | null; error: Error | null }> {
-    return updateChild(context, athleteId, dto)
+    return createAthleteBasic(context, dto)
 }
 
 /**
- * Delete athlete (same as deleteChild, just renamed for clarity)
+ * Legacy alias for updateAthlete
+ * @deprecated Use updateAthlete instead
  */
-export async function deleteAthlete(
+export async function updateChild(
     context: UserContext,
-    athleteId: string
+    childId: string,
+    dto: UpdateChildDTO
+): Promise<{ data: Child | null; error: Error | null }> {
+    return updateAthlete(context, childId, dto)
+}
+
+/**
+ * Legacy alias for deleteAthlete
+ * @deprecated Use deleteAthlete instead
+ */
+export async function deleteChild(
+    context: UserContext,
+    childId: string
 ): Promise<{ error: Error | null }> {
-    return deleteChild(context, athleteId)
+    return deleteAthlete(context, childId)
 }
