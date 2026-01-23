@@ -49,11 +49,11 @@ export default function TeamsManagement() {
           getSeasons(context),
         ])
 
-        setTeams(teamsResult.data as Team[])
-        setSports(sportsResult.data as Sport[])
-        setPrograms(programsResult.data as Program[])
-        setLevels(levelsResult.data as Level[])
-        setSeasons(seasonsResult.data as Season[])
+        setTeams(Array.isArray(teamsResult.data) ? teamsResult.data : [])
+        setSports(Array.isArray(sportsResult.data) ? sportsResult.data : [])
+        setPrograms(Array.isArray(programsResult.data) ? programsResult.data : [])
+        setLevels(Array.isArray(levelsResult.data) ? levelsResult.data : [])
+        setSeasons(Array.isArray(seasonsResult.data) ? seasonsResult.data : [])
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data')
       } finally {
@@ -67,6 +67,12 @@ export default function TeamsManagement() {
   const sportById = useMemo(() => new Map(sports.map((s) => [s.id, s])), [sports])
   const programById = useMemo(() => new Map(programs.map((p) => [p.id, p])), [programs])
   const levelById = useMemo(() => new Map(levels.map((l) => [l.id, l])), [levels])
+
+  // Compute prerequisite flag using useMemo for consistency
+  const canCreateTeam = useMemo(
+    () => !loading && Array.isArray(levels) && levels.length > 0,
+    [loading, levels.length]
+  )
 
   // Filter available programs based on selected sport
   const availablePrograms = filterSportId ? programs.filter((p) => p.sport_id === filterSportId) : programs
@@ -104,8 +110,25 @@ export default function TeamsManagement() {
     </div>
   )
 
-  const PrimaryButton = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
-    <button className={`inline-flex items-center justify-center h-11 px-6 font-semibold text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 ${className}`}>
+  const PrimaryButton = ({ 
+    children, 
+    className = '', 
+    disabled = false,
+    title,
+    style,
+  }: { 
+    children: ReactNode
+    className?: string
+    disabled?: boolean
+    title?: string
+    style?: React.CSSProperties
+  }) => (
+    <button 
+      className={`inline-flex items-center justify-center h-11 px-6 font-semibold text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 ${className}`}
+      disabled={disabled}
+      title={title}
+      style={style}
+    >
       {children}
     </button>
   )
@@ -133,6 +156,65 @@ export default function TeamsManagement() {
         </div>
       </div>
     )
+  }
+
+  // Show empty state if prerequisites don't exist (check full chain: programs → levels → teams)
+  if (!loading) {
+    if (programs.length === 0) {
+      return (
+        <div className="max-w-7xl mx-auto p-8">
+          <OfflineBanner />
+          <AdminPageHeader
+            title="Teams"
+            subtitle="Manage your rostered competition units and their assignments."
+            breadcrumbs={[
+              { label: 'Organizations', path: '/admin/organization/structure' },
+              { label: 'Teams' },
+            ]}
+          />
+          <div className="bg-white border border-slate-200 rounded-xl p-12 text-center shadow-sm">
+            <span className="material-symbols-outlined text-5xl text-slate-200 mb-4 block">groups</span>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">No programs yet</h3>
+            <p className="text-slate-500 mb-6">
+              You need to create at least one program before you can add teams. Teams require levels, and levels require programs.
+            </p>
+            <Link to="/admin/organization/structure/forms?type=program">
+              <button className="inline-flex items-center justify-center h-11 px-6 font-semibold text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm">
+                Add a Program
+              </button>
+            </Link>
+          </div>
+        </div>
+      )
+    }
+    
+    if (levels.length === 0) {
+      return (
+        <div className="max-w-7xl mx-auto p-8">
+          <OfflineBanner />
+          <AdminPageHeader
+            title="Teams"
+            subtitle="Manage your rostered competition units and their assignments."
+            breadcrumbs={[
+              { label: 'Organizations', path: '/admin/organization/structure' },
+              { label: 'Teams' },
+            ]}
+          />
+          <div className="bg-white border border-slate-200 rounded-xl p-12 text-center shadow-sm">
+            <span className="material-symbols-outlined text-5xl text-slate-200 mb-4 block">groups</span>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">No levels yet</h3>
+            <p className="text-slate-500 mb-6">
+              You need to create at least one level before you can add teams.
+            </p>
+            <Link to="/admin/organization/structure/forms?type=level">
+              <button className="inline-flex items-center justify-center h-11 px-6 font-semibold text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm">
+                Add a Level
+              </button>
+            </Link>
+          </div>
+        </div>
+      )
+    }
   }
 
   return (
@@ -192,7 +274,17 @@ export default function TeamsManagement() {
                  Let's stick to placing it in the grid for responsive alignment. 
              */}
              <Link to="/admin/organization/structure/forms?type=team" className="w-full lg:w-auto">
-                <PrimaryButton className="w-full lg:w-auto">Add Team</PrimaryButton>
+                <PrimaryButton 
+                  className="w-full lg:w-auto"
+                  disabled={!canCreateTeam}
+                  title={!canCreateTeam ? 'Add a Level first' : undefined}
+                  style={{
+                    opacity: !canCreateTeam ? 0.5 : 1,
+                    cursor: !canCreateTeam ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  Add Team
+                </PrimaryButton>
              </Link>
           </div>
 

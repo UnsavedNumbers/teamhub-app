@@ -32,6 +32,137 @@ export interface TryoutRegistration {
     tryout?: Tryout
 }
 
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Converts any error to a standard Error object
+ */
+function toServiceError(err: unknown): Error {
+    if (err instanceof Error) {
+        return err
+    }
+    // Check if it's a PostgrestError (Supabase error)
+    if (err && typeof err === 'object' && 'message' in err) {
+        return new Error(String((err as { message: unknown }).message))
+    }
+    return new Error(String(err))
+}
+
+/**
+ * Gets tryout start time from either new start_at column or legacy tryout_date + start_time
+ */
+function getTryoutStartTime(dbRow: any): string | null {
+    // Prefer new start_at column
+    if (dbRow.start_at) {
+        return dbRow.start_at
+    }
+    // Fall back to legacy columns
+    if (dbRow.tryout_date && dbRow.start_time) {
+        // Construct UTC timestamptz from legacy fields
+        const dateStr = `${dbRow.tryout_date}T${dbRow.start_time}Z`
+        return new Date(dateStr).toISOString()
+    }
+    return null
+}
+
+/**
+ * Derives tryout status from dates (no capacity check for performance)
+ */
+function deriveTryoutStatus(dbRow: any): 'open' | 'closed' | 'cancelled' {
+    const now = new Date()
+    
+    // Check start_at first
+    if (dbRow.start_at) {
+        const startAt = new Date(dbRow.start_at)
+        if (startAt < now) {
+            return 'closed'
+        }
+        return 'open'
+    }
+    
+    // Fall back to legacy tryout_date
+    if (dbRow.tryout_date) {
+        const tryoutDate = new Date(dbRow.tryout_date)
+        if (tryoutDate < now) {
+            return 'closed'
+        }
+        return 'open'
+    }
+    
+    // Default to open if no dates available
+    return 'open'
+}
+
+/**
+ * Maps database tryout row to service Tryout interface
+ */
+function mapDbTryoutToService(dbRow: any): Tryout {
+    const startAt = getTryoutStartTime(dbRow)
+    const status = deriveTryoutStatus(dbRow)
+    
+    return {
+        id: dbRow.id,
+        title: dbRow.name ?? dbRow.title ?? 'Tryout',
+        description: dbRow.notes ?? dbRow.description ?? null,
+        org_id: dbRow.org_id,
+        start_at: startAt,
+        tryout_date: dbRow.tryout_date ?? null,
+        start_time: dbRow.start_time ?? null,
+        location: dbRow.location ?? null,
+        age_group: dbRow.age_group ?? '',
+        entry_fee: dbRow.entry_fee ?? 0,
+        status,
+        type: dbRow.type ?? null,
+    }
+}
+
+/**
+ * Maps database registration status enum to service union type
+ */
+function mapRegistrationStatus(dbStatus: string): 'registered' | 'attended' | 'offered' | 'accepted' | 'declined' {
+    // Map 'checked_in' to 'attended' for backward compatibility
+    if (dbStatus === 'checked_in') {
+        return 'attended'
+    }
+    // Map other statuses that match
+    if (dbStatus === 'registered' || dbStatus === 'attended' || dbStatus === 'offered' || 
+        dbStatus === 'accepted' || dbStatus === 'declined') {
+        return dbStatus as 'registered' | 'attended' | 'offered' | 'accepted' | 'declined'
+    }
+    // Default to registered for unknown statuses
+    return 'registered'
+}
+
+/**
+ * Maps database registration row to service TryoutRegistration interface
+ */
+function mapDbRegistrationToService(dbRow: any): TryoutRegistration {
+    // Map athlete_id to child_id
+    const childId = dbRow.athlete_id ?? dbRow.child_id
+    
+    // Map nested athlete join to child
+    const child = dbRow.athlete ? {
+        first_name: dbRow.athlete.first_name ?? '',
+        last_name: dbRow.athlete.last_name ?? '',
+    } : undefined
+    
+    // Map nested tryout if present
+    const tryout = dbRow.tryout ? mapDbTryoutToService(dbRow.tryout) : undefined
+    
+    return {
+        id: dbRow.id,
+        tryout_id: dbRow.tryout_id,
+        child_id: childId,
+        status: mapRegistrationStatus(dbRow.status ?? 'registered'),
+        offer_deadline: dbRow.offer_deadline ?? null,
+        notes: dbRow.notes ?? null,
+        child,
+        tryout,
+    }
+}
+
 const MOCK_TRYOUTS: Tryout[] = [
     {
         id: 'tryout-1',
@@ -78,16 +209,24 @@ export async function getTryouts(
 
     try {
         const orgId = _orgId ?? _context.orgId
+        if (!orgId) {
+            return { data: [], error: new Error('Organization ID is required') }
+        }
+
         const { data, error } = await supabase
             .from('tryouts')
             .select('*')
             .eq('org_id', orgId)
+            .order('start_at', { ascending: true, nullsFirst: false })
             .order('tryout_date', { ascending: true })
 
         if (error) throw error
-        return { data: (data as unknown) as Tryout[], error: null }
+
+        const mapped = (data || []).map(mapDbTryoutToService)
+        return { data: mapped, error: null }
     } catch (err) {
-        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch tryouts') }
+        console.error('getTryouts error:', err)
+        return { data: [], error: toServiceError(err) }
     }
 }
 
@@ -109,9 +248,13 @@ export async function getTryoutById(
             .single()
 
         if (error) throw error
-        return { data: (data as unknown) as Tryout, error: null }
+        if (!data) return { data: null, error: null }
+
+        const mapped = mapDbTryoutToService(data)
+        return { data: mapped, error: null }
     } catch (err) {
-        return { data: null, error: err instanceof Error ? err : new Error('Failed to fetch tryout') }
+        console.error('getTryoutById error:', err)
+        return { data: null, error: toServiceError(err) }
     }
 }
 
@@ -124,12 +267,15 @@ export async function getTryoutRegistrations(
     try {
         const { data, error } = await supabase
             .from('tryout_registrations')
-            .select('*, child:athletes(id, first_name, last_name), tryout:tryouts(*)')
+            .select('*, athlete:athletes(first_name, last_name)')
 
         if (error) throw error
-        return { data: (data as unknown) as TryoutRegistration[], error: null }
+
+        const mapped = (data || []).map(mapDbRegistrationToService)
+        return { data: mapped, error: null }
     } catch (err) {
-        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch registrations') }
+        console.error('getTryoutRegistrations error:', err)
+        return { data: [], error: toServiceError(err) }
     }
 }
 
@@ -142,27 +288,17 @@ export async function registerChildForTryout(
     if (USE_FAKE_DATA) return { error: null }
 
     try {
-        const { data: childRow, error: childErr } = await supabase
-            .from('athletes')
-            .select('family_id')
-            .eq('id', _childId)
-            .single()
-
-        if (childErr) throw childErr
-
-        const { error } = await supabase
-            .from('tryout_registrations')
-            .insert({
-                tryout_id: _tryoutId,
-                athlete_id: _childId,
-                family_id: childRow?.family_id ?? '',
-                status: 'registered',
-            } satisfies Database['public']['Tables']['tryout_registrations']['Insert'])
+        // Use RPC for atomic registration with capacity/deadline checks
+        const { error } = await supabase.rpc('register_child_for_tryout', {
+            p_tryout_id: _tryoutId,
+            p_child_id: _childId,
+        })
 
         if (error) throw error
         return { error: null }
     } catch (err) {
-        return { error: err instanceof Error ? err : new Error('Failed to register child for tryout') }
+        console.error('registerChildForTryout error:', err)
+        return { error: toServiceError(err) }
     }
 }
 
@@ -174,19 +310,30 @@ export async function createTryout(
     if (USE_FAKE_DATA) return { data: { ...MOCK_TRYOUTS[0], ...tryout }, error: null }
 
     try {
-        const insertRow: Database['public']['Tables']['tryouts']['Insert'] = {
+        const orgId = tryout.org_id ?? _context.orgId
+        if (!orgId) {
+            return { data: null, error: new Error('Organization ID is required') }
+        }
+
+        // Map service interface to database columns
+        const insertRow: any = {
             title: tryout.title ?? 'Tryout',
-            org_id: tryout.org_id ?? _context.orgId,
-            tryout_date: tryout.tryout_date ?? new Date().toISOString().slice(0, 10),
-            start_time: tryout.start_time ?? '09:00',
-            end_time: tryout.end_time ?? null,
-            location: tryout.location ?? 'TBD',
-            age_group: tryout.age_group ?? 'U12',
+            name: tryout.title ?? 'Tryout', // Set name = title if not provided
+            org_id: orgId,
+            location: tryout.location ?? null,
+            age_group: tryout.age_group ?? null,
             entry_fee: tryout.entry_fee ?? 0,
-            sport: tryout.type ?? 'general',
-            requirements: null,
-            what_to_bring: null,
-            max_spots: null,
+            notes: tryout.description ?? null,
+            // Use new start_at if provided, otherwise leave null (don't construct from legacy fields on insert)
+            start_at: tryout.start_at ?? null,
+            // Legacy fields - only set if explicitly provided
+            tryout_date: tryout.tryout_date ?? null,
+            start_time: tryout.start_time ?? null,
+        }
+
+        // Map type enum if provided
+        if (tryout.type) {
+            insertRow.type = tryout.type
         }
 
         const { data, error } = await supabase
@@ -196,9 +343,13 @@ export async function createTryout(
             .single()
 
         if (error) throw error
-        return { data: (data as unknown) as Tryout, error: null }
+        if (!data) return { data: null, error: new Error('Failed to create tryout') }
+
+        const mapped = mapDbTryoutToService(data)
+        return { data: mapped, error: null }
     } catch (err) {
-        return { data: null, error: err instanceof Error ? err : new Error('Failed to create tryout') }
+        console.error('createTryout error:', err)
+        return { data: null, error: toServiceError(err) }
     }
 }
 
@@ -212,12 +363,16 @@ export async function getAdminTryoutRegistrations(
     try {
         const { data, error } = await supabase
             .from('tryout_registrations')
-            .select('*, child:athletes(id, first_name, last_name), tryout:tryouts(*)')
+            .select('*, athlete:athletes(first_name, last_name)')
             .eq('tryout_id', _tryoutId)
+            .order('created_at', { ascending: false })
 
         if (error) throw error
-        return { data: (data as unknown) as TryoutRegistration[], error: null }
+
+        const mapped = (data || []).map(mapDbRegistrationToService)
+        return { data: mapped, error: null }
     } catch (err) {
-        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch admin registrations') }
+        console.error('getAdminTryoutRegistrations error:', err)
+        return { data: [], error: toServiceError(err) }
     }
 }

@@ -184,12 +184,19 @@ export default function OrganizationStructureForms() {
         if (teamsResult.error) throw teamsResult.error
         if (seasonsResult.error) throw seasonsResult.error
 
-        setSports(sportsResult.data as Sport[])
-        setSystemSports(systemSportsResult.data as Sport[])
-        setPrograms(programsResult.data as Program[])
-        setLevels(levelsResult.data as Level[])
-        setTeams(teamsResult.data as Team[])
-        setSeasons(seasonsResult.data as Season[])
+        // Check before each state update to prevent memory leaks
+        if (!isActive) return
+        setSports(Array.isArray(sportsResult.data) ? sportsResult.data : [])
+        if (!isActive) return
+        setSystemSports(Array.isArray(systemSportsResult.data) ? systemSportsResult.data : [])
+        if (!isActive) return
+        setPrograms(Array.isArray(programsResult.data) ? programsResult.data : [])
+        if (!isActive) return
+        setLevels(Array.isArray(levelsResult.data) ? levelsResult.data : [])
+        if (!isActive) return
+        setTeams(Array.isArray(teamsResult.data) ? teamsResult.data : [])
+        if (!isActive) return
+        setSeasons(Array.isArray(seasonsResult.data) ? seasonsResult.data : [])
       } catch (err) {
         if (!isActive) return
         console.error('[OrganizationStructureForms] Error loading data:', err)
@@ -515,6 +522,161 @@ export default function OrganizationStructureForms() {
     return <div className="pa-skeleton" style={{ height: '500px' }} />
   }
 
+  // Validate context query params exist in loaded data
+  if (activeFormType === 'program' && contextSportId) {
+    const sportExists = sports.some(s => s.id === contextSportId)
+    if (!sportExists) {
+      return (
+        <div className="pa-root">
+          <OfflineBanner />
+          <AdminPageHeader
+            title={pageTitle}
+            subtitle={pageSubtitle}
+            breadcrumbs={[
+              { label: t('admin.structureForms.breadcrumbs.organizations'), path: '/admin/organization/structure' },
+              { label: activeFormLabel },
+            ]}
+          />
+          <Card className="pa-mb-6">
+            <div className="pa-text-muted pa-mb-4">
+              {t('admin.structureForms.empty.noSportsForProgram')}
+            </div>
+            <Link to="/admin/organization/structure/forms?type=sport">
+              <Button>{t('admin.structureForms.empty.createSportFirst')}</Button>
+            </Link>
+          </Card>
+        </div>
+      )
+    }
+  }
+
+  if (activeFormType === 'level' && contextProgramId) {
+    const programExists = programs.some(p => p.id === contextProgramId)
+    if (!programExists) {
+      return (
+        <div className="pa-root">
+          <OfflineBanner />
+          <AdminPageHeader
+            title={pageTitle}
+            subtitle={pageSubtitle}
+            breadcrumbs={[
+              { label: t('admin.structureForms.breadcrumbs.organizations'), path: '/admin/organization/structure' },
+              { label: activeFormLabel },
+            ]}
+          />
+          <Card className="pa-mb-6">
+            <div className="pa-text-muted pa-mb-4">
+              {t('admin.structureForms.empty.noProgramsForLevel')}
+            </div>
+            <Link to="/admin/organization/structure/forms?type=program">
+              <Button>{t('admin.structureForms.empty.createProgramFirst')}</Button>
+            </Link>
+          </Card>
+        </div>
+      )
+    }
+  }
+
+  if (activeFormType === 'team' && contextLevelId) {
+    const levelExists = levels.some(l => l.id === contextLevelId)
+    if (!levelExists) {
+      return (
+        <div className="pa-root">
+          <OfflineBanner />
+          <AdminPageHeader
+            title={pageTitle}
+            subtitle={pageSubtitle}
+            breadcrumbs={[
+              { label: t('admin.structureForms.breadcrumbs.organizations'), path: '/admin/organization/structure' },
+              { label: activeFormLabel },
+            ]}
+          />
+          <Card className="pa-mb-6">
+            <div className="pa-text-muted pa-mb-4">
+              {t('admin.structureForms.empty.noLevelsForTeam')}
+            </div>
+            <Link to="/admin/organization/structure/forms?type=level">
+              <Button>{t('admin.structureForms.empty.createLevelFirst')}</Button>
+            </Link>
+          </Card>
+        </div>
+      )
+    }
+  }
+
+  // Check prerequisites only when creating new (not editing)
+  if (!editType && activeFormType === 'program' && sports.length === 0) {
+    return (
+      <div className="pa-root">
+        <OfflineBanner />
+        <AdminPageHeader
+          title={pageTitle}
+          subtitle={pageSubtitle}
+          breadcrumbs={[
+            { label: t('admin.structureForms.breadcrumbs.organizations'), path: '/admin/organization/structure' },
+            { label: activeFormLabel },
+          ]}
+        />
+        <Card className="pa-mb-6">
+          <div className="pa-text-muted pa-mb-4">
+            {t('admin.structureForms.empty.noSportsForProgram')}
+          </div>
+          <Link to="/admin/organization/structure/forms?type=sport">
+            <Button>{t('admin.structureForms.empty.createSportFirst')}</Button>
+          </Link>
+        </Card>
+      </div>
+    )
+  }
+
+  if (!editType && activeFormType === 'level' && programs.length === 0) {
+    return (
+      <div className="pa-root">
+        <OfflineBanner />
+        <AdminPageHeader
+          title={pageTitle}
+          subtitle={pageSubtitle}
+          breadcrumbs={[
+            { label: t('admin.structureForms.breadcrumbs.organizations'), path: '/admin/organization/structure' },
+            { label: activeFormLabel },
+          ]}
+        />
+        <Card className="pa-mb-6">
+          <div className="pa-text-muted pa-mb-4">
+            {t('admin.structureForms.empty.noProgramsForLevel')}
+          </div>
+          <Link to="/admin/organization/structure/forms?type=program">
+            <Button>{t('admin.structureForms.empty.createProgramFirst')}</Button>
+          </Link>
+        </Card>
+      </div>
+    )
+  }
+
+  if (!editType && activeFormType === 'team' && levels.length === 0) {
+    return (
+      <div className="pa-root">
+        <OfflineBanner />
+        <AdminPageHeader
+          title={pageTitle}
+          subtitle={pageSubtitle}
+          breadcrumbs={[
+            { label: t('admin.structureForms.breadcrumbs.organizations'), path: '/admin/organization/structure' },
+            { label: activeFormLabel },
+          ]}
+        />
+        <Card className="pa-mb-6">
+          <div className="pa-text-muted pa-mb-4">
+            {t('admin.structureForms.empty.noLevelsForTeam')}
+          </div>
+          <Link to="/admin/organization/structure/forms?type=level">
+            <Button>{t('admin.structureForms.empty.createLevelFirst')}</Button>
+          </Link>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="pa-root">
       <OfflineBanner />
@@ -628,7 +790,14 @@ export default function OrganizationStructureForms() {
                   if (result.error) {
                     setActionError(result.error.message || t('admin.structureForms.errors.saveFailed', { item: formLabels.sport }))
                   } else if (result.data) {
-                    setSports((prev) => [result.data as Sport, ...prev])
+                    // Refetch sports to ensure UI is up to date
+                    const freshSportsResult = await getSports(context)
+                    if (!freshSportsResult.error && freshSportsResult.data) {
+                      setSports(Array.isArray(freshSportsResult.data) ? freshSportsResult.data : [])
+                    } else {
+                      // Fallback to optimistic update
+                      setSports((prev) => [result.data as Sport, ...prev])
+                    }
                     setSportForm((prev) => ({ ...prev, name: '' }))
                     setSuccessMessage(t('admin.structureForms.messages.created', { item: formLabels.sport }))
                   }
@@ -721,7 +890,14 @@ export default function OrganizationStructureForms() {
                     if (result.error) {
                       setActionError(t('admin.structureForms.errors.saveFailed', { item: formLabels.program }))
                     } else if (result.data) {
-                      setPrograms((prev) => [result.data as Program, ...prev])
+                      // Refetch programs to ensure UI is up to date
+                      const freshProgramsResult = await getPrograms(context)
+                      if (!freshProgramsResult.error && freshProgramsResult.data) {
+                        setPrograms(Array.isArray(freshProgramsResult.data) ? freshProgramsResult.data : [])
+                      } else {
+                        // Fallback to optimistic update
+                        setPrograms((prev) => [result.data as Program, ...prev])
+                      }
                       setProgramForm((prev) => ({
                         ...prev,
                         name: '',
@@ -889,7 +1065,14 @@ export default function OrganizationStructureForms() {
                     if (result.error) {
                       setActionError(t('admin.structureForms.errors.saveFailed', { item: formLabels.level }))
                     } else if (result.data) {
-                      setLevels((prev) => [result.data as Level, ...prev])
+                      // Refetch levels to ensure UI is up to date
+                      const freshLevelsResult = await getLevels(context)
+                      if (!freshLevelsResult.error && freshLevelsResult.data) {
+                        setLevels(Array.isArray(freshLevelsResult.data) ? freshLevelsResult.data : [])
+                      } else {
+                        // Fallback to optimistic update
+                        setLevels((prev) => [result.data as Level, ...prev])
+                      }
                       setLevelForm((prev) => ({
                         ...prev,
                         programId: '',
