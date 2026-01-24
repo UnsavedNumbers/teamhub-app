@@ -8,15 +8,21 @@ import { mapFeatureEntitlement } from '../../utils/domainMappers'
 import type { FeatureEntitlement, CreateEntitlementOverrideRequest } from '../../types/licenseTiers.types'
 import { validateFeatureDependencies, logAuditEvent } from '../../utils/licenseEntitlementsHelpers'
 import { showSuccess, showError } from '../../utils/toast'
+import { useOffline } from '../../hooks/useOffline'
+import { isDemoMode, assertNotDemoMode, getDemoModeError } from '../../utils/demoMode'
 
 export default function OverrideCreate() {
   const navigate = useNavigate()
+  const { isOffline } = useOffline()
+  const demoMode = isDemoMode()
   const [step, setStep] = useState(1)
   const [targetType, setTargetType] = useState<'organization' | 'user'>('organization')
   const [targetSearch, setTargetSearch] = useState('')
   const [selectedTargetId, setSelectedTargetId] = useState('')
   const [selectedTargetName, setSelectedTargetName] = useState('')
   const [features, setFeatures] = useState<FeatureEntitlement[]>([])
+  const [featuresLoading, setFeaturesLoading] = useState(true)
+  const [featuresError, setFeaturesError] = useState<string | null>(null)
   const [selectedFeatureId, setSelectedFeatureId] = useState('')
   const [overrideAction, setOverrideAction] = useState<'enable' | 'disable' | 'set_limit'>('enable')
   const [limitValue, setLimitValue] = useState<number | null>(null)
@@ -28,12 +34,22 @@ export default function OverrideCreate() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searchResults, setSearchResults] = useState<Array<{ id: string; name: string }>>([])
+  const [searching, setSearching] = useState(false)
 
   useEffect(() => {
     fetchFeatures()
   }, [])
 
   const fetchFeatures = async () => {
+    if (isOffline) {
+      setFeaturesError('You appear to be offline. Please reconnect and try again.')
+      setFeaturesLoading(false)
+      return
+    }
+
+    setFeaturesLoading(true)
+    setFeaturesError(null)
+
     try {
       const { data, error: featuresError } = await supabase
         .from('feature_entitlements')
@@ -41,18 +57,33 @@ export default function OverrideCreate() {
         .is('archived_at', null)
         .order('display_name', { ascending: true })
 
-      if (featuresError) throw featuresError
+      if (featuresError) {
+        throw featuresError
+      }
       setFeatures((data || []).map(row => mapFeatureEntitlement(row)) as any)
+      setFeaturesError(null)
     } catch (err: any) {
       console.error('Error fetching features:', err)
+      setFeaturesError(err.message || 'Failed to load features. Please try again.')
+    } finally {
+      setFeaturesLoading(false)
     }
   }
 
   const searchTargets = useCallback(async () => {
     if (targetSearch.length < 2) {
       setSearchResults([])
+      setSearching(false)
       return
     }
+
+    if (isOffline) {
+      setSearchResults([])
+      setSearching(false)
+      return
+    }
+
+    setSearching(true)
 
     try {
       if (targetType === 'organization') {
@@ -76,8 +107,11 @@ export default function OverrideCreate() {
       }
     } catch (err: any) {
       console.error('Error searching targets:', err)
+      setSearchResults([])
+    } finally {
+      setSearching(false)
     }
-  }, [targetType, targetSearch])
+  }, [targetType, targetSearch, isOffline])
 
   useEffect(() => {
     const timeout = setTimeout(searchTargets, 300)
@@ -85,6 +119,24 @@ export default function OverrideCreate() {
   }, [searchTargets])
 
   const handleSave = async () => {
+    // Block in demo mode
+    try {
+      assertNotDemoMode('create override')
+    } catch (err: any) {
+      setError(err.message)
+      showError(err.message)
+      return
+    }
+
+    // Block if offline
+    if (isOffline) {
+      const errorMsg = 'You appear to be offline. Please reconnect and try again.'
+      setError(errorMsg)
+      showError(errorMsg)
+      return
+    }
+
+    // Validation
     if (!selectedTargetId || !selectedFeatureId || !reason.trim()) {
       setError('Target, feature, and reason are required')
       return
@@ -96,18 +148,34 @@ export default function OverrideCreate() {
       return
     }
 
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(selectedTargetId)) {
+      setError('Invalid target ID format')
+      return
+    }
+    if (!uuidRegex.test(selectedFeatureId)) {
+      setError('Invalid feature ID format')
+      return
+    }
+
     // Validate dependencies if enabling
     if (overrideAction === 'enable') {
-      const validation = await validateFeatureDependencies(
-        selectedTargetId,
-        targetType,
-        selectedFeatureId,
-        overrideAction
-      )
+      try {
+        const validation = await validateFeatureDependencies(
+          selectedTargetId,
+          targetType,
+          selectedFeatureId,
+          overrideAction
+        )
 
-      if (!validation.valid && validation.missingDependencies) {
-        setError(`Cannot enable feature: Missing required dependencies: ${validation.missingDependencies.join(', ')}`)
-        return
+        if (!validation.valid && validation.missingDependencies) {
+          setError(`Cannot enable feature: Missing required dependencies: ${validation.missingDependencies.join(', ')}`)
+          return
+        }
+      } catch (err: any) {
+        console.error('Error validating dependencies:', err)
+        // Continue - dependency validation is best effort
       }
     }
 
@@ -152,7 +220,18 @@ export default function OverrideCreate() {
       showSuccess('Override created successfully!')
       navigate('/platform-admin/licenses/overrides')
     } catch (err: any) {
-      const errorMessage = err.message || 'Failed to create override'
+      let errorMessage = 'Failed to create override'
+      
+      if (err.code === '23505') {
+        errorMessage = 'An override for this target and feature already exists.'
+      } else if (err.code === '23503') {
+        errorMessage = 'Invalid target or feature. Please verify your selections.'
+      } else if (err.code === '23502') {
+        errorMessage = 'Missing required fields. Please check your input.'
+      } else if (err.message) {
+        errorMessage = err.message
+      }
+      
       setError(errorMessage)
       showError(errorMessage)
     } finally {
@@ -164,6 +243,48 @@ export default function OverrideCreate() {
 
   return (
     <div>
+      {/* Demo mode indicator */}
+      {demoMode && (
+        <div
+          className="pa-card pa-mb-4"
+          style={{
+            background: 'var(--pa-info-bg)',
+            border: '1px solid var(--pa-info)',
+            padding: 'var(--pa-space-3)',
+          }}
+        >
+          <div className="pa-flex pa-items-center pa-gap-2">
+            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-info)' }}>
+              info
+            </span>
+            <span className="pa-body-s" style={{ color: 'var(--pa-n900)' }}>
+              Demo mode: Changes will not be saved to the database.
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Offline indicator */}
+      {isOffline && (
+        <div
+          className="pa-card pa-mb-4"
+          style={{
+            background: 'var(--pa-warning-bg)',
+            border: '1px solid var(--pa-warning)',
+            padding: 'var(--pa-space-3)',
+          }}
+        >
+          <div className="pa-flex pa-items-center pa-gap-2">
+            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-warning)' }}>
+              wifi_off
+            </span>
+            <span className="pa-body-s" style={{ color: 'var(--pa-n900)' }}>
+              You appear to be offline. Please reconnect and try again.
+            </span>
+          </div>
+        </div>
+      )}
+
       <PageHeader
         title="Create Override"
         subtitle="Override entitlements for an organization or user"
@@ -173,7 +294,11 @@ export default function OverrideCreate() {
               Cancel
             </Button>
             {step === 4 && (
-              <Button variant="primary" onClick={handleSave} disabled={saving}>
+              <Button 
+                variant="primary" 
+                onClick={handleSave} 
+                disabled={saving || demoMode || isOffline}
+              >
                 {saving ? 'Creating...' : 'Create Override'}
               </Button>
             )}
@@ -259,8 +384,14 @@ export default function OverrideCreate() {
                     }
                   }}
                   placeholder={`Search ${targetType === 'organization' ? 'organizations' : 'users'}...`}
+                  disabled={isOffline}
                 />
-                {targetSearch.length >= 2 && searchResults.length > 0 && !selectedTargetId && (
+                {searching && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, padding: '12px', textAlign: 'center', background: 'var(--pa-white)', border: '1px solid var(--pa-n100)', borderRadius: 'var(--pa-radius-s)', marginTop: '4px' }}>
+                    <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>Searching...</div>
+                  </div>
+                )}
+                {targetSearch.length >= 2 && searchResults.length > 0 && !selectedTargetId && !searching && (
                   <div
                     style={{
                       position: 'absolute',
@@ -326,13 +457,27 @@ export default function OverrideCreate() {
         {step === 2 && (
           <div>
             <h3 className="pa-h3" style={{ marginBottom: 'var(--pa-space-4)' }}>Select Feature</h3>
+            {featuresLoading && (
+              <div className="pa-card pa-mb-4" style={{ padding: 'var(--pa-space-4)', textAlign: 'center' }}>
+                <div className="pa-body-m" style={{ color: 'var(--pa-n700)' }}>Loading features...</div>
+              </div>
+            )}
+            {featuresError && (
+              <div className="pa-card pa-mb-4" style={{ borderLeft: '3px solid var(--pa-danger)', background: 'var(--pa-danger-bg)', padding: 'var(--pa-space-3)' }}>
+                <div className="pa-body-s" style={{ color: 'var(--pa-n900)' }}>{featuresError}</div>
+                <Button variant="secondary" size="dense" onClick={fetchFeatures} style={{ marginTop: 'var(--pa-space-2)' }}>
+                  Retry
+                </Button>
+              </div>
+            )}
             <div className="pa-form-group">
               <label className="pa-label">Feature</label>
               <Select
                 value={selectedFeatureId}
                 onChange={(e) => setSelectedFeatureId(e.target.value)}
+                disabled={featuresLoading || !!featuresError || isOffline}
                 options={[
-                  { value: '', label: 'Select a feature...' },
+                  { value: '', label: featuresLoading ? 'Loading...' : 'Select a feature...' },
                   ...features.map(f => ({ value: f.id, label: `${f.display_name} (${f.category})` })),
                 ]}
               />

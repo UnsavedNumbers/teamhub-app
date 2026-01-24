@@ -9,6 +9,8 @@ import { DEMO_ORG_A_ID } from '../config'
 import {
     TEAM_U10_BASKETBALL_ID,
     TEAM_U12_BASKETBALL_ID,
+    TEAM_U12_SOCCER_ID,
+    TEAM_U14_SOCCER_ELITE_ID,
     SEASON_SPRING_CURRENT_ID,
 } from './fakeTeams'
 
