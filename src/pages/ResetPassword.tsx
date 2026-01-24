@@ -1,6 +1,8 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { useI18n } from '../i18n/useI18n'
+import { mapAuthError } from '../utils/authErrorMapper'
 
 export default function ResetPassword() {
   const [password, setPassword] = useState('')
@@ -14,6 +16,7 @@ export default function ResetPassword() {
 
   const { updatePassword, session } = useAuth()
   const navigate = useNavigate()
+  const { t } = useI18n()
 
   useEffect(() => {
     // Check if we have a valid session from the reset link
@@ -48,7 +51,7 @@ export default function ResetPassword() {
     const { error } = await updatePassword(password)
     
     if (error) {
-      setError(error.message)
+      setError(mapAuthError(error, t))
       setLoading(false)
     } else {
       setSuccess(true)

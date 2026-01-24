@@ -2,11 +2,13 @@ import { useState, FormEvent, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
+import { useI18n } from '../i18n/useI18n'
 import {
   getSetupOrganizationFlag,
   cleanupStaleFlags,
 } from '../utils/setupOrganization'
 import { AUTH_HERO_IMAGES } from '../utils/authImages'
+import { mapAuthError } from '../utils/authErrorMapper'
 
 export default function Signup() {
   const [email, setEmail] = useState('')
@@ -23,6 +25,7 @@ export default function Signup() {
   const { resolvedTheme } = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
+  const { t } = useI18n()
   const [logoVersion, setLogoVersion] = useState(0)
 
   // Check for setupOrganization flag from both location state and localStorage
@@ -80,7 +83,7 @@ export default function Signup() {
     const { error } = await signUp(email, password, displayName || undefined, isOrgSetupFlow)
     
     if (error) {
-      setError(error.message)
+      setError(mapAuthError(error, t))
       setLoading(false)
     } else {
       // Navigate to email confirmation page with returnTo info

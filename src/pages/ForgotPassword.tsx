@@ -2,7 +2,9 @@ import { useState, FormEvent, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
+import { useI18n } from '../i18n/useI18n'
 import { AUTH_HERO_IMAGES } from '../utils/authImages'
+import { mapAuthError } from '../utils/authErrorMapper'
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
@@ -13,6 +15,7 @@ export default function ForgotPassword() {
 
   const { resetPassword } = useAuth()
   const { resolvedTheme } = useTheme()
+  const { t } = useI18n()
   const [logoVersion, setLogoVersion] = useState(0)
 
   // Select random hero image on mount
@@ -36,7 +39,7 @@ export default function ForgotPassword() {
     const { error } = await resetPassword(email)
     
     if (error) {
-      setError(error.message)
+      setError(mapAuthError(error, t))
       setLoading(false)
     } else {
       setSuccess(true)

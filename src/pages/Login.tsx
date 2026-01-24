@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
+import { useI18n } from '../i18n/useI18n'
 
 import { getHostAppContext } from '../utils/host'
 import {
@@ -11,6 +12,7 @@ import {
 } from '../utils/setupOrganization'
 import { getLoginRedirect } from '../utils/loginRedirect'
 import { AUTH_HERO_IMAGES } from '../utils/authImages'
+import { mapAuthError } from '../utils/authErrorMapper'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -24,6 +26,7 @@ export default function Login() {
   const { signInWithEmail, user } = useAuth()
   const { resolvedTheme } = useTheme()
   const navigate = useNavigate()
+  const { t } = useI18n()
   const [logoVersion, setLogoVersion] = useState(0)
 
   // Clean up stale localStorage flags on mount
@@ -52,7 +55,7 @@ export default function Login() {
     const { error } = await signInWithEmail(email, password)
     
     if (error) {
-      setError(error.message)
+      setError(mapAuthError(error, t))
       setLoading(false)
     } else {
       // Wait for profile to load to get organizations
