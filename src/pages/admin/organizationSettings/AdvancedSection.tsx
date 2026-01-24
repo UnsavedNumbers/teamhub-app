@@ -12,6 +12,7 @@ import { useUserContext } from '../../../hooks/useUserContext'
 import { updateAdvancedSettings } from '../../../data/services/organizationSettingsService'
 import type { AdvancedSettings } from '../../../types/organizationSettings'
 import { Button, Input, Checkbox } from '../../../components/platformAdmin'
+import { showSuccess, showError } from '../../../utils/toast'
 
 const formSchema = z.object({
   data_retention_days: z.number().int().nullable(),
@@ -96,13 +97,16 @@ export default function AdvancedSection({
 
       if (updateError) throw updateError
 
+      showSuccess('Advanced settings updated successfully!')
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
 
       await onSettingsUpdated()
     } catch (err) {
       console.error('Error saving advanced settings:', err)
-      setError(err instanceof Error ? err.message : 'Failed to save settings')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save settings'
+      setError(errorMessage)
+      showError(errorMessage)
     } finally {
       setSaving(false)
       onSaveEnd()

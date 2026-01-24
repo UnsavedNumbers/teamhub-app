@@ -7,6 +7,7 @@ import Badge from '../../components/platformAdmin/Badge'
 import { mapFeatureEntitlement } from '../../utils/domainMappers'
 import type { FeatureEntitlement, CreateEntitlementOverrideRequest } from '../../types/licenseTiers.types'
 import { validateFeatureDependencies, logAuditEvent } from '../../utils/licenseEntitlementsHelpers'
+import { showSuccess, showError } from '../../utils/toast'
 
 export default function OverrideCreate() {
   const navigate = useNavigate()
@@ -148,9 +149,12 @@ export default function OverrideCreate() {
         })
       }
 
+      showSuccess('Override created successfully!')
       navigate('/platform-admin/licenses/overrides')
     } catch (err: any) {
-      setError(err.message || 'Failed to create override')
+      const errorMessage = err.message || 'Failed to create override'
+      setError(errorMessage)
+      showError(errorMessage)
     } finally {
       setSaving(false)
     }

@@ -12,6 +12,7 @@ import { useUserContext } from '../../../hooks/useUserContext'
 import { updateVisibilitySettings } from '../../../data/services/organizationSettingsService'
 import type { VisibilitySettings } from '../../../types/organizationSettings'
 import { Button, Checkbox } from '../../../components/platformAdmin'
+import { showSuccess, showError } from '../../../utils/toast'
 
 const ROLES = ['admin', 'coach', 'parent'] as const
 const PERMISSIONS = [
@@ -144,13 +145,16 @@ export default function VisibilitySection({
 
       if (updateError) throw updateError
 
+      showSuccess('Visibility settings updated successfully!')
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
 
       await onSettingsUpdated()
     } catch (err) {
       console.error('Error saving visibility settings:', err)
-      setError(err instanceof Error ? err.message : 'Failed to save settings')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save settings'
+      setError(errorMessage)
+      showError(errorMessage)
     } finally {
       setSaving(false)
       onSaveEnd()

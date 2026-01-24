@@ -12,6 +12,7 @@ import { useUserContext } from '../../../hooks/useUserContext'
 import { updateGeneralSettings } from '../../../data/services/organizationSettingsService'
 import type { GeneralSettings } from '../../../types/organizationSettings'
 import { Button, Input, Select } from '../../../components/platformAdmin'
+import { showSuccess, showError } from '../../../utils/toast'
 
 // Common US timezones
 const TIMEZONES = [
@@ -108,6 +109,7 @@ export default function GeneralSection({
 
       if (updateError) throw updateError
 
+      showSuccess('General settings updated successfully!')
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
 
@@ -115,7 +117,9 @@ export default function GeneralSection({
       await onSettingsUpdated()
     } catch (err) {
       console.error('Error saving general settings:', err)
-      setError(err instanceof Error ? err.message : 'Failed to save settings')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save settings'
+      setError(errorMessage)
+      showError(errorMessage)
     } finally {
       setSaving(false)
       onSaveEnd()

@@ -16,6 +16,7 @@ import {
 } from '../../components/platformAdmin'
 import { getUserPreferences, updateUserPreferences, type UserPreferences } from '../../data/services/preferencesService'
 import { supabase } from '../../lib/supabase'
+import { showSuccess, showError } from '../../utils/toast'
 
 // ============================================================================
 // Helper Functions
@@ -253,11 +254,12 @@ export default function AdminSettings() {
         setPreferences(refreshedPrefs)
       }
       
-      setProfileSuccess(true)
-      setTimeout(() => setProfileSuccess(false), 3000)
+      showSuccess('Profile updated successfully!')
     } catch (err) {
       console.error('Error saving profile:', err)
-      setError(err instanceof Error ? err.message : 'Failed to save profile')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save profile'
+      setError(errorMessage)
+      showError(errorMessage)
     } finally {
       setSavingProfile(false)
     }
@@ -285,11 +287,12 @@ export default function AdminSettings() {
         setPreferences(refreshedPrefs)
       }
       
-      setNotificationSuccess(true)
-      setTimeout(() => setNotificationSuccess(false), 3000)
+      showSuccess('Notification preferences updated successfully!')
     } catch (err) {
       console.error('Error saving notifications:', err)
-      setError(err instanceof Error ? err.message : 'Failed to save notification preferences')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save notification preferences'
+      setError(errorMessage)
+      showError(errorMessage)
     } finally {
       setSavingNotifications(false)
     }
@@ -317,11 +320,12 @@ export default function AdminSettings() {
         setPreferences(refreshedPrefs)
       }
       
-      setWorkflowSuccess(true)
-      setTimeout(() => setWorkflowSuccess(false), 3000)
+      showSuccess('Workflow preferences updated successfully!')
     } catch (err) {
       console.error('Error saving workflow preferences:', err)
-      setError(err instanceof Error ? err.message : 'Failed to save workflow preferences')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save workflow preferences'
+      setError(errorMessage)
+      showError(errorMessage)
     } finally {
       setSavingWorkflow(false)
     }
@@ -349,11 +353,12 @@ export default function AdminSettings() {
         setPreferences(refreshedPrefs)
       }
       
-      setAdvancedSuccess(true)
-      setTimeout(() => setAdvancedSuccess(false), 3000)
+      showSuccess('Advanced preferences updated successfully!')
     } catch (err) {
       console.error('Error saving advanced preferences:', err)
-      setError(err instanceof Error ? err.message : 'Failed to save advanced preferences')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save advanced preferences'
+      setError(errorMessage)
+      showError(errorMessage)
     } finally {
       setSavingAdvanced(false)
     }
@@ -393,15 +398,16 @@ export default function AdminSettings() {
       const { error: pwError } = await updatePassword(newPassword)
       if (pwError) throw pwError
       
-      setPasswordSuccess(true)
+      showSuccess('Password changed successfully!')
       setShowPasswordModal(false)
       setNewPassword('')
       setConfirmPassword('')
       setPasswordValidation(null)
-      setTimeout(() => setPasswordSuccess(false), 3000)
     } catch (err) {
       console.error('Error changing password:', err)
-      setError(err instanceof Error ? err.message : 'Failed to change password')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to change password'
+      setError(errorMessage)
+      showError(errorMessage)
     } finally {
       setChangingPassword(false)
     }

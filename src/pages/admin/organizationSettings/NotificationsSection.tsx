@@ -12,6 +12,7 @@ import { useUserContext } from '../../../hooks/useUserContext'
 import { updateNotificationSettings } from '../../../data/services/organizationSettingsService'
 import type { NotificationSettings } from '../../../types/organizationSettings'
 import { Button, Checkbox, Select } from '../../../components/platformAdmin'
+import { showSuccess, showError } from '../../../utils/toast'
 
 const PAYMENT_BEHAVIORS = [
   { value: 'immediate', label: 'Send Immediately' },
@@ -117,13 +118,16 @@ export default function NotificationsSection({
 
       if (updateError) throw updateError
 
+      showSuccess('Notification settings updated successfully!')
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
 
       await onSettingsUpdated()
     } catch (err) {
       console.error('Error saving notification settings:', err)
-      setError(err instanceof Error ? err.message : 'Failed to save settings')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save settings'
+      setError(errorMessage)
+      showError(errorMessage)
     } finally {
       setSaving(false)
       onSaveEnd()
