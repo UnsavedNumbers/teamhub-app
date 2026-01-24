@@ -1,12 +1,16 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, PlatformDataTable, FilterBar, Button, Badge, Select, type ColumnConfig } from '../../components/platformAdmin'
+import { PageHeader, PlatformDataTable, FilterBar, Button, Badge, Select, type ColumnConfig, ErrorState, EmptyState, DataState } from '../../components/platformAdmin'
 import type { EntitlementOverrideWithDetails, OverrideStatus, OverrideTargetType } from '../../types/licenseTiers.types'
+import { useOffline } from '../../hooks/useOffline'
+import { isDemoMode } from '../../utils/demoMode'
+import { showError } from '../../utils/toast'
 
 export default function Overrides() {
   const [overrides, setOverrides] = useState<EntitlementOverrideWithDetails[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [targetTypeFilter, setTargetTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -14,9 +18,18 @@ export default function Overrides() {
   const [rowsPerPage, setRowsPerPage] = useState(25)
   const [totalCount, setTotalCount] = useState(0)
   const navigate = useNavigate()
+  const { isOffline } = useOffline()
+  const demoMode = isDemoMode()
 
   const fetchOverrides = useCallback(async () => {
+    if (isOffline) {
+      setError('You appear to be offline. Please reconnect and try again.')
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
+    setError(null)
 
     try {
       let query = supabase
@@ -41,23 +54,33 @@ export default function Overrides() {
       const to = from + rowsPerPage - 1
       query = query.range(from, to)
 
-      const { data, error, count } = await query
+      const { data, error: queryError, count } = await query
 
-      if (error) {
-        console.error('Error fetching overrides:', error)
+      if (queryError) {
+        console.error('Error fetching overrides:', queryError)
+        const errorMessage = queryError.code === 'PGRST301' 
+          ? 'You do not have permission to view overrides.'
+          : queryError.code === 'PGRST116'
+          ? 'No overrides found.'
+          : `Failed to load overrides: ${queryError.message}`
+        setError(errorMessage)
         setOverrides([])
         setTotalCount(0)
       } else {
         setOverrides(data || [])
         setTotalCount(count || 0)
+        setError(null)
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error:', err)
+      const errorMessage = err.message || 'An unexpected error occurred while loading overrides.'
+      setError(errorMessage)
       setOverrides([])
+      setTotalCount(0)
     } finally {
       setLoading(false)
     }
-  }, [page, rowsPerPage, search, targetTypeFilter, statusFilter])
+  }, [page, rowsPerPage, search, targetTypeFilter, statusFilter, isOffline])
 
   useEffect(() => {
     fetchOverrides()
@@ -166,15 +189,70 @@ export default function Overrides() {
     },
   ]
 
+  const handleCreateClick = () => {
+    if (demoMode) {
+      showError('Demo mode: Cannot create overrides. Please configure Supabase to enable write operations.')
+      return
+    }
+    if (isOffline) {
+      showError('You appear to be offline. Please reconnect and try again.')
+      return
+    }
+    navigate('/platform-admin/licenses/overrides/new')
+  }
+
   return (
     <div>
+      {/* Demo mode indicator */}
+      {demoMode && (
+        <div
+          className="pa-card pa-mb-4"
+          style={{
+            background: 'var(--pa-info-bg)',
+            border: '1px solid var(--pa-info)',
+            padding: 'var(--pa-space-3)',
+          }}
+        >
+          <div className="pa-flex pa-items-center pa-gap-2">
+            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-info)' }}>
+              info
+            </span>
+            <span className="pa-body-s" style={{ color: 'var(--pa-n900)' }}>
+              Demo mode: Changes will not be saved to the database.
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Offline indicator */}
+      {isOffline && (
+        <div
+          className="pa-card pa-mb-4"
+          style={{
+            background: 'var(--pa-warning-bg)',
+            border: '1px solid var(--pa-warning)',
+            padding: 'var(--pa-space-3)',
+          }}
+        >
+          <div className="pa-flex pa-items-center pa-gap-2">
+            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-warning)' }}>
+              wifi_off
+            </span>
+            <span className="pa-body-s" style={{ color: 'var(--pa-n900)' }}>
+              You appear to be offline. Some features may not be available.
+            </span>
+          </div>
+        </div>
+      )}
+
       <PageHeader
         title="Rules & Overrides"
         subtitle="Manage organization and user-level entitlement overrides"
         actions={
           <Button
             variant="primary"
-            onClick={() => navigate('/platform-admin/licenses/overrides/new')}
+            onClick={handleCreateClick}
+            disabled={demoMode || isOffline}
           >
             Create Override
           </Button>
@@ -217,17 +295,38 @@ export default function Overrides() {
         />
       </div>
 
-      <PlatformDataTable
-        columns={columns}
-        rows={overrides}
+      <DataState
+        data={error ? null : overrides}
         loading={loading}
+        error={error}
+        onRetry={fetchOverrides}
         emptyMessage="No overrides found"
-        page={page}
-        rowsPerPage={rowsPerPage}
-        totalCount={totalCount}
-        onPageChange={setPage}
-        onRowsPerPageChange={setRowsPerPage}
-      />
+        emptyIcon="rule"
+        emptyTitle="No overrides found"
+        emptyDescription="Create your first override to get started."
+        emptyAction={
+          !demoMode && !isOffline
+            ? {
+                label: 'Create Override',
+                onClick: handleCreateClick,
+              }
+            : undefined
+        }
+      >
+        {(data) => (
+          <PlatformDataTable
+            columns={columns}
+            rows={data}
+            loading={false}
+            emptyMessage="No overrides found"
+            page={page}
+            rowsPerPage={rowsPerPage}
+            totalCount={totalCount}
+            onPageChange={setPage}
+            onRowsPerPageChange={setRowsPerPage}
+          />
+        )}
+      </DataState>
     </div>
   )
 }

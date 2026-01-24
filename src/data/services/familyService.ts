@@ -62,6 +62,8 @@ function mapFakeFamily(f: FakeFamily): Family {
 function mapFakeChild(c: FakeChild): Child {
     return {
         ...c,
+        preferred_name: null,
+        photo_url: null,
         deleted_at: null
     }
 }
@@ -333,6 +335,8 @@ export async function createAthleteBasic(
                 ...dto,
                 family_id: dto.family_id ?? null,
                 gender: dto.gender || null,
+                preferred_name: null,
+                photo_url: null,
                 jersey_number: dto.jersey_number || null,
                 medical_notes: dto.medical_notes || null,
                 allergies: dto.allergies || null,
