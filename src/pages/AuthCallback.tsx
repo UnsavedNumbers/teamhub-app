@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useI18n } from '../i18n/useI18n'
 import { getHostAppContext } from '../utils/host'
 import {
   getSetupOrganizationFlag,
@@ -8,11 +9,13 @@ import {
   cleanupStaleFlags,
 } from '../utils/setupOrganization'
 import { getLoginRedirect } from '../utils/loginRedirect'
+import { mapAuthError } from '../utils/authErrorMapper'
 import type { SupabaseExtended as Database } from '../lib/supabase.extended.types'
 
 export default function AuthCallback() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  const { t } = useI18n()
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -25,7 +28,8 @@ export default function AuthCallback() {
       const errorDescription = searchParams.get('error_description')
       
       if (errorParam) {
-        setError(errorDescription || errorParam)
+        const errorMessage = errorDescription || errorParam
+        setError(mapAuthError(errorMessage, t))
         return
       }
 
@@ -33,7 +37,7 @@ export default function AuthCallback() {
       const { data, error: sessionError } = await supabase.auth.getSession()
       
       if (sessionError) {
-        setError(sessionError.message)
+        setError(mapAuthError(sessionError, t))
         return
       }
 

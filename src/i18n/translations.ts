@@ -159,6 +159,22 @@ export const en = {
         unknownError: 'An unknown error occurred',
         concurrentUpdate: 'User was modified by another admin. Please refresh the page.',
         staleData: 'Data may be out of date. Please refresh the page.',
+        // Authentication errors - user-friendly messages
+        auth: {
+            invalidCredentials: 'The email or password you entered is incorrect. Please try again.',
+            emailNotConfirmed: 'Please check your email and click the confirmation link to activate your account.',
+            userBanned: 'Your account access has been temporarily restricted. Please contact support for assistance.',
+            tooManyRequests: 'Too many attempts. Please wait a moment and try again.',
+            emailAlreadyRegistered: 'An account with this email already exists. Try signing in instead.',
+            weakPassword: 'Please choose a stronger password with at least 8 characters.',
+            invalidEmail: 'Please enter a valid email address.',
+            expiredToken: 'This link has expired. Please request a new one.',
+            invalidToken: 'This link is invalid or has already been used. Please request a new one.',
+            networkError: 'We\'re having trouble connecting. Please check your internet connection and try again.',
+            sessionExpired: 'Your session has expired. Please sign in again.',
+            signupDisabled: 'New account registration is currently unavailable. Please try again later.',
+            default: 'Something went wrong. Please try again or contact support if the problem persists.',
+        },
     },
     portal: {
         travel: {
@@ -773,6 +789,22 @@ export const es: typeof en = {
         unknownError: 'Ocurrió un error desconocido',
         concurrentUpdate: 'El usuario fue modificado por otro administrador. Por favor, actualice la página.',
         staleData: 'Los datos pueden estar desactualizados. Por favor, actualice la página.',
+        // Authentication errors - user-friendly messages
+        auth: {
+            invalidCredentials: 'El correo electrónico o la contraseña que ingresó son incorrectos. Por favor, intente nuevamente.',
+            emailNotConfirmed: 'Por favor revise su correo electrónico y haga clic en el enlace de confirmación para activar su cuenta.',
+            userBanned: 'El acceso a su cuenta ha sido restringido temporalmente. Por favor, contacte al soporte para obtener ayuda.',
+            tooManyRequests: 'Demasiados intentos. Por favor espere un momento e intente nuevamente.',
+            emailAlreadyRegistered: 'Ya existe una cuenta con este correo electrónico. Intente iniciar sesión en su lugar.',
+            weakPassword: 'Por favor elija una contraseña más segura con al menos 8 caracteres.',
+            invalidEmail: 'Por favor ingrese una dirección de correo electrónico válida.',
+            expiredToken: 'Este enlace ha expirado. Por favor solicite uno nuevo.',
+            invalidToken: 'Este enlace es inválido o ya ha sido utilizado. Por favor solicite uno nuevo.',
+            networkError: 'Estamos teniendo problemas para conectarnos. Por favor verifique su conexión a internet e intente nuevamente.',
+            sessionExpired: 'Su sesión ha expirado. Por favor inicie sesión nuevamente.',
+            signupDisabled: 'El registro de nuevas cuentas no está disponible actualmente. Por favor intente más tarde.',
+            default: 'Algo salió mal. Por favor intente nuevamente o contacte al soporte si el problema persiste.',
+        },
     },
     portal: {
         travel: {
