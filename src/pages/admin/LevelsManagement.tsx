@@ -4,7 +4,7 @@
  * Table view with filtering and contextual creation.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getLevels } from '../../data/services/levelsService'
@@ -46,6 +46,7 @@ export default function LevelsManagement() {
 
   const programById = new Map(programs.map((p) => [p.id, p]))
   const filteredLevels = filterProgramId ? levels.filter((l) => l.program_id === filterProgramId) : levels
+  const canCreateLevel = programs.length > 0
 
   const levelTypeLabel = (type: string) => {
     switch (type) {

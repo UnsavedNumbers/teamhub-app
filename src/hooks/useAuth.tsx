@@ -10,8 +10,6 @@ import {
 import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { useOrganization, Organization } from '../contexts/OrganizationContext'
-import { USE_FAKE_DATA } from '../data/config'
-import { getUserOrganizations } from '../data/fake/fakeUsers'
 import type { PlatformAdminRole } from '../types/platformAdmin.types'
 
 // Role types - now per organization

@@ -270,7 +270,7 @@ export function UsersTab({ organizationId, adminRole }: UsersTabProps) {
           throw new Error('Unknown action type')
       }
 
-      const { data, error: rpcError } = await supabase.rpc(rpcName, rpcParams)
+      const { data, error: rpcError } = await supabase.rpc(rpcName as any, rpcParams)
 
       if (rpcError) {
         // Check if RPC function doesn't exist
@@ -335,7 +335,7 @@ export function UsersTab({ organizationId, adminRole }: UsersTabProps) {
       label: 'Roles',
       render: (row) => (
         <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-          {row.roles.map((role) => (
+          {row.roles.map((role: string) => (
             <Badge key={role} variant="neutral" size="small">
               {role}
             </Badge>
@@ -376,7 +376,7 @@ export function UsersTab({ organizationId, adminRole }: UsersTabProps) {
                 variant="ghost"
                 size="dense"
                 icon="check_circle"
-                onClick={(e) => {
+                onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                   e.stopPropagation()
                   handleEnable(row)
                 }}
@@ -389,7 +389,7 @@ export function UsersTab({ organizationId, adminRole }: UsersTabProps) {
                 variant="ghost"
                 size="dense"
                 icon="block"
-                onClick={(e) => {
+                onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                   e.stopPropagation()
                   handleDisable(row)
                 }}
@@ -402,7 +402,7 @@ export function UsersTab({ organizationId, adminRole }: UsersTabProps) {
               variant="ghost"
               size="dense"
               icon="logout"
-              onClick={(e) => {
+              onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                 e.stopPropagation()
                 handleForceLogout(row)
               }}
@@ -414,7 +414,7 @@ export function UsersTab({ organizationId, adminRole }: UsersTabProps) {
               variant="ghost"
               size="dense"
               icon="mail"
-              onClick={(e) => {
+              onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                 e.stopPropagation()
                 handleResendVerification(row)
               }}
@@ -480,7 +480,7 @@ export function UsersTab({ organizationId, adminRole }: UsersTabProps) {
         emptyMessage="No users found in this organization"
         emptyIcon="people"
       >
-        {(data) => (
+        {(_data) => (
           <PlatformDataTable
             columns={columns}
             rows={paginatedUsers}

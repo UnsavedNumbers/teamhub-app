@@ -13,7 +13,6 @@ import { handleRpcError } from '../../../../utils/rpcErrorHandler'
 import { formatCurrency, getDisplayEmail } from '../../../../utils/platformAdminMasking'
 import { MaskedStripeId } from '../../../../components/platformAdmin/MaskedStripeId'
 import { safeString, safeDate } from '../../../../utils/safeAccessors'
-import { useRolePermissions } from '../../../../hooks/useRolePermissions'
 import type { AdminPayment } from '../../../../types/platformAdmin.types'
 import type { PlatformAdminRole } from '../../../../types/platformAdmin.types'
 
@@ -24,7 +23,6 @@ interface PaymentsTabProps {
 
 export function PaymentsTab({ organizationId, adminRole }: PaymentsTabProps) {
   const isMountedRef = useRef(true)
-  const permissions = useRolePermissions()
   const [payments, setPayments] = useState<AdminPayment[] | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -56,7 +54,7 @@ export function PaymentsTab({ organizationId, adminRole }: PaymentsTabProps) {
       }
 
       if (statusFilter) {
-        query = query.eq('status', statusFilter)
+        query = query.eq('status', statusFilter as any)
       }
 
       query = query.order('created_at', { ascending: false })
@@ -77,7 +75,7 @@ export function PaymentsTab({ organizationId, adminRole }: PaymentsTabProps) {
         return
       }
 
-      setPayments((data || []) as AdminPayment[])
+      setPayments((data || []) as unknown as AdminPayment[])
       setTotalCount(count || 0)
     } catch (err) {
       if (!isMountedRef.current) return

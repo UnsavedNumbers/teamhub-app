@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, StatCard, Badge, FilterBar, PlatformDataTable, type ColumnConfig, Button } from '../../components/platformAdmin'
+import { PageHeader, StatCard, Badge, FilterBar, PlatformDataTable, type ColumnConfig } from '../../components/platformAdmin'
 import { useQueryParams } from '../../hooks/useQueryParams'
 import { 
   formatCurrency, 
@@ -44,22 +44,6 @@ export default function PlatformPayments() {
   const { getUUID } = useQueryParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const orgFilter = getUUID('org_id')
-  const [orgFilterName, setOrgFilterName] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (orgFilter) {
-      supabase
-        .from('admin_organizations')
-        .select('name')
-        .eq('id', orgFilter)
-        .single()
-        .then(({ data }) => {
-          if (data) setOrgFilterName((data as any).name)
-        })
-    } else {
-      setOrgFilterName(null)
-    }
-  }, [orgFilter])
 
   const clearOrgFilter = () => {
     const newParams = new URLSearchParams(searchParams)
@@ -100,7 +84,7 @@ export default function PlatformPayments() {
         setPayments([])
         setTotalCount(0)
       } else {
-        setPayments(data as AdminPayment[])
+        setPayments((data || []) as unknown as AdminPayment[])
         setTotalCount(count || 0)
       }
 

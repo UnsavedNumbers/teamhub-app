@@ -41,7 +41,7 @@ export function FeesTab({ organizationId }: FeesTabProps) {
         .from('admin_fees_status')
         .select('*')
         .eq('org_id', organizationId)
-        .order('due_date', { ascending: true, nullsLast: true })
+        .order('due_date', { ascending: true, nullsFirst: false })
 
       if (!isMountedRef.current) return
 
@@ -52,7 +52,11 @@ export function FeesTab({ organizationId }: FeesTabProps) {
         return
       }
 
-      setFees((data || []) as AdminFeeStatus[])
+      // Filter out rows with null required fields
+      const validData = (data || []).filter((row): row is typeof row & { fee_id: string } => 
+        row.fee_id !== null
+      )
+      setFees(validData as AdminFeeStatus[])
     } catch (err) {
       if (!isMountedRef.current) return
       const normalized = handleRpcError(err, 'fetch_fees')

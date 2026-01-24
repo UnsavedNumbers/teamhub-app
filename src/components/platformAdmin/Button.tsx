@@ -14,8 +14,8 @@ type ButtonProps<E extends ElementType = 'button'> = {
   iconRight?: string
   /** Loading state - shows spinner */
   loading?: boolean
-  /** Children (button label) */
-  children: ReactNode
+  /** Children (button label) - optional when icon is provided */
+  children?: ReactNode
   /** Render as a different element */
   as?: E
   /** Disabled state */

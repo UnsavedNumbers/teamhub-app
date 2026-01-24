@@ -52,7 +52,7 @@ export function ActivityTab({ organizationId }: ActivityTabProps) {
       }
 
       if (categoryFilter) {
-        query = query.eq('category', categoryFilter)
+        query = query.eq('category', categoryFilter as any)
       }
 
       query = query.order('created_at', { ascending: false })
@@ -244,7 +244,6 @@ export function ActivityTab({ organizationId }: ActivityTabProps) {
       {selectedEvent && (
         <EventLogDetailModal
           event={selectedEvent}
-          open={!!selectedEvent}
           onClose={() => setSelectedEvent(null)}
         />
       )}

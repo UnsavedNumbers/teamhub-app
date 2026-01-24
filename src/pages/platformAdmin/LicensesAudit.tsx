@@ -9,6 +9,8 @@ export default function LicensesAudit() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [actionFilter, setActionFilter] = useState('')
+  const [targetTypeFilter, setTargetTypeFilter] = useState<string>('')
+  const [targetIdFilter, setTargetIdFilter] = useState<string>('')
   const [dateFilter, setDateFilter] = useState<'30days' | 'all'>('30days')
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(50)
@@ -68,7 +70,7 @@ export default function LicensesAudit() {
     } finally {
       setLoading(false)
     }
-  }, [page, rowsPerPage, search, actionFilter, dateFilter])
+  }, [page, rowsPerPage, search, actionFilter, targetTypeFilter, targetIdFilter, dateFilter])
 
   useEffect(() => {
     fetchLogs()

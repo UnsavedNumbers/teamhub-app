@@ -22,7 +22,7 @@ export async function logDiscoveryError(error: unknown, context: Partial<Discove
             feature_key: context.featureKey,
             error_type: context.errorType || 'DiscoveryError',
             error_message: message,
-            error_details: JSON.stringify({ ...details, ...context.details }),
+            error_details: JSON.stringify({ ...(details || {}), ...(context.details || {}) }),
         });
     } catch (e) {
         console.error('Failed to log error to DB', e);

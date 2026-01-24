@@ -1,7 +1,7 @@
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
-import type { Database, Json } from '../../lib/database.types'
+import type { SupabaseExtended as Database, Json } from '../../lib/supabase.extended.types'
 import type { CreateUniformKitDTO, UpdateUniformKitDTO } from '../../types/uniforms'
 import {
     fakeUniformKits,
@@ -269,22 +269,22 @@ export async function createUniformKit(
 
     try {
         const insertData: Database['public']['Tables']['uniform_kits']['Insert'] = {
-            team_id: dto.team_id || null,
-            season_id: dto.season_id || null,
+            team_id: dto.team_id ?? null,
+            season_id: dto.season_id ?? null,
             name: dto.name,
-            sport_id: dto.sport_id,
-            program_id: dto.program_id || null,
+            sport_id: dto.sport_id ?? undefined,
+            program_id: dto.program_id ?? null,
             org_id: dto.org_id,
-            deadline_at: dto.deadline_at || null,
-            primary_color: dto.primary_color || null,
-            secondary_color: dto.secondary_color || null,
-            accent_color: dto.accent_color || null,
-            vendor: dto.vendor || null,
-            notes: dto.notes || null,
-            status: dto.status || 'active',
+            deadline_at: dto.deadline_at ?? null,
+            primary_color: dto.primary_color ?? null,
+            secondary_color: dto.secondary_color ?? null,
+            accent_color: dto.accent_color ?? null,
+            vendor: dto.vendor ?? null,
+            notes: dto.notes ?? null,
+            status: dto.status ?? 'active',
             sport_specific_fields: (dto.sport_specific_fields || {}) as Json,
             created_by: context.userId,
-        }
+        } as Database['public']['Tables']['uniform_kits']['Insert']
 
         const { data, error } = await supabase
             .from('uniform_kits')
@@ -337,18 +337,18 @@ export async function updateUniformKit(
     }
 
     try {
-        const updateData: Database['public']['Tables']['uniform_kits']['Update'] = {}
+        const updateData: any = {}
 
         if (dto.name !== undefined) updateData.name = dto.name
         if (dto.sport_id !== undefined) updateData.sport_id = dto.sport_id
-        if (dto.program_id !== undefined) updateData.program_id = dto.program_id
-        if (dto.season_id !== undefined) updateData.season_id = dto.season_id
-        if (dto.deadline_at !== undefined) updateData.deadline_at = dto.deadline_at
-        if (dto.primary_color !== undefined) updateData.primary_color = dto.primary_color
-        if (dto.secondary_color !== undefined) updateData.secondary_color = dto.secondary_color
-        if (dto.accent_color !== undefined) updateData.accent_color = dto.accent_color
-        if (dto.vendor !== undefined) updateData.vendor = dto.vendor
-        if (dto.notes !== undefined) updateData.notes = dto.notes
+        if (dto.program_id !== undefined) updateData.program_id = dto.program_id ?? null
+        if (dto.season_id !== undefined) updateData.season_id = dto.season_id ?? null
+        if (dto.deadline_at !== undefined) updateData.deadline_at = dto.deadline_at ?? null
+        if (dto.primary_color !== undefined) updateData.primary_color = dto.primary_color ?? null
+        if (dto.secondary_color !== undefined) updateData.secondary_color = dto.secondary_color ?? null
+        if (dto.accent_color !== undefined) updateData.accent_color = dto.accent_color ?? null
+        if (dto.vendor !== undefined) updateData.vendor = dto.vendor ?? null
+        if (dto.notes !== undefined) updateData.notes = dto.notes ?? null
         if (dto.status !== undefined) updateData.status = dto.status
         if (dto.sport_specific_fields !== undefined) {
             updateData.sport_specific_fields = dto.sport_specific_fields as Json

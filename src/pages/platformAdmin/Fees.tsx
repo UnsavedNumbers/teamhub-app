@@ -40,9 +40,12 @@ export default function Fees() {
         setFees([])
         setTotalCount(0)
       } else {
-        // Map rows to include id field
-        const mapped = (data || []).map(row => mapAdminFeeStatus(row))
-        setFees(mapped)
+        // Filter out rows with null required fields, then map
+        const validData = (data || []).filter((row): row is typeof row & { fee_id: string } => 
+          row.fee_id !== null
+        )
+        const mapped = validData.map(row => mapAdminFeeStatus(row))
+        setFees(mapped as AdminFeeStatus[])
         setTotalCount(count || 0)
       }
     } catch (err) {

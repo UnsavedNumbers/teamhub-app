@@ -362,7 +362,10 @@ export default function ImportAthletes() {
         updated_count: result.updated_count || 0,
         skipped_count: result.skipped_count || 0,
         error_count: result.error_count || 0,
-        errors: result.errors || [],
+        errors: (result.errors || []).map((error: any) => ({
+          row_number: error.row,
+          message: error.message
+        })),
       })
 
       navigate('/admin/athletes', { state: { importSuccess: true } })

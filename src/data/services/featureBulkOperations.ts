@@ -195,7 +195,7 @@ export async function bulkApplyToTiers(
   tierIds: string[],
   action: 'add' | 'remove',
   roleVisibility: { admin: boolean; coach: boolean; parent: boolean },
-  onProgress?: (processed: number, total: number) => void
+  _onProgress?: (processed: number, total: number) => void
 ): Promise<BulkOperationResult> {
   if (featureIds.length === 0) {
     return { success: false, error: 'No features selected' }

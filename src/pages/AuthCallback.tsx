@@ -8,7 +8,7 @@ import {
   cleanupStaleFlags,
 } from '../utils/setupOrganization'
 import { getLoginRedirect } from '../utils/loginRedirect'
-import { Database } from '@/lib/database.types'
+import type { SupabaseExtended as Database } from '../lib/supabase.extended.types'
 
 export default function AuthCallback() {
   const [searchParams] = useSearchParams()

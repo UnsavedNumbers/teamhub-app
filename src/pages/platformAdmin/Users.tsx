@@ -8,7 +8,7 @@ import { getDisplayEmail } from '../../utils/platformAdminMasking'
 import { isRpcSuccessResponse } from '../../utils/typeAdapters'
 import { useQueryParams } from '../../hooks/useQueryParams'
 import { useAuth } from '../../hooks/useAuth'
-import type { AdminUser, AdminRpcResponse, PlatformAdminRole } from '../../types/platformAdmin.types'
+import type { AdminUser, AdminRpcResponse } from '../../types/platformAdmin.types'
 
 export default function Users() {
   const [users, setUsers] = useState<AdminUser[]>([])

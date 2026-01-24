@@ -1,4 +1,4 @@
-import toast from 'react-hot-toast'
+import toast, { type Renderable } from 'react-hot-toast'
 
 /**
  * Toast utility functions with themed styling
@@ -95,7 +95,11 @@ export const showCustom = (
     style?: React.CSSProperties
   }
 ) => {
-  return toast(message, options)
+  const { icon, ...restOptions } = options ?? {}
+  return toast(message as string, {
+    ...restOptions,
+    icon: icon as Renderable | undefined,
+  })
 }
 
 // Re-export the default toast function for advanced usage

@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, Navigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getUniformKit, updateUniformKit } from '../../data/services/uniformsService'
 import { AdminPageHeader, Card, Button } from '../../components/platformAdmin'
@@ -20,15 +20,22 @@ export default function EditUniform() {
   const [initialData, setInitialData] = useState<Partial<CreateUniformKitDTO> | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const kitId = id
+  if (!kitId) {
+    return <Navigate to="/admin/uniforms" />
+  }
+
   useEffect(() => {
-    if (!isReady || !context || !id) return
+    if (!isReady || !context || !kitId) return
 
     async function loadUniform() {
+      if (!kitId) return
+
       setLoading(true)
       setError(null)
 
       try {
-        const { data, error: fetchError } = await getUniformKit(context, id)
+        const { data, error: fetchError } = await getUniformKit(context, kitId)
         if (fetchError) {
           setError(fetchError.message)
           return

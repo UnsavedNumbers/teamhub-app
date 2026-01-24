@@ -7,7 +7,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { createUniformKit } from '../../data/services/uniformsService'
-import { AdminPageHeader, Card } from '../../components/platformAdmin'
+import { AdminPageHeader } from '../../components/platformAdmin'
 import { SportUniformForm } from '../../components/uniforms/SportUniformForm'
 import type { CreateUniformKitDTO } from '../../types/uniforms'
 

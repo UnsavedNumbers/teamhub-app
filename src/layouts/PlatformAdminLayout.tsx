@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import {
@@ -6,7 +6,6 @@ import {
   ROLE_LABELS,
   type PlatformAdminAction,
 } from '../utils/platformAdminPermissions'
-import type { PlatformAdminRole } from '../types/platformAdmin.types'
 import { usePlatformAdminTheme } from '../hooks/usePlatformAdminTheme'
 import GlobalNav from '../components/common/GlobalNav'
 import { getLink, getPath, RouteKeys } from '@/utils/routes'

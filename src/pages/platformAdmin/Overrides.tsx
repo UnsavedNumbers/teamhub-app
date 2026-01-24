@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, PlatformDataTable, FilterBar, Button, Badge, Select, type ColumnConfig, ErrorState, EmptyState, DataState } from '../../components/platformAdmin'
+import { PageHeader, PlatformDataTable, FilterBar, Button, Badge, Select, type ColumnConfig, DataState } from '../../components/platformAdmin'
 import type { EntitlementOverrideWithDetails, OverrideStatus, OverrideTargetType } from '../../types/licenseTiers.types'
 import { useOffline } from '../../hooks/useOffline'
 import { isDemoMode } from '../../utils/demoMode'
@@ -85,7 +85,7 @@ export default function Overrides() {
         setOverrides([])
         setTotalCount(0)
       } else {
-        setOverrides(data || [])
+        setOverrides((data || []) as unknown as EntitlementOverrideWithDetails[])
         setTotalCount(count || 0)
         setError(null)
       }

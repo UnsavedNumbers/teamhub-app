@@ -314,7 +314,7 @@ async function getGeneralSettings(
       timezone: row.timezone,
       default_language: row.default_language,
       theme_id: row.theme_id || null,
-      status: row.status,
+      status: (row.status === 'active' || row.status === 'inactive') ? row.status : 'active',
       updated_at: row.updated_at || new Date().toISOString(),
     }
 
@@ -349,7 +349,7 @@ async function getDefaultsSettings(
       default_sport_id: row.default_sport_id,
       default_program_id: row.default_program_id,
       default_level_id: row.default_level_id,
-      default_event_types: row.default_event_types || undefined,
+      default_event_types: Array.isArray(row.default_event_types) ? row.default_event_types as string[] : undefined,
       updated_at: row.updated_at || new Date().toISOString(),
     }
 
@@ -418,7 +418,9 @@ async function getRegistrationSettings(
 
     const settings: RegistrationSettings = {
       org_id: row.org_id,
-      required_fields: row.required_fields || undefined,
+      required_fields: Array.isArray(row.required_fields)
+        ? row.required_fields.filter((f): f is string => typeof f === 'string')
+        : undefined,
       allow_players_without_guardians: row.allow_players_without_guardians,
       allow_guardian_self_invite: row.allow_guardian_self_invite,
       medical_form_required: row.medical_form_required,
@@ -483,10 +485,10 @@ async function getNotificationSettings(
 
     const settings: NotificationSettings = {
       org_id: row.org_id,
-      default_channels: row.default_channels || undefined,
+      default_channels: Array.isArray(row.default_channels) ? row.default_channels as string[] : (row.default_channels ? null : undefined),
       attendance_reminders_enabled: row.attendance_reminders_enabled,
       schedule_change_alerts_enabled: row.schedule_change_alerts_enabled,
-      payment_reminder_behavior: row.payment_reminder_behavior,
+      payment_reminder_behavior: (row.payment_reminder_behavior === 'immediate' || row.payment_reminder_behavior === 'daily_digest') ? row.payment_reminder_behavior : 'immediate',
       updated_at: row.updated_at || new Date().toISOString(),
     }
 

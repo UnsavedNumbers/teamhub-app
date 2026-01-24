@@ -1,7 +1,6 @@
 import { routes } from '../routes/definitions';
 import { normalizeFeatureKey, formatDisplayName } from './normalizer';
-import type { DiscoveredFeature, DiscoverySource } from './types';
-import type { RouteDefinition } from '../routes/types';
+import type { DiscoveredFeature } from './types';
 
 // Helper to deduce category from route path/structure
 function deduceCategory(path: string, groupKey: string): string {

@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { PageHeader, Badge, Card, FilterBar, EmptyState, Button } from '../../components/platformAdmin'
-import { useQueryParams } from '../../hooks/useQueryParams'
 import type { AdminStructure } from '../../types/platformAdmin.types'
 
 interface OrganizationWithStructure {
@@ -25,7 +23,14 @@ export default function Structure() {
   const [organizedData, setOrganizedData] = useState<OrganizationWithStructure[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [orgFilter, setOrgFilter] = useState<string | null>(null)
+  const [orgFilterName, setOrgFilterName] = useState<string | null>(null)
   const [expandedOrgs, setExpandedOrgs] = useState<Set<string>>(new Set())
+
+  const clearOrgFilter = () => {
+    setOrgFilter(null)
+    setOrgFilterName(null)
+  }
 
   const fetchStructure = useCallback(async () => {
     setLoading(true)
@@ -59,7 +64,7 @@ export default function Structure() {
     } finally {
       setLoading(false)
     }
-  }, [search])
+  }, [search, orgFilter])
 
   useEffect(() => {
     fetchStructure()

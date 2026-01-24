@@ -151,7 +151,8 @@ export default function LicenseTierDetail() {
     setLoadingOrgs(true)
     try {
       // Map tier_key to license_plan values
-      const licensePlans: string[] = []
+      type LicensePlan = 'basic' | 'starter' | 'power' | 'standard' | 'pro'
+      const licensePlans: LicensePlan[] = []
       if (tier.tier_key === 'basic') {
         licensePlans.push('basic', 'starter')
       } else if (tier.tier_key === 'power') {
@@ -161,7 +162,7 @@ export default function LicenseTierDetail() {
       const { data, error } = await supabase
         .from('organizations')
         .select('id, name, license_plan')
-        .in('license_plan', licensePlans)
+        .in('license_plan', licensePlans as any)
         .order('name', { ascending: true })
 
       if (error) throw error

@@ -256,7 +256,6 @@ export default function FeatureCatalog() {
   useEffect(() => {
     const currentIds = new Set(features.map(f => f.id))
     setSelectedFeatureIds(prev => {
-      const beforeCount = prev.size
       const filtered = new Set([...prev].filter(id => currentIds.has(id)))
       const afterCount = filtered.size
       
@@ -450,8 +449,14 @@ export default function FeatureCatalog() {
   }
 
   // Selection handlers
-  const handleSelectionChange = useCallback((newSelection: Set<string>) => {
-    setSelectedFeatureIds(newSelection)
+  const handleSelectionChange = useCallback((
+    updater: Set<string> | ((prev: Set<string>) => Set<string>)
+  ) => {
+    if (typeof updater === 'function') {
+      setSelectedFeatureIds(prev => updater(prev))
+    } else {
+      setSelectedFeatureIds(updater)
+    }
     setSelectAllMode('none') // Clear mode on individual change
   }, [])
 
@@ -485,13 +490,6 @@ export default function FeatureCatalog() {
     return featureIds.filter(id => {
       const feature = features.find(f => f.id === id)
       return feature && feature.is_toggleable !== false
-    })
-  }, [features])
-
-  const getRemovableFeatures = useCallback((featureIds: string[]) => {
-    return featureIds.filter(id => {
-      const feature = features.find(f => f.id === id)
-      return feature && feature.is_removable !== false
     })
   }, [features])
 
@@ -588,7 +586,7 @@ export default function FeatureCatalog() {
       const result = await bulkUpdateStatus(
         toggleableIds,
         status,
-        (processed, total) => {
+        (_processed, _total) => {
           // Progress callback could update UI
         }
       )
@@ -770,7 +768,7 @@ export default function FeatureCatalog() {
                 <Badge variant="warning" size="small">Review</Badge>
             )}
             {row.integrations?.length ? (
-                row.integrations.map(i => <Badge key={i} variant="neutral" size="small">{i}</Badge>)
+                row.integrations.map((i: string) => <Badge key={i} variant="neutral" size="small">{i}</Badge>)
             ) : null}
           </div>
           <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px', fontFamily: 'var(--pa-font-mono)' }}>

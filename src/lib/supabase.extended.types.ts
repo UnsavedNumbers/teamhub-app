@@ -1,223 +1,10 @@
-import { OverrideStatus, OverrideTargetType } from '@/types/licenseTiers.types'
 import type { Database, Json } from './database.types'
 
 // Re-export Json for use in other modules
 export type { Json }
 
-// Additional tables and views that are not present in the generated database.types.ts
-// This augments the Supabase schema used by the client to cover license/entitlements tables and views.
+// Additional tables that are NOT present in the generated database.types.ts
 type AdditionalTables = {
-  organization_settings: {
-    Row: {
-      org_id: string
-      organization_name: string
-      timezone: string
-      default_language: string | null
-      theme_id: string | null
-      status: 'active' | 'inactive'
-      updated_at: string | null
-    }
-    Insert: Partial<AdditionalTables['organization_settings']['Row']> & {
-      org_id: string
-    }
-    Update: Partial<AdditionalTables['organization_settings']['Row']>
-    Relationships: []
-  }
-  organization_defaults: {
-    Row: {
-      org_id: string
-      default_season_id: string | null
-      default_sport_id: string | null
-      default_program_id: string | null
-      default_level_id: string | null
-      default_event_types: string[] | null
-      updated_at: string | null
-    }
-    Insert: Partial<AdditionalTables['organization_defaults']['Row']> & {
-      org_id: string
-    }
-    Update: Partial<AdditionalTables['organization_defaults']['Row']>
-    Relationships: []
-  }
-  organization_attendance_settings: {
-    Row: {
-      org_id: string
-      required_for_practice: boolean
-      required_for_game: boolean
-      required_for_meeting: boolean
-      submission_deadline_hours: number
-      lock_after_days: number | null
-      allow_admin_override: boolean
-      enable_coach_reminders: boolean
-      parent_visibility: Json | null
-      updated_at: string | null
-    }
-    Insert: Partial<AdditionalTables['organization_attendance_settings']['Row']> & {
-      org_id: string
-    }
-    Update: Partial<AdditionalTables['organization_attendance_settings']['Row']>
-    Relationships: []
-  }
-  organization_registration_settings: {
-    Row: {
-      org_id: string
-      required_fields: string[] | null
-      allow_players_without_guardians: boolean
-      allow_guardian_self_invite: boolean
-      medical_form_required: boolean
-      updated_at: string | null
-    }
-    Insert: Partial<AdditionalTables['organization_registration_settings']['Row']> & {
-      org_id: string
-    }
-    Update: Partial<AdditionalTables['organization_registration_settings']['Row']>
-    Relationships: []
-  }
-  organization_visibility_settings: {
-    Row: {
-      org_id: string
-      role_permissions: Json | null
-      updated_at: string | null
-    }
-    Insert: Partial<AdditionalTables['organization_visibility_settings']['Row']> & {
-      org_id: string
-    }
-    Update: Partial<AdditionalTables['organization_visibility_settings']['Row']>
-    Relationships: []
-  }
-  organization_notification_settings: {
-    Row: {
-      org_id: string
-      default_channels: string[] | null
-      attendance_reminders_enabled: boolean
-      schedule_change_alerts_enabled: boolean
-      payment_reminder_behavior: 'immediate' | 'daily_digest'
-      updated_at: string | null
-    }
-    Insert: Partial<AdditionalTables['organization_notification_settings']['Row']> & {
-      org_id: string
-    }
-    Update: Partial<AdditionalTables['organization_notification_settings']['Row']>
-    Relationships: []
-  }
-  organization_advanced_settings: {
-    Row: {
-      org_id: string
-      data_retention_days: number | null
-      enable_api_access: boolean
-      api_rate_limit: number | null
-      allow_data_export: boolean
-      updated_at: string | null
-    }
-    Insert: Partial<AdditionalTables['organization_advanced_settings']['Row']> & {
-      org_id: string
-    }
-    Update: Partial<AdditionalTables['organization_advanced_settings']['Row']>
-    Relationships: []
-  }
-  license_tiers: {
-    Row: {
-      id: string
-      tier_key: string
-      tier_name: string
-      description: string | null
-      stripe_price_id: string
-      stripe_verified_at: string | null
-      stripe_product_name: string | null
-      stripe_amount_cents: number | null
-      stripe_interval: string | null
-      stripe_currency: string | null
-      stripe_active: boolean | null
-      status: 'active' | 'archived'
-      version: number | null
-      created_at: string
-      updated_at: string
-    }
-    Insert: Partial<AdditionalTables['license_tiers']['Row']> & {
-      tier_key: string
-      tier_name: string
-      stripe_price_id: string
-    }
-    Update: Partial<AdditionalTables['license_tiers']['Row']>
-    Relationships: []
-  }
-  feature_entitlements: {
-    Row: {
-      id: string
-      feature_key: string
-      display_name: string
-      category: string
-      feature_type: 'module' | 'permission' | 'limit' | 'visibility' | 'integration'
-      description: string | null
-      rollout_status: 'live' | 'beta' | 'hidden'
-      created_at: string
-      updated_at: string
-      archived_at: string | null
-      is_toggleable: boolean
-      is_removable: boolean
-      lock_reason: string | null
-    }
-    Insert: Partial<AdditionalTables['feature_entitlements']['Row']> & {
-      feature_key: string
-      display_name: string
-      category: string
-      feature_type: AdditionalTables['feature_entitlements']['Row']['feature_type']
-    }
-    Update: Partial<AdditionalTables['feature_entitlements']['Row']>
-    Relationships: []
-  }
-  tier_feature_assignments: {
-    Row: {
-      id: string
-      license_tier_id: string
-      feature_entitlement_id: string
-      included: boolean
-      limit_value: number | null
-      role_admin: boolean
-      role_coach: boolean
-      role_parent: boolean
-      created_at: string
-      updated_at: string
-    }
-    Insert: Partial<AdditionalTables['tier_feature_assignments']['Row']> & {
-      license_tier_id: string
-      feature_entitlement_id: string
-      included: boolean
-    }
-    Update: Partial<AdditionalTables['tier_feature_assignments']['Row']>
-    Relationships: []
-  }
-  entitlement_overrides: {
-    Row: {
-      id: string
-      target_type: 'organization' | 'user'
-      target_id: string
-      feature_entitlement_id: string
-      override_action: 'enable' | 'disable' | 'set_limit'
-      limit_value: number | null
-      role_admin: boolean | null
-      role_coach: boolean | null
-      role_parent: boolean | null
-      reason: string
-      expires_at: string | null
-      created_by: string
-      created_at: string
-      updated_at: string
-      revoked_at: string | null
-      revoked_by: string | null
-      revoked_reason: string | null
-      version: number
-    }
-    Insert: Partial<AdditionalTables['entitlement_overrides']['Row']> & {
-      target_type: 'organization' | 'user'
-      target_id: string
-      feature_entitlement_id: string
-      override_action: AdditionalTables['entitlement_overrides']['Row']['override_action']
-      created_by: string
-    }
-    Update: Partial<AdditionalTables['entitlement_overrides']['Row']>
-    Relationships: []
-  }
   entitlement_audit_log: {
     Row: {
       id: string
@@ -231,7 +18,9 @@ type AdditionalTables = {
       reason: string | null
       created_at: string
     }
-    Insert: AdditionalTables['entitlement_audit_log']['Row']
+    Insert: Partial<AdditionalTables['entitlement_audit_log']['Row']> & {
+      action: string
+    }
     Update: Partial<AdditionalTables['entitlement_audit_log']['Row']>
     Relationships: []
   }
@@ -263,9 +52,7 @@ type AdditionalTables = {
     }
     Insert: Partial<AdditionalTables['event_general_rsvps']['Row']> & {
       event_id: string
-      user_id?: string | null
       status: 'going' | 'not_going' | 'maybe'
-      responded_at?: string | null
     }
     Update: Partial<AdditionalTables['event_general_rsvps']['Row']>
     Relationships: [
@@ -333,140 +120,11 @@ type AdditionalTables = {
       }
     ]
   }
-  levels: {
-    Row: {
-      id: string
-      org_id: string
-      program_id: string
-      name: string
-      level_type: 'age_based' | 'grade_based' | 'skill_based'
-      description: string | null
-      age_min: number | null
-      age_max: number | null
-      grade_min: number | null
-      grade_max: number | null
-      skill_min: number | null
-      skill_max: number | null
-      created_at: string
-      updated_at: string
-      deleted_at: string | null
-    }
-    Insert: Partial<AdditionalTables['levels']['Row']> & {
-      org_id: string
-      program_id: string
-      name: string
-      level_type: 'age_based' | 'grade_based' | 'skill_based'
-    }
-    Update: Partial<AdditionalTables['levels']['Row']>
-    Relationships: []
-  }
-  attendance_settings: {
-    Row: {
-      org_id: string
-      reminder_enabled: boolean
-      lock_after_hours: number
-      required_for_practice: boolean
-      required_for_game: boolean
-      required_for_meeting: boolean
-      created_at: string
-      updated_at: string
-    }
-    Insert: Partial<AdditionalTables['attendance_settings']['Row']> & {
-      org_id: string
-    }
-    Update: Partial<AdditionalTables['attendance_settings']['Row']>
-    Relationships: []
-  }
-  team_seasons: {
-    Row: {
-      id: string
-      team_id: string
-      season_id: string
-      is_active: boolean
-      created_at: string | null
-      updated_at: string | null
-    }
-    Insert: {
-      id?: string
-      team_id: string
-      season_id: string
-      is_active?: boolean
-      created_at?: string | null
-      updated_at?: string | null
-    }
-    Update: {
-      id?: string
-      team_id?: string
-      season_id?: string
-      is_active?: boolean
-      created_at?: string | null
-      updated_at?: string | null
-    }
-    Relationships: []
-  }
 }
 
-type ViewDef<Row> = {
-  Row: Row
-  Relationships: []
-  // include these if your generated views have them:
-  Insert: never
-  Update: never
-}
-
+// Additional views that are NOT present in database.types.ts
 type AdditionalViews = {
-  admin_license_tiers_list: ViewDef<
-    AdditionalTables['license_tiers']['Row'] & {
-      included_features_count: number
-      orgs_using_count: number
-    }
-  > 
-  admin_entitlement_overrides_list: ViewDef<
-    AdditionalTables['entitlement_overrides']['Row'] & {
-      target_name: string | null
-      feature_key: string
-      feature_name: string
-      created_by_email: string | null
-      revoked_by_email: string | null
-      target_type: OverrideTargetType
-      status: OverrideStatus
-    }
-  >
-  admin_feature_entitlements_list: ViewDef<
-    AdditionalTables['feature_entitlements']['Row'] & {
-      tier_assignments_count: number
-      active_overrides_count: number
-      assigned_tier_keys: string[]
-      integrations: string[]
-      is_quantifiable: boolean
-      discovery_source: 'auto-discovered' | 'manually-created' | 'override-custom'
-      visible_to_admin: boolean
-      visible_to_coach: boolean
-      visible_to_parent: boolean
-    }
-  >
-  admin_audit_log: ViewDef<{
-    id: string
-    actor_id: string | null
-    actor_email: string | null
-    actor_name: string | null
-    action: string
-    entity_type: string
-    entity_id: string
-    metadata: Record<string, unknown>
-    created_at: string}
-  >
-  team_seasons_view: ViewDef<{
-    team_id: string
-    season_id: string
-    org_id: string
-    name: string
-    start_date: string
-    end_date: string
-    season_is_active: boolean
-    is_active: boolean
-  }>
-  // Admin feature flag views - these exist in database.types.ts but we ensure they're typed correctly
+  // admin_feature_flags_list view with additional computed columns
   admin_feature_flags_list: {
     Row: {
       id: string
@@ -484,6 +142,9 @@ type AdditionalViews = {
       org_override_count: number
       user_override_count: number
     }
+    Insert: never
+    Update: never
+    Relationships: []
   }
   admin_feature_flag_overrides: {
     Row: {
@@ -500,6 +161,9 @@ type AdditionalViews = {
       created_at: string
       updated_at: string
     }
+    Insert: never
+    Update: never
+    Relationships: []
   }
   admin_feature_flag_audit: {
     Row: {
@@ -517,446 +181,31 @@ type AdditionalViews = {
       environment: Database['public']['Enums']['feature_flag_environment']
       created_at: string
     }
+    Insert: never
+    Update: never
+    Relationships: []
   }
-  admin_fees_status: {
+  admin_audit_log: {
     Row: {
-      fee_id: string
-      fee_name: string
-      amount_cents: number
-      currency: string | null
-      due_date: string | null
-      fee_status: Database['public']['Enums']['fee_status']
-      org_id: string
-      organization_name: string
-      assigned_count: number
-      paid_count: number
-      unpaid_count: number
-      payment_rate_percent: number
-    }
-  }
-  admin_license_metrics: ViewDef<{
-    active_tiers: number
-    total_features: number
-    orgs_on_basic: number
-    orgs_on_power: number
-    active_overrides: number
-    tiers_missing_price_id: number
-    features_without_assignment: number
-    tiers_with_archived_features?: number
-  }>
-}
-
-// RPC response type for admin functions
-type AdminRpcResponse = {
-  success: boolean
-  error?: string
-  action?: string
-  flag_id?: string
-}
-
-type AdditionalFunctions = {
-  resolve_feature_flag: {
-    Args: {
-      p_feature_key: string
-      p_user_id?: string | null
-      p_org_id?: string | null
-      p_environment?: string | null
-    }
-    Returns: {
-      value: unknown
-      value_type: 'boolean' | 'integer' | 'double' | 'string' | null
-      resolved_from: 'platform' | 'organization' | 'user' | null
-      source_id: string | null
-    }
-  }
-  resolve_feature_flags: {
-    Args: {
-      p_feature_keys: string[]
-      p_user_id?: string | null
-      p_org_id?: string | null
-      p_environment?: string | null
-    }
-    Returns: {
-      feature_key: string
-      value: unknown
-      value_type: 'boolean' | 'integer' | 'double' | 'string' | null
-      resolved_from: 'platform' | 'organization' | 'user' | null
-      source_id: string | null
-    }[]
-  }
-  // Admin RPCs with typed return values
-  admin_activate_organization: {
-    Args: {
-      target_org_id: string
-      reason: string
-    }
-    Returns: AdminRpcResponse
-  }
-  admin_suspend_organization: {
-    Args: {
-      target_org_id: string
-      reason: string
-    }
-    Returns: AdminRpcResponse
-  }
-  admin_disable_user: {
-    Args: {
-      target_user_id: string
-      reason: string
-    }
-    Returns: AdminRpcResponse
-  }
-  admin_enable_user: {
-    Args: {
-      target_user_id: string
-      reason: string
-    }
-    Returns: AdminRpcResponse
-  }
-  admin_add_platform_admin: {
-    Args: {
-      target_email: string
-      target_role: Database['public']['Enums']['platform_admin_role']
-      reason: string
-    }
-    Returns: AdminRpcResponse & { action?: 'added' | 'updated' }
-  }
-  admin_remove_platform_admin: {
-    Args: {
-      target_user_id: string
-      reason: string
-    }
-    Returns: AdminRpcResponse
-  }
-  admin_create_feature_flag: {
-    Args: {
-      p_key: string
-      p_value_type: Database['public']['Enums']['feature_flag_value_type']
-      p_environment: Database['public']['Enums']['feature_flag_environment']
-      p_description?: string
-    }
-    Returns: AdminRpcResponse & { flag_id?: string }
-  }
-  admin_set_platform_default: {
-    Args: {
-      p_feature_flag_id: string
-      p_environment: Database['public']['Enums']['feature_flag_environment']
-      p_reason: string
-      p_value_boolean?: boolean | null
-      p_value_integer?: number | null
-      p_value_double?: number | null
-      p_expected_version?: number | null
-    }
-    Returns: AdminRpcResponse
-  }
-  admin_set_org_override: {
-    Args: {
-      p_feature_flag_id: string
-      p_org_id: string
-      p_environment: Database['public']['Enums']['feature_flag_environment']
-      p_reason: string
-      p_value_boolean?: boolean | null
-      p_value_integer?: number | null
-      p_value_double?: number | null
-      p_expected_version?: number | null
-    }
-    Returns: AdminRpcResponse
-  }
-  admin_set_user_override: {
-    Args: {
-      p_feature_flag_id: string
-      p_user_id: string
-      p_environment: Database['public']['Enums']['feature_flag_environment']
-      p_reason: string
-      p_value_boolean?: boolean | null
-      p_value_integer?: number | null
-      p_value_double?: number | null
-      p_expected_version?: number | null
-    }
-    Returns: AdminRpcResponse
-  }
-  admin_remove_org_override: {
-    Args: {
-      p_feature_flag_id: string
-      p_org_id: string
-      p_environment: Database['public']['Enums']['feature_flag_environment']
-      p_reason: string
-      p_expected_version?: number | null
-    }
-    Returns: AdminRpcResponse
-  }
-  admin_remove_user_override: {
-    Args: {
-      p_feature_flag_id: string
-      p_user_id: string
-      p_environment: Database['public']['Enums']['feature_flag_environment']
-      p_reason: string
-      p_expected_version?: number | null
-    }
-    Returns: AdminRpcResponse
-  }
-  admin_delete_feature_flag: {
-    Args: {
-      p_feature_flag_id: string
-      p_environment: Database['public']['Enums']['feature_flag_environment']
-      p_reason: string
-    }
-    Returns: AdminRpcResponse
-  }
-  admin_restore_feature_flag: {
-    Args: {
-      p_feature_flag_id: string
-      p_environment: Database['public']['Enums']['feature_flag_environment']
-      p_reason: string
-    }
-    Returns: AdminRpcResponse
-  }
-  admin_set_feature_flag: {
-    Args: {
-      target_feature_key: string
-      target_org_id: string
-      target_enabled: boolean
-      reason: string
-    }
-    Returns: AdminRpcResponse
-  }
-  log_event: {
-    Args: {
-      p_category: Database['public']['Enums']['event_category']
-      p_event_type: string
-      p_actor_role: Database['public']['Enums']['event_actor_role']
-      p_actor_user_id?: string | null
-      p_org_id?: string | null
-      p_target_entity_type?: string | null
-      p_target_entity_id?: string | null
-      p_metadata?: Json | null
-      p_ip_address?: string | null
-      p_user_agent?: string | null
-      p_idempotency_key?: string | null
-    }
-    Returns: string | null // Returns UUID of created event or null
-  }
-  is_child_eligible_for_event: {
-    Args: {
-      p_child_id: string
-      p_event_id: string
-    }
-    Returns: boolean
-  }
-  get_user_organizations: {
-    Args: {
-      check_user_id: string
-    }
-    Returns: {
-      org_id: string
-      org_name: string
-      roles: string[]
-    }[]
-  }
-  update_event_rsvp_config: {
-    Args: {
-      p_event_id: string
-      p_rsvp_enabled: boolean
-      p_rsvp_type: 'general' | 'athlete' | null
-      p_clear_existing: boolean
-    }
-    Returns: { success: boolean; error?: string }
-  }
-  get_event_rsvp_summary: {
-    Args: {
-      p_event_id: string
-    }
-    Returns: {
-      going_count: number
-      late_count: number
-      not_going_count: number
-      unknown_count: number
-      total_children: number
-      response_rate: number
-    }
-  }
-  set_travel_override: {
-    Args: {
-      p_event_id: string
-      p_is_travel: boolean
-      p_reason: string | null
-    }
-    Returns: void
-  }
-  clear_travel_override: {
-    Args: {
-      p_event_id: string
-    }
-    Returns: void
-  }
-  // Organization user management
-  get_organization_users: {
-    Args: {
-      target_org_id: string
-    }
-    Returns: {
       id: string
-      email: string
-      phone: string | null
-      display_name: string | null
-      roles: string[]
-      is_platform_admin: boolean
-      last_sign_in_at: string | null
-      email_confirmed: boolean
-      is_disabled: boolean
+      actor_id: string | null
+      actor_email: string | null
+      actor_name: string | null
+      action: string
+      entity_type: string
+      entity_id: string
+      metadata: Record<string, unknown>
       created_at: string
-      updated_at: string
-    }[]
+    }
+    Insert: never
+    Update: never
+    Relationships: []
   }
-  // Bulk feature operations
-  bulk_update_feature_status: {
-    Args: {
-      p_feature_ids: string[]
-      p_new_status: string
-    }
-    Returns: {
-      success: boolean
-      updated?: number
-      error?: string
-      code?: string
-      message?: string
-      locked_features?: Array<{
-        feature_key: string
-        display_name: string
-        lock_reason: string | null
-      }>
-    }
-  }
-  bulk_update_feature_category: {
-    Args: {
-      p_feature_ids: string[]
-      p_new_category: string
-    }
-    Returns: {
-      success: boolean
-      updated?: number
-      error?: string
-      code?: string
-      message?: string
-    }
-  }
-  bulk_apply_to_tiers: {
-    Args: {
-      p_feature_ids: string[]
-      p_tier_ids: string[]
-      p_action: 'add' | 'remove'
-      p_role_admin?: boolean
-      p_role_coach?: boolean
-      p_role_parent?: boolean
-    }
-    Returns: {
-      success: boolean
-      processed?: number
-      error?: string
-      code?: string
-      message?: string
-      locked_features?: Array<{
-        feature_key: string
-        display_name: string
-        lock_reason: string | null
-      }>
-    }
-  }
-  bulk_update_role_visibility: {
-    Args: {
-      p_feature_ids: string[]
-      p_role_type: 'admin' | 'coach' | 'parent'
-      p_visible: boolean
-    }
-    Returns: {
-      success: boolean
-      updated?: number
-      error?: string
-      code?: string
-      message?: string
-      locked_features?: Array<{
-        feature_key: string
-        display_name: string
-        lock_reason: string | null
-      }>
-    }
-  }
-  // Family and athlete management
-  create_athlete_with_guardians: {
-    Args: {
-      p_org_id: string
-      p_athlete_data: {
-        first_name: string
-        last_name: string
-        birthdate?: string | null
-        gender?: string | null
-        preferred_name?: string | null
-        jersey_number?: string | null
-        medical_notes?: string | null
-        allergies?: string | null
-        emergency_contact_name?: string | null
-        emergency_contact_phone?: string | null
-      }
-      p_guardians?: Array<{
-        email: string
-        display_name?: string | null
-        phone?: string | null
-      }>
-      p_athlete_sports?: Array<{
-        sport_id: string
-        sport_type: 'plays' | 'interested'
-      }>
-    }
-    Returns: {
-      success: boolean
-      athlete_id?: string
-      error?: string
-      guardian_results?: Array<{
-        email: string
-        user_id: string | null
-        linked: boolean
-        error?: string
-      }>
-    }
-  }
-  get_derived_family_for_athlete: {
-    Args: {
-      p_athlete_id: string
-      p_org_id: string
-    }
-    Returns: {
-      athlete_ids: string[]
-      guardian_ids: string[]
-      athletes: Array<{
-        id: string
-        first_name: string
-        last_name: string
-        birthdate: string | null
-        gender: string | null
-      }>
-      guardians: Array<{
-        id: string
-        email: string
-        display_name: string | null
-        phone: string | null
-      }>
-      is_derived: boolean
-      has_guardians: boolean
-    }
-  }
-  get_orphaned_athletes: {
-    Args: {
-      p_org_id: string
-    }
-    Returns: {
-      athlete_id: string
-      first_name: string
-      last_name: string
-      birthdate: string | null
-      created_at: string
-    }[]
-  }
-  // Role management
+}
+
+// Additional RPC functions that are NOT present in database.types.ts
+type AdditionalFunctions = {
+  // Role management functions
   admin_add_org_role: {
     Args: {
       target_user_id: string
@@ -997,50 +246,31 @@ type AdditionalFunctions = {
       error?: string
     }
   }
-  // Feature discovery
-  sync_discovered_features: {
+  // Event RSVP functions
+  update_event_rsvp_config: {
     Args: {
-      p_discovered_features: Array<{
-        featureKey: string
-        displayName?: string
-        category?: string
-        featureType?: string
-        description?: string | null
-        rolloutStatus?: string
-      }>
+      p_event_id: string
+      p_rsvp_enabled: boolean
+      p_rsvp_type: 'general' | 'athlete' | null
+      p_clear_existing: boolean
     }
-    Returns: {
-      success: boolean
-      synced: number
-      failed: number
-      errors: Array<{
-        key: string
-        error: string
-      }>
-      total: number
-      message?: string
-      code?: string
+    Returns: { success: boolean; error?: string }
+  }
+  is_child_eligible_for_event: {
+    Args: {
+      p_child_id: string
+      p_event_id: string
     }
-  }
-  get_schema_tables: {
-    Args: Record<string, never>
-    Returns: {
-      table_name: string
-      table_type: string
-    }[]
-  }
-  get_schema_columns: {
-    Args: Record<string, never>
-    Returns: {
-      table_name: string
-      column_name: string
-      data_type: string
-    }[]
+    Returns: boolean
   }
 }
 
+// Override status and target types for entitlement overrides
+export type OverrideStatus = 'active' | 'expired' | 'revoked'
+export type OverrideTargetType = 'organization' | 'user'
+
 export type SupabaseExtended = Omit<Database, 'public'> & {
-  public: Database['public'] & {
+  public: Omit<Database['public'], 'Tables' | 'Views' | 'Functions'> & {
     Tables: Database['public']['Tables'] & AdditionalTables
     Views: Database['public']['Views'] & AdditionalViews
     Functions: Database['public']['Functions'] & AdditionalFunctions
