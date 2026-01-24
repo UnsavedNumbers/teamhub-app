@@ -227,13 +227,43 @@ export function isStripeVerificationValid(verifiedAt: string | null): boolean {
  * Get archived features count for a tier
  */
 export async function getArchivedFeaturesCount(tierId: string): Promise<number> {
-  const { count } = await supabase
-    .from('tier_feature_assignments')
-    .select('*', { count: 'exact', head: true })
-    .eq('license_tier_id', tierId)
-    .eq('included', true)
-    .not('feature_entitlement_id', 'in',
-      `(SELECT id FROM feature_entitlements WHERE archived_at IS NULL)`)
+  try {
+    // First, get all assignments for this tier
+    const { data: assignments, error: assignmentsError } = await supabase
+      .from('tier_feature_assignments')
+      .select('feature_entitlement_id')
+      .eq('license_tier_id', tierId)
+      .eq('included', true)
 
-  return count || 0
+    if (assignmentsError) {
+      console.error('Error fetching assignments:', assignmentsError)
+      return 0
+    }
+
+    if (!assignments || assignments.length === 0) {
+      return 0
+    }
+
+    // Get all non-archived feature IDs
+    const { data: activeFeatures, error: featuresError } = await supabase
+      .from('feature_entitlements')
+      .select('id')
+      .is('archived_at', null)
+
+    if (featuresError) {
+      console.error('Error fetching features:', featuresError)
+      return 0
+    }
+
+    // Count assignments that reference archived features
+    const activeFeatureIds = new Set((activeFeatures || []).map(f => f.id))
+    const archivedCount = (assignments || []).filter(
+      assignment => !activeFeatureIds.has(assignment.feature_entitlement_id)
+    ).length
+
+    return archivedCount
+  } catch (err) {
+    console.error('Error getting archived features count:', err)
+    return 0
+  }
 }

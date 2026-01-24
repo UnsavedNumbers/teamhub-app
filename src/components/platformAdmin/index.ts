@@ -17,6 +17,8 @@ export { default as Badge } from './Badge'
 export { default as Table, type TableColumn } from './Table'
 export { default as PlatformDataTable, type ColumnConfig } from './PlatformDataTable'
 export { default as StandardTable, type StandardTableProps } from './StandardTable'
+export { MaskedStripeId } from './MaskedStripeId'
+export { DataState } from './DataState'
 
 // Controls
 export { default as Button } from './Button'
@@ -38,4 +40,7 @@ export { DiscoveryErrorBoundary } from './DiscoveryErrorBoundary'
 export { ProgressBar, MultiStepProgressBar } from './ProgressBar'
 export { default as BulkActionsToolbar } from './BulkActionsToolbar'
 export { ApplyToTiersModal, ChangeStatusModal, ChangeVisibilityModal, UpdateCategoryModal } from './BulkActionModals'
+export { AddRoleModal } from './AddRoleModal'
+export { ChangeRoleModal } from './ChangeRoleModal'
+export { ManagePlatformAdminModal } from './ManagePlatformAdminModal'
 

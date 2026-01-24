@@ -7,7 +7,7 @@
 
 export { default as PlatformAdminDashboard } from './PlatformAdminDashboard'
 export { default as Organizations } from './Organizations'
-export { default as OrganizationDetail } from './OrganizationDetail'
+export { default as OrganizationDetail } from './organizationDetail/OrganizationDetail'
 export { default as Users } from './Users'
 export { default as UserDetail } from './UserDetail'
 export { default as Structure } from './Structure'
