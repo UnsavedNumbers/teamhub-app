@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Controller, useForm } from 'react-hook-form'
+import { useSearchParams } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { getErrorMessage } from '../../utils/errorUtils'
@@ -16,7 +17,8 @@ import {
   Tabs,
   TabsList,
   TabsTrigger,
-  TabsContent
+  TabsContent,
+  Badge
 } from '../../components/platformAdmin'
 
 import { 
@@ -39,6 +41,14 @@ import {
   type OrganizationThemeSettings,
 } from '../../data/services/organizationSettingsService'
 
+import {
+  initiateStripeConnectOnboarding,
+  getStripeConnectStatus,
+  refreshStripeConnectStatus,
+} from '../../data/services/paymentSettingsService'
+
+import type { StripeConnectStatus } from '../../types/stripeConnect.types'
+
 import { type OrganizationSettings as OrgSettingsType } from '@/types/organizationSettings'
 
 import type { Organization } from '../../types/domain/Organization'
@@ -46,12 +56,32 @@ import type { Organization } from '../../types/domain/Organization'
 export default function OrganizationSettings() {
   const { currentOrganization } = useOrganization()
   const { context, isReady } = useUserContext()
+  const [searchParams, setSearchParams] = useSearchParams()
   
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('overview')
+  
+  // Check for onboarding redirect
+  useEffect(() => {
+    const onboarded = searchParams.get('onboarded')
+    if (onboarded === 'true') {
+      setActiveTab('payments')
+      setSearchParams({}, { replace: true })
+      // Poll status with exponential backoff
+      let attempts = 0
+      const pollStatus = async () => {
+        if (attempts < 3 && currentOrganization?.id) {
+          await refreshStripeConnectStatus(currentOrganization.id)
+          attempts++
+          setTimeout(pollStatus, Math.pow(2, attempts) * 1000)
+        }
+      }
+      pollStatus()
+    }
+  }, [searchParams, currentOrganization?.id, setSearchParams])
 
   // Data State
   const [orgDetails, setOrgDetails] = useState<Organization | null>(null)
@@ -278,6 +308,10 @@ export default function OrganizationSettings() {
 
         <TabsContent value="permissions">
            {settings && <PermissionsForm settings={settings.visibility} onSave={(d) => handleSaveSettings('visibility', d)} loading={saving} />}
+        </TabsContent>
+
+        <TabsContent value="payments">
+          {currentOrganization && <PaymentSettingsForm organizationId={currentOrganization.id} />}
         </TabsContent>
 
         <TabsContent value="advanced">
@@ -669,6 +703,174 @@ function PermissionsForm({ settings, onSave, loading }: { settings: OrgSettingsT
           <Button type="submit" loading={loading} variant="primary">Update Permissions</Button>
         </div>
       </form>
+    </Card>
+  )
+}
+
+function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
+  const [connectStatus, setConnectStatus] = useState<StripeConnectStatus | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [onboarding, setOnboarding] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadStatus = useCallback(async () => {
+    if (!organizationId) return
+    setLoading(true)
+    setError(null)
+    const { data, error: statusError } = await getStripeConnectStatus(organizationId)
+    if (statusError) {
+      setError(statusError.message)
+    } else {
+      setConnectStatus(data)
+    }
+    setLoading(false)
+  }, [organizationId])
+
+  useEffect(() => {
+    loadStatus()
+  }, [loadStatus])
+
+  const handleConnect = async () => {
+    if (!organizationId) return
+    setOnboarding(true)
+    setError(null)
+    const { data, error: onboardError } = await initiateStripeConnectOnboarding(organizationId)
+    if (onboardError) {
+      setError(onboardError.message)
+      setOnboarding(false)
+    } else if (data?.account_link_url) {
+      window.location.href = data.account_link_url
+    }
+  }
+
+  const handleRefresh = async () => {
+    if (!organizationId) return
+    setRefreshing(true)
+    setError(null)
+    const { error: refreshError } = await refreshStripeConnectStatus(organizationId)
+    if (refreshError) {
+      setError(refreshError.message)
+    } else {
+      await loadStatus()
+      showSuccess('Connect status refreshed')
+    }
+    setRefreshing(false)
+  }
+
+  if (loading) {
+    return (
+      <Card>
+        <div className="pa-text-center pa-p-8">Loading payment settings...</div>
+      </Card>
+    )
+  }
+
+  return (
+    <Card>
+      <h3 className="pa-h3 pa-mb-4">Stripe Connect Settings</h3>
+      
+      {error && (
+        <div className="pa-alert pa-alert-error pa-mb-4" style={{ background: 'var(--pa-danger-bg)', color: 'var(--pa-danger)', padding: '1rem', borderRadius: '8px' }}>
+          {error}
+        </div>
+      )}
+
+      <div className="pa-form-group pa-mb-6">
+        <div className="pa-mb-4">
+          <div className="pa-caption pa-text-muted pa-mb-2">Connection Status</div>
+          <div className="pa-flex pa-items-center pa-gap-2">
+            <Badge variant={connectStatus?.connected ? 'success' : 'neutral'}>
+              {connectStatus?.connected ? 'Connected' : 'Not Connected'}
+            </Badge>
+            {connectStatus?.connected && (
+              <Button
+                variant="ghost"
+                size="dense"
+                icon="refresh"
+                onClick={handleRefresh}
+                disabled={refreshing}
+              >
+                Refresh Status
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {connectStatus?.connected && (
+          <>
+            <div className="pa-mb-4">
+              <div className="pa-caption pa-text-muted pa-mb-2">Payout Status</div>
+              <Badge variant={connectStatus.payoutsEnabled ? 'success' : 'neutral'}>
+                {connectStatus.payoutsEnabled ? 'Enabled' : 'Disabled'}
+              </Badge>
+            </div>
+
+            <div className="pa-mb-4">
+              <div className="pa-caption pa-text-muted pa-mb-2">Onboarding Status</div>
+              <Badge
+                variant={
+                  connectStatus.onboardingStatus === 'completed'
+                    ? 'success'
+                    : connectStatus.onboardingStatus === 'restricted'
+                      ? 'danger'
+                      : 'warning'
+                }
+              >
+                {connectStatus.onboardingStatus}
+              </Badge>
+            </div>
+
+            {connectStatus.payoutDescriptor && (
+              <div className="pa-mb-4">
+                <div className="pa-caption pa-text-muted pa-mb-2">Payout Descriptor</div>
+                <div className="pa-text-sm">{connectStatus.payoutDescriptor}</div>
+              </div>
+            )}
+
+            {connectStatus.dashboardUrl && (
+              <div className="pa-mb-4">
+                <Button
+                  variant="ghost"
+                  icon="open_in_new"
+                  onClick={() => window.open(connectStatus.dashboardUrl!, '_blank')}
+                >
+                  View in Stripe Dashboard
+                </Button>
+              </div>
+            )}
+
+            {connectStatus.onboardingStatus !== 'completed' && (
+              <div className="pa-mb-4">
+                <Button
+                  variant="primary"
+                  onClick={handleConnect}
+                  disabled={onboarding}
+                  loading={onboarding}
+                >
+                  Complete Onboarding
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+
+        {!connectStatus?.connected && (
+          <div className="pa-mb-4">
+            <p className="pa-text-sm pa-text-muted pa-mb-4">
+              Connect your Stripe account to receive payments directly from parents.
+            </p>
+            <Button
+              variant="primary"
+              onClick={handleConnect}
+              disabled={onboarding}
+              loading={onboarding}
+            >
+              Connect Stripe Account
+            </Button>
+          </div>
+        )}
+      </div>
     </Card>
   )
 }

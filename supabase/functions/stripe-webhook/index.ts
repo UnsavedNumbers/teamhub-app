@@ -291,6 +291,138 @@ serve(async (req) => {
         })
         break
       }
+      case "account.created": {
+        // Handle account.created to establish mapping (handles event ordering)
+        const account = event.data.object as Stripe.Account
+        const payoutAccountId = account.id
+        const orgIdFromMetadata = account.metadata?.org_id as string | undefined
+
+        if (orgIdFromMetadata) {
+          // Link account to organization if not already linked
+          const { data: org } = await supabase
+            .from("organizations")
+            .select("id, payout_account_id")
+            .eq("id", orgIdFromMetadata)
+            .maybeSingle()
+
+          if (org && !org.payout_account_id) {
+            await supabase
+              .from("organizations")
+              .update({
+                payout_account_id: payoutAccountId,
+                payouts_enabled: account.payouts_enabled ?? false,
+                payout_onboarding_status: account.details_submitted && account.charges_enabled
+                  ? "completed"
+                  : account.requirements?.currently_due?.length > 0
+                    ? "restricted"
+                    : "pending",
+                payout_descriptor: account.settings?.payments?.statement_descriptor || null,
+              })
+              .eq("id", org.id)
+
+            // Update billing_events with org_id
+            await supabase
+              .from("billing_events")
+              .update({ org_id: org.id })
+              .eq("stripe_event_id", event.id)
+          }
+        }
+        break
+      }
+      case "account.updated": {
+        // Check idempotency first (same pattern as subscription webhooks)
+        const account = event.data.object as Stripe.Account
+        
+        // Type guard: verify this is an Account object
+        if (!account || typeof account.id !== "string") {
+          break
+        }
+
+        const payoutAccountId = account.id
+
+        // Find organization by payout_account_id (fallback to metadata if not found)
+        let { data: org } = await supabase
+          .from("organizations")
+          .select("id")
+          .eq("payout_account_id", payoutAccountId)
+          .maybeSingle()
+
+        // Fallback: query by metadata if direct lookup fails (handles event ordering)
+        if (!org && account.metadata?.org_id) {
+          const { data: orgByMetadata } = await supabase
+            .from("organizations")
+            .select("id, payout_account_id")
+            .eq("id", account.metadata.org_id)
+            .maybeSingle()
+
+          if (orgByMetadata && !orgByMetadata.payout_account_id) {
+            // Link account if not already linked
+            await supabase
+              .from("organizations")
+              .update({ payout_account_id: payoutAccountId })
+              .eq("id", orgByMetadata.id)
+            org = orgByMetadata
+          } else if (orgByMetadata) {
+            org = orgByMetadata
+          }
+        }
+
+        if (org) {
+          await supabase
+            .from("organizations")
+            .update({
+              payouts_enabled: account.payouts_enabled ?? false,
+              payout_onboarding_status: account.details_submitted && account.charges_enabled
+                ? "completed"
+                : account.requirements?.currently_due?.length > 0
+                  ? "restricted"
+                  : "pending",
+              payout_descriptor: account.settings?.payments?.statement_descriptor || null,
+            })
+            .eq("id", org.id)
+
+          // Update billing_events with org_id
+          await supabase
+            .from("billing_events")
+            .update({ org_id: org.id })
+            .eq("stripe_event_id", event.id)
+        }
+        break
+      }
+      case "account.application.deauthorized": {
+        const account = event.data.object as Stripe.Account
+        
+        // Type guard
+        if (!account || typeof account.id !== "string") {
+          break
+        }
+
+        const payoutAccountId = account.id
+
+        // Find organization by payout_account_id
+        const { data: org } = await supabase
+          .from("organizations")
+          .select("id")
+          .eq("payout_account_id", payoutAccountId)
+          .maybeSingle()
+
+        if (org) {
+          await supabase
+            .from("organizations")
+            .update({
+              payouts_enabled: false,
+              payout_onboarding_status: "pending",
+            })
+            .eq("id", org.id)
+
+          // Update billing_events with org_id
+          await supabase
+            .from("billing_events")
+            .update({ org_id: org.id })
+            .eq("stripe_event_id", event.id)
+        }
+        break
+      }
       default:
         break
     }

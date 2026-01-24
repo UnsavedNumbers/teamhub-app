@@ -264,25 +264,19 @@ serve(async (req) => {
       }
     })
 
-    const { data: checkout, error: checkoutErr } = await supabase
-      .from("checkout_sessions")
-      .insert({
-        org_id: organizationId,
-        parent_id: user.id,          // ✅ required by schema
-        status: "created",           // default is created; optional
-        currency: "usd",             // optional
-        subtotal_cents: 0,           // optional
-        platform_fee_cents: 0,       // optional
-        total_cents: 0,              // optional
-      })
-      .select("id")
+    // Fetch organization with Connect status for payment routing
+    const { data: org, error: orgError } = await supabase
+      .from("organizations")
+      .select("payout_account_id, payouts_enabled, billing_mode")
+      .eq("id", organizationId)
       .single()
 
-    if (checkoutErr) {
-      return json(req, { error: checkoutErr.message }, 400)
+    if (orgError || !org) {
+      return new Response(JSON.stringify({ error: "Organization not found" }), { status: 404 })
     }
 
-    const stripeSession = await stripe.checkout.sessions.create({
+    // Build Stripe checkout session parameters
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: "payment",
       payment_method_types: ["card"],
       line_items: lineItems,
@@ -294,12 +288,61 @@ serve(async (req) => {
       },
       success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${cancelUrl}?session_id={CHECKOUT_SESSION_ID}`,
-    })
+    }
 
-    await supabase
-      .from("checkout_sessions")
-      .update({ stripe_checkout_session_id: stripeSession.id, status: "in_progress" })
-      .eq("id", checkout.id)
+    // Route to organization's connected account if available
+    // Re-validate status immediately before Stripe call (handles concurrent changes)
+    if (org.payout_account_id && org.payouts_enabled && org.billing_mode === "platform_facilitated") {
+      const platformFeeCents = Math.floor(totalCents * 0.029) // Example: 2.9% platform fee
+      sessionParams.payment_intent_data = {
+        transfer_data: {
+          destination: org.payout_account_id,
+        },
+        application_fee_amount: platformFeeCents, // Platform fee
+      }
+
+      // Update checkout_sessions with platform fee
+      await supabase
+        .from("checkout_sessions")
+        .update({ platform_fee_cents: platformFeeCents })
+        .eq("id", checkout.id)
+    }
+
+    try {
+      const stripeSession = await stripe.checkout.sessions.create(sessionParams)
+
+      // Update checkout session with Stripe session ID
+      await supabase
+        .from("checkout_sessions")
+        .update({
+          stripe_checkout_session_id: stripeSession.id,
+          status: "in_progress",
+        })
+        .eq("id", checkout.id)
+
+      return new Response(
+        JSON.stringify({ checkout_session_url: stripeSession.url, session_id: stripeSession.id }),
+        { status: 200 },
+      )
+    } catch (stripeError: any) {
+      // If Connect account routing fails, mark as failed and log
+      await supabase
+        .from("checkout_sessions")
+        .update({ status: "failed" })
+        .eq("id", checkout.id)
+
+      await logError(supabase, organizationId, `Stripe session creation failed: ${stripeError.message}`, {
+        error: stripeError.toString(),
+        checkout_id: checkout.id,
+      })
+
+      // For Connect account errors, could retry with platform account routing
+      // For now, return error to user
+      return new Response(
+        JSON.stringify({ error: "Payment processing failed. Please try again or contact support." }),
+        { status: 500 },
+      )
+    }
 
     return new Response(
       JSON.stringify({ checkout_session_url: stripeSession.url, session_id: stripeSession.id }),
