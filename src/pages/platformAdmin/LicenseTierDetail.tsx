@@ -14,6 +14,7 @@ import { shouldBlockInDemoMode, getDemoModeError } from '../../utils/demoMode'
 import { showSuccess, showError } from '../../utils/toast'
 import { getLink } from '../../utils/routes'
 import { RouteKeys } from '../../utils/routes'
+import { useI18n } from '../../i18n/useI18n'
 
 // Unused - keep for future use
 // const FEATURE_CATEGORIES_OPTIONS = FEATURE_CATEGORIES.map(cat => ({ value: cat, label: cat }))
@@ -23,6 +24,7 @@ export default function LicenseTierDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { isOffline } = useOffline()
+  const { t } = useI18n()
   const isNew = id === 'new'
 
   const [tier, setTier] = useState<Partial<LicenseTier>>({
@@ -306,7 +308,7 @@ export default function LicenseTierDetail() {
         } catch (assignmentError: any) {
           console.error('Error saving assignments:', assignmentError)
           // Tier was created but assignments failed - show warning but continue
-          showError('Tier created but some feature assignments failed to save. Please review and update manually.')
+          showError(t('toast.error.tierCreatedButAssignmentsFailed'))
           // Still navigate to the tier so user can fix assignments
         }
           
@@ -324,7 +326,7 @@ export default function LicenseTierDetail() {
           // Continue - audit failure shouldn't block the operation
         }
           
-        showSuccess('License tier created successfully!')
+        showSuccess(t('toast.success.licenseTierCreated'))
         navigate(`/platform-admin/licenses/tiers/${(data as any).id}`)
         }
       } else {
@@ -382,7 +384,7 @@ export default function LicenseTierDetail() {
         } catch (assignmentError: any) {
           console.error('Error saving assignments:', assignmentError)
           // Tier was updated but assignments failed - show warning
-          showError('Tier updated but some feature assignments failed to save. Please review and update manually.')
+          showError(t('toast.error.tierUpdatedButAssignmentsFailed'))
           // Reload assignments to show current state
           await fetchAssignments()
         }
@@ -405,17 +407,17 @@ export default function LicenseTierDetail() {
         // Refresh tier data to get latest version
         await fetchTier()
         setLastRefreshed(new Date())
-        showSuccess('License tier updated successfully!')
+        showSuccess(t('toast.success.licenseTierUpdated'))
       }
     } catch (err: any) {
       // Provide user-friendly error messages
-      let errorMessage = 'Failed to save tier'
+      let errorMessage = t('toast.error.saveFailed')
       if (err.code === '23505') {
-        errorMessage = 'A tier with this Stripe Price ID already exists'
+        errorMessage = t('toast.error.tierStripePriceIdExists')
       } else if (err.code === '23503') {
-        errorMessage = 'Invalid reference. Please refresh and try again.'
+        errorMessage = t('toast.error.tierInvalidReference')
       } else if (err.code === '42501') {
-        errorMessage = 'Permission denied. You do not have access to modify license tiers.'
+        errorMessage = t('toast.error.tierPermissionDenied')
       } else if (err.message) {
         errorMessage = err.message
       }
@@ -498,7 +500,9 @@ export default function LicenseTierDetail() {
         reason: tier.status === 'active' ? 'Tier archived' : 'Tier activated',
       })
 
-      showSuccess(`License tier ${tier.status === 'active' ? 'archived' : 'activated'} successfully!`)
+      showSuccess(tier.status === 'active' 
+        ? t('toast.success.licenseTierArchived')
+        : t('toast.success.licenseTierActivated'))
       setArchiveDialog(false)
       await fetchTier()
       await fetchOrganizationsUsingTier()
@@ -586,7 +590,7 @@ export default function LicenseTierDetail() {
           reason: `Duplicated from tier ${tier.id}`,
         })
 
-        showSuccess('License tier duplicated successfully!')
+        showSuccess(t('toast.success.licenseTierDuplicated'))
         navigate(`/platform-admin/licenses/tiers/${(newTier as any).id}`)
       }
     } catch (err: any) {

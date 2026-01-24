@@ -8,11 +8,13 @@ import { useOffline } from '../../hooks/useOffline'
 import { isDemoMode, assertNotDemoMode } from '../../utils/demoMode'
 import { showError, showSuccess } from '../../utils/toast'
 import { useAuth } from '../../hooks/useAuth'
+import { useI18n } from '../../i18n/useI18n'
 
 export default function OverrideDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { isOffline } = useOffline()
+  const { t } = useI18n()
   const { profile } = useAuth()
   const demoMode = isDemoMode()
   const [override, setOverride] = useState<EntitlementOverrideWithDetails | null>(null)
@@ -124,7 +126,7 @@ export default function OverrideDetail() {
 
     // Block if offline
     if (isOffline) {
-      const errorMsg = 'You appear to be offline. Please reconnect and try again.'
+      const errorMsg = t('toast.error.offline')
       setError(errorMsg)
       showError(errorMsg)
       setRevokeDialog(false)
@@ -133,14 +135,14 @@ export default function OverrideDetail() {
 
     // Check expiration before revoke (Issue 2)
     if (override.expires_at && new Date(override.expires_at) < new Date()) {
-      showError('Override has expired and cannot be revoked.')
+      showError(t('toast.error.overrideExpiredCannotRevoke'))
       setRevokeDialog(false)
       return
     }
 
     // Check status is active (Issue 2)
     if (override.status !== 'active') {
-      showError(`Cannot revoke override with status: ${override.status}`)
+      showError(t('toast.error.overrideInvalidStatus'))
       setRevokeDialog(false)
       return
     }
@@ -193,19 +195,26 @@ export default function OverrideDetail() {
             setRevoking(false)
             return
           } else if (current && current.revoked_at) {
-            throw new Error('Override has already been revoked.')
+            throw new Error(t('toast.error.overrideAlreadyRevoked'))
           } else {
-            throw new Error('Override not found. It may have been deleted.')
+            throw new Error(t('toast.error.overrideNotFound'))
           }
         }
         throw revokeError
       }
 
       setRevokeDialog(false)
-      showSuccess('Override revoked successfully')
+      showSuccess(t('toast.success.overrideRevoked'))
       fetchOverride()
     } catch (err: any) {
-      const errorMessage = err.message || 'Failed to revoke override'
+      let errorMessage = t('toast.error.operationFailed')
+      if (err.message === t('toast.error.overrideAlreadyRevoked') || 
+          err.message === t('toast.error.overrideNotFound') ||
+          err.message === t('toast.error.permissionDenied')) {
+        errorMessage = err.message
+      } else if (err.message) {
+        errorMessage = err.message
+      }
       setError(errorMessage)
       showError(errorMessage)
     } finally {
