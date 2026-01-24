@@ -41,7 +41,7 @@ BEGIN
   
   -- Check for duplicate in last second (idempotency)
   IF EXISTS (
-    SELECT 1 FROM event_log
+    SELECT 1 FROM event_logs
     WHERE metadata->>'idempotency_key' = v_idempotency_key
     AND created_at > NOW() - INTERVAL '1 second'
   ) THEN
@@ -174,7 +174,7 @@ BEGIN
   
   -- Check for duplicate
   IF EXISTS (
-    SELECT 1 FROM event_log
+    SELECT 1 FROM event_logs
     WHERE metadata->>'idempotency_key' = v_idempotency_key
     AND created_at > NOW() - INTERVAL '1 second'
   ) THEN
@@ -304,7 +304,7 @@ BEGIN
   
   -- Check for duplicate
   IF EXISTS (
-    SELECT 1 FROM event_log
+    SELECT 1 FROM event_logs
     WHERE metadata->>'idempotency_key' = v_idempotency_key
     AND created_at > NOW() - INTERVAL '1 second'
   ) THEN
@@ -403,7 +403,7 @@ BEGIN
   
   -- Check for duplicate
   IF EXISTS (
-    SELECT 1 FROM event_log
+    SELECT 1 FROM event_logs
     WHERE metadata->>'idempotency_key' = v_idempotency_key
     AND created_at > NOW() - INTERVAL '1 second'
   ) THEN
