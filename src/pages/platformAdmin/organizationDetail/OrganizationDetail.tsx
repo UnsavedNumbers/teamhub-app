@@ -28,14 +28,8 @@ import { getStatusVariant } from '../../../utils/organizationUtils'
 import { validateAdminOrganization } from '../../../types/platformAdmin.types'
 import type { AdminOrganization, AdminRpcResponse, PlatformAdminRole } from '../../../types/platformAdmin.types'
 
-// Lazy load tab components
-import { OverviewTab } from './tabs/OverviewTab'
-import { UsersTab } from './tabs/UsersTab'
-import { StructureTab } from './tabs/StructureTab'
-import { PaymentsTab } from './tabs/PaymentsTab'
-import { FeesTab } from './tabs/FeesTab'
-import { ActivityTab } from './tabs/ActivityTab'
-import { FeatureFlagsTab } from './tabs/FeatureFlagsTab'
+// Import tab components from barrel export
+import { OverviewTab, UsersTab, StructureTab, PaymentsTab, FeesTab, ActivityTab, FeatureFlagsTab } from './tabs'
 
 type DialogState =
   | { open: false }
@@ -192,8 +186,19 @@ export default function OrganizationDetail() {
       })
 
       if (rpcError) {
-        const normalized = handleRpcError(rpcError, rpcName)
-        setDialogError(normalized.message)
+        // Check if RPC function doesn't exist
+        const is404 = rpcError.code === 'PGRST116' || 
+                      rpcError.message.includes('404') || 
+                      rpcError.message.includes('not found') ||
+                      rpcError.message.includes('function') ||
+                      rpcError.message.includes('does not exist')
+        
+        if (is404) {
+          setDialogError(`RPC function '${rpcName}' not available. Please ensure database migrations are up to date.`)
+        } else {
+          const normalized = handleRpcError(rpcError, rpcName)
+          setDialogError(normalized.message)
+        }
         return
       }
 

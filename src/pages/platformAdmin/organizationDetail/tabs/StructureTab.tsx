@@ -34,16 +34,25 @@ export function StructureTab({ organizationId }: StructureTabProps) {
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set())
 
   useEffect(() => {
+    isMountedRef.current = true
     return () => {
       isMountedRef.current = false
     }
   }, [])
 
   const fetchStructure = useCallback(async () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StructureTab.tsx:42',message:'fetchStructure START',data:{organizationId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,C'})}).catch(()=>{});
+    // #endregion
+
     if (!organizationId) return
 
     setLoading(true)
     setError(null)
+
+    // #region agent log
+    fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StructureTab.tsx:53',message:'BEFORE query admin_structure',data:{organizationId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,E'})}).catch(()=>{});
+    // #endregion
 
     try {
       const { data, error: fetchError } = await supabase
@@ -53,9 +62,16 @@ export function StructureTab({ organizationId }: StructureTabProps) {
         .order('team_name', { ascending: true })
         .order('season_name', { ascending: true })
 
+      // #region agent log
+      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StructureTab.tsx:65',message:'AFTER query admin_structure',data:{hasData:!!data,hasError:!!fetchError,errorCode:fetchError?.code},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,B'})}).catch(()=>{});
+      // #endregion
+
       if (!isMountedRef.current) return
 
       if (fetchError) {
+        // #region agent log
+        fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StructureTab.tsx:74',message:'Query ERROR',data:{code:fetchError.code,message:fetchError.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,B'})}).catch(()=>{});
+        // #endregion
         const normalized = handleRpcError(fetchError, 'fetch_structure')
         setError(normalized.message)
         setTeams([])
