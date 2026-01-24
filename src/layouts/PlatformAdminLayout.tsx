@@ -117,11 +117,43 @@ export default function PlatformAdminLayout() {
   }
 
   const platformDashboardPath = getPath(RouteKeys.PLATFORM_DASHBOARD)
+  
+  // Find all matching paths in the same section, return the most specific one
+  const getActivePathInSection = (section: NavSection): string | null => {
+    const matchingPaths = section.items
+      .filter(item => {
+        // Dashboard requires exact match
+        if (item.path === platformDashboardPath) {
+          return location.pathname === item.path
+        }
+        // Exact match
+        if (location.pathname === item.path) {
+          return true
+        }
+        // Current path starts with item path followed by '/' (parent path matches child route)
+        return location.pathname.startsWith(item.path + '/')
+      })
+      .map(item => item.path)
+      .sort((a, b) => b.length - a.length) // Sort by length descending (most specific first)
+    
+    return matchingPaths[0] || null
+  }
+  
   const isActive = (path: string) => {
+    // Exact match for dashboard
     if (path === platformDashboardPath) {
       return location.pathname === path
     }
-    return location.pathname.startsWith(path)
+    
+    // Find the section containing this path
+    const section = navSections.find(s => s.items.some(item => item.path === path))
+    if (!section) return false
+    
+    // Get the most specific active path in this section
+    const activePath = getActivePathInSection(section)
+    
+    // This path is active only if it's the most specific match
+    return activePath === path
   }
 
   // Show loading while theme loads or profile is loading
