@@ -25,12 +25,13 @@ export function Select({
   required = false,
   options,
   className = '',
+  style,
   ...props
 }: SelectProps) {
   const hasError = !!error
 
   return (
-    <div className="pa-form-group">
+    <div className="pa-form-group" style={style}>
       {label && (
         <label className={`pa-label ${required ? 'pa-label--required' : ''}`}>
           {label}

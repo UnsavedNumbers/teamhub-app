@@ -13,6 +13,8 @@ export interface CheckboxProps {
   disabled?: boolean
   helperText?: string
   className?: string
+  indeterminate?: boolean
+  style?: React.CSSProperties
 }
 
 export function Checkbox({ 
@@ -21,10 +23,21 @@ export function Checkbox({
   label, 
   disabled = false,
   helperText,
-  className = ''
+  className = '',
+  indeterminate = false,
+  style
 }: CheckboxProps) {
+  const inputRef = React.useRef<HTMLInputElement>(null)
+
+  // Set indeterminate state
+  React.useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.indeterminate = indeterminate
+    }
+  }, [indeterminate])
+
   return (
-    <div className={className}>
+    <div className={className} style={style}>
       <label 
         className={`pa-checkbox ${disabled ? 'pa-checkbox-disabled' : ''}`}
         style={{
@@ -36,6 +49,7 @@ export function Checkbox({
         }}
       >
         <input
+          ref={inputRef}
           type="checkbox"
           checked={checked}
           onChange={onChange}
