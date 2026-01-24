@@ -74,6 +74,10 @@ export default function UserDetail() {
   const [removeRoleDialog, setRemoveRoleDialog] = useState<{ open: boolean; org: AdminUserOrganization | null }>({ open: false, org: null })
   const [managePlatformAdminModal, setManagePlatformAdminModal] = useState(false)
   
+  // Family info state
+  const [familyInfo, setFamilyInfo] = useState<FamilyInfo | null>(null)
+  const [loadingFamily, setLoadingFamily] = useState(false)
+  
   // Get admin role from profile
   const adminRole: PlatformAdminRole | null = profile?.platformAdminRole ?? null
 
@@ -290,11 +294,88 @@ export default function UserDetail() {
     }
   }, [id, t, fetchPlatformAdminRole])
 
+  // Fetch family info
+  const fetchFamilyInfo = useCallback(async (familyId: string) => {
+    if (!mountedRef.current || !familyId || !isValidUUID(familyId)) return
+
+    setLoadingFamily(true)
+    
+    // Cancel previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    abortControllerRef.current = new AbortController()
+
+    try {
+      // Fetch family with organization
+      const { data: familyData, error: familyError } = await supabase
+        .from('families')
+        .select(`
+          id,
+          name,
+          org_id,
+          organizations!inner(name)
+        `)
+        .eq('id', familyId)
+        .single()
+
+      if (familyError) {
+        console.error('Error fetching family:', familyError)
+        setFamilyInfo(null)
+        return
+      }
+
+      // Fetch children count
+      const { count: childrenCount } = await supabase
+        .from('athletes')
+        .select('*', { count: 'exact', head: true })
+        .eq('family_id', familyId)
+
+      // Fetch parents count
+      const { count: parentsCount } = await supabase
+        .from('family_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('family_id', familyId)
+        .eq('role', 'guardian')
+
+      if (!mountedRef.current) return
+
+      if (familyData) {
+        setFamilyInfo({
+          id: familyData.id,
+          family_name: familyData.name,
+          organization_name: (familyData.organizations as any)?.name || '',
+          children_count: childrenCount || 0,
+          parent_count: parentsCount || 0,
+          children: [],
+          parents: []
+        })
+      } else {
+        setFamilyInfo(null)
+      }
+    } catch (err: any) {
+      if (!mountedRef.current || err.name === 'AbortError') return
+      console.error('Error fetching family info:', err)
+      setFamilyInfo(null)
+    } finally {
+      if (mountedRef.current) {
+        setLoadingFamily(false)
+      }
+    }
+  }, [])
+
   useEffect(() => {
     if (id && isValidUUID(id)) {
       fetchUser()
     }
   }, [id, fetchUser])
+
+  // Fetch family info when user has family_id
+  useEffect(() => {
+    if (user?.family_id) {
+      fetchFamilyInfo(user.family_id)
+    }
+  }, [user?.family_id, fetchFamilyInfo])
 
   const handleConfirmAction = async (reason: string) => {
     if (!user || !user.id) return

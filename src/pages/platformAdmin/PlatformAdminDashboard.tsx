@@ -70,6 +70,7 @@ export default function PlatformAdminDashboard() {
           failed_payments: healthData.failed_payments ?? 0,
           total_payment_volume_cents: healthData.total_payment_volume_cents ?? 0,
           total_teams: healthData.total_teams ?? 0,
+          total_children: healthData.total_athletes ?? 0,
         })
       }
 
