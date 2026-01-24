@@ -1,11 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganization } from '@/contexts/OrganizationContext'
 import { useTheme } from '@/hooks/useTheme'
 import { useT } from '@/i18n/useI18n'
+import { useOffline } from '@/hooks/useOffline'
 import { hasRole } from '@/utils/roleHelpers'
-import type { Organization, OrgMemberRole } from '@/contexts/OrganizationContext'
+import { hasMultipleRoles, getLoginRedirect } from '@/utils/loginRedirect'
+import { isDemoMode } from '@/utils/demoMode'
+import { getLink, RouteKeys } from '@/utils/routes'
+import { showError } from '@/utils/toast'
+import type { OrgMemberRole } from '@/contexts/OrganizationContext'
 
 interface RoleCard {
   orgId: string
@@ -16,15 +21,21 @@ interface RoleCard {
 }
 
 export function RoleSelection() {
-  const { profile, signOut } = useAuth()
-  const { setCurrentOrganization } = useOrganization()
+  const { profile, signOut, loading: authLoading } = useAuth()
+  const { setCurrentOrganization, isLoading: orgLoading } = useOrganization()
   const { resolvedTheme } = useTheme()
+  const { isOffline } = useOffline()
   const navigate = useNavigate()
   const t = useT()
   const [selectedCard, setSelectedCard] = useState<string | null>(null)
   const [helpModalOpen, setHelpModalOpen] = useState(false)
   const [logoError, setLogoError] = useState(false)
   const [logoVersion, setLogoVersion] = useState(0)
+  const [navigating, setNavigating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [retrying, setRetrying] = useState(false)
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  const focusedCardIndex = useRef<number>(-1)
 
   // Logo based on theme (same as PortalNav)
   const logoSrc = resolvedTheme === 'dark' 
@@ -39,83 +50,204 @@ export function RoleSelection() {
     setLogoVersion(prev => prev + 1)
   }, [resolvedTheme])
 
-  if (!profile) {
-    return null
-  }
+  // Helper functions for role titles and descriptions
+  const getRoleTitle = useCallback((role: OrgMemberRole): string => {
+    switch (role) {
+      case 'parent':
+        return t('portal.roleSelection.parentTitle')
+      case 'coach':
+        return t('portal.roleSelection.coachTitle')
+      case 'org_admin':
+        return t('portal.roleSelection.adminTitle')
+      default:
+        return role
+    }
+  }, [t])
+
+  const getRoleDescription = useCallback((role: OrgMemberRole, orgName: string): string => {
+    switch (role) {
+      case 'parent':
+        return `${t('portal.roleSelection.parentDescription')} - ${orgName}`
+      case 'coach':
+      case 'org_admin':
+        return orgName
+      default:
+        return orgName
+    }
+  }, [t])
 
   // Build role cards from user's organizations
-  const roleCards: RoleCard[] = []
+  const roleCards = useMemo((): RoleCard[] => {
+    if (!profile) return []
 
-  // Group by role type
-  const parentOrgs: Organization[] = []
-  const coachOrgs: Organization[] = []
-  const adminOrgs: Organization[] = []
-
-  profile.organizations.forEach(org => {
-    if (hasRole(org, 'parent')) parentOrgs.push(org)
-    if (hasRole(org, 'coach')) coachOrgs.push(org)
-    if (hasRole(org, 'org_admin')) adminOrgs.push(org)
-  })
-
-  // Create cards for each role in each org
-  parentOrgs.forEach(org => {
-    roleCards.push({
-      orgId: org.id,
-      orgName: org.name,
-      role: 'parent',
-      title: t('portal.roleSelection.parentTitle'),
-      description: `${t('portal.roleSelection.parentDescription')} - ${org.name}`,
+    const cards: RoleCard[] = []
+    profile.organizations.forEach(org => {
+      org.roles?.forEach(role => {
+        cards.push({
+          orgId: org.id,
+          orgName: org.name,
+          role,
+          title: getRoleTitle(role),
+          description: getRoleDescription(role, org.name),
+        })
+      })
     })
-  })
+    return cards
+  }, [profile, getRoleTitle, getRoleDescription])
 
-  coachOrgs.forEach(org => {
-    roleCards.push({
-      orgId: org.id,
-      orgName: org.name,
-      role: 'coach',
-      title: t('portal.roleSelection.coachTitle'),
-      description: org.name,
-    })
-  })
+  // Validate user has multiple roles - redirect if not
+  useEffect(() => {
+    if (authLoading || orgLoading) return
+    if (!profile) return
 
-  adminOrgs.forEach(org => {
-    roleCards.push({
-      orgId: org.id,
-      orgName: org.name,
-      role: 'org_admin',
-      title: t('portal.roleSelection.adminTitle'),
-      description: org.name,
-    })
-  })
+    // If user doesn't have multiple roles, redirect appropriately
+    if (!hasMultipleRoles(profile.organizations)) {
+      const redirectTo = getLoginRedirect(profile.isPlatformAdmin, profile.organizations)
+      navigate(redirectTo, { replace: true })
+    }
+  }, [profile, authLoading, orgLoading, navigate])
 
-  const handleCardClick = (card: RoleCard) => {
+  const focusCard = useCallback((card: RoleCard | null) => {
+    if (!card) return
+    const cardId = `${card.orgId}-${card.role}`
+    const cardElement = cardRefs.current.get(cardId)
+    if (cardElement) {
+      cardElement.focus()
+      cardElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [])
+
+  const handleCardClick = useCallback((card: RoleCard) => {
     setSelectedCard(`${card.orgId}-${card.role}`)
-  }
+    setError(null)
+    focusedCardIndex.current = roleCards.findIndex(c => 
+      c.orgId === card.orgId && c.role === card.role
+    )
+  }, [roleCards])
 
-  const handleEnter = () => {
-    if (!selectedCard) return
+  const handleEnter = useCallback(async () => {
+    if (!selectedCard || navigating) return
 
-    const [orgId, role] = selectedCard.split('-')
+    // Parse selectedCard format: "orgId-role"
+    // Since orgId is a UUID with dashes, we need to split from the right
+    const lastDashIndex = selectedCard.lastIndexOf('-')
+    if (lastDashIndex === -1) {
+      setError(t('portal.roleSelection.errors.invalidSelection'))
+      return
+    }
+
+    const orgId = selectedCard.substring(0, lastDashIndex)
+    const role = selectedCard.substring(lastDashIndex + 1) as OrgMemberRole
+    
+    // Validate role
+    if (!['parent', 'coach', 'org_admin'].includes(role)) {
+      setError(t('portal.roleSelection.errors.invalidRole'))
+      return
+    }
+
+    if (!profile) {
+      setError(t('portal.roleSelection.errors.sessionExpired'))
+      navigate(getLink(RouteKeys.AUTH_LOGIN), { replace: true })
+      return
+    }
+
+    // Find the organization
     const org = profile.organizations.find(o => o.id === orgId)
     
-    if (org) {
+    if (!org) {
+      setError(t('portal.roleSelection.errors.orgNotFound'))
+      return
+    }
+
+    // Verify user has this role in this org
+    if (!hasRole(org, role)) {
+      setError(t('portal.roleSelection.errors.roleNotFound'))
+      setSelectedCard(null)
+      return
+    }
+
+    // Check offline mode
+    if (isOffline) {
+      setError(t('portal.roleSelection.errors.offline'))
+      return
+    }
+
+    // Check demo mode
+    if (isDemoMode()) {
+      setError(t('portal.roleSelection.errors.demoMode'))
+      return
+    }
+
+    setNavigating(true)
+    setError(null)
+
+    try {
+      // Set the current organization
       setCurrentOrganization(org)
       
-      // Navigate based on selected role
-      // Admins and coaches always go to admin section
+      // Determine navigation destination
+      let destination: string
       if (role === 'org_admin' || role === 'coach') {
-        navigate('/admin')
+        destination = getLink(RouteKeys.ADMIN_DASHBOARD)
       } else {
-        // Parents go to portal dashboard
-        navigate('/portal/dashboard')
+        destination = getLink(RouteKeys.PORTAL_DASHBOARD)
+      }
+
+      // Navigate to destination
+      navigate(destination, { replace: true })
+    } catch (err: any) {
+      console.error('Error during role selection:', err)
+      setError(err.message || t('portal.roleSelection.errors.switchFailed'))
+      setNavigating(false)
+    }
+  }, [selectedCard, navigating, profile, isOffline, navigate, setCurrentOrganization, t])
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (helpModalOpen) {
+        if (e.key === 'Escape') {
+          setHelpModalOpen(false)
+        }
+        return
+      }
+
+      if (roleCards.length === 0) return
+
+      switch (e.key) {
+        case 'ArrowDown':
+        case 'ArrowRight':
+          e.preventDefault()
+          focusedCardIndex.current = Math.min(focusedCardIndex.current + 1, roleCards.length - 1)
+          focusCard(roleCards[focusedCardIndex.current])
+          break
+        case 'ArrowUp':
+        case 'ArrowLeft':
+          e.preventDefault()
+          focusedCardIndex.current = Math.max(focusedCardIndex.current - 1, 0)
+          focusCard(roleCards[focusedCardIndex.current])
+          break
+        case 'Enter':
+          e.preventDefault()
+          if (selectedCard) {
+            handleEnter()
+          } else if (focusedCardIndex.current >= 0) {
+            const card = roleCards[focusedCardIndex.current]
+            handleCardClick(card)
+          }
+          break
+        case 'Escape':
+          if (selectedCard) {
+            setSelectedCard(null)
+            focusedCardIndex.current = -1
+          }
+          break
       }
     }
-  }
 
-  const handleSignOut = async () => {
-    await signOut()
-    navigate('/portal/login')
-  }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedCard, helpModalOpen, roleCards, focusCard, handleEnter, handleCardClick])
 
   const getRoleBackgroundImage = (role: OrgMemberRole): string => {
     switch (role) {
@@ -130,10 +262,129 @@ export function RoleSelection() {
     }
   }
 
+  // Group by role type for display
   const groupedCards = {
     parent: roleCards.filter(c => c.role === 'parent'),
     coach: roleCards.filter(c => c.role === 'coach'),
     admin: roleCards.filter(c => c.role === 'org_admin'),
+  }
+
+  const handleSignOut = useCallback(async () => {
+    if (navigating) return
+
+    try {
+      await signOut()
+      navigate(getLink(RouteKeys.AUTH_LOGIN), { replace: true })
+    } catch (err: any) {
+      console.error('Error signing out:', err)
+      showError(err.message || t('portal.roleSelection.errors.signOutFailed'))
+    }
+  }, [navigating, signOut, navigate, t])
+
+  const handleRetry = useCallback(async () => {
+    setRetrying(true)
+    setError(null)
+    
+    try {
+      // Force refresh profile to reload organizations
+      if (profile?.id) {
+        // Trigger a profile refresh by reloading the page
+        window.location.reload()
+      }
+    } catch (err: any) {
+      setError(err.message || t('common.error'))
+    } finally {
+      setRetrying(false)
+    }
+  }, [profile, t])
+
+  // Loading state
+  if (authLoading || orgLoading) {
+    return (
+      <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light dark:bg-slate-900">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-slate-600 dark:text-slate-400">{t('common.loading')}</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // No profile (should be handled by ProtectedRoute, but safety check)
+  if (!profile) {
+    return (
+      <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light dark:bg-slate-900">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-md mx-auto px-4">
+            <span className="material-symbols-rounded text-6xl text-slate-400 dark:text-slate-500 mb-4 block">
+              error
+            </span>
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">{t('portal.roleSelection.emptyStates.sessionExpired.title')}</h2>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">
+              {t('portal.roleSelection.emptyStates.sessionExpired.message')}
+            </p>
+            <button
+              onClick={() => navigate(getLink(RouteKeys.AUTH_LOGIN), { replace: true })}
+              className="btn-primary"
+            >
+              {t('portal.roleSelection.emptyStates.sessionExpired.action')}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // No organizations (should be handled by redirect, but safety check)
+  if (profile.organizations.length === 0) {
+    return (
+      <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light dark:bg-slate-900">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-md mx-auto px-4">
+            <span className="material-symbols-rounded text-6xl text-slate-400 dark:text-slate-500 mb-4 block">
+              group_off
+            </span>
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">{t('portal.roleSelection.emptyStates.noOrganizations.title')}</h2>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">
+              {t('portal.roleSelection.emptyStates.noOrganizations.message')}
+            </p>
+            <button
+              onClick={() => navigate(getLink(RouteKeys.PORTAL_DASHBOARD), { replace: true })}
+              className="btn-primary"
+            >
+              {t('portal.roleSelection.emptyStates.noOrganizations.action')}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // No role cards (all roles filtered out - edge case)
+  if (roleCards.length === 0) {
+    return (
+      <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light dark:bg-slate-900">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-md mx-auto px-4">
+            <span className="material-symbols-rounded text-6xl text-slate-400 dark:text-slate-500 mb-4 block">
+              warning
+            </span>
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">{t('portal.roleSelection.emptyStates.noRoles.title')}</h2>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">
+              {t('portal.roleSelection.emptyStates.noRoles.message')}
+            </p>
+            <button
+              onClick={() => navigate(getLink(RouteKeys.PORTAL_DASHBOARD), { replace: true })}
+              className="btn-primary"
+            >
+              {t('portal.roleSelection.emptyStates.noRoles.action')}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -169,12 +420,14 @@ export function RoleSelection() {
             onClick={() => setHelpModalOpen(true)}
             className="flex items-center justify-center rounded-lg h-10 w-10 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
             aria-label={t('portal.roleSelection.helpTitle')}
+            disabled={navigating}
           >
             <span className="material-symbols-outlined text-lg">help</span>
           </button>
           <button 
             onClick={handleSignOut}
-            className="flex items-center justify-center rounded-lg h-10 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white gap-2 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            className="flex items-center justify-center rounded-lg h-10 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white gap-2 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={navigating}
           >
             <span className="material-symbols-outlined text-lg">logout</span>
             {t('portal.roleSelection.signOut')}
@@ -194,6 +447,48 @@ export function RoleSelection() {
           </p>
         </div>
 
+        {/* Offline Indicator */}
+        {isOffline && (
+          <div className="w-full max-w-4xl mx-auto mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-yellow-600 dark:text-yellow-400">wifi_off</span>
+              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                You are offline. Role selection requires an internet connection.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="w-full max-w-4xl mx-auto mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3 flex-1">
+                <span className="material-symbols-outlined text-red-600 dark:text-red-400">error</span>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-red-800 dark:text-red-200">{error}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setError(null)}
+                className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200"
+                aria-label={t('common.close')}
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+            {error.includes('refresh') && (
+              <button
+                onClick={handleRetry}
+                disabled={retrying}
+                className="mt-3 text-sm text-red-600 dark:text-red-400 hover:underline disabled:opacity-50"
+              >
+                {retrying ? t('common.loading') : t('common.retry')}
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="w-full flex flex-col gap-14">
           {/* Parent Section */}
           {groupedCards.parent.length > 0 && (
@@ -212,8 +507,22 @@ export function RoleSelection() {
                   return (
                     <div
                       key={cardId}
+                      ref={(el) => {
+                        if (el) cardRefs.current.set(cardId, el)
+                        else cardRefs.current.delete(cardId)
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Select ${card.title} for ${card.orgName}`}
+                      aria-pressed={isSelected}
                       onClick={() => handleCardClick(card)}
-                      className={`cursor-pointer group relative flex flex-col gap-4 p-8 rounded-2xl transition-all overflow-hidden ${
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          handleCardClick(card)
+                        }
+                      }}
+                      className={`cursor-pointer group relative flex flex-col gap-4 p-8 rounded-2xl transition-all overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
                         isSelected
                           ? 'shadow-[0_10px_30px_rgba(37,140,244,0.15)]'
                           : 'shadow-sm hover:-translate-y-1'
@@ -264,8 +573,22 @@ export function RoleSelection() {
                   return (
                     <div
                       key={cardId}
+                      ref={(el) => {
+                        if (el) cardRefs.current.set(cardId, el)
+                        else cardRefs.current.delete(cardId)
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Select ${card.title} for ${card.orgName}`}
+                      aria-pressed={isSelected}
                       onClick={() => handleCardClick(card)}
-                      className={`cursor-pointer group relative flex flex-col gap-4 p-8 rounded-2xl transition-all overflow-hidden ${
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          handleCardClick(card)
+                        }
+                      }}
+                      className={`cursor-pointer group relative flex flex-col gap-4 p-8 rounded-2xl transition-all overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
                         isSelected
                           ? 'shadow-[0_10px_30px_rgba(37,140,244,0.15)]'
                           : 'shadow-sm hover:-translate-y-1'
@@ -316,8 +639,22 @@ export function RoleSelection() {
                   return (
                     <div
                       key={cardId}
+                      ref={(el) => {
+                        if (el) cardRefs.current.set(cardId, el)
+                        else cardRefs.current.delete(cardId)
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Select ${card.title} for ${card.orgName}`}
+                      aria-pressed={isSelected}
                       onClick={() => handleCardClick(card)}
-                      className={`cursor-pointer group relative flex flex-col gap-4 p-8 rounded-2xl transition-all overflow-hidden ${
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          handleCardClick(card)
+                        }
+                      }}
+                      className={`cursor-pointer group relative flex flex-col gap-4 p-8 rounded-2xl transition-all overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
                         isSelected
                           ? 'shadow-[0_10px_30px_rgba(37,140,244,0.15)]'
                           : 'shadow-sm hover:-translate-y-1'
@@ -356,15 +693,25 @@ export function RoleSelection() {
         <div className="mt-20 w-full flex flex-col items-center gap-8">
           <button
             onClick={handleEnter}
-            disabled={!selectedCard}
+            disabled={!selectedCard || navigating || isOffline || isDemoMode()}
             className={`flex min-w-[320px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 gap-3 text-lg font-black leading-normal tracking-widest uppercase transition-all ${
-              selectedCard
+              selectedCard && !navigating && !isOffline && !isDemoMode()
                 ? 'bg-primary text-white hover:bg-primary/90 shadow-[0_8px_0_0_#1a6ec2] active:shadow-[0_2px_0_0_#1a6ec2] active:translate-y-[6px]'
                 : 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-500 cursor-not-allowed'
             }`}
+            aria-label={t('portal.roleSelection.enterButton')}
           >
-            {t('portal.roleSelection.enterButton')}
-            <span className="material-symbols-outlined">arrow_forward</span>
+            {navigating ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                {t('common.loading')}
+              </>
+            ) : (
+              <>
+                {t('portal.roleSelection.enterButton')}
+                <span className="material-symbols-outlined">arrow_forward</span>
+              </>
+            )}
           </button>
           <div className="flex flex-col items-center gap-2">
             <p className="text-slate-400 dark:text-slate-600 text-xs font-bold uppercase tracking-widest">{t('portal.roleSelection.version')}</p>
@@ -378,6 +725,9 @@ export function RoleSelection() {
         <div
           onClick={() => setHelpModalOpen(false)}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="help-modal-title"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -385,7 +735,7 @@ export function RoleSelection() {
           >
             {/* Header */}
             <div className="px-6 py-5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+              <h2 id="help-modal-title" className="text-xl font-bold text-slate-900 dark:text-white">
                 {t('portal.roleSelection.helpTitle')}
               </h2>
               <button

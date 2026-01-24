@@ -296,6 +296,34 @@ export const en = {
             enterButton: 'ENTER LOCKER ROOM',
             signOut: 'SIGN OUT',
             version: 'Youth Sports v1.0.4',
+            errors: {
+                invalidSelection: 'Invalid selection. Please try again.',
+                invalidRole: 'Invalid role selected. Please try again.',
+                sessionExpired: 'Session expired. Please sign in again.',
+                orgNotFound: 'Organization not found. Please refresh and try again.',
+                roleNotFound: 'You no longer have this role. Please select a different role.',
+                offline: 'Cannot switch roles while offline. Please reconnect and try again.',
+                demoMode: 'Demo mode: Role selection is not available. Please configure Supabase to enable this feature.',
+                switchFailed: 'Failed to switch role. Please try again.',
+                signOutFailed: 'Failed to sign out. Please try again.',
+            },
+            emptyStates: {
+                noOrganizations: {
+                    title: 'No Organizations',
+                    message: 'You are not a member of any organization. Contact your team administrator for an invite.',
+                    action: 'Go to Dashboard',
+                },
+                noRoles: {
+                    title: 'No Roles Available',
+                    message: 'You don\'t have any valid roles in your organizations. Please contact support.',
+                    action: 'Go to Dashboard',
+                },
+                sessionExpired: {
+                    title: 'Session Expired',
+                    message: 'Your session has expired. Please sign in again.',
+                    action: 'Sign In',
+                },
+            },
         },
         travel: {
             title: 'Travel',
@@ -1046,6 +1074,34 @@ export const es: typeof en = {
             enterButton: 'ENTRAR AL VESTUARIO',
             signOut: 'CERRAR SESIÓN',
             version: 'Youth Sports v1.0.4',
+            errors: {
+                invalidSelection: 'Selección inválida. Por favor intenta de nuevo.',
+                invalidRole: 'Rol seleccionado inválido. Por favor intenta de nuevo.',
+                sessionExpired: 'La sesión ha expirado. Por favor inicia sesión nuevamente.',
+                orgNotFound: 'Organización no encontrada. Por favor actualiza e intenta de nuevo.',
+                roleNotFound: 'Ya no tienes este rol. Por favor selecciona un rol diferente.',
+                offline: 'No se puede cambiar de rol sin conexión. Por favor reconéctate e intenta de nuevo.',
+                demoMode: 'Modo demo: La selección de roles no está disponible. Por favor configura Supabase para habilitar esta función.',
+                switchFailed: 'Error al cambiar de rol. Por favor intenta de nuevo.',
+                signOutFailed: 'Error al cerrar sesión. Por favor intenta de nuevo.',
+            },
+            emptyStates: {
+                noOrganizations: {
+                    title: 'Sin Organizaciones',
+                    message: 'No eres miembro de ninguna organización. Contacta al administrador de tu equipo para una invitación.',
+                    action: 'Ir al Panel',
+                },
+                noRoles: {
+                    title: 'No Hay Roles Disponibles',
+                    message: 'No tienes roles válidos en tus organizaciones. Por favor contacta soporte.',
+                    action: 'Ir al Panel',
+                },
+                sessionExpired: {
+                    title: 'Sesión Expirada',
+                    message: 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
+                    action: 'Iniciar Sesión',
+                },
+            },
         },
         travel: {
             title: 'Viaje',
