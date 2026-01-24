@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { PageHeader, Badge, Card, FilterBar, ConfirmDialog, Button, Input, Select, PlatformDataTable, type ColumnConfig } from '../../components/platformAdmin'
+import { EntitySelect } from '../../components/common/EntitySelect'
 import { canPerformAction } from '../../utils/platformAdminPermissions'
 import { getEnvironment } from '../../utils/featureFlags'
 import { mapFeatureFlagOverride, isRpcSuccessResponse } from '../../utils/typeAdapters'
@@ -52,11 +53,9 @@ export default function FeatureFlags() {
     environment: getEnvironment(),
   })
   const [defaultValue, setDefaultValue] = useState<{ boolean?: boolean; integer?: number; double?: number }>({})
-  const [orgSearch, setOrgSearch] = useState('')
-  const [selectedOrgId, setSelectedOrgId] = useState('')
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null)
   const [orgValue, setOrgValue] = useState<{ boolean?: boolean; integer?: number; double?: number }>({})
-  const [userSearch, setUserSearch] = useState('')
-  const [selectedUserId, setSelectedUserId] = useState('')
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [userValue, setUserValue] = useState<{ boolean?: boolean; integer?: number; double?: number }>({})
   
   // TODO: Fetch actual role
@@ -305,7 +304,7 @@ export default function FeatureFlags() {
       
       const { data, error } = await supabase.rpc('admin_set_user_override', {
         p_feature_flag_id: flag.id,
-        p_user_id: selectedUserId,
+        p_user_id: selectedUserId!,
         p_value_boolean: userValue.boolean ?? null,
         p_value_integer: userValue.integer ?? null,
         p_value_double: userValue.double ?? null,
@@ -966,23 +965,43 @@ export default function FeatureFlags() {
           onConfirm={handleSetOrgOverride}
           onCancel={() => {
             setOrgOverrideDialog({ open: false, flag: null })
-            setSelectedOrgId('')
+            setSelectedOrgId(null)
             setOrgValue({})
-            setOrgSearch('')
             setDialogError(null)
           }}
           requireReason
         >
-          <div className="pa-form-group">
-            <label className="pa-label">Organization *</label>
-            <OrgSearchSelect
-              value={selectedOrgId}
-              onChange={setSelectedOrgId}
-              search={orgSearch}
-              onSearchChange={setOrgSearch}
-              disabled={dialogLoading}
-            />
-          </div>
+          <EntitySelect
+            label="Organization *"
+            value={selectedOrgId}
+            onChange={(id) => setSelectedOrgId(id)}
+            fetchOptions={async (query) => {
+              const { data, error } = await supabase
+                .from('organizations')
+                .select('id, name')
+                .ilike('name', `%${query}%`)
+                .limit(20)
+              
+              if (error) throw error
+              return (data || []).map((org: any) => ({
+                id: org.id,
+                label: org.name,
+              }))
+            }}
+            getOptionById={async (id) => {
+              const { data, error } = await supabase
+                .from('organizations')
+                .select('id, name')
+                .eq('id', id)
+                .single()
+              
+              if (error || !data) return null
+              return { id: data.id, label: data.name }
+            }}
+            placeholder="Search organizations..."
+            disabled={dialogLoading}
+            required
+          />
           {orgOverrideDialog.flag.value_type === 'boolean' && (
             <div className="pa-form-group">
               <label className="pa-label">Value *</label>
@@ -1054,23 +1073,65 @@ export default function FeatureFlags() {
           onConfirm={handleSetUserOverride}
           onCancel={() => {
             setUserOverrideDialog({ open: false, flag: null })
-            setSelectedUserId('')
+            setSelectedUserId(null)
             setUserValue({})
-            setUserSearch('')
             setDialogError(null)
           }}
           requireReason
         >
-          <div className="pa-form-group">
-            <label className="pa-label">User *</label>
-            <UserSearchSelect
-              value={selectedUserId}
-              onChange={setSelectedUserId}
-              search={userSearch}
-              onSearchChange={setUserSearch}
-              disabled={dialogLoading}
-            />
-          </div>
+          <EntitySelect
+            label="User *"
+            value={selectedUserId}
+            onChange={(id) => setSelectedUserId(id)}
+            fetchOptions={async (query) => {
+              const { data, error } = await supabase
+                .from('users')
+                .select('id, email, display_name')
+                .or(`email.ilike.%${query}%,display_name.ilike.%${query}%`)
+                .limit(20)
+              
+              if (error) throw error
+              return (data || []).map((user: any) => ({
+                id: user.id,
+                label: user.display_name || user.email || '',
+                data: user,
+              }))
+            }}
+            getOptionById={async (id) => {
+              const { data, error } = await supabase
+                .from('users')
+                .select('id, email, display_name')
+                .eq('id', id)
+                .single()
+              
+              if (error || !data) return null
+              return {
+                id: data.id,
+                label: data.display_name || data.email || '',
+                data,
+              }
+            }}
+            renderOption={(option, isHighlighted) => (
+              <div
+                style={{
+                  padding: '12px 16px',
+                  cursor: 'pointer',
+                  background: isHighlighted ? 'var(--pa-n50)' : 'transparent',
+                  borderBottom: '1px solid var(--pa-n100)',
+                }}
+              >
+                <div className="pa-body-m">{option.label}</div>
+                {option.data && (option.data as any).email && option.label !== (option.data as any).email && (
+                  <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
+                    {(option.data as any).email}
+                  </div>
+                )}
+              </div>
+            )}
+            placeholder="Search users by email or name..."
+            disabled={dialogLoading}
+            required
+          />
           {userOverrideDialog.flag.value_type === 'boolean' && (
             <div className="pa-form-group">
               <label className="pa-label">Value *</label>
@@ -1169,125 +1230,6 @@ export default function FeatureFlags() {
   )
 }
 
-// Org Search Select Component
-function OrgSearchSelect({
-  value,
-  onChange,
-  search,
-  onSearchChange,
-  disabled,
-}: {
-  value: string
-  onChange: (orgId: string) => void
-  search: string
-  onSearchChange: (search: string) => void
-  disabled?: boolean
-}) {
-  const [orgs, setOrgs] = useState<Array<{ id: string; name: string }>>([])
-  const [loading, setLoading] = useState(false)
-  
-  useEffect(() => {
-    if (search.length < 2) {
-      setOrgs([])
-      return
-    }
-    
-    const fetchOrgs = async () => {
-      setLoading(true)
-      try {
-        const { data, error } = await supabase
-          .from('organizations')
-          .select('id, name')
-          .ilike('name', `%${search}%`)
-          .limit(20)
-        
-        if (!error && data) {
-          setOrgs(data)
-        }
-      } catch (err) {
-        console.error('Error fetching organizations:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    
-    const timeout = setTimeout(fetchOrgs, 300)
-    return () => clearTimeout(timeout)
-  }, [search])
-  
-  const selectedOrg = orgs.find(o => o.id === value)
-  
-  return (
-    <div style={{ position: 'relative' }}>
-      <Input
-        value={selectedOrg ? selectedOrg.name : search}
-        onChange={(e) => {
-          onSearchChange(e.target.value)
-          if (!e.target.value) {
-            onChange('')
-          }
-        }}
-        placeholder="Search organizations..."
-        disabled={disabled}
-        onFocus={() => {
-          if (!search && value) {
-            // Load selected org name
-            const org = orgs.find(o => o.id === value)
-            if (org) {
-              onSearchChange(org.name)
-            }
-          }
-        }}
-      />
-      {search.length >= 2 && orgs.length > 0 && !selectedOrg && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            right: 0,
-            background: 'var(--pa-bg-primary)',
-            border: '1px solid var(--pa-n100)',
-            borderRadius: 'var(--pa-radius-md)',
-            marginTop: '4px',
-            maxHeight: '200px',
-            overflowY: 'auto',
-            zIndex: 1000,
-            boxShadow: 'var(--pa-shadow-2)',
-          }}
-        >
-          {orgs.map((org) => (
-            <div
-              key={org.id}
-              onClick={() => {
-                onChange(org.id)
-                onSearchChange(org.name)
-              }}
-              style={{
-                padding: '12px 16px',
-                cursor: 'pointer',
-                borderBottom: '1px solid var(--pa-n100)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--pa-n50)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent'
-              }}
-            >
-              <div className="pa-body-m">{org.name}</div>
-            </div>
-          ))}
-        </div>
-      )}
-      {loading && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, padding: '12px', textAlign: 'center' }}>
-          <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>Loading...</div>
-        </div>
-      )}
-    </div>
-  )
-}
 
 // Form Modal Component
 function FormModal({
@@ -1413,122 +1355,3 @@ function FormModal({
   )
 }
 
-// User Search Select Component
-function UserSearchSelect({
-  value,
-  onChange,
-  search,
-  onSearchChange,
-  disabled,
-}: {
-  value: string
-  onChange: (userId: string) => void
-  search: string
-  onSearchChange: (search: string) => void
-  disabled?: boolean
-}) {
-  const [users, setUsers] = useState<Array<{ id: string; email: string; display_name: string | null }>>([])
-  const [loading, setLoading] = useState(false)
-  
-  useEffect(() => {
-    if (search.length < 2) {
-      setUsers([])
-      return
-    }
-    
-    const fetchUsers = async () => {
-      setLoading(true)
-      try {
-        const { data, error } = await supabase
-          .from('users')
-          .select('id, email, display_name')
-          .or(`email.ilike.%${search}%,display_name.ilike.%${search}%`)
-          .limit(20)
-        
-        if (!error && data) {
-          setUsers(data as Array<{ id: string; email: string; display_name: string | null }>)
-        }
-      } catch (err) {
-        console.error('Error fetching users:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    
-    const timeout = setTimeout(fetchUsers, 300)
-    return () => clearTimeout(timeout)
-  }, [search])
-  
-  const selectedUser = users.find(u => u.id === value)
-  
-  return (
-    <div style={{ position: 'relative' }}>
-      <Input
-        value={selectedUser ? (selectedUser.display_name || selectedUser.email) : search}
-        onChange={(e) => {
-          onSearchChange(e.target.value)
-          if (!e.target.value) {
-            onChange('')
-          }
-        }}
-        placeholder="Search users by email or name..."
-        disabled={disabled}
-        onFocus={() => {
-          if (!search && value) {
-            const user = users.find(u => u.id === value)
-            if (user) {
-              onSearchChange(user.display_name || user.email)
-            }
-          }
-        }}
-      />
-      {search.length >= 2 && users.length > 0 && !selectedUser && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            right: 0,
-            background: 'var(--pa-bg-primary)',
-            border: '1px solid var(--pa-n100)',
-            borderRadius: 'var(--pa-radius-md)',
-            marginTop: '4px',
-            maxHeight: '200px',
-            overflowY: 'auto',
-            zIndex: 1000,
-            boxShadow: 'var(--pa-shadow-2)',
-          }}
-        >
-          {users.map((user) => (
-            <div
-              key={user.id}
-              onClick={() => {
-                onChange(user.id)
-                onSearchChange(user.display_name || user.email)
-              }}
-              style={{
-                padding: '12px 16px',
-                cursor: 'pointer',
-                borderBottom: '1px solid var(--pa-n100)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--pa-n50)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent'
-              }}
-            >
-              <div className="pa-body-m">{user.display_name || user.email}</div>
-              <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>{user.email}</div>
-            </div>
-          ))}
-        </div>
-      )}
-      {loading && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, padding: '12px', textAlign: 'center' }}>
-          <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>Loading...</div>
-        </div>
-      )}
-    </div>
-  )
-}

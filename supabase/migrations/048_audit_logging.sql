@@ -69,11 +69,11 @@ BEGIN
     PERFORM log_event(
       'ORGANIZATION',
       'ROLE_ADDED',
+      v_actor_role::event_actor_role,
       COALESCE(auth.uid(), NEW.user_id), -- actor (may be self-add or admin-add)
-      v_actor_role::text,
       NEW.org_id,
       'user',
-      NEW.user_id::text,
+      NEW.user_id,
       jsonb_build_object(
         'role', NEW.role,
         'idempotency_key', v_idempotency_key
@@ -85,11 +85,11 @@ BEGIN
       PERFORM log_event(
         'ORGANIZATION',
         'ORG_JOINED',
+        v_actor_role::event_actor_role,
         COALESCE(auth.uid(), NEW.user_id),
-        v_actor_role::text,
         NEW.org_id,
         'organization',
-        NEW.org_id::text,
+        NEW.org_id,
         jsonb_build_object(
           'first_role', NEW.role,
           'user_id', NEW.user_id,
@@ -113,11 +113,11 @@ BEGIN
     PERFORM log_event(
       'ORGANIZATION',
       'ROLE_REMOVED',
+      v_actor_role::event_actor_role,
       COALESCE(auth.uid(), OLD.user_id),
-      v_actor_role::text,
       OLD.org_id,
       'user',
-      OLD.user_id::text,
+      OLD.user_id,
       jsonb_build_object(
         'role', OLD.role,
         'idempotency_key', v_idempotency_key
@@ -129,11 +129,11 @@ BEGIN
       PERFORM log_event(
         'ORGANIZATION',
         'ORG_LEFT',
+        v_actor_role::event_actor_role,
         COALESCE(auth.uid(), OLD.user_id),
-        v_actor_role::text,
         OLD.org_id,
         'organization',
-        OLD.org_id::text,
+        OLD.org_id,
         jsonb_build_object(
           'last_role', OLD.role,
           'user_id', OLD.user_id,
@@ -186,11 +186,11 @@ BEGIN
     PERFORM log_event(
       'ORGANIZATION',
       'PARENT_INVITED',
+      'org_admin'::event_actor_role,
       COALESCE(NEW.created_by_user_id, auth.uid()),
-      'org_admin',
       NEW.org_id,
       'parent_invite',
-      NEW.id::text,
+      NEW.id,
       jsonb_build_object(
         'email', NEW.email,
         'athlete_id', NEW.athlete_id,
@@ -261,11 +261,11 @@ BEGIN
     PERFORM log_event(
       'ORGANIZATION',
       'JOIN_LINK_CREATED',
+      'org_admin'::event_actor_role,
       COALESCE(NEW.created_by_user_id, auth.uid()),
-      'org_admin',
       NEW.org_id,
       'join_link',
-      NEW.id::text,
+      NEW.id,
       jsonb_build_object(
         'team_id', NEW.team_id,
         'auto_approve', NEW.auto_approve,
@@ -316,11 +316,11 @@ BEGIN
     PERFORM log_event(
       'ORGANIZATION',
       'JOIN_REQUEST_SUBMITTED',
+      'parent'::event_actor_role,
       NEW.requested_by_user_id,
-      'parent',
       NEW.org_id,
       'join_request',
-      NEW.id::text,
+      NEW.id,
       jsonb_build_object(
         'athlete_id', NEW.athlete_id,
         'team_id', NEW.team_id,
@@ -357,11 +357,11 @@ BEGIN
     PERFORM log_event(
       'ORGANIZATION',
       'JOIN_REQUEST_DENIED',
+      'org_admin'::event_actor_role,
       NEW.reviewed_by_user_id,
-      'org_admin',
       NEW.org_id,
       'join_request',
-      NEW.id::text,
+      NEW.id,
       jsonb_build_object(
         'athlete_id', NEW.athlete_id,
         'team_id', NEW.team_id,
@@ -415,11 +415,11 @@ BEGIN
     PERFORM log_event(
       'ORGANIZATION',
       'CHILD_CLAIM_TOKEN_CREATED',
+      'org_admin'::event_actor_role,
       COALESCE(NEW.created_by_user_id, auth.uid()),
-      'org_admin',
       NEW.org_id,
       'claim_token',
-      NEW.id::text,
+      NEW.id,
       jsonb_build_object(
         'athlete_id', NEW.athlete_id,
         'team_id', NEW.team_id,
@@ -434,11 +434,11 @@ BEGIN
     PERFORM log_event(
       'ORGANIZATION',
       'CHILD_CLAIMED',
+      'parent'::event_actor_role,
       NEW.used_by_user_id,
-      'parent',
       NEW.org_id,
       'claim_token',
-      NEW.id::text,
+      NEW.id,
       jsonb_build_object(
         'athlete_id', NEW.athlete_id,
         'team_id', NEW.team_id,

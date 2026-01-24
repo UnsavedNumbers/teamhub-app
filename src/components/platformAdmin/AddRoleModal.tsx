@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { Select } from './Select'
 import { Button } from './Button'
+import { EntitySelect } from '../common/EntitySelect'
 
 interface AddRoleModalProps {
   open: boolean
@@ -27,63 +28,25 @@ export function AddRoleModal({
   loading = false,
   error = null,
 }: AddRoleModalProps) {
-  const [orgId, setOrgId] = useState('')
+  const [orgId, setOrgId] = useState<string | null>(null)
   const [role, setRole] = useState<'parent' | 'coach' | 'org_admin'>('parent')
   const [reason, setReason] = useState('')
-  const [orgs, setOrgs] = useState<Array<{ id: string; name: string }>>([])
-  const [orgSearch, setOrgSearch] = useState('')
-  const [loadingOrgs, setLoadingOrgs] = useState(false)
 
   // Reset form when modal opens/closes
   useEffect(() => {
     if (!open) {
-      setOrgId('')
+      setOrgId(null)
       setRole('parent')
       setReason('')
-      setOrgSearch('')
     }
   }, [open])
-
-  // Fetch organizations when search changes
-  useEffect(() => {
-    if (!open || orgSearch.length < 2) {
-      setOrgs([])
-      return
-    }
-
-    const fetchOrgs = async () => {
-      setLoadingOrgs(true)
-      try {
-        const { data, error } = await supabase
-          .from('admin_organizations')
-          .select('id, name')
-          .ilike('name', `%${orgSearch}%`)
-          .limit(20)
-
-        if (!error && data) {
-          // Filter out orgs user is already in
-          const existingOrgIds = new Set(existingOrgs.map(o => o.org_id))
-          setOrgs((data as Array<{id: string, name: string}>).filter(org => !existingOrgIds.has(org.id)))
-        }
-      } catch (err) {
-        console.error('Error fetching organizations:', err)
-      } finally {
-        setLoadingOrgs(false)
-      }
-    }
-
-    const timeout = setTimeout(fetchOrgs, 300)
-    return () => clearTimeout(timeout)
-  }, [orgSearch, open, existingOrgs])
-
-  const selectedOrg = orgs.find(o => o.id === orgId)
 
   const handleConfirm = async () => {
     if (!orgId || !reason.trim()) return
     await onConfirm(orgId, role, reason)
   }
 
-  const isValid = orgId && role && reason.trim().length > 0
+  const isValid = !!orgId && role && reason.trim().length > 0
 
   if (!open) return null
 
@@ -124,77 +87,43 @@ export function AddRoleModal({
           {/* Content */}
           <div style={{ padding: 'var(--pa-space-5)' }}>
             {/* Organization Search */}
-            <div className="pa-form-group" style={{ marginBottom: 'var(--pa-space-4)' }}>
-              <label className="pa-label">Organization</label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="text"
-                  className="pa-input"
-                  value={selectedOrg ? selectedOrg.name : orgSearch}
-                  onChange={(e) => {
-                    setOrgSearch(e.target.value)
-                    if (!e.target.value) {
-                      setOrgId('')
-                    }
-                  }}
-                  placeholder="Search organizations..."
-                  disabled={loading || loadingOrgs}
-                  onFocus={() => {
-                    if (!orgSearch && orgId) {
-                      const org = orgs.find(o => o.id === orgId)
-                      if (org) {
-                        setOrgSearch(org.name)
-                      }
-                    }
-                  }}
-                />
-                {orgSearch.length >= 2 && orgs.length > 0 && !selectedOrg && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '100%',
-                      left: 0,
-                      right: 0,
-                      background: 'var(--pa-bg-primary)',
-                      border: '1px solid var(--pa-n100)',
-                      borderRadius: 'var(--pa-radius-md)',
-                      marginTop: '4px',
-                      maxHeight: '200px',
-                      overflowY: 'auto',
-                      zIndex: 1000,
-                      boxShadow: 'var(--pa-shadow-2)',
-                    }}
-                  >
-                    {orgs.map((org) => (
-                      <div
-                        key={org.id}
-                        onClick={() => {
-                          setOrgId(org.id)
-                          setOrgSearch(org.name)
-                        }}
-                        style={{
-                          padding: '12px 16px',
-                          cursor: 'pointer',
-                          borderBottom: '1px solid var(--pa-n100)',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'var(--pa-n50)'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'transparent'
-                        }}
-                      >
-                        <div className="pa-body-m">{org.name}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {loadingOrgs && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, padding: '12px', textAlign: 'center' }}>
-                    <div className="pa-body-s" style={{ color: 'var(--pa-n600)' }}>Loading...</div>
-                  </div>
-                )}
-              </div>
+            <div style={{ marginBottom: 'var(--pa-space-4)' }}>
+              <EntitySelect
+                label="Organization"
+                value={orgId}
+                onChange={(id) => setOrgId(id)}
+                fetchOptions={async (query) => {
+                  const { data, error } = await supabase
+                    .from('admin_organizations')
+                    .select('id, name')
+                    .ilike('name', `%${query}%`)
+                    .limit(20)
+
+                  if (error) throw error
+                  
+                  // Filter out orgs user is already in
+                  const existingOrgIds = new Set(existingOrgs.map(o => o.org_id))
+                  return (data || [])
+                    .filter((org: any) => !existingOrgIds.has(org.id))
+                    .map((org: any) => ({
+                      id: org.id,
+                      label: org.name,
+                    }))
+                }}
+                getOptionById={async (id) => {
+                  const { data, error } = await supabase
+                    .from('admin_organizations')
+                    .select('id, name')
+                    .eq('id', id)
+                    .single()
+
+                  if (error || !data || !data.id || !data.name) return null
+                  return { id: data.id, label: data.name }
+                }}
+                placeholder="Search organizations..."
+                disabled={loading}
+                required
+              />
             </div>
 
             {/* Role Select */}
