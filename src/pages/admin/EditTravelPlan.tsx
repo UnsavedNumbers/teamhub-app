@@ -5,6 +5,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getTravelPlanById } from '../../data/services/travelService'
 import { getErrorMessage } from '../../utils/errorUtils'
+import { showSuccess, showError } from '../../utils/toast'
 import { 
   AdminPageHeader, 
   Card, 
@@ -110,9 +111,12 @@ export default function EditTravelPlan() {
       
       // Simulate delay
       await new Promise(resolve => setTimeout(resolve, 500))
+      showSuccess('Travel plan updated successfully!')
       navigate('/admin/travel')
     } catch (err: unknown) { 
-      setError(getErrorMessage(err) || 'Failed to update travel plan') 
+      const errorMessage = getErrorMessage(err) || 'Failed to update travel plan'
+      setError(errorMessage)
+      showError(errorMessage)
     } finally { 
       setSaving(false) 
     }

@@ -14,6 +14,7 @@ import { getSeasons } from '../../../data/services/seasonsService'
 import { getSports } from '../../../data/services/sportsService'
 import type { DefaultsSettings } from '../../../types/organizationSettings'
 import { Button, Select, Checkbox } from '../../../components/platformAdmin'
+import { showSuccess, showError } from '../../../utils/toast'
 
 const formSchema = z.object({
   default_season_id: z.string().nullable(),
@@ -139,13 +140,16 @@ export default function DefaultsSection({
 
       if (updateError) throw updateError
 
+      showSuccess('Default settings updated successfully!')
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
 
       await onSettingsUpdated()
     } catch (err) {
       console.error('Error saving defaults settings:', err)
-      setError(err instanceof Error ? err.message : 'Failed to save settings')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save settings'
+      setError(errorMessage)
+      showError(errorMessage)
     } finally {
       setSaving(false)
       onSaveEnd()

@@ -12,6 +12,7 @@ import { useUserContext } from '../../../hooks/useUserContext'
 import { updateAttendanceSettings } from '../../../data/services/organizationSettingsService'
 import type { AttendanceSettings } from '../../../types/organizationSettings'
 import { Button, Input, Checkbox } from '../../../components/platformAdmin'
+import { showSuccess, showError } from '../../../utils/toast'
 
 const formSchema = z.object({
   required_for_practice: z.boolean(),
@@ -122,13 +123,16 @@ export default function AttendanceSection({
 
       if (updateError) throw updateError
 
+      showSuccess('Attendance settings updated successfully!')
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
 
       await onSettingsUpdated()
     } catch (err) {
       console.error('Error saving attendance settings:', err)
-      setError(err instanceof Error ? err.message : 'Failed to save settings')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save settings'
+      setError(errorMessage)
+      showError(errorMessage)
     } finally {
       setSaving(false)
       onSaveEnd()

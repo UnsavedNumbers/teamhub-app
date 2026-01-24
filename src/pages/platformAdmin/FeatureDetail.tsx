@@ -2,10 +2,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
-import { PageHeader, Card, Button, Input, Select, Badge } from '../../components/platformAdmin'
+import { PageHeader, Card, Button, Input, Select, Badge, Checkbox } from '../../components/platformAdmin'
 import { mapFeatureEntitlement, mapLicenseTier, mapTierFeatureAssignment } from '../../utils/domainMappers'
 import type { FeatureEntitlement, LicenseTier, TierFeatureAssignment } from '../../types/domain/License'
 import { FEATURE_CATEGORIES, FEATURE_TYPES } from '../../utils/licenseTierConstants'
+import { showSuccess, showError } from '../../utils/toast'
 
 const FEATURE_CATEGORIES_OPTIONS = FEATURE_CATEGORIES.map(cat => ({ value: cat, label: cat }))
 const FEATURE_TYPES_OPTIONS = FEATURE_TYPES.map(type => ({ value: type, label: type }))
@@ -23,11 +24,15 @@ export default function FeatureDetail() {
     description: '',
     rolloutStatus: 'live',
   })
+  const [originalFeature, setOriginalFeature] = useState<Partial<FeatureEntitlement> | null>(null)
   const [tiers, setTiers] = useState<LicenseTier[]>([])
   const [assignments, setAssignments] = useState<Record<string, TierFeatureAssignment>>({})
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [featureTypeOverride, setFeatureTypeOverride] = useState(false)
+  const [savingAssignment, setSavingAssignment] = useState<Record<string, boolean>>({})
+  const [showUnsavedBanner, setShowUnsavedBanner] = useState(false)
 
   const fetchFeature = useCallback(async () => {
     if (isNew) return
@@ -42,7 +47,9 @@ export default function FeatureDetail() {
 
       if (featureError) throw featureError
       if (data) {
-        setFeature(mapFeatureEntitlement(data))
+        const mapped = mapFeatureEntitlement(data)
+        setFeature(mapped)
+        setOriginalFeature(mapped)
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load feature')
@@ -88,22 +95,131 @@ export default function FeatureDetail() {
     }
   }, [id, isNew])
 
+  const toggleTierAssignment = async (tierId: string, included: boolean) => {
+    if (isNew || !id) return
+
+    setSavingAssignment(prev => ({ ...prev, [tierId]: true }))
+
+    try {
+      const assignment = assignments[tierId]
+      
+      if (included) {
+        // Create or update assignment
+        const assignmentData: Database['public']['Tables']['tier_feature_assignments']['Insert'] = {
+          license_tier_id: tierId,
+          feature_entitlement_id: id,
+          included: true,
+          limit_value: assignment?.limitValue || null,
+          role_admin: assignment?.roleAdmin ?? true,
+          role_coach: assignment?.roleCoach ?? true,
+          role_parent: assignment?.roleParent ?? false,
+        }
+
+        if (assignment?.id) {
+          // Update existing
+          const { error: updateError } = await supabase
+            .from('tier_feature_assignments')
+            .update({ included: true, updated_at: new Date().toISOString() })
+            .eq('id', assignment.id)
+
+          if (updateError) throw updateError
+        } else {
+          // Insert new
+          const { error: insertError } = await supabase
+            .from('tier_feature_assignments')
+            .insert(assignmentData)
+
+          if (insertError) throw insertError
+        }
+      } else {
+        // Remove assignment (set included to false or delete)
+        if (assignment?.id) {
+          const { error: updateError } = await supabase
+            .from('tier_feature_assignments')
+            .update({ included: false, updated_at: new Date().toISOString() })
+            .eq('id', assignment.id)
+
+          if (updateError) throw updateError
+        }
+      }
+
+      // Refresh assignments
+      await fetchAssignments()
+      showSuccess(included ? 'Feature enabled for tier' : 'Feature disabled for tier')
+    } catch (err: any) {
+      console.error('Error toggling assignment:', err)
+      const errorMessage = err.message || 'Failed to update tier assignment'
+      setError(errorMessage)
+      showError(errorMessage)
+    } finally {
+      setSavingAssignment(prev => ({ ...prev, [tierId]: false }))
+    }
+  }
+
   useEffect(() => {
     fetchFeature()
     fetchTiers()
     fetchAssignments()
   }, [fetchFeature, fetchTiers, fetchAssignments])
 
-  const handleSave = async () => {
+  // Track unsaved changes
+  useEffect(() => {
+    if (isNew || !originalFeature) {
+      setShowUnsavedBanner(false)
+      return
+    }
+
+    const hasChanges = 
+      feature.displayName !== originalFeature.displayName ||
+      feature.category !== originalFeature.category ||
+      feature.featureType !== originalFeature.featureType ||
+      feature.description !== originalFeature.description ||
+      feature.rolloutStatus !== originalFeature.rolloutStatus
+
+    setShowUnsavedBanner(hasChanges)
+  }, [feature, originalFeature, isNew])
+
+  // Reset original feature after successful save
+  useEffect(() => {
+    if (!saving && !error && originalFeature) {
+      // Check if current feature matches what we just saved
+      const matchesOriginal = 
+        feature.displayName === originalFeature.displayName &&
+        feature.category === originalFeature.category &&
+        feature.featureType === originalFeature.featureType &&
+        feature.description === originalFeature.description &&
+        feature.rolloutStatus === originalFeature.rolloutStatus
+
+      if (matchesOriginal) {
+        setShowUnsavedBanner(false)
+      }
+    }
+  }, [saving, error, feature, originalFeature])
+
+  // Warn before leaving page with unsaved changes
+  useEffect(() => {
+    if (!showUnsavedBanner) return
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = 'You have unsaved changes. Are you sure you want to leave?'
+      return e.returnValue
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [showUnsavedBanner])
+
+  const handleSave = async (): Promise<boolean> => {
     if (!feature.featureKey || !feature.displayName) {
       setError('Feature key and display name are required')
-      return
+      return false
     }
 
     // Validate feature key format
     if (!/^[a-z0-9_]+$/.test(feature.featureKey)) {
       setError('Feature key must contain only lowercase letters, numbers, and underscores')
-      return
+      return false
     }
 
     setSaving(true)
@@ -129,8 +245,11 @@ export default function FeatureDetail() {
         if (createError) throw createError
 
         if (data) {
+          showSuccess('Feature created successfully!')
           navigate(`/platform-admin/licenses/features/${(data as any).id}`)
+          return true
         }
+        return false
       } else {
         type FeatureUpdate = Database['public']['Tables']['feature_entitlements']['Update']
         const updateData = {
@@ -146,9 +265,17 @@ export default function FeatureDetail() {
           .eq('id', id!)
 
         if (updateError) throw updateError
+        
+        // Update original feature after successful save
+        setOriginalFeature(feature)
+        showSuccess('Feature updated successfully!')
+        return true
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to save feature')
+      const errorMessage = err.message || 'Failed to save feature'
+      setError(errorMessage)
+      showError(errorMessage)
+      return false
     } finally {
       setSaving(false)
     }
@@ -169,9 +296,36 @@ export default function FeatureDetail() {
         subtitle={isNew ? 'Add a new feature to the catalog' : `Manage ${feature.displayName}`}
         actions={
           <div style={{ display: 'flex', gap: 'var(--pa-space-3)' }}>
-            <Button variant="secondary" onClick={() => navigate('/platform-admin/licenses/features')}>
-              Cancel
-            </Button>
+            {!isNew && (
+              <Button 
+                variant="ghost" 
+                onClick={() => navigate('/platform-admin/licenses/features')}
+                style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>arrow_back</span>
+                Back to Features
+              </Button>
+            )}
+            {isNew && (
+              <Button variant="secondary" onClick={() => navigate('/platform-admin/licenses/features')}>
+                Cancel
+              </Button>
+            )}
+            {!isNew && (
+              <Button 
+                variant="secondary" 
+                onClick={async () => {
+                  const success = await handleSave()
+                  if (success) {
+                    // Small delay to show the success toast before navigating
+                    setTimeout(() => navigate('/platform-admin/licenses/features'), 500)
+                  }
+                }} 
+                disabled={saving}
+              >
+                {saving ? 'Saving...' : 'Save and Go Back'}
+              </Button>
+            )}
             <Button variant="primary" onClick={handleSave} disabled={saving}>
               {saving ? 'Saving...' : 'Save Changes'}
             </Button>
@@ -184,6 +338,57 @@ export default function FeatureDetail() {
           <div className="pa-flex pa-items-center pa-gap-2">
             <span className="material-symbols-outlined" style={{ color: 'var(--pa-danger)' }}>error</span>
             <span className="pa-body-m">{error}</span>
+          </div>
+        </div>
+      )}
+
+      {showUnsavedBanner && (
+        <div 
+          className="pa-card pa-mb-4" 
+          style={{ 
+            borderLeft: '3px solid var(--pa-warning)', 
+            background: 'var(--pa-warning-bg)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: 'var(--pa-space-3) var(--pa-space-4)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)' }}>
+            <span className="material-symbols-outlined" style={{ color: 'var(--pa-warning)' }}>
+              edit
+            </span>
+            <div>
+              <div className="pa-body-m" style={{ fontWeight: 600, color: 'var(--pa-n900)' }}>
+                You have unsaved changes
+              </div>
+              <div className="pa-body-s" style={{ color: 'var(--pa-n600)', marginTop: '2px' }}>
+                Save your changes to avoid losing them.
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--pa-space-2)' }}>
+            <Button
+              variant="ghost"
+              size="dense"
+              onClick={() => {
+                if (originalFeature) {
+                  setFeature(originalFeature)
+                  setShowUnsavedBanner(false)
+                }
+              }}
+              disabled={saving}
+            >
+              Discard
+            </Button>
+            <Button
+              variant="primary"
+              size="dense"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? 'Saving...' : 'Save Changes'}
+            </Button>
           </div>
         </div>
       )}
@@ -224,11 +429,56 @@ export default function FeatureDetail() {
 
           <div className="pa-form-group">
             <label className="pa-label pa-label--required">Feature Type</label>
-            <Select
-              value={feature.featureType || 'module'}
-              onChange={(e) => setFeature({ ...feature, featureType: e.target.value as any })}
-              options={FEATURE_TYPES_OPTIONS}
-            />
+            {!featureTypeOverride ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span className="pa-body-m" style={{ color: 'var(--pa-n700)' }}>
+                  {feature.featureType || 'module'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFeatureTypeOverride(true)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--pa-primary)',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    fontSize: '13px',
+                    padding: 0,
+                  }}
+                  className="pa-body-s"
+                >
+                  Override
+                </button>
+              </div>
+            ) : (
+              <div>
+                <Select
+                  value={feature.featureType || 'module'}
+                  onChange={(e) => {
+                    setFeature({ ...feature, featureType: e.target.value as any })
+                    setFeatureTypeOverride(false)
+                  }}
+                  options={FEATURE_TYPES_OPTIONS}
+                />
+                <button
+                  type="button"
+                  onClick={() => setFeatureTypeOverride(false)}
+                  style={{
+                    marginTop: '8px',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--pa-n500)',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    padding: 0,
+                  }}
+                  className="pa-body-xs"
+                >
+                  Cancel override
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="pa-form-group">
@@ -285,50 +535,91 @@ export default function FeatureDetail() {
           {tiers.map((tier) => {
             const assignment = assignments[tier.id]
             const included = assignment?.included ?? false
+            const isSaving = savingAssignment[tier.id] || false
 
             return (
-              <div key={tier.id} className="pa-card pa-mb-3" style={{ padding: 'var(--pa-space-4)' }}>
-                <div className="pa-flex pa-items-center pa-justify-between pa-mb-3">
-                  <div>
-                    <div className="pa-body-m" style={{ fontWeight: 600 }}>
-                      {tier.tierName}
+              <div 
+                key={tier.id} 
+                className="pa-card pa-mb-3" 
+                style={{ 
+                  padding: 'var(--pa-space-4)',
+                  border: included ? '1px solid var(--pa-success)' : '1px solid var(--pa-n100)',
+                  backgroundColor: included ? 'var(--pa-success-bg)' : 'var(--pa-n50)',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <div className="pa-flex pa-items-center pa-justify-between">
+                  <div style={{ flex: 1 }}>
+                    <div className="pa-flex pa-items-center pa-gap-3">
+                      <Checkbox
+                        checked={included}
+                        onChange={(e) => toggleTierAssignment(tier.id, e.target.checked)}
+                        disabled={isSaving || isNew}
+                      />
+                      <div>
+                        <div className="pa-body-m" style={{ fontWeight: 600, color: 'var(--pa-n900)' }}>
+                          {tier.tierName}
+                        </div>
+                        <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '2px' }}>
+                          {tier.tierKey}
+                        </div>
+                      </div>
                     </div>
-                    <div className="pa-body-s" style={{ color: 'var(--pa-n500)' }}>
-                      {tier.tierKey}
-                    </div>
+
+                    {included && assignment && (
+                      <div style={{ 
+                        marginTop: 'var(--pa-space-3)', 
+                        paddingTop: 'var(--pa-space-3)', 
+                        borderTop: '1px solid var(--pa-n200)',
+                        marginLeft: '30px'
+                      }}>
+                        {feature.featureType === 'limit' && (
+                          <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
+                            <strong>Limit:</strong> {assignment.limitValue ?? 'Not set'}
+                          </div>
+                        )}
+                        {feature.featureType === 'permission' && (
+                          <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
+                            <strong>Roles:</strong> {[
+                              assignment.roleAdmin && 'Admin',
+                              assignment.roleCoach && 'Coach',
+                              assignment.roleParent && 'Parent',
+                            ].filter(Boolean).join(', ') || 'None'}
+                          </div>
+                        )}
+                        {feature.featureType !== 'limit' && feature.featureType !== 'permission' && (
+                          <div className="pa-body-s" style={{ color: 'var(--pa-n600)' }}>
+                            Configured for this tier
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <Badge variant={included ? 'success' : 'neutral'}>
-                    {included ? 'Included' : 'Not Included'}
-                  </Badge>
+
+                  {isSaving && (
+                    <div style={{ marginLeft: 'var(--pa-space-3)' }}>
+                      <span className="material-symbols-outlined pa-spin" style={{ 
+                        fontSize: '18px',
+                        color: 'var(--pa-n500)'
+                      }}>
+                        sync
+                      </span>
+                    </div>
+                  )}
                 </div>
 
-                {included && assignment && (
-                  <div style={{ paddingTop: 'var(--pa-space-3)', borderTop: '1px solid var(--pa-n100)' }}>
-                    {feature.featureType === 'limit' && (
-                      <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
-                        Limit: {assignment.limitValue ?? 'Not set'}
-                      </div>
-                    )}
-                    {feature.featureType === 'permission' && (
-                      <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
-                        Roles: {[
-                          assignment.roleAdmin && 'Admin',
-                          assignment.roleCoach && 'Coach',
-                          assignment.roleParent && 'Parent',
-                        ].filter(Boolean).join(', ') || 'None'}
-                      </div>
-                    )}
+                {included && !isNew && (
+                  <div style={{ marginTop: 'var(--pa-space-3)', marginLeft: '30px' }}>
+                    <Button
+                      variant="ghost"
+                      size="dense"
+                      onClick={() => navigate(`/platform-admin/licenses/tiers/${tier.id}`)}
+                      disabled={isSaving}
+                    >
+                      Configure Details
+                    </Button>
                   </div>
                 )}
-
-                <Button
-                  variant="ghost"
-                  size="dense"
-                  onClick={() => navigate(`/platform-admin/licenses/tiers/${tier.id}`)}
-                  style={{ marginTop: 'var(--pa-space-2)' }}
-                >
-                  Edit in Tier
-                </Button>
               </div>
             )
           })}

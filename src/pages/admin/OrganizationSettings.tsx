@@ -4,6 +4,7 @@ import { Controller, useForm } from 'react-hook-form'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { getErrorMessage } from '../../utils/errorUtils'
+import { showSuccess, showError } from '../../utils/toast'
 import { 
   AdminPageHeader, 
   Card, 
@@ -124,10 +125,11 @@ export default function OrganizationSettings() {
       if (updateError) throw updateError
       
       setOrgDetails(updatedOrg)
-      setSuccess('Organization profile updated successfully')
-      setTimeout(() => setSuccess(null), 3000)
+      showSuccess('Organization profile updated successfully')
     } catch (err) {
-      setError(getErrorMessage(err) || 'Failed to update profile')
+      const errorMessage = getErrorMessage(err) || 'Failed to update profile'
+      setError(errorMessage)
+      showError(errorMessage)
     } finally {
       setSaving(false)
     }
@@ -169,11 +171,12 @@ export default function OrganizationSettings() {
 
       if (result.error) throw result.error
 
-      setSuccess('Settings updated successfully')
+      showSuccess('Settings updated successfully')
       loadData() // Reload to get fresh timestamps
-      setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
-      setError(getErrorMessage(err) || 'Failed to update settings')
+      const errorMessage = getErrorMessage(err) || 'Failed to update settings'
+      setError(errorMessage)
+      showError(errorMessage)
     } finally {
       setSaving(false)
     }

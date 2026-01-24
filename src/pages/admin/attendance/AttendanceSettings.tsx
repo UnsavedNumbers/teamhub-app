@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent, Button } from '../../../compo
 import { useUserContext } from '../../../hooks/useUserContext'
 import { getAttendanceSettings, updateAttendanceSettings } from '../../../data/services/attendanceService'
 import type { AttendanceSettings } from '../../../types/attendance'
+import { showSuccess, showError } from '../../../utils/toast'
 
 export default function AttendanceSettingsTab() {
   const [settings, setSettings] = useState<AttendanceSettings | null>(null)
@@ -22,8 +23,18 @@ export default function AttendanceSettingsTab() {
   const handleSave = async () => {
     if (!settings) return
     setSaving(true)
-    await updateAttendanceSettings(context, settings)
-    setSaving(false)
+    try {
+      const { error } = await updateAttendanceSettings(context, settings)
+      if (error) {
+        showError(error.message || 'Failed to save attendance settings')
+      } else {
+        showSuccess('Attendance settings updated successfully!')
+      }
+    } catch (err: any) {
+      showError(err.message || 'Failed to save attendance settings')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const toggle = (key: keyof AttendanceSettings) => {
