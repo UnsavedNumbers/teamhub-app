@@ -36,7 +36,7 @@ interface OrganizationUser {
 
 interface UsersTabProps {
   organizationId: string
-  adminRole: string | null
+  adminRole: PlatformAdminRole | null
 }
 
 export function UsersTab({ organizationId, adminRole }: UsersTabProps) {
@@ -58,6 +58,7 @@ export function UsersTab({ organizationId, adminRole }: UsersTabProps) {
   const [dialogError, setDialogError] = useState<string | null>(null)
 
   useEffect(() => {
+    isMountedRef.current = true
     return () => {
       isMountedRef.current = false
     }
@@ -70,26 +71,114 @@ export function UsersTab({ organizationId, adminRole }: UsersTabProps) {
     setError(null)
 
     try {
-      const { data, error: rpcError } = await supabase.rpc('get_organization_users', {
+      // Validate organizationId is a valid UUID
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(organizationId)) {
+        setError('Invalid organization ID format')
+        setUsers([])
+        setTotalCount(0)
+        setLoading(false)
+        return
+      }
+
+      // Try RPC function first (more efficient)
+      const { data: rpcData, error: rpcError } = await supabase.rpc('get_organization_users', {
         target_org_id: organizationId,
       })
 
       if (!isMountedRef.current) return
 
+      // If RPC error, check if we should fallback
       if (rpcError) {
-        const normalized = handleRpcError(rpcError, 'get_organization_users')
-        setError(normalized.message)
+        // Log the full error for debugging
+        console.error('[UsersTab] RPC error:', {
+          code: rpcError.code,
+          message: rpcError.message,
+          details: rpcError.details,
+          hint: rpcError.hint,
+        })
+
+        const is404 = rpcError.code === 'PGRST116' || 
+                      rpcError.message?.includes('404') || 
+                      rpcError.message?.includes('not found') ||
+                      rpcError.message?.includes('function') ||
+                      rpcError.message?.includes('does not exist')
+
+        const is400 = rpcError.code === 'PGRST400' || 
+                     rpcError.code === '42501' ||
+                     rpcError.message?.includes('400') ||
+                     rpcError.message?.includes('Bad Request') ||
+                     rpcError.message?.includes('Not authorized') ||
+                     rpcError.message?.includes('permission denied')
+
+        // For 404 (function doesn't exist) or 400 (authorization/parameter issue), try fallback
+        if (is404 || is400) {
+          console.warn(`[UsersTab] RPC returned ${is404 ? '404' : '400'}, falling back to admin_users view`)
+          // Fall through to fallback logic below
+        } else {
+          // For other errors, show the error and don't fallback
+          const normalized = handleRpcError(rpcError, 'get_organization_users')
+          setError(normalized.message)
+          setUsers([])
+          setTotalCount(0)
+          setLoading(false)
+          return
+        }
+      } else if (rpcData) {
+        // RPC succeeded with data
+        const userList = (rpcData || []) as OrganizationUser[]
+        setUsers(userList)
+        setTotalCount(userList.length)
+        setLoading(false)
+        return
+      }
+    } catch (err) {
+      if (!isMountedRef.current) return
+      console.error('[UsersTab] Unexpected error:', err)
+      // Try fallback on unexpected errors too
+    }
+
+    // Fallback: Query admin_users view and filter client-side
+    try {
+      console.warn('[UsersTab] Using fallback: querying admin_users view')
+      
+      const { data: viewData, error: viewError } = await supabase
+        .from('admin_users')
+        .select('*')
+
+      if (!isMountedRef.current) return
+
+      if (viewError) {
+        const normalized = handleRpcError(viewError, 'fetch_users_fallback')
+        setError(`Unable to fetch users. ${normalized.message} Please ensure database migrations are up to date.`)
         setUsers([])
         setTotalCount(0)
         return
       }
 
-      const userList = (data || []) as OrganizationUser[]
-      setUsers(userList)
-      setTotalCount(userList.length)
-    } catch (err) {
+      // Filter users by organization client-side
+      const filteredUsers = ((viewData || []) as any[]).filter((user: any) => {
+        if (!user.organizations || !Array.isArray(user.organizations)) return false
+        return user.organizations.some((org: any) => org.org_id === organizationId)
+      }).map((user: any) => ({
+        id: user.id,
+        email: user.email,
+        phone: user.phone,
+        display_name: user.display_name,
+        roles: user.roles || [],
+        is_platform_admin: user.is_platform_admin || false,
+        last_sign_in_at: user.last_sign_in_at,
+        email_confirmed: user.email_confirmed || false,
+        is_disabled: user.is_disabled || false,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+      })) as OrganizationUser[]
+
+      setUsers(filteredUsers)
+      setTotalCount(filteredUsers.length)
+    } catch (fallbackErr) {
       if (!isMountedRef.current) return
-      const normalized = handleRpcError(err, 'get_organization_users')
+      console.error('[UsersTab] Fallback also failed:', fallbackErr)
+      const normalized = handleRpcError(fallbackErr, 'fetch_users_fallback')
       setError(normalized.message)
       setUsers([])
       setTotalCount(0)
@@ -184,8 +273,19 @@ export function UsersTab({ organizationId, adminRole }: UsersTabProps) {
       const { data, error: rpcError } = await supabase.rpc(rpcName, rpcParams)
 
       if (rpcError) {
-        const normalized = handleRpcError(rpcError, rpcName)
-        setDialogError(normalized.message)
+        // Check if RPC function doesn't exist
+        const is404 = rpcError.code === 'PGRST116' || 
+                      rpcError.message.includes('404') || 
+                      rpcError.message.includes('not found') ||
+                      rpcError.message.includes('function') ||
+                      rpcError.message.includes('does not exist')
+        
+        if (is404) {
+          setDialogError(`RPC function '${rpcName}' not available. Please ensure database migrations are up to date.`)
+        } else {
+          const normalized = handleRpcError(rpcError, rpcName)
+          setDialogError(normalized.message)
+        }
         return
       }
 

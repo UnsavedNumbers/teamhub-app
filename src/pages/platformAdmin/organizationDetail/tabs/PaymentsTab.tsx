@@ -33,6 +33,7 @@ export function PaymentsTab({ organizationId, adminRole }: PaymentsTabProps) {
   const { page, rowsPerPage, totalCount, setPage, setRowsPerPage, setTotalCount } = usePagination(0, 50)
 
   useEffect(() => {
+    isMountedRef.current = true
     return () => {
       isMountedRef.current = false
     }

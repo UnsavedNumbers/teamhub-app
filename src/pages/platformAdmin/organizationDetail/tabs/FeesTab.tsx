@@ -24,6 +24,7 @@ export function FeesTab({ organizationId }: FeesTabProps) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    isMountedRef.current = true
     return () => {
       isMountedRef.current = false
     }

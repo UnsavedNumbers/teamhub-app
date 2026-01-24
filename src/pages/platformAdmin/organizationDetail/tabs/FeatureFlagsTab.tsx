@@ -39,16 +39,30 @@ export function FeatureFlagsTab({ organizationId, adminRole, onFlagToggled }: Fe
   const [dialogError, setDialogError] = useState<string | null>(null)
 
   useEffect(() => {
+    isMountedRef.current = true
     return () => {
       isMountedRef.current = false
     }
   }, [])
 
   const fetchFlags = useCallback(async () => {
-    if (!organizationId) return
+    // #region agent log
+    fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FeatureFlagsTab.tsx:47',message:'fetchFlags START',data:{organizationId,isMounted:isMountedRef.current},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,C'})}).catch(()=>{});
+    // #endregion
+
+    if (!organizationId) {
+      // #region agent log
+      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FeatureFlagsTab.tsx:53',message:'NO organizationId',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      return
+    }
 
     setLoading(true)
     setError(null)
+
+    // #region agent log
+    fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FeatureFlagsTab.tsx:64',message:'BEFORE query admin_feature_flags',data:{organizationId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,E'})}).catch(()=>{});
+    // #endregion
 
     try {
       const { data, error: fetchError } = await supabase
@@ -57,24 +71,43 @@ export function FeatureFlagsTab({ organizationId, adminRole, onFlagToggled }: Fe
         .eq('org_id', organizationId)
         .order('feature_key', { ascending: true })
 
+      // #region agent log
+      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FeatureFlagsTab.tsx:76',message:'AFTER query admin_feature_flags',data:{hasData:!!data,dataLength:data?.length,hasError:!!fetchError,errorCode:fetchError?.code,isMounted:isMountedRef.current},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,B'})}).catch(()=>{});
+      // #endregion
+
       if (!isMountedRef.current) return
 
       if (fetchError) {
+        // #region agent log
+        fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FeatureFlagsTab.tsx:85',message:'Query ERROR',data:{code:fetchError.code,message:fetchError.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,B'})}).catch(()=>{});
+        // #endregion
         const normalized = handleRpcError(fetchError, 'fetch_feature_flags')
         setError(normalized.message)
         setFlags([])
         return
       }
 
+      // #region agent log
+      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FeatureFlagsTab.tsx:96',message:'Query SUCCESS',data:{dataLength:data?.length||0},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       setFlags((data || []) as AdminFeatureFlag[])
     } catch (err) {
+      // #region agent log
+      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FeatureFlagsTab.tsx:103',message:'EXCEPTION',data:{error:err instanceof Error?err.message:String(err)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B,E'})}).catch(()=>{});
+      // #endregion
       if (!isMountedRef.current) return
       const normalized = handleRpcError(err, 'fetch_feature_flags')
       setError(normalized.message)
       setFlags([])
     } finally {
+      // #region agent log
+      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FeatureFlagsTab.tsx:113',message:'FINALLY block',data:{isMounted:isMountedRef.current},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       if (isMountedRef.current) {
         setLoading(false)
+        // #region agent log
+        fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FeatureFlagsTab.tsx:119',message:'setLoading(false) SUCCESS',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
       }
     }
   }, [organizationId])
@@ -119,8 +152,19 @@ export function FeatureFlagsTab({ organizationId, adminRole, onFlagToggled }: Fe
       })
 
       if (rpcError) {
-        const normalized = handleRpcError(rpcError, 'admin_set_feature_flag')
-        setDialogError(normalized.message)
+        // Check if RPC function doesn't exist
+        const is404 = rpcError.code === 'PGRST116' || 
+                      rpcError.message.includes('404') || 
+                      rpcError.message.includes('not found') ||
+                      rpcError.message.includes('function') ||
+                      rpcError.message.includes('does not exist')
+        
+        if (is404) {
+          setDialogError('RPC function \'admin_set_feature_flag\' not available. Please ensure database migrations are up to date.')
+        } else {
+          const normalized = handleRpcError(rpcError, 'admin_set_feature_flag')
+          setDialogError(normalized.message)
+        }
         return
       }
 
