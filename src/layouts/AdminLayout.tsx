@@ -9,6 +9,7 @@ import { usePlatformAdminTheme } from '../hooks/usePlatformAdminTheme'
 import { useT } from '../i18n/useI18n'
 import { useSidebar } from '../contexts/SidebarContext'
 import { getLink, getPath, RouteKeys } from '@/utils/routes'
+import SidebarOrganizationSwitcher from '../components/admin/SidebarOrganizationSwitcher'
 
 export default function AdminLayout() {
   const { loaded: themeLoaded } = usePlatformAdminTheme()
@@ -112,11 +113,7 @@ export default function AdminLayout() {
               style={{ height: '32px', width: 'auto' }}
             />
           </Link>
-          {currentOrganization && (
-            <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--pa-n500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              {currentOrganization.name}
-            </div>
-          )}
+          <SidebarOrganizationSwitcher />
         </div>
 
         {/* Navigation */}
