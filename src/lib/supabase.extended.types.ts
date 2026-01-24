@@ -203,6 +203,7 @@ type AdditionalTables = {
       revoked_at: string | null
       revoked_by: string | null
       revoked_reason: string | null
+      version: number
     }
     Insert: Partial<AdditionalTables['entitlement_overrides']['Row']> & {
       target_type: 'organization' | 'user'

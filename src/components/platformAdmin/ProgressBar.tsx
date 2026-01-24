@@ -1,5 +1,3 @@
-import type { ReactNode } from 'react'
-
 interface ProgressBarProps {
   /** Progress value from 0 to 100 */
   value: number
@@ -135,7 +133,6 @@ export function MultiStepProgressBar({
         {steps.map((step, index) => {
           const isCompleted = index < clampedStep
           const isCurrent = index === clampedStep
-          const isPending = index > clampedStep
           
           return (
             <div

@@ -9,7 +9,6 @@
  */
 
 import { supabase } from '../../lib/supabase'
-import { showError } from '../../utils/toast'
 import type { FeatureCategory } from '../../types/licenseTiers.types'
 
 // Type definitions

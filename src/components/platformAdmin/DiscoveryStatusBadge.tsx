@@ -1,6 +1,4 @@
 import { Badge, Button } from '.';
-import { useState } from 'react';
-import { supabase } from '../../lib/supabase';
 
 interface DiscoveryStatusBadgeProps {
     lastDiscoveredAt: string | null;

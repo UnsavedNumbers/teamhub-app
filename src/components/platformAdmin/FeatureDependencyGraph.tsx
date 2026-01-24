@@ -1,4 +1,3 @@
-import { useRef, useEffect, useState } from 'react';
 import type { DiscoveredFeature } from '../../utils/featureDiscovery/types';
 
 interface FeatureDependencyGraphProps {

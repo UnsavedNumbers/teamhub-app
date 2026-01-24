@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
@@ -10,11 +10,27 @@ import { validateFeatureDependencies, logAuditEvent } from '../../utils/licenseE
 import { showSuccess, showError } from '../../utils/toast'
 import { useOffline } from '../../hooks/useOffline'
 import { isDemoMode, assertNotDemoMode, getDemoModeError } from '../../utils/demoMode'
+import { useAuth } from '../../hooks/useAuth'
+import { canPerformAction } from '../../utils/platformAdminPermissions'
+import type { PlatformAdminRole } from '../../types/platformAdmin.types'
+
+const SESSION_STORAGE_KEY = 'override_create_state'
 
 export default function OverrideCreate() {
   const navigate = useNavigate()
   const { isOffline } = useOffline()
   const demoMode = isDemoMode()
+  const { profile } = useAuth()
+  
+  // Get admin role for permission checks (Issue 7)
+  const adminRole = useMemo<PlatformAdminRole | null>(() => {
+    return profile?.platformAdminRole ?? null
+  }, [profile?.platformAdminRole])
+  
+  const canCreate = useMemo(() => {
+    return adminRole ? canPerformAction(adminRole, 'manage_overrides') : false
+  }, [adminRole])
+  
   const [step, setStep] = useState(1)
   const [targetType, setTargetType] = useState<'organization' | 'user'>('organization')
   const [targetSearch, setTargetSearch] = useState('')
@@ -35,6 +51,50 @@ export default function OverrideCreate() {
   const [error, setError] = useState<string | null>(null)
   const [searchResults, setSearchResults] = useState<Array<{ id: string; name: string }>>([])
   const [searching, setSearching] = useState(false)
+
+  // Restore form state from session storage (Issue 10)
+  useEffect(() => {
+    const saved = sessionStorage.getItem(SESSION_STORAGE_KEY)
+    if (saved) {
+      try {
+        const state = JSON.parse(saved)
+        if (state.step) setStep(state.step)
+        if (state.targetType) setTargetType(state.targetType)
+        if (state.selectedTargetId) setSelectedTargetId(state.selectedTargetId)
+        if (state.selectedTargetName) setSelectedTargetName(state.selectedTargetName)
+        if (state.selectedFeatureId) setSelectedFeatureId(state.selectedFeatureId)
+        if (state.overrideAction) setOverrideAction(state.overrideAction)
+        if (state.limitValue !== undefined) setLimitValue(state.limitValue)
+        if (state.roleAdmin !== undefined) setRoleAdmin(state.roleAdmin)
+        if (state.roleCoach !== undefined) setRoleCoach(state.roleCoach)
+        if (state.roleParent !== undefined) setRoleParent(state.roleParent)
+        if (state.reason) setReason(state.reason)
+        if (state.expiresAt) setExpiresAt(state.expiresAt)
+      } catch (err) {
+        console.error('Failed to restore form state:', err)
+        sessionStorage.removeItem(SESSION_STORAGE_KEY)
+      }
+    }
+  }, [])
+
+  // Save form state to session storage on changes (Issue 10)
+  useEffect(() => {
+    const state = {
+      step,
+      targetType,
+      selectedTargetId,
+      selectedTargetName,
+      selectedFeatureId,
+      overrideAction,
+      limitValue,
+      roleAdmin,
+      roleCoach,
+      roleParent,
+      reason,
+      expiresAt,
+    }
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(state))
+  }, [step, targetType, selectedTargetId, selectedTargetName, selectedFeatureId, overrideAction, limitValue, roleAdmin, roleCoach, roleParent, reason, expiresAt])
 
   useEffect(() => {
     fetchFeatures()
@@ -217,13 +277,38 @@ export default function OverrideCreate() {
         })
       }
 
+      // Clear session storage on success (Issue 10)
+      sessionStorage.removeItem(SESSION_STORAGE_KEY)
+      
       showSuccess('Override created successfully!')
       navigate('/platform-admin/licenses/overrides')
     } catch (err: any) {
       let errorMessage = 'Failed to create override'
+      let existingOverrideId: string | null = null
       
       if (err.code === '23505') {
+        // Duplicate override (Issue 4) - try to find existing override
         errorMessage = 'An override for this target and feature already exists.'
+        
+        // Try to find the existing override
+        try {
+          const { data: existing } = await supabase
+            .from('admin_entitlement_overrides_list')
+            .select('id')
+            .eq('target_type', targetType)
+            .eq('target_id', selectedTargetId)
+            .eq('feature_entitlement_id', selectedFeatureId)
+            .eq('override_action', overrideAction)
+            .eq('status', 'active')
+            .single()
+          
+          if (existing) {
+            existingOverrideId = existing.id
+            errorMessage = 'An override for this target and feature already exists. Would you like to view it?'
+          }
+        } catch (lookupErr) {
+          // Ignore lookup errors
+        }
       } else if (err.code === '23503') {
         errorMessage = 'Invalid target or feature. Please verify your selections.'
       } else if (err.code === '23502') {
@@ -234,9 +319,36 @@ export default function OverrideCreate() {
       
       setError(errorMessage)
       showError(errorMessage)
+      
+      // If we found an existing override, show link to view it
+      if (existingOverrideId) {
+        setTimeout(() => {
+          if (window.confirm('Would you like to view the existing override?')) {
+            navigate(`/platform-admin/licenses/overrides/${existingOverrideId}`)
+          }
+        }, 100)
+      }
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleClearSavedProgress = () => {
+    sessionStorage.removeItem(SESSION_STORAGE_KEY)
+    setStep(1)
+    setTargetType('organization')
+    setTargetSearch('')
+    setSelectedTargetId('')
+    setSelectedTargetName('')
+    setSelectedFeatureId('')
+    setOverrideAction('enable')
+    setLimitValue(null)
+    setRoleAdmin(null)
+    setRoleCoach(null)
+    setRoleParent(null)
+    setReason('')
+    setExpiresAt('')
+    showSuccess('Saved progress cleared')
   }
 
   const selectedFeature = features.find(f => f.id === selectedFeatureId)
@@ -293,11 +405,17 @@ export default function OverrideCreate() {
             <Button variant="blue" onClick={() => navigate('/platform-admin/licenses/overrides')}>
               Cancel
             </Button>
+            {sessionStorage.getItem(SESSION_STORAGE_KEY) && (
+              <Button variant="ghost" onClick={handleClearSavedProgress}>
+                Clear Saved Progress
+              </Button>
+            )}
             {step === 4 && (
               <Button 
                 variant="primary" 
                 onClick={handleSave} 
-                disabled={saving || demoMode || isOffline}
+                disabled={saving || demoMode || isOffline || !canCreate}
+                title={!canCreate ? 'You do not have permission to create overrides' : undefined}
               >
                 {saving ? 'Creating...' : 'Create Override'}
               </Button>

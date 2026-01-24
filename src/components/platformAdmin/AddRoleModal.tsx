@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { Select } from './Select'
 import { Button } from './Button'
-import type { AdminOrganization } from '../../types/platformAdmin.types'
 
 interface AddRoleModalProps {
   open: boolean
@@ -22,7 +21,6 @@ const ORG_ROLES: Array<{ value: 'parent' | 'coach' | 'org_admin'; label: string 
 
 export function AddRoleModal({
   open,
-  userId,
   existingOrgs,
   onConfirm,
   onCancel,
@@ -65,7 +63,7 @@ export function AddRoleModal({
         if (!error && data) {
           // Filter out orgs user is already in
           const existingOrgIds = new Set(existingOrgs.map(o => o.org_id))
-          setOrgs(data.filter(org => !existingOrgIds.has(org.id)))
+          setOrgs((data as Array<{id: string, name: string}>).filter(org => !existingOrgIds.has(org.id)))
         }
       } catch (err) {
         console.error('Error fetching organizations:', err)

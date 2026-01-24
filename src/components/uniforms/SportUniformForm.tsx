@@ -40,7 +40,7 @@ export function SportUniformForm({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<CreateUniformKitDTO & {
+  const { control, handleSubmit, watch, setValue } = useForm<CreateUniformKitDTO & {
     sport_name: string
     program_id_select: string
     season_id_select: string
@@ -436,6 +436,7 @@ export function SportUniformForm({
                 <Input
                   label="Vendor (Optional)"
                   {...field}
+                  value={field.value ?? ''}
                 />
               )}
             />
@@ -450,6 +451,7 @@ export function SportUniformForm({
                   label="Order Deadline (Optional)"
                   type="datetime-local"
                   {...field}
+                  value={field.value ?? ''}
                 />
               )}
             />
@@ -466,6 +468,7 @@ export function SportUniformForm({
                     className="pa-input pa-textarea"
                     rows={4}
                     {...field}
+                    value={field.value ?? ''}
                     placeholder="Internal notes about this uniform..."
                   />
                 </div>
