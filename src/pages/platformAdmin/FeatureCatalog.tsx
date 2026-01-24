@@ -32,6 +32,8 @@ import {
 } from '../../data/services/featureBulkOperations'
 import { showSuccess, showError, showInfo } from '../../utils/toast'
 import type { FeatureCategory } from '../../types/licenseTiers.types'
+import { useI18n } from '../../i18n/useI18n'
+import { formatToastMessage, formatPlural } from '../../utils/toastMessages'
 
 const CATEGORY_OPTIONS = [
   { value: '', label: 'All Categories' },
@@ -60,6 +62,7 @@ function normalizeArrayField(value: unknown): string[] | null {
 
 export default function FeatureCatalog() {
   const navigate = useNavigate()
+  const { t } = useI18n()
   
   // Data State
   const [features, setFeatures] = useState<FeatureEntitlementWithCounts[]>([])
@@ -519,7 +522,7 @@ export default function FeatureCatalog() {
       }
 
       if (action === 'remove' && applicableIds.length === 0) {
-        showError('No toggleable features selected. All selected features are locked and cannot be removed from tiers.')
+        showError(t('toast.error.noToggleableFeaturesForRemoval'))
         throw new Error('ALL_LOCKED')
       }
 
@@ -536,7 +539,11 @@ export default function FeatureCatalog() {
       } else {
         if (result.code === 'FEATURE_LOCKED') {
           const lockedNames = result.locked_features?.map(f => f.display_name).join(', ') || 'locked features'
-          showError(`Cannot modify locked features: ${lockedNames}`)
+          showError(formatToastMessage(t('toast.error.lockedFeaturesCannotModify'), {
+            count: result.locked_features?.length || 0,
+            plural: formatPlural(result.locked_features?.length || 0),
+            names: lockedNames
+          }))
           throw new Error('FEATURE_LOCKED')
         } else if (result.code === 'LOCK_HELD') {
           showError('Another bulk operation is in progress. Please wait.')
@@ -548,7 +555,7 @@ export default function FeatureCatalog() {
       }
     } catch (err: any) {
       if (err.message !== 'LOCK_HELD' && err.message !== 'Operation failed' && err.message !== 'FEATURE_LOCKED' && err.message !== 'ALL_LOCKED') {
-        showError(err.message || 'Operation failed')
+        showError(err.message || t('toast.error.operationFailed'))
       }
       throw err // Re-throw to let modal handle it
     }

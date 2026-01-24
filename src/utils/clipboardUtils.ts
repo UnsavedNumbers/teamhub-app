@@ -8,6 +8,7 @@
  */
 
 import { showSuccess, showError } from './toast'
+import { t } from '../i18n/index'
 
 /**
  * Copy text to clipboard with error handling
@@ -31,19 +32,19 @@ export async function copyToClipboard(
   if (!navigator.clipboard) {
     const error = new Error('Clipboard API not available')
     onError?.(error)
-    showError('Clipboard not supported in this browser')
+    showError(t('toast.error.clipboardNotSupported'))
     return false
   }
 
   try {
     await navigator.clipboard.writeText(text)
     onSuccess?.()
-    showSuccess('Copied to clipboard')
+    showSuccess(t('toast.success.copied'))
     return true
   } catch (error) {
     const err = error instanceof Error ? error : new Error('Failed to copy to clipboard')
     onError?.(err)
-    showError('Failed to copy to clipboard')
+    showError(t('toast.error.clipboardFailed'))
     return false
   }
 }

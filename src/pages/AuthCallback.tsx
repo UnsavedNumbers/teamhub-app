@@ -11,6 +11,7 @@ import {
 import { getLoginRedirect } from '../utils/loginRedirect'
 import { mapAuthError } from '../utils/authErrorMapper'
 import type { SupabaseExtended as Database } from '../lib/supabase.extended.types'
+import type { OrgMemberRole } from '../contexts/OrganizationContext'
 
 export default function AuthCallback() {
   const [searchParams] = useSearchParams()
@@ -155,12 +156,19 @@ export default function AuthCallback() {
             return
           }
 
-          // Map to Organization format
+          // Map to Organization format with proper role validation
           const organizations = (orgData || []).map((org: any) => {
-            const roles = org.roles || []
+            // Normalize and validate roles array (same logic as useAuth.tsx)
+            const roles = Array.isArray(org.roles)
+              ? org.roles.filter(
+                  (r: unknown): r is OrgMemberRole =>
+                    r === 'parent' || r === 'coach' || r === 'org_admin'
+                )
+              : []
+            
             return {
               id: org.org_id,
-              name: org.org_name,
+              name: org.org_name || '',
               roles,
               get role() { return this.roles[0] ?? 'parent' }
             }
