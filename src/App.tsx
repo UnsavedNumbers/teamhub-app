@@ -107,6 +107,7 @@ const OrganizationBilling = lazy(() => import('./pages/admin/OrganizationBilling
 const PlanSelection = lazy(() => import('./pages/admin/PlanSelection'))
 const CheckoutSuccess = lazy(() => import('./pages/admin/CheckoutSuccess'))
 const CheckoutCancel = lazy(() => import('./pages/admin/CheckoutCancel'))
+const TrialExpired = lazy(() => import('./pages/admin/TrialExpired'))
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'))
 const AdminFamilies = lazy(() => import('./pages/admin/AdminFamilies'))
 const CreateFamily = lazy(() => import('./pages/admin/CreateFamily'))
@@ -244,6 +245,18 @@ function AppWithTheme() {
               <Suspense fallback={<AdminLoadingSpinner />}>
                 <OrganizationOnboarding />
               </Suspense>
+            }
+          />
+
+          {/* Trial Expired - Standalone route outside AdminLayout */}
+          <Route
+            path="/admin/organization/trial-expired"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<AdminLoadingSpinner />}>
+                  <TrialExpired />
+                </Suspense>
+              </ProtectedRoute>
             }
           />
 

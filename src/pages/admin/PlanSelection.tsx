@@ -1,11 +1,9 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useLicense } from '../../hooks/useLicense'
-import { createCheckoutSession } from '../../api/billing'
+import { useCheckoutSession } from '../../hooks/useCheckoutSession'
 import { LicensePlan } from '../../utils/licenseUtils'
 import { t } from '../../i18n'
-import { getErrorMessage } from '../../utils/errorUtils'
 import { 
   AdminPageHeader, 
   Card, 
@@ -32,8 +30,11 @@ export default function PlanSelection() {
   const orgId = currentOrganization?.id
   const { licensePlan } = useLicense(orgId)
 
-  const [loadingPlan, setLoadingPlan] = useState<LicensePlan | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const { loadingPlan, error, handleSelect } = useCheckoutSession({
+    organizationId: orgId || '',
+    successUrl: `${window.location.origin}/admin/organization/billing/checkout/success`,
+    cancelUrl: `${window.location.origin}/admin/organization/billing/checkout/cancel`,
+  })
 
   if (!orgId) {
     return (
@@ -43,19 +44,6 @@ export default function PlanSelection() {
         </div>
       </div>
     )
-  }
-
-  async function handleSelect(plan: LicensePlan) {
-    if (!orgId) return
-    setError(null); setLoadingPlan(plan)
-    try {
-      const { checkout_session_url } = await createCheckoutSession({
-        organizationId: orgId, requestedPlan: plan, successUrl: `${window.location.origin}/admin/organization/billing/checkout/success`, cancelUrl: `${window.location.origin}/admin/organization/billing/checkout/cancel`,
-      })
-      if (checkout_session_url) window.location.href = checkout_session_url
-    } catch (err: unknown) {
-      setError(getErrorMessage(err) || t('billing.errorCreatingSession'))
-    } finally { setLoadingPlan(null) }
   }
 
   return (

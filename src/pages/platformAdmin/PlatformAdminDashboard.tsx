@@ -6,6 +6,7 @@ import { StatCard, PageHeader, Card, Badge, EmptyState } from '../../components/
 import { formatCurrency } from '../../utils/platformAdminMasking'
 import type { AdminPlatformHealth, AdminAuditLog } from '../../types/platformAdmin.types'
 import { mapEventLogsToAuditLogs, type AdminEventLog } from '../../utils/auditLogMapper'
+import { getLink, RouteKeys } from '@/utils/routes'
 
 // Loading skeleton for stats
 function StatsSkeleton() {
@@ -227,7 +228,10 @@ export default function PlatformAdminDashboard() {
         <Card
           title="Recent Activity"
           actions={
-            <button className="pa-btn pa-btn--ghost pa-btn--dense">
+            <button
+              className="pa-btn pa-btn--ghost pa-btn--dense"
+              onClick={() => navigate(getLink(RouteKeys.PLATFORM_AUDIT))}
+            >
               View All
             </button>
           }
