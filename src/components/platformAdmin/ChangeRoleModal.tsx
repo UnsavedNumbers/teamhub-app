@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Select } from './Select'
 import { Button } from './Button'
 
@@ -22,7 +22,6 @@ const ORG_ROLES: Array<{ value: 'parent' | 'coach' | 'org_admin'; label: string 
 
 export function ChangeRoleModal({
   open,
-  userId,
   orgId,
   orgName,
   currentRole,

@@ -56,11 +56,6 @@ const getDateInPreviousYear = (month: number, day: number): string => {
     return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00Z`
 }
 
-const getDateInNextYear = (month: number, day: number): string => {
-    const year = getNextYear()
-    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00Z`
-}
-
 // For "base" dates (like when sports/programs were first created), use previous year
 const getBaseDate = () => getDateInPreviousYear(1, 1)
 import {

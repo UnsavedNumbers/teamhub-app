@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
@@ -7,6 +7,9 @@ import type { EntitlementOverrideWithDetails } from '../../types/licenseTiers.ty
 import { useOffline } from '../../hooks/useOffline'
 import { isDemoMode, assertNotDemoMode } from '../../utils/demoMode'
 import { showError, showSuccess } from '../../utils/toast'
+import { useAuth } from '../../hooks/useAuth'
+import { canPerformAction } from '../../utils/platformAdminPermissions'
+import type { PlatformAdminRole } from '../../types/platformAdmin.types'
 
 export default function OverrideDetail() {
   const { id } = useParams<{ id: string }>()
@@ -14,9 +17,11 @@ export default function OverrideDetail() {
   const { isOffline } = useOffline()
   const demoMode = isDemoMode()
   const [override, setOverride] = useState<EntitlementOverrideWithDetails | null>(null)
+  const [overrideVersion, setOverrideVersion] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [revoking, setRevoking] = useState(false)
   const [revokeDialog, setRevokeDialog] = useState(false)
+  const [conflictDialog, setConflictDialog] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const fetchOverride = useCallback(async () => {
@@ -51,24 +56,32 @@ export default function OverrideDetail() {
         .single()
 
       if (overrideError) {
-        if (overrideError.code === 'PGRST116') {
-          setError('Override not found. It may have been deleted or you may not have permission to view it.')
+        let errorMessage = overrideError.message || 'Failed to load override'
+        
+        if (overrideError.code === 'PGRST205') {
+          errorMessage = 'The overrides view is not available. The database schema may need to refresh. Please try again in a moment or contact support if the issue persists.'
+        } else if (overrideError.code === 'PGRST116') {
+          errorMessage = 'Override not found. It may have been deleted or you may not have permission to view it.'
         } else if (overrideError.code === 'PGRST301') {
-          setError('You do not have permission to view this override.')
-        } else {
-          setError(overrideError.message || 'Failed to load override')
+          errorMessage = 'You do not have permission to view this override.'
         }
+        
+        setError(errorMessage)
         setOverride(null)
+        setOverrideVersion(null)
         return
       }
 
       if (!data) {
         setError('Override not found')
         setOverride(null)
+        setOverrideVersion(null)
         return
       }
 
       setOverride(data)
+      // Get version from view data (view now includes version column)
+      setOverrideVersion((data as any).version || 1)
       setError(null)
     } catch (err: any) {
       console.error('Error fetching override:', err)
@@ -82,6 +95,17 @@ export default function OverrideDetail() {
   useEffect(() => {
     fetchOverride()
   }, [fetchOverride])
+
+  // Auto-refresh when window regains focus (Issue 2)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (!loading && id) {
+        fetchOverride()
+      }
+    }
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [fetchOverride, loading, id])
 
   const handleRevoke = async (reason: string) => {
     if (!id || !override) return
@@ -105,6 +129,20 @@ export default function OverrideDetail() {
       return
     }
 
+    // Check expiration before revoke (Issue 2)
+    if (override.expires_at && new Date(override.expires_at) < new Date()) {
+      showError('Override has expired and cannot be revoked.')
+      setRevokeDialog(false)
+      return
+    }
+
+    // Check status is active (Issue 2)
+    if (override.status !== 'active') {
+      showError(`Cannot revoke override with status: ${override.status}`)
+      setRevokeDialog(false)
+      return
+    }
+
     setRevoking(true)
     setError(null)
 
@@ -115,6 +153,9 @@ export default function OverrideDetail() {
         throw new Error('You must be logged in to revoke an override')
       }
       
+      // Optimistic locking: check version (Issue 1 & 5)
+      const currentVersion = overrideVersion || 1
+      
       type OverrideUpdate = Database['public']['Tables']['entitlement_overrides']['Update']
       const updateData = {
         revoked_at: new Date().toISOString(),
@@ -123,16 +164,37 @@ export default function OverrideDetail() {
         updated_at: new Date().toISOString(),
       } satisfies OverrideUpdate
       
-      const { error: revokeError } = await supabase
+      const { data: updatedData, error: revokeError } = await supabase
         .from('entitlement_overrides')
         .update(updateData)
         .eq('id', id)
+        .eq('version', currentVersion) // Optimistic locking check
+        .select('version')
+        .single()
 
       if (revokeError) {
         if (revokeError.code === 'PGRST301') {
           throw new Error('You do not have permission to revoke this override.')
         } else if (revokeError.code === 'PGRST116') {
-          throw new Error('Override not found. It may have already been revoked.')
+          // Version conflict or not found
+          // Check if it's a version conflict by fetching current version
+          const { data: current } = await supabase
+            .from('entitlement_overrides')
+            .select('version, revoked_at')
+            .eq('id', id)
+            .single()
+          
+          if (current && current.version !== currentVersion) {
+            // Version conflict
+            setConflictDialog(true)
+            setRevokeDialog(false)
+            setRevoking(false)
+            return
+          } else if (current && current.revoked_at) {
+            throw new Error('Override has already been revoked.')
+          } else {
+            throw new Error('Override not found. It may have been deleted.')
+          }
         }
         throw revokeError
       }
@@ -147,6 +209,11 @@ export default function OverrideDetail() {
     } finally {
       setRevoking(false)
     }
+  }
+
+  const handleConflictRefresh = () => {
+    setConflictDialog(false)
+    fetchOverride()
   }
 
   return (
@@ -224,7 +291,8 @@ export default function OverrideDetail() {
                     <Button 
                       variant="danger" 
                       onClick={() => setRevokeDialog(true)}
-                      disabled={demoMode || isOffline}
+                      disabled={demoMode || isOffline || !canRevoke}
+                      title={!canRevoke ? 'You do not have permission to revoke overrides' : undefined}
                     >
                       Revoke Override
                     </Button>
@@ -235,6 +303,33 @@ export default function OverrideDetail() {
                 </div>
               }
             />
+
+            {/* Expiration Warning (Issue 2) */}
+            {overrideData.expires_at && new Date(overrideData.expires_at) > new Date() && 
+             new Date(overrideData.expires_at).getTime() - new Date().getTime() < 7 * 24 * 60 * 60 * 1000 && (
+              <div
+                className="pa-card pa-mb-4"
+                style={{
+                  background: 'var(--pa-warning-bg)',
+                  border: '1px solid var(--pa-warning)',
+                  padding: 'var(--pa-space-3)',
+                }}
+              >
+                <div className="pa-flex pa-items-center pa-gap-2">
+                  <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-warning)' }}>
+                    schedule
+                  </span>
+                  <div>
+                    <div className="pa-body-m" style={{ fontWeight: 600, color: 'var(--pa-n900)' }}>
+                      Override expires soon
+                    </div>
+                    <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
+                      This override expires on {new Date(overrideData.expires_at).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="pa-grid pa-grid-2" style={{ gap: 'var(--pa-space-5)' }}>
               <Card title="Override Information">
@@ -329,6 +424,22 @@ export default function OverrideDetail() {
         onCancel={() => {
           setRevokeDialog(false)
           setError(null)
+        }}
+      />
+
+      {/* Version Conflict Dialog (Issue 1 & 5) */}
+      <ConfirmDialog
+        open={conflictDialog}
+        title="Override Was Modified"
+        description="This override was modified by another admin. Please refresh to see the latest state, then try again."
+        confirmLabel="Refresh & Retry"
+        variant="warning"
+        requireReason={false}
+        loading={false}
+        error={null}
+        onConfirm={handleConflictRefresh}
+        onCancel={() => {
+          setConflictDialog(false)
         }}
       />
     </div>

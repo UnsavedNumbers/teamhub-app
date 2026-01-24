@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { PageHeader, PlatformDataTable, FilterBar, Button, Badge, Select, type ColumnConfig, ErrorState, EmptyState, DataState } from '../../components/platformAdmin'
@@ -6,6 +6,9 @@ import type { EntitlementOverrideWithDetails, OverrideStatus, OverrideTargetType
 import { useOffline } from '../../hooks/useOffline'
 import { isDemoMode } from '../../utils/demoMode'
 import { showError } from '../../utils/toast'
+import { useAuth } from '../../hooks/useAuth'
+import { canPerformAction } from '../../utils/platformAdminPermissions'
+import type { PlatformAdminRole } from '../../types/platformAdmin.types'
 
 export default function Overrides() {
   const [overrides, setOverrides] = useState<EntitlementOverrideWithDetails[]>([])
@@ -20,6 +23,16 @@ export default function Overrides() {
   const navigate = useNavigate()
   const { isOffline } = useOffline()
   const demoMode = isDemoMode()
+  const { profile } = useAuth()
+  
+  // Get admin role for permission checks (Issue 7)
+  const adminRole = useMemo<PlatformAdminRole | null>(() => {
+    return profile?.platformAdminRole ?? null
+  }, [profile?.platformAdminRole])
+  
+  const canCreate = useMemo(() => {
+    return adminRole ? canPerformAction(adminRole, 'manage_overrides') : false
+  }, [adminRole])
 
   const fetchOverrides = useCallback(async () => {
     if (isOffline) {
@@ -58,11 +71,16 @@ export default function Overrides() {
 
       if (queryError) {
         console.error('Error fetching overrides:', queryError)
-        const errorMessage = queryError.code === 'PGRST301' 
-          ? 'You do not have permission to view overrides.'
-          : queryError.code === 'PGRST116'
-          ? 'No overrides found.'
-          : `Failed to load overrides: ${queryError.message}`
+        let errorMessage = `Failed to load overrides: ${queryError.message}`
+        
+        if (queryError.code === 'PGRST205') {
+          errorMessage = 'The overrides view is not available. The database schema may need to refresh. Please try again in a moment or contact support if the issue persists.'
+        } else if (queryError.code === 'PGRST301') {
+          errorMessage = 'You do not have permission to view overrides.'
+        } else if (queryError.code === 'PGRST116') {
+          errorMessage = 'No overrides found.'
+        }
+        
         setError(errorMessage)
         setOverrides([])
         setTotalCount(0)
@@ -252,7 +270,8 @@ export default function Overrides() {
           <Button
             variant="primary"
             onClick={handleCreateClick}
-            disabled={demoMode || isOffline}
+            disabled={demoMode || isOffline || !canCreate}
+            title={!canCreate ? 'You do not have permission to create overrides' : undefined}
           >
             Create Override
           </Button>

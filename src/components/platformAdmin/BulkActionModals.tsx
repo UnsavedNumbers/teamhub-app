@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { Card, Button, Select, Checkbox } from './index'
+import { Button, Select, Checkbox } from './index'
 import type { FeatureEntitlementWithCounts } from '../../types/licenseTiers.types'
 import type { FeatureCategory } from '../../types/licenseTiers.types'
 import { FEATURE_CATEGORIES } from '../../utils/licenseTierConstants'
@@ -131,6 +131,7 @@ interface ApplyToTiersModalProps {
   availableTiers: Array<{ id: string; tier_key: string; tier_name: string }>
   onConfirm: (tierIds: string[], action: 'add' | 'remove', roleVisibility: { admin: boolean; coach: boolean; parent: boolean }) => void
   onCancel: () => void
+  onComplete?: () => void
   loading?: boolean
 }
 

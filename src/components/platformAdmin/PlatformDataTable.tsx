@@ -31,7 +31,7 @@ interface PlatformDataTableProps<T extends { id: string }> {
   // Selection props
   selectable?: boolean
   selectedIds?: Set<string>
-  onSelectionChange?: (selectedIds: Set<string>) => void
+  onSelectionChange?: (updater: ((prev: Set<string>) => Set<string>) | Set<string>) => void
   selectAllMode?: 'none' | 'page' | 'all'
   onSelectAllChange?: (mode: 'none' | 'page' | 'all') => void
 }
@@ -82,7 +82,7 @@ export default function PlatformDataTable<T extends { id: string }>({
     if (!onSelectionChange) return
 
     onSelectionChange((prev) => {
-      const next = new Set(prev)
+      const next = new Set<string>(prev)
       if (next.has(rowId)) {
         next.delete(rowId)
       } else {
@@ -115,7 +115,7 @@ export default function PlatformDataTable<T extends { id: string }>({
       // Select all on current page
       const pageIds = new Set(safeRows.map(r => r.id))
       onSelectionChange((prev) => {
-        const next = new Set(prev)
+        const next = new Set<string>(prev)
         pageIds.forEach(id => next.add(id))
         return next
       })

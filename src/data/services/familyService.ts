@@ -332,7 +332,9 @@ export async function createAthleteBasic(
         return {
             data: {
                 id: `demo-child-${Date.now()}`,
-                ...dto,
+                first_name: dto.first_name,
+                last_name: dto.last_name,
+                date_of_birth: dto.date_of_birth,
                 family_id: dto.family_id ?? null,
                 gender: dto.gender || null,
                 preferred_name: null,

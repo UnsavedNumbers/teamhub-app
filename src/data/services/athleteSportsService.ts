@@ -7,7 +7,6 @@
 
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
-import type { UserContext } from '../fake/userContext'
 
 export type SportType = 'plays' | 'interested'
 

@@ -5,7 +5,6 @@
  * Allows adding/removing parts (jersey, shorts, pants, hat, etc.)
  */
 
-import { useState } from 'react'
 import { Button, Card } from '../platformAdmin'
 import type { SportUniformConfig } from '../../types/uniforms'
 

@@ -15,20 +15,12 @@ interface AthleteAvatarProps {
     className?: string
 }
 
-const sizeClasses = {
-    sm: 'w-12 h-12 text-sm',
-    md: 'w-16 h-16 text-base',
-    lg: 'w-24 h-24 text-lg',
-    xl: 'w-32 h-32 text-xl'
-}
-
-export default function AthleteAvatar({ athlete, size = 'md', className = '' }: AthleteAvatarProps) {
+export default function AthleteAvatar({ athlete, className = '' }: AthleteAvatarProps) {
     const [imageLoaded, setImageLoaded] = useState(false)
     const [imageError, setImageError] = useState(false)
 
     const photoUrl = athlete.photo_url
     const initials = getAthleteInitials(athlete.first_name, athlete.last_name)
-    const sizeClass = sizeClasses[size]
 
     // Reset loading state when photoUrl changes
     useEffect(() => {

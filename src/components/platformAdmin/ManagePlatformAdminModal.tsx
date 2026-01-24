@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Select } from './Select'
 import { Button } from './Button'
 import type { PlatformAdminRole } from '../../types/platformAdmin.types'
@@ -25,7 +25,6 @@ const PLATFORM_ADMIN_ROLES: Array<{ value: PlatformAdminRole; label: string }> =
 
 export function ManagePlatformAdminModal({
   open,
-  userId,
   userEmail,
   isCurrentlyAdmin,
   currentRole,

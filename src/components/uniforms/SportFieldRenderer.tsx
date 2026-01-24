@@ -16,7 +16,6 @@ interface SportFieldRendererProps {
 
 export function SportFieldRenderer({ field, name }: SportFieldRendererProps) {
   const { control, watch } = useFormContext()
-  const value = watch(name)
 
   // Handle conditional visibility
   if (field.visibility?.dependsOn) {
@@ -82,7 +81,7 @@ export function SportFieldRenderer({ field, name }: SportFieldRendererProps) {
               label={field.label}
               required={field.required}
               error={fieldState.error?.message}
-              options={field.options.map(opt => ({ value: opt, label: opt.charAt(0).toUpperCase() + opt.slice(1) }))}
+              options={(field.options || []).map(opt => ({ value: opt, label: opt.charAt(0).toUpperCase() + opt.slice(1) }))}
               {...formField}
             />
           )}
