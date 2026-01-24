@@ -153,6 +153,9 @@ type AdditionalTables = {
       created_at: string
       updated_at: string
       archived_at: string | null
+      is_toggleable: boolean
+      is_removable: boolean
+      lock_reason: string | null
     }
     Insert: Partial<AdditionalTables['feature_entitlements']['Row']> & {
       feature_key: string
@@ -433,6 +436,13 @@ type AdditionalViews = {
     AdditionalTables['feature_entitlements']['Row'] & {
       tier_assignments_count: number
       active_overrides_count: number
+      assigned_tier_keys: string[]
+      integrations: string[]
+      is_quantifiable: boolean
+      discovery_source: 'auto-discovered' | 'manually-created' | 'override-custom'
+      visible_to_admin: boolean
+      visible_to_coach: boolean
+      visible_to_parent: boolean
     }
   >
   admin_audit_log: ViewDef<{
@@ -778,6 +788,254 @@ type AdditionalFunctions = {
       p_event_id: string
     }
     Returns: void
+  }
+  // Organization user management
+  get_organization_users: {
+    Args: {
+      target_org_id: string
+    }
+    Returns: {
+      id: string
+      email: string
+      phone: string | null
+      display_name: string | null
+      roles: string[]
+      is_platform_admin: boolean
+      last_sign_in_at: string | null
+      email_confirmed: boolean
+      is_disabled: boolean
+      created_at: string
+      updated_at: string
+    }[]
+  }
+  // Bulk feature operations
+  bulk_update_feature_status: {
+    Args: {
+      p_feature_ids: string[]
+      p_new_status: string
+    }
+    Returns: {
+      success: boolean
+      updated?: number
+      error?: string
+      code?: string
+      message?: string
+      locked_features?: Array<{
+        feature_key: string
+        display_name: string
+        lock_reason: string | null
+      }>
+    }
+  }
+  bulk_update_feature_category: {
+    Args: {
+      p_feature_ids: string[]
+      p_new_category: string
+    }
+    Returns: {
+      success: boolean
+      updated?: number
+      error?: string
+      code?: string
+      message?: string
+    }
+  }
+  bulk_apply_to_tiers: {
+    Args: {
+      p_feature_ids: string[]
+      p_tier_ids: string[]
+      p_action: 'add' | 'remove'
+      p_role_admin?: boolean
+      p_role_coach?: boolean
+      p_role_parent?: boolean
+    }
+    Returns: {
+      success: boolean
+      processed?: number
+      error?: string
+      code?: string
+      message?: string
+      locked_features?: Array<{
+        feature_key: string
+        display_name: string
+        lock_reason: string | null
+      }>
+    }
+  }
+  bulk_update_role_visibility: {
+    Args: {
+      p_feature_ids: string[]
+      p_role_type: 'admin' | 'coach' | 'parent'
+      p_visible: boolean
+    }
+    Returns: {
+      success: boolean
+      updated?: number
+      error?: string
+      code?: string
+      message?: string
+      locked_features?: Array<{
+        feature_key: string
+        display_name: string
+        lock_reason: string | null
+      }>
+    }
+  }
+  // Family and athlete management
+  create_athlete_with_guardians: {
+    Args: {
+      p_org_id: string
+      p_athlete_data: {
+        first_name: string
+        last_name: string
+        birthdate?: string | null
+        gender?: string | null
+        preferred_name?: string | null
+        jersey_number?: string | null
+        medical_notes?: string | null
+        allergies?: string | null
+        emergency_contact_name?: string | null
+        emergency_contact_phone?: string | null
+      }
+      p_guardians?: Array<{
+        email: string
+        display_name?: string | null
+        phone?: string | null
+      }>
+      p_athlete_sports?: Array<{
+        sport_id: string
+        sport_type: 'plays' | 'interested'
+      }>
+    }
+    Returns: {
+      success: boolean
+      athlete_id?: string
+      error?: string
+      guardian_results?: Array<{
+        email: string
+        user_id: string | null
+        linked: boolean
+        error?: string
+      }>
+    }
+  }
+  get_derived_family_for_athlete: {
+    Args: {
+      p_athlete_id: string
+      p_org_id: string
+    }
+    Returns: {
+      athlete_ids: string[]
+      guardian_ids: string[]
+      athletes: Array<{
+        id: string
+        first_name: string
+        last_name: string
+        birthdate: string | null
+        gender: string | null
+      }>
+      guardians: Array<{
+        id: string
+        email: string
+        display_name: string | null
+        phone: string | null
+      }>
+      is_derived: boolean
+      has_guardians: boolean
+    }
+  }
+  get_orphaned_athletes: {
+    Args: {
+      p_org_id: string
+    }
+    Returns: {
+      athlete_id: string
+      first_name: string
+      last_name: string
+      birthdate: string | null
+      created_at: string
+    }[]
+  }
+  // Role management
+  admin_add_org_role: {
+    Args: {
+      target_user_id: string
+      target_org_id: string
+      target_role: Database['public']['Enums']['org_member_role']
+      reason: string
+    }
+    Returns: {
+      success: boolean
+      role_added?: boolean
+      error?: string
+    }
+  }
+  admin_remove_org_role: {
+    Args: {
+      target_user_id: string
+      target_org_id: string
+      target_role: Database['public']['Enums']['org_member_role']
+      reason: string
+    }
+    Returns: {
+      success: boolean
+      role_removed?: boolean
+      error?: string
+    }
+  }
+  admin_change_org_role: {
+    Args: {
+      target_user_id: string
+      target_org_id: string
+      old_role: Database['public']['Enums']['org_member_role']
+      new_role: Database['public']['Enums']['org_member_role']
+      reason: string
+    }
+    Returns: {
+      success: boolean
+      role_changed?: boolean
+      error?: string
+    }
+  }
+  // Feature discovery
+  sync_discovered_features: {
+    Args: {
+      p_discovered_features: Array<{
+        featureKey: string
+        displayName?: string
+        category?: string
+        featureType?: string
+        description?: string | null
+        rolloutStatus?: string
+      }>
+    }
+    Returns: {
+      success: boolean
+      synced: number
+      failed: number
+      errors: Array<{
+        key: string
+        error: string
+      }>
+      total: number
+      message?: string
+      code?: string
+    }
+  }
+  get_schema_tables: {
+    Args: Record<string, never>
+    Returns: {
+      table_name: string
+      table_type: string
+    }[]
+  }
+  get_schema_columns: {
+    Args: Record<string, never>
+    Returns: {
+      table_name: string
+      column_name: string
+      data_type: string
+    }[]
   }
 }
 
