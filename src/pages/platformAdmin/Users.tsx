@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { showSuccess, showError } from '../../utils/toast'
-import { PageHeader, Badge, FilterBar, PlatformDataTable, ConfirmDialog, type ColumnConfig } from '../../components/platformAdmin'
+import { PageHeader, Badge, FilterBar, PlatformDataTable, ConfirmDialog, type ColumnConfig, Button } from '../../components/platformAdmin'
 import { canPerformAction, getDeniedMessage } from '../../utils/platformAdminPermissions'
 import { getDisplayEmail } from '../../utils/platformAdminMasking'
 import { isRpcSuccessResponse } from '../../utils/typeAdapters'
+import { useQueryParams } from '../../hooks/useQueryParams'
+import { useAuth } from '../../hooks/useAuth'
 import type { AdminUser, AdminRpcResponse, PlatformAdminRole } from '../../types/platformAdmin.types'
 
 export default function Users() {
@@ -18,6 +20,11 @@ export default function Users() {
   const [orderBy, setOrderBy] = useState('created_at')
   const [order, setOrder] = useState<'asc' | 'desc'>('desc')
   
+  // Deep link support: org_id query param
+  const { getUUID } = useQueryParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const orgFilter = getUUID('org_id')
+  
   // Dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean
@@ -27,10 +34,17 @@ export default function Users() {
   const [dialogLoading, setDialogLoading] = useState(false)
   const [dialogError, setDialogError] = useState<string | null>(null)
   
-  // TODO: Fetch actual role
-  const [adminRole] = useState<PlatformAdminRole>('super_admin')
+  const { profile } = useAuth()
+  const adminRole = profile?.platformAdminRole ?? null
   
   const navigate = useNavigate()
+
+  const clearOrgFilter = () => {
+    const newParams = new URLSearchParams(searchParams)
+    newParams.delete('org_id')
+    setSearchParams(newParams)
+    setPage(0) // Reset to first page
+  }
 
   const fetchUsers = useCallback(async () => {
     setLoading(true)
@@ -42,6 +56,12 @@ export default function Users() {
 
       if (search) {
         query = query.ilike('email', `%${search}%`)
+      }
+
+      // Apply org filter if present (filter by organizations JSON array)
+      if (orgFilter) {
+        // Filter users where organizations array contains the org_id
+        query = query.filter('organizations', 'cs', JSON.stringify([{ org_id: orgFilter }]))
       }
 
       query = query.order(orderBy, { ascending: order === 'asc' })
@@ -57,8 +77,16 @@ export default function Users() {
         setUsers([])
         setTotalCount(0)
       } else {
-        setUsers(data as AdminUser[] || [])
-        setTotalCount(count || 0)
+        // If org filter is active, further filter client-side (JSON array filtering is limited)
+        let filteredUsers = (data as AdminUser[] || [])
+        if (orgFilter) {
+          filteredUsers = filteredUsers.filter(user => {
+            if (!user.organizations || !Array.isArray(user.organizations)) return false
+            return user.organizations.some((org: any) => org.org_id === orgFilter)
+          })
+        }
+        setUsers(filteredUsers)
+        setTotalCount(orgFilter ? filteredUsers.length : (count || 0))
       }
     } catch (err) {
       console.error('Error:', err)
@@ -66,7 +94,7 @@ export default function Users() {
     } finally {
       setLoading(false)
     }
-  }, [page, rowsPerPage, search, orderBy, order])
+  }, [page, rowsPerPage, search, orderBy, order, orgFilter])
 
   useEffect(() => {
     fetchUsers()
@@ -79,12 +107,16 @@ export default function Users() {
   }
 
   const handleRowClick = (user: AdminUser) => {
+    if (!user.id) {
+      console.error('Cannot navigate: user ID is null')
+      return
+    }
     navigate(`/platform-admin/users/${user.id}`)
   }
 
   const handleDisable = (user: AdminUser) => {
     if (!canPerformAction(adminRole, 'disable_user')) {
-      setToast({ show: true, message: getDeniedMessage('disable_user'), variant: 'danger' })
+      showError(getDeniedMessage('disable_user'))
       return
     }
     setDialogError(null)
@@ -218,12 +250,48 @@ export default function Users() {
     },
   ]
 
+  // Fetch organization name for filter badge
+  const [orgFilterName, setOrgFilterName] = useState<string | null>(null)
+  useEffect(() => {
+    if (orgFilter) {
+      supabase
+        .from('admin_organizations')
+        .select('name')
+        .eq('id', orgFilter)
+        .single()
+        .then(({ data }) => {
+          if (data) setOrgFilterName((data as any).name)
+        })
+    } else {
+      setOrgFilterName(null)
+    }
+  }, [orgFilter])
+
   return (
     <div>
       <PageHeader
         title="Users"
         subtitle={`${totalCount} users total`}
       />
+
+      {/* Org Filter Indicator */}
+      {orgFilter && (
+        <div className="pa-card pa-mb-4" style={{ background: 'var(--pa-primary-bg)', borderLeft: '3px solid var(--pa-primary)' }}>
+          <div className="pa-flex pa-items-center pa-justify-between">
+            <div className="pa-flex pa-items-center pa-gap-2">
+              <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-primary)' }}>
+                filter_alt
+              </span>
+              <span className="pa-body-m">
+                Filtered by organization: <strong>{orgFilterName || orgFilter}</strong>
+              </span>
+            </div>
+            <Button variant="ghost" size="dense" onClick={clearOrgFilter}>
+              Clear Filter
+            </Button>
+          </div>
+        </div>
+      )}
 
       <FilterBar
         searchValue={search}

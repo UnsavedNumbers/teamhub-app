@@ -188,6 +188,9 @@ BEGIN
 END;
 $$;
 
+-- Grant execute permission
+GRANT EXECUTE ON FUNCTION admin_disable_user(UUID, TEXT) TO authenticated;
+
 -- ============================================================================
 -- Update admin_enable_user
 -- ============================================================================
@@ -481,6 +484,19 @@ BEGIN
   RETURN jsonb_build_object('success', true);
 END;
 $$;
+
+-- ============================================================================
+-- Grant Execute Permissions
+-- ============================================================================
+
+-- Grant execute on all updated functions
+GRANT EXECUTE ON FUNCTION admin_activate_organization(UUID, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION admin_suspend_organization(UUID, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION admin_disable_user(UUID, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION admin_enable_user(UUID, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION admin_set_feature_flag(UUID, TEXT, BOOLEAN, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION admin_add_platform_admin(TEXT, platform_admin_role, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION admin_remove_platform_admin(UUID, TEXT) TO authenticated;
 
 -- ============================================================================
 -- Comments

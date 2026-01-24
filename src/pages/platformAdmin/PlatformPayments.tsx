@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, StatCard, Badge, FilterBar, PlatformDataTable, type ColumnConfig } from '../../components/platformAdmin'
+import { PageHeader, StatCard, Badge, FilterBar, PlatformDataTable, type ColumnConfig, Button } from '../../components/platformAdmin'
+import { useQueryParams } from '../../hooks/useQueryParams'
 import { 
   formatCurrency, 
   getDisplayEmail, 
@@ -38,6 +40,34 @@ export default function PlatformPayments() {
     failedCount: 0,
   })
   
+  // Deep link support: org_id query param
+  const { getUUID } = useQueryParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const orgFilter = getUUID('org_id')
+  const [orgFilterName, setOrgFilterName] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (orgFilter) {
+      supabase
+        .from('admin_organizations')
+        .select('name')
+        .eq('id', orgFilter)
+        .single()
+        .then(({ data }) => {
+          if (data) setOrgFilterName((data as any).name)
+        })
+    } else {
+      setOrgFilterName(null)
+    }
+  }, [orgFilter])
+
+  const clearOrgFilter = () => {
+    const newParams = new URLSearchParams(searchParams)
+    newParams.delete('org_id')
+    setSearchParams(newParams)
+    setPage(0)
+  }
+
   // TODO: Fetch actual role
   const [adminRole] = useState<PlatformAdminRole>('super_admin')
 
@@ -94,7 +124,7 @@ export default function PlatformPayments() {
     } finally {
       setLoading(false)
     }
-  }, [page, rowsPerPage, search, statusFilter, orderBy, order])
+  }, [page, rowsPerPage, search, statusFilter, orderBy, order, orgFilter])
 
   useEffect(() => {
     fetchPayments()
@@ -237,6 +267,7 @@ export default function PlatformPayments() {
           setSearch('')
           setStatusFilter('')
           setPage(0)
+          clearOrgFilter()
         }}
       />
 

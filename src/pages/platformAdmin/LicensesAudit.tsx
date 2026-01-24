@@ -31,6 +31,14 @@ export default function LicensesAudit() {
         query = query.eq('action', actionFilter)
       }
 
+      if (targetTypeFilter) {
+        query = query.eq('target_type', targetTypeFilter)
+      }
+
+      if (targetIdFilter) {
+        query = query.eq('target_id', targetIdFilter)
+      }
+
       // Default to last 30 days unless "all" is selected
       if (dateFilter === '30days') {
         const thirtyDaysAgo = new Date()
@@ -163,6 +171,8 @@ export default function LicensesAudit() {
           onClearAll={() => {
             setSearch('')
             setActionFilter('')
+            setTargetTypeFilter('')
+            setTargetIdFilter('')
             setDateFilter('30days')
           }}
         />

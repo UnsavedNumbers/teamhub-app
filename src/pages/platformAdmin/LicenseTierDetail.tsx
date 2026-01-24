@@ -25,7 +25,7 @@ export default function LicenseTierDetail() {
   const { isOffline } = useOffline()
   const isNew = id === 'new'
 
-  const [tier, setTier] = useState<Partial<LicenseTier & { version?: number }>>({
+  const [tier, setTier] = useState<Partial<LicenseTier>>({
     tier_key: 'basic',
     tier_name: '',
     description: '',
@@ -44,6 +44,11 @@ export default function LicenseTierDetail() {
   const [archivedFeaturesCount, setArchivedFeaturesCount] = useState(0)
   const [notFound, setNotFound] = useState(false)
   const [invalidRoute, setInvalidRoute] = useState(false)
+  const [organizationsUsingTier, setOrganizationsUsingTier] = useState<Array<{ id: string; name: string; license_plan: string }>>([])
+  const [loadingOrgs, setLoadingOrgs] = useState(false)
+  const [archiveDialog, setArchiveDialog] = useState(false)
+  const [duplicating, setDuplicating] = useState(false)
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null)
 
   // Validate route parameter
   useEffect(() => {
@@ -70,7 +75,7 @@ export default function LicenseTierDetail() {
         }
         throw tierError
       }
-      setTier(data as Partial<LicenseTier & { version?: number | undefined }>)
+      setTier(data as Partial<LicenseTier>)
 
       // Check for archived features
       if ((data as LicenseTier)?.id) {
@@ -140,11 +145,53 @@ export default function LicenseTierDetail() {
     }
   }, [id, isNew])
 
+  const fetchOrganizationsUsingTier = useCallback(async () => {
+    if (isNew || !tier.tier_key) return
+
+    setLoadingOrgs(true)
+    try {
+      // Map tier_key to license_plan values
+      const licensePlans: string[] = []
+      if (tier.tier_key === 'basic') {
+        licensePlans.push('basic', 'starter')
+      } else if (tier.tier_key === 'power') {
+        licensePlans.push('power', 'standard', 'pro')
+      }
+
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('id, name, license_plan')
+        .in('license_plan', licensePlans)
+        .order('name', { ascending: true })
+
+      if (error) throw error
+      setOrganizationsUsingTier((data || []) as Array<{ id: string; name: string; license_plan: string }>)
+    } catch (err: any) {
+      console.error('Error fetching organizations:', err)
+      setOrganizationsUsingTier([])
+    } finally {
+      setLoadingOrgs(false)
+    }
+  }, [isNew, tier.tier_key])
+
   useEffect(() => {
     fetchTier()
     fetchFeatures()
     fetchAssignments()
   }, [fetchTier, fetchFeatures, fetchAssignments])
+
+  useEffect(() => {
+    if (!isNew && tier.tier_key) {
+      fetchOrganizationsUsingTier()
+    }
+  }, [fetchOrganizationsUsingTier])
+
+  // Update last refreshed time when tier data is loaded
+  useEffect(() => {
+    if (!loading && tier.id) {
+      setLastRefreshed(new Date())
+    }
+  }, [loading, tier.id])
 
   const verifyStripePrice = async (priceId: string, forceRefresh = false) => {
     if (!priceId || !priceId.startsWith('price_')) {
@@ -252,9 +299,18 @@ export default function LicenseTierDetail() {
 
         // Save feature assignments
         if (data) {
+          // Save feature assignments with error handling
+        try {
           await saveAssignments(data.id)
+        } catch (assignmentError: any) {
+          console.error('Error saving assignments:', assignmentError)
+          // Tier was created but assignments failed - show warning but continue
+          showError('Tier created but some feature assignments failed to save. Please review and update manually.')
+          // Still navigate to the tier so user can fix assignments
+        }
           
-          // Log audit event
+        // Log audit event (best effort - don't block on audit failure)
+        try {
           await logAuditEvent({
             action: 'tier_created',
             targetType: 'tier',
@@ -262,9 +318,13 @@ export default function LicenseTierDetail() {
             afterState: data,
             reason: reason || 'Tier created',
           })
+        } catch (auditError) {
+          console.error('Error logging audit event:', auditError)
+          // Continue - audit failure shouldn't block the operation
+        }
           
-          showSuccess('License tier created successfully!')
-          navigate(`/platform-admin/licenses/tiers/${(data as any).id}`)
+        showSuccess('License tier created successfully!')
+        navigate(`/platform-admin/licenses/tiers/${(data as any).id}`)
         }
       } else {
         // Optimistic locking: check version
@@ -315,18 +375,35 @@ export default function LicenseTierDetail() {
           throw updateError
         }
 
-        await saveAssignments(id!)
+        // Save feature assignments with error handling
+        try {
+          await saveAssignments(id!)
+        } catch (assignmentError: any) {
+          console.error('Error saving assignments:', assignmentError)
+          // Tier was updated but assignments failed - show warning
+          showError('Tier updated but some feature assignments failed to save. Please review and update manually.')
+          // Reload assignments to show current state
+          await fetchAssignments()
+        }
 
-        // Log audit event
-        await logAuditEvent({
-          action: 'tier_updated',
-          targetType: 'tier',
-          targetId: id!,
-          beforeState,
-          afterState: updatedTier,
-          reason: reason || 'Tier updated',
-        })
+        // Log audit event (best effort - don't block on audit failure)
+        try {
+          await logAuditEvent({
+            action: 'tier_updated',
+            targetType: 'tier',
+            targetId: id!,
+            beforeState,
+            afterState: updatedTier,
+            reason: reason || 'Tier updated',
+          })
+        } catch (auditError) {
+          console.error('Error logging audit event:', auditError)
+          // Continue - audit failure shouldn't block the operation
+        }
         
+        // Refresh tier data to get latest version
+        await fetchTier()
+        setLastRefreshed(new Date())
         showSuccess('License tier updated successfully!')
       }
     } catch (err: any) {
@@ -352,6 +429,188 @@ export default function LicenseTierDetail() {
     setConflictDialog(false)
     await fetchTier()
     await fetchAssignments()
+    setLastRefreshed(new Date())
+  }
+
+  const handleArchive = async () => {
+    if (shouldBlockInDemoMode('write')) {
+      showError(getDemoModeError('archive license tier'))
+      return
+    }
+
+    if (isOffline) {
+      showError('Cannot archive while offline. Please check your internet connection.')
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+
+    try {
+      const beforeState = { ...tier }
+      const expectedVersion = tier.version || 1
+
+      const { data: currentTier, error: fetchError } = await supabase
+        .from('license_tiers')
+        .select('version')
+        .eq('id', id!)
+        .single()
+
+      if (fetchError) throw fetchError
+
+      if ((currentTier as any).version !== expectedVersion) {
+        setArchiveDialog(false)
+        setConflictDialog(true)
+        setSaving(false)
+        return
+      }
+
+      type LicenseTierUpdate = Database['public']['Tables']['license_tiers']['Update']
+      const updateData = {
+        status: tier.status === 'active' ? 'archived' : 'active',
+      } satisfies LicenseTierUpdate
+
+      const { data: updatedTier, error: updateError } = await supabase
+        .from('license_tiers')
+        .update(updateData)
+        .eq('id', id!)
+        .eq('version', expectedVersion)
+        .select()
+        .single()
+
+      if (updateError) {
+        if (updateError.code === 'PGRST116' || updateError.message?.includes('0 rows')) {
+          setArchiveDialog(false)
+          setConflictDialog(true)
+          setSaving(false)
+          return
+        }
+        throw updateError
+      }
+
+      await logAuditEvent({
+        action: tier.status === 'active' ? 'tier_archived' : 'tier_activated',
+        targetType: 'tier',
+        targetId: id!,
+        beforeState,
+        afterState: updatedTier,
+        reason: tier.status === 'active' ? 'Tier archived' : 'Tier activated',
+      })
+
+      showSuccess(`License tier ${tier.status === 'active' ? 'archived' : 'activated'} successfully!`)
+      setArchiveDialog(false)
+      await fetchTier()
+      await fetchOrganizationsUsingTier()
+    } catch (err: any) {
+      let errorMessage = 'Failed to update tier status'
+      if (err.code === '42501') {
+        errorMessage = 'Permission denied. You do not have access to modify license tiers.'
+      } else if (err.message) {
+        errorMessage = err.message
+      }
+      showError(errorMessage)
+      setError(errorMessage)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDuplicate = async () => {
+    if (shouldBlockInDemoMode('write')) {
+      showError(getDemoModeError('duplicate license tier'))
+      return
+    }
+
+    if (isOffline) {
+      showError('Cannot duplicate while offline. Please check your internet connection.')
+      return
+    }
+
+    setDuplicating(true)
+    setError(null)
+
+    try {
+      // Create new tier with same data but new ID and modified name
+      type LicenseTierInsert = Database['public']['Tables']['license_tiers']['Insert']
+      const insertData: LicenseTierInsert = {
+        tier_key: tier.tier_key!,
+        tier_name: `${tier.tier_name} (Copy)`,
+        description: tier.description || null,
+        stripe_price_id: '', // Must be set separately - cannot duplicate Stripe Price ID
+        stripe_product_name: tier.stripe_product_name || null,
+        stripe_amount_cents: tier.stripe_amount_cents || null,
+        stripe_interval: tier.stripe_interval || null,
+        stripe_currency: tier.stripe_currency || null,
+        stripe_active: tier.stripe_active || null,
+        status: 'active',
+      }
+
+      const { data: newTier, error: createError } = await supabase
+        .from('license_tiers')
+        .insert(insertData)
+        .select()
+        .single()
+
+      if (createError) throw createError
+
+      // Copy feature assignments
+      if (newTier) {
+        const assignmentEntries = Object.entries(assignments).filter(([_, assignment]) => assignment.included)
+
+        for (const [featureId, assignment] of assignmentEntries) {
+          type AssignmentUpsert = Database['public']['Tables']['tier_feature_assignments']['Insert']
+          const upsertData = {
+            license_tier_id: (newTier as any).id,
+            feature_entitlement_id: featureId,
+            included: assignment.included,
+            limit_value: assignment.limit_value || null,
+            role_admin: assignment.role_admin ?? true,
+            role_coach: assignment.role_coach ?? true,
+            role_parent: assignment.role_parent ?? false,
+          } satisfies AssignmentUpsert
+
+          await supabase
+            .from('tier_feature_assignments')
+            .upsert(upsertData, {
+              onConflict: 'license_tier_id,feature_entitlement_id',
+            })
+        }
+
+        await logAuditEvent({
+          action: 'tier_duplicated',
+          targetType: 'tier',
+          targetId: (newTier as any).id,
+          beforeState: null,
+          afterState: newTier,
+          reason: `Duplicated from tier ${tier.id}`,
+        })
+
+        showSuccess('License tier duplicated successfully!')
+        navigate(`/platform-admin/licenses/tiers/${(newTier as any).id}`)
+      }
+    } catch (err: any) {
+      let errorMessage = 'Failed to duplicate tier'
+      if (err.code === '23505') {
+        errorMessage = 'A tier with this Stripe Price ID already exists'
+      } else if (err.code === '42501') {
+        errorMessage = 'Permission denied. You do not have access to create license tiers.'
+      } else if (err.message) {
+        errorMessage = err.message
+      }
+      showError(errorMessage)
+      setError(errorMessage)
+    } finally {
+      setDuplicating(false)
+    }
+  }
+
+  const handleRefresh = async () => {
+    setLoading(true)
+    await fetchTier()
+    await fetchAssignments()
+    await fetchOrganizationsUsingTier()
+    setLastRefreshed(new Date())
+    setLoading(false)
   }
 
   const saveAssignments = async (tierId: string) => {
@@ -470,7 +729,7 @@ export default function LicenseTierDetail() {
           { label: isNew ? 'Create' : tier.tier_name || 'Tier' },
         ]}
         actions={
-          <div style={{ display: 'flex', gap: 'var(--pa-space-3)' }}>
+          <div style={{ display: 'flex', gap: 'var(--pa-space-3)', flexWrap: 'wrap' }}>
             <Button 
               variant="ghost" 
               onClick={() => navigate(getLink('platformAdmin.licenses.tiers'))}
@@ -479,6 +738,47 @@ export default function LicenseTierDetail() {
               <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>arrow_back</span>
               Back to Tiers
             </Button>
+            {!isNew && (
+              <>
+                <Button
+                  variant="ghost"
+                  onClick={handleRefresh}
+                  disabled={loading}
+                  style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>refresh</span>
+                  Refresh
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={handleDuplicate}
+                  disabled={duplicating || isOffline || shouldBlockInDemoMode('write')}
+                  style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>content_copy</span>
+                  {duplicating ? 'Duplicating...' : 'Duplicate'}
+                </Button>
+                <Button
+                  variant={tier.status === 'active' ? 'secondary' : 'primary'}
+                  onClick={() => setArchiveDialog(true)}
+                  disabled={saving || isOffline || shouldBlockInDemoMode('write')}
+                  style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                    {tier.status === 'active' ? 'archive' : 'unarchive'}
+                  </span>
+                  {tier.status === 'active' ? 'Archive' : 'Activate'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate(`/platform-admin/licenses/audit?target_type=tier&target_id=${id}`)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>history</span>
+                  Audit History
+                </Button>
+              </>
+            )}
             {isNew && (
               <Button variant="secondary" onClick={() => navigate(getLink('platformAdmin.licenses.tiers'))}>
                 Cancel
@@ -487,7 +787,7 @@ export default function LicenseTierDetail() {
             <Button 
               variant="primary" 
               onClick={() => handleSave()} 
-              disabled={saving || isOffline || shouldBlockInDemoMode('write')}
+              disabled={saving || duplicating || isOffline || shouldBlockInDemoMode('write')}
             >
               {saving ? 'Saving...' : shouldBlockInDemoMode('write') ? 'Demo Mode' : 'Save Changes'}
             </Button>
@@ -522,7 +822,7 @@ export default function LicenseTierDetail() {
               })
             } else if (id) {
               // Reload data
-              window.location.reload()
+              handleRefresh()
             }
           }}
           retryLabel={isNew ? 'Reset Form' : 'Reload'}
@@ -737,6 +1037,68 @@ export default function LicenseTierDetail() {
         </Card>
       </div>
 
+      {/* Tier Usage Details */}
+      {!isNew && tier.id && (
+        <Card 
+          title="Organizations Using This Tier" 
+          style={{ marginTop: 'var(--pa-space-5)' }}
+          actions={
+            <Button
+              variant="ghost"
+              size="dense"
+              onClick={fetchOrganizationsUsingTier}
+              disabled={loadingOrgs}
+            >
+              {loadingOrgs ? 'Loading...' : 'Refresh'}
+            </Button>
+          }
+        >
+          {loadingOrgs ? (
+            <div className="pa-skeleton" style={{ height: '100px', width: '100%' }} />
+          ) : organizationsUsingTier.length > 0 ? (
+            <div>
+              <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginBottom: 'var(--pa-space-3)' }}>
+                {organizationsUsingTier.length} organization{organizationsUsingTier.length === 1 ? '' : 's'} currently using this tier
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-2)', maxHeight: '300px', overflowY: 'auto' }}>
+                {organizationsUsingTier.map((org) => (
+                  <div
+                    key={org.id}
+                    className="pa-card"
+                    style={{
+                      padding: 'var(--pa-space-3)',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => navigate(`/platform-admin/organizations/${org.id}`)}
+                  >
+                    <div className="pa-flex pa-items-center pa-justify-between">
+                      <div>
+                        <div className="pa-body-m" style={{ fontWeight: 600 }}>{org.name}</div>
+                        <div className="pa-body-s" style={{ color: 'var(--pa-n500)' }}>
+                          License Plan: {org.license_plan}
+                        </div>
+                      </div>
+                      <span className="material-symbols-outlined" style={{ color: 'var(--pa-n500)' }}>chevron_right</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="pa-body-s" style={{ color: 'var(--pa-n500)' }}>
+              No organizations are currently using this tier.
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Last Updated Indicator */}
+      {!isNew && lastRefreshed && (
+        <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: 'var(--pa-space-3)', textAlign: 'right' }}>
+          Last refreshed: {lastRefreshed.toLocaleTimeString()}
+        </div>
+      )}
+
       {archivedFeaturesCount > 0 && (
         <Card style={{ marginTop: 'var(--pa-space-5)', borderLeft: '3px solid var(--pa-warning)' }}>
           <div className="pa-flex pa-items-center pa-gap-2">
@@ -761,6 +1123,20 @@ export default function LicenseTierDetail() {
         variant="warning"
         onConfirm={handleReloadAfterConflict}
         onCancel={() => setConflictDialog(false)}
+      />
+
+      <ConfirmDialog
+        open={archiveDialog}
+        title={tier.status === 'active' ? 'Archive License Tier' : 'Activate License Tier'}
+        description={
+          tier.status === 'active'
+            ? `Are you sure you want to archive "${tier.tier_name}"? This will mark the tier as archived but will not affect organizations currently using it.`
+            : `Are you sure you want to activate "${tier.tier_name}"? This will make the tier available for new organizations.`
+        }
+        confirmLabel={tier.status === 'active' ? 'Archive' : 'Activate'}
+        variant={tier.status === 'active' ? 'warning' : 'info'}
+        onConfirm={handleArchive}
+        onCancel={() => setArchiveDialog(false)}
       />
     </div>
   )

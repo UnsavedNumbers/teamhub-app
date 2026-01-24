@@ -55,7 +55,7 @@ const PlatformAdminLayout = lazy(() => import('./layouts/PlatformAdminLayout'))
 // Platform Admin Pages - Lazy loaded for code splitting
 const PlatformAdminDashboard = lazy(() => import('./pages/platformAdmin/PlatformAdminDashboard'))
 const PlatformOrganizations = lazy(() => import('./pages/platformAdmin/Organizations'))
-const PlatformOrganizationDetail = lazy(() => import('./pages/platformAdmin/OrganizationDetail'))
+const PlatformOrganizationDetail = lazy(() => import('./pages/platformAdmin').then(m => ({ default: m.OrganizationDetail })))
 const PlatformUsers = lazy(() => import('./pages/platformAdmin/Users'))
 const PlatformUserDetail = lazy(() => import('./pages/platformAdmin/UserDetail'))
 const PlatformStructure = lazy(() => import('./pages/platformAdmin/Structure'))

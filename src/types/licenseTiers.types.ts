@@ -57,7 +57,7 @@ export interface LicenseTier {
   stripe_currency: string | null // 'usd'
   stripe_active: boolean | null
   status: LicenseTierStatus
-  version?: number // For optimistic locking
+  version: number // For optimistic locking (required, defaults to 1 in DB)
   created_at: string
   updated_at: string
 }

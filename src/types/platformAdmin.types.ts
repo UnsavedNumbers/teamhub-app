@@ -24,24 +24,92 @@ export type OrganizationStatus = 'trial' | 'active' | 'suspended' | 'expired'
 
 /**
  * admin_organizations view row
+ * 
+ * Enhanced with all fields from the database including contact info,
+ * Stripe details, and license information.
  */
 export interface AdminOrganization {
+    // Basic organization info
     id: string
     name: string
     org_type: string | null
     status: OrganizationStatus
+    slug: string | null
+    
+    // Contact information
+    website: string | null
+    phone: string | null
+    contact_email: string | null
+    address: string | null
+    city: string | null
+    state: string | null
+    zip: string | null
+    logo_path: string | null
+    
+    // License information
     license_status: string | null
     license_plan: string | null
     license_trial_ends_at: string | null
+    license_current_period_start: string | null
     license_current_period_end: string | null
+    license_grace_ends_at: string | null
+    license_cancel_at_period_end: boolean | null
+    
+    // Stripe information
+    stripe_customer_id: string | null
+    stripe_subscription_id: string | null
+    stripe_price_id: string | null
+    stripe_connected: boolean
+    
+    // Payout information
     payout_account_id: string | null
     payouts_enabled: boolean | null
+    payout_onboarding_status: 'pending' | 'completed' | 'restricted' | null
+    payout_descriptor: string | null
+    billing_mode: string | null
+    currency: string | null
+    
+    // Primary location (for travel detection)
+    primary_city: string | null
+    primary_state: string | null
+    primary_region_radius_miles: number | null
+    
+    // Timestamps
     created_at: string | null
     updated_at: string | null
+    
+    // Aggregated counts
     team_count: number
     sport_count: number
     user_count: number
-    stripe_connected: boolean
+}
+
+/**
+ * Validation function for AdminOrganization
+ * Ensures data from API matches expected schema
+ * 
+ * @param data - Data to validate
+ * @returns true if data is a valid AdminOrganization
+ */
+export function validateAdminOrganization(data: unknown): data is AdminOrganization {
+    if (!data || typeof data !== 'object') return false
+    
+    const org = data as any
+    
+    // Check required fields
+    if (typeof org.id !== 'string') return false
+    if (typeof org.name !== 'string') return false
+    if (typeof org.status !== 'string') return false
+    if (typeof org.team_count !== 'number') return false
+    if (typeof org.sport_count !== 'number') return false
+    if (typeof org.user_count !== 'number') return false
+    if (typeof org.stripe_connected !== 'boolean') return false
+    
+    // Validate status enum
+    const validStatuses: OrganizationStatus[] = ['trial', 'active', 'suspended', 'expired']
+    if (!validStatuses.includes(org.status)) return false
+    
+    return true
 }
 
 /**
@@ -63,11 +131,13 @@ export interface AdminUser {
     email_confirmed: boolean | null
     id: string | null
     is_platform_admin: boolean | null
+    is_disabled: boolean | null
     last_sign_in_at: string | null
     organizations: AdminUserOrganization[] | null
     phone: string | null
     roles: string[] | null
     updated_at: string | null
+    family_id: string | null
 }
 
 /**

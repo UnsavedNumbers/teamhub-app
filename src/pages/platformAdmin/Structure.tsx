@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, Badge, Card, FilterBar, EmptyState } from '../../components/platformAdmin'
+import { PageHeader, Badge, Card, FilterBar, EmptyState, Button } from '../../components/platformAdmin'
+import { useQueryParams } from '../../hooks/useQueryParams'
 import type { AdminStructure } from '../../types/platformAdmin.types'
 
 interface OrganizationWithStructure {
@@ -34,6 +36,10 @@ export default function Structure() {
         .select('*')
         .order('organization_name', { ascending: true })
         .order('team_name', { ascending: true })
+
+      if (orgFilter) {
+        query = query.eq('org_id', orgFilter)
+      }
 
       if (search) {
         query = query.ilike('organization_name', `%${search}%`)
@@ -136,6 +142,25 @@ export default function Structure() {
         title="Structure"
         subtitle="Hierarchical view of all organizations, teams, and seasons. Read-only."
       />
+
+      {/* Org Filter Indicator */}
+      {orgFilter && (
+        <div className="pa-card pa-mb-4" style={{ background: 'var(--pa-primary-bg)', borderLeft: '3px solid var(--pa-primary)' }}>
+          <div className="pa-flex pa-items-center pa-justify-between">
+            <div className="pa-flex pa-items-center pa-gap-2">
+              <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-primary)' }}>
+                filter_alt
+              </span>
+              <span className="pa-body-m">
+                Filtered by organization: <strong>{orgFilterName || orgFilter}</strong>
+              </span>
+            </div>
+            <Button variant="ghost" size="dense" onClick={clearOrgFilter}>
+              Clear Filter
+            </Button>
+          </div>
+        </div>
+      )}
 
       <FilterBar
         searchValue={search}
