@@ -1,9 +1,11 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router-dom'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useLicense } from '../../hooks/useLicense'
 import { useCheckoutSession } from '../../hooks/useCheckoutSession'
 import { LicensePlan } from '../../utils/licenseUtils'
 import { t } from '../../i18n'
+import { getLink, RouteKeys } from '../../utils/routes'
+import { useAuth } from '../../hooks/useAuth'
 import { 
   AdminPageHeader, 
   Card, 
@@ -26,9 +28,11 @@ const planCards: PlanCard[] = [
 
 export default function PlanSelection() {
   const navigate = useNavigate()
+  const { profile } = useAuth()
   const { currentOrganization } = useOrganization()
   const orgId = currentOrganization?.id
-  const { licensePlan } = useLicense(orgId)
+  const { licensePlan, isActive: licenseActive, isPastGracePeriod, loading: licenseLoading } = useLicense(orgId)
+  const isPlatformAdmin = profile?.isPlatformAdmin ?? false
 
   const { loadingPlan, error, handleSelect } = useCheckoutSession({
     organizationId: orgId || '',
@@ -44,6 +48,24 @@ export default function PlanSelection() {
         </div>
       </div>
     )
+  }
+
+  // Wait for license to load
+  if (licenseLoading) {
+    return (
+      <div className="pa-root">
+        <div className="pa-card" style={{ textAlign: 'center', padding: '2rem' }}>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-slate-900 dark:border-white mx-auto"></div>
+          <p className="mt-4 text-slate-600 dark:text-slate-400">{t('common.loading')}</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Redirect to trial expired page if license is expired (platform admins bypass)
+  // This prevents users from bypassing the paywall by navigating directly to plan-selection
+  if (!isPlatformAdmin && !licenseActive && isPastGracePeriod) {
+    return <Navigate to={getLink(RouteKeys.ADMIN_TRIAL_EXPIRED)} replace />
   }
 
   return (

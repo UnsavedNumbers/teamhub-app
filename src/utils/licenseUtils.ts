@@ -66,7 +66,8 @@ export function isTrialExpired(summary: LicenseSummary): boolean {
   if (summary.status === 'trial') {
     const trialEnd = parseDate(summary.trialEndsAt)
     if (!trialEnd) return false
-    // Trial is expired if the end date has passed
+    // Trial is expired if the end date/time has passed
+    // Use <= to ensure we catch trials that end exactly at the current moment
     return trialEnd.getTime() <= Date.now()
   }
   return false
