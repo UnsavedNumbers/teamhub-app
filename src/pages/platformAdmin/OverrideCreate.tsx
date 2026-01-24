@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { PageHeader, Card, Button, Input, Select, Checkbox } from '../../components/platformAdmin'
 import Badge from '../../components/platformAdmin/Badge'
+import { EntitySelect } from '../../components/common/EntitySelect'
 import { mapFeatureEntitlement } from '../../utils/domainMappers'
 import type { FeatureEntitlement, CreateEntitlementOverrideRequest } from '../../types/licenseTiers.types'
 import { validateFeatureDependencies, logAuditEvent } from '../../utils/licenseEntitlementsHelpers'
@@ -33,9 +34,8 @@ export default function OverrideCreate() {
   
   const [step, setStep] = useState(1)
   const [targetType, setTargetType] = useState<'organization' | 'user'>('organization')
-  const [targetSearch, setTargetSearch] = useState('')
-  const [selectedTargetId, setSelectedTargetId] = useState('')
-  const [selectedTargetName, setSelectedTargetName] = useState('')
+  const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null)
+  const [selectedTargetOption, setSelectedTargetOption] = useState<{ id: string; name: string } | null>(null)
   const [features, setFeatures] = useState<FeatureEntitlement[]>([])
   const [featuresLoading, setFeaturesLoading] = useState(true)
   const [featuresError, setFeaturesError] = useState<string | null>(null)
@@ -49,8 +49,6 @@ export default function OverrideCreate() {
   const [expiresAt, setExpiresAt] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [searchResults, setSearchResults] = useState<Array<{ id: string; name: string }>>([])
-  const [searching, setSearching] = useState(false)
 
   // Restore form state from session storage (Issue 10)
   useEffect(() => {
@@ -61,7 +59,9 @@ export default function OverrideCreate() {
         if (state.step) setStep(state.step)
         if (state.targetType) setTargetType(state.targetType)
         if (state.selectedTargetId) setSelectedTargetId(state.selectedTargetId)
-        if (state.selectedTargetName) setSelectedTargetName(state.selectedTargetName)
+        if (state.selectedTargetName) {
+          setSelectedTargetOption({ id: state.selectedTargetId, name: state.selectedTargetName })
+        }
         if (state.selectedFeatureId) setSelectedFeatureId(state.selectedFeatureId)
         if (state.overrideAction) setOverrideAction(state.overrideAction)
         if (state.limitValue !== undefined) setLimitValue(state.limitValue)
@@ -83,7 +83,7 @@ export default function OverrideCreate() {
       step,
       targetType,
       selectedTargetId,
-      selectedTargetName,
+      selectedTargetName: selectedTargetOption?.name,
       selectedFeatureId,
       overrideAction,
       limitValue,
@@ -94,7 +94,7 @@ export default function OverrideCreate() {
       expiresAt,
     }
     sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(state))
-  }, [step, targetType, selectedTargetId, selectedTargetName, selectedFeatureId, overrideAction, limitValue, roleAdmin, roleCoach, roleParent, reason, expiresAt])
+  }, [step, targetType, selectedTargetId, selectedTargetOption, selectedFeatureId, overrideAction, limitValue, roleAdmin, roleCoach, roleParent, reason, expiresAt])
 
   useEffect(() => {
     fetchFeatures()
@@ -130,53 +130,6 @@ export default function OverrideCreate() {
     }
   }
 
-  const searchTargets = useCallback(async () => {
-    if (targetSearch.length < 2) {
-      setSearchResults([])
-      setSearching(false)
-      return
-    }
-
-    if (isOffline) {
-      setSearchResults([])
-      setSearching(false)
-      return
-    }
-
-    setSearching(true)
-
-    try {
-      if (targetType === 'organization') {
-        const { data, error } = await supabase
-          .from('organizations')
-          .select('id, name')
-          .ilike('name', `%${targetSearch}%`)
-          .limit(20)
-
-        if (error) throw error
-        setSearchResults((data || []).map((org: any) => ({ id: org.id, name: org.name })))
-      } else {
-        const { data, error } = await supabase
-          .from('users')
-          .select('id, email, display_name')
-          .or(`email.ilike.%${targetSearch}%,display_name.ilike.%${targetSearch}%`)
-          .limit(20)
-
-        if (error) throw error
-        setSearchResults((data || []).map((user: any) => ({ id: user.id, name: user.display_name || user.email || '' })))
-      }
-    } catch (err: any) {
-      console.error('Error searching targets:', err)
-      setSearchResults([])
-    } finally {
-      setSearching(false)
-    }
-  }, [targetType, targetSearch, isOffline])
-
-  useEffect(() => {
-    const timeout = setTimeout(searchTargets, 300)
-    return () => clearTimeout(timeout)
-  }, [searchTargets])
 
   const handleSave = async () => {
     // Block in demo mode
@@ -210,7 +163,7 @@ export default function OverrideCreate() {
 
     // Validate UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    if (!uuidRegex.test(selectedTargetId)) {
+    if (!uuidRegex.test(selectedTargetId!)) {
       setError('Invalid target ID format')
       return
     }
@@ -245,7 +198,7 @@ export default function OverrideCreate() {
     try {
       const override: CreateEntitlementOverrideRequest = {
         target_type: targetType,
-        target_id: selectedTargetId,
+        target_id: selectedTargetId!,
         feature_entitlement_id: selectedFeatureId,
         override_action: overrideAction,
         limit_value: overrideAction === 'set_limit' ? (limitValue && limitValue > 0 ? limitValue : null) : null,
@@ -337,9 +290,8 @@ export default function OverrideCreate() {
     sessionStorage.removeItem(SESSION_STORAGE_KEY)
     setStep(1)
     setTargetType('organization')
-    setTargetSearch('')
-    setSelectedTargetId('')
-    setSelectedTargetName('')
+    setSelectedTargetId(null)
+    setSelectedTargetOption(null)
     setSelectedFeatureId('')
     setOverrideAction('enable')
     setLimitValue(null)
@@ -475,13 +427,12 @@ export default function OverrideCreate() {
             <h3 className="pa-h3" style={{ marginBottom: 'var(--pa-space-4)' }}>Choose Target</h3>
             <div className="pa-form-group">
               <label className="pa-label">Target Type</label>
-              <Select
+                <Select
                 value={targetType}
                 onChange={(e) => {
                   setTargetType(e.target.value as 'organization' | 'user')
-                  setTargetSearch('')
-                  setSelectedTargetId('')
-                  setSelectedTargetName('')
+                  setSelectedTargetId(null)
+                  setSelectedTargetOption(null)
                 }}
                 options={[
                   { value: 'organization', label: 'Organization' },
@@ -489,74 +440,75 @@ export default function OverrideCreate() {
                 ]}
               />
             </div>
-            <div className="pa-form-group">
-              <label className="pa-label">Search {targetType === 'organization' ? 'Organization' : 'User'}</label>
-              <div style={{ position: 'relative' }}>
-                <Input
-                  value={selectedTargetName || targetSearch}
-                  onChange={(e) => {
-                    setTargetSearch(e.target.value)
-                    if (!e.target.value) {
-                      setSelectedTargetId('')
-                      setSelectedTargetName('')
-                    }
-                  }}
-                  placeholder={`Search ${targetType === 'organization' ? 'organizations' : 'users'}...`}
-                  disabled={isOffline}
-                />
-                {searching && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, padding: '12px', textAlign: 'center', background: 'var(--pa-white)', border: '1px solid var(--pa-n100)', borderRadius: 'var(--pa-radius-s)', marginTop: '4px' }}>
-                    <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>Searching...</div>
-                  </div>
-                )}
-                {targetSearch.length >= 2 && searchResults.length > 0 && !selectedTargetId && !searching && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '100%',
-                      left: 0,
-                      right: 0,
-                      background: 'var(--pa-white)',
-                      border: '1px solid var(--pa-n100)',
-                      borderRadius: 'var(--pa-radius-s)',
-                      marginTop: '4px',
-                      maxHeight: '200px',
-                      overflowY: 'auto',
-                      zIndex: 1000,
-                      boxShadow: 'var(--pa-shadow-2)',
-                    }}
-                  >
-                    {searchResults.map((result) => (
-                      <div
-                        key={result.id}
-                        onClick={() => {
-                          setSelectedTargetId(result.id)
-                          setSelectedTargetName(result.name)
-                          setTargetSearch('')
-                          setSearchResults([])
-                        }}
-                        style={{
-                          padding: 'var(--pa-space-3)',
-                          cursor: 'pointer',
-                          borderBottom: '1px solid var(--pa-n100)',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'var(--pa-n50)'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'transparent'
-                        }}
-                      >
-                        <div className="pa-body-m">{result.name}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            {selectedTargetId && (
+            <EntitySelect
+              label={`Search ${targetType === 'organization' ? 'Organization' : 'User'}`}
+              value={selectedTargetId}
+              onChange={(id, option) => {
+                setSelectedTargetId(id)
+                setSelectedTargetOption(option ? { id: option.id, name: option.label } : null)
+              }}
+              fetchOptions={async (query) => {
+                if (isOffline) return []
+                
+                if (targetType === 'organization') {
+                  const { data, error } = await supabase
+                    .from('organizations')
+                    .select('id, name')
+                    .ilike('name', `%${query}%`)
+                    .limit(20)
+                  
+                  if (error) throw error
+                  return (data || []).map((org: any) => ({
+                    id: org.id,
+                    label: org.name,
+                  }))
+                } else {
+                  const { data, error } = await supabase
+                    .from('users')
+                    .select('id, email, display_name')
+                    .or(`email.ilike.%${query}%,display_name.ilike.%${query}%`)
+                    .limit(20)
+                  
+                  if (error) throw error
+                  return (data || []).map((user: any) => ({
+                    id: user.id,
+                    label: user.display_name || user.email || '',
+                  }))
+                }
+              }}
+              getOptionById={async (id) => {
+                if (isOffline) return null
+                
+                if (targetType === 'organization') {
+                  const { data, error } = await supabase
+                    .from('organizations')
+                    .select('id, name')
+                    .eq('id', id)
+                    .single()
+                  
+                  if (error || !data) return null
+                  return { id: data.id, label: data.name }
+                } else {
+                  const { data, error } = await supabase
+                    .from('users')
+                    .select('id, email, display_name')
+                    .eq('id', id)
+                    .single()
+                  
+                  if (error || !data) return null
+                  return {
+                    id: data.id,
+                    label: data.display_name || data.email || '',
+                  }
+                }
+              }}
+              placeholder={`Search ${targetType === 'organization' ? 'organizations' : 'users'}...`}
+              disabled={isOffline}
+              required
+            />
+            {selectedTargetOption && (
               <div className="pa-card" style={{ background: 'var(--pa-success-bg)', marginTop: 'var(--pa-space-3)' }}>
-                <div className="pa-body-m">Selected: {selectedTargetName}</div>
+                <div className="pa-body-m">Selected: {selectedTargetOption.name}</div>
               </div>
             )}
             <div style={{ marginTop: 'var(--pa-space-5)' }}>
@@ -696,7 +648,7 @@ export default function OverrideCreate() {
             <h3 className="pa-h3" style={{ marginBottom: 'var(--pa-space-4)' }}>Review & Save</h3>
             <div className="pa-card pa-mb-4" style={{ background: 'var(--pa-n50)' }}>
               <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginBottom: 'var(--pa-space-2)' }}>Target</div>
-              <div className="pa-body-m" style={{ fontWeight: 600 }}>{selectedTargetName}</div>
+              <div className="pa-body-m" style={{ fontWeight: 600 }}>{selectedTargetOption?.name || 'Unknown'}</div>
               <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: 'var(--pa-space-4)' }}>Feature</div>
               <div className="pa-body-m" style={{ fontWeight: 600 }}>{selectedFeature?.display_name}</div>
               <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: 'var(--pa-space-4)' }}>Action</div>

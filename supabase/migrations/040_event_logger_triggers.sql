@@ -74,8 +74,8 @@ BEGIN
   PERFORM log_event(
     'ORGANIZATION'::event_category,
     v_event_type,
-    auth.uid(),
     v_actor_role,
+    auth.uid(),
     COALESCE(NEW.id, OLD.id),
     'organization',
     COALESCE(NEW.id, OLD.id),
@@ -136,8 +136,8 @@ BEGIN
   PERFORM log_event(
     'USER'::event_category,
     v_event_type,
-    auth.uid(),
     v_actor_role,
+    auth.uid(),
     NULL, -- org_id not directly on users table
     'user',
     COALESCE(NEW.id, OLD.id),
@@ -285,8 +285,8 @@ BEGIN
   PERFORM log_event(
     'PAYMENT'::event_category,
     v_event_type,
-    auth.uid(),
     v_actor_role,
+    auth.uid(),
     COALESCE(NEW.org_id, OLD.org_id),
     'fee',
     COALESCE(NEW.id, OLD.id),
