@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
-import { PageHeader, Card, Button, Input, Select, Badge, Checkbox, ConfirmDialog, ErrorState } from '../../components/platformAdmin'
+import { PageHeader, Card, Button, Input, Select, Badge, Checkbox, ConfirmDialog, ErrorState, Accordion } from '../../components/platformAdmin'
 import { mapTierFeatureAssignment } from '../../utils/domainMappers'
 import type { LicenseTier, FeatureEntitlement, TierFeatureAssignment, StripePriceVerification } from '../../types/licenseTiers.types'
 // Unused - keep for future use
@@ -889,38 +889,163 @@ export default function LicenseTierDetail() {
             {stripeVerification && (
               <div className="pa-mt-3">
                 {stripeVerification.valid ? (
-                  <div className="pa-card" style={{ background: 'var(--pa-success-bg)', border: '1px solid var(--pa-success)' }}>
-                    <div className="pa-flex pa-items-center pa-gap-2 pa-mb-2">
-                      <span className="material-symbols-outlined" style={{ color: 'var(--pa-success)' }}>check_circle</span>
-                      <span className="pa-body-m" style={{ fontWeight: 600 }}>Verified</span>
-                      {tier.stripe_verified_at && isStripeVerificationValid(tier.stripe_verified_at) && (
-                        <Badge variant="neutral" style={{ marginLeft: 'auto' }}>Cached</Badge>
+                  <div 
+                    className="pa-card" 
+                    style={{ 
+                      background: 'linear-gradient(135deg, var(--pa-success-bg) 0%, rgba(34, 197, 94, 0.05) 100%)',
+                      border: '1px solid var(--pa-success)',
+                      borderRadius: 'var(--pa-radius-lg)',
+                      padding: 'var(--pa-space-5)',
+                      boxShadow: '0 2px 8px rgba(34, 197, 94, 0.1)',
+                    }}
+                  >
+                    {/* Header */}
+                    <div className="pa-flex pa-items-center pa-justify-between pa-mb-4">
+                      <div className="pa-flex pa-items-center pa-gap-3">
+                        <div 
+                          style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            background: 'var(--pa-success)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <span className="material-symbols-outlined" style={{ color: 'white', fontSize: '24px' }}>
+                            check_circle
+                          </span>
+                        </div>
+                        <div>
+                          <div className="pa-body-m" style={{ fontWeight: 600, color: 'var(--pa-n900)' }}>
+                            Stripe Price Verified
+                          </div>
+                          {tier.stripe_verified_at && isStripeVerificationValid(tier.stripe_verified_at) && (
+                            <div className="pa-body-s" style={{ color: 'var(--pa-n600)', marginTop: '2px' }}>
+                              Using cached data
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {tier.stripe_price_id && (
+                        <a
+                          href={`https://dashboard.stripe.com/prices/${tier.stripe_price_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="pa-flex pa-items-center pa-gap-2"
+                          style={{
+                            color: 'var(--pa-success)',
+                            textDecoration: 'none',
+                            fontWeight: 600,
+                            fontSize: '13px',
+                            padding: 'var(--pa-space-2) var(--pa-space-3)',
+                            borderRadius: 'var(--pa-radius-md)',
+                            border: '1px solid var(--pa-success)',
+                            background: 'white',
+                            transition: 'all 0.2s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'var(--pa-success)'
+                            e.currentTarget.style.color = 'white'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'white'
+                            e.currentTarget.style.color = 'var(--pa-success)'
+                          }}
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>open_in_new</span>
+                          View in Stripe
+                        </a>
                       )}
                     </div>
-                    {stripeVerification.product_name && (
-                      <div className="pa-body-s">Product: {stripeVerification.product_name}</div>
-                    )}
-                    {stripeVerification.amount_cents && stripeVerification.currency && (
-                      <div className="pa-body-s">
-                        Amount: {new Intl.NumberFormat('en-US', {
-                          style: 'currency',
-                          currency: stripeVerification.currency.toUpperCase(),
-                        }).format(stripeVerification.amount_cents / 100)}
-                        {stripeVerification.interval && ` / ${stripeVerification.interval}`}
+
+                    {/* Details Grid */}
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+                      gap: 'var(--pa-space-4)',
+                      paddingTop: 'var(--pa-space-4)',
+                      borderTop: '1px solid rgba(34, 197, 94, 0.2)',
+                    }}>
+                      {stripeVerification.product_name && (
+                        <div>
+                          <div className="pa-body-s" style={{ color: 'var(--pa-n600)', marginBottom: 'var(--pa-space-1)' }}>
+                            Product Name
+                          </div>
+                          <div className="pa-body-m" style={{ fontWeight: 600, color: 'var(--pa-n900)' }}>
+                            {stripeVerification.product_name}
+                          </div>
+                        </div>
+                      )}
+                      {stripeVerification.amount_cents && stripeVerification.currency && (
+                        <div>
+                          <div className="pa-body-s" style={{ color: 'var(--pa-n600)', marginBottom: 'var(--pa-space-1)' }}>
+                            Price
+                          </div>
+                          <div className="pa-body-m" style={{ fontWeight: 600, color: 'var(--pa-n900)' }}>
+                            {new Intl.NumberFormat('en-US', {
+                              style: 'currency',
+                              currency: stripeVerification.currency.toUpperCase(),
+                            }).format(stripeVerification.amount_cents / 100)}
+                            {stripeVerification.interval && (
+                              <span style={{ color: 'var(--pa-n600)', fontWeight: 400, marginLeft: '4px' }}>
+                                / {stripeVerification.interval}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      <div>
+                        <div className="pa-body-s" style={{ color: 'var(--pa-n600)', marginBottom: 'var(--pa-space-1)' }}>
+                          Status
+                        </div>
+                        <div>
+                          <Badge variant={stripeVerification.active ? 'success' : 'neutral'}>
+                            {stripeVerification.active ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </div>
                       </div>
-                    )}
-                    <div className="pa-body-s">Status: {stripeVerification.active ? 'Active' : 'Inactive'}</div>
-                    {tier.stripe_verified_at && (
-                      <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
-                        Verified: {new Date(tier.stripe_verified_at).toLocaleString()}
-                      </div>
-                    )}
+                      {tier.stripe_verified_at && (
+                        <div>
+                          <div className="pa-body-s" style={{ color: 'var(--pa-n600)', marginBottom: 'var(--pa-space-1)' }}>
+                            Last Verified
+                          </div>
+                          <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
+                            {new Date(tier.stripe_verified_at).toLocaleString()}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ) : (
-                  <div className="pa-card" style={{ background: 'var(--pa-danger-bg)', border: '1px solid var(--pa-danger)' }}>
-                    <div className="pa-flex pa-items-center pa-gap-2">
-                      <span className="material-symbols-outlined" style={{ color: 'var(--pa-danger)' }}>error</span>
-                      <span className="pa-body-s">{stripeVerification.error || 'Verification failed'}</span>
+                  <div 
+                    className="pa-card" 
+                    style={{ 
+                      background: 'var(--pa-danger-bg)', 
+                      border: '1px solid var(--pa-danger)',
+                      borderRadius: 'var(--pa-radius-lg)',
+                      padding: 'var(--pa-space-4)',
+                    }}
+                  >
+                    <div className="pa-flex pa-items-center pa-gap-3">
+                      <span 
+                        className="material-symbols-outlined" 
+                        style={{ 
+                          color: 'var(--pa-danger)',
+                          fontSize: '24px',
+                        }}
+                      >
+                        error
+                      </span>
+                      <div style={{ flex: 1 }}>
+                        <div className="pa-body-m" style={{ fontWeight: 600, color: 'var(--pa-n900)' }}>
+                          Verification Failed
+                        </div>
+                        <div className="pa-body-s" style={{ color: 'var(--pa-n700)', marginTop: '2px' }}>
+                          {stripeVerification.error || 'Unable to verify Stripe Price ID'}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -947,93 +1072,127 @@ export default function LicenseTierDetail() {
             Select features to include in this tier. Use limits and role toggles for granular control.
           </div>
 
-          {Object.entries(featuresByCategory).map(([category, categoryFeatures]) => (
-            <div key={category} className="pa-mb-5">
-              <div className="pa-overline" style={{ marginBottom: 'var(--pa-space-3)' }}>
-                {category}
-              </div>
-              {categoryFeatures.map((feature) => {
-                const assignment = assignments[feature.id]
-                const included = assignment?.included ?? false
+          <Accordion
+            items={Object.entries(featuresByCategory).map(([category, categoryFeatures]) => {
+              const includedCount = categoryFeatures.filter(f => assignments[f.id]?.included).length
+              const totalCount = categoryFeatures.length
+              return {
+                title: category,
+                count: `${includedCount} / ${totalCount}`,
+                defaultExpanded: false,
+                children: (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-3)' }}>
+                    {categoryFeatures.map((feature) => {
+                      const assignment = assignments[feature.id]
+                      const included = assignment?.included ?? false
 
-                return (
-                  <div
-                    key={feature.id}
-                    className="pa-card pa-mb-3"
-                    style={{ padding: 'var(--pa-space-3)' }}
-                  >
-                    <div className="pa-flex pa-items-start pa-gap-3">
-                      <Checkbox
-                        checked={included}
-                        onChange={(e) => toggleFeature(feature.id, e.target.checked)}
-                        label={feature.display_name}
-                      />
-                      <div style={{ flex: 1 }}>
-                        {feature.description && (
-                          <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
-                            {feature.description}
-                          </div>
-                        )}
-                        <div className="pa-flex pa-items-center pa-gap-2 pa-mt-2">
-                          <Badge variant="neutral">{feature.feature_type}</Badge>
-                          <Badge variant="info">{feature.rollout_status}</Badge>
-                        </div>
-
-                        {included && (
-                          <div className="pa-mt-3" style={{ paddingTop: 'var(--pa-space-3)', borderTop: '1px solid var(--pa-n100)' }}>
-                            {feature.feature_type === 'limit' && (
-                              <div className="pa-form-group">
-                                <label className="pa-label">Limit Value</label>
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  step="1"
-                                  value={assignment?.limit_value || ''}
-                                  onChange={(e) => {
-                                    const value = e.target.value
-                                    const numValue = value ? parseInt(value, 10) : null
-                                    if (numValue === null || numValue > 0) {
-                                      updateAssignment(feature.id, {
-                                        limit_value: numValue,
-                                      })
-                                    }
-                                  }}
-                                  placeholder="Enter limit"
-                                />
+                      return (
+                        <div
+                          key={feature.id}
+                          style={{
+                            padding: 'var(--pa-space-4)',
+                            border: '1px solid var(--pa-n100)',
+                            borderRadius: 'var(--pa-radius-md)',
+                            background: 'var(--pa-n50)',
+                          }}
+                        >
+                          {/* Feature Header - Always visible, consistent height */}
+                          <div className="pa-flex pa-items-start pa-gap-3">
+                            <div style={{ marginTop: '2px' }}>
+                              <Checkbox
+                                checked={included}
+                                onChange={(e) => toggleFeature(feature.id, e.target.checked)}
+                                label=""
+                              />
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div className="pa-flex pa-items-center pa-gap-2 pa-mb-2">
+                                <span className="pa-body-m" style={{ fontWeight: 600 }}>
+                                  {feature.display_name}
+                                </span>
+                                <Badge variant="neutral" style={{ fontSize: '11px', padding: '2px 8px' }}>
+                                  {feature.feature_type.toUpperCase()}
+                                </Badge>
+                                <Badge variant="info" style={{ fontSize: '11px', padding: '2px 8px' }}>
+                                  {feature.rollout_status.toUpperCase()}
+                                </Badge>
                               </div>
-                            )}
+                              {feature.description && (
+                                <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
+                                  {feature.description}
+                                </div>
+                              )}
+                            </div>
+                          </div>
 
-                            {feature.feature_type === 'permission' && (
-                              <div className="pa-form-group">
-                                <label className="pa-label">Role Access</label>
-                                <div className="pa-flex pa-flex-col pa-gap-2">
-                                  <Checkbox
-                                    checked={assignment?.role_admin ?? true}
-                                    onChange={(e) => updateAssignment(feature.id, { role_admin: e.target.checked })}
-                                    label="Admin"
-                                  />
-                                  <Checkbox
-                                    checked={assignment?.role_coach ?? true}
-                                    onChange={(e) => updateAssignment(feature.id, { role_coach: e.target.checked })}
-                                    label="Coach"
-                                  />
-                                  <Checkbox
-                                    checked={assignment?.role_parent ?? false}
-                                    onChange={(e) => updateAssignment(feature.id, { role_parent: e.target.checked })}
-                                    label="Parent"
+                          {/* Feature Configuration - Only shown when included */}
+                          {included && (
+                            <div
+                              style={{
+                                marginTop: 'var(--pa-space-4)',
+                                paddingTop: 'var(--pa-space-4)',
+                                borderTop: '1px solid var(--pa-n100)',
+                              }}
+                            >
+                              {feature.feature_type === 'limit' && (
+                                <div className="pa-form-group" style={{ marginBottom: 0 }}>
+                                  <label className="pa-label" style={{ fontSize: '12px', marginBottom: 'var(--pa-space-2)' }}>
+                                    Limit Value
+                                  </label>
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    value={assignment?.limit_value || ''}
+                                    onChange={(e) => {
+                                      const value = e.target.value
+                                      const numValue = value ? parseInt(value, 10) : null
+                                      if (numValue === null || numValue > 0) {
+                                        updateAssignment(feature.id, {
+                                          limit_value: numValue,
+                                        })
+                                      }
+                                    }}
+                                    placeholder="Enter limit"
+                                    style={{ maxWidth: '200px' }}
                                   />
                                 </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                              )}
+
+                              {feature.feature_type === 'permission' && (
+                                <div className="pa-form-group" style={{ marginBottom: 0 }}>
+                                  <label className="pa-label" style={{ fontSize: '12px', marginBottom: 'var(--pa-space-2)' }}>
+                                    Role Access
+                                  </label>
+                                  <div className="pa-flex pa-flex-col pa-gap-2">
+                                    <Checkbox
+                                      checked={assignment?.role_admin ?? true}
+                                      onChange={(e) => updateAssignment(feature.id, { role_admin: e.target.checked })}
+                                      label="Admin"
+                                    />
+                                    <Checkbox
+                                      checked={assignment?.role_coach ?? true}
+                                      onChange={(e) => updateAssignment(feature.id, { role_coach: e.target.checked })}
+                                      label="Coach"
+                                    />
+                                    <Checkbox
+                                      checked={assignment?.role_parent ?? false}
+                                      onChange={(e) => updateAssignment(feature.id, { role_parent: e.target.checked })}
+                                      label="Parent"
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
-                )
-              })}
-            </div>
-          ))}
+                ),
+              }
+            })}
+          />
         </Card>
       </div>
 
