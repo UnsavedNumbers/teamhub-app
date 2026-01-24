@@ -32,15 +32,22 @@ export function UniformPartsSelector({
 
   if (!config) {
     return (
-      <Card>
+      <Card style={{ marginBottom: '24px' }}>
         <p className="pa-text-muted">Select a sport to see available uniform parts.</p>
       </Card>
     )
   }
 
   return (
-    <Card title="Uniform Parts">
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+    <Card title="Uniform Parts" style={{ marginTop: '24px', marginBottom: '24px' }}>
+      <div 
+        style={{ 
+          display: 'flex', 
+          flexWrap: 'wrap', 
+          gap: '8px',
+          width: '100%'
+        }}
+      >
         {availableParts.map(part => {
           const isSelected = selectedParts.includes(part)
           return (
@@ -50,8 +57,10 @@ export function UniformPartsSelector({
               onClick={() => togglePart(part)}
               style={{
                 textTransform: 'capitalize',
-                minWidth: '100px'
+                minWidth: '100px',
+                flex: '1 1 auto'
               }}
+              className="pa-uniform-part-btn"
             >
               {part}
             </Button>

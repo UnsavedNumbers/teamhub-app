@@ -13,7 +13,7 @@ import { getSports, getPrograms } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
 import { getSeasons } from '../../data/services/seasonsService'
 import type { Team, Sport, Program, Level, Season } from '../../data/types/organization'
-import { AdminPageHeader } from '../../components/platformAdmin'
+import { AdminPageHeader, Button } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 
 export default function TeamsManagement() {
@@ -179,9 +179,7 @@ export default function TeamsManagement() {
               You need to create at least one program before you can add teams. Teams require levels, and levels require programs.
             </p>
             <Link to="/admin/organization/structure/forms?type=program">
-              <button className="inline-flex items-center justify-center h-11 px-6 font-semibold text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm">
-                Add a Program
-              </button>
+              <Button variant="primary">Add a Program</Button>
             </Link>
           </div>
         </div>
@@ -207,9 +205,7 @@ export default function TeamsManagement() {
               You need to create at least one level before you can add teams.
             </p>
             <Link to="/admin/organization/structure/forms?type=level">
-              <button className="inline-flex items-center justify-center h-11 px-6 font-semibold text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm">
-                Add a Level
-              </button>
+              <Button variant="primary">Add a Level</Button>
             </Link>
           </div>
         </div>

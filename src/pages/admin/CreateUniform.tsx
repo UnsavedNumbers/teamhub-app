@@ -40,12 +40,12 @@ export default function CreateUniform() {
         actions={null}
       />
 
-      <Card>
+      <div className="pa-form-container">
         <SportUniformForm
           onSubmit={handleSubmit}
           isOrgLevel={false}
         />
-      </Card>
+      </div>
     </div>
   )
 }

@@ -6,7 +6,6 @@ import { t } from '../../i18n'
 import { formatDate } from '../../utils/licenseUtils'
 import { createCustomerPortalSession, getBillingHistory, BillingEvent } from '../../api/billing'
 import { LicenseStatusBadge } from '../../components/admin/LicenseStatusBadge'
-import { LicenseWarningBanner } from '../../components/admin/LicenseWarningBanner'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { 
   AdminPageHeader, 
@@ -79,10 +78,6 @@ export default function OrganizationBilling() {
   return (
     <div className="pa-root">
       <AdminPageHeader title={t('billing.pageTitle')} />
-
-      {summary && (
-        <LicenseWarningBanner summary={summary} />
-      )}
 
       {error && (
         <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>

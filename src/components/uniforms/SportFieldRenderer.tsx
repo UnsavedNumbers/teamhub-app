@@ -117,17 +117,19 @@ export function SportFieldRenderer({ field, name }: SportFieldRendererProps) {
               <label className={`pa-label ${field.required ? 'pa-label--required' : ''}`}>
                 {field.label}
               </label>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <input
                   type="color"
                   {...formField}
                   value={formField.value || '#000000'}
                   style={{
                     width: '60px',
+                    minWidth: '60px',
                     height: '44px',
                     border: '1px solid var(--pa-n300)',
                     borderRadius: '10px',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    flexShrink: 0
                   }}
                 />
                 <Input
@@ -135,7 +137,10 @@ export function SportFieldRenderer({ field, name }: SportFieldRendererProps) {
                   value={formField.value || '#000000'}
                   placeholder="#000000"
                   error={fieldState.error?.message}
-                  style={{ flex: 1 }}
+                  style={{ 
+                    flex: '1 1 auto',
+                    minWidth: '120px'
+                  }}
                 />
               </div>
               {fieldState.error && (

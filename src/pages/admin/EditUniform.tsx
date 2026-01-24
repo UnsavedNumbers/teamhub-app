@@ -127,14 +127,14 @@ export default function EditUniform() {
         actions={null}
       />
 
-      <Card>
+      <div className="pa-form-container">
         <SportUniformForm
           onSubmit={handleSubmit}
           initialData={initialData}
           isOrgLevel={!initialData.team_id}
           teamId={initialData.team_id || null}
         />
-      </Card>
+      </div>
     </div>
   )
 }
