@@ -119,6 +119,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Continue with empty orgs - don't block profile creation
           }
 
+          // Debug logging for organization loading
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[useAuth] RPC result:', { userId, dataCount: data?.length ?? 0, hasError: !!orgError, data })
+          }
+
           // Type-safe organization mapping (Bug Prevention #5 & #8)
           if (Array.isArray(data)) {
             orgs = data.map((o: any) => {
@@ -140,6 +145,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 },
               }
             })
+            
+            // Debug logging for mapped organizations
+            if (process.env.NODE_ENV === 'development') {
+              console.log('[useAuth] Mapped organizations:', orgs)
+            }
+          } else {
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('[useAuth] RPC data is not an array:', data)
+            }
           }
         } catch (err) {
           // Continue with empty orgs on error
@@ -183,6 +197,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Guard against state updates after unmount (Bug Prevention #2)
         if (!mountedRef.current) return
+
+        // Debug logging before setting organizations
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[useAuth] Setting organizations:', { orgCount: orgs.length, orgs })
+        }
 
         setProfile(profileData)
         setOrganizations(orgs)

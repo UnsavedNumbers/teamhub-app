@@ -123,18 +123,6 @@ function HostHomeRoute() {
   return <Marketing />
 }
 
-function PlatformAdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, profile, loading } = useAuth()
-  const location = useLocation()
-
-  if (loading) return <AdminLoadingSpinner />
-  if (!user) return <Navigate to={getLink(RouteKeys.AUTH_LOGIN)} state={{ from: location }} replace />
-  if (!profile) return <AdminLoadingSpinner />
-  if (!profile.isPlatformAdmin) return <Navigate to={getLink(RouteKeys.AUTH_UNAUTHORIZED)} replace />
-
-  return <>{children}</>
-}
-
 function HostGateLayout() {
   const appContext = getHostAppContext()
   const location = useLocation()
@@ -186,6 +174,19 @@ function App() {
 function AppWithTheme() {
   // Apply organization theme globally - must be inside both OrganizationProvider and AuthProvider
   useOrganizationTheme()
+
+  // PlatformAdminRoute must be defined inside AppWithTheme to ensure it's within AuthProvider context
+  function PlatformAdminRoute({ children }: { children: React.ReactNode }) {
+    const { user, profile, loading } = useAuth()
+    const location = useLocation()
+
+    if (loading) return <AdminLoadingSpinner />
+    if (!user) return <Navigate to={getLink(RouteKeys.AUTH_LOGIN)} state={{ from: location }} replace />
+    if (!profile) return <AdminLoadingSpinner />
+    if (!profile.isPlatformAdmin) return <Navigate to={getLink(RouteKeys.AUTH_UNAUTHORIZED)} replace />
+
+    return <>{children}</>
+  }
 
   return (
     <>
@@ -346,9 +347,11 @@ function AppWithTheme() {
             <Route
               element={
                 <PlatformAdminRoute>
-                  <Suspense fallback={<AdminLoadingSpinner />}>
-                    <PlatformAdminLayout />
-                  </Suspense>
+                  <SidebarProvider>
+                    <Suspense fallback={<AdminLoadingSpinner />}>
+                      <PlatformAdminLayout />
+                    </Suspense>
+                  </SidebarProvider>
                 </PlatformAdminRoute>
               }
             >
