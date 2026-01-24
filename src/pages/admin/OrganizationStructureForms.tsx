@@ -213,13 +213,16 @@ export default function OrganizationStructureForms() {
     }
   }, [context, isReady, t])
 
-  const sportOptions = useMemo(
-    () => [
+  const sportOptions = useMemo(() => {
+    // Deduplicate by sport ID as a safety measure
+    const uniqueSports = Array.from(
+      new Map(sports.map((sport) => [sport.id, sport])).values()
+    )
+    return [
       { value: '', label: t('admin.structureForms.fields.programSport.select') },
-      ...sports.map((sport) => ({ value: sport.id, label: sport.name })),
-    ],
-    [sports, t]
-  )
+      ...uniqueSports.map((sport) => ({ value: sport.id, label: sport.name })),
+    ]
+  }, [sports, t])
 
   const programOptions = useMemo(
     () => [

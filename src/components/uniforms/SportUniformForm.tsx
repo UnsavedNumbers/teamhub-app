@@ -231,86 +231,98 @@ export function SportUniformForm({
         </div>
       )}
 
-      <Card title="Basic Information">
-        <Controller
-          name="sport_name"
-          control={control}
-          rules={{ required: 'Sport is required' }}
-          render={({ field, fieldState }) => (
-            <Select
-              label="Sport"
-              required
-              error={fieldState.error?.message}
-              options={sports.map(s => ({ value: s.name, label: s.name }))}
-              {...field}
+      <Card title="Basic Information" style={{ marginBottom: '24px' }}>
+        <div className="pa-form-grid" style={{ marginTop: '16px' }}>
+          <div className="pa-col-span-1 pa-select-wrapper">
+            <Controller
+              name="sport_name"
+              control={control}
+              rules={{ required: 'Sport is required' }}
+              render={({ field, fieldState }) => (
+                <Select
+                  label="Sport"
+                  required
+                  error={fieldState.error?.message}
+                  options={sports.map(s => ({ value: s.name, label: s.name }))}
+                  {...field}
+                />
+              )}
             />
-          )}
-        />
+          </div>
 
-        {!isOrgLevel && (
-          <Controller
-            name="team_id_select"
-            control={control}
-            rules={{ required: !isOrgLevel ? 'Team is required' : false }}
-            render={({ field, fieldState }) => (
-              <Select
-                label="Team"
-                required={!isOrgLevel}
-                error={fieldState.error?.message}
-                options={teams.map(t => ({ value: t.id, label: t.name }))}
-                {...field}
+          {!isOrgLevel && (
+            <div className="pa-col-span-1 pa-select-wrapper">
+              <Controller
+                name="team_id_select"
+                control={control}
+                rules={{ required: !isOrgLevel ? 'Team is required' : false }}
+                render={({ field, fieldState }) => (
+                  <Select
+                    label="Team"
+                    required={!isOrgLevel}
+                    error={fieldState.error?.message}
+                    options={teams.map(t => ({ value: t.id, label: t.name }))}
+                    {...field}
+                  />
+                )}
               />
-            )}
-          />
-        )}
-
-        <Controller
-          name="program_id_select"
-          control={control}
-          render={({ field, fieldState }) => (
-            <Select
-              label="Program (Optional)"
-              error={fieldState.error?.message}
-              options={[
-                { value: '', label: 'None' },
-                ...programs.map(p => ({ value: p.id, label: p.name }))
-              ]}
-              {...field}
-            />
+            </div>
           )}
-        />
 
-        {!isOrgLevel && (
-          <Controller
-            name="season_id_select"
-            control={control}
-            rules={{ required: !isOrgLevel ? 'Season is required' : false }}
-            render={({ field, fieldState }) => (
-              <Select
-                label="Season"
-                required={!isOrgLevel}
-                error={fieldState.error?.message}
-                options={seasons.map(s => ({ value: s.id, label: s.name }))}
-                {...field}
+          <div className="pa-col-span-1 pa-select-wrapper">
+            <Controller
+              name="program_id_select"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Select
+                  label="Program (Optional)"
+                  error={fieldState.error?.message}
+                  options={[
+                    { value: '', label: 'None' },
+                    ...programs.map(p => ({ value: p.id, label: p.name }))
+                  ]}
+                  {...field}
+                />
+              )}
+            />
+          </div>
+
+          {!isOrgLevel && (
+            <div className="pa-col-span-1 pa-select-wrapper">
+              <Controller
+                name="season_id_select"
+                control={control}
+                rules={{ required: !isOrgLevel ? 'Season is required' : false }}
+                render={({ field, fieldState }) => (
+                  <Select
+                    label="Season"
+                    required={!isOrgLevel}
+                    error={fieldState.error?.message}
+                    options={seasons.map(s => ({ value: s.id, label: s.name }))}
+                    {...field}
+                  />
+                )}
               />
-            )}
-          />
-        )}
-
-        <Controller
-          name="name"
-          control={control}
-          rules={{ required: 'Uniform name is required' }}
-          render={({ field, fieldState }) => (
-            <Input
-              label="Uniform Name"
-              required
-              error={fieldState.error?.message}
-              placeholder="e.g., Home, Away, Alternate"
-              {...field}
-            />
+            </div>
           )}
-        />
+
+          <div className="pa-col-span-1">
+            <Controller
+              name="name"
+              control={control}
+              rules={{ required: 'Uniform name is required' }}
+              render={({ field, fieldState }) => (
+                <Input
+                  label="Uniform Name"
+                  required
+                  error={fieldState.error?.message}
+                  placeholder="e.g., Home, Away, Alternate"
+                  {...field}
+                />
+              )}
+            />
+          </div>
+        </div>
       </Card>
 
       {sportConfig && selectedSportName && (
@@ -321,118 +333,165 @@ export function SportUniformForm({
             onPartsChange={(parts) => setValue('selectedParts', parts)}
           />
 
-          <Card title="Sport-Specific Fields">
-            {sportConfig.fields.map(field => (
-              <SportFieldRenderer
-                key={field.key}
-                field={field}
-                name={`sport_specific_fields.${field.key}`}
-              />
-            ))}
-
-            {sportConfig.optionalSections?.map(section => (
-              <div key={section.key} style={{ marginTop: '24px' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '12px' }}>
-                  {section.label}
-                </h3>
-                {section.fields.map(field => (
-                  <SportFieldRenderer
+          <Card title="Sport-Specific Fields" style={{ marginTop: '24px', marginBottom: '24px' }}>
+            <div className="pa-form-grid pa-form-grid-2" style={{ marginTop: '16px' }}>
+              {sportConfig.fields.map(field => {
+                // Group related fields in two-column on desktop
+                const shouldSpanTwo = field.type === 'text' && field.key.includes('rules')
+                
+                return (
+                  <div 
                     key={field.key}
-                    field={field}
-                    name={`sport_specific_fields.${section.key}.${field.key}`}
-                  />
-                ))}
-              </div>
-            ))}
+                    className={shouldSpanTwo ? 'pa-col-span-2' : 'pa-col-span-1'}
+                  >
+                    <div className={field.type === 'select' ? 'pa-select-wrapper' : ''}>
+                      <SportFieldRenderer
+                        field={field}
+                        name={`sport_specific_fields.${field.key}`}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+
+              {sportConfig.optionalSections?.map(section => (
+                <div key={section.key} className="pa-col-span-2" style={{ marginTop: '24px' }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '12px' }}>
+                    {section.label}
+                  </h3>
+                  <div className="pa-form-grid pa-form-grid-2 pa-form-grid-tablet-2col" style={{ marginTop: '8px' }}>
+                    {section.fields.map(field => (
+                      <div 
+                        key={field.key}
+                        className="pa-col-span-1"
+                      >
+                        <div className={field.type === 'select' ? 'pa-select-wrapper' : ''}>
+                          <SportFieldRenderer
+                            field={field}
+                            name={`sport_specific_fields.${section.key}.${field.key}`}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </Card>
         </>
       )}
 
-      <Card title="Common Fields">
-        <Controller
-          name="primary_color"
-          control={control}
-          render={({ field }) => (
-            <Input
-              label="Primary Color"
-              type="color"
-              {...field}
-              value={field.value || '#000000'}
+      <Card title="Common Fields" style={{ marginTop: '24px', marginBottom: '24px' }}>
+        <div className="pa-form-grid pa-form-grid-2 pa-form-grid-tablet-2col" style={{ marginTop: '16px' }}>
+          <div className="pa-col-span-1">
+            <Controller
+              name="primary_color"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  label="Primary Color"
+                  type="color"
+                  {...field}
+                  value={field.value || '#000000'}
+                />
+              )}
             />
-          )}
-        />
+          </div>
 
-        <Controller
-          name="secondary_color"
-          control={control}
-          render={({ field }) => (
-            <Input
-              label="Secondary Color"
-              type="color"
-              {...field}
-              value={field.value || '#000000'}
+          <div className="pa-col-span-1">
+            <Controller
+              name="secondary_color"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  label="Secondary Color"
+                  type="color"
+                  {...field}
+                  value={field.value || '#000000'}
+                />
+              )}
             />
-          )}
-        />
+          </div>
 
-        <Controller
-          name="accent_color"
-          control={control}
-          render={({ field }) => (
-            <Input
-              label="Accent Color (Optional)"
-              type="color"
-              {...field}
-              value={field.value || '#000000'}
+          <div className="pa-col-span-1">
+            <Controller
+              name="accent_color"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  label="Accent Color (Optional)"
+                  type="color"
+                  {...field}
+                  value={field.value || '#000000'}
+                />
+              )}
             />
-          )}
-        />
+          </div>
 
-        <Controller
-          name="vendor"
-          control={control}
-          render={({ field }) => (
-            <Input
-              label="Vendor (Optional)"
-              {...field}
+          <div className="pa-col-span-1">
+            <Controller
+              name="vendor"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  label="Vendor (Optional)"
+                  {...field}
+                />
+              )}
             />
-          )}
-        />
+          </div>
 
-        <Controller
-          name="deadline_at"
-          control={control}
-          render={({ field }) => (
-            <Input
-              label="Order Deadline (Optional)"
-              type="datetime-local"
-              {...field}
+          <div className="pa-col-span-1">
+            <Controller
+              name="deadline_at"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  label="Order Deadline (Optional)"
+                  type="datetime-local"
+                  {...field}
+                />
+              )}
             />
-          )}
-        />
+          </div>
 
-        <Controller
-          name="notes"
-          control={control}
-          render={({ field }) => (
-            <div className="pa-form-group">
-              <label className="pa-label">Notes (Admin Only)</label>
-              <textarea
-                className="pa-input pa-textarea"
-                rows={4}
-                {...field}
-                placeholder="Internal notes about this uniform..."
-              />
-            </div>
-          )}
-        />
+          <div className="pa-col-span-2">
+            <Controller
+              name="notes"
+              control={control}
+              render={({ field }) => (
+                <div className="pa-form-group">
+                  <label className="pa-label">Notes (Admin Only)</label>
+                  <textarea
+                    className="pa-input pa-textarea"
+                    rows={4}
+                    {...field}
+                    placeholder="Internal notes about this uniform..."
+                  />
+                </div>
+              )}
+            />
+          </div>
+        </div>
       </Card>
 
-      <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+      <div 
+        className="pa-form-actions"
+        style={{ 
+          display: 'flex', 
+          gap: '12px', 
+          marginTop: '24px',
+          flexDirection: 'column'
+        }}
+      >
         <Button
           type="submit"
           variant="primary"
           disabled={submitting}
+          style={{
+            width: '100%'
+          }}
+          className="pa-form-submit-btn"
         >
           {submitting ? 'Saving...' : 'Save Uniform'}
         </Button>

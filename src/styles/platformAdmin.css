@@ -644,7 +644,7 @@
     height: 44px;
     padding: 0 var(--pa-space-5);
     border: none;
-    border-radius: 0;
+    border-radius: var(--pa-radius-s);
 
     @media (max-width: 768px) {
         height: 48px;
@@ -2806,13 +2806,28 @@
     max-width: 960px;
     margin: 0 auto;
     width: 100%;
+    padding: 0 var(--pa-space-4);
 }
 
-/* On mobile, ensure full width */
+/* On mobile, ensure full width with proper padding */
 @media (max-width: 768px) {
     .pa-form-container {
         max-width: 100%;
-        padding: 0;
+        padding: 0 var(--pa-space-4);
+    }
+}
+
+/* On tablet, add more horizontal padding */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .pa-form-container {
+        padding: 0 var(--pa-space-6);
+    }
+}
+
+/* On desktop, center with reasonable padding */
+@media (min-width: 1024px) {
+    .pa-form-container {
+        padding: 0 var(--pa-space-8);
     }
 }
 
@@ -3257,8 +3272,26 @@
     grid-template-columns: 1fr; /* Mobile: Single column */
 }
 
-/* Tablet & Desktop */
-@media (min-width: 768px) {
+/* Tablet: Two-column for obvious pairs (like colors), single column for selects */
+@media (min-width: 640px) and (max-width: 1023px) {
+    /* Two-column for sections that benefit (colors, dates) */
+    .pa-form-grid-2.pa-form-grid-tablet-2col {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    /* Single column for select-heavy sections */
+    .pa-form-grid-2:not(.pa-form-grid-tablet-2col) {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Selects can be slightly narrower on tablet but not constrained too much */
+    .pa-select-wrapper {
+        max-width: 100%;
+    }
+}
+
+/* Desktop: Full two-column layout */
+@media (min-width: 1024px) {
     .pa-form-grid-2 {
         grid-template-columns: repeat(2, 1fr);
     }
@@ -3331,5 +3364,59 @@
         flex-wrap: wrap;
         gap: var(--pa-space-6);
     }
+}
+
+/* =====================================================================
+   UNIFORM FORMS RESPONSIVE ADJUSTMENTS
+   ===================================================================== */
+
+/* Select wrapper - constrains select width on desktop */
+.pa-select-wrapper {
+    width: 100%;
+}
+
+@media (min-width: 1024px) {
+    .pa-select-wrapper {
+        max-width: 480px;
+    }
+}
+
+/* Form submit button - full width on mobile, auto on desktop */
+.pa-form-submit-btn {
+    width: 100%;
+}
+
+@media (min-width: 768px) {
+    .pa-form-submit-btn {
+        width: auto;
+        min-width: 140px;
+    }
+}
+
+/* Uniform part buttons - responsive flex behavior */
+.pa-uniform-part-btn {
+    flex: 1 1 auto;
+    min-width: 100px;
+}
+
+/* On tablet and up, buttons don't need to flex to fill */
+@media (min-width: 640px) {
+    .pa-uniform-part-btn {
+        flex: 0 1 auto;
+    }
+}
+
+/* Ensure cards inside form container have proper spacing */
+.pa-form-container .pa-card {
+    margin-bottom: var(--pa-space-6);
+}
+
+.pa-form-container .pa-card:last-child {
+    margin-bottom: 0;
+}
+
+/* Form grid inside cards should respect card padding */
+.pa-card .pa-form-grid {
+    width: 100%;
 }
 

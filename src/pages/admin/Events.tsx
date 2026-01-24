@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useT } from '../../i18n/useI18n'
 import { getEvents } from '../../data/services/eventsService'
 import { getRSVPSummary } from '../../data/services/rsvpService'
 import { 
@@ -35,6 +36,7 @@ export default function Events() {
 
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
+  const t = useT()
 
   const fetchEvents = useCallback(async () => {
     if (!isReady) return
@@ -144,10 +146,10 @@ export default function Events() {
     <div className="pa-root">
       <AdminPageHeader 
         title="Events" 
-        actions={<Button onClick={() => navigate('/admin/events/new')}><span className="material-symbols-outlined">add</span>New Event</Button>} 
+        actions={<Button onClick={() => navigate('/admin/events/new')}><span className="material-symbols-outlined">add</span>{t('admin.events.create')}</Button>} 
       />
       {events.length === 0 && !loading ? (
-        <Card><EmptyState icon="event" title="NO UPCOMING EVENTS" description="Create your first event to get started." action={{ label: 'Create Event', onClick: () => navigate('/admin/events/new') }} /></Card>
+        <Card><EmptyState icon="event" title="NO UPCOMING EVENTS" description="Create your first event to get started." action={{ label: t('admin.events.create'), onClick: () => navigate('/admin/events/new') }} /></Card>
       ) : (
         <PlatformDataTable columns={columns} rows={events} loading={loading} totalCount={totalCount} page={page} rowsPerPage={rowsPerPage} onPageChange={setPage} onRowsPerPageChange={setRowsPerPage} />
       )}

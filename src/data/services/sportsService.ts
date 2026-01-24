@@ -99,10 +99,14 @@ export async function getSports(
         if (error) throw error
 
         // Extract sports from the joined data
-        const sports = (data || [])
-            .map((row: any) => row.sport)
-            .filter((sport: any) => sport)
-            .sort((a: Sport, b: Sport) => a.name.localeCompare(b.name))
+        const sportsMap = new Map<string, Sport>()
+        ;(data || []).forEach((row: any) => {
+            const sport = row.sport
+            if (sport && sport.id && !sportsMap.has(sport.id)) {
+                sportsMap.set(sport.id, sport)
+            }
+        })
+        const sports = Array.from(sportsMap.values()).sort((a: Sport, b: Sport) => a.name.localeCompare(b.name))
 
         return { data: sports as Sport[], error: null }
     } catch (err) {

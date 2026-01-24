@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { useUserContext } from '../../hooks/useUserContext'
 import { getFeeAssignmentsForUser, getOrgPaymentSummary, formatCurrency } from '../../data/services/paymentsService'
+import { getLink, RouteKeys } from '../../utils/routes'
 import { 
   AdminPageHeader, 
   Badge, 
@@ -138,7 +139,7 @@ export default function Payments() {
       <AdminPageHeader 
         title="Payments" 
         actions={
-          <button className="pa-btn pa-btn--primary" onClick={() => navigate('/admin/payments/create')}>
+          <button className="pa-btn pa-btn--primary" onClick={() => navigate(getLink(RouteKeys.ADMIN_CREATE_FEE))}>
             <span className="material-symbols-outlined">add</span>
             Assign Fee
           </button>
