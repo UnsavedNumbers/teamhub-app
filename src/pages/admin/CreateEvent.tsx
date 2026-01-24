@@ -333,7 +333,7 @@ export default function CreateEvent() {
 
           {/* SECTION 6: ACTIONS */}
           <div className="pa-flex pa-justify-end pa-gap-3">
-            <Button variant="secondary" onClick={() => navigate(-1)}>Cancel</Button>
+            <Button variant="blue" onClick={() => navigate(-1)}>Cancel</Button>
             <Button type="submit" loading={saving}>Create Event</Button>
           </div>
         </form>

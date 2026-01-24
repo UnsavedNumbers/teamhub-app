@@ -117,7 +117,7 @@ export default function AttendanceRoster() {
   return (
     <div className="pa-root">
       <div className="pa-flex pa-items-center pa-gap-4 pa-mb-6">
-        <Button variant="secondary" onClick={() => navigate('/admin/attendance')}>
+        <Button variant="blue" onClick={() => navigate('/admin/attendance')}>
            Back to Attendance
         </Button>
         <div className="pa-flex-1">

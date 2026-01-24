@@ -101,7 +101,7 @@ export default function EditUniform() {
         <AdminPageHeader title="Edit Uniform" />
         <Card>
           <div className="pa-alert pa-alert--error">{error}</div>
-          <Button onClick={() => navigate('/admin/uniforms')} variant="secondary">
+          <Button onClick={() => navigate('/admin/uniforms')} variant="blue">
             Back to Uniforms
           </Button>
         </Card>

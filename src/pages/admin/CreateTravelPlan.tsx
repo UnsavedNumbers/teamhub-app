@@ -207,7 +207,7 @@ export default function CreateTravelPlan() {
             </div>
 
             <div className="pa-flex pa-justify-end pa-gap-3">
-              <Button variant="secondary" onClick={() => navigate('/admin/travel')}>Cancel</Button>
+              <Button variant="blue" onClick={() => navigate('/admin/travel')}>Cancel</Button>
               <Button type="submit" loading={saving}>Create Draft Plan</Button>
             </div>
           </form>

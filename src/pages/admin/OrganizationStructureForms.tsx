@@ -718,16 +718,16 @@ export default function OrganizationStructureForms() {
                 <Button>{t('admin.structureForms.actions.addItem', { item: formLabels.sport })}</Button>
               </Link>
               <Link to="/admin/organization/structure/forms?type=program">
-                <Button variant="secondary">{t('admin.structureForms.actions.addItem', { item: formLabels.program })}</Button>
+                <Button variant="primary">{t('admin.structureForms.actions.addItem', { item: formLabels.program })}</Button>
               </Link>
               <Link to="/admin/organization/structure/forms?type=level">
-                <Button variant="secondary">{t('admin.structureForms.actions.addItem', { item: formLabels.level })}</Button>
+                <Button variant="primary">{t('admin.structureForms.actions.addItem', { item: formLabels.level })}</Button>
               </Link>
               <Link to="/admin/organization/structure/forms?type=team">
-                <Button variant="secondary">{t('admin.structureForms.actions.addItem', { item: formLabels.team })}</Button>
+                <Button variant="primary">{t('admin.structureForms.actions.addItem', { item: formLabels.team })}</Button>
               </Link>
               <Link to="/admin/organization/structure/forms?type=season">
-                <Button variant="secondary">{t('admin.structureForms.actions.addItem', { item: formLabels.season })}</Button>
+                <Button variant="primary">{t('admin.structureForms.actions.addItem', { item: formLabels.season })}</Button>
               </Link>
             </div>
           </Card>

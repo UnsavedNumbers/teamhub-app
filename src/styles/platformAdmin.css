@@ -695,16 +695,26 @@
     transform: translateY(1px);
 }
 
-/* Secondary (outline) */
+/* Secondary (solid gray) */
 .pa-btn--secondary {
-    background: transparent;
-    color: var(--pa-n900);
-    border: 1px solid var(--pa-n200);
+    background: var(--pa-n600);
+    color: var(--pa-white);
+    border: none;
 }
 
 .pa-btn--secondary:hover:not(:disabled) {
-    background: var(--pa-n50);
-    border-color: var(--pa-n300);
+    background: var(--pa-n700);
+}
+
+/* Blue (Google action blue for secondary actions) */
+.pa-btn--blue {
+    background: #5468FF;
+    color: var(--pa-white);
+    border: none;
+}
+
+.pa-btn--blue:hover:not(:disabled) {
+    background: #4054E8;
 }
 
 /* Ghost */

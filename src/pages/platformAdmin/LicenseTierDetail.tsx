@@ -750,7 +750,7 @@ export default function LicenseTierDetail() {
                   Refresh
                 </Button>
                 <Button
-                  variant="secondary"
+                  variant="blue"
                   onClick={handleDuplicate}
                   disabled={duplicating || isOffline || shouldBlockInDemoMode('write')}
                   style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
@@ -759,7 +759,7 @@ export default function LicenseTierDetail() {
                   {duplicating ? 'Duplicating...' : 'Duplicate'}
                 </Button>
                 <Button
-                  variant={tier.status === 'active' ? 'secondary' : 'primary'}
+                  variant={tier.status === 'active' ? 'blue' : 'primary'}
                   onClick={() => setArchiveDialog(true)}
                   disabled={saving || isOffline || shouldBlockInDemoMode('write')}
                   style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
@@ -780,7 +780,7 @@ export default function LicenseTierDetail() {
               </>
             )}
             {isNew && (
-              <Button variant="secondary" onClick={() => navigate(getLink('platformAdmin.licenses.tiers'))}>
+              <Button variant="blue" onClick={() => navigate(getLink('platformAdmin.licenses.tiers'))}>
                 Cancel
               </Button>
             )}
@@ -878,7 +878,7 @@ export default function LicenseTierDetail() {
                 style={{ flex: 1 }}
               />
                 <Button
-                variant="secondary"
+                variant="blue"
                 onClick={() => tier.stripe_price_id && verifyStripePrice(tier.stripe_price_id, true)}
                 disabled={verifying || !tier.stripe_price_id}
                 size="dense"

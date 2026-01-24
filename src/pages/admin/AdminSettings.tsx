@@ -615,7 +615,7 @@ export default function AdminSettings() {
             <div className="pa-modal-footer">
               <Button
                 onClick={() => setShowPasswordModal(false)}
-                variant="secondary"
+                variant="blue"
               >
                 Cancel
               </Button>
@@ -1010,7 +1010,7 @@ function SecuritySettings({ user, onShowPasswordModal, onSignOutAll, passwordSuc
           <label className="pa-label">Password</label>
           <Button
             onClick={onShowPasswordModal}
-            variant="secondary"
+            variant="blue"
           >
             Change Password
           </Button>

@@ -446,7 +446,7 @@ export default function CreateFee() {
         </Card>
 
         <div className="pa-flex pa-justify-end pa-gap-4 pa-mb-12">
-            <Button variant="secondary" onClick={() => navigate('/admin/payments')} type="button">
+            <Button variant="blue" onClick={() => navigate('/admin/payments')} type="button">
                 Cancel
             </Button>
             <Button type="submit" loading={saving} disabled={!watchTeamId || !watchSeasonId}>

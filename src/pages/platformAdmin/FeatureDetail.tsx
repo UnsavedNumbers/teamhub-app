@@ -318,13 +318,13 @@ export default function FeatureDetail() {
               </Button>
             )}
             {isNew && (
-              <Button variant="secondary" onClick={() => navigate('/platform-admin/licenses/features')}>
+              <Button variant="blue" onClick={() => navigate('/platform-admin/licenses/features')}>
                 Cancel
               </Button>
             )}
             {!isNew && (
               <Button 
-                variant="secondary" 
+                variant="blue" 
                 onClick={async () => {
                   const success = await handleSave()
                   if (success) {

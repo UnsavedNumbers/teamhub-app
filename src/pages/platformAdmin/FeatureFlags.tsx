@@ -865,7 +865,7 @@ export default function FeatureFlags() {
               }}
             >
               <Button
-                variant="secondary"
+                variant="blue"
                 onClick={() => {
                   setCreateDialog(false)
                   setNewFlag({ key: '', value_type: 'boolean', description: '', environment: getEnvironment() })
@@ -1409,7 +1409,7 @@ function FormModal({
             justifyContent: 'flex-end',
           }}
         >
-          <Button variant="secondary" onClick={onCancel} disabled={loading}>
+          <Button variant="blue" onClick={onCancel} disabled={loading}>
             Cancel
           </Button>
           <Button

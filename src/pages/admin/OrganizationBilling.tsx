@@ -123,10 +123,10 @@ export default function OrganizationBilling() {
                 <Button onClick={() => navigate('/admin/organization/billing/plan-selection')} disabled={loading}>
                   {t('billing.changePlan')}
                 </Button>
-                <Button variant="secondary" onClick={handleOpenPortal} loading={portalLoading}>
+                <Button variant="blue" onClick={handleOpenPortal} loading={portalLoading}>
                   {t('billing.portalCta')}
                 </Button>
-                <Button variant="secondary" onClick={() => refresh()} disabled={loading} loading={loading}>
+                <Button variant="blue" onClick={() => refresh()} disabled={loading} loading={loading}>
                   {t('common.retry')}
                 </Button>
               </div>

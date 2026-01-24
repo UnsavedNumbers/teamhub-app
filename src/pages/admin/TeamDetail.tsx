@@ -95,7 +95,7 @@ export default function TeamDetail() {
   }
 
   if (loading) return <div className="pa-skeleton" style={{ height: '400px' }} />
-  if (!team) return <PageHeader title="Team not found" actions={<Button variant="secondary" onClick={() => navigate('/admin/teams')}>Back</Button>} />
+  if (!team) return <PageHeader title="Team not found" actions={<Button variant="blue" onClick={() => navigate('/admin/teams')}>Back</Button>} />
 
   return (
     <div className="pa-root">
@@ -159,7 +159,7 @@ export default function TeamDetail() {
         <div>
           <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
             <h3 className="pa-h3">SEASONS</h3>
-            <Button variant="secondary" onClick={() => setShowSeasonModal(true)}>New Season</Button>
+            <Button variant="primary" onClick={() => setShowSeasonModal(true)}>New Season</Button>
           </div>
           {seasons.length === 0 ? (
             <Card><EmptyState icon="calendar_today" title="NO SEASONS" description="Create a season to start assigning rosters." action={{ label: 'Create Season', onClick: () => setShowSeasonModal(true) }} /></Card>
@@ -202,7 +202,7 @@ export default function TeamDetail() {
               <Input label="End Date" type="date" value={seasonForm.end_date} onChange={e => setSeasonForm({...seasonForm, end_date: e.target.value})} />
             </div>
             <div className="pa-flex pa-gap-3 pa-mt-6 pa-justify-end">
-              <Button variant="secondary" onClick={() => setShowSeasonModal(false)}>Cancel</Button>
+              <Button variant="blue" onClick={() => setShowSeasonModal(false)}>Cancel</Button>
               <Button onClick={handleCreateSeason} loading={creating} disabled={creating || !seasonForm.name.trim()}>Create</Button>
             </div>
           </div>

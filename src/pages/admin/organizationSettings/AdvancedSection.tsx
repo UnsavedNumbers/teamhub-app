@@ -217,7 +217,7 @@ export default function AdvancedSection({
         <div className="flex justify-end gap-3 pt-4 border-t">
           <Button
             type="button"
-            variant="secondary"
+            variant="blue"
             onClick={() => reset()}
             disabled={!isDirty || isSaving}
           >
