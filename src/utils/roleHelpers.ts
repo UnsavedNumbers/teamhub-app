@@ -92,6 +92,9 @@ export function formatRoleName(role: OrgMemberRole): string {
     case 'coach':
       return 'Coach'
     default:
-      return role.charAt(0).toUpperCase() + role.slice(1)
+      // TypeScript exhaustiveness check - this should never happen
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const _exhaustive: never = role
+      return String(role).charAt(0).toUpperCase() + String(role).slice(1)
   }
 }
