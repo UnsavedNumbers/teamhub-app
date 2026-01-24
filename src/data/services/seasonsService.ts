@@ -136,7 +136,7 @@ export async function createSeason(
       is_active: dto.is_active ?? false,
       sport_id: dto.sport_id ?? null,
       program_id: dto.program_id ?? null,
-      team_id: "",
+      team_id: null,
     }
     const { data, error } = await supabase
       .from('seasons')
@@ -144,7 +144,15 @@ export async function createSeason(
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('[seasonsService] Supabase error creating season:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      })
+      throw error
+    }
 
     const row = data as any
     return {
@@ -162,7 +170,13 @@ export async function createSeason(
       error: null,
     }
   } catch (err) {
-    return { data: null, error: err instanceof Error ? err : new Error('Create season failed') }
+    console.error('[seasonsService] Error creating season:', err)
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+    const errorDetails = err && typeof err === 'object' && 'details' in err ? (err as any).details : undefined
+    return { 
+      data: null, 
+      error: err instanceof Error ? err : new Error(errorMessage + (errorDetails ? `: ${errorDetails}` : ''))
+    }
   }
 }
 
