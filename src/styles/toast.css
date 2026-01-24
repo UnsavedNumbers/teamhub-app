@@ -1,0 +1,139 @@
+/* =====================================================================
+   REACT-HOT-TOAST THEME OVERRIDES
+   Matches Platform Admin Design System
+   ===================================================================== */
+
+/* Toast Container */
+.react-hot-toast {
+  font-family: var(--pa-font-body, 'Inter', 'Roboto', 'Helvetica Neue', Arial, system-ui, sans-serif);
+}
+
+/* Toast Base Styles */
+.react-hot-toast > div {
+  border-radius: var(--pa-radius-md, 8px);
+  box-shadow: var(--pa-shadow-2, 0 4px 12px rgba(0, 0, 0, 0.15));
+  backdrop-filter: var(--pa-glass-blur, blur(20px));
+}
+
+/* Success Toast */
+.react-hot-toast > div[data-type="success"] {
+  background: var(--pa-surface, #FFFFFF);
+  border-left: 3px solid var(--pa-success, #2B343D);
+  color: var(--pa-n900, #0B0F14);
+}
+
+.react-hot-toast > div[data-type="success"] .react-hot-toast-icon {
+  color: var(--pa-success, #2B343D);
+}
+
+/* Error Toast */
+.react-hot-toast > div[data-type="error"] {
+  background: var(--pa-surface, #FFFFFF);
+  border-left: 3px solid var(--pa-danger, #0B0F14);
+  color: var(--pa-n900, #0B0F14);
+}
+
+.react-hot-toast > div[data-type="error"] .react-hot-toast-icon {
+  color: var(--pa-danger, #0B0F14);
+}
+
+/* Loading Toast */
+.react-hot-toast > div[data-type="loading"] {
+  background: var(--pa-surface, #FFFFFF);
+  border-left: 3px solid var(--pa-info, #7A8794);
+  color: var(--pa-n900, #0B0F14);
+}
+
+.react-hot-toast > div[data-type="loading"] .react-hot-toast-icon {
+  color: var(--pa-info, #7A8794);
+}
+
+/* Blank/Default Toast */
+.react-hot-toast > div[data-type="blank"] {
+  background: var(--pa-surface, #FFFFFF);
+  border-left: 3px solid var(--pa-info, #7A8794);
+  color: var(--pa-n900, #0B0F14);
+}
+
+/* Custom Toast (for custom types) */
+.react-hot-toast > div[data-type="custom"] {
+  background: var(--pa-surface, #FFFFFF);
+  border-left: 3px solid var(--pa-info, #7A8794);
+  color: var(--pa-n900, #0B0F14);
+}
+
+/* Warning Toast (if using warning type) */
+.react-hot-toast > div[data-type="warning"],
+.react-hot-toast > div[data-type="warn"] {
+  background: var(--pa-surface, #FFFFFF);
+  border-left: 3px solid var(--pa-warning, #4A5568);
+  color: var(--pa-n900, #0B0F14);
+}
+
+.react-hot-toast > div[data-type="warning"] .react-hot-toast-icon,
+.react-hot-toast > div[data-type="warn"] .react-hot-toast-icon {
+  color: var(--pa-warning, #4A5568);
+}
+
+/* Toast Content */
+.react-hot-toast-message {
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--pa-n900, #0B0F14);
+}
+
+/* Toast Close Button */
+.react-hot-toast-close {
+  color: var(--pa-n500, #7A8794);
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.react-hot-toast-close:hover {
+  opacity: 1;
+  color: var(--pa-n900, #0B0F14);
+}
+
+/* Dark Mode Support */
+.dark .react-hot-toast > div {
+  background: var(--pa-n800, #1A202C);
+  color: var(--pa-n0, #FFFFFF);
+  border-color: var(--pa-n600, #4A5568);
+}
+
+.dark .react-hot-toast-message {
+  color: var(--pa-n0, #FFFFFF);
+}
+
+.dark .react-hot-toast-close {
+  color: var(--pa-n400, #9AA5B1);
+}
+
+.dark .react-hot-toast-close:hover {
+  color: var(--pa-n0, #FFFFFF);
+}
+
+/* Regular App Theme Support (non-platform-admin) */
+:root:not([data-platform-admin]) .react-hot-toast > div {
+  background: var(--bg-primary, #FFFFFF);
+  color: var(--text-primary, #212529);
+  border-left: 3px solid var(--accent-primary, #4361ee);
+}
+
+:root:not([data-platform-admin]) .react-hot-toast > div[data-type="success"] {
+  border-left-color: var(--accent-success, #10b981);
+}
+
+:root:not([data-platform-admin]) .react-hot-toast > div[data-type="error"] {
+  border-left-color: var(--accent-danger, #ef4444);
+}
+
+:root:not([data-platform-admin]) .react-hot-toast > div[data-type="loading"] {
+  border-left-color: var(--accent-info, #06b6d4);
+}
+
+[data-theme="dark"]:not([data-platform-admin]) .react-hot-toast > div {
+  background: var(--bg-primary, #0d1117);
+  color: var(--text-primary, #f0f6fc);
+}

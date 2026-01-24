@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { showSuccess, showError } from '../../utils/toast'
 import { PageHeader, Badge, FilterBar, PlatformDataTable, ConfirmDialog, type ColumnConfig } from '../../components/platformAdmin'
 import { canPerformAction, getDeniedMessage } from '../../utils/platformAdminPermissions'
 import { getDisplayEmail } from '../../utils/platformAdminMasking'
@@ -25,13 +26,6 @@ export default function Users() {
   }>({ open: false, type: 'disable', user: null })
   const [dialogLoading, setDialogLoading] = useState(false)
   const [dialogError, setDialogError] = useState<string | null>(null)
-  
-  // Toast state
-  const [toast, setToast] = useState<{ show: boolean; message: string; variant: 'success' | 'danger' }>({
-    show: false,
-    message: '',
-    variant: 'success',
-  })
   
   // TODO: Fetch actual role
   const [adminRole] = useState<PlatformAdminRole>('super_admin')
@@ -77,14 +71,6 @@ export default function Users() {
   useEffect(() => {
     fetchUsers()
   }, [fetchUsers])
-
-  // Auto-hide toast
-  useEffect(() => {
-    if (toast.show) {
-      const timer = setTimeout(() => setToast({ ...toast, show: false }), 5000)
-      return () => clearTimeout(timer)
-    }
-  }, [toast])
 
   const handleSort = (column: string) => {
     const isAsc = orderBy === column && order === 'asc'
@@ -132,11 +118,7 @@ export default function Users() {
       }
 
       setConfirmDialog({ open: false, type: 'disable', user: null })
-      setToast({
-        show: true,
-        message: `User ${confirmDialog.type === 'enable' ? 'enabled' : 'disabled'} successfully`,
-        variant: 'success',
-      })
+      showSuccess(`User ${confirmDialog.type === 'enable' ? 'enabled' : 'disabled'} successfully`)
       fetchUsers()
     } catch (err) {
       setDialogError(err instanceof Error ? err.message : 'Unknown error')
@@ -288,42 +270,6 @@ export default function Users() {
       />
 
       {/* Toast */}
-      {toast.show && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 'var(--pa-space-5)',
-            right: 'var(--pa-space-5)',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            className="pa-card"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--pa-space-3)',
-              padding: 'var(--pa-space-3) var(--pa-space-4)',
-              borderLeft: `3px solid var(--pa-${toast.variant})`,
-              boxShadow: 'var(--pa-shadow-2)',
-            }}
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{ color: `var(--pa-${toast.variant})`, fontSize: '20px' }}
-            >
-              {toast.variant === 'success' ? 'check_circle' : 'error'}
-            </span>
-            <span className="pa-body-m">{toast.message}</span>
-            <button
-              className="pa-btn pa-btn--ghost pa-btn--dense"
-              onClick={() => setToast({ ...toast, show: false })}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>close</span>
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

@@ -31,4 +31,8 @@ export { default as ConfirmDialog } from './ConfirmDialog'
 export { default as JsonViewer } from './JsonViewer'
 export { EventLogDetailModal } from './EventLogDetailModal'
 export { ErrorState } from './ErrorState'
+export { default as DiscoveryStatusBadge } from './DiscoveryStatusBadge'
+export { default as FeatureDependencyGraph } from './FeatureDependencyGraph'
+export { DiscoveryErrorBoundary } from './DiscoveryErrorBoundary'
+export { ProgressBar, MultiStepProgressBar } from './ProgressBar'
 
