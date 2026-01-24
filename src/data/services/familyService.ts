@@ -9,7 +9,7 @@ import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext, PermissionSet } from '../fake/userContext'
 import { calculatePermissions } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
-import type { Database } from '../../lib/database.types'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import {
     fakeFamilies,
     fakeChildren,
@@ -26,8 +26,8 @@ import type {
     Family,
     Child,
     FamilyMember,
-    FamilyWithDetails,
-    CreateFamilyDTO,
+    FamilyWithDetails,    Athlete,
+    Gender,    CreateFamilyDTO,
     UpdateFamilyDTO,
     CreateChildDTO,
     UpdateChildDTO,
@@ -556,10 +556,25 @@ export async function getAthleteById(
         }
 
         // Return athlete with empty sports array (sports will be fetched separately if needed)
-        const athlete = {
-            ...data,
+        const athlete: Child = {
+            id: data.id,
+            family_id: data.family_id,
+            first_name: data.first_name,
+            last_name: data.last_name,
+            date_of_birth: data.birthdate || '',
+            gender: data.gender as Gender | null,
+            preferred_name: data.preferred_name ?? null,
+            jersey_number: null,
+            medical_notes: null,
+            allergies: null,
+            emergency_contact_name: null,
+            emergency_contact_phone: null,
+            photo_url: null,
+            created_at: data.created_at ?? new Date().toISOString(),
+            updated_at: data.updated_at ?? new Date().toISOString(),
+            deleted_at: data.deleted_at,
             sports: []
-        } as Child
+        }
 
         return { data: athlete, error: null }
     } catch (err) {

@@ -59,7 +59,18 @@ export default function PlatformAdminDashboard() {
           setError('Failed to load platform health metrics')
         }
       } else {
-        setHealth(healthData)
+        setHealth({
+          ...healthData,
+          active_organizations: healthData.active_organizations ?? 0,
+          trial_organizations: healthData.trial_organizations ?? 0,
+          suspended_organizations: healthData.suspended_organizations ?? 0,
+          total_users: healthData.total_users ?? 0,
+          platform_admin_count: healthData.platform_admin_count ?? 0,
+          successful_payments: healthData.successful_payments ?? 0,
+          failed_payments: healthData.failed_payments ?? 0,
+          total_payment_volume_cents: healthData.total_payment_volume_cents ?? 0,
+          total_teams: healthData.total_teams ?? 0,
+        })
       }
 
       // Fetch recent audit log entries

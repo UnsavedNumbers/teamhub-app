@@ -6,10 +6,10 @@ import { canPerformAction, ROLE_LABELS, ROLE_DESCRIPTIONS } from '../../utils/pl
 import { isAdminRpcResponse } from '../../utils/typeAdapters'
 import { normalizeSupabaseError } from '../../utils/errorUtils'
 import { getPlatformAdmins } from '../../data/services/platformAdminsService'
-import type { AdminRpcResponse, PlatformAdminRole } from '../../types/platformAdmin.types'
+import type { PlatformAdminRole } from '../../types/platformAdmin.types'
 import { VALID_ROLES } from '../../types/platformAdmin.types'
-import { Database } from '@/lib/database.types'
-import { showSuccess, showError } from '../../utils/toast'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
+import { showSuccess } from '../../utils/toast'
 
 interface PlatformAdminWithUser {
   user_id: string
@@ -67,6 +67,7 @@ export default function PlatformAdmins() {
   
   // Technical Bug #3: Mounted ref to prevent state updates after unmount
   const mountedRef = useRef(true)
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     mountedRef.current = true
@@ -171,11 +172,7 @@ export default function PlatformAdmins() {
       setAddEmail('')
       setAddRole('support_admin')
       setAddReason('')
-      setToast({
-        show: true,
-        message: `Platform admin ${data.action === 'updated' ? 'updated' : 'added'} successfully`,
-        variant: 'success',
-      })
+      showSuccess(`Platform admin ${data.action === 'updated' ? 'updated' : 'added'} successfully`)
       fetchAdmins()
     } catch (err) {
       if (!mountedRef.current) return

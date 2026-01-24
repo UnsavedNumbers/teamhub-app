@@ -11,7 +11,7 @@ interface AccordionItemProps {
   title: string
   children: ReactNode
   defaultExpanded?: boolean
-  count?: number
+  count?: number | string
 }
 
 interface AccordionProps {

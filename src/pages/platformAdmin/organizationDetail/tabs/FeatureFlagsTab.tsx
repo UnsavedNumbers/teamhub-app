@@ -23,7 +23,7 @@ interface FeatureFlagsTabProps {
   onFlagToggled?: () => void
 }
 
-export function FeatureFlagsTab({ organizationId, adminRole, onFlagToggled }: FeatureFlagsTabProps) {
+export function FeatureFlagsTab({ organizationId, adminRole: _adminRole, onFlagToggled }: FeatureFlagsTabProps) {
   const isMountedRef = useRef(true)
   const permissions = useRolePermissions()
   const [flags, setFlags] = useState<AdminFeatureFlag[] | null>(null)
@@ -218,7 +218,7 @@ export function FeatureFlagsTab({ organizationId, adminRole, onFlagToggled }: Fe
           variant="ghost"
           size="dense"
           icon={row.enabled ? 'toggle_on' : 'toggle_off'}
-          onClick={(e) => {
+          onClick={(e: React.MouseEvent) => {
             e.stopPropagation()
             handleToggleFlag(row)
           }}

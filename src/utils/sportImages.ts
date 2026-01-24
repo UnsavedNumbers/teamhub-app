@@ -335,6 +335,8 @@ export function getSportImagePath(
         return sportImages['card'] || DEFAULT_IMAGE_PATHS['card']
     }
 
+    if (!basePath) return ''
+
     // For dark mode, try dark variant first
     if (darkMode) {
         try {

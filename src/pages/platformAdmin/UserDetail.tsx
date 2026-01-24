@@ -8,9 +8,9 @@ import { isRpcSuccessResponse } from '../../utils/typeAdapters'
 import { isValidUUID } from '../../utils/uuid'
 import { useAuth } from '../../hooks/useAuth'
 import { useT } from '../../i18n/useI18n'
-import { normalizeAdminUser, parseOrganizationsArray, formatDate, formatDateTime, formatRelativeTime, getUserOrganizations } from '../../utils/userDataHelpers'
+import { normalizeAdminUser, formatDate, formatDateTime, formatRelativeTime, getUserOrganizations } from '../../utils/userDataHelpers'
 import type { AdminUser, AdminRpcResponse, PlatformAdminRole, AdminUserOrganization } from '../../types/platformAdmin.types'
-import { showSuccess, showError } from '../../utils/toast'
+import { showSuccess } from '../../utils/toast'
 
 type ErrorType = 
   | 'invalid_uuid'
@@ -59,8 +59,6 @@ export default function UserDetail() {
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<FetchError | null>(null)
   const [platformAdminRole, setPlatformAdminRole] = useState<PlatformAdminRole | null>(null)
-  const [familyInfo, setFamilyInfo] = useState<FamilyInfo | null>(null)
-  const [loadingFamily, setLoadingFamily] = useState(false)
   
   // Dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -201,47 +199,6 @@ export default function UserDetail() {
     }
   }, [])
 
-  // Fetch family info
-  const fetchFamilyInfo = useCallback(async (familyId: string) => {
-    if (!mountedRef.current || !familyId || !isValidUUID(familyId)) return
-
-    setLoadingFamily(true)
-    
-    // Cancel previous request
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-    }
-    abortControllerRef.current = new AbortController()
-
-    try {
-      const { data, error } = await supabase
-        .from('admin_families')
-        .select('*')
-        .eq('id', familyId)
-        .single()
-        .abortSignal(abortControllerRef.current.signal)
-
-      if (!mountedRef.current) return
-
-      if (error) {
-        console.error('Error fetching family info:', error)
-        setFamilyInfo(null)
-      } else if (data) {
-        setFamilyInfo(data as FamilyInfo)
-      } else {
-        setFamilyInfo(null)
-      }
-    } catch (err: any) {
-      if (!mountedRef.current || err.name === 'AbortError') return
-      console.error('Error fetching family info:', err)
-      setFamilyInfo(null)
-    } finally {
-      if (mountedRef.current) {
-        setLoadingFamily(false)
-      }
-    }
-  }, [])
-
   // Technical Mitigation #2, #8: AbortController for request cancellation
   const fetchUser = useCallback(async () => {
     if (!id || !isValidUUID(id)) {
@@ -264,7 +221,6 @@ export default function UserDetail() {
         .select('*')
         .eq('id', id)
         .single()
-        .abortSignal(abortControllerRef.current.signal)
 
       if (!mountedRef.current) return
 
@@ -378,7 +334,7 @@ export default function UserDetail() {
           return
       }
 
-      const { data, error } = await supabase.rpc(rpcName, { 
+      const { data, error } = await supabase.rpc(rpcName as any, { 
         target_user_id: targetUserId, 
         reason 
       })

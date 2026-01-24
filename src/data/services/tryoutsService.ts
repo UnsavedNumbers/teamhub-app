@@ -1,7 +1,6 @@
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
-import type { Database } from '../../lib/database.types'
 
 export interface Tryout {
     id: string

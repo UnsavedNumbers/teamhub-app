@@ -9,7 +9,7 @@ import type { FeatureEntitlement, CreateEntitlementOverrideRequest } from '../..
 import { validateFeatureDependencies, logAuditEvent } from '../../utils/licenseEntitlementsHelpers'
 import { showSuccess, showError } from '../../utils/toast'
 import { useOffline } from '../../hooks/useOffline'
-import { isDemoMode, assertNotDemoMode, getDemoModeError } from '../../utils/demoMode'
+import { isDemoMode, assertNotDemoMode } from '../../utils/demoMode'
 import { useAuth } from '../../hooks/useAuth'
 import { canPerformAction } from '../../utils/platformAdminPermissions'
 import type { PlatformAdminRole } from '../../types/platformAdmin.types'

@@ -31,7 +31,6 @@ import {
 } from '../fake/relationships'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
-import type { Database as Generated } from '../../lib/database.types'
 import type { Team, CreateTeamDTO, UpdateTeamDTO } from '../types/organization'
 
 // ============================================================================
@@ -54,7 +53,7 @@ function buildPermissions(context: UserContext): PermissionSet {
 }
 
 function isOrgAdmin(context: UserContext): boolean {
-    return context.roles.includes('admin') || context.roles.includes('org_admin')
+    return context.roles.includes('org_admin')
 }
 
 async function getFamilyIdForUser(userId: string): Promise<string | null> {
@@ -549,9 +548,9 @@ export async function getTeamCoaches(
             team_id: teamId,
             season_id: seasonId,
             user_id: row.user?.id ?? '',
-            role: 'coach',
-            created_at: null,
-            updated_at: null,
+            role: 'head_coach' as const,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
         }))
 
         return { data: mapped, error: null }

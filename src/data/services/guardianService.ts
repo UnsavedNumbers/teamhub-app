@@ -8,7 +8,7 @@
  * - Getting athletes for a guardian
  */
 
-import { Database } from '@/lib/database.types'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { supabase } from '../../lib/supabase'
 import type {
     Guardian,
@@ -300,6 +300,8 @@ export async function getGuardianAthletes(
             date_of_birth: a.birthdate,
             gender: a.gender,
             family_id: null,  // Families are derived
+            preferred_name: a.preferred_name ?? null,
+            photo_url: a.photo_url ?? null,
             jersey_number: null,
             medical_notes: null,
             allergies: null,

@@ -112,11 +112,13 @@ export default function CreateEvent() {
         .eq('is_active', true)
 
     if (!error && data) {
-      const mappedSeasons = data.map(s => ({
-          id: s.season_id,
-          name: s.name,
+      const mappedSeasons = data
+        .filter(s => s.season_id !== null && s.name !== null)
+        .map(s => ({
+          id: s.season_id as string,
+          name: s.name as string,
           team_id: teamId
-      }))
+        }))
       setSeasons(mappedSeasons)
       if (mappedSeasons.length > 0) setValue('season_id', mappedSeasons[0].id)
     }

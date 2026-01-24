@@ -31,7 +31,6 @@ import {
 } from '../fake/fakePayments'
 import { getChildrenForUserId, getAssignedTeamsForCoach } from '../fake/relationships'
 import { supabase } from '../../lib/supabase'
-import type { Database } from '../../lib/database.types'
 
 // ============================================================================
 // Helper Functions
@@ -71,7 +70,7 @@ async function getChildIdsForUser(userId: string): Promise<string[]> {
 }
 
 function isOrgAdmin(context: UserContext): boolean {
-    return context.roles.includes('admin') || context.roles.includes('org_admin')
+    return context.roles.includes('org_admin')
 }
 
 // Re-export for convenience
@@ -300,7 +299,7 @@ export async function getUnpaidFeeAssignments(
             .select('*, fee:fees(*)')
             .eq('org_id', context.orgId)
             .in('athlete_id', childIds)
-            .in('status', ['unpaid', 'partial', 'overdue'])
+            .in('status', ['unpaid', 'partial'])
             .order('created_at', { ascending: false })
 
         if (error) throw error
@@ -539,18 +538,18 @@ export async function getOrgPaymentSummary(
 
         const { data: totals, error: feeError } = await supabase
             .from('fee_assignments')
-            .select('status, amount_due_cents, amount_paid_cents')
+            .select('status, amount_cents, paid_cents_total, balance_cents')
             .eq('org_id', context.orgId)
 
         if (feeError) throw feeError
 
-        const totalPaidCents = (totals ?? []).reduce((sum, row) => sum + (row.amount_paid_cents ?? 0), 0)
+        const totalPaidCents = (totals ?? []).reduce((sum, row: any) => sum + (row.paid_cents_total ?? 0), 0)
         const totalOutstandingCents = (totals ?? [])
-            .filter((r) => r.status !== 'paid' && r.status !== 'waived')
-            .reduce((sum, row) => sum + ((row.amount_due_cents ?? 0) - (row.amount_paid_cents ?? 0)), 0)
+            .filter((r: any) => r.status !== 'paid' && r.status !== 'waived')
+            .reduce((sum, row: any) => sum + (row.balance_cents ?? 0), 0)
 
         const unpaidCount = (totals ?? []).filter(
-            (a) => a.status === 'unpaid' || a.status === 'partial' || a.status === 'overdue'
+            (a: any) => a.status === 'unpaid' || a.status === 'partial'
         ).length
         const paidCount = (totals ?? []).filter((a) => a.status === 'paid').length
 
@@ -615,20 +614,20 @@ export async function getParentPaymentSummary(
 
         const { data, error } = await supabase
             .from('fee_assignments')
-            .select('status, amount_due_cents, amount_paid_cents')
+            .select('status, amount_cents, paid_cents_total, balance_cents')
             .eq('org_id', context.orgId)
             .in('athlete_id', childIds)
 
         if (error) throw error
 
         const assignments = data ?? []
-        const totalPaidCents = assignments.reduce((sum, a) => sum + (a.amount_paid_cents ?? 0), 0)
+        const totalPaidCents = assignments.reduce((sum, a: any) => sum + (a.paid_cents_total ?? 0), 0)
         const totalOutstandingCents = assignments
-            .filter((a) => a.status !== 'paid' && a.status !== 'waived')
-            .reduce((sum, a) => sum + ((a.amount_due_cents ?? 0) - (a.amount_paid_cents ?? 0)), 0)
+            .filter((a: any) => a.status !== 'paid' && a.status !== 'waived')
+            .reduce((sum, a: any) => sum + (a.balance_cents ?? 0), 0)
 
         const unpaidCount = assignments.filter(
-            (a) => a.status === 'unpaid' || a.status === 'partial' || a.status === 'overdue'
+            (a: any) => a.status === 'unpaid' || a.status === 'partial'
         ).length
         const paidCount = assignments.filter((a) => a.status === 'paid').length
 

@@ -56,7 +56,7 @@ export default function OrganizationDetail() {
   const [dialogError, setDialogError] = useState<string | null>(null)
 
   // Export organization hook
-  const { exporting, progress, exportData, cancelExport } = useExportOrganization(id)
+  const { exporting, progress, exportData, cancelExport } = useExportOrganization(id ?? null)
 
   // Get admin role
   const adminRole = useMemo<PlatformAdminRole | null>(() => {
@@ -176,6 +176,11 @@ export default function OrganizationDetail() {
     setDialogError(null)
 
     try {
+      if (!confirmDialog.open) {
+        setDialogError('Dialog state is invalid')
+        return
+      }
+      
       const rpcName = confirmDialog.type === 'activate'
         ? 'admin_activate_organization'
         : 'admin_suspend_organization'
@@ -208,7 +213,8 @@ export default function OrganizationDetail() {
       }
 
       resetDialog()
-      showSuccess(`Organization ${confirmDialog.type === 'activate' ? 'activated' : 'suspended'} successfully`)
+      const actionType = confirmDialog.open ? confirmDialog.type : 'activate'
+      showSuccess(`Organization ${actionType === 'activate' ? 'activated' : 'suspended'} successfully`)
       fetchOrganization() // Refresh to get updated status
     } catch (err) {
       console.error('[OrganizationDetail] Error in handleConfirmAction:', err)
@@ -614,27 +620,27 @@ export default function OrganizationDetail() {
       <ConfirmDialog
         open={confirmDialog.open}
         title={
-          confirmDialog.type === 'activate'
+          confirmDialog.open && confirmDialog.type === 'activate'
             ? 'Activate Organization'
-            : confirmDialog.type === 'suspend'
+            : confirmDialog.open && confirmDialog.type === 'suspend'
             ? 'Suspend Organization'
             : 'Confirm Action'
         }
         description={
-          confirmDialog.type === 'activate'
+          confirmDialog.open && confirmDialog.type === 'activate'
             ? `Are you sure you want to activate "${organization.name}"? This will allow the organization to access all features.`
-            : confirmDialog.type === 'suspend'
+            : confirmDialog.open && confirmDialog.type === 'suspend'
             ? `Are you sure you want to suspend "${organization.name}"? This will prevent all users from accessing the organization.`
             : ''
         }
         confirmLabel={
-          confirmDialog.type === 'activate'
+          confirmDialog.open && confirmDialog.type === 'activate'
             ? 'Activate'
-            : confirmDialog.type === 'suspend'
+            : confirmDialog.open && confirmDialog.type === 'suspend'
             ? 'Suspend'
             : 'Confirm'
         }
-        variant={confirmDialog.type === 'suspend' ? 'danger' : 'info'}
+        variant={confirmDialog.open && confirmDialog.type === 'suspend' ? 'danger' : 'info'}
         requireReason
         loading={dialogLoading}
         error={dialogError}

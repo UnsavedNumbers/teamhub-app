@@ -7,14 +7,12 @@
  * All UI components should use domain models, not Supabase row types.
  */
 
-import type { Database } from '../lib/database.types'
-import type { SupabaseExtended } from '../lib/supabase.extended.types'
+import type { SupabaseExtended as Database, SupabaseExtended, Json } from '../lib/supabase.extended.types'
 import type { Event, EventLocation, RSVPConfig, RecurringPattern } from '../types/domain/Event'
 import type { Organization } from '../types/domain/Organization'
 import type { User, UserOrganization } from '../types/domain/User'
 import type { LicenseTier, FeatureEntitlement, TierFeatureAssignment, LicenseMetrics } from '../types/domain/License'
 import type { FeatureFlag, FeatureFlagOverride, FeatureFlagAuditLog, RpcResponse } from '../types/domain/FeatureFlag'
-import type { Json } from '../lib/database.types'
 
 // Re-export domain models for convenience
 export type { Event, Organization, User, LicenseTier, FeatureEntitlement, FeatureFlag } from '../types/domain'
@@ -197,12 +195,12 @@ export function mapLicenseTier(row: SupabaseExtended['public']['Tables']['licens
   return {
     id: row.id,
     tierKey: row.tier_key,
-    tierName: row.tier_name,
-    description: row.description,
-    status: row.status,
-    version: row.version,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    tierName: row.tier_name ?? '',
+    description: row.description ?? '',
+    status: (row.status ?? 'active') as 'active' | 'archived',
+    version: row.version ?? 1,
+    createdAt: row.created_at ?? new Date().toISOString(),
+    updatedAt: row.updated_at ?? new Date().toISOString(),
     stripePriceId: row.stripe_price_id,
     stripeVerifiedAt: row.stripe_verified_at,
     stripeProductName: row.stripe_product_name,
@@ -217,13 +215,13 @@ export function mapFeatureEntitlement(row: SupabaseExtended['public']['Tables'][
   return {
     id: row.id,
     featureKey: row.feature_key,
-    displayName: row.display_name,
-    category: row.category,
-    featureType: row.feature_type,
-    description: row.description,
-    rolloutStatus: row.rollout_status,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    displayName: row.display_name ?? '',
+    category: row.category ?? '',
+    featureType: (row.feature_type ?? 'module') as 'module' | 'permission' | 'limit' | 'visibility' | 'integration',
+    description: row.description ?? '',
+    rolloutStatus: (row.rollout_status ?? 'hidden') as 'live' | 'beta' | 'hidden',
+    createdAt: row.created_at ?? new Date().toISOString(),
+    updatedAt: row.updated_at ?? new Date().toISOString(),
     archivedAt: row.archived_at,
     isToggleable: (row as any).is_toggleable ?? true,
     isRemovable: (row as any).is_removable ?? true,
@@ -236,13 +234,13 @@ export function mapTierFeatureAssignment(row: SupabaseExtended['public']['Tables
     id: row.id,
     licenseTierId: row.license_tier_id,
     featureEntitlementId: row.feature_entitlement_id,
-    included: row.included,
+    included: row.included ?? false,
     limitValue: row.limit_value,
-    roleAdmin: row.role_admin,
-    roleCoach: row.role_coach,
-    roleParent: row.role_parent,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    roleAdmin: row.role_admin ?? false,
+    roleCoach: row.role_coach ?? false,
+    roleParent: row.role_parent ?? false,
+    createdAt: row.created_at ?? new Date().toISOString(),
+    updatedAt: row.updated_at ?? new Date().toISOString(),
   }
 }
 

@@ -15,7 +15,7 @@ export default function ConfirmEmail() {
   const state = location.state as ConfirmEmailState | null
   const { resolvedTheme } = useTheme()
   const [heroImage, setHeroImage] = useState<string>('')
-  const [logoVersion, setLogoVersion] = useState(0)
+  const [logoVersion] = useState(0)
 
   // Check for org setup intent from both state and localStorage
   const isOrgSetupFlow =

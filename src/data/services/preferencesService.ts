@@ -7,8 +7,7 @@
 
 import { USE_FAKE_DATA } from '../config'
 import { supabase } from '../../lib/supabase'
-import type { Json } from '../../lib/database.types'
-import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
+import type { SupabaseExtended as Database, Json } from '../../lib/supabase.extended.types'
 import { getFakeUserPreferences } from '../fake/fakeSettings'
 
 // ============================================================================

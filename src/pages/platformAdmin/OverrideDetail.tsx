@@ -1,20 +1,19 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
-import { PageHeader, Card, Button, Badge, ConfirmDialog, ErrorState, DataState } from '../../components/platformAdmin'
+import { PageHeader, Card, Button, Badge, ConfirmDialog, DataState } from '../../components/platformAdmin'
 import type { EntitlementOverrideWithDetails } from '../../types/licenseTiers.types'
 import { useOffline } from '../../hooks/useOffline'
 import { isDemoMode, assertNotDemoMode } from '../../utils/demoMode'
 import { showError, showSuccess } from '../../utils/toast'
 import { useAuth } from '../../hooks/useAuth'
-import { canPerformAction } from '../../utils/platformAdminPermissions'
-import type { PlatformAdminRole } from '../../types/platformAdmin.types'
 
 export default function OverrideDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { isOffline } = useOffline()
+  const { profile } = useAuth()
   const demoMode = isDemoMode()
   const [override, setOverride] = useState<EntitlementOverrideWithDetails | null>(null)
   const [overrideVersion, setOverrideVersion] = useState<number | null>(null)
@@ -23,6 +22,8 @@ export default function OverrideDetail() {
   const [revokeDialog, setRevokeDialog] = useState(false)
   const [conflictDialog, setConflictDialog] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const canRevoke = profile?.platformAdminRole === 'super_admin'
 
   const fetchOverride = useCallback(async () => {
     if (!id) {
@@ -79,7 +80,8 @@ export default function OverrideDetail() {
         return
       }
 
-      setOverride(data)
+      // Cast view data to domain type (view may have nullable fields)
+      setOverride(data as EntitlementOverrideWithDetails)
       // Get version from view data (view now includes version column)
       setOverrideVersion((data as any).version || 1)
       setError(null)
@@ -164,7 +166,7 @@ export default function OverrideDetail() {
         updated_at: new Date().toISOString(),
       } satisfies OverrideUpdate
       
-      const { data: updatedData, error: revokeError } = await supabase
+      const { data: _updatedData, error: revokeError } = await supabase
         .from('entitlement_overrides')
         .update(updateData)
         .eq('id', id)

@@ -54,7 +54,18 @@ export default function LicensesOverview() {
           setError('Failed to load license metrics')
         }
       } else {
-        setMetrics(metricsData)
+        setMetrics({
+          ...metricsData,
+          active_tiers: metricsData.active_tiers ?? 0,
+          total_features: metricsData.total_features ?? 0,
+          orgs_on_basic: metricsData.orgs_on_basic ?? 0,
+          orgs_on_power: metricsData.orgs_on_power ?? 0,
+          active_overrides: metricsData.active_overrides ?? 0,
+          tiers_missing_price_id: metricsData.tiers_missing_price_id ?? 0,
+          features_without_assignment: metricsData.features_without_assignment ?? 0,
+          archived_features: metricsData.archived_features ?? undefined,
+          tiers_with_archived_features: metricsData.tiers_with_archived_features ?? undefined,
+        })
       }
 
       // Check for alerts

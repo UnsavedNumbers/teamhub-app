@@ -166,8 +166,7 @@ export default function Athletes() {
                     {/* Edit Button */}
                     <Button
                       variant="secondary"
-                      size="sm"
-                      className="mt-2 w-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="mt-2 w-full text-sm px-3 py-1 opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={(e) => {
                         e.stopPropagation()
                         handleCardClick(athlete.id)

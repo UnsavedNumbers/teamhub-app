@@ -11,7 +11,7 @@ import { MaskedStripeId } from '../../../../components/platformAdmin/MaskedStrip
 import { ContactLocationCard } from '../components/ContactLocationCard'
 import { QuickStatsCard } from '../components/QuickStatsCard'
 import { RecentActivityCard } from '../components/RecentActivityCard'
-import { safeString, safeDate, safeBoolean } from '../../../../utils/safeAccessors'
+import { safeString, safeBoolean } from '../../../../utils/safeAccessors'
 import { getStatusVariant, formatDate, isInTrial, isInGracePeriod, getDaysUntilTrialExpires } from '../../../../utils/organizationUtils'
 import { useRolePermissions } from '../../../../hooks/useRolePermissions'
 import type { AdminOrganization } from '../../../../types/platformAdmin.types'

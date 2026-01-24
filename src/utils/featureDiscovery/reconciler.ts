@@ -8,6 +8,7 @@ import { analyzeDependencies } from './dependencyGraph';
 import { logDiscoveryError } from './errorHandling';
 import { safeParseJSONB } from './jsonbUtils';
 import type { DiscoveredFeature } from './types';
+import type { Json } from '../../lib/database.types';
 import { supabase } from '../../lib/supabase';
 
 // Helper to merge features
@@ -110,7 +111,7 @@ async function saveToCache(features: DiscoveredFeature[]) {
     // We can single row it if we want, or keep history.
     // For now insert new.
     await supabase.from('feature_discovery_cache').insert({
-        discovered_features: features,
+        discovered_features: features as unknown as Json,
         last_discovered_at: new Date().toISOString(),
         schema_hash: schemaHash,
         sync_status: 'pending'

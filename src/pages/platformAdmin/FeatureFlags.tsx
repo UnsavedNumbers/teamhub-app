@@ -14,7 +14,7 @@ import type {
   RpcResponse,
 } from '../../types/featureFlags.types'
 import type { PlatformAdminRole } from '../../types/platformAdmin.types'
-import { showSuccess, showError } from '../../utils/toast'
+import { showSuccess } from '../../utils/toast'
 
 type TabType = 'flags' | 'overrides' | 'audit'
 
@@ -212,11 +212,7 @@ export default function FeatureFlags() {
       
       setEditDefaultDialog({ open: false, flag: null })
       setDefaultValue({})
-      setToast({
-        show: true,
-        message: 'Platform default updated successfully',
-        variant: 'success',
-      })
+      showSuccess('Platform default updated successfully')
       fetchFlags()
     } catch (err) {
       setDialogError(err instanceof Error ? err.message : 'Unknown error')
@@ -323,19 +319,15 @@ export default function FeatureFlags() {
         return
       }
       
-      if (data && !(data as RpcResponse).success) {
-        setDialogError((data as RpcResponse).error || 'Unknown error')
+      if (data && !(data as unknown as RpcResponse).success) {
+        setDialogError((data as unknown as RpcResponse).error || 'Unknown error')
         return
       }
       
       setUserOverrideDialog({ open: false, flag: null })
       setSelectedUserId('')
       setUserValue({})
-      setToast({
-        show: true,
-        message: 'User override set successfully',
-        variant: 'success',
-      })
+      showSuccess('User override set successfully')
       fetchFlags()
       fetchOverrides()
     } catch (err) {
@@ -413,8 +405,8 @@ export default function FeatureFlags() {
         return
       }
       
-      if (data && !(data as RpcResponse).success) {
-        setDialogError((data as RpcResponse).error || 'Unknown error')
+      if (data && !(data as unknown as RpcResponse).success) {
+        setDialogError((data as unknown as RpcResponse).error || 'Unknown error')
         return
       }
       
@@ -452,11 +444,7 @@ export default function FeatureFlags() {
       }
       
       setRestoreDialog({ open: false, flag: null })
-      setToast({
-        show: true,
-        message: 'Feature flag restored successfully',
-        variant: 'success',
-      })
+      showSuccess('Feature flag restored successfully')
       fetchFlags()
     } catch (err) {
       setDialogError(err instanceof Error ? err.message : 'Unknown error')

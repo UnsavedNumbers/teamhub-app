@@ -128,7 +128,6 @@ export async function createSeason(
   }
 
   try {
-    type SeasonInsert = Database['public']['Tables']['seasons']['Insert']
     const insertData = {
       org_id: dto.org_id,
       name: dto.name,

@@ -11,7 +11,6 @@ import { useState, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { handleRpcError } from '../utils/rpcErrorHandler'
 import { showSuccess, showError, showLoading, dismissToast } from '../utils/toast'
-import type { AdminOrganization } from '../types/platformAdmin.types'
 
 interface ExportProgress {
   stage: 'users' | 'payments' | 'structure' | 'fees' | 'activity' | 'complete'

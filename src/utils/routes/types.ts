@@ -41,12 +41,6 @@ export type RouteGroup = {
 }
 
 /**
- * Helper type to check if a value is a RouteDefinition
- * RouteDefinitions always have a 'path' string property
- */
-type IsRouteDefinition<T> = T extends { path: string } ? true : false
-
-/**
  * Recursive type to extract all route keys from a nested route object
  * Produces a union type of all valid route keys like 'portal.dashboard' | 'admin.organization.billing'
  */
