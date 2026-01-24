@@ -64,8 +64,7 @@ export default function UserContextDropdown() {
   // Filter links based on current roles
   const visibleRoleLinks = roleLinks.filter(link => currentRoles.includes(link.role as any))
 
-  const hasMultipleOrgs = organizations.length > 1
-  const singleOrgName = organizations.length > 0 ? organizations[0].name : null
+  const hasAnyOrgs = organizations.length > 0
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -110,7 +109,9 @@ export default function UserContextDropdown() {
                     <div className="px-4 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                         Organization
                     </div>
-                    {hasMultipleOrgs ? (
+                    {hasAnyOrgs ? (
+                        // Always show organizations as a list if any exist (even if just one)
+                        // This allows users to see and switch between orgs even when only one exists
                         organizations.map(org => {
                             const isActive = currentOrganization?.id === org.id
                             return (
@@ -130,8 +131,8 @@ export default function UserContextDropdown() {
                             )
                         })
                     ) : (
-                        <div className="px-4 py-2 text-sm text-slate-700 dark:text-slate-300" title="You are a member of only one organization">
-                            {singleOrgName || "No Organization"}
+                        <div className="px-4 py-2 text-sm text-slate-700 dark:text-slate-300" title="You are not a member of any organization">
+                            No Organization
                         </div>
                     )}
                 </div>
