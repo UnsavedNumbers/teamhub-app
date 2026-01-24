@@ -273,6 +273,12 @@ const admin = {
             icon: 'cancel',
             requiresOrg: false,
         },
+        trialExpired: {
+            path: '/admin/organization/trial-expired',
+            label: 'Trial Expired',
+            icon: 'lock',
+            requiresOrg: false,
+        },
     },
 
     // Onboarding (special - outside admin layout)

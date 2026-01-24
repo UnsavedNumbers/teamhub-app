@@ -84,11 +84,12 @@ export function ProtectedRoute({
   // Global no-org gate for /admin/* routes
   // Show empty state when org_admin has no organizations
   // This prevents pages from rendering skeleton loops when currentOrganization is null
-  // Allow-list: onboarding, billing, and organization routes (user needs these to get started)
+  // Allow-list: onboarding, billing, trial expired, and organization routes (user needs these to get started)
   const adminRouteAllowList = [
     getPath(RouteKeys.ADMIN_ONBOARDING),
     getPath(RouteKeys.ADMIN_ORGANIZATION_BILLING),
     getPath(RouteKeys.ADMIN_ORGANIZATION),
+    getPath(RouteKeys.ADMIN_TRIAL_EXPIRED),
   ]
   const isAllowedAdminRoute = adminRouteAllowList.some(route => 
     location.pathname === route || location.pathname.startsWith(route + '/')
@@ -151,9 +152,26 @@ export function ProtectedRoute({
   }
 
   // License gating for admin routes (platform admins bypass)
+  // Allow access to trial expired page, billing routes, and checkout success/cancel
   if (isAdminRoute && !profile.isPlatformAdmin) {
-    if (!licenseActive && isPastGracePeriod) {
-      return <Navigate to={getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING)} state={{ from: location }} replace />
+    const trialExpiredPath = getPath(RouteKeys.ADMIN_TRIAL_EXPIRED)
+    const billingPath = getPath(RouteKeys.ADMIN_ORGANIZATION_BILLING)
+    const planSelectionPath = '/admin/organization/billing/plan-selection'
+    const checkoutSuccessPath = '/admin/organization/billing/checkout/success'
+    const checkoutCancelPath = '/admin/organization/billing/checkout/cancel'
+    
+    const isPaywallAllowedRoute = 
+      location.pathname === trialExpiredPath ||
+      location.pathname === billingPath ||
+      location.pathname === planSelectionPath ||
+      location.pathname === checkoutSuccessPath ||
+      location.pathname === checkoutCancelPath ||
+      location.pathname.startsWith(billingPath + '/')
+    
+    // Block access if license is not active AND past grace period (includes expired trials)
+    // isPastGracePeriod now includes expired trials via isTrialExpired check
+    if (!licenseActive && isPastGracePeriod && !isPaywallAllowedRoute) {
+      return <Navigate to={getLink(RouteKeys.ADMIN_TRIAL_EXPIRED)} state={{ from: location }} replace />
     }
   }
 

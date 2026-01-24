@@ -134,6 +134,7 @@ export const RouteKeys = {
     ADMIN_ORGANIZATION_STRUCTURE: 'admin.organization.structure',
     ADMIN_ORGANIZATION_BILLING: 'admin.organization.billing',
     ADMIN_ORGANIZATION_USERS: 'admin.organization.users',
+    ADMIN_TRIAL_EXPIRED: 'admin.organization.trialExpired',
     ADMIN_ONBOARDING: 'admin.onboarding',
     ADMIN_TEAMS: 'admin.teams.list',
     ADMIN_TEAM_DETAIL: 'admin.teams.detail',

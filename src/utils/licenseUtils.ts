@@ -62,7 +62,22 @@ export function isLicenseReadOnlyAllowed(summary: LicenseSummary): boolean {
   return isWithinGracePeriod(summary)
 }
 
+export function isTrialExpired(summary: LicenseSummary): boolean {
+  if (summary.status === 'trial') {
+    const trialEnd = parseDate(summary.trialEndsAt)
+    if (!trialEnd) return false
+    // Trial is expired if the end date has passed
+    return trialEnd.getTime() <= Date.now()
+  }
+  return false
+}
+
 export function isPastGrace(summary: LicenseSummary): boolean {
+  // Check if trial has expired first (status might still be 'trial' but date has passed)
+  if (isTrialExpired(summary)) {
+    return true
+  }
+
   if (summary.status === 'past_due') {
     const grace = parseDate(summary.graceEndsAt)
     if (!grace) return true
