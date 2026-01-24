@@ -77,3 +77,21 @@ export function hasRoleInAnyOrg(
 ): boolean {
   return organizations.some(org => org.roles?.includes(role))
 }
+
+/**
+ * Format role name for display
+ * @param role - Role to format
+ * @returns Display name for the role
+ */
+export function formatRoleName(role: OrgMemberRole): string {
+  switch (role) {
+    case 'org_admin':
+      return 'Admin'
+    case 'parent':
+      return 'Parent'
+    case 'coach':
+      return 'Coach'
+    default:
+      return role.charAt(0).toUpperCase() + role.slice(1)
+  }
+}

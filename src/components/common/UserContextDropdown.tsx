@@ -1,17 +1,42 @@
-import { useState, useRef, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
 import { getLink, RouteKeys } from '@/utils/routes'
+import { formatRoleName, hasRole } from '@/utils/roleHelpers'
+import { isDemoMode } from '@/utils/demoMode'
+import { useOffline } from '@/hooks/useOffline'
+import type { OrgMemberRole } from '@/contexts/OrganizationContext'
 
 export default function UserContextDropdown() {
   const { user, profile, signOut } = useAuth()
-  const { currentOrganization, organizations, switchOrganization } = useOrganization()
+  const { currentOrganization, organizations, setCurrentOrganization } = useOrganization()
+  const { isOffline } = useOffline()
   const navigate = useNavigate()
+  const location = useLocation()
   const t = useT()
   const [isOpen, setIsOpen] = useState(false)
+  const [switching, setSwitching] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Infer active role from current route
+  // Admin routes (starting with /admin) indicate org_admin or coach role
+  // Portal routes indicate parent role
+  const inferredActiveRole = useMemo((): OrgMemberRole | null => {
+    if (!currentOrganization) return null
+    const isAdminRoute = location.pathname.startsWith('/admin')
+    if (isAdminRoute) {
+      // Prefer org_admin if available, otherwise coach
+      if (hasRole(currentOrganization, 'org_admin')) return 'org_admin'
+      if (hasRole(currentOrganization, 'coach')) return 'coach'
+    } else {
+      // Portal route - prefer parent role
+      if (hasRole(currentOrganization, 'parent')) return 'parent'
+    }
+    // Fallback to first available role
+    return currentOrganization.roles?.[0] || null
+  }, [location.pathname, currentOrganization])
 
   // Close on outside click
   useEffect(() => {
@@ -38,13 +63,63 @@ export default function UserContextDropdown() {
     navigate(getLink(RouteKeys.AUTH_LOGIN))
   }
 
-  const handleSwitchOrg = (orgId: string) => {
-    switchOrganization(orgId)
+  // Handle role switching using the same logic as RoleSelection
+  const handleSwitchRole = useCallback(async (orgId: string, role: OrgMemberRole) => {
+    if (switching) return
+
+    if (!profile) {
+      console.error('No profile available for role switch')
+      return
+    }
+
+    // Check offline mode
+    if (isOffline) {
+      console.error('Cannot switch roles while offline')
+      return
+    }
+
+    // Check demo mode
+    if (isDemoMode()) {
+      console.error('Demo mode: Role selection is not available')
+      return
+    }
+
+    // Find the organization
+    const org = profile.organizations.find(o => o.id === orgId)
+    
+    if (!org) {
+      console.error('Organization not found:', orgId)
+      return
+    }
+
+    // Verify user has this role in this org
+    if (!hasRole(org, role)) {
+      console.error('User does not have role', role, 'in organization', orgId)
+      return
+    }
+
+    setSwitching(true)
     setIsOpen(false)
-    // Avoid full page reload (keeps SPA routing + avoids "blue screen" on bad paths)
-    // Navigate to a known-good portal route after switching org.
-    navigate(getLink(RouteKeys.PORTAL_DASHBOARD))
-  }
+
+    try {
+      // Set the current organization
+      setCurrentOrganization(org)
+      
+      // Determine navigation destination (same logic as RoleSelection)
+      let destination: string
+      if (role === 'org_admin' || role === 'coach') {
+        destination = getLink(RouteKeys.ADMIN_DASHBOARD)
+      } else {
+        destination = getLink(RouteKeys.PORTAL_DASHBOARD)
+      }
+
+      // Navigate to destination
+      navigate(destination, { replace: true })
+    } catch (err: any) {
+      console.error('Error during role switch:', err)
+      setSwitching(false)
+    }
+  }, [switching, profile, isOffline, navigate, setCurrentOrganization])
 
   const initials = profile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'
   const displayName = profile?.display_name || user?.email || 'User'
@@ -83,18 +158,11 @@ export default function UserContextDropdown() {
         {/* Menu */}
         {isOpen && (
             <div 
-                className="absolute right-0 mt-2 w-72 origin-top-right rounded-xl overflow-hidden z-50"
-                style={{
-                    background: 'var(--pa-glass-bg, rgba(255, 255, 255, 0.85))',
-                    backdropFilter: 'var(--pa-glass-blur, blur(20px))',
-                    WebkitBackdropFilter: 'var(--pa-glass-blur, blur(20px))',
-                    border: '1px solid var(--pa-glass-border, rgba(0, 0, 0, 0.06))',
-                    boxShadow: 'var(--pa-shadow-3, 0 16px 40px rgba(0, 0, 0, 0.18))',
-                }}
+                className="absolute right-0 mt-2 w-72 origin-top-right rounded-xl overflow-hidden z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg"
             >
                 
                 {/* 1. User Identity */}
-                <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700">
                     <p className="text-sm font-medium text-slate-900 dark:text-white truncate" title={displayName}>{displayName}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400 truncate" title={email}>{email}</p>
                     {currentOrganization && (
@@ -104,32 +172,41 @@ export default function UserContextDropdown() {
                     )}
                 </div>
 
-                {/* 2. Organization Context */}
-                <div className="py-1 border-b border-slate-100 dark:border-slate-800">
+                {/* 2. Organization Context - Role Switcher */}
+                <div className="py-1 border-b border-slate-100 dark:border-slate-700">
                     <div className="px-4 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                         Organization
                     </div>
                     {hasAnyOrgs ? (
-                        // Always show organizations as a list if any exist (even if just one)
-                        // This allows users to see and switch between orgs even when only one exists
-                        organizations.map(org => {
-                            const isActive = currentOrganization?.id === org.id
-                            return (
-                                <button
-                                    key={org.id}
-                                    onClick={() => handleSwitchOrg(org.id)}
-                                    className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between group ${isActive ? 'bg-slate-50 dark:bg-slate-800/50 text-blue-600 dark:text-blue-400 font-medium' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-                                >
-                                    <div className="flex flex-col">
-                                        <span>{org.name}</span>
-                                        <span className="text-xs text-slate-400 font-normal">
-                                            {org.roles?.join(', ') || 'No roles'}
-                                        </span>
-                                    </div>
-                                    {isActive && <span className="material-symbols-outlined text-lg">check</span>}
-                                </button>
-                            )
-                        })
+                        // Show each organization with each role as a separate selectable item
+                        // This matches the RoleSelection page behavior
+                        organizations.flatMap(org => 
+                            org.roles?.map(role => {
+                                const isActive = currentOrganization?.id === org.id && role === inferredActiveRole
+                                return (
+                                    <button
+                                        key={`${org.id}-${role}`}
+                                        onClick={() => handleSwitchRole(org.id, role)}
+                                        disabled={switching}
+                                        className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between group transition-colors ${
+                                            isActive 
+                                                ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium' 
+                                                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                                        } ${switching ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    >
+                                        <div className="flex flex-col">
+                                            <span>{org.name}</span>
+                                            <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">
+                                                {formatRoleName(role)}
+                                            </span>
+                                        </div>
+                                        {isActive && (
+                                            <span className="material-symbols-outlined text-lg text-blue-600 dark:text-blue-400">check</span>
+                                        )}
+                                    </button>
+                                )
+                            }) || []
+                        )
                     ) : (
                         <div className="px-4 py-2 text-sm text-slate-700 dark:text-slate-300" title="You are not a member of any organization">
                             No Organization
@@ -138,28 +215,28 @@ export default function UserContextDropdown() {
                 </div>
 
                 {/* 3. Personal Settings */}
-                <div className="py-1 border-b border-slate-100 dark:border-slate-800">
+                <div className="py-1 border-b border-slate-100 dark:border-slate-700">
                      <Link 
                         to={getLink(RouteKeys.PORTAL_SETTINGS)}
                         onClick={() => setIsOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                        className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                     >
-                        <span className="material-symbols-outlined mr-3 text-lg text-slate-400">settings</span>
+                        <span className="material-symbols-outlined mr-3 text-lg text-slate-400 dark:text-slate-500">settings</span>
                         My Settings
                     </Link>
                 </div>
 
                 {/* 4. Role-Specific Links */}
                 {visibleRoleLinks.length > 0 && (
-                    <div className="py-1 border-b border-slate-100 dark:border-slate-800">
+                    <div className="py-1 border-b border-slate-100 dark:border-slate-700">
                          {visibleRoleLinks.map(link => (
                             <Link 
                                 key={link.path}
                                 to={link.path} 
                                 onClick={() => setIsOpen(false)} 
-                                className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                             >
-                                <span className="material-symbols-outlined mr-3 text-lg text-slate-400">{link.icon}</span>
+                                <span className="material-symbols-outlined mr-3 text-lg text-slate-400 dark:text-slate-500">{link.icon}</span>
                                 {link.label}
                             </Link>
                          ))}
@@ -167,9 +244,13 @@ export default function UserContextDropdown() {
                 )}
 
                 {/* 5. Support */}
-                <div className="py-1 border-b border-slate-100 dark:border-slate-800">
-                    <Link to={getLink(RouteKeys.PORTAL_SETTINGS)} onClick={() => setIsOpen(false)} className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
-                        <span className="material-symbols-outlined mr-3 text-lg text-slate-400">help</span>
+                <div className="py-1 border-b border-slate-100 dark:border-slate-700">
+                    <Link 
+                        to={getLink(RouteKeys.PORTAL_SETTINGS)} 
+                        onClick={() => setIsOpen(false)} 
+                        className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                    >
+                        <span className="material-symbols-outlined mr-3 text-lg text-slate-400 dark:text-slate-500">help</span>
                         Help & Support
                     </Link>
                 </div>
