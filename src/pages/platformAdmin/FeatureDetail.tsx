@@ -251,13 +251,24 @@ export default function FeatureDetail() {
         }
         return false
       } else {
+        // Check if trying to change status of locked feature
+        if (feature.isToggleable === false && originalFeature && feature.rolloutStatus !== originalFeature.rolloutStatus) {
+          setError('Cannot change status of locked feature')
+          showError(
+            `Cannot change status of "${feature.displayName}". ` +
+            (feature.lockReason || 'This feature is required for platform functionality.')
+          )
+          return false
+        }
+
         type FeatureUpdate = Database['public']['Tables']['feature_entitlements']['Update']
         const updateData = {
           display_name: feature.displayName,
           category: feature.category,
           feature_type: feature.featureType,
           description: feature.description || null,
-          rollout_status: feature.rolloutStatus,
+          // Only update rollout_status if feature is toggleable
+          ...(feature.isToggleable !== false ? { rollout_status: feature.rolloutStatus } : {}),
         } satisfies FeatureUpdate
         const { error: updateError } = await supabase
           .from('feature_entitlements')
@@ -338,6 +349,42 @@ export default function FeatureDetail() {
           <div className="pa-flex pa-items-center pa-gap-2">
             <span className="material-symbols-outlined" style={{ color: 'var(--pa-danger)' }}>error</span>
             <span className="pa-body-m">{error}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Lock Status Banner */}
+      {!isNew && (feature.isToggleable === false || feature.isRemovable === false) && (
+        <div 
+          className="pa-card pa-mb-4" 
+          style={{ 
+            borderLeft: '3px solid var(--pa-warning)', 
+            background: 'var(--pa-warning-bg)',
+            padding: 'var(--pa-space-4)',
+          }}
+        >
+          <div className="pa-flex pa-items-center pa-gap-3">
+            <span className="material-symbols-outlined" style={{ color: 'var(--pa-warning)', fontSize: '24px' }}>
+              lock
+            </span>
+            <div style={{ flex: 1 }}>
+              <div className="pa-body-m" style={{ fontWeight: 600, marginBottom: 'var(--pa-space-1)' }}>
+                This feature is locked
+              </div>
+              <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
+                {feature.lockReason || 'This feature is required for platform functionality and cannot be modified.'}
+              </div>
+              {feature.isToggleable === false && (
+                <div className="pa-body-s" style={{ color: 'var(--pa-n700)', marginTop: 'var(--pa-space-1)' }}>
+                  • Status cannot be changed
+                </div>
+              )}
+              {feature.isRemovable === false && (
+                <div className="pa-body-s" style={{ color: 'var(--pa-n700)', marginTop: 'var(--pa-space-1)' }}>
+                  • Cannot be removed from license tiers
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -493,16 +540,29 @@ export default function FeatureDetail() {
           </div>
 
           <div className="pa-form-group">
-            <label className="pa-label">Rollout Status</label>
+            <label className="pa-label">
+              Rollout Status
+              {feature.isToggleable === false && (
+                <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--pa-warning)', marginLeft: 'var(--pa-space-2)', verticalAlign: 'middle' }}>
+                  lock
+                </span>
+              )}
+            </label>
             <Select
               value={feature.rolloutStatus || 'live'}
               onChange={(e) => setFeature({ ...feature, rolloutStatus: e.target.value as any })}
+              disabled={feature.isToggleable === false}
               options={[
                 { value: 'live', label: 'Live' },
                 { value: 'beta', label: 'Beta' },
                 { value: 'hidden', label: 'Hidden' },
               ]}
             />
+            {feature.isToggleable === false && (
+              <div className="pa-helper-text" style={{ color: 'var(--pa-warning)' }}>
+                This feature is locked and its status cannot be changed.
+              </div>
+            )}
           </div>
 
           {/* Developer snippet */}
@@ -553,12 +613,37 @@ export default function FeatureDetail() {
                     <div className="pa-flex pa-items-center pa-gap-3">
                       <Checkbox
                         checked={included}
-                        onChange={(e) => toggleTierAssignment(tier.id, e.target.checked)}
-                        disabled={isSaving || isNew}
+                        onChange={(e) => {
+                          const newValue = e.target.checked
+                          if (feature.isToggleable === false && !newValue) {
+                            showError(
+                              `Cannot remove "${feature.displayName}" from license tiers. ` +
+                              (feature.lockReason || 'This feature is required for platform functionality.')
+                            )
+                            return
+                          }
+                          toggleTierAssignment(tier.id, newValue)
+                        }}
+                        disabled={isSaving || isNew || (feature.isToggleable === false && !included)}
                       />
-                      <div>
-                        <div className="pa-body-m" style={{ fontWeight: 600, color: 'var(--pa-n900)' }}>
-                          {tier.tierName}
+                      <div style={{ flex: 1 }}>
+                        <div className="pa-flex pa-items-center pa-gap-2">
+                          <div className="pa-body-m" style={{ fontWeight: 600, color: 'var(--pa-n900)' }}>
+                            {tier.tierName}
+                          </div>
+                          {feature.isToggleable === false && included && (
+                            <span
+                              className="material-symbols-outlined"
+                              style={{
+                                fontSize: '16px',
+                                color: 'var(--pa-warning)',
+                                cursor: 'help',
+                              }}
+                              title="This feature is locked and cannot be removed from this tier"
+                            >
+                              lock
+                            </span>
+                          )}
                         </div>
                         <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '2px' }}>
                           {tier.tierKey}

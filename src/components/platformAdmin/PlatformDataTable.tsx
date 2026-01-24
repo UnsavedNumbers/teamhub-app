@@ -1,4 +1,5 @@
 import { ReactNode } from 'react'
+import { Checkbox } from './Checkbox'
 
 /**
  * Column configuration for PlatformDataTable
@@ -27,6 +28,12 @@ interface PlatformDataTableProps<T extends { id: string }> {
   orderBy?: string
   order?: 'asc' | 'desc'
   onSort?: (column: string) => void
+  // Selection props
+  selectable?: boolean
+  selectedIds?: Set<string>
+  onSelectionChange?: (selectedIds: Set<string>) => void
+  selectAllMode?: 'none' | 'page' | 'all'
+  onSelectAllChange?: (mode: 'none' | 'page' | 'all') => void
 }
 
 /**
@@ -47,6 +54,11 @@ export default function PlatformDataTable<T extends { id: string }>({
   orderBy,
   order = 'asc',
   onSort,
+  selectable = false,
+  selectedIds = new Set(),
+  onSelectionChange,
+  selectAllMode = 'none',
+  onSelectAllChange,
 }: PlatformDataTableProps<T>) {
   // Defensive guard against null (if default didn't catch it due to explicit null pass)
   const safeRows = (data || rows) || []
@@ -61,6 +73,67 @@ export default function PlatformDataTable<T extends { id: string }>({
       onSort(columnId)
     }
   }
+
+  // Selection handlers
+  const handleRowToggle = (rowId: string, event?: React.MouseEvent) => {
+    if (event) {
+      event.stopPropagation()
+    }
+    if (!onSelectionChange) return
+
+    onSelectionChange((prev) => {
+      const next = new Set(prev)
+      if (next.has(rowId)) {
+        next.delete(rowId)
+      } else {
+        next.add(rowId)
+      }
+      return next
+    })
+
+    // Clear select-all mode when individual selection changes
+    if (onSelectAllChange) {
+      onSelectAllChange('none')
+    }
+  }
+
+  const handleSelectAll = (event?: React.MouseEvent) => {
+    if (event) {
+      event.stopPropagation()
+    }
+    if (!onSelectionChange || !onSelectAllChange) return
+
+    if (selectAllMode === 'all') {
+      // Clear all
+      onSelectionChange(new Set())
+      onSelectAllChange('none')
+    } else if (selectAllMode === 'page') {
+      // Clear page selection
+      onSelectionChange(new Set())
+      onSelectAllChange('none')
+    } else {
+      // Select all on current page
+      const pageIds = new Set(safeRows.map(r => r.id))
+      onSelectionChange((prev) => {
+        const next = new Set(prev)
+        pageIds.forEach(id => next.add(id))
+        return next
+      })
+      onSelectAllChange('page')
+    }
+  }
+
+  // Determine header checkbox state
+  const headerCheckboxState =
+    selectAllMode === 'all'
+      ? 'checked'
+      : selectAllMode === 'page'
+      ? 'checked'
+      : selectedIds.size === 0
+      ? 'unchecked'
+      : selectedIds.size === safeRows.length && safeRows.every(r => selectedIds.has(r.id))
+      ? 'checked'
+      : 'indeterminate'
 
   if (loading) {
     return (
@@ -93,6 +166,28 @@ export default function PlatformDataTable<T extends { id: string }>({
         <table className="pa-table" style={{ width: '100%' }}>
           <thead>
             <tr>
+              {/* Selection column */}
+              {selectable && (
+                <th
+                  style={{
+                    width: '48px',
+                    textAlign: 'center',
+                    padding: 'var(--pa-space-2)',
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleSelectAll(e)
+                  }}
+                >
+                  <Checkbox
+                    checked={headerCheckboxState === 'checked'}
+                    indeterminate={headerCheckboxState === 'indeterminate'}
+                    onChange={() => handleSelectAll()}
+                    label=""
+                    style={{ margin: 0 }}
+                  />
+                </th>
+              )}
               {safeColumns.map((column) => (
                 <th
                   key={String(column.id)}
@@ -131,8 +226,32 @@ export default function PlatformDataTable<T extends { id: string }>({
                 key={row.id}
                 className={onRowClick ? 'pa-clickable' : ''}
                 onClick={() => onRowClick?.(row)}
-                style={{ cursor: onRowClick ? 'pointer' : 'default' }}
+                style={{
+                  cursor: onRowClick ? 'pointer' : 'default',
+                  backgroundColor: selectable && selectedIds.has(row.id) ? 'var(--pa-primary-bg, rgba(59, 130, 246, 0.1))' : undefined,
+                }}
               >
+                {/* Selection checkbox */}
+                {selectable && (
+                  <td
+                    style={{
+                      width: '48px',
+                      textAlign: 'center',
+                      padding: 'var(--pa-space-2)',
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleRowToggle(row.id, e)
+                    }}
+                  >
+                    <Checkbox
+                      checked={selectedIds.has(row.id)}
+                      onChange={() => handleRowToggle(row.id)}
+                      label=""
+                      style={{ margin: 0 }}
+                    />
+                  </td>
+                )}
                 {safeColumns.map((column) => (
                   <td
                     key={String(column.id)}

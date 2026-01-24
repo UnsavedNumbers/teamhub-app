@@ -84,6 +84,9 @@ export interface FeatureEntitlement {
   created_at: string
   updated_at: string
   archived_at: string | null
+  is_toggleable?: boolean // If false, feature status cannot be changed
+  is_removable?: boolean // If false, feature cannot be deleted or removed from tiers
+  lock_reason?: string | null // Explanation for why feature is locked
 }
 
 /**
@@ -92,6 +95,16 @@ export interface FeatureEntitlement {
 export interface FeatureEntitlementWithCounts extends FeatureEntitlement {
   tier_assignments_count: number
   active_overrides_count: number
+  assigned_tier_keys?: string[] // Array of tier keys this feature is assigned to
+  visible_to_admin?: boolean // Visible to org admin role
+  visible_to_coach?: boolean // Visible to coach role
+  visible_to_parent?: boolean // Visible to parent/guardian role
+  integrations?: string[] // Array of integration names (Stripe, Email, Calendar, etc.)
+  is_quantifiable?: boolean // Whether feature has limits/counts
+  discovery_source?: 'auto-discovered' | 'manually-created' | 'override-custom' // How feature was created
+  is_toggleable?: boolean // If false, feature status cannot be changed (inherited from FeatureEntitlement)
+  is_removable?: boolean // If false, feature cannot be deleted or removed from tiers (inherited from FeatureEntitlement)
+  lock_reason?: string | null // Explanation for why feature is locked (inherited from FeatureEntitlement)
 }
 
 /**

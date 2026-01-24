@@ -24,6 +24,7 @@ export { default as Input } from './Input'
 export { default as Select } from './Select'
 export { default as Checkbox } from './Checkbox'
 export { default as FilterBar } from './FilterBar'
+export { default as EnhancedFilterBar } from './EnhancedFilterBar'
 export { default as ThemePicker } from './ThemePicker'
 
 // Feedback
@@ -35,4 +36,6 @@ export { default as DiscoveryStatusBadge } from './DiscoveryStatusBadge'
 export { default as FeatureDependencyGraph } from './FeatureDependencyGraph'
 export { DiscoveryErrorBoundary } from './DiscoveryErrorBoundary'
 export { ProgressBar, MultiStepProgressBar } from './ProgressBar'
+export { default as BulkActionsToolbar } from './BulkActionsToolbar'
+export { ApplyToTiersModal, ChangeStatusModal, ChangeVisibilityModal, UpdateCategoryModal } from './BulkActionModals'
 
