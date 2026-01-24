@@ -5,6 +5,7 @@ import { useLicense } from '../hooks/useLicense'
 import { NoOrganizationEmptyState } from './admin/NoOrganizationEmptyState'
 import { hasAnyRole } from '@/utils/roleHelpers'
 import { getLink, getPath, RouteKeys } from '@/utils/routes'
+import { isTrialExpired } from '@/utils/licenseUtils'
 import type { OrgMemberRole } from '@/contexts/OrganizationContext'
 
 interface ProtectedRouteProps {
@@ -26,7 +27,7 @@ export function ProtectedRoute({
   const isAdminRoute = location.pathname.startsWith('/admin')
   const isPlatformAdmin = profile?.isPlatformAdmin ?? false
 
-  const { isActive: licenseActive, isPastGracePeriod, loading: licenseLoading } = useLicense(
+  const { isActive: licenseActive, isPastGracePeriod, loading: licenseLoading, summary } = useLicense(
     isAdminRoute && !isPlatformAdmin ? currentOrganization?.id : undefined,
     { requireOrganization: isAdminRoute && !isPlatformAdmin }
   )
@@ -152,25 +153,35 @@ export function ProtectedRoute({
   }
 
   // License gating for admin routes (platform admins bypass)
-  // Allow access to trial expired page, billing routes, and checkout success/cancel
+  // Allow access to trial expired page, billing overview, and checkout success/cancel
+  // Note: plan-selection is NOT in allowlist - it will check license status itself
   if (isAdminRoute && !profile.isPlatformAdmin) {
     const trialExpiredPath = getPath(RouteKeys.ADMIN_TRIAL_EXPIRED)
     const billingPath = getPath(RouteKeys.ADMIN_ORGANIZATION_BILLING)
-    const planSelectionPath = '/admin/organization/billing/plan-selection'
     const checkoutSuccessPath = '/admin/organization/billing/checkout/success'
     const checkoutCancelPath = '/admin/organization/billing/checkout/cancel'
     
     const isPaywallAllowedRoute = 
       location.pathname === trialExpiredPath ||
       location.pathname === billingPath ||
-      location.pathname === planSelectionPath ||
       location.pathname === checkoutSuccessPath ||
-      location.pathname === checkoutCancelPath ||
-      location.pathname.startsWith(billingPath + '/')
+      location.pathname === checkoutCancelPath
     
     // Block access if license is not active AND past grace period (includes expired trials)
     // isPastGracePeriod now includes expired trials via isTrialExpired check
-    if (!licenseActive && isPastGracePeriod && !isPaywallAllowedRoute) {
+    // Also explicitly check for expired trials - if status is 'trial' but trial has expired
+    // This blocks ALL admin routes including /admin (dashboard) when trial is expired
+    const trialIsExpired = summary ? isTrialExpired(summary) : false
+    // Also check: if status is 'trial' but license is not active, the trial must be expired
+    const trialStatusButNotActive = summary?.status === 'trial' && !licenseActive
+    // Check if trial has 0 days remaining (treat as expired even if exact time hasn't passed)
+    const daysRemaining = summary?.daysRemaining ?? null
+    const trialHasZeroDays = summary?.status === 'trial' && daysRemaining !== null && daysRemaining <= 0
+    
+    // Block if: past grace period OR trial explicitly expired OR trial status but not active OR 0 days remaining
+    const shouldBlock = isPastGracePeriod || trialIsExpired || trialStatusButNotActive || trialHasZeroDays
+    
+    if (shouldBlock && !isPaywallAllowedRoute) {
       return <Navigate to={getLink(RouteKeys.ADMIN_TRIAL_EXPIRED)} state={{ from: location }} replace />
     }
   }
