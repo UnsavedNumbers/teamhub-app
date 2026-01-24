@@ -43,4 +43,5 @@ export { ApplyToTiersModal, ChangeStatusModal, ChangeVisibilityModal, UpdateCate
 export { AddRoleModal } from './AddRoleModal'
 export { ChangeRoleModal } from './ChangeRoleModal'
 export { ManagePlatformAdminModal } from './ManagePlatformAdminModal'
+export { Accordion, AccordionItem } from './Accordion'
 
