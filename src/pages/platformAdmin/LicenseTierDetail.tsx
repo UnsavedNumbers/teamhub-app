@@ -11,6 +11,9 @@ import { logAuditEvent, isStripeVerificationValid, getArchivedFeaturesCount } fr
 import { isValidRouteId, getInvalidRouteIdError } from '../../utils/routeValidation'
 import { useOffline } from '../../hooks/useOffline'
 import { shouldBlockInDemoMode, getDemoModeError } from '../../utils/demoMode'
+import { showSuccess, showError } from '../../utils/toast'
+import { getLink } from '../../utils/routes'
+import { RouteKeys } from '../../utils/routes'
 
 // Unused - keep for future use
 // const FEATURE_CATEGORIES_OPTIONS = FEATURE_CATEGORIES.map(cat => ({ value: cat, label: cat }))
@@ -260,6 +263,7 @@ export default function LicenseTierDetail() {
             reason: reason || 'Tier created',
           })
           
+          showSuccess('License tier created successfully!')
           navigate(`/platform-admin/licenses/tiers/${(data as any).id}`)
         }
       } else {
@@ -322,6 +326,8 @@ export default function LicenseTierDetail() {
           afterState: updatedTier,
           reason: reason || 'Tier updated',
         })
+        
+        showSuccess('License tier updated successfully!')
       }
     } catch (err: any) {
       // Provide user-friendly error messages
@@ -335,6 +341,7 @@ export default function LicenseTierDetail() {
       } else if (err.message) {
         errorMessage = err.message
       }
+      showError(errorMessage)
       setError(errorMessage)
     } finally {
       setSaving(false)
@@ -457,11 +464,26 @@ export default function LicenseTierDetail() {
       <PageHeader
         title={isNew ? 'Create License Tier' : tier.tier_name || 'License Tier'}
         subtitle={isNew ? 'Define a new license tier' : `Manage ${tier.tier_name}`}
+        breadcrumbs={[
+          { label: 'Licenses', path: getLink(RouteKeys.PLATFORM_LICENSES) },
+          { label: 'License Tiers', path: getLink('platformAdmin.licenses.tiers') },
+          { label: isNew ? 'Create' : tier.tier_name || 'Tier' },
+        ]}
         actions={
           <div style={{ display: 'flex', gap: 'var(--pa-space-3)' }}>
-            <Button variant="secondary" onClick={() => navigate('/platform-admin/licenses/tiers')}>
-              Cancel
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate(getLink('platformAdmin.licenses.tiers'))}
+              style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>arrow_back</span>
+              Back to Tiers
             </Button>
+            {isNew && (
+              <Button variant="secondary" onClick={() => navigate(getLink('platformAdmin.licenses.tiers'))}>
+                Cancel
+              </Button>
+            )}
             <Button 
               variant="primary" 
               onClick={() => handleSave()} 

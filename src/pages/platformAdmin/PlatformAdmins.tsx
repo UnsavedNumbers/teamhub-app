@@ -9,6 +9,7 @@ import { getPlatformAdmins } from '../../data/services/platformAdminsService'
 import type { AdminRpcResponse, PlatformAdminRole } from '../../types/platformAdmin.types'
 import { VALID_ROLES } from '../../types/platformAdmin.types'
 import { Database } from '@/lib/database.types'
+import { showSuccess, showError } from '../../utils/toast'
 
 interface PlatformAdminWithUser {
   user_id: string
@@ -64,17 +65,8 @@ export default function PlatformAdmins() {
   const [removeLoading, setRemoveLoading] = useState(false)
   const [removeError, setRemoveError] = useState<string | null>(null)
   
-  // Toast state
-  const [toast, setToast] = useState<{ show: boolean; message: string; variant: 'success' | 'danger' }>({
-    show: false,
-    message: '',
-    variant: 'success',
-  })
-
   // Technical Bug #3: Mounted ref to prevent state updates after unmount
   const mountedRef = useRef(true)
-  // Technical Bug #8: Toast timeout ref for cleanup
-  const toastTimeoutRef = useRef<NodeJS.Timeout>()
 
   useEffect(() => {
     mountedRef.current = true
@@ -125,27 +117,6 @@ export default function PlatformAdmins() {
     fetchAdmins()
   }, [fetchAdmins])
 
-  // Technical Bug #8: Auto-hide toast with proper cleanup
-  useEffect(() => {
-    if (toast.show) {
-      // Clear any existing timeout
-      if (toastTimeoutRef.current) {
-        clearTimeout(toastTimeoutRef.current)
-      }
-      
-      toastTimeoutRef.current = setTimeout(() => {
-        if (mountedRef.current) {
-          setToast((prev) => ({ ...prev, show: false }))
-        }
-      }, 5000)
-      
-      return () => {
-        if (toastTimeoutRef.current) {
-          clearTimeout(toastTimeoutRef.current)
-        }
-      }
-    }
-  }, [toast.show])
 
   const handleAddAdmin = async () => {
     if (!addEmail || !addReason) return
@@ -257,11 +228,7 @@ export default function PlatformAdmins() {
       if (!mountedRef.current) return
 
       setRemoveDialog({ open: false, admin: null })
-      setToast({
-        show: true,
-        message: 'Platform admin removed successfully',
-        variant: 'success',
-      })
+      showSuccess('Platform admin removed successfully')
       fetchAdmins()
     } catch (err) {
       if (!mountedRef.current) return
@@ -485,36 +452,6 @@ export default function PlatformAdmins() {
       />
 
       {/* Toast */}
-      {toast.show && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 'var(--pa-space-5)',
-            right: 'var(--pa-space-5)',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            className="pa-card"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--pa-space-3)',
-              padding: 'var(--pa-space-3) var(--pa-space-4)',
-              borderLeft: `3px solid var(--pa-${toast.variant})`,
-              boxShadow: 'var(--pa-shadow-2)',
-            }}
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{ color: `var(--pa-${toast.variant})`, fontSize: '20px' }}
-            >
-              {toast.variant === 'success' ? 'check_circle' : 'error'}
-            </span>
-            <span className="pa-body-m">{toast.message}</span>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

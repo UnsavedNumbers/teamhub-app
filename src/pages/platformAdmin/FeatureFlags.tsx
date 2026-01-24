@@ -14,6 +14,7 @@ import type {
   RpcResponse,
 } from '../../types/featureFlags.types'
 import type { PlatformAdminRole } from '../../types/platformAdmin.types'
+import { showSuccess, showError } from '../../utils/toast'
 
 type TabType = 'flags' | 'overrides' | 'audit'
 
@@ -57,13 +58,6 @@ export default function FeatureFlags() {
   const [userSearch, setUserSearch] = useState('')
   const [selectedUserId, setSelectedUserId] = useState('')
   const [userValue, setUserValue] = useState<{ boolean?: boolean; integer?: number; double?: number }>({})
-  
-  // Toast state
-  const [toast, setToast] = useState<{ show: boolean; message: string; variant: 'success' | 'danger' }>({
-    show: false,
-    message: '',
-    variant: 'success',
-  })
   
   // TODO: Fetch actual role
   const [adminRole] = useState<PlatformAdminRole>('super_admin')
@@ -140,13 +134,6 @@ export default function FeatureFlags() {
     }
   }, [activeTab, fetchFlags, fetchOverrides])
 
-  // Auto-hide toast
-  useEffect(() => {
-    if (toast.show) {
-      const timer = setTimeout(() => setToast({ ...toast, show: false }), 5000)
-      return () => clearTimeout(timer)
-    }
-  }, [toast])
 
   const handleCreateFlag = async (_reason: string) => {
     if (!newFlag.key.trim()) {
@@ -177,11 +164,7 @@ export default function FeatureFlags() {
       
       setCreateDialog(false)
       setNewFlag({ key: '', value_type: 'boolean', description: '', environment: getEnvironment() })
-      setToast({
-        show: true,
-        message: 'Feature flag created successfully',
-        variant: 'success',
-      })
+      showSuccess('Feature flag created successfully')
       fetchFlags()
     } catch (err) {
       setDialogError(err instanceof Error ? err.message : 'Unknown error')
@@ -290,11 +273,7 @@ export default function FeatureFlags() {
       setOrgOverrideDialog({ open: false, flag: null })
       setSelectedOrgId('')
       setOrgValue({})
-      setToast({
-        show: true,
-        message: 'Organization override set successfully',
-        variant: 'success',
-      })
+      showSuccess('Organization override set successfully')
       fetchFlags()
       fetchOverrides()
     } catch (err) {
@@ -406,11 +385,7 @@ export default function FeatureFlags() {
         return
       }
       
-      setToast({
-        show: true,
-        message: 'Override removed successfully',
-        variant: 'success',
-      })
+      showSuccess('Override removed successfully')
       fetchFlags()
       fetchOverrides()
     } catch (err) {
@@ -444,11 +419,7 @@ export default function FeatureFlags() {
       }
       
       setDeleteDialog({ open: false, flag: null })
-      setToast({
-        show: true,
-        message: 'Feature flag deleted successfully',
-        variant: 'success',
-      })
+      showSuccess('Feature flag deleted successfully')
       fetchFlags()
     } catch (err) {
       setDialogError(err instanceof Error ? err.message : 'Unknown error')
@@ -1206,36 +1177,6 @@ export default function FeatureFlags() {
       />
 
       {/* Toast */}
-      {toast.show && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 'var(--pa-space-5)',
-            right: 'var(--pa-space-5)',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            className="pa-card"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--pa-space-3)',
-              padding: 'var(--pa-space-3) var(--pa-space-4)',
-              borderLeft: `3px solid var(--pa-${toast.variant})`,
-              boxShadow: 'var(--pa-shadow-2)',
-            }}
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{ color: `var(--pa-${toast.variant})`, fontSize: '20px' }}
-            >
-              {toast.variant === 'success' ? 'check_circle' : 'error'}
-            </span>
-            <span className="pa-body-m">{toast.message}</span>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

@@ -11,6 +11,7 @@ import type {
   PlatformAdminRole, 
   OrganizationStatus,
 } from '../../types/platformAdmin.types'
+import { showSuccess, showError } from '../../utils/toast'
 
 export default function OrganizationDetail() {
   const { id } = useParams<{ id: string }>()
@@ -28,13 +29,6 @@ export default function OrganizationDetail() {
   }>({ open: false, type: 'activate' })
   const [dialogLoading, setDialogLoading] = useState(false)
   const [dialogError, setDialogError] = useState<string | null>(null)
-  
-  // Toast state
-  const [toast, setToast] = useState<{ show: boolean; message: string; variant: 'success' | 'danger' }>({
-    show: false,
-    message: '',
-    variant: 'success',
-  })
   
   // TODO: Fetch actual role
   const [adminRole] = useState<PlatformAdminRole>('super_admin')
@@ -76,14 +70,6 @@ export default function OrganizationDetail() {
     fetchOrganization()
   }, [fetchOrganization])
 
-  // Auto-hide toast
-  useEffect(() => {
-    if (toast.show) {
-      const timer = setTimeout(() => setToast({ ...toast, show: false }), 5000)
-      return () => clearTimeout(timer)
-    }
-  }, [toast])
-
   const handleConfirmAction = async (reason: string) => {
     if (!organization) return
 
@@ -111,11 +97,7 @@ export default function OrganizationDetail() {
       }
 
       setConfirmDialog({ open: false, type: 'activate' })
-      setToast({
-        show: true,
-        message: `Organization ${confirmDialog.type === 'activate' ? 'activated' : 'suspended'} successfully`,
-        variant: 'success',
-      })
+      showSuccess(`Organization ${confirmDialog.type === 'activate' ? 'activated' : 'suspended'} successfully`)
       fetchOrganization()
     } catch (err) {
       setDialogError(err instanceof Error ? err.message : 'Unknown error')
@@ -347,36 +329,6 @@ export default function OrganizationDetail() {
       />
 
       {/* Toast */}
-      {toast.show && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 'var(--pa-space-5)',
-            right: 'var(--pa-space-5)',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            className="pa-card"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--pa-space-3)',
-              padding: 'var(--pa-space-3) var(--pa-space-4)',
-              borderLeft: `3px solid var(--pa-${toast.variant})`,
-              boxShadow: 'var(--pa-shadow-2)',
-            }}
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{ color: `var(--pa-${toast.variant})`, fontSize: '20px' }}
-            >
-              {toast.variant === 'success' ? 'check_circle' : 'error'}
-            </span>
-            <span className="pa-body-m">{toast.message}</span>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

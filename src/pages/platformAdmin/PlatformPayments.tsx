@@ -10,6 +10,7 @@ import {
 } from '../../utils/platformAdminMasking'
 import type { AdminPayment, PlatformAdminRole } from '../../types/platformAdmin.types'
 import { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
+import { showSuccess, showInfo } from '../../utils/toast'
 
 // Status filter options
 const statusOptions = [
@@ -35,13 +36,6 @@ export default function PlatformPayments() {
     totalVolume: 0,
     successCount: 0,
     failedCount: 0,
-  })
-  
-  // Toast state
-  const [toast, setToast] = useState<{ show: boolean; message: string; variant: 'success' | 'info' }>({
-    show: false,
-    message: '',
-    variant: 'success',
   })
   
   // TODO: Fetch actual role
@@ -106,14 +100,6 @@ export default function PlatformPayments() {
     fetchPayments()
   }, [fetchPayments])
 
-  // Auto-hide toast
-  useEffect(() => {
-    if (toast.show) {
-      const timer = setTimeout(() => setToast({ ...toast, show: false }), 3000)
-      return () => clearTimeout(timer)
-    }
-  }, [toast])
-
   const handleSort = (column: string) => {
     const isAsc = orderBy === column && order === 'asc'
     setOrder(isAsc ? 'desc' : 'asc')
@@ -124,13 +110,11 @@ export default function PlatformPayments() {
     if (!stripeId) return
     
     const { wasTruncated } = await copyStripeIdToClipboard(stripeId, adminRole)
-    setToast({
-      show: true,
-      message: wasTruncated 
-        ? 'Copied truncated ID (full ID requires finance role)' 
-        : 'Copied to clipboard',
-      variant: wasTruncated ? 'info' : 'success',
-    })
+    if (wasTruncated) {
+      showInfo('Copied truncated ID (full ID requires finance role)')
+    } else {
+      showSuccess('Copied to clipboard')
+    }
   }
 
   const getStatusVariant = (status: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' => {
@@ -272,36 +256,6 @@ export default function PlatformPayments() {
       />
 
       {/* Toast */}
-      {toast.show && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 'var(--pa-space-5)',
-            right: 'var(--pa-space-5)',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            className="pa-card"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--pa-space-3)',
-              padding: 'var(--pa-space-3) var(--pa-space-4)',
-              borderLeft: `3px solid var(--pa-${toast.variant})`,
-              boxShadow: 'var(--pa-shadow-2)',
-            }}
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{ color: `var(--pa-${toast.variant})`, fontSize: '20px' }}
-            >
-              {toast.variant === 'success' ? 'check_circle' : 'info'}
-            </span>
-            <span className="pa-body-m">{toast.message}</span>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

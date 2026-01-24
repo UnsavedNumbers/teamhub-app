@@ -8,6 +8,7 @@ import AdminLoadingSpinner from './components/admin/AdminLoadingSpinner'
 import { getHostAppContext } from './utils/host'
 import { useOrganizationTheme } from './hooks/useOrganizationTheme'
 import { getLink, getPath, RouteKeys } from './utils/routes'
+import { Toaster } from './components/Toaster'
 
 // Marketing Page
 import Marketing from './pages/Marketing'
@@ -187,7 +188,9 @@ function AppWithTheme() {
   useOrganizationTheme()
 
   return (
-    <Routes>
+    <>
+      <Toaster />
+      <Routes>
           {/* Marketing Landing Page - Public */}
           <Route path="/" element={<HostHomeRoute />} />
 
@@ -391,6 +394,7 @@ function AppWithTheme() {
             </Route>
           </Route>
         </Routes>
+    </>
   )
 }
 

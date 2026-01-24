@@ -6,6 +6,7 @@ import { canPerformAction } from '../../utils/platformAdminPermissions'
 import { getDisplayEmail } from '../../utils/platformAdminMasking'
 import { isRpcSuccessResponse } from '../../utils/typeAdapters'
 import type { AdminUser, AdminRpcResponse, PlatformAdminRole } from '../../types/platformAdmin.types'
+import { showSuccess, showError } from '../../utils/toast'
 
 export default function UserDetail() {
   const { id } = useParams<{ id: string }>()
@@ -21,13 +22,6 @@ export default function UserDetail() {
   }>({ open: false, type: 'disable' })
   const [dialogLoading, setDialogLoading] = useState(false)
   const [dialogError, setDialogError] = useState<string | null>(null)
-  
-  // Toast state
-  const [toast, setToast] = useState<{ show: boolean; message: string; variant: 'success' | 'danger' }>({
-    show: false,
-    message: '',
-    variant: 'success',
-  })
   
   // TODO: Fetch actual role
   const [adminRole] = useState<PlatformAdminRole>('super_admin')
@@ -59,14 +53,6 @@ export default function UserDetail() {
   useEffect(() => {
     fetchUser()
   }, [fetchUser])
-
-  // Auto-hide toast
-  useEffect(() => {
-    if (toast.show) {
-      const timer = setTimeout(() => setToast({ ...toast, show: false }), 5000)
-      return () => clearTimeout(timer)
-    }
-  }, [toast])
 
   const handleConfirmAction = async (reason: string) => {
     if (!user) return
@@ -110,11 +96,7 @@ export default function UserDetail() {
       }
 
       setConfirmDialog({ open: false, type: 'disable' })
-      setToast({
-        show: true,
-        message: 'Action completed successfully',
-        variant: 'success',
-      })
+      showSuccess('Action completed successfully')
       fetchUser()
     } catch (err) {
       setDialogError(err instanceof Error ? err.message : 'Unknown error')
@@ -327,36 +309,6 @@ export default function UserDetail() {
       />
 
       {/* Toast */}
-      {toast.show && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 'var(--pa-space-5)',
-            right: 'var(--pa-space-5)',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            className="pa-card"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--pa-space-3)',
-              padding: 'var(--pa-space-3) var(--pa-space-4)',
-              borderLeft: `3px solid var(--pa-${toast.variant})`,
-              boxShadow: 'var(--pa-shadow-2)',
-            }}
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{ color: `var(--pa-${toast.variant})`, fontSize: '20px' }}
-            >
-              {toast.variant === 'success' ? 'check_circle' : 'error'}
-            </span>
-            <span className="pa-body-m">{toast.message}</span>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

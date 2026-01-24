@@ -6,6 +6,7 @@ import { canPerformAction, getDeniedMessage } from '../../utils/platformAdminPer
 import { isRpcSuccessResponse } from '../../utils/typeAdapters'
 import type { AdminOrganization, AdminRpcResponse, PlatformAdminRole, OrganizationStatus } from '../../types/platformAdmin.types'
 import { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
+import { showSuccess, showError } from '../../utils/toast'
 
 // Status filter options
 const statusOptions = [
@@ -34,13 +35,6 @@ export default function Organizations() {
   }>({ open: false, type: 'activate', org: null })
   const [dialogLoading, setDialogLoading] = useState(false)
   const [dialogError, setDialogError] = useState<string | null>(null)
-  
-  // Toast state
-  const [toast, setToast] = useState<{ show: boolean; message: string; variant: 'success' | 'danger' }>({
-    show: false,
-    message: '',
-    variant: 'success',
-  })
   
   // TODO: Fetch actual role
   const [adminRole] = useState<PlatformAdminRole>('super_admin')
@@ -91,14 +85,6 @@ export default function Organizations() {
     fetchOrganizations()
   }, [fetchOrganizations])
 
-  // Auto-hide toast
-  useEffect(() => {
-    if (toast.show) {
-      const timer = setTimeout(() => setToast({ ...toast, show: false }), 5000)
-      return () => clearTimeout(timer)
-    }
-  }, [toast])
-
   const handleSort = (column: string) => {
     const isAsc = orderBy === column && order === 'asc'
     setOrder(isAsc ? 'desc' : 'asc')
@@ -111,7 +97,7 @@ export default function Organizations() {
 
   const handleActivate = (org: AdminOrganization) => {
     if (!canPerformAction(adminRole, 'activate_organization')) {
-      setToast({ show: true, message: getDeniedMessage('activate_organization'), variant: 'danger' })
+      showError(getDeniedMessage('activate_organization'))
       return
     }
     setDialogError(null)
@@ -120,7 +106,7 @@ export default function Organizations() {
 
   const handleSuspend = (org: AdminOrganization) => {
     if (!canPerformAction(adminRole, 'suspend_organization')) {
-      setToast({ show: true, message: getDeniedMessage('suspend_organization'), variant: 'danger' })
+      showError(getDeniedMessage('suspend_organization'))
       return
     }
     setDialogError(null)
@@ -154,11 +140,7 @@ export default function Organizations() {
       }
 
       setConfirmDialog({ open: false, type: 'activate', org: null })
-      setToast({
-        show: true,
-        message: `Organization ${confirmDialog.type === 'activate' ? 'activated' : 'suspended'} successfully`,
-        variant: 'success',
-      })
+      showSuccess(`Organization ${confirmDialog.type === 'activate' ? 'activated' : 'suspended'} successfully`)
       fetchOrganizations()
     } catch (err) {
       setDialogError(err instanceof Error ? err.message : 'Unknown error')
@@ -316,44 +298,6 @@ export default function Organizations() {
         onCancel={() => setConfirmDialog({ open: false, type: 'activate', org: null })}
       />
 
-      {/* Toast */}
-      {toast.show && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 'var(--pa-space-5)',
-            right: 'var(--pa-space-5)',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            className="pa-card"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--pa-space-3)',
-              padding: 'var(--pa-space-3) var(--pa-space-4)',
-              borderLeft: `3px solid var(--pa-${toast.variant})`,
-              boxShadow: 'var(--pa-shadow-2)',
-            }}
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{ color: `var(--pa-${toast.variant})`, fontSize: '20px' }}
-            >
-              {toast.variant === 'success' ? 'check_circle' : 'error'}
-            </span>
-            <span className="pa-body-m">{toast.message}</span>
-            <button
-              className="pa-btn pa-btn--ghost pa-btn--dense"
-              onClick={() => setToast({ ...toast, show: false })}
-              style={{ marginLeft: 'var(--pa-space-2)' }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>close</span>
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
