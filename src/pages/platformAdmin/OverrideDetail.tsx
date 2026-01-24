@@ -83,7 +83,7 @@ export default function OverrideDetail() {
         <PageHeader title="Override Not Found" />
         <div className="pa-card">
           <div className="pa-body-m">The override you're looking for doesn't exist.</div>
-          <Button variant="secondary" onClick={() => navigate('/platform-admin/licenses/overrides')} style={{ marginTop: 'var(--pa-space-4)' }}>
+          <Button variant="blue" onClick={() => navigate('/platform-admin/licenses/overrides')} style={{ marginTop: 'var(--pa-space-4)' }}>
             Back to Overrides
           </Button>
         </div>
@@ -103,7 +103,7 @@ export default function OverrideDetail() {
                 Revoke Override
               </Button>
             )}
-            <Button variant="secondary" onClick={() => navigate('/platform-admin/licenses/overrides')}>
+            <Button variant="blue" onClick={() => navigate('/platform-admin/licenses/overrides')}>
               Back
             </Button>
           </div>

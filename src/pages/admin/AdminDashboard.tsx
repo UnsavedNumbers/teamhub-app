@@ -89,7 +89,7 @@ export default function AdminDashboard() {
       <AdminPageHeader 
         title="DASHBOARD" 
         subtitle={currentOrganization?.name?.toUpperCase()} 
-        actions={<Button variant="secondary" onClick={() => fetchDashboardData()}>Refresh</Button>} 
+        actions={<Button variant="blue" onClick={() => fetchDashboardData()}>Refresh</Button>} 
       />
 
       <div className="pa-grid pa-grid-3 pa-gap-4 pa-mb-8">
@@ -110,11 +110,11 @@ export default function AdminDashboard() {
                 <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>add_circle</span>
                 New Event
               </Button>
-              <Button style={{ height: 'auto', padding: 'var(--pa-space-4)', flexDirection: 'column', gap: '8px' }} variant="secondary" onClick={() => navigate('/admin/users/new')}>
+              <Button style={{ height: 'auto', padding: 'var(--pa-space-4)', flexDirection: 'column', gap: '8px' }} variant="primary" onClick={() => navigate('/admin/users/new')}>
                 <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>person_add</span>
                 Add User
               </Button>
-              <Button style={{ height: 'auto', padding: 'var(--pa-space-4)', flexDirection: 'column', gap: '8px' }} variant="secondary" onClick={() => navigate('/admin/fees/new')}>
+              <Button style={{ height: 'auto', padding: 'var(--pa-space-4)', flexDirection: 'column', gap: '8px' }} variant="primary" onClick={() => navigate('/admin/fees/new')}>
                 <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>request_quote</span>
                 Assign Fee
               </Button>

@@ -405,7 +405,7 @@ export default function OrganizationDetail() {
           {/* Export Menu */}
           <div style={{ position: 'relative' }}>
             <Button
-              variant="secondary"
+              variant="blue"
               size="compact"
               icon="download"
               onClick={() => setShowExportMenu(!showExportMenu)}

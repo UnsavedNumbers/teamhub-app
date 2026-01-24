@@ -22,7 +22,7 @@ export default function CheckoutCancel() {
         </div>
         <div className="pa-flex pa-gap-3">
           <Button onClick={() => navigate('/admin/organization/billing')}>{t('checkout.returnToBilling')}</Button>
-          <Button variant="secondary" onClick={() => navigate('/admin/organization/billing/plan-selection')}>{t('billing.planSelectionTitle')}</Button>
+          <Button variant="blue" onClick={() => navigate('/admin/organization/billing/plan-selection')}>{t('billing.planSelectionTitle')}</Button>
         </div>
       </Card>
     </div>

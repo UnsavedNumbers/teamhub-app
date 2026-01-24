@@ -50,7 +50,7 @@ export default function AttendanceEvents() {
         id: 'actions',
         label: 'Actions',
         render: (row: AttendanceEventSummary & { id: string }) => (
-            <Button size="compact" variant="secondary" onClick={() => navigate(`/admin/events/${row.event_id}/attendance`)}>
+            <Button size="compact" variant="blue" onClick={() => navigate(`/admin/events/${row.event_id}/attendance`)}>
                 View
             </Button>
         )

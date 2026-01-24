@@ -12,7 +12,7 @@ export default function AttendanceReports() {
           <p className="pa-mb-4 pa-text-sm pa-text-neutral-500">
             Generate a full breakdown of attendance by team and season.
           </p>
-          <Button variant="secondary">Download CSV</Button>
+          <Button variant="blue">Download CSV</Button>
         </CardContent>
       </Card>
       
@@ -24,7 +24,7 @@ export default function AttendanceReports() {
            <p className="pa-mb-4 pa-text-sm pa-text-neutral-500">
              List of all events where attendance has not been submitted.
            </p>
-           <Button variant="secondary">Download CSV</Button>
+           <Button variant="blue">Download CSV</Button>
         </CardContent>
       </Card>
       
@@ -36,7 +36,7 @@ export default function AttendanceReports() {
            <p className="pa-mb-4 pa-text-sm pa-text-neutral-500">
              List of players with attendance below the "Watch" threshold.
            </p>
-           <Button variant="secondary">Download PDF</Button>
+           <Button variant="blue">Download PDF</Button>
         </CardContent>
       </Card>
     </div>

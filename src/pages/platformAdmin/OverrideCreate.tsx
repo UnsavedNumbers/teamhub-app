@@ -169,7 +169,7 @@ export default function OverrideCreate() {
         subtitle="Override entitlements for an organization or user"
         actions={
           <div style={{ display: 'flex', gap: 'var(--pa-space-3)' }}>
-            <Button variant="secondary" onClick={() => navigate('/platform-admin/licenses/overrides')}>
+            <Button variant="blue" onClick={() => navigate('/platform-admin/licenses/overrides')}>
               Cancel
             </Button>
             {step === 4 && (
@@ -350,7 +350,7 @@ export default function OverrideCreate() {
               </div>
             )}
             <div style={{ marginTop: 'var(--pa-space-5)', display: 'flex', gap: 'var(--pa-space-3)' }}>
-              <Button variant="secondary" onClick={() => setStep(1)}>
+              <Button variant="blue" onClick={() => setStep(1)}>
                 Back
               </Button>
               <Button
@@ -417,7 +417,7 @@ export default function OverrideCreate() {
             )}
 
             <div style={{ marginTop: 'var(--pa-space-5)', display: 'flex', gap: 'var(--pa-space-3)' }}>
-              <Button variant="secondary" onClick={() => setStep(2)}>
+              <Button variant="blue" onClick={() => setStep(2)}>
                 Back
               </Button>
               <Button variant="primary" onClick={() => setStep(4)}>
@@ -461,7 +461,7 @@ export default function OverrideCreate() {
             </div>
 
             <div style={{ marginTop: 'var(--pa-space-5)', display: 'flex', gap: 'var(--pa-space-3)' }}>
-              <Button variant="secondary" onClick={() => setStep(3)}>
+              <Button variant="blue" onClick={() => setStep(3)}>
                 Back
               </Button>
               <Button variant="primary" onClick={handleSave} disabled={saving || !reason.trim()}>

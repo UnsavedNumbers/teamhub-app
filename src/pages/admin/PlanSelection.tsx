@@ -62,7 +62,7 @@ export default function PlanSelection() {
     <div className="pa-root">
       <AdminPageHeader 
         title={t('billing.planSelectionTitle')} 
-        actions={<Button variant="secondary" onClick={() => navigate('/admin/organization/billing')}>{t('common.goBack')}</Button>} 
+        actions={<Button variant="blue" onClick={() => navigate('/admin/organization/billing')}>{t('common.goBack')}</Button>} 
       />
 
       {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}

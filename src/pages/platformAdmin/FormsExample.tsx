@@ -132,7 +132,7 @@ export default function FormsExample() {
               </Button>
               <Button
                 type="button"
-                variant="secondary"
+                variant="blue"
                 onClick={() => {
                   setFormData({
                     name: '',

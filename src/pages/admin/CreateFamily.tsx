@@ -74,7 +74,7 @@ export default function CreateFamily() {
             <div className="pa-flex pa-justify-end pa-gap-4 pa-mt-8">
               <Button 
                 type="button" 
-                variant="secondary" 
+                variant="blue" 
                 onClick={() => navigate('/admin/families')}
                 disabled={loading}
               >
