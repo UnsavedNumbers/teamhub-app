@@ -9,16 +9,32 @@ import {
     fakeUniformSubmissions,
     getUniformKitsForOrg,
     type FakeUniformKit,
-    type FakeUniformItem,
     type FakeUniformSubmission,
     type FakeUniformSizeSelection,
     fakeUniformSizeSelections
 } from '../fake/fakeUniforms'
 
-// Re-export types
+// Unified types that work with both fake and real data
 export type UniformKit = FakeUniformKit
-export type UniformItem = FakeUniformItem
-export type UniformSubmission = FakeUniformSubmission
+
+export interface UniformItem {
+  id: string
+  kit_id: string
+  name: string
+  required: boolean
+  size_options: string[] | any // Can be array or JSONB
+  sort_order?: number
+  // Additional fields from fake data (optional)
+  type?: string
+  sizes_available?: string[]
+  price_cents?: number | null
+  image_url?: string | null
+  created_at?: string
+}
+
+export type UniformSubmission = FakeUniformSubmission & {
+  items?: UniformSizeSelection[]
+}
 export type UniformSizeSelection = FakeUniformSizeSelection
 
 async function simulateDelay() {
@@ -74,7 +90,21 @@ export async function getUniformKitItems(
     await simulateDelay()
 
     if (USE_FAKE_DATA) {
-        const items = fakeUniformItems.filter(i => kitIds.includes(i.kit_id))
+        const items = fakeUniformItems
+            .filter(i => kitIds.includes(i.kit_id))
+            .map(item => ({
+                id: item.id,
+                kit_id: item.kit_id,
+                name: item.name,
+                required: item.is_required,
+                size_options: item.sizes_available,
+                sort_order: 0,
+                type: item.type,
+                sizes_available: item.sizes_available,
+                price_cents: item.price_cents,
+                image_url: item.image_url,
+                created_at: item.created_at,
+            } as UniformItem))
         return { data: items, error: null }
     }
 
@@ -86,7 +116,19 @@ export async function getUniformKitItems(
             .order('sort_order', { ascending: true })
 
         if (error) throw error
-        return { data: (data as unknown) as UniformItem[], error: null }
+        
+        // Transform database rows to UniformItem format
+        const transformed = (data ?? []).map((row: any) => ({
+            id: row.id,
+            kit_id: row.kit_id,
+            name: row.name,
+            required: row.required ?? true,
+            size_options: row.size_options || [],
+            sort_order: row.sort_order ?? 0,
+            created_at: row.created_at,
+        } as UniformItem))
+        
+        return { data: transformed, error: null }
     } catch (err) {
         return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch kit items') }
     }
@@ -106,7 +148,12 @@ export async function getUniformSubmissions(
         if (childIds && childIds.length > 0) {
             submissions = submissions.filter(s => childIds.includes(s.child_id))
         }
-        return { data: submissions, error: null }
+        // Include items for fake data to match real data structure
+        const submissionsWithItems = submissions.map(submission => ({
+            ...submission,
+            items: fakeUniformSizeSelections.filter(s => s.submission_id === submission.id)
+        }))
+        return { data: submissionsWithItems, error: null }
     }
 
     try {

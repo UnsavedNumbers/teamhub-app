@@ -5,6 +5,7 @@ import { getTravelPlanById, formatDateRange } from '../data/services/travelServi
 import { getEvents } from '../data/services/eventsService'
 import type { FakeTravelPlan } from '../data/fake/fakeTravel'
 import type { CalendarEvent } from '../types/calendar'
+import { supabase } from '../lib/supabase'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
@@ -95,19 +96,6 @@ function copyToClipboard(text: string) {
   navigator.clipboard.writeText(text)
 }
 
-// Helper to get team name from team_id (temporary until we have proper team data)
-const getTeamName = (teamId: string): string => {
-  const teamNames: Record<string, string> = {
-    'team-u10-soccer-001': 'U10 Lightning',
-    'team-u12-soccer-002': 'U12 Thunder',
-    'team-u10-basketball-003': 'U10 Hawks',
-    'team-u12-basketball-004': 'U12 Eagles',
-    'team-u14-soccer-elite-005': 'U14 Elite Storm',
-    'team-u16-soccer-elite-006': 'U16 Elite Hurricanes',
-  }
-  return teamNames[teamId] ?? 'Unknown Team'
-}
-
 export default function TravelDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -118,6 +106,8 @@ export default function TravelDetail() {
   const [tripEvents, setTripEvents] = useState<CalendarEvent[]>([])
   const [eventsLoading, setEventsLoading] = useState(false)
   const [copiedText, setCopiedText] = useState<string | null>(null)
+  const [teamName, setTeamName] = useState<string>('')
+  const [emergencyContact, setEmergencyContact] = useState<{ name: string; phone: string; role: string } | null>(null)
 
 
   useEffect(() => {
@@ -129,9 +119,52 @@ export default function TravelDetail() {
       if (error || !data) {
         console.error('Error fetching travel plan:', error)
         navigate('/portal/travel')
-      } else {
-        setPlan(data)
+        setLoading(false)
+        return
       }
+
+      setPlan(data)
+
+      // Fetch team name
+      try {
+        const { data: teamData, error: teamError } = await supabase
+          .from('teams')
+          .select('name')
+          .eq('id', data.team_id)
+          .eq('org_id', context.orgId)
+          .single()
+
+        if (!teamError && teamData) {
+          setTeamName(teamData.name)
+        } else {
+          setTeamName('Unknown Team')
+        }
+      } catch (err) {
+        setTeamName('Unknown Team')
+      }
+
+      // Fetch emergency contact (first coach)
+      try {
+        const { data: coachData, error: coachError } = await supabase
+          .from('organization_members')
+          .select('user:users(display_name, phone), role')
+          .eq('org_id', context.orgId)
+          .eq('role', 'coach')
+          .limit(1)
+          .single()
+
+        if (!coachError && coachData?.user) {
+          const user = coachData.user as { display_name: string | null; phone: string | null }
+          setEmergencyContact({
+            name: user.display_name || 'Coach',
+            phone: user.phone || '',
+            role: 'Head Coach',
+          })
+        }
+      } catch (err) {
+        // Keep emergencyContact as null, will show placeholder
+      }
+
       setLoading(false)
     }
 
@@ -197,14 +230,6 @@ export default function TravelDetail() {
   }
 
   const meetingLocations = parseMeetingLocations(plan.meeting_locations)
-  const teamName = getTeamName(plan.team_id)
-
-  // Emergency contact info (placeholder - would come from team/org data)
-  const emergencyContact = {
-    name: 'Coach Mike Johnson',
-    phone: '(555) 123-4567',
-    role: 'Head Coach',
-  }
 
   return (
     <PortalLayout
@@ -521,29 +546,31 @@ export default function TravelDetail() {
         {/* Right Column - Quick Actions & Emergency Info */}
         <div className="space-y-6">
           {/* Emergency Contact Card */}
-          <Card className="p-6 bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900">
-            <div className="flex items-center gap-2 mb-4">
-              <Icon name="emergency" size="text-2xl" className="text-red-600 dark:text-red-400" />
-              <CardTitle className="text-red-900 dark:text-red-100">Emergency Contact</CardTitle>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-red-600 dark:text-red-400 mb-1">Coach (Urgent)</p>
-                <p className="font-black text-red-900 dark:text-red-100">{emergencyContact.name}</p>
-                <a href={`tel:${emergencyContact.phone}`} className="text-red-600 dark:text-red-400 font-bold hover:underline">
-                  {emergencyContact.phone}
-                </a>
+          {emergencyContact && emergencyContact.phone && (
+            <Card className="p-6 bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900">
+              <div className="flex items-center gap-2 mb-4">
+                <Icon name="emergency" size="text-2xl" className="text-red-600 dark:text-red-400" />
+                <CardTitle className="text-red-900 dark:text-red-100">Emergency Contact</CardTitle>
               </div>
-              <div className="pt-3 border-t border-red-200 dark:border-red-900">
-                <a href={`tel:${emergencyContact.phone}`}>
-                  <Button variant="primary" className="w-full bg-red-600 hover:bg-red-700 text-white">
-                    <Icon name="phone" size="text-sm" className="mr-2" />
-                    Call Coach Now
-                  </Button>
-                </a>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-red-600 dark:text-red-400 mb-1">Coach (Urgent)</p>
+                  <p className="font-black text-red-900 dark:text-red-100">{emergencyContact.name}</p>
+                  <a href={`tel:${emergencyContact.phone}`} className="text-red-600 dark:text-red-400 font-bold hover:underline">
+                    {emergencyContact.phone}
+                  </a>
+                </div>
+                <div className="pt-3 border-t border-red-200 dark:border-red-900">
+                  <a href={`tel:${emergencyContact.phone}`}>
+                    <Button variant="primary" className="w-full bg-red-600 hover:bg-red-700 text-white">
+                      <Icon name="phone" size="text-sm" className="mr-2" />
+                      Call Coach Now
+                    </Button>
+                  </a>
+                </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          )}
 
           {/* Quick Calendar Actions */}
           <Card className="p-6">

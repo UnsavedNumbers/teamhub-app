@@ -119,6 +119,12 @@ const portal = {
         icon: 'checkroom',
         description: 'Uniform orders',
     },
+    uniformKitDetail: {
+        path: '/portal/uniforms/:kitId',
+        params: ['kitId'] as const,
+        label: 'Uniform Kit Order',
+        icon: 'checkroom',
+    },
 
     // Settings
     settings: {

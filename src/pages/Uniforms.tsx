@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
-import { getUniformKits, getUniformSubmissions, type UniformKit } from '../data/services/uniformsService'
+import { getUniformKits, getUniformSubmissions, getUniformKitItems, type UniformKit, type UniformItem } from '../data/services/uniformsService'
 import { getChildren } from '../data/services/familyService'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
@@ -9,6 +9,7 @@ import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import { useT } from '../i18n/useI18n'
+import { getLink } from '../utils/routes'
 
 interface Child {
   id: string
@@ -18,8 +19,10 @@ interface Child {
 
 export default function Uniforms() {
   const t = useT()
+  const navigate = useNavigate()
   const [children, setChildren] = useState<Child[]>([])
   const [kits, setKits] = useState<UniformKit[]>([])
+  const [kitItems, setKitItems] = useState<Record<string, UniformItem[]>>({})
   const [loading, setLoading] = useState(true)
 
   const { context, isReady } = useUserContext()
@@ -41,7 +44,23 @@ export default function Uniforms() {
     const { data: kitsData } = await getUniformKits(context)
     setKits(kitsData)
 
-    // Fetch uniform submissions - mostly to see status, but for now just getting kits is enough for display
+    // Fetch items for all kits
+    if (kitsData.length > 0) {
+      const kitIds = kitsData.map(k => k.id)
+      const { data: itemsData } = await getUniformKitItems(context, kitIds)
+      
+      // Group items by kit_id
+      const itemsByKit: Record<string, UniformItem[]> = {}
+      itemsData.forEach(item => {
+        if (!itemsByKit[item.kit_id]) {
+          itemsByKit[item.kit_id] = []
+        }
+        itemsByKit[item.kit_id].push(item)
+      })
+      setKitItems(itemsByKit)
+    }
+
+    // Fetch uniform submissions to show status
     await getUniformSubmissions(context)
 
     setLoading(false)
@@ -124,17 +143,25 @@ export default function Uniforms() {
                 
                 <div className="bg-slate-50 dark:bg-slate-800/50 p-6">
                    <p className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-4">Required Items</p>
-                   <div className="flex flex-wrap gap-2">
-                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-white dark:bg-slate-700 rounded-full text-sm font-medium border border-slate-200 dark:border-slate-600">
-                        <Icon name="checkroom" size="text-sm" /> Jersey
-                     </span>
-                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-white dark:bg-slate-700 rounded-full text-sm font-medium border border-slate-200 dark:border-slate-600">
-                        <Icon name="checkroom" size="text-sm" /> Shorts
-                     </span>
-                   </div>
+                   {kitItems[kit.id] && kitItems[kit.id].length > 0 ? (
+                     <div className="flex flex-wrap gap-2">
+                       {kitItems[kit.id]
+                         .filter(item => item.required)
+                         .map((item) => (
+                           <span key={item.id} className="inline-flex items-center gap-1 px-3 py-1 bg-white dark:bg-slate-700 rounded-full text-sm font-medium border border-slate-200 dark:border-slate-600">
+                             <Icon name="checkroom" size="text-sm" /> {item.name}
+                           </span>
+                         ))}
+                     </div>
+                   ) : (
+                     <p className="text-sm text-slate-500 dark:text-slate-400">No items configured for this kit.</p>
+                   )}
                    
                    <div className="mt-6 flex justify-end">
-                      <Button variant="primary">
+                      <Button 
+                        variant="primary"
+                        onClick={() => navigate(getLink('portal.uniformKitDetail', { kitId: kit.id }))}
+                      >
                         View & Order
                       </Button>
                    </div>
