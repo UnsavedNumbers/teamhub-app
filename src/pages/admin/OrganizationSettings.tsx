@@ -1,10 +1,11 @@
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { startTransition } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import { useLicense } from '../../hooks/useLicense'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { showSuccess, showError } from '../../utils/toast'
 import { 
@@ -59,6 +60,7 @@ import type { Organization } from '../../types/domain/Organization'
 export default function OrganizationSettings() {
   const { currentOrganization } = useOrganization()
   const { context, isReady } = useUserContext()
+  const { summary: licenseSummary } = useLicense(currentOrganization?.id)
   const [searchParams, setSearchParams] = useSearchParams()
   
   const [loading, setLoading] = useState(true)
@@ -66,6 +68,16 @@ export default function OrganizationSettings() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('overview')
+
+  // Check if organization has access to payment features (pro or standard license, and license must be active)
+  const hasPaymentAccess = useMemo(() => {
+    if (!licenseSummary?.plan) return false
+    // Pro and standard plans have access to Stripe Connect
+    const hasCorrectPlan = licenseSummary.plan === 'pro' || licenseSummary.plan === 'standard'
+    // License must also be active/valid
+    const isActive = licenseSummary.isValid ?? false
+    return hasCorrectPlan && isActive
+  }, [licenseSummary?.plan, licenseSummary?.isValid])
   
   // Check for onboarding redirect
   useEffect(() => {
@@ -276,7 +288,7 @@ export default function OrganizationSettings() {
           <TabsTrigger value="registration">Registration</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="permissions">Permissions</TabsTrigger>
-          <TabsTrigger value="payments">Payments</TabsTrigger>
+          {hasPaymentAccess && <TabsTrigger value="payments">Payments</TabsTrigger>}
           <TabsTrigger value="advanced">Advanced</TabsTrigger>
         </TabsList>
 
@@ -314,9 +326,11 @@ export default function OrganizationSettings() {
            {settings && <PermissionsForm settings={settings.visibility} onSave={(d) => handleSaveSettings('visibility', d)} loading={saving} />}
         </TabsContent>
 
-        <TabsContent value="payments">
-          {currentOrganization && <PaymentSettingsForm organizationId={currentOrganization.id} />}
-        </TabsContent>
+        {hasPaymentAccess && (
+          <TabsContent value="payments">
+            {currentOrganization && <PaymentSettingsForm organizationId={currentOrganization.id} />}
+          </TabsContent>
+        )}
 
         <TabsContent value="advanced">
            {settings && <AdvancedForm settings={settings.advanced} onSave={(d) => handleSaveSettings('advanced', d)} loading={saving} />}

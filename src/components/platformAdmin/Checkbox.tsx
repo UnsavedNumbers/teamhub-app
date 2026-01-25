@@ -5,6 +5,7 @@
  */
 
 import React from 'react'
+import { cn } from '../../utils/cn'
 
 export interface CheckboxProps {
   checked: boolean
@@ -39,14 +40,15 @@ export function Checkbox({
   return (
     <div className={className} style={style}>
       <label 
-        className={`pa-checkbox ${disabled ? 'pa-checkbox-disabled' : ''}`}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 'var(--pa-space-2)',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          userSelect: 'none'
-        }}
+        className={cn(
+          'pa-checkbox',
+          disabled && 'pa-checkbox-disabled',
+          'pa-inline-flex',
+          'pa-items-center',
+          'pa-gap-2',
+          disabled ? 'pa-cursor-not-allowed' : 'pa-cursor-pointer',
+          'pa-select-none'
+        )}
       >
         <input
           ref={inputRef}
@@ -54,28 +56,26 @@ export function Checkbox({
           checked={checked}
           onChange={onChange}
           disabled={disabled}
-          style={{
-            width: '18px',
-            height: '18px',
-            cursor: disabled ? 'not-allowed' : 'pointer',
-            accentColor: 'var(--pa-n900)'
-          }}
+          className={cn(
+            'pa-checkbox-input',
+            disabled ? 'pa-cursor-not-allowed' : 'pa-cursor-pointer'
+          )}
         />
         {label && (
           <span 
-            className="pa-label"
-            style={{
-              fontSize: '13px',
-              fontWeight: 600,
-              color: disabled ? 'var(--pa-text-muted)' : 'var(--pa-text-primary)'
-            }}
+            className={cn(
+              'pa-label',
+              'pa-font-xs',
+              'pa-font-semibold',
+              disabled ? 'pa-text-muted' : 'pa-text-primary'
+            )}
           >
             {label}
           </span>
         )}
       </label>
       {helperText && (
-        <p className="pa-helper-text" style={{ marginTop: 'var(--pa-space-1)', marginLeft: 'calc(18px + var(--pa-space-2))' }}>
+        <p className={cn('pa-helper-text', 'pa-mt-1', 'pa-checkbox-helper-offset')}>
           {helperText}
         </p>
       )}

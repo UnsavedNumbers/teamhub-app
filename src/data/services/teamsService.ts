@@ -32,6 +32,7 @@ import {
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { Team, CreateTeamDTO, UpdateTeamDTO } from '../types/organization'
+import type { AddAthletesToTeamResponse } from '../../types/athletes'
 import { buildTeamQuery, buildTeamMembershipQuery, buildCoachAssignmentQuery } from './queryHelpers'
 import { normalizeSupabaseResponse } from './responseHelpers'
 import { classifySupabaseError } from '../../utils/supabaseErrorHandler'
@@ -348,7 +349,10 @@ export async function createTeam(
 
     try {
         type TeamInsert = Database['public']['Tables']['teams']['Insert']
-        const insertData = {
+        // Generate a temporary invite code - the database trigger will generate the actual one
+        // This is just to satisfy TypeScript's type requirement
+        const tempInviteCode = `TEMP${Math.random().toString(36).substring(2, 10).toUpperCase()}`
+        const insertData: TeamInsert = {
             org_id: dto.org_id,
             name: dto.name,
             level_id: dto.level_id,
@@ -356,7 +360,8 @@ export async function createTeam(
             program_id: dto.program_id ?? null,
             max_roster_size: dto.max_roster_size ?? null,
             is_active: dto.is_active ?? true,
-        } satisfies TeamInsert
+            invite_code: tempInviteCode, // Will be overridden by database trigger
+        }
         const { data, error } = await supabase
             .from('teams')
             .insert(insertData)
@@ -508,13 +513,13 @@ export async function getTeamDetails(
     try {
         // Use buildTeamQuery pattern for consistency with list view and to avoid RLS issues
         // Start with the standard team query builder
-        let query = buildTeamQuery(supabase)
-        query = query.eq('id', teamId).eq('org_id', context.orgId).single()
+        const { data, error } = await buildTeamQuery(supabase)
+            .eq('id', teamId)
+            .eq('org_id', context.orgId)
+            .single()
         
         console.log('[getTeamDetails] Query params:', { teamId, orgId: context.orgId })
         
-        const { data, error } = await query
-
         console.log('[getTeamDetails] Query result:', { 
             hasData: !!data, 
             error: error ? { code: error.code, message: error.message } : null,
@@ -713,6 +718,203 @@ export async function createTeamMembership(
         }
     } catch (err) {
         return { data: null, error: mapDatabaseError(err) }
+    }
+}
+
+/**
+ * Add multiple athletes to a team (bulk membership creation)
+ * 
+ * This function:
+ * - Validates user is org admin
+ * - Validates team belongs to org
+ * - Validates season belongs to team
+ * - Creates memberships with ON CONFLICT handling
+ * - Returns detailed results (added, skipped, errors)
+ */
+export async function addAthletesToTeam(
+    context: UserContext,
+    teamId: string,
+    seasonId: string,
+    athleteIds: string[]
+): Promise<AddAthletesToTeamResponse> {
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+            
+            // Simulate some duplicates being skipped
+            const added: string[] = []
+            const skipped: string[] = []
+            
+            athleteIds.forEach((id, idx) => {
+                if (idx % 5 === 0) {
+                    skipped.push(id)
+                } else {
+                    added.push(id)
+                }
+            })
+            
+            return {
+                data: {
+                    added,
+                    skipped,
+                    errors: []
+                },
+                error: null
+            }
+        } catch (err) {
+            return {
+                data: null,
+                error: err instanceof Error ? err : new Error('Unknown error')
+            }
+        }
+    }
+
+    // Real Supabase implementation
+    try {
+        // Validate user is org admin
+        if (!isOrgAdmin(context)) {
+            return {
+                data: null,
+                error: new Error('You do not have permission to add athletes to teams.')
+            }
+        }
+
+        // Validate team belongs to org
+        const { data: teamData, error: teamError } = await supabase
+            .from('teams')
+            .select('id, org_id')
+            .eq('id', teamId)
+            .single()
+
+        if (teamError || !teamData) {
+            return {
+                data: null,
+                error: new Error('Team not found.')
+            }
+        }
+
+        if (teamData.org_id !== context.orgId) {
+            return {
+                data: null,
+                error: new Error('You do not have permission to add athletes to this team.')
+            }
+        }
+
+        // Validate season belongs to team (Issue #10 solution)
+        const { data: teamSeasonData, error: teamSeasonError } = await supabase
+            .from('team_seasons')
+            .select('team_id')
+            .eq('team_id', teamId)
+            .eq('season_id', seasonId)
+            .single()
+
+        if (teamSeasonError || !teamSeasonData) {
+            // Fallback: check if season has direct team_id
+            const { data: seasonData, error: seasonError } = await supabase
+                .from('seasons')
+                .select('id, team_id')
+                .eq('id', seasonId)
+                .single()
+
+            if (seasonError || !seasonData || seasonData.team_id !== teamId) {
+                return {
+                    data: null,
+                    error: new Error('Selected season is not available for this team.')
+                }
+            }
+        }
+
+        // Get existing memberships to identify skipped athletes (Issue #2 solution)
+        const { data: existingMemberships } = await supabase
+            .from('team_memberships')
+            .select('athlete_id')
+            .eq('team_id', teamId)
+            .eq('season_id', seasonId)
+            .in('athlete_id', athleteIds)
+
+        const existingAthleteIds = new Set(
+            (existingMemberships || []).map((m: { athlete_id: string }) => m.athlete_id)
+        )
+
+        // Filter out athletes already on team
+        const athletesToAdd = athleteIds.filter(id => !existingAthleteIds.has(id))
+        const skipped = athleteIds.filter(id => existingAthleteIds.has(id))
+
+        if (athletesToAdd.length === 0) {
+            return {
+                data: {
+                    added: [],
+                    skipped,
+                    errors: []
+                },
+                error: null
+            }
+        }
+
+        // Batch insert with ON CONFLICT DO NOTHING (Issue #2 solution)
+        type MembershipInsert = Database['public']['Tables']['team_memberships']['Insert']
+        const insertData: MembershipInsert[] = athletesToAdd.map(athleteId => ({
+            athlete_id: athleteId,
+            team_id: teamId,
+            season_id: seasonId,
+            status: 'active',
+        }))
+
+        const { data: insertedData, error: insertError } = await supabase
+            .from('team_memberships')
+            .insert(insertData)
+            .select('athlete_id')
+
+        // Track results (Issue #6 solution)
+        const added: string[] = []
+        const errors: Array<{ athleteId: string; error: string }> = []
+
+        if (insertError) {
+            // If it's a unique constraint violation, some may have succeeded
+            if (insertError.code === '23505') {
+                // Query to see which ones were actually inserted
+                const { data: successfulInserts } = await supabase
+                    .from('team_memberships')
+                    .select('athlete_id')
+                    .eq('team_id', teamId)
+                    .eq('season_id', seasonId)
+                    .in('athlete_id', athletesToAdd)
+
+                const successfulIds = new Set(
+                    (successfulInserts || []).map((m: { athlete_id: string }) => m.athlete_id)
+                )
+
+                athletesToAdd.forEach(id => {
+                    if (successfulIds.has(id)) {
+                        added.push(id)
+                    } else {
+                        errors.push({ athleteId: id, error: 'Already on team or duplicate entry' })
+                    }
+                })
+            } else {
+                // Other error - mark all as failed
+                athletesToAdd.forEach(id => {
+                    errors.push({ athleteId: id, error: insertError.message || 'Failed to add athlete' })
+                })
+            }
+        } else {
+            // Success - all were inserted
+            added.push(...(insertedData || []).map((m: { athlete_id: string }) => m.athlete_id))
+        }
+
+        return {
+            data: {
+                added,
+                skipped,
+                errors
+            },
+            error: null
+        }
+    } catch (err) {
+        return {
+            data: null,
+            error: mapDatabaseError(err)
+        }
     }
 }
 

@@ -48,9 +48,12 @@
   --z-nav: 100;
 
   /* Organization Theme Variables (applied dynamically by useOrganizationTheme hook) */
-  --org-primary: #1e40af;    /* Default blue - overridden by theme */
-  --org-secondary: #3b82f6;  /* Default blue-500 - overridden by theme */
-  --org-accent: #d946ef;     /* Default fuchsia-500 - overridden by theme */
+  --org-primary: #1e40af;
+  /* Default blue - overridden by theme */
+  --org-secondary: #3b82f6;
+  /* Default blue-500 - overridden by theme */
+  --org-accent: #d946ef;
+  /* Default fuchsia-500 - overridden by theme */
 }
 
 .dark {
@@ -101,7 +104,7 @@ body {
     'opsz' 24;
 }
 
-  /* Material Symbols Outlined config (for auth pages) */
+/* Material Symbols Outlined config (for auth pages) */
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined';
   font-weight: normal;
@@ -125,6 +128,7 @@ body {
   0% {
     transform: translateX(-100%);
   }
+
   100% {
     transform: translateX(400%);
   }
@@ -545,7 +549,7 @@ body {
   opacity: 0;
   visibility: hidden;
   transition: opacity var(--gn-motion-normal) var(--gn-ease-out),
-              visibility var(--gn-motion-normal) var(--gn-ease-out);
+    visibility var(--gn-motion-normal) var(--gn-ease-out);
   touch-action: manipulation;
 }
 
@@ -744,7 +748,7 @@ body {
   opacity: 0;
   visibility: hidden;
   transition: opacity var(--gn-motion-normal) var(--gn-ease-out),
-              visibility var(--gn-motion-normal) var(--gn-ease-out);
+    visibility var(--gn-motion-normal) var(--gn-ease-out);
   touch-action: manipulation;
 }
 
@@ -831,4 +835,12 @@ body {
   padding: 8px;
   overflow-y: auto;
   min-height: 0;
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+
+.z-loader {
+  z-index: var(--z-loader);
 }

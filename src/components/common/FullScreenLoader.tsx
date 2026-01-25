@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTheme } from '../../hooks/useTheme'
 import { useLoadingState } from '../../contexts/LoadingStateContext'
+import { cn } from '../../utils/cn'
 
 interface FullScreenLoaderProps {
   message?: string
@@ -32,8 +33,10 @@ export default function FullScreenLoader({ message }: FullScreenLoaderProps) {
 
   return (
     <div
-      className="fixed inset-0 bg-background-light dark:bg-background-dark flex items-center justify-center"
-      style={{ zIndex: 'var(--z-loader)' }}
+      className={cn(
+        "fixed inset-0 bg-background-light dark:bg-background-dark flex items-center justify-center",
+        "z-loader"
+      )}
       role="status"
       aria-live="polite"
       aria-label={message || 'Loading, please wait'}

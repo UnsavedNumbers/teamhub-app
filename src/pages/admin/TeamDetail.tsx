@@ -1,12 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useTeamParams } from '../../hooks/useRouteParams'
 import { getTeamDetails, getTeamRoster } from '../../data/services/teamsService'
 import { supabase } from '../../lib/supabase'
 import { getLink } from '../../utils/routes/helpers'
 import type { FakeTeamMember } from '../../data/fake/fakeTeams'
-import { Button, EmptyState } from '../../components/platformAdmin'
+import { Button } from '../../components/platformAdmin'
+import { AddExistingAthleteModal } from '../../components/admin/AddExistingAthleteModal'
+import { EmptyRosterState } from '../../components/admin/EmptyRosterState'
+import { TeamOverviewTab } from '../../components/admin/TeamOverviewTab'
+import { TeamScheduleTab } from '../../components/admin/TeamScheduleTab'
+import { TeamAttendanceTab } from '../../components/admin/TeamAttendanceTab'
+import { TeamPaymentsTab } from '../../components/admin/TeamPaymentsTab'
+import { TeamSettingsTab } from '../../components/admin/TeamSettingsTab'
 
 interface Team {
   id: string
@@ -46,7 +53,8 @@ export default function TeamDetail() {
   const [roster, setRoster] = useState<RosterMember[]>([])
   const [loading, setLoading] = useState(true)
   const [rosterLoading, setRosterLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState('roster')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab = searchParams.get('tab') || 'overview'
   const [navigating, setNavigating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [teamStats, setTeamStats] = useState({
@@ -55,6 +63,7 @@ export default function TeamDetail() {
     vacancies: 0,
     rank: 1,
   })
+  const [showAddExistingModal, setShowAddExistingModal] = useState(false)
 
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
@@ -274,6 +283,20 @@ export default function TeamDetail() {
     }
   }, [activeSeason, teamId, isReady, fetchRoster])
 
+  // Initialize tab from URL on mount
+  useEffect(() => {
+    const tabParam = searchParams.get('tab')
+    if (tabParam && ['overview', 'roster', 'schedule', 'attendance', 'payments', 'settings'].includes(tabParam)) {
+      // Tab is already set in URL, no need to update
+    } else if (!tabParam) {
+      // No tab in URL, set default to overview
+      const newSearchParams = new URLSearchParams(searchParams)
+      newSearchParams.set('tab', 'overview')
+      setSearchParams(newSearchParams, { replace: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Only run on mount - intentionally excluding searchParams/setSearchParams to avoid loops
+
   const getInitials = (firstName: string, lastName: string): string => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
   }
@@ -284,6 +307,21 @@ export default function TeamDetail() {
     setNavigating(true)
     navigate(`/admin/teams/${teamId}/roster`)
   }, [teamId, navigate, navigating])
+
+  const handleAddExistingAthlete = useCallback(() => {
+    if (!teamId || navigating) return
+    setShowAddExistingModal(true)
+  }, [teamId, navigating])
+
+  const handleAddExistingSuccess = useCallback(() => {
+    // Refresh roster after adding athletes
+    if (activeSeason) {
+      fetchRoster(activeSeason.id)
+    }
+  }, [activeSeason, fetchRoster])
+
+  // Check if user is org admin
+  const isOrgAdmin = context.roles.includes('org_admin')
 
   const handleAthleteClick = useCallback(
     (athleteId: string) => {
@@ -299,21 +337,12 @@ export default function TeamDetail() {
     (tab: string) => {
       if (navigating) return
 
-      if (tab === 'schedule') {
-        setNavigating(true)
-        navigate(`/admin/events?teamId=${teamId}`)
-      } else if (tab === 'attendance') {
-        setNavigating(true)
-        navigate(`/admin/attendance?teamId=${teamId}`)
-      } else if (tab === 'settings') {
-        // For now, navigate to teams list - in future could have team settings page
-        setNavigating(true)
-        navigate(getLink('admin.teams.list'))
-      } else {
-        setActiveTab(tab)
-      }
+      // Update URL with tab state while preserving team context
+      const newSearchParams = new URLSearchParams(searchParams)
+      newSearchParams.set('tab', tab)
+      setSearchParams(newSearchParams, { replace: true })
     },
-    [teamId, navigate, navigating]
+    [searchParams, setSearchParams, navigating]
   )
 
   const handleBreadcrumbClick = useCallback(
@@ -596,7 +625,17 @@ export default function TeamDetail() {
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--pa-space-3)' }}>
+            {isOrgAdmin && (
+              <Button
+                onClick={handleAddExistingAthlete}
+                disabled={!teamId || navigating || loading || !activeSeason}
+                variant="secondary"
+                icon="group_add"
+              >
+                ADD EXISTING
+              </Button>
+            )}
             <Button
               onClick={handleAddAthlete}
               disabled={!teamId || navigating || loading}
@@ -619,7 +658,7 @@ export default function TeamDetail() {
             }}
             className="dark:border-slate-700"
           >
-            {['roster', 'schedule', 'attendance', 'settings'].map((tab) => (
+            {['overview', 'roster', 'schedule', 'attendance', 'payments', 'settings'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => handleTabChange(tab)}
@@ -663,7 +702,20 @@ export default function TeamDetail() {
           </div>
         </div>
 
-        {/* Main Content */}
+        {/* Main Content - Tabs */}
+        {activeTab === 'overview' && (
+          <TeamOverviewTab
+            teamId={teamId}
+            teamName={team.name}
+            sportName={sportName}
+            programName={programName}
+            levelName={levelName}
+            seasonName={activeSeason?.name || null}
+            totalAthletes={teamStats.totalAthletes}
+            activeAthletes={teamStats.activeAthletes}
+          />
+        )}
+
         {activeTab === 'roster' && (
           <div
             style={{
@@ -675,20 +727,32 @@ export default function TeamDetail() {
           >
             {/* Roster Table */}
             <div style={{ flex: 1 }}>
+              {/* Top row with title and org-level link */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--pa-space-4)' }}>
+                <div>
+                  <h3 className="pa-h3" style={{ margin: 0 }}>
+                    Roster
+                  </h3>
+                  <p className="pa-body-s dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 'var(--pa-space-1) 0 0 0' }}>
+                    {roster.length} athlete{roster.length !== 1 ? 's' : ''} on team
+                  </p>
+                </div>
+                <Button variant="secondary" size="small" onClick={() => navigate('/admin/athletes')}>
+                  View organization roster
+                </Button>
+              </div>
+
               {rosterLoading ? (
                 <div className="pa-card">
                   <div className="pa-skeleton" style={{ height: '200px' }} />
                 </div>
               ) : roster.length === 0 ? (
                 <div className="pa-card">
-                  <EmptyState
-                    icon="people"
-                    title="NO ATHLETES ON ROSTER"
-                    description="Add athletes to this team to start building your roster."
-                    action={{
-                      label: 'Add Athlete',
-                      onClick: handleAddAthlete,
-                    }}
+                  <EmptyRosterState
+                    teamId={teamId || ''}
+                    seasonId={activeSeason?.id || null}
+                    onAddAthlete={handleAddAthlete}
+                    onAthleteAdded={handleAddExistingSuccess}
                   />
                 </div>
               ) : (
@@ -1069,7 +1133,49 @@ export default function TeamDetail() {
             </div>
           </div>
         )}
+
+        {activeTab === 'schedule' && (
+          <TeamScheduleTab
+            teamId={teamId}
+            seasonId={activeSeason?.id || null}
+            teamName={team.name}
+          />
+        )}
+
+        {activeTab === 'attendance' && (
+          <TeamAttendanceTab
+            teamId={teamId}
+            seasonId={activeSeason?.id || null}
+            teamName={team.name}
+          />
+        )}
+
+        {activeTab === 'payments' && (
+          <TeamPaymentsTab
+            teamId={teamId}
+            seasonId={activeSeason?.id || null}
+            teamName={team.name}
+          />
+        )}
+
+        {activeTab === 'settings' && (
+          <TeamSettingsTab
+            teamId={teamId}
+            teamName={team.name}
+          />
+        )}
       </div>
+
+      {/* Add Existing Athlete Modal */}
+      {activeSeason && (
+        <AddExistingAthleteModal
+          open={showAddExistingModal}
+          onClose={() => setShowAddExistingModal(false)}
+          teamId={teamId}
+          seasonId={activeSeason.id}
+          onSuccess={handleAddExistingSuccess}
+        />
+      )}
     </div>
   )
 }
