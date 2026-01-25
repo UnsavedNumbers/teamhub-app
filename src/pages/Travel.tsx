@@ -7,6 +7,7 @@ import {
 } from '../data/services/travelService'
 import type { FakeTravelPlan } from '../data/fake/fakeTravel'
 import { getSportFromTeam, type SportInfo } from '../utils/sportContext'
+import { supabase } from '../lib/supabase'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
 import { SportCardImage } from '../components/portal/SportCardImage'
@@ -15,17 +16,38 @@ import Icon from '../components/portal/Icon'
 
 type TravelPlan = FakeTravelPlan & { team?: { name: string } }
 
-// Helper to get team name from team_id
-const getTeamName = (teamId: string): string => {
-  const teamNames: Record<string, string> = {
-    'team-u10-soccer-001': 'U10 Lightning',
-    'team-u12-soccer-002': 'U12 Thunder',
-    'team-u10-basketball-003': 'U10 Hawks',
-    'team-u12-basketball-004': 'U12 Eagles',
-    'team-u14-soccer-elite-005': 'U14 Elite Storm',
-    'team-u16-soccer-elite-006': 'U16 Elite Hurricanes',
+/**
+ * Fetch team names for the given team IDs
+ * Returns a map of team_id -> team_name
+ */
+async function fetchTeamNames(
+  teamIds: string[],
+  orgId: string
+): Promise<Record<string, string>> {
+  if (teamIds.length === 0) return {}
+
+  try {
+    const { data, error } = await supabase
+      .from('teams')
+      .select('id, name')
+      .in('id', teamIds)
+      .eq('org_id', orgId)
+
+    if (error) {
+      console.error('Error fetching team names:', error)
+      return {}
+    }
+
+    const teamNameMap: Record<string, string> = {}
+    for (const team of data || []) {
+      teamNameMap[team.id] = team.name
+    }
+
+    return teamNameMap
+  } catch (err) {
+    console.error('Error fetching team names:', err)
+    return {}
   }
-  return teamNames[teamId] ?? 'Unknown Team'
 }
 
 export default function Travel() {
@@ -45,23 +67,32 @@ export default function Travel() {
       if (error) {
         console.error('Error fetching travel plans:', error)
         setPlans([])
-      } else {
-        // Transform data to include team name
-        const plansWithTeam = data.map(plan => ({
-          ...plan,
-          team: { name: getTeamName(plan.team_id) }
-        }))
-        setPlans(plansWithTeam)
-        
-        // Load sports for travel plans
-        const sportsMap: Record<string, SportInfo | null> = {}
-        Promise.all(
-          data.map(async (plan) => {
-            const sport = await getSportFromTeam(context, plan.team_id)
-            if (sport) sportsMap[plan.id] = sport
-          })
-        ).then(() => setPlanSports(sportsMap))
+        setLoading(false)
+        return
       }
+
+      // Get unique team IDs from travel plans
+      const uniqueTeamIds = [...new Set(data.map(plan => plan.team_id))]
+      
+      // Fetch team names for all teams
+      const teamNameMap = await fetchTeamNames(uniqueTeamIds, context.orgId)
+      
+      // Transform data to include team name
+      const plansWithTeam = data.map(plan => ({
+        ...plan,
+        team: { name: teamNameMap[plan.team_id] || 'Unknown Team' }
+      }))
+      setPlans(plansWithTeam)
+      
+      // Load sports for travel plans
+      const sportsMap: Record<string, SportInfo | null> = {}
+      Promise.all(
+        data.map(async (plan) => {
+          const sport = await getSportFromTeam(context, plan.team_id)
+          if (sport) sportsMap[plan.id] = sport
+        })
+      ).then(() => setPlanSports(sportsMap))
+      
       setLoading(false)
     }
 

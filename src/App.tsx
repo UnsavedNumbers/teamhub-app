@@ -34,6 +34,7 @@ import PaymentSuccess from './pages/PaymentSuccess'
 import PaymentCancel from './pages/PaymentCancel'
 import Settings from './pages/Settings'
 import Uniforms from './pages/Uniforms'
+import UniformKitOrder from './pages/UniformKitOrder'
 import Travel from './pages/Travel'
 import TravelDetail from './pages/TravelDetail'
 import Tryouts from './pages/Tryouts'
@@ -229,6 +230,7 @@ function AppWithTheme() {
             <Route path="payments/success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
             <Route path="payments/cancel" element={<ProtectedRoute><PaymentCancel /></ProtectedRoute>} />
             <Route path="uniforms" element={<ProtectedRoute><Uniforms /></ProtectedRoute>} />
+            <Route path="uniforms/:kitId" element={<ProtectedRoute><UniformKitOrder /></ProtectedRoute>} />
             <Route path="travel" element={<ProtectedRoute><Travel /></ProtectedRoute>} />
             <Route path="travel/:id" element={<ProtectedRoute><TravelDetail /></ProtectedRoute>} />
             <Route path="tryouts" element={<ProtectedRoute><Tryouts /></ProtectedRoute>} />
