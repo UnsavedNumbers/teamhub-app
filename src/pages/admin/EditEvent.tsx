@@ -279,7 +279,7 @@ export default function EditEvent() {
         .from('teams')
         .select('id, name')
         .eq('org_id', context.orgId!)
-        .eq('status', 'active')
+        .eq('is_active', true)
         .order('name')
     
     if (!error && data) {

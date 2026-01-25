@@ -164,7 +164,13 @@ export async function getSports(
                 .eq('org_id', context.orgId)
                 .in('sport_id', sportIds)
 
-            if (!customizationsError && customizationsData && Array.isArray(customizationsData)) {
+            // Silently handle customization errors (table may not exist yet)
+            // Only log non-404 errors for debugging
+            if (customizationsError) {
+                if (customizationsError.code !== 'PGRST116' && !customizationsError.message?.includes('404')) {
+                    console.warn('[sportsService] Non-critical error fetching customizations:', customizationsError.message)
+                }
+            } else if (customizationsData && Array.isArray(customizationsData)) {
                 type CustomizationRow = { sport_id: string; icon_path: string | null; color: string | null }
                 customizations = (customizationsData as unknown as CustomizationRow[]).reduce((acc, cust) => {
                     acc[cust.sport_id] = { icon_path: cust.icon_path, color: cust.color }

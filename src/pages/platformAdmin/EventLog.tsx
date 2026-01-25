@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, Badge, FilterBar, PlatformDataTable, type ColumnConfig, Button } from '../../components/platformAdmin'
+import { PageHeader, Badge, FilterBar, PlatformDataTable, type ColumnConfig, Button, OfflineBanner } from '../../components/platformAdmin'
 import { EventLogDetailModal } from '../../components/platformAdmin/EventLogDetailModal'
 import { useQueryParams } from '../../hooks/useQueryParams'
-import OfflineBanner from '../../components/admin/OfflineBanner'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { AdminEventLog, EventCategory } from '../../types/eventLog.types'
 

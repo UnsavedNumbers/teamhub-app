@@ -118,7 +118,7 @@ export default function SportDetail() {
               <Button variant="ghost">Back to Sports</Button>
             </Link>
             <Link to={`${programsRoute}?sport_id=${sportId}`}>
-              <Button variant="secondary">View Programs</Button>
+              <Button variant="secondary">View {sport?.name || ''} Programs</Button>
             </Link>
             <Link to={`${formsRoute}?type=program&sport_id=${sportId}&returnUrl=${encodeURIComponent(detailRoute)}`}>
               <Button>Add Program</Button>

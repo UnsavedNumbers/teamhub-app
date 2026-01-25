@@ -250,41 +250,34 @@ export default function LevelsManagement() {
                                 Edit
                               </button>
                             </Link>
-                            <div className="flex flex-col items-end gap-1">
-                              <button
-                                onClick={() => handleDeleteLevel(level.id, level.name)}
-                                disabled={deletingLevelId === level.id || isOffline || USE_FAKE_DATA || teamCount > 0 || !!level.deleted_at}
-                                className="invisible group-hover:visible focus:visible inline-flex items-center justify-center h-8 px-3 font-medium text-xs text-red-700 bg-white border border-red-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                                title={
-                                  level.deleted_at
-                                    ? 'Cannot remove archived level'
-                                    : USE_FAKE_DATA 
-                                    ? 'Sign in to remove level' 
-                                    : isOffline 
-                                    ? 'Offline - cannot remove level' 
-                                    : teamCount > 0
-                                    ? `Cannot remove: This level contains ${teamCount} ${teamCount === 1 ? 'team' : 'teams'} and cannot be removed.`
-                                    : 'Remove level from organization'
-                                }
-                              >
-                                {deletingLevelId === level.id ? (
-                                  <>
-                                    <span className="material-symbols-outlined animate-spin" style={{ fontSize: '14px', marginRight: '4px' }}>refresh</span>
-                                    Removing...
-                                  </>
-                                ) : (
-                                  <>
-                                    <span className="material-symbols-outlined" style={{ fontSize: '14px', marginRight: '4px' }}>delete</span>
-                                    Remove
-                                  </>
-                                )}
-                              </button>
-                              {teamCount > 0 && (
-                                <p className="text-xs text-slate-500 text-right max-w-[180px] invisible group-hover:visible">
-                                  Contains sub-items
-                                </p>
+                            <button
+                              onClick={() => handleDeleteLevel(level.id, level.name)}
+                              disabled={deletingLevelId === level.id || isOffline || USE_FAKE_DATA || teamCount > 0 || !!level.deleted_at}
+                              className="invisible group-hover:visible focus:visible inline-flex items-center justify-center h-8 px-3 font-medium text-xs text-red-700 bg-white border border-red-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title={
+                                level.deleted_at
+                                  ? 'Cannot remove archived level'
+                                  : USE_FAKE_DATA 
+                                  ? 'Sign in to remove level' 
+                                  : isOffline 
+                                  ? 'Offline - cannot remove level' 
+                                  : teamCount > 0
+                                  ? `Cannot remove: This level contains ${teamCount} ${teamCount === 1 ? 'team' : 'teams'} and cannot be removed.`
+                                  : 'Remove level from organization'
+                              }
+                            >
+                              {deletingLevelId === level.id ? (
+                                <>
+                                  <span className="material-symbols-outlined animate-spin" style={{ fontSize: '14px', marginRight: '4px' }}>refresh</span>
+                                  Removing...
+                                </>
+                              ) : (
+                                <>
+                                  <span className="material-symbols-outlined" style={{ fontSize: '14px', marginRight: '4px' }}>delete</span>
+                                  Remove
+                                </>
                               )}
-                            </div>
+                            </button>
                           </div>
                         </td>
                       </tr>

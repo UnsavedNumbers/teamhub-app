@@ -26,7 +26,7 @@ import {
 } from '../../types/calendar'
 
 interface Team { id: string; name: string }
-interface Season { id: string; name: string; team_id: string }
+interface Season { id: string; name: string; team_id: string; is_active?: boolean }
 
 export default function CreateEvent() {
   const [teams, setTeams] = useState<Team[]>([])
@@ -95,7 +95,7 @@ export default function CreateEvent() {
         .from('teams')
         .select('id, name')
         .eq('org_id', context.orgId!)
-        .eq('status', 'active')
+        .eq('is_active', true)
         .order('name')
     
     if (!error && data) {
@@ -111,9 +111,9 @@ export default function CreateEvent() {
     
     const { data, error } = await supabase
         .from('team_seasons_view')
-        .select('season_id, name')
+        .select('season_id, name, is_active')
         .eq('team_id', teamId)
-        .eq('is_active', true)
+        .order('is_active', { ascending: false }) // Active seasons first
 
     if (!error && data) {
       const mappedSeasons = data
@@ -121,10 +121,17 @@ export default function CreateEvent() {
         .map(s => ({
           id: s.season_id as string,
           name: s.name as string,
-          team_id: teamId
+          team_id: teamId,
+          is_active: s.is_active ?? false
         }))
       setSeasons(mappedSeasons)
-      if (mappedSeasons.length > 0) setValue('season_id', mappedSeasons[0].id)
+      // Auto-select the active season if it exists, otherwise select the first one
+      const activeSeason = mappedSeasons.find(s => s.is_active)
+      if (activeSeason) {
+        setValue('season_id', activeSeason.id)
+      } else if (mappedSeasons.length > 0) {
+        setValue('season_id', mappedSeasons[0].id)
+      }
     }
   }, [context, isReady, setValue])
 
@@ -235,28 +242,104 @@ export default function CreateEvent() {
               <Controller name="title" control={control} rules={{ required: 'Title is required' }} render={({ field }) => <Input {...field} label="Event Title" required error={errors.title?.message || undefined} />} />
             </div>
             
-            <div className="pa-grid pa-grid-3 pa-mb-4 pa-gap-4">
-              <Controller name="type" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label="Event Type" options={eventTypeOptions} />} />
-              <Controller name="team_id" control={control} rules={{ required: 'Team is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label="Team" options={teams.map(t => ({value:t.id, label:t.name}))} required error={errors.team_id?.message || undefined} />} />
-              <Controller name="season_id" control={control} rules={{ required: 'Season is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label="Season" options={seasons.map(s => ({value:s.id, label:s.name}))} required disabled={!watchTeamId} />} />
+            {/* Mobile: Single column | Tablet: Single column | Desktop: Three columns with medium-width selects */}
+            <div className="pa-form-grid pa-form-grid-3 pa-mb-4">
+              <div className="pa-select-wrapper">
+                <Controller name="type" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label="Event Type" options={eventTypeOptions} />} />
+              </div>
+              <div className="pa-select-wrapper">
+                <Controller name="team_id" control={control} rules={{ required: 'Team is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label="Team" options={teams.map(t => ({value:t.id, label:t.name}))} required error={errors.team_id?.message || undefined} />} />
+              </div>
+              <div className="pa-select-wrapper">
+                <Controller name="season_id" control={control} rules={{ required: 'Season is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label="Season" options={seasons.map(s => ({value:s.id, label:s.name}))} required disabled={!watchTeamId} />} />
+              </div>
             </div>
 
             {/* SECTION 2: DATE + TIME */}
-            <div className="pa-grid pa-grid-3 pa-mb-4 pa-gap-4">
-              <Controller name="start_time" control={control} rules={{ required: 'Start time is required' }} render={({ field }) => <Input {...field} label="Start Time" type="datetime-local" required />} />
-              <Controller name="end_time" control={control} render={({ field }) => <Input {...field} label="End Time" type="datetime-local" />} />
-              <Controller name="arrival_time" control={control} render={({ field }) => <Input {...field} label="Arrival Time" type="datetime-local" />} />
+            {/* Mobile: Single column | Tablet: Date + Start Time side-by-side | Desktop: Date + Start Time + End Time + Arrival Time (all in one row) */}
+            <div className="pa-mb-4">
+              <div className="pa-form-grid pa-form-grid-4 pa-form-grid-tablet-2col">
+                <Controller 
+                  name="start_time" 
+                  control={control} 
+                  rules={{ required: 'Start date and time are required' }} 
+                  render={({ field }) => (
+                    <DatePicker 
+                      label="Event Date" 
+                      value={field.value ? field.value.split('T')[0] : ''}
+                      onChange={(date) => {
+                        const time = field.value?.split('T')[1] || '09:00'
+                        field.onChange(`${date}T${time}`)
+                      }}
+                      required
+                      error={errors.start_time?.message}
+                    />
+                  )} 
+                />
+                <div className="pa-max-w-xs">
+                  <Controller 
+                    name="start_time" 
+                    control={control} 
+                    render={({ field }) => (
+                      <Input 
+                        label="Start Time" 
+                        type="time"
+                        value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                        onChange={(e) => {
+                          const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
+                          field.onChange(`${date}T${e.target.value}`)
+                        }}
+                        required
+                      />
+                    )} 
+                  />
+                </div>
+                <div className="pa-max-w-xs">
+                  <Controller 
+                    name="end_time" 
+                    control={control} 
+                    render={({ field }) => (
+                      <Input 
+                        label="End Time" 
+                        type="time"
+                        value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                        onChange={(e) => {
+                          const startDate = watch('start_time')?.split('T')[0] || new Date().toISOString().split('T')[0]
+                          field.onChange(e.target.value ? `${startDate}T${e.target.value}` : '')
+                        }}
+                      />
+                    )} 
+                  />
+                </div>
+                <div className="pa-max-w-xs">
+                  <Controller 
+                    name="arrival_time" 
+                    control={control} 
+                    render={({ field }) => (
+                      <Input 
+                        label="Arrival Time" 
+                        type="time"
+                        value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                        onChange={(e) => {
+                          const startDate = watch('start_time')?.split('T')[0] || new Date().toISOString().split('T')[0]
+                          field.onChange(e.target.value ? `${startDate}T${e.target.value}` : '')
+                        }}
+                      />
+                    )} 
+                  />
+                </div>
+              </div>
             </div>
 
           {/* SECTION 3: LOCATION */}
+          {/* Mobile: Single column | Tablet: Venue + Address side-by-side | Desktop: Venue + Address side-by-side */}
           <div className="pa-mb-4">
-            <div className="pa-flex pa-justify-between pa-items-center pa-mb-2">
-              <div className="pa-label">Location</div>
+            <div className="pa-mb-2">
               <Button type="button" variant="ghost" onClick={() => setShowLocationDetails(!showLocationDetails)}>{showLocationDetails ? 'Simple Location' : 'Detailed Location'}</Button>
             </div>
             
             <div className="pa-space-y-4">
-              <div className="pa-grid pa-grid-2 pa-gap-4">
+              <div className="pa-form-grid pa-form-grid-2 pa-form-grid-tablet-2col">
                 <Controller name="location.venue_name" control={control} render={({ field }) => <Input {...field} label="Venue Name" placeholder="e.g. Field 1" />} />
                 <Controller
                   name="location.address_line1"
@@ -286,12 +369,14 @@ export default function CreateEvent() {
               
               {showLocationDetails && (
                 <>
-                  <div className="pa-grid pa-grid-3 pa-gap-4">
+                  {/* Mobile: Single column | Tablet: City + State side-by-side, Zip single | Desktop: City + State + Zip side-by-side */}
+                  <div className="pa-form-grid pa-form-grid-3 pa-form-grid-tablet-2col">
                     <Controller name="location.city" control={control} render={({ field }) => <Input {...field} label="City" />} />
                     <Controller name="location.state" control={control} render={({ field }) => <Input {...field} label="State" />} />
                     <Controller name="location.postal_code" control={control} render={({ field }) => <Input {...field} label="Zip Code" />} />
                   </div>
-                  <div className="pa-flex pa-gap-4">
+                  {/* Mobile: Vertical | Desktop: Inline */}
+                  <div className="pa-checkbox-group pa-checkbox-group--inline">
                     <Controller name="location.is_tbd" control={control} render={({ field: { value, onChange } }) => <Checkbox checked={value} onChange={(e) => onChange(e.target.checked)} label="Location TBD" />} />
                     <Controller name="location.is_virtual" control={control} render={({ field: { value, onChange } }) => <Checkbox checked={value} onChange={(e) => onChange(e.target.checked)} label="Virtual Event" />} />
                   </div>
@@ -302,8 +387,9 @@ export default function CreateEvent() {
           </div>
           
           {/* SECTION 4: RSVP + RECURRENCE (SETTINGS) */}
+          {/* Mobile: Vertical checkboxes | Desktop: Inline checkboxes */}
           <div className="pa-mb-4">
-            <div className="pa-flex pa-items-center pa-gap-6 pa-mb-4">
+            <div className="pa-checkbox-group pa-checkbox-group--inline pa-mb-4">
               <div className="pa-flex pa-items-center pa-gap-2">
                 <span className="pa-label">RSVP Required?</span>
                 <Controller name="rsvp_enabled" control={control} render={({ field: { value, onChange } }) => (
@@ -325,48 +411,71 @@ export default function CreateEvent() {
             
             {watchRSVPEnabled && (
               <div className="pa-mb-4">
-                <Controller 
-                  name="rsvp_type" 
-                  control={control} 
-                  rules={{ required: watchRSVPEnabled ? 'RSVP type is required' : false }}
-                  render={({ field }) => (
-                    <Select 
-                      {...field} 
-                      value={field.value || ''}
-                      label="RSVP Type" 
-                      options={[
-                        {value: 'general', label: t('admin.events.rsvpType.general')},
-                        {value: 'athlete', label: t('admin.events.rsvpType.athlete')}
-                      ]}
-                      required
-                      error={errors.rsvp_type?.message || undefined}
-                    />
-                  )} 
-                />
+                <div className="pa-select-wrapper">
+                  <Controller 
+                    name="rsvp_type" 
+                    control={control} 
+                    rules={{ required: watchRSVPEnabled ? 'RSVP type is required' : false }}
+                    render={({ field }) => (
+                      <Select 
+                        {...field} 
+                        value={field.value || ''}
+                        label="RSVP Type" 
+                        options={[
+                          {value: 'general', label: t('admin.events.rsvpType.general')},
+                          {value: 'athlete', label: t('admin.events.rsvpType.athlete')}
+                        ]}
+                        required
+                        error={errors.rsvp_type?.message || undefined}
+                      />
+                    )} 
+                  />
+                </div>
               </div>
             )}
             
             {showRecurring && (
-              <div className="pa-space-y-4">
-                <Controller name="recurring.frequency" control={control} render={({ field }) => <Select {...field} label="Frequency" options={[{value:'weekly', label:'Weekly'}]} />} />
-                <Controller name="recurring.end_date" control={control} render={({ field }) => <DatePicker {...field} label="Recurs Until" />} />
+              <div className="pa-form-grid pa-form-grid-2 pa-form-grid-tablet-2col">
+                <div className="pa-select-wrapper">
+                  <Controller name="recurring.frequency" control={control} render={({ field }) => <Select {...field} label="Frequency" options={[{value:'weekly', label:'Weekly'}]} />} />
+                </div>
+                <div className="pa-max-w-sm">
+                  <Controller name="recurring.end_date" control={control} render={({ field }) => <DatePicker {...field} label="Recurs Until" />} />
+                </div>
               </div>
             )}
           </div>
 
           {/* SECTION 5: NOTES + PREP */}
-          <div className="pa-grid pa-grid-2 pa-mb-6 pa-gap-4">
-            <Controller name="notes" control={control} render={({ field }) => <textarea className="pa-input pa-textarea" {...field} placeholder="General Notes..." style={{ minHeight: '80px' }} />} />
+          {/* Mobile: Single column | Tablet: Single column | Desktop: Uniform/Equipment (left) + General Notes (right) side-by-side */}
+          <div className="pa-form-grid pa-form-grid-2 pa-mb-6">
             <div className="pa-space-y-2">
               <Controller name="uniform_notes" control={control} render={({ field }) => <Input {...field} label="Uniform Notes" placeholder="e.g. Home Kit" />} />
               <Controller name="equipment_notes" control={control} render={({ field }) => <Input {...field} label="Equipment Notes" placeholder="e.g. Bring water" />} />
             </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <label className="pa-label" style={{ display: 'block', marginBottom: 'var(--pa-space-2)' }}>General Notes</label>
+              <Controller name="notes" control={control} render={({ field }) => (
+                <textarea 
+                  className="pa-input pa-textarea" 
+                  {...field} 
+                  placeholder="General Notes..." 
+                  style={{ 
+                    flex: '1',
+                    minHeight: '80px',
+                    width: '100%',
+                    resize: 'vertical'
+                  }} 
+                />
+              )} />
+            </div>
           </div>
 
           {/* SECTION 6: ACTIONS */}
-          <div className="pa-flex pa-justify-end pa-gap-3">
+          {/* Mobile: Full-width stacked | Tablet: Full-width or right-aligned | Desktop: Right-aligned */}
+          <div className="pa-form-actions">
             <Button variant="blue" onClick={() => navigate(-1)}>Cancel</Button>
-            <Button type="submit" loading={saving}>Create Event</Button>
+            <Button type="submit" loading={saving} className="pa-form-submit-btn">Create Event</Button>
           </div>
         </form>
       </Card>

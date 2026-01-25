@@ -58,7 +58,7 @@ CREATE POLICY "Org admins can create sport customizations"
       SELECT org_id 
       FROM organization_members 
       WHERE user_id = auth.uid() 
-      AND role IN ('org_admin', 'admin')
+      AND role IN ('org_admin')
     )
     AND sport_id IN (
       SELECT sport_id 
@@ -77,7 +77,7 @@ CREATE POLICY "Org admins can update sport customizations"
       SELECT org_id 
       FROM organization_members 
       WHERE user_id = auth.uid() 
-      AND role IN ('org_admin', 'admin')
+      AND role IN ('org_admin')
     )
   );
 
@@ -91,7 +91,7 @@ CREATE POLICY "Org admins can delete sport customizations"
       SELECT org_id 
       FROM organization_members 
       WHERE user_id = auth.uid() 
-      AND role IN ('org_admin', 'admin')
+      AND role IN ('org_admin')
     )
   );
 
@@ -154,7 +154,7 @@ CREATE POLICY "Org admins can manage sport icons"
       SELECT 1
       FROM organization_members om
       WHERE om.user_id = auth.uid()
-        AND om.role IN ('org_admin', 'admin')
+        AND om.role IN ('org_admin')
         AND (storage.foldername(name))[2] = om.org_id::text
     )
   )
@@ -165,7 +165,7 @@ CREATE POLICY "Org admins can manage sport icons"
       SELECT 1
       FROM organization_members om
       WHERE om.user_id = auth.uid()
-        AND om.role IN ('org_admin', 'admin')
+        AND om.role IN ('org_admin')
         AND (storage.foldername(name))[2] = om.org_id::text
     )
   );

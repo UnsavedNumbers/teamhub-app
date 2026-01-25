@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, Badge, FilterBar, PlatformDataTable, JsonViewer, type ColumnConfig } from '../../components/platformAdmin'
-import OfflineBanner from '../../components/admin/OfflineBanner'
+import { PageHeader, Badge, FilterBar, PlatformDataTable, JsonViewer, type ColumnConfig, OfflineBanner } from '../../components/platformAdmin'
 import type { AdminAuditLog } from '../../types/platformAdmin.types'
 import { mapEventLogsToAuditLogs, type AdminEventLog } from '../../utils/auditLogMapper'
 

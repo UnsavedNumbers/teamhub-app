@@ -84,6 +84,7 @@ interface AutocompleteSuggestion {
     main_text: string
     secondary_text: string
   }
+  placePrediction?: google.maps.places.PlacePrediction
 }
 
 export function LocationAutocomplete({
@@ -117,8 +118,8 @@ export function LocationAutocomplete({
   const requestIdRef = useRef(0)
   const previousValueRef = useRef<string>('')
   const debouncedSearchRef = useRef<ReturnType<typeof debounce> | null>(null)
-  const autocompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null)
-  const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null)
+  const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null)
+  const placesLibraryRef = useRef<typeof google.maps.places | null>(null)
   const mountedRef = useRef(true)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 })
 
@@ -156,7 +157,21 @@ export function LocationAutocomplete({
 
     // Check if already loaded
     if (isGoogleMapsLoaded()) {
-      setIsLoaded(true)
+      // Import places library
+      google.maps.importLibrary('places')
+        .then((places) => {
+          if (mountedRef.current) {
+            placesLibraryRef.current = places as typeof google.maps.places
+            setIsLoaded(true)
+            setApiError(null)
+          }
+        })
+        .catch((err) => {
+          if (mountedRef.current) {
+            setFallbackMode(true)
+            setApiError(err instanceof Error ? err.message : 'Failed to load Places library')
+          }
+        })
       return
     }
 
@@ -170,10 +185,15 @@ export function LocationAutocomplete({
 
     // Load script
     loadGoogleMapsScript(apiKey)
-      .then(() => {
+      .then(async () => {
         if (mountedRef.current) {
-          setIsLoaded(true)
-          setApiError(null)
+          // Import places library
+          const places = await google.maps.importLibrary('places')
+          if (mountedRef.current) {
+            placesLibraryRef.current = places as typeof google.maps.places
+            setIsLoaded(true)
+            setApiError(null)
+          }
         }
       })
       .catch((err) => {
@@ -187,20 +207,6 @@ export function LocationAutocomplete({
       mountedRef.current = false
     }
   }, [])
-
-  // Initialize services when loaded
-  useEffect(() => {
-    if (!isLoaded || fallbackMode) return
-
-    if (!autocompleteServiceRef.current) {
-      autocompleteServiceRef.current = new google.maps.places.AutocompleteService()
-    }
-
-    if (!placesServiceRef.current) {
-      const div = document.createElement('div')
-      placesServiceRef.current = new google.maps.places.PlacesService(div)
-    }
-  }, [isLoaded, fallbackMode])
 
   // Handle input change with adaptive debounce
   const handleInputChange = useCallback((newValue: string) => {
@@ -235,54 +241,75 @@ export function LocationAutocomplete({
     // Create new debounced function with adaptive delay
     const delay = getDebounceDelay(newValue.length)
     const debouncedFn = debounce(async (searchValue: string) => {
-      if (!autocompleteServiceRef.current || !mountedRef.current) return
+      if (!placesLibraryRef.current || !mountedRef.current) return
 
       try {
-        const request: google.maps.places.AutocompletionRequest = {
+        // Create or reuse session token
+        if (!sessionTokenRef.current) {
+          sessionTokenRef.current = new placesLibraryRef.current.AutocompleteSessionToken()
+        }
+
+        const request: google.maps.places.AutocompleteRequest = {
           input: searchValue,
-          types: types,
-          componentRestrictions: countryRestrictions
-            ? { country: countryRestrictions }
+          sessionToken: sessionTokenRef.current,
+          includedPrimaryTypes: types.length > 0 ? types.map(t => t === 'address' ? 'geocode' : t) as string[] : undefined,
+          includedRegionCodes: countryRestrictions && countryRestrictions.length > 0
+            ? countryRestrictions.map(code => code.toUpperCase())
             : undefined,
         }
 
-        autocompleteServiceRef.current.getPlacePredictions(request, (results, status) => {
-          // Only update if this is still the latest request
-          if (currentRequestId !== requestIdRef.current || !mountedRef.current) {
-            return
-          }
+        // Use the new AutocompleteSuggestion API
+        const { suggestions: apiSuggestions } = await placesLibraryRef.current.AutocompleteSuggestion.fetchAutocompleteSuggestions(request)
 
-          if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-            const formattedResults: AutocompleteSuggestion[] = results.map((result) => ({
-              place_id: result.place_id,
-              description: result.description,
-              structured_formatting: result.structured_formatting,
-            }))
-            setSuggestions(formattedResults)
-            setShowSuggestions(true)
-            setIsLoading(false)
-            updatePosition()
-          } else if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-            setSuggestions([])
-            setShowSuggestions(true)
-            setIsLoading(false)
-            updatePosition()
-          } else if (
-            status === google.maps.places.PlacesServiceStatus.OVER_QUERY_LIMIT ||
-            status === google.maps.places.PlacesServiceStatus.REQUEST_DENIED
-          ) {
-            setFallbackMode(true)
-            setApiError('Autocomplete temporarily unavailable')
-            setIsLoading(false)
-          } else {
-            setSuggestions([])
-            setIsLoading(false)
-          }
-        })
-      } catch (err) {
+        // Only update if this is still the latest request
+        if (currentRequestId !== requestIdRef.current || !mountedRef.current) {
+          return
+        }
+
+        if (apiSuggestions && apiSuggestions.length > 0) {
+          const formattedResults = apiSuggestions
+            .map((suggestion) => {
+              const prediction = suggestion.placePrediction
+              if (!prediction) {
+                // Skip suggestions without placePrediction
+                return null
+              }
+              // Use mainText and secondaryText from the new API
+              const mainText = prediction.mainText?.text || prediction.text.text
+              const secondaryText = prediction.secondaryText?.text || ''
+              const fullText = prediction.text.text
+              
+              return {
+                place_id: prediction.placeId,
+                description: fullText,
+                structured_formatting: {
+                  main_text: mainText,
+                  secondary_text: secondaryText,
+                },
+                placePrediction: prediction,
+              } as AutocompleteSuggestion
+            })
+            .filter((result): result is AutocompleteSuggestion => result !== null)
+          setSuggestions(formattedResults)
+          setShowSuggestions(true)
+          setIsLoading(false)
+          updatePosition()
+        } else {
+          setSuggestions([])
+          setShowSuggestions(true)
+          setIsLoading(false)
+          updatePosition()
+        }
+      } catch (err: any) {
         if (currentRequestId === requestIdRef.current && mountedRef.current) {
           console.error('Autocomplete error:', err)
-          setApiError('Failed to fetch suggestions')
+          // Check for specific error types
+          if (err?.code === 'OVER_QUERY_LIMIT' || err?.code === 'REQUEST_DENIED') {
+            setFallbackMode(true)
+            setApiError('Autocomplete temporarily unavailable')
+          } else {
+            setApiError('Failed to fetch suggestions')
+          }
           setIsLoading(false)
         }
       }
@@ -295,73 +322,91 @@ export function LocationAutocomplete({
   // Handle place selection
   const handlePlaceSelect = useCallback(
     async (suggestion: AutocompleteSuggestion) => {
-      if (!placesServiceRef.current || !mountedRef.current) return
+      if (!placesLibraryRef.current || !mountedRef.current || !suggestion.placePrediction) return
 
       try {
         setIsLoading(true)
 
-        const request: google.maps.places.PlaceDetailsRequest = {
-          placeId: suggestion.place_id,
-          fields: ['place_id', 'formatted_address', 'address_components', 'geometry'],
+        // Convert PlacePrediction to Place using the new API
+        const place = suggestion.placePrediction.toPlace()
+        
+        // Fetch required fields
+        await place.fetchFields({
+          fields: ['id', 'formattedAddress', 'addressComponents', 'location'],
+        })
+
+        if (!mountedRef.current) return
+
+        // Convert new Place object to legacy PlaceResult format for compatibility
+        // The new Place API uses different property names and structures
+        // Place.location is a LatLng object with lat() and lng() methods
+        const location = place.location
+        const placeResult: google.maps.places.PlaceResult = {
+          place_id: place.id || suggestion.place_id,
+          formatted_address: place.formattedAddress || '',
+          address_components: place.addressComponents?.map((comp) => ({
+            long_name: comp.longText || '',
+            short_name: comp.shortText || '',
+            types: comp.types || [],
+          })) || [],
+          geometry: location
+            ? {
+                location: location, // LatLng object is compatible
+              }
+            : undefined,
         }
 
-        placesServiceRef.current.getDetails(request, (place, status) => {
-          if (!mountedRef.current) return
+        // Validate place has required data
+        if (!isPlaceResult(placeResult) || !placeResult.place_id) {
+          setApiError('Invalid place data received')
+          setIsLoading(false)
+          return
+        }
 
-          if (status === google.maps.places.PlacesServiceStatus.OK && place) {
-            // Validate place has required data
-            if (!isPlaceResult(place) || !place.place_id) {
-              setApiError('Invalid place data received')
-              setIsLoading(false)
-              return
-            }
+        // Fetch details if missing
+        if (!hasAddressComponents(placeResult)) {
+          setApiError('Place details incomplete')
+          setIsLoading(false)
+          return
+        }
 
-            // Fetch details if missing
-            if (!hasAddressComponents(place)) {
-              setApiError('Place details incomplete')
-              setIsLoading(false)
-              return
-            }
+        // Parse address
+        const address = parsePlace(placeResult)
+        if (!address || !validateStructuredAddress(address)) {
+          setApiError('Could not parse address components')
+          setIsLoading(false)
+          return
+        }
 
-            // Parse address
-            const address = parsePlace(place)
-            if (!address || !validateStructuredAddress(address)) {
-              setApiError('Could not parse address components')
-              setIsLoading(false)
-              return
-            }
-
-            // Validate country restrictions
-            if (countryRestrictions && countryRestrictions.length > 0) {
-              const countryComponent = place.address_components?.find((c) =>
-                c.types.includes('country')
-              )
-              if (
-                countryComponent &&
-                !countryRestrictions.includes(countryComponent.short_name.toLowerCase())
-              ) {
-                setApiError(`This location is outside the allowed countries`)
-                setIsLoading(false)
-                return
-              }
-            }
-
-            // Update state
-            setSelectedPlace(address)
-            setInputValue(address.formatted_address)
-            setShowSuggestions(false)
-            setSelectedIndex(-1)
+        // Validate country restrictions
+        if (countryRestrictions && countryRestrictions.length > 0) {
+          const countryComponent = placeResult.address_components?.find((c) =>
+            c.types.includes('country')
+          )
+          if (
+            countryComponent &&
+            !countryRestrictions.includes(countryComponent.short_name.toLowerCase())
+          ) {
+            setApiError(`This location is outside the allowed countries`)
             setIsLoading(false)
-            setApiError(null)
-
-            // Call onChange
-            onChange(address)
-            onInputChange?.(address.formatted_address)
-          } else {
-            setApiError(`Failed to fetch place details: ${status}`)
-            setIsLoading(false)
+            return
           }
-        })
+        }
+
+        // Reset session token after successful selection
+        sessionTokenRef.current = null
+
+        // Update state
+        setSelectedPlace(address)
+        setInputValue(address.formatted_address)
+        setShowSuggestions(false)
+        setSelectedIndex(-1)
+        setIsLoading(false)
+        setApiError(null)
+
+        // Call onChange
+        onChange(address)
+        onInputChange?.(address.formatted_address)
       } catch (err) {
         if (mountedRef.current) {
           console.error('Place selection error:', err)

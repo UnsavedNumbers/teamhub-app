@@ -60,11 +60,34 @@ export default function Programs() {
           getTeams(context)
         ])
 
+        // Check for errors in results
+        if (sportsResult.error || programsResult.error || levelsResult.error || teamsResult.error) {
+          const errors: string[] = []
+          
+          if (sportsResult.error) {
+            errors.push(`Sports: ${sportsResult.error.message || sportsResult.error.toString()}`)
+          }
+          if (programsResult.error) {
+            errors.push(`Programs: ${programsResult.error.message || programsResult.error.toString()}`)
+          }
+          if (levelsResult.error) {
+            errors.push(`Levels: ${levelsResult.error.message || levelsResult.error.toString()}`)
+          }
+          if (teamsResult.error) {
+            errors.push(`Teams: ${teamsResult.error.message || teamsResult.error.toString()}`)
+          }
+          
+          console.error('[Programs] Load errors:', { sportsResult, programsResult, levelsResult, teamsResult })
+          setError(errors.join('; ') || 'Failed to load data')
+          return
+        }
+
         setSports(sportsResult.data as Sport[])
         setPrograms(programsResult.data as Program[])
         setLevels(levelsResult.data as Level[])
         setTeams(teamsResult.data as Team[])
       } catch (err) {
+        console.error('[Programs] Error loading data:', err)
         setError(err instanceof Error ? err.message : 'Failed to load data')
       } finally {
         setLoading(false)
@@ -299,11 +322,6 @@ export default function Programs() {
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <Link to={programDetailRoute(program.id)}>
-                      <button className="inline-flex items-center justify-center h-9 px-4 font-medium text-xs text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 hover:border-slate-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-200">
-                        Details
-                      </button>
-                    </Link>
                     <Link 
                       to={`${formsRoute}?edit=program&id=${program.id}&returnUrl=${encodeURIComponent(programsRoute)}`}
                     >
@@ -319,39 +337,32 @@ export default function Programs() {
                         Add Level
                       </button>
                     </Link>
-                    <div className="flex flex-col items-end gap-1">
-                      <button
-                        onClick={() => handleDeleteProgram(program.id, program.name)}
-                        disabled={deletingProgramId === program.id || isOffline || USE_FAKE_DATA || levelCount > 0}
-                        className="inline-flex items-center justify-center h-9 px-4 font-medium text-xs text-red-700 bg-white border border-red-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                        title={
-                          USE_FAKE_DATA 
-                            ? 'Sign in to remove program' 
-                            : isOffline 
-                            ? 'Offline - cannot remove program' 
-                            : levelCount > 0
-                            ? `Cannot remove: This program contains ${levelCount} ${levelCount === 1 ? 'level' : 'levels'} and cannot be removed.`
-                            : 'Remove program from organization'
-                        }
-                      >
-                        {deletingProgramId === program.id ? (
-                          <>
-                            <span className="material-symbols-outlined animate-spin" style={{ fontSize: '16px', marginRight: '4px' }}>refresh</span>
-                            Removing...
-                          </>
-                        ) : (
-                          <>
-                            <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '4px' }}>delete</span>
-                            Remove
-                          </>
-                        )}
-                      </button>
-                      {levelCount > 0 && (
-                        <p className="text-xs text-slate-500 text-right max-w-[200px]">
-                          This item contains sub-items and cannot be removed.
-                        </p>
+                    <button
+                      onClick={() => handleDeleteProgram(program.id, program.name)}
+                      disabled={deletingProgramId === program.id || isOffline || USE_FAKE_DATA || levelCount > 0}
+                      className="inline-flex items-center justify-center h-9 px-4 font-medium text-xs text-red-700 bg-white border border-red-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={
+                        USE_FAKE_DATA 
+                          ? 'Sign in to remove program' 
+                          : isOffline 
+                          ? 'Offline - cannot remove program' 
+                          : levelCount > 0
+                          ? `Cannot remove: This program contains ${levelCount} ${levelCount === 1 ? 'level' : 'levels'} and cannot be removed.`
+                          : 'Remove program from organization'
+                      }
+                    >
+                      {deletingProgramId === program.id ? (
+                        <>
+                          <span className="material-symbols-outlined animate-spin" style={{ fontSize: '16px', marginRight: '4px' }}>refresh</span>
+                          Removing...
+                        </>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '4px' }}>delete</span>
+                          Remove
+                        </>
                       )}
-                    </div>
+                    </button>
                   </div>
                 </div>
               </div>
