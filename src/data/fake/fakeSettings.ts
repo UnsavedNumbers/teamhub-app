@@ -87,7 +87,7 @@ export const fakeOrgAdminSettings: Record<string, UserPreferences> = {
       frequency: 'immediate',
     },
     workflow: {
-      default_landing_page: '/admin/families',
+      default_landing_page: '/admin/guardians',
       default_season_id: '',
       remember_filters: false,
       auto_select_org: true,

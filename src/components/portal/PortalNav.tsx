@@ -9,6 +9,7 @@ import { useOrganization } from '../../contexts/OrganizationContext'
 import { useTheme } from '../../hooks/useTheme'
 import { useT } from '../../i18n/useI18n'
 import { useMobile } from '@/hooks/useMobile'
+import { getLink } from '../../utils/routes'
 
 // ============================================================================
 // ORGANIZATION ADMIN MENU STRUCTURE
@@ -89,12 +90,12 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
     },
     {
       label: 'Operations',
-      route: '/admin/teams',
+      route: getLink('admin.teams.list'),
       groups: [
         {
           label: 'Core',
           items: [
-            { text: 'Teams', icon: 'groups', path: '/admin/teams', description: 'Teams and rosters' },
+            { text: 'Teams', icon: 'groups', path: getLink('admin.teams.list'), description: 'Teams and rosters' },
             { text: 'Events', icon: 'event', path: '/admin/events', description: 'Schedule and calendar' },
             { text: 'Payments', icon: 'receipt_long', path: '/admin/payments', description: 'Fees and collections' },
           ],

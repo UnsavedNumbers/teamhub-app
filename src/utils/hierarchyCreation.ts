@@ -92,16 +92,16 @@ export function getEntityLabelKey(level: FormType): string {
  * @returns The route path to the list page for that entity type
  * 
  * @example
- * getListPageRoute('sport') // returns '/admin/organization/sports'
- * getListPageRoute('program') // returns '/admin/organization/programs'
+ * getListPageRoute('sport') // returns '/admin/sports'
+ * getListPageRoute('program') // returns '/admin/programs'
  */
 export function getListPageRoute(entityType: FormType): string {
   const routeMap: Record<FormType, string> = {
-    sport: getLink('admin.organization.sports'),
-    program: getLink('admin.organization.programs'),
-    level: getLink('admin.organization.levels'),
-    team: getLink('admin.organization.teamsManagement'),
-    season: getLink('admin.organization.seasons'),
+    sport: getLink('admin.sports.list'),
+    program: getLink('admin.programs.list'),
+    level: getLink('admin.levels.list'),
+    team: getLink('admin.teams.list'),
+    season: getLink('admin.seasons.list'),
   }
   return routeMap[entityType] ?? getLink('admin.organization.structure')
 }

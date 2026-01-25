@@ -89,6 +89,12 @@ export interface CalendarEvent {
     general_rsvps?: GeneralRSVP[]
     recurring_pattern?: RecurringEventPattern | null
     change_history?: EventChangeHistory[]
+    venue_insights?: {
+      place_id: string
+      photos: string[]
+      ai_summary: string | null
+      ai_what_to_expect: string | null
+    } | null
 }
 
 // Meeting location for travel events

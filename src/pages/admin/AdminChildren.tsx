@@ -7,6 +7,7 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { getAthletes } from '../../data/services/familyService'
 import { useT } from '../../i18n/useI18n'
 import type { Child } from '../../types/family'
+import { getLink } from '../../utils/routes'
 
 export default function AdminChildren() {
   const navigate = useNavigate()
@@ -49,7 +50,7 @@ export default function AdminChildren() {
             className="pa-link"
             onClick={(e) => {
                 e.stopPropagation()
-                navigate(`/admin/families/${c.family_id}`)
+                navigate(getLink('admin.guardians.detail', { id: c.family_id }))
             }}
           >
               View Family
@@ -66,7 +67,7 @@ export default function AdminChildren() {
         title={t('admin.children.title')}
         actions={
           <div className="pa-flex pa-gap-2">
-            <Button onClick={() => navigate('/admin/athletes/import')} icon="upload_file" variant="secondary">
+            <Button onClick={() => navigate(getLink('admin.athletes.import'))} icon="upload_file" variant="secondary">
               Import Athletes
             </Button>
             <Button onClick={() => navigate('/admin/athletes/new')} icon="add">
@@ -86,7 +87,7 @@ export default function AdminChildren() {
             columns={columns}
             loading={loading}
             // Navigate to family detail since we don't have a child detail page
-            onRowClick={(c) => navigate(`/admin/families/${c.family_id}`)}
+            onRowClick={(c) => c.family_id && navigate(getLink('admin.guardians.detail', { id: c.family_id as string }))}
             emptyMessage={t('admin.children.emptyMessage')}
             page={0}
             rowsPerPage={children.length}

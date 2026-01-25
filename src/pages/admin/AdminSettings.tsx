@@ -942,9 +942,9 @@ function WorkflowSettings({ preferences, setPreferences, onSave, saving, success
             })}
             options={[
               { value: '/admin', label: 'Dashboard' },
-              { value: getLink('admin.organization.teamsManagement'), label: 'Teams' },
-              { value: '/admin/athletes', label: 'Athletes' },
-              { value: '/admin/families', label: 'Families' },
+              { value: getLink('admin.teams.list'), label: 'Teams' },
+              { value: getLink('admin.athletes.list'), label: 'Athletes' },
+              { value: getLink('admin.guardians.list'), label: 'Guardians' },
               { value: '/admin/attendance', label: 'Attendance' },
               { value: '/admin/events', label: 'Events' },
               { value: '/admin/payments', label: 'Payments' },

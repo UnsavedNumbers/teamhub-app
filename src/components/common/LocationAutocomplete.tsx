@@ -186,14 +186,63 @@ export function LocationAutocomplete({
     // Load script
     loadGoogleMapsScript(apiKey)
       .then(async () => {
-        if (mountedRef.current) {
-          // Import places library
-          const places = await google.maps.importLibrary('places')
+        if (!mountedRef.current) return
+        
+        // Check if Google Maps API is available
+        if (!window.google?.maps) {
           if (mountedRef.current) {
-            placesLibraryRef.current = places as typeof google.maps.places
+            setFallbackMode(true)
+            setApiError('Google Maps API not available')
+          }
+          return
+        }
+
+        // Check if places is already available
+        if (window.google.maps.places) {
+          if (mountedRef.current) {
+            placesLibraryRef.current = window.google.maps.places
             setIsLoaded(true)
             setApiError(null)
           }
+          return
+        }
+
+        // Try to import places library
+        if (window.google.maps.importLibrary) {
+          try {
+            const places = await window.google.maps.importLibrary('places')
+            if (mountedRef.current) {
+              placesLibraryRef.current = places as typeof google.maps.places
+              setIsLoaded(true)
+              setApiError(null)
+            }
+          } catch (err) {
+            if (mountedRef.current) {
+              setFallbackMode(true)
+              setApiError('Places library could not be loaded. You can enter the address manually below.')
+            }
+          }
+        } else {
+          // importLibrary not available, check if places becomes available
+          let attempts = 0
+          const maxAttempts = 50 // 5 seconds
+          const checkInterval = setInterval(() => {
+            attempts++
+            if (window.google?.maps?.places) {
+              clearInterval(checkInterval)
+              if (mountedRef.current) {
+                placesLibraryRef.current = window.google.maps.places
+                setIsLoaded(true)
+                setApiError(null)
+              }
+            } else if (attempts >= maxAttempts) {
+              clearInterval(checkInterval)
+              if (mountedRef.current) {
+                setFallbackMode(true)
+                setApiError('Places library could not be loaded. You can enter the address manually below.')
+              }
+            }
+          }, 100)
         }
       })
       .catch((err) => {

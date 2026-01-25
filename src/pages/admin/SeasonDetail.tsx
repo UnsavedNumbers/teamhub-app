@@ -60,14 +60,14 @@ export default function SeasonDetail() {
           subtitle={error || 'The season you are looking for does not exist'}
           breadcrumbs={[
             { label: 'Organizations', path: getLink('admin.organization.structure') },
-            { label: 'Seasons', path: getLink('admin.organization.seasons') },
+            { label: 'Seasons', path: getLink('admin.seasons.list') },
             { label: 'Details' },
           ]}
         />
         <Card className="pa-mb-4">
           <div className="pa-text-danger">{error || 'Season not found'}</div>
         </Card>
-        <Button onClick={() => navigate(getLink('admin.organization.seasons'))}>
+        <Button onClick={() => navigate(getLink('admin.seasons.list'))}>
           Back to Seasons
         </Button>
       </div>

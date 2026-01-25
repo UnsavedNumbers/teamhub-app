@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import { OrganizationProvider } from './contexts/OrganizationContext'
@@ -85,7 +85,7 @@ const SportDetail = lazy(() => import('./pages/admin/SportDetail'))
 const Programs = lazy(() => import('./pages/admin/Programs'))
 const ProgramDetail = lazy(() => import('./pages/admin/ProgramDetail'))
 const LevelsManagement = lazy(() => import('./pages/admin/LevelsManagement'))
-const TeamsManagement = lazy(() => import('./pages/admin/TeamsManagement'))
+const LevelDetail = lazy(() => import('./pages/admin/LevelDetail'))
 const SeasonsManagement = lazy(() => import('./pages/admin/SeasonsManagement'))
 const SeasonDetail = lazy(() => import('./pages/admin/SeasonDetail'))
 const Teams = lazy(() => import('./pages/admin/Teams'))
@@ -131,6 +131,14 @@ function HostHomeRoute() {
   if (appContext === 'platform') return <Navigate to={getLink(RouteKeys.PORTAL_DASHBOARD)} replace />
   if (appContext === 'platform-admin') return <Navigate to={getLink(RouteKeys.PLATFORM_DASHBOARD)} replace />
   return <Marketing />
+}
+
+// Redirect component that preserves route parameters
+function RedirectWithParams({ to, paramKey = 'id', suffix = '' }: { to: string; paramKey?: string; suffix?: string }) {
+  const params = useParams()
+  const paramValue = params[paramKey]
+  const redirectTo = paramValue ? `${to}/${paramValue}${suffix}` : to
+  return <Navigate to={redirectTo} replace />
 }
 
 function HostGateLayout() {
@@ -291,33 +299,46 @@ function AppWithTheme() {
               {/* Admin Dashboard */}
               <Route index element={<AdminDashboard />} />
             
+              {/* Standardized Entity Routes - Most specific first */}
+              <Route path="sports/:id" element={<SportDetail />} />
+              <Route path="sports" element={<Sports />} />
+              <Route path="programs/:id" element={<ProgramDetail />} />
+              <Route path="programs" element={<Programs />} />
+              <Route path="levels/:id" element={<LevelDetail />} />
+              <Route path="levels" element={<LevelsManagement />} />
+              <Route path="seasons/:id" element={<SeasonDetail />} />
+              <Route path="seasons" element={<SeasonsManagement />} />
+              <Route path="teams/:id/roster" element={<Roster />} />
+              <Route path="teams/:id" element={<TeamDetail />} />
+              <Route path="teams" element={<Teams />} />
+              <Route path="athletes/:id" element={<EditAthlete />} />
+              <Route path="athletes/new" element={<CreateAthlete />} />
+              <Route path="athletes/import" element={<ImportAthletes />} />
+              <Route path="athletes" element={<AdminChildren />} />
+              <Route path="guardians/:familyId/athletes/new" element={<CreateChild />} />
+              <Route path="guardians/new" element={<CreateFamily />} />
+              <Route path="guardians/:id" element={<FamilyDetail />} />
+              <Route path="guardians" element={<AdminFamilies />} />
+
+              {/* Backward Compatibility Redirects */}
+              <Route path="organization/sports/:id" element={<RedirectWithParams to="/admin/sports" />} />
+              <Route path="organization/sports" element={<Navigate to="/admin/sports" replace />} />
+              <Route path="organization/programs/:id" element={<RedirectWithParams to="/admin/programs" />} />
+              <Route path="organization/programs" element={<Navigate to="/admin/programs" replace />} />
+              <Route path="organization/levels/:id" element={<RedirectWithParams to="/admin/levels" />} />
+              <Route path="organization/levels" element={<Navigate to="/admin/levels" replace />} />
+              <Route path="organization/seasons/:id" element={<RedirectWithParams to="/admin/seasons" />} />
+              <Route path="organization/seasons" element={<Navigate to="/admin/seasons" replace />} />
+              <Route path="organization/teams" element={<Navigate to="/admin/teams" replace />} />
+              <Route path="athletes/:id/edit" element={<RedirectWithParams to="/admin/athletes" />} />
+              <Route path="families/:familyId/athletes/new" element={<RedirectWithParams to="/admin/guardians" paramKey="familyId" suffix="/athletes/new" />} />
+              <Route path="families/new" element={<Navigate to="/admin/guardians/new" replace />} />
+              <Route path="families/:id" element={<RedirectWithParams to="/admin/guardians" />} />
+              <Route path="families" element={<Navigate to="/admin/guardians" replace />} />
+
               {/* Organizational Structure */}
               <Route path="organization/structure" element={<OrganizationStructureOverview />} />
-              <Route path="organization/sports" element={<Sports />} />
-              <Route path="organization/sports/:id" element={<SportDetail />} />
-              <Route path="organization/programs" element={<Programs />} />
-              <Route path="organization/programs/:id" element={<ProgramDetail />} />
-              <Route path="organization/levels" element={<LevelsManagement />} />
-              <Route path="organization/teams" element={<TeamsManagement />} />
-              <Route path="organization/seasons" element={<SeasonsManagement />} />
-              <Route path="organization/seasons/:id" element={<SeasonDetail />} />
 
-              {/* Teams (legacy) */}
-              <Route path="teams" element={<Teams />} />
-              <Route path="teams/:id" element={<TeamDetail />} />
-              <Route path="teams/:id/roster" element={<Roster />} />
-
-              {/* Families */}
-              <Route path="families" element={<AdminFamilies />} />
-              <Route path="families/new" element={<CreateFamily />} />
-              <Route path="families/:id" element={<FamilyDetail />} />
-              <Route path="families/:familyId/athletes/new" element={<CreateChild />} />
-              
-              {/* Athletes */}
-              <Route path="athletes" element={<AdminChildren />} />
-              <Route path="athletes/new" element={<CreateAthlete />} />
-              <Route path="athletes/:id/edit" element={<EditAthlete />} />
-              <Route path="athletes/import" element={<ImportAthletes />} />
             
               {/* Events */}
             

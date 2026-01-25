@@ -6,6 +6,7 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { createAthleteBasic, getFamilyDetails } from '../../data/services/familyService'
 import { useT } from '../../i18n/useI18n'
 import type { Gender } from '../../types/family'
+import { getLink } from '../../utils/routes'
 
 export default function CreateChild() {
   const navigate = useNavigate()
@@ -69,7 +70,7 @@ export default function CreateChild() {
       })
 
       if (createError) throw createError
-      navigate(`/admin/families/${familyId}`)
+      navigate(getLink('admin.guardians.detail', { id: familyId }))
     } catch (err) {
       setError(err instanceof Error ? err : new Error(t('admin.createChild.errorCreate')))
       setLoading(false)
@@ -181,7 +182,7 @@ export default function CreateChild() {
                 <Button 
                   type="button" 
                   variant="blue" 
-                  onClick={() => navigate(`/admin/families/${familyId}`)}
+                  onClick={() => navigate(getLink('admin.guardians.detail', { id: familyId! }))}
                   disabled={loading}
                 >
                   Cancel

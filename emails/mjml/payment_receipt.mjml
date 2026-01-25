@@ -1,0 +1,112 @@
+<mjml>
+  <mj-head>
+    <mj-title>Payment Receipt</mj-title>
+    <mj-preview>Your payment has been processed successfully</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Arial, sans-serif" />
+      <mj-text font-size="14px" color="#333333" line-height="1.5" />
+      <mj-section background-color="#ffffff" />
+    </mj-attributes>
+    <mj-style>
+      .button {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        padding: 12px 24px !important;
+        text-decoration: none !important;
+        border-radius: 6px !important;
+        display: inline-block !important;
+        font-weight: 600 !important;
+      }
+      .footer-text {
+        color: #666666 !important;
+        font-size: 12px !important;
+      }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f8fafc">
+    <mj-section padding="20px">
+      <mj-column>
+        <mj-text align="center" font-size="24px" font-weight="bold" color="#1e293b">
+          YouthSports Team Hub
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="30px 20px">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold" color="#1e293b">
+          Payment Receipt
+        </mj-text>
+
+        <mj-text padding-top="20px">
+          Hi {{recipient_name}},
+        </mj-text>
+
+        <mj-text padding-top="10px">
+          Thank you for your payment. Here are the details:
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#ffffff" border-radius="8px" padding="20px" border="1px solid #e2e8f0">
+      <mj-column>
+        <mj-text font-weight="bold" font-size="16px">
+          Payment Details
+        </mj-text>
+        <mj-text padding-top="10px">
+          Amount: ${{amount}}<br>
+          Date: {{payment_date}}<br>
+          Transaction ID: {{transaction_id}}
+        </mj-text>
+        {{#if description}}
+        <mj-text padding-top="15px">
+          Description: {{description}}
+        </mj-text>
+        {{/if}}
+      </mj-column>
+    </mj-section>
+
+    {{#if items}}
+    <mj-section background-color="#ffffff" border-radius="8px" padding="20px" border="1px solid #e2e8f0">
+      <mj-column>
+        <mj-text font-weight="bold" font-size="16px">
+          Items Purchased
+        </mj-text>
+        {{#each items}}
+        <mj-text padding-top="10px">
+          {{name}} - ${{price}}
+        </mj-text>
+        {{/each}}
+      </mj-column>
+    </mj-section>
+    {{/if}}
+
+    <mj-section padding="30px 20px">
+      <mj-column>
+        <mj-button css-class="button" href="{{url}}">
+          View Receipt
+        </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="20px">
+      <mj-column>
+        <mj-text padding-top="20px">
+          If you have any questions about this payment, please contact your organization administrator.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="20px" background-color="#f1f5f9">
+      <mj-column>
+        <mj-text align="center" color="#666666" font-size="12px">
+          You're receiving this email because you're part of {{organization_name}} on YouthSports Team Hub.<br>
+          <a href="{{unsubscribe_url}}">Unsubscribe</a> | <a href="{{preferences_url}}">Email Preferences</a>
+        </mj-text>
+        <mj-text align="center" color="#666666" font-size="12px" padding-top="10px">
+          © 2026 YouthSports Team Hub. All rights reserved.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

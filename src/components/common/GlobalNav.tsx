@@ -8,6 +8,7 @@ import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
 import { useMobile } from '@/hooks/useMobile'
 import type { NavSection } from '@/types/menu'
+import { getLink } from '../../utils/routes'
 
 interface GlobalNavProps {
   variant: 'admin' | 'platform-admin'
@@ -44,9 +45,9 @@ export default function GlobalNav({ variant }: GlobalNavProps) {
         {
           label: 'Teams & People',
           items: [
-            { text: 'Teams', icon: 'groups', path: '/admin/teams', description: 'Manage teams & rosters' },
-            { text: 'Families', icon: 'home', path: '/admin/families', description: 'Family management' },
-            { text: t('admin.navigation.children'), icon: 'child_care', path: '/admin/athletes', description: 'Player registry' },
+            { text: 'Teams', icon: 'groups', path: getLink('admin.teams.list'), description: 'Manage teams & rosters' },
+            { text: 'Guardians', icon: 'home', path: getLink('admin.guardians.list'), description: 'Guardian management' },
+            { text: t('admin.navigation.children'), icon: 'child_care', path: getLink('admin.athletes.list'), description: 'Player registry' },
           ],
         },
       ],
@@ -161,9 +162,9 @@ export default function GlobalNav({ variant }: GlobalNavProps) {
       items: group.items.map(item => {
         // Check if item requires org
         const requiresOrg = [
-          '/admin/teams', '/admin/families', '/admin/athletes',
-          '/admin/payments', '/admin/events', '/admin/attendance',
-          '/admin/uniforms', '/admin/travel', '/admin/tryouts',
+          getLink('admin.teams.list'), getLink('admin.guardians.list'), getLink('admin.athletes.list'),
+          getLink('admin.payments.list'), getLink('admin.events.list'), getLink('admin.attendance'),
+          getLink('admin.uniforms.list'), getLink('admin.travel.list'), getLink('admin.tryouts.list'),
           '/admin/messages', '/admin/reports'
         ].includes(item.path)
         

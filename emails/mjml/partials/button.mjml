@@ -1,0 +1,3 @@
+<mj-button css-class="button" href="{{url}}" padding="20px">
+  {{text}}
+</mj-button>

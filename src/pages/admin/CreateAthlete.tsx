@@ -24,6 +24,7 @@ import type { Gender, GuardianFormData, CreateAthleteDTO } from '../../types/fam
 import type { Sport } from '../../data/types/organization'
 import { createDefaultGuardians, validateGuardians, findDuplicateEmails } from '../../utils/guardianMatching'
 import { AlertCircle } from 'lucide-react'
+import { getLink } from '../../utils/routes'
 
 type SportType = 'plays' | 'interested'
 
@@ -217,7 +218,7 @@ export default function CreateAthlete() {
             }
 
             // Success - navigate to athlete list
-            navigate(`/admin/athletes`)
+            navigate(getLink('admin.athletes.list'))
         } catch (err) {
             console.error('Error creating athlete:', err)
             setError(err instanceof Error ? err : new Error('Failed to create athlete'))
@@ -236,7 +237,7 @@ export default function CreateAthlete() {
                 title="Add Athlete"
                 subtitle="Create a new athlete profile and link guardians"
                 breadcrumbs={[
-                    { label: 'Athletes', path: '/admin/athletes' },
+                    { label: 'Athletes', path: getLink('admin.athletes.list') },
                     { label: 'Add Athlete', path: '#' }
                 ]}
             />
@@ -450,7 +451,7 @@ export default function CreateAthlete() {
                             <Button
                                 type="button"
                                 variant="ghost"
-                                onClick={() => navigate('/admin/athletes')}
+                                onClick={() => navigate(getLink('admin.athletes.list'))}
                                 disabled={loading}
                             >
                                 Cancel

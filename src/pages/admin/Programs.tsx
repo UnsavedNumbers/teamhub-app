@@ -4,8 +4,8 @@
  * View and manage programs with sport filtering.
  */
 
-import { useEffect, useState, useMemo } from 'react'
-import { Link, useSearchParams, useLocation } from 'react-router-dom'
+import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOffline } from '../../hooks/useOffline'
 import { USE_FAKE_DATA } from '../../data/config'
@@ -13,7 +13,7 @@ import { getSports, getPrograms, deleteProgram } from '../../data/services/sport
 import { getLevels } from '../../data/services/levelsService'
 import { getTeams } from '../../data/services/teamsService'
 import type { Sport, Program, Level, Team } from '../../data/types/organization'
-import { AdminPageHeader, Select, ConfirmDialog } from '../../components/platformAdmin'
+import { AdminPageHeader, Select, ConfirmDialog, Button } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 
@@ -22,6 +22,7 @@ export default function Programs() {
   const { isOffline } = useOffline()
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
+  const navigate = useNavigate()
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -45,66 +46,75 @@ export default function Programs() {
   const [teams, setTeams] = useState<Team[]>([])
   const [filterSportId, setFilterSportId] = useState<string>(searchParams.get('sport_id') || '')
 
-  useEffect(() => {
+  const loadProgramsData = useCallback(async () => {
     if (!isReady) return
 
-    const load = async () => {
-      setLoading(true)
-      setError(null)
+    setLoading(true)
+    setError(null)
+    setActionError(null)
 
-      try {
-        const [sportsResult, programsResult, levelsResult, teamsResult] = await Promise.all([
-          getSports(context), 
-          getPrograms(context),
-          getLevels(context),
-          getTeams(context)
-        ])
+    try {
+      const [sportsResult, programsResult, levelsResult, teamsResult] = await Promise.all([
+        getSports(context), 
+        getPrograms(context),
+        getLevels(context),
+        getTeams(context)
+      ])
 
-        // Check for errors in results
-        if (sportsResult.error || programsResult.error || levelsResult.error || teamsResult.error) {
-          const errors: string[] = []
-          
-          if (sportsResult.error) {
-            errors.push(`Sports: ${sportsResult.error.message || sportsResult.error.toString()}`)
-          }
-          if (programsResult.error) {
-            errors.push(`Programs: ${programsResult.error.message || programsResult.error.toString()}`)
-          }
-          if (levelsResult.error) {
-            errors.push(`Levels: ${levelsResult.error.message || levelsResult.error.toString()}`)
-          }
-          if (teamsResult.error) {
-            errors.push(`Teams: ${teamsResult.error.message || teamsResult.error.toString()}`)
-          }
-          
-          console.error('[Programs] Load errors:', { sportsResult, programsResult, levelsResult, teamsResult })
-          setError(errors.join('; ') || 'Failed to load data')
-          return
+      // Check for errors in results
+      if (sportsResult.error || programsResult.error || levelsResult.error || teamsResult.error) {
+        const errors: string[] = []
+        
+        if (sportsResult.error) {
+          errors.push(`Sports: ${sportsResult.error.message || sportsResult.error.toString()}`)
         }
-
-        setSports(sportsResult.data as Sport[])
-        setPrograms(programsResult.data as Program[])
-        setLevels(levelsResult.data as Level[])
-        setTeams(teamsResult.data as Team[])
-      } catch (err) {
-        console.error('[Programs] Error loading data:', err)
-        setError(err instanceof Error ? err.message : 'Failed to load data')
-      } finally {
-        setLoading(false)
+        if (programsResult.error) {
+          errors.push(`Programs: ${programsResult.error.message || programsResult.error.toString()}`)
+        }
+        if (levelsResult.error) {
+          errors.push(`Levels: ${levelsResult.error.message || levelsResult.error.toString()}`)
+        }
+        if (teamsResult.error) {
+          errors.push(`Teams: ${teamsResult.error.message || teamsResult.error.toString()}`)
+        }
+        
+        console.error('[Programs] Load errors:', { sportsResult, programsResult, levelsResult, teamsResult })
+        setError(errors.join('; ') || 'Failed to load data')
+        return
       }
-    }
 
-    load()
+      setSports(sportsResult.data as Sport[])
+      setPrograms(programsResult.data as Program[])
+      setLevels(levelsResult.data as Level[])
+      setTeams(teamsResult.data as Team[])
+    } catch (err) {
+      console.error('[Programs] Error loading data:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load data')
+    } finally {
+      setLoading(false)
+    }
   }, [context, isReady])
+
+  useEffect(() => {
+    loadProgramsData()
+  }, [loadProgramsData])
 
   // Update URL when filter changes
   useEffect(() => {
-    if (filterSportId) {
-      setSearchParams({ sport_id: filterSportId }, { replace: true })
+    if (filterSportId && filterSportId.trim()) {
+      // Validate that the sport exists
+      const sportExists = !filterSportId || sports.some((s) => s.id === filterSportId)
+      if (sportExists) {
+        setSearchParams({ sport_id: filterSportId }, { replace: true })
+      } else {
+        // Invalid sport ID, reset filter
+        setFilterSportId('')
+        setSearchParams({}, { replace: true })
+      }
     } else {
       setSearchParams({}, { replace: true })
     }
-  }, [filterSportId, setSearchParams])
+  }, [filterSportId, setSearchParams, sports])
 
   // Filter programs by selected sport
   const filteredPrograms = useMemo(() => {
@@ -117,58 +127,180 @@ export default function Programs() {
   const programLevels = (programId: string) => levels.filter((l) => l.program_id === programId)
   const levelTeams = (levelId: string) => teams.filter((t) => t.level_id === levelId)
 
-  const handleDeleteProgram = (programId: string, programName: string) => {
-    // Block if offline
-    if (isOffline) {
-      setActionError('You appear to be offline. Please reconnect and try again.')
-      return
-    }
-
-    // Block if in demo mode
-    if (USE_FAKE_DATA) {
-      setActionError('This action is not available in demo mode. Please sign in to remove programs from your organization.')
-      return
-    }
-
-    setProgramToDelete({ id: programId, name: programName })
-  }
-
-  const confirmDeleteProgram = async (_reason: string) => {
-    if (!programToDelete) return
-
-    setDeletingProgramId(programToDelete.id)
-    setActionError(null)
-    setSuccessMessage(null)
-
-    try {
-      const result = await deleteProgram(context, programToDelete.id)
-
-      if (result.error) {
-        setActionError(result.error.message || 'Failed to remove program. Please try again.')
-      } else {
-        // Remove from local state
-        setPrograms((prev) => prev.filter((p) => p.id !== programToDelete.id))
-        setSuccessMessage(`"${programToDelete.name}" has been removed from your organization.`)
-
-        // Clear success message after 5 seconds
-        setTimeout(() => {
-          setSuccessMessage(null)
-        }, 5000)
-      }
-    } catch (err) {
-      console.error('[Programs] Unexpected error deleting program:', err)
-      setActionError(err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.')
-    } finally {
-      setDeletingProgramId(null)
-      setProgramToDelete(null)
-    }
-  }
-
-  const sportsRoute = getLink('admin.organization.sports')
-  const programsRoute = getLink('admin.organization.programs')
-  const programDetailRoute = (id: string) => getLink('admin.organization.programDetail', { id })
+  // Route definitions (must be before handlers that use them)
+  const sportsRoute = getLink('admin.sports.list')
+  const programsRoute = getLink('admin.programs.list')
   const formsRoute = getLink('admin.organization.forms')
   const structureRoute = getLink('admin.organization.structure')
+  const levelsRoute = getLink('admin.levels.list')
+  const teamsRoute = getLink('admin.teams.list')
+
+  // Navigation handlers with validation
+  const handleNavigateToProgramDetail = useCallback(
+    (programId: string) => {
+      if (!programId || !programId.trim()) {
+        setActionError('Program ID is required to view program details.')
+        return
+      }
+      const route = getLink('admin.programs.detail', { id: programId.trim() })
+      navigate(route)
+    },
+    [navigate]
+  )
+
+  const handleNavigateToSports = useCallback(() => {
+    navigate(sportsRoute)
+  }, [navigate])
+
+  const handleNavigateToAddProgram = useCallback(
+    (sportId: string) => {
+      if (isOffline) {
+        setActionError('You appear to be offline. Please reconnect and try again.')
+        return
+      }
+      if (USE_FAKE_DATA) {
+        setActionError('This action is not available in demo mode. Please sign in to add programs.')
+        return
+      }
+      if (!sportId || !sportId.trim()) {
+        setActionError('Sport ID is required to add a program.')
+        return
+      }
+      const route = `${formsRoute}?type=program&sport_id=${encodeURIComponent(sportId.trim())}&returnUrl=${encodeURIComponent(programsRoute)}`
+      navigate(route)
+    },
+    [navigate, isOffline, formsRoute, programsRoute]
+  )
+
+  const handleNavigateToEditProgram = useCallback(
+    (programId: string) => {
+      if (!programId || !programId.trim()) {
+        setActionError('Program ID is required to edit program.')
+        return
+      }
+      const route = `${formsRoute}?edit=program&id=${encodeURIComponent(programId.trim())}&returnUrl=${encodeURIComponent(programsRoute)}`
+      navigate(route)
+    },
+    [navigate, formsRoute, programsRoute]
+  )
+
+  const handleNavigateToAddLevel = useCallback(
+    (programId: string, sportId: string | null | undefined) => {
+      if (isOffline) {
+        setActionError('You appear to be offline. Please reconnect and try again.')
+        return
+      }
+      if (USE_FAKE_DATA) {
+        setActionError('This action is not available in demo mode. Please sign in to add levels.')
+        return
+      }
+      if (!programId || !programId.trim()) {
+        setActionError('Program ID is required to add a level.')
+        return
+      }
+      if (!sportId || !sportId.trim()) {
+        setActionError('Sport ID is required to add a level.')
+        return
+      }
+      const route = `${formsRoute}?type=level&program_id=${encodeURIComponent(programId.trim())}&sport_id=${encodeURIComponent(sportId.trim())}&returnUrl=${encodeURIComponent(programsRoute)}`
+      navigate(route)
+    },
+    [navigate, isOffline, formsRoute, programsRoute]
+  )
+
+  const handleNavigateToLevels = useCallback(
+    (programId: string) => {
+      if (!programId || !programId.trim()) {
+        setActionError('Program ID is required to view levels.')
+        return
+      }
+      const route = `${levelsRoute}?program_id=${encodeURIComponent(programId.trim())}`
+      navigate(route)
+    },
+    [navigate, levelsRoute]
+  )
+
+  const handleNavigateToTeams = useCallback(
+    (programId: string) => {
+      if (!programId || !programId.trim()) {
+        setActionError('Program ID is required to view teams.')
+        return
+      }
+      const route = `${teamsRoute}?program_id=${encodeURIComponent(programId.trim())}`
+      navigate(route)
+    },
+    [navigate, teamsRoute]
+  )
+
+  const handleDeleteProgram = useCallback(
+    (programId: string, programName: string) => {
+      if (!programId || !programId.trim()) {
+        setActionError('Program ID is required to remove program.')
+        return
+      }
+
+      // Block if offline
+      if (isOffline) {
+        setActionError('You appear to be offline. Please reconnect and try again.')
+        return
+      }
+
+      // Block if in demo mode
+      if (USE_FAKE_DATA) {
+        setActionError('This action is not available in demo mode. Please sign in to remove programs from your organization.')
+        return
+      }
+
+      setProgramToDelete({ id: programId.trim(), name: programName })
+    },
+    [isOffline]
+  )
+
+  const confirmDeleteProgram = useCallback(
+    async (_reason: string) => {
+      if (!programToDelete || !programToDelete.id) {
+        setActionError('Program information is missing. Please try again.')
+        setProgramToDelete(null)
+        return
+      }
+
+      setDeletingProgramId(programToDelete.id)
+      setActionError(null)
+      setSuccessMessage(null)
+
+      try {
+        const result = await deleteProgram(context, programToDelete.id)
+
+        if (result.error) {
+          setActionError(result.error.message || 'Failed to remove program. Please try again.')
+        } else {
+          // Remove from local state
+          setPrograms((prev) => prev.filter((p) => p.id !== programToDelete.id))
+          setSuccessMessage(`"${programToDelete.name}" has been removed from your organization.`)
+
+          // Clear success message after 5 seconds
+          setTimeout(() => {
+            setSuccessMessage(null)
+          }, 5000)
+        }
+      } catch (err) {
+        console.error('[Programs] Unexpected error deleting program:', err)
+        setActionError(err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.')
+      } finally {
+        setDeletingProgramId(null)
+        setProgramToDelete(null)
+      }
+    },
+    [context, programToDelete]
+  )
+
+  const handleFilterChange = useCallback(
+    (value: string) => {
+      setFilterSportId(value)
+      setActionError(null)
+    },
+    []
+  )
 
   if (loading) {
     return (
@@ -187,6 +319,7 @@ export default function Programs() {
   if (error) {
     return (
       <div className="max-w-5xl mx-auto p-8">
+        <OfflineBanner />
         <AdminPageHeader
           title="Programs"
           subtitle="Manage programs within your sports."
@@ -195,8 +328,11 @@ export default function Programs() {
             { label: 'Programs' },
           ]}
         />
-        <div className="p-6 bg-red-50 text-red-700 rounded-xl border border-red-100">
-          {error}
+        <div className="p-6 bg-red-50 text-red-700 rounded-xl border border-red-100 mb-4">
+          <div className="font-medium mb-2">{error}</div>
+          <Button variant="ghost" size="dense" onClick={loadProgramsData} disabled={loading}>
+            Retry
+          </Button>
         </div>
       </div>
     )
@@ -232,22 +368,33 @@ export default function Programs() {
             <Select
               label="Filter by sport"
               value={filterSportId}
-              onChange={(e) => setFilterSportId(e.target.value)}
+              onChange={(e) => handleFilterChange(e.target.value)}
               options={[
                 { value: '', label: 'All sports' },
                 ...sports.map((s) => ({ value: s.id, label: s.name })),
               ]}
+              disabled={loading}
+              aria-label="Filter programs by sport"
             />
           </div>
           {filterSportId && (
-            <Link 
-              to={`${formsRoute}?type=program&sport_id=${filterSportId}&returnUrl=${encodeURIComponent(programsRoute)}`}
-              className={`w-full md:w-auto ${isOffline || USE_FAKE_DATA ? 'pointer-events-none opacity-50' : ''}`}
+            <button
+              onClick={() => handleNavigateToAddProgram(filterSportId)}
+              disabled={loading || isOffline || USE_FAKE_DATA || !filterSportId}
+              className="w-full md:w-auto inline-flex items-center justify-center h-12 md:h-10 px-6 font-medium text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label={USE_FAKE_DATA ? 'Sign in to add program' : `Add program for ${sportById.get(filterSportId)?.name || 'selected sport'}`}
+              title={
+                isOffline
+                  ? 'Offline - cannot add programs'
+                  : USE_FAKE_DATA
+                    ? 'Sign in to add programs'
+                    : !filterSportId
+                      ? 'Select a sport first'
+                      : undefined
+              }
             >
-              <button className="w-full md:w-auto inline-flex items-center justify-center h-12 md:h-10 px-6 font-medium text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900">
-                {USE_FAKE_DATA ? 'Sign in to Add Program' : 'Add Program'}
-              </button>
-            </Link>
+              {USE_FAKE_DATA ? 'Sign in to Add Program' : 'Add Program'}
+            </button>
           )}
         </div>
       </div>
@@ -265,20 +412,32 @@ export default function Programs() {
                 : 'Start by selecting a sport or create a program from the Sports page.'}
             </p>
             {filterSportId ? (
-              <Link 
-                to={`${formsRoute}?type=program&sport_id=${filterSportId}&returnUrl=${encodeURIComponent(programsRoute)}`}
-                className={isOffline || USE_FAKE_DATA ? 'pointer-events-none opacity-50' : ''}
+              <button
+                onClick={() => handleNavigateToAddProgram(filterSportId)}
+                disabled={loading || isOffline || USE_FAKE_DATA || !filterSportId}
+                className="inline-flex items-center justify-center h-12 md:h-10 px-6 font-medium text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label={USE_FAKE_DATA ? 'Sign in to add program' : `Add program for ${sportById.get(filterSportId)?.name || 'selected sport'}`}
+                title={
+                  isOffline
+                    ? 'Offline - cannot add programs'
+                    : USE_FAKE_DATA
+                      ? 'Sign in to add programs'
+                      : !filterSportId
+                        ? 'Select a sport first'
+                        : undefined
+                }
               >
-                <button className="inline-flex items-center justify-center h-12 md:h-10 px-6 font-medium text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900">
-                  {USE_FAKE_DATA ? 'Sign in to Add Program' : 'Add Program'}
-                </button>
-              </Link>
+                {USE_FAKE_DATA ? 'Sign in to Add Program' : 'Add Program'}
+              </button>
             ) : (
-              <Link to={sportsRoute}>
-                <button className="inline-flex items-center justify-center h-12 md:h-10 px-6 font-medium text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900">
-                  View Sports
-                </button>
-              </Link>
+              <button
+                onClick={handleNavigateToSports}
+                disabled={loading}
+                className="inline-flex items-center justify-center h-12 md:h-10 px-6 font-medium text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Navigate to sports list"
+              >
+                View Sports
+              </button>
             )}
           </div>
         ) : (
@@ -296,18 +455,23 @@ export default function Programs() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <Link to={programDetailRoute(program.id)} className="inline-block">
-                        <h3 className="text-lg font-bold text-slate-900 hover:underline">
-                          {program.name}
-                        </h3>
-                      </Link>
+                      <button
+                        onClick={() => handleNavigateToProgramDetail(program.id)}
+                        disabled={loading || !program.id}
+                        className="text-left text-lg font-bold text-slate-900 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label={`View details for ${program.name}`}
+                      >
+                        {program.name}
+                      </button>
                       {sport && (
-                        <Link 
-                          to={`${sportsRoute}`}
-                          className="text-sm font-medium text-slate-500 hover:text-slate-700"
+                        <button
+                          onClick={handleNavigateToSports}
+                          disabled={loading}
+                          className="text-sm font-medium text-slate-500 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          aria-label={`View ${sport.name} sport details`}
                         >
                           ({sport.name})
-                        </Link>
+                        </button>
                       )}
                     </div>
                     <div className="flex items-center gap-4 text-sm text-slate-500">
@@ -315,32 +479,57 @@ export default function Programs() {
                         {program.gender_category}
                       </span>
                       <span>•</span>
-                      <span>{levelCount} {levelCount === 1 ? 'level' : 'levels'}</span>
+                      <button
+                        onClick={() => handleNavigateToLevels(program.id)}
+                        disabled={loading || !program.id}
+                        className="hover:text-slate-700 hover:underline disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        aria-label={`View ${levelCount} ${levelCount === 1 ? 'level' : 'levels'} for ${program.name}`}
+                      >
+                        {levelCount} {levelCount === 1 ? 'level' : 'levels'}
+                      </button>
                       <span>•</span>
-                      <span>{totalTeams} {totalTeams === 1 ? 'team' : 'teams'}</span>
+                      <button
+                        onClick={() => handleNavigateToTeams(program.id)}
+                        disabled={loading || !program.id}
+                        className="hover:text-slate-700 hover:underline disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        aria-label={`View ${totalTeams} ${totalTeams === 1 ? 'team' : 'teams'} for ${program.name}`}
+                      >
+                        {totalTeams} {totalTeams === 1 ? 'team' : 'teams'}
+                      </button>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <Link 
-                      to={`${formsRoute}?edit=program&id=${program.id}&returnUrl=${encodeURIComponent(programsRoute)}`}
+                    <button
+                      onClick={() => handleNavigateToEditProgram(program.id)}
+                      disabled={loading || !program.id || deletingProgramId === program.id}
+                      className="inline-flex items-center justify-center h-9 px-4 font-medium text-xs text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 hover:border-slate-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      aria-label={`Edit ${program.name}`}
                     >
-                      <button className="inline-flex items-center justify-center h-9 px-4 font-medium text-xs text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 hover:border-slate-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-200">
-                        Edit
-                      </button>
-                    </Link>
-                    <Link 
-                      to={`${formsRoute}?type=level&program_id=${program.id}&sport_id=${program.sport_id}&returnUrl=${encodeURIComponent(programsRoute)}`}
-                      className={isOffline || USE_FAKE_DATA ? 'pointer-events-none opacity-50' : ''}
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleNavigateToAddLevel(program.id, program.sport_id)}
+                      disabled={loading || isOffline || USE_FAKE_DATA || !program.id || !program.sport_id || deletingProgramId === program.id}
+                      className="inline-flex items-center justify-center h-9 px-4 font-medium text-xs text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 hover:border-slate-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      aria-label={`Add level to ${program.name}`}
+                      title={
+                        isOffline
+                          ? 'Offline - cannot add levels'
+                          : USE_FAKE_DATA
+                            ? 'Sign in to add levels'
+                            : !program.id || !program.sport_id
+                              ? 'Missing required information'
+                              : undefined
+                      }
                     >
-                      <button className="inline-flex items-center justify-center h-9 px-4 font-medium text-xs text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 hover:border-slate-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-200">
-                        Add Level
-                      </button>
-                    </Link>
+                      Add Level
+                    </button>
                     <button
                       onClick={() => handleDeleteProgram(program.id, program.name)}
-                      disabled={deletingProgramId === program.id || isOffline || USE_FAKE_DATA || levelCount > 0}
+                      disabled={deletingProgramId === program.id || loading || isOffline || USE_FAKE_DATA || levelCount > 0 || !program.id}
                       className="inline-flex items-center justify-center h-9 px-4 font-medium text-xs text-red-700 bg-white border border-red-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      aria-label={`Remove ${program.name} from organization`}
                       title={
                         USE_FAKE_DATA 
                           ? 'Sign in to remove program' 
@@ -353,12 +542,12 @@ export default function Programs() {
                     >
                       {deletingProgramId === program.id ? (
                         <>
-                          <span className="material-symbols-outlined animate-spin" style={{ fontSize: '16px', marginRight: '4px' }}>refresh</span>
+                          <span className="material-symbols-outlined animate-spin" style={{ fontSize: '16px', marginRight: '4px' }} aria-hidden="true">refresh</span>
                           Removing...
                         </>
                       ) : (
                         <>
-                          <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '4px' }}>delete</span>
+                          <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '4px' }} aria-hidden="true">delete</span>
                           Remove
                         </>
                       )}

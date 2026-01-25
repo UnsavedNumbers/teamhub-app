@@ -336,6 +336,22 @@ export default function SidebarOrganizationSwitcher() {
   // Bug 5: Keyboard navigation
   const handleKeyDown = useCallback((event: Event) => {
     const keyboardEvent = event as KeyboardEvent
+    
+    // Don't trigger keyboard shortcuts when user is typing in input fields
+    const activeElement = document.activeElement
+    if (activeElement) {
+      const tagName = activeElement.tagName.toLowerCase()
+      const isInputField = 
+        tagName === 'input' ||
+        tagName === 'textarea' ||
+        activeElement.getAttribute('contenteditable') === 'true' ||
+        (activeElement as HTMLElement).isContentEditable
+      
+      if (isInputField) {
+        return // Skip keyboard shortcut when typing in input fields
+      }
+    }
+    
     if (!isOpenRef.current) {
       if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') {
         keyboardEvent.preventDefault()

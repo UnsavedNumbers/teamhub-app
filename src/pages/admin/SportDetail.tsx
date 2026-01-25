@@ -31,11 +31,11 @@ export default function SportDetail() {
   const [uploadingIcon, setUploadingIcon] = useState(false)
   const [deletingIcon, setDeletingIcon] = useState(false)
 
-  const sportsRoute = getLink('admin.organization.sports')
-  const programsRoute = getLink('admin.organization.programs')
+  const sportsRoute = getLink('admin.sports.list')
+  const programsRoute = getLink('admin.programs.list')
   const formsRoute = getLink('admin.organization.forms')
   const structureRoute = getLink('admin.organization.structure')
-  const detailRoute = getLink('admin.organization.sportDetail', { id: sportId })
+  const detailRoute = getLink('admin.sports.detail', { id: sportId })
 
   const iconUrl = useMemo(() => getSportIconUrl(sport?.icon ?? null), [sport?.icon])
   const isColorDirty = useMemo(() => (sport?.color ?? '#137fec') !== pendingColor, [sport?.color, pendingColor])

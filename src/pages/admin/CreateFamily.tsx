@@ -4,6 +4,7 @@ import { AdminPageHeader, Card, Input, Button, ErrorState } from '../../componen
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { useUserContext } from '../../hooks/useUserContext'
 import { createFamily } from '../../data/services/familyService'
+import { getLink } from '../../utils/routes'
 
 export default function CreateFamily() {
   const navigate = useNavigate()
@@ -30,7 +31,7 @@ export default function CreateFamily() {
 
       if (createError) throw createError
       if (data) {
-        navigate(`/admin/families/${data.id}`)
+        navigate(getLink('admin.guardians.detail', { id: data.id }))
       }
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to create family'))
@@ -75,7 +76,7 @@ export default function CreateFamily() {
               <Button 
                 type="button" 
                 variant="blue" 
-                onClick={() => navigate('/admin/families')}
+                onClick={() => navigate(getLink('admin.guardians.list'))}
                 disabled={loading}
               >
                 Cancel

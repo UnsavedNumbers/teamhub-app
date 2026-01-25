@@ -1,0 +1,95 @@
+<mjml>
+  <mj-head>
+    <mj-title>New Message from {{sender_name}}</mj-title>
+    <mj-preview>You have a new message in Team Hub</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Arial, sans-serif" />
+      <mj-text font-size="14px" color="#333333" line-height="1.5" />
+      <mj-section background-color="#ffffff" />
+    </mj-attributes>
+    <mj-style>
+      .button {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        padding: 12px 24px !important;
+        text-decoration: none !important;
+        border-radius: 6px !important;
+        display: inline-block !important;
+        font-weight: 600 !important;
+      }
+      .footer-text {
+        color: #666666 !important;
+        font-size: 12px !important;
+      }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f8fafc">
+    <mj-section padding="20px">
+      <mj-column>
+        <mj-text align="center" font-size="24px" font-weight="bold" color="#1e293b">
+          YouthSports Team Hub
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="30px 20px">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold" color="#1e293b">
+          New Message from {{sender_name}}
+        </mj-text>
+
+        <mj-text padding-top="20px">
+          Hi {{recipient_name}},
+        </mj-text>
+
+        <mj-text padding-top="10px">
+          You have a new message {{#if team_name}}for {{team_name}}{{/if}}:
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#ffffff" border-radius="8px" padding="20px" border="1px solid #e2e8f0">
+      <mj-column>
+        <mj-text font-weight="bold">
+          From: {{sender_name}} {{#if sender_role}}({{sender_role}}){{/if}}
+        </mj-text>
+        <mj-text padding-top="10px" font-style="italic">
+          "{{message_content}}"
+        </mj-text>
+        {{#if message_subject}}
+        <mj-text padding-top="10px" font-weight="bold">
+          Subject: {{message_subject}}
+        </mj-text>
+        {{/if}}
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="30px 20px">
+      <mj-column>
+        <mj-button css-class="button" href="{{url}}">
+          View Message
+        </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="20px">
+      <mj-column>
+        <mj-text padding-top="20px">
+          You can reply to this message through the Team Hub app.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="20px" background-color="#f1f5f9">
+      <mj-column>
+        <mj-text align="center" color="#666666" font-size="12px">
+          You're receiving this email because you're part of {{organization_name}} on YouthSports Team Hub.<br>
+          <a href="{{unsubscribe_url}}">Unsubscribe</a> | <a href="{{preferences_url}}">Email Preferences</a>
+        </mj-text>
+        <mj-text align="center" color="#666666" font-size="12px" padding-top="10px">
+          © 2026 YouthSports Team Hub. All rights reserved.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
