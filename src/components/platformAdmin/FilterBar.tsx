@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { DatePicker } from './DatePicker'
 
 interface FilterOption {
   value: string
@@ -195,23 +196,18 @@ export default function FilterBar({
           <>
             <div style={{ width: '150px' }}>
               <div className="pa-form-group" style={{ marginBottom: 0 }}>
-                <input
-                  type="date"
-                  className="pa-input"
+                <DatePicker
                   value={dateFrom}
-                  onChange={(e) => onDateFromChange(e.target.value)}
-                  aria-label="From date"
+                  onChange={onDateFromChange}
                 />
               </div>
             </div>
             <div style={{ width: '150px' }}>
               <div className="pa-form-group" style={{ marginBottom: 0 }}>
-                <input
-                  type="date"
-                  className="pa-input"
+                <DatePicker
                   value={dateTo}
-                  onChange={(e) => onDateToChange(e.target.value)}
-                  aria-label="To date"
+                  onChange={onDateToChange}
+                  minValue={dateFrom}
                 />
               </div>
             </div>

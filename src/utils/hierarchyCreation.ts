@@ -7,6 +7,8 @@
  * Season is org-scoped and separate from this hierarchy.
  */
 
+import { getLink } from './routes'
+
 export type FormType = 'sport' | 'program' | 'level' | 'team' | 'season'
 
 /**
@@ -90,18 +92,18 @@ export function getEntityLabelKey(level: FormType): string {
  * @returns The route path to the list page for that entity type
  * 
  * @example
- * getListPageRoute('sport') // returns '/admin/organization/structure/sports'
- * getListPageRoute('program') // returns '/admin/organization/structure/programs'
+ * getListPageRoute('sport') // returns '/admin/organization/sports'
+ * getListPageRoute('program') // returns '/admin/organization/programs'
  */
 export function getListPageRoute(entityType: FormType): string {
   const routeMap: Record<FormType, string> = {
-    sport: '/admin/organization/structure/sports',
-    program: '/admin/organization/structure/programs',
-    level: '/admin/organization/structure/levels',
-    team: '/admin/organization/structure/teams',
-    season: '/admin/organization/structure/seasons',
+    sport: getLink('admin.organization.sports'),
+    program: getLink('admin.organization.programs'),
+    level: getLink('admin.organization.levels'),
+    team: getLink('admin.organization.teamsManagement'),
+    season: getLink('admin.organization.seasons'),
   }
-  return routeMap[entityType] ?? '/admin/organization/structure'
+  return routeMap[entityType] ?? getLink('admin.organization.structure')
 }
 
 /**

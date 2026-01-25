@@ -10,7 +10,8 @@ import {
   Card, 
   Button, 
   Input, 
-  Select 
+  Select,
+  DatePicker 
 } from '../../components/platformAdmin'
 import { FileUpload } from '../../components/common/FileUpload'
 
@@ -178,8 +179,8 @@ export default function CreateTravelPlan() {
             <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
               <Controller name="destination_city" control={control} render={({ field }) => <Input {...field} label="Destination City" />} />
               <Controller name="destination_state" control={control} render={({ field }) => <Input {...field} label="Destination State" />} />
-              <Controller name="start_date" control={control} rules={{ required: 'Start date is required' }} render={({ field }) => <Input {...field} label="Start Date" type="date" required />} />
-              <Controller name="end_date" control={control} rules={{ required: 'End date is required' }} render={({ field }) => <Input {...field} label="End Date" type="date" required />} />
+              <Controller name="start_date" control={control} rules={{ required: 'Start date is required' }} render={({ field }) => <DatePicker {...field} label="Start Date" required />} />
+              <Controller name="end_date" control={control} rules={{ required: 'End date is required' }} render={({ field }) => <DatePicker {...field} label="End Date" required />} />
             </div>
 
             <h3 className="pa-h3 pa-mb-4 pa-mt-6">VENUE & HOTEL</h3>

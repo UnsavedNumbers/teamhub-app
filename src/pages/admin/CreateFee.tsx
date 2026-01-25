@@ -13,6 +13,7 @@ import {
   Button, 
   Input, 
   Select,
+  DatePicker,
   Checkbox
 } from '../../components/platformAdmin'
 
@@ -309,7 +310,7 @@ export default function CreateFee() {
                     name="due_date" 
                     control={control} 
                     render={({ field }) => (
-                        <Input {...field} label="Due Date" type="date" helper="Optional" />
+                        <DatePicker {...field} label="Due Date" helper="Optional" />
                     )} 
                 />
             </div>

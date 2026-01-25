@@ -91,7 +91,7 @@ export interface TeamSeason {
 export interface CreateTeamDTO {
     org_id: string
     name: string
-    level_id: string
+    level_id?: string | null
     sport_id?: string | null
     program_id?: string | null
     max_roster_size?: number | null

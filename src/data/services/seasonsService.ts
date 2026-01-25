@@ -231,6 +231,30 @@ export async function updateSeason(
   }
 }
 
+export async function isSeasonEmpty(
+  _context: UserContext,
+  seasonId: string
+): Promise<{ isEmpty: boolean; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    // For fake data, assume seasons are empty
+    return { isEmpty: true, error: null }
+  }
+
+  try {
+    const { count, error } = await supabase
+      .from('team_seasons')
+      .select('*', { count: 'exact', head: true })
+      .eq('season_id', seasonId)
+
+    if (error) throw error
+    return { isEmpty: (count ?? 0) === 0, error: null }
+  } catch (err) {
+    console.error('[seasonsService] Error checking if season is empty:', err)
+    return { isEmpty: false, error: err instanceof Error ? err : new Error('Failed to check if season is empty') }
+  }
+}
+
 export async function deleteSeason(
   context: UserContext,
   seasonId: string

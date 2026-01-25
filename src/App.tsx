@@ -83,6 +83,7 @@ const Programs = lazy(() => import('./pages/admin/Programs'))
 const LevelsManagement = lazy(() => import('./pages/admin/LevelsManagement'))
 const TeamsManagement = lazy(() => import('./pages/admin/TeamsManagement'))
 const SeasonsManagement = lazy(() => import('./pages/admin/SeasonsManagement'))
+const SeasonDetail = lazy(() => import('./pages/admin/SeasonDetail'))
 const Teams = lazy(() => import('./pages/admin/Teams'))
 const TeamDetail = lazy(() => import('./pages/admin/TeamDetail'))
 const Roster = lazy(() => import('./pages/admin/Roster'))
@@ -284,12 +285,13 @@ function AppWithTheme() {
               <Route index element={<AdminDashboard />} />
             
               {/* Organizational Structure */}
-              <Route path="organization/structure" element={<OrganizationStructureOverview />} />
-              <Route path="organization/structure/sports" element={<Sports />} />
-              <Route path="organization/structure/programs" element={<Programs />} />
-              <Route path="organization/structure/levels" element={<LevelsManagement />} />
-              <Route path="organization/structure/teams" element={<TeamsManagement />} />
-              <Route path="organization/structure/seasons" element={<SeasonsManagement />} />
+              <Route path="organization" element={<OrganizationStructureOverview />} />
+              <Route path="organization/sports" element={<Sports />} />
+              <Route path="organization/programs" element={<Programs />} />
+              <Route path="organization/levels" element={<LevelsManagement />} />
+              <Route path="organization/teams" element={<TeamsManagement />} />
+              <Route path="organization/seasons" element={<SeasonsManagement />} />
+              <Route path="organization/seasons/:id" element={<SeasonDetail />} />
 
               {/* Teams (legacy) */}
               <Route path="teams" element={<Teams />} />
@@ -342,7 +344,7 @@ function AppWithTheme() {
             
               {/* Organization */}
               <Route path="organization" element={<OrganizationSettings />} />
-              <Route path="organization/structure/forms" element={<OrganizationStructureForms />} />
+              <Route path="organization/forms" element={<OrganizationStructureForms />} />
               <Route path="organization/users" element={<OrganizationUsers />} />
               <Route path="organization/billing" element={<OrganizationBilling />} />
               <Route path="organization/billing/plan-selection" element={<PlanSelection />} />

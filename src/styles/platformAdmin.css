@@ -1229,6 +1229,320 @@ html.dark .pa-input:focus {
     resize: vertical;
 }
 
+/* DatePicker - React Aria Components */
+.pa-datepicker-group {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 44px;
+    
+    @media (max-width: 768px) {
+        height: 48px;
+    }
+    
+    border: 1px solid var(--pa-n200);
+    border-radius: var(--pa-radius-s);
+    background: var(--pa-surface);
+    transition: all var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.pa-datepicker-group:hover {
+    border-color: var(--pa-n300);
+}
+
+.pa-datepicker-group:focus-within {
+    border-color: var(--pa-n700);
+    outline: 2px solid rgba(43, 52, 61, 0.25);
+    box-shadow: var(--pa-shadow-1);
+}
+
+.pa-datepicker-group--error {
+    border-color: var(--pa-n800);
+}
+
+.pa-datepicker-group--error:focus-within {
+    outline-color: rgba(11, 15, 20, 0.25);
+}
+
+html.dark .pa-datepicker-group {
+    background: var(--pa-surface);
+    border-color: #374151;
+}
+
+html.dark .pa-datepicker-group:hover {
+    border-color: #4b5563;
+}
+
+html.dark .pa-datepicker-group:focus-within {
+    border-color: #6b7280;
+    outline: 2px solid rgba(107, 114, 128, 0.25);
+}
+
+.pa-datepicker-input {
+    flex: 1;
+    display: flex;
+    padding: 0 var(--pa-space-3);
+    font: var(--pa-text-body-m);
+    color: var(--pa-n900);
+}
+
+html.dark .pa-datepicker-input {
+    color: #f9fafb;
+}
+
+.pa-datepicker-segment {
+    padding: 2px;
+    font: var(--pa-text-body-m);
+    color: var(--pa-n900);
+    border-radius: 4px;
+    outline: none;
+}
+
+html.dark .pa-datepicker-segment {
+    color: #f9fafb;
+}
+
+.pa-datepicker-segment:focus {
+    background: var(--pa-n100);
+    color: var(--pa-n900);
+}
+
+html.dark .pa-datepicker-segment:focus {
+    background: #374151;
+    color: #f9fafb;
+}
+
+.pa-datepicker-segment[data-placeholder] {
+    color: var(--pa-n500);
+}
+
+html.dark .pa-datepicker-segment[data-placeholder] {
+    color: #9ca3af;
+}
+
+.pa-datepicker-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 var(--pa-space-2);
+    margin-right: var(--pa-space-1);
+    background: transparent;
+    border: none;
+    color: var(--pa-n500);
+    cursor: pointer;
+    border-radius: var(--pa-radius-s);
+    transition: all var(--pa-motion-fast) var(--pa-ease-out);
+}
+
+.pa-datepicker-button:hover {
+    background: var(--pa-n100);
+    color: var(--pa-n700);
+}
+
+html.dark .pa-datepicker-button {
+    color: #9ca3af;
+}
+
+html.dark .pa-datepicker-button:hover {
+    background: #374151;
+    color: #d1d5db;
+}
+
+.pa-datepicker-button:focus-visible {
+    outline: 2px solid var(--pa-n700);
+    outline-offset: 2px;
+}
+
+.pa-datepicker-popover {
+    background: var(--pa-surface);
+    border: 1px solid var(--pa-n200);
+    border-radius: var(--pa-radius-m);
+    box-shadow: var(--pa-shadow-4);
+    margin-top: var(--pa-space-1);
+    overflow: hidden;
+}
+
+html.dark .pa-datepicker-popover {
+    background: #1f2937;
+    border-color: #374151;
+}
+
+.pa-datepicker-popover[data-entering] {
+    animation: slideIn 200ms;
+}
+
+.pa-datepicker-popover[data-exiting] {
+    animation: slideOut 200ms;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+}
+
+.pa-datepicker-dialog {
+    padding: var(--pa-space-4);
+    outline: none;
+}
+
+.pa-datepicker-calendar {
+    width: 280px;
+}
+
+.pa-datepicker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--pa-space-3);
+}
+
+.pa-datepicker-heading {
+    flex: 1;
+    text-align: center;
+    font: var(--pa-text-heading-xs);
+    color: var(--pa-n900);
+    margin: 0;
+}
+
+html.dark .pa-datepicker-heading {
+    color: #f9fafb;
+}
+
+.pa-datepicker-nav-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: none;
+    border-radius: var(--pa-radius-s);
+    color: var(--pa-n700);
+    cursor: pointer;
+    transition: all var(--pa-motion-fast) var(--pa-ease-out);
+}
+
+.pa-datepicker-nav-button:hover {
+    background: var(--pa-n100);
+}
+
+html.dark .pa-datepicker-nav-button {
+    color: #d1d5db;
+}
+
+html.dark .pa-datepicker-nav-button:hover {
+    background: #374151;
+}
+
+.pa-datepicker-nav-button:focus-visible {
+    outline: 2px solid var(--pa-n700);
+    outline-offset: 2px;
+}
+
+.pa-datepicker-nav-button[data-disabled] {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.pa-datepicker-grid {
+    width: 100%;
+    border-spacing: 0;
+}
+
+.pa-datepicker-weekday {
+    font: var(--pa-text-body-s);
+    font-weight: 600;
+    color: var(--pa-n600);
+    text-align: center;
+    padding: var(--pa-space-1);
+}
+
+html.dark .pa-datepicker-weekday {
+    color: #9ca3af;
+}
+
+.pa-datepicker-cell {
+    width: 36px;
+    height: 36px;
+    text-align: center;
+    font: var(--pa-text-body-m);
+    color: var(--pa-n900);
+    border-radius: var(--pa-radius-s);
+    cursor: pointer;
+    outline: none;
+    border: 2px solid transparent;
+    transition: all var(--pa-motion-fast) var(--pa-ease-out);
+}
+
+html.dark .pa-datepicker-cell {
+    color: #f9fafb;
+}
+
+.pa-datepicker-cell:hover {
+    background: var(--pa-n100);
+}
+
+html.dark .pa-datepicker-cell:hover {
+    background: #374151;
+}
+
+.pa-datepicker-cell:focus-visible {
+    border-color: var(--pa-n700);
+}
+
+.pa-datepicker-cell[data-selected] {
+    background: var(--pa-n900);
+    color: var(--pa-white);
+}
+
+html.dark .pa-datepicker-cell[data-selected] {
+    background: #3b82f6;
+    color: #ffffff;
+}
+
+.pa-datepicker-cell[data-disabled] {
+    color: var(--pa-n300);
+    cursor: not-allowed;
+}
+
+html.dark .pa-datepicker-cell[data-disabled] {
+    color: #6b7280;
+}
+
+.pa-datepicker-cell[data-outside-month] {
+    color: var(--pa-n400);
+}
+
+html.dark .pa-datepicker-cell[data-outside-month] {
+    color: #6b7280;
+}
+
+.pa-datepicker-cell[data-unavailable] {
+    text-decoration: line-through;
+    color: var(--pa-n300);
+}
+
+html.dark .pa-datepicker-cell[data-unavailable] {
+    color: #6b7280;
+}
+
 /* Checkbox */
 .pa-checkbox {
     display: flex;

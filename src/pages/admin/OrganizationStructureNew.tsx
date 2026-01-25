@@ -4,6 +4,7 @@ import { useOrganization } from '../../contexts/OrganizationContext'
 import { useUserContext } from '../../hooks/useUserContext'
 import { AdminPageHeader } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
+import { getLink } from '../../utils/routes'
 import { getSports, getPrograms } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
 import { getTeams } from '../../data/services/teamsService'
@@ -146,7 +147,7 @@ export default function OrganizationStructureNew() {
         }
         subtitle={`${currentOrganization?.name || 'Organization'} — Structural setup and team management`}
         breadcrumbs={[
-          { label: 'Organizations', path: '/admin/organization/structure' },
+          { label: 'Organizations', path: getLink('admin.organization.structure') },
           { label: currentOrganization?.name || 'Organization' },
         ]}
       />
@@ -185,33 +186,33 @@ export default function OrganizationStructureNew() {
             <QuickActionButton
               icon="sports_basketball"
               label="Add Sport"
-              onClick={() => navigate('/admin/organization/structure/forms?type=sport')}
+              onClick={() => navigate(`${getLink('admin.organization.forms')}?type=sport`)}
             />
             <QuickActionButton
               icon="category"
               label="Add Program"
-              onClick={() => navigate('/admin/organization/structure/forms?type=program')}
+              onClick={() => navigate(`${getLink('admin.organization.forms')}?type=program`)}
               disabled={!canCreateProgram}
               tooltip={!canCreateProgram ? 'Add a Sport first' : undefined}
             />
             <QuickActionButton
               icon="stairs"
               label="Add Level"
-              onClick={() => navigate('/admin/organization/structure/forms?type=level')}
+              onClick={() => navigate(`${getLink('admin.organization.forms')}?type=level`)}
               disabled={!canCreateLevel}
               tooltip={!canCreateLevel ? 'Add a Program first' : undefined}
             />
             <QuickActionButton
               icon="groups"
               label="Add Team"
-              onClick={() => navigate('/admin/organization/structure/forms?type=team')}
+              onClick={() => navigate(`${getLink('admin.organization.forms')}?type=team`)}
               disabled={!canCreateTeam}
               tooltip={!canCreateTeam ? 'Add a Level first' : undefined}
             />
             <QuickActionButton
               icon="calendar_today"
               label="Add Season"
-              onClick={() => navigate('/admin/organization/structure/forms?type=season')}
+              onClick={() => navigate(`${getLink('admin.organization.forms')}?type=season`)}
             />
             <QuickActionButton
               icon="person_add"

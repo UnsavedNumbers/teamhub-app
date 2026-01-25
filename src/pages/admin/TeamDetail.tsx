@@ -9,7 +9,8 @@ import {
   Card, 
   Button, 
   Badge, 
-  Input, 
+  Input,
+  DatePicker, 
   EmptyState 
 } from '../../components/platformAdmin'
 
@@ -198,8 +199,8 @@ export default function TeamDetail() {
             {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
             <div className="pa-flex pa-flex-col pa-gap-4">
               <Input label="Season Name" value={seasonForm.name} onChange={e => setSeasonForm({...seasonForm, name: e.target.value})} placeholder="e.g. Spring 2024" />
-              <Input label="Start Date" type="date" value={seasonForm.start_date} onChange={e => setSeasonForm({...seasonForm, start_date: e.target.value})} />
-              <Input label="End Date" type="date" value={seasonForm.end_date} onChange={e => setSeasonForm({...seasonForm, end_date: e.target.value})} />
+              <DatePicker label="Start Date" value={seasonForm.start_date} onChange={value => setSeasonForm({...seasonForm, start_date: value})} />
+              <DatePicker label="End Date" value={seasonForm.end_date} onChange={value => setSeasonForm({...seasonForm, end_date: value})} minValue={seasonForm.start_date} />
             </div>
             <div className="pa-flex pa-gap-3 pa-mt-6 pa-justify-end">
               <Button variant="blue" onClick={() => setShowSeasonModal(false)}>Cancel</Button>

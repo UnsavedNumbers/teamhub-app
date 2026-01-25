@@ -4,20 +4,27 @@
  * Table view for organization-wide time periods.
  */
 
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState, useRef } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
-import { getSeasons } from '../../data/services/seasonsService'
+import { getSeasons, deleteSeason, isSeasonEmpty } from '../../data/services/seasonsService'
 import type { Season } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, ConfirmDialog } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 
 export default function SeasonsManagement() {
   const { context, isReady } = useUserContext()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [seasons, setSeasons] = useState<Season[]>([])
+  const [emptySeasons, setEmptySeasons] = useState<Set<string>>(new Set())
+  const [checkingEmpty, setCheckingEmpty] = useState(false)
+  const [seasonToDelete, setSeasonToDelete] = useState<Season | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const checkedSeasonIds = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     if (!isReady) return
@@ -38,6 +45,72 @@ export default function SeasonsManagement() {
 
     load()
   }, [context, isReady])
+
+  // Check which seasons are empty
+  useEffect(() => {
+    if (!isReady || seasons.length === 0 || checkingEmpty) return
+
+    // Get current season IDs
+    const currentSeasonIds = new Set(seasons.map(s => s.id))
+    const seasonIdsString = Array.from(currentSeasonIds).sort().join(',')
+
+    // Only check if the season IDs have changed
+    if (checkedSeasonIds.current.has(seasonIdsString)) return
+
+    const checkEmpty = async () => {
+      setCheckingEmpty(true)
+      const emptySet = new Set<string>()
+
+      for (const season of seasons) {
+        const { isEmpty, error } = await isSeasonEmpty(context, season.id)
+        if (!error && isEmpty) {
+          emptySet.add(season.id)
+        }
+      }
+
+      setEmptySeasons(emptySet)
+      // Clear old entries and add new one
+      checkedSeasonIds.current.clear()
+      checkedSeasonIds.current.add(seasonIdsString)
+      setCheckingEmpty(false)
+    }
+
+    checkEmpty()
+  }, [context, isReady, seasons])
+
+  const handleDeleteClick = (season: Season) => {
+    setSeasonToDelete(season)
+    setDeleteError(null)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!seasonToDelete) return
+
+    setDeleting(true)
+    setDeleteError(null)
+
+    try {
+      const { error } = await deleteSeason(context, seasonToDelete.id)
+      if (error) {
+        setDeleteError(error.message)
+        setDeleting(false)
+        return
+      }
+
+      // Remove the season from the list
+      setSeasons(seasons.filter(s => s.id !== seasonToDelete.id))
+      setEmptySeasons(prev => {
+        const next = new Set(prev)
+        next.delete(seasonToDelete.id)
+        return next
+      })
+      setSeasonToDelete(null)
+      setDeleting(false)
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete season')
+      setDeleting(false)
+    }
+  }
 
   // const statusBadgeStyle = (status: string) => {
   //   const styles = {
@@ -79,7 +152,7 @@ export default function SeasonsManagement() {
             </span>
             <h3 className="pa-h3">No seasons yet</h3>
             <p className="pa-body-m pa-text-muted pa-mb-4">Create your first season to start organizing teams and events.</p>
-            <Link to={`/admin/organization/structure/forms?type=season&returnUrl=${encodeURIComponent('/admin/organization/structure/seasons')}`}>
+            <Link to={`${getLink('admin.organization.forms')}?type=season&returnUrl=${encodeURIComponent(getLink('admin.organization.seasons'))}`}>
               <Button>Add Season</Button>
             </Link>
           </div>
@@ -87,7 +160,7 @@ export default function SeasonsManagement() {
       ) : (
         <>
           <div className="pa-flex pa-justify-end pa-mb-4">
-            <Link to={`/admin/organization/structure/forms?type=season&returnUrl=${encodeURIComponent('/admin/organization/structure/seasons')}`}>
+            <Link to={`${getLink('admin.organization.forms')}?type=season&returnUrl=${encodeURIComponent(getLink('admin.organization.seasons'))}`}>
               <Button>Add Season</Button>
             </Link>
           </div>
@@ -107,7 +180,11 @@ export default function SeasonsManagement() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {seasons.map((season) => (
-                    <tr key={season.id} className="hover:bg-slate-50/80 transition-colors group">
+                    <tr 
+                      key={season.id} 
+                      className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                      onClick={() => navigate(getLink('admin.organization.seasonDetail', { id: season.id }))}
+                    >
                       <td className="py-4 px-6">
                         <div className="font-bold text-slate-900">{season.name}</div>
                       </td>
@@ -125,12 +202,28 @@ export default function SeasonsManagement() {
                           {season.is_active ? 'Active' : 'Upcoming'}
                         </span>
                       </td>
-                      <td className="py-4 px-6 text-right">
-                        <Link to={`${getLink('admin.organization.forms')}?edit=season&id=${season.id}&returnUrl=${encodeURIComponent(getLink('admin.organization.seasons'))}`} className="invisible group-hover:visible focus:visible">
-                          <button className="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors">
-                            Edit
-                          </button>
-                        </Link>
+                      <td className="py-4 px-6 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-3">
+                          <Link to={`${getLink('admin.organization.forms')}?edit=season&id=${season.id}&returnUrl=${encodeURIComponent(getLink('admin.organization.seasons'))}`} className="invisible group-hover:visible focus:visible">
+                            <button className="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors">
+                              Edit
+                            </button>
+                          </Link>
+                          {emptySeasons.has(season.id) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDeleteClick(season)
+                              }}
+                              disabled={deleting}
+                              className="invisible group-hover:visible focus:visible inline-flex items-center justify-center h-8 px-3 font-medium text-xs text-red-700 bg-white border border-red-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Delete empty season"
+                            >
+                              <span className="material-symbols-outlined" style={{ fontSize: '14px', marginRight: '4px' }}>delete</span>
+                              Delete
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -140,6 +233,25 @@ export default function SeasonsManagement() {
           </div>
         </>
       )}
+
+      <ConfirmDialog
+        open={Boolean(seasonToDelete)}
+        title="Delete season?"
+        description={
+          seasonToDelete
+            ? `Are you sure you want to delete "${seasonToDelete.name}"? This action cannot be undone.`
+            : ''
+        }
+        confirmLabel="Delete"
+        variant="danger"
+        loading={deleting}
+        error={deleteError}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => {
+          setSeasonToDelete(null)
+          setDeleteError(null)
+        }}
+      />
     </div>
   )
 }

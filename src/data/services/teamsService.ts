@@ -189,7 +189,7 @@ export async function createTeam(
             id: `demo-team-${Date.now()}`,
             org_id: dto.org_id,
             name: dto.name,
-            level_id: dto.level_id,
+            level_id: dto.level_id ?? null,
             sport_id: dto.sport_id ?? null,
             program_id: dto.program_id ?? null,
             max_roster_size: dto.max_roster_size ?? null,
@@ -218,7 +218,16 @@ export async function createTeam(
             .select()
             .single()
 
-        if (error) throw error
+        if (error) {
+            console.error('[teamsService] Supabase error creating team:', {
+                message: error.message,
+                details: error.details,
+                hint: error.hint,
+                code: error.code,
+                insertData,
+            })
+            throw error
+        }
 
         if (dto.season_id) {
             type TeamSeasonInsert = Database['public']['Tables']['team_seasons']['Insert']
@@ -237,7 +246,16 @@ export async function createTeam(
 
         return { data: data as unknown as Team, error: null }
     } catch (err) {
-        return { data: null, error: err instanceof Error ? err : new Error('Create team failed') }
+        console.error('[teamsService] Error creating team:', err)
+        // Preserve the actual error message if available
+        if (err instanceof Error) {
+            return { data: null, error: err }
+        }
+        // Try to extract error message from Supabase error
+        if (err && typeof err === 'object' && 'message' in err) {
+            return { data: null, error: new Error(String(err.message)) }
+        }
+        return { data: null, error: new Error('Create team failed') }
     }
 }
 
