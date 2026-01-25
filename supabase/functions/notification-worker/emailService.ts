@@ -198,14 +198,14 @@ async function loadTemplate(type: string, payload: Record<string, any>): Promise
             <p>Thank you for your payment. Here are the details:</p>
             <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h3>Payment Details</h3>
-              <p>Amount: ${{amount}}<br>Date: {{payment_date}}<br>Transaction ID: {{transaction_id}}</p>
+              <p>Amount: \${{amount}}<br>Date: {{payment_date}}<br>Transaction ID: {{transaction_id}}</p>
               {{#if description}}<p>Description: {{description}}</p>{{/if}}
             </div>
             {{#if items}}
             <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h3>Items Purchased</h3>
               {{#each items}}
-              <p>{{name}} - ${{price}}</p>
+              <p>{{name}} - \${{price}}</p>
               {{/each}}
             </div>
             {{/if}}
