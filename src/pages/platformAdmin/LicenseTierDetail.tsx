@@ -10,7 +10,6 @@ import type { LicenseTier, FeatureEntitlement, TierFeatureAssignment, StripePric
 import { logAuditEvent, isStripeVerificationValid, getArchivedFeaturesCount } from '../../utils/licenseEntitlementsHelpers'
 import { isValidRouteId, getInvalidRouteIdError } from '../../utils/routeValidation'
 import { useOffline } from '../../hooks/useOffline'
-import { shouldBlockInDemoMode, getDemoModeError } from '../../utils/demoMode'
 import { showSuccess, showError } from '../../utils/toast'
 import { getLink } from '../../utils/routes'
 import { RouteKeys } from '../../utils/routes'
@@ -246,12 +245,6 @@ export default function LicenseTierDetail() {
   }
 
   const handleSave = async (reason?: string) => {
-    // Check demo mode
-    if (shouldBlockInDemoMode('write')) {
-      setError(getDemoModeError('save license tier'))
-      return
-    }
-
     // Check offline
     if (isOffline) {
       setError('Cannot save while offline. Please check your internet connection.')
@@ -436,11 +429,6 @@ export default function LicenseTierDetail() {
   }
 
   const handleArchive = async () => {
-    if (shouldBlockInDemoMode('write')) {
-      showError(getDemoModeError('archive license tier'))
-      return
-    }
-
     if (isOffline) {
       showError('Cannot archive while offline. Please check your internet connection.')
       return
@@ -521,11 +509,6 @@ export default function LicenseTierDetail() {
   }
 
   const handleDuplicate = async () => {
-    if (shouldBlockInDemoMode('write')) {
-      showError(getDemoModeError('duplicate license tier'))
-      return
-    }
-
     if (isOffline) {
       showError('Cannot duplicate while offline. Please check your internet connection.')
       return
@@ -757,7 +740,7 @@ export default function LicenseTierDetail() {
                 <Button
                   variant="blue"
                   onClick={handleDuplicate}
-                  disabled={duplicating || isOffline || shouldBlockInDemoMode('write')}
+                  disabled={duplicating || isOffline}
                   style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>content_copy</span>
@@ -766,7 +749,7 @@ export default function LicenseTierDetail() {
                 <Button
                   variant={tier.status === 'active' ? 'blue' : 'primary'}
                   onClick={() => setArchiveDialog(true)}
-                  disabled={saving || isOffline || shouldBlockInDemoMode('write')}
+                  disabled={saving || isOffline}
                   style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
@@ -792,9 +775,9 @@ export default function LicenseTierDetail() {
             <Button 
               variant="primary" 
               onClick={() => handleSave()} 
-              disabled={saving || duplicating || isOffline || shouldBlockInDemoMode('write')}
+              disabled={saving || duplicating || isOffline}
             >
-              {saving ? 'Saving...' : shouldBlockInDemoMode('write') ? 'Demo Mode' : 'Save Changes'}
+              {saving ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
         }

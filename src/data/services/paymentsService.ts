@@ -31,6 +31,9 @@ import {
 } from '../fake/fakePayments'
 import { getChildrenForUserId, getAssignedTeamsForCoach } from '../fake/relationships'
 import { supabase } from '../../lib/supabase'
+import { buildFeeAssignmentQuery } from './queryHelpers'
+import { normalizeSupabaseResponse } from './responseHelpers'
+import { classifySupabaseError } from '../../utils/supabaseErrorHandler'
 
 // ============================================================================
 // Helper Functions
@@ -49,6 +52,38 @@ function buildPermissions(context: UserContext): PermissionSet {
         : []
 
     return calculatePermissions(context, assignedTeamIds, childIds, [])
+}
+
+// ============================================================================
+// Type Mappers
+// ============================================================================
+
+/**
+ * Map Supabase fee row to FakeFee domain type
+ */
+function mapSupabaseFeeToDomain(fee: any): FakeFee {
+    return fee as unknown as FakeFee
+}
+
+/**
+ * Map Supabase fee assignment row to domain type with nested fee, athlete, and payments
+ */
+function mapSupabaseFeeAssignmentToDomain(row: any): FakeFeeAssignment & { fee?: FakeFee; payments?: FakePayment[]; athlete?: any } {
+    const baseAssignment = row as FakeFeeAssignment
+    const fee = row.fee ? {
+        ...mapSupabaseFeeToDomain(row.fee),
+        season: row.fee.season || null,
+    } : undefined
+    const payments = ((row.payments as any[]) ?? [])
+        .map((p) => p.payment)
+        .filter(Boolean) as FakePayment[]
+
+    return {
+        ...baseAssignment,
+        fee,
+        athlete: row.athlete || null,
+        payments,
+    }
 }
 
 async function getAthleteIdsForUser(userId: string): Promise<string[]> {
@@ -82,24 +117,7 @@ export { formatCurrency }
 
 /**
  * Get fees for the organization
- *
- * TODO: Replace with Supabase query:
- * ```typescript
- * const { data, error } = await supabase
- *   .from('fees')
- *   .select(`
- *     *,
- *     team:teams(id, name),
- *     season:seasons(id, name)
- *   `)
- *   .eq('org_id', context.orgId)
- *   .eq('status', 'active')
- *   .order('due_date', { ascending: true })
- * ```
  */
-// ----------------------------------------------------------------------------
-// Real Supabase Implementation
-// ----------------------------------------------------------------------------
 export async function getFees(
     context: UserContext,
     activeOnly: boolean = true
@@ -129,12 +147,13 @@ export async function getFees(
 
         if (error) throw error
 
-        // Transform if necessary to match FakeFee interface (assuming DB type is compatible or similar)
-        // FakeFee might differ slightly from DB types.
-        // Let's assume for now they are close enough or cast.
-        return { data: (data as unknown) as FakeFee[], error: null }
+        // Normalize and map response
+        const normalizedData = normalizeSupabaseResponse(data, true)
+        const fees = Array.isArray(normalizedData) ? normalizedData.map(mapSupabaseFeeToDomain) : []
+        return { data: fees, error: null }
     } catch (err) {
-        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch fees') }
+        const classifiedError = classifySupabaseError(err)
+        return { data: [], error: classifiedError }
     }
 }
 
@@ -170,9 +189,14 @@ export async function getFeeDetails(
             .single()
 
         if (error) throw error
-        return { data: (data as unknown) as FakeFee, error: null }
+
+        // Normalize and map response
+        const normalizedData = normalizeSupabaseResponse(data, false)
+        const fee = normalizedData ? mapSupabaseFeeToDomain(normalizedData) : null
+        return { data: fee, error: null }
     } catch (err) {
-        return { data: null, error: err instanceof Error ? err : new Error('Failed to fetch fee details') }
+        const classifiedError = classifySupabaseError(err, 'Fee')
+        return { data: null, error: classifiedError }
     }
 }
 
@@ -182,20 +206,6 @@ export async function getFeeDetails(
 
 /**
  * Get fee assignments for the current user's children
- *
- * TODO: Replace with Supabase query:
- * ```typescript
- * const { data, error } = await supabase
- *   .from('fee_assignments')
- *   .select(`
- *     *,
- *     fee:fees(*),
- *     athlete:athletes(id, first_name, last_name),
- *     payments:payments(*)
- *   `)
- *   .in('child_id', childIds)
- *   .order('fee(due_date)', { ascending: true })
- * ```
  */
 export async function getFeeAssignmentsForUser(
     context: UserContext
@@ -230,50 +240,34 @@ export async function getFeeAssignmentsForUser(
         }
     }
 
+    // Real Supabase implementation - NO FALLBACK
     try {
         const isAdmin = isOrgAdmin(context)
         const childIds = isAdmin ? [] : await getAthleteIdsForUser(context.userId)
 
-        let query = supabase
-            .from('fee_assignments')
-            .select(
-                `*,
-                fee:fees(
-                    *,
-                    season:seasons(
-                        id,
-                        name,
-                        team:teams(id, name)
-                    )
-                ),
-                athlete:athletes(id, first_name, last_name),
-                payments:payment_allocations(payment:payments(*))`
-            )
+        let query = buildFeeAssignmentQuery(supabase)
             .eq('org_id', context.orgId)
 
         if (!isAdmin) {
-            if (childIds.length === 0) return { data: [], error: null }
+            if (childIds.length === 0) {
+                return { data: [], error: null }
+            }
             query = query.in('athlete_id', childIds)
         }
 
         const { data, error } = await query.order('created_at', { ascending: false })
         if (error) throw error
 
-        const assignments = (data ?? []).map((row: any) => ({
-            ...(row as FakeFeeAssignment),
-            fee: row.fee ? {
-                ...(row.fee as FakeFee),
-                season: row.fee.season || null,
-            } : undefined,
-            athlete: row.athlete || null,
-            payments: ((row.payments as any[]) ?? [])
-                .map((p) => p.payment)
-                .filter(Boolean) as FakePayment[],
-        }))
+        // Normalize and map response
+        const normalizedData = normalizeSupabaseResponse(data, true)
+        const mappedAssignments = Array.isArray(normalizedData)
+            ? normalizedData.map(mapSupabaseFeeAssignmentToDomain)
+            : []
 
-        return { data: assignments, error: null }
+        return { data: mappedAssignments, error: null }
     } catch (err) {
-        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch fee assignments') }
+        const classifiedError = classifySupabaseError(err)
+        return { data: [], error: classifiedError }
     }
 }
 
@@ -328,17 +322,6 @@ export async function getUnpaidFeeAssignments(
 
 /**
  * Get fee assignments for a specific fee (admin view)
- *
- * TODO: Replace with Supabase query:
- * ```typescript
- * const { data, error } = await supabase
- *   .from('fee_assignments')
- *   .select(`
- *     *,
- *     athlete:athletes(id, first_name, last_name, family:families(id, name))
- *   `)
- *   .eq('fee_id', feeId)
- * ```
  */
 export async function getFeeAssignmentsByFee(
     context: UserContext,
@@ -358,6 +341,7 @@ export async function getFeeAssignmentsByFee(
         }
     }
 
+    // Real Supabase implementation - NO FALLBACK
     try {
         // Verify permissions effectively? RLS should handle it.
         // We fetching full details including athlete and parent
@@ -375,9 +359,16 @@ export async function getFeeAssignmentsByFee(
             .eq('org_id', context.orgId)
 
         if (error) throw error
-        return { data: (data as unknown) as FakeFeeAssignment[], error: null }
+
+        // Normalize and map response
+        const normalizedData = normalizeSupabaseResponse(data, true)
+        const assignments = Array.isArray(normalizedData) 
+            ? normalizedData.map((row: any) => row as FakeFeeAssignment)
+            : []
+        return { data: assignments, error: null }
     } catch (err) {
-        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch assignments') }
+        const classifiedError = classifySupabaseError(err)
+        return { data: [], error: classifiedError }
     }
 }
 
@@ -387,21 +378,6 @@ export async function getFeeAssignmentsByFee(
 
 /**
  * Get payments for the organization (admin view)
- *
- * TODO: Replace with Supabase query:
- * ```typescript
- * const { data, error } = await supabase
- *   .from('payments')
- *   .select(`
- *     *,
- *     fee_assignment:fee_assignments(
- *       fee:fees(title),
- *       athlete:athletes(first_name, last_name)
- *     )
- *   `)
- *   .eq('org_id', context.orgId)
- *   .order('created_at', { ascending: false })
- * ```
  */
 export async function getPayments(
     context: UserContext,
@@ -477,9 +453,9 @@ export async function getPaymentsForFeeAssignment(
 
         if (error) throw error
 
-        const payments = ((data as any[]) ?? [])
-            .map((row) => row.payment)
-            .filter(Boolean) as FakePayment[]
+        const payments = Array.isArray(data) 
+            ? data.map((row: any) => row.payment).filter(Boolean) as FakePayment[]
+            : [] as FakePayment[]
 
         return { data: payments, error: null }
     } catch (err) {

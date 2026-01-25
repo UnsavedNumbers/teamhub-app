@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, Badge, Card, FilterBar, ConfirmDialog, Button, Input, Select, PlatformDataTable, type ColumnConfig } from '../../components/platformAdmin'
+import { PageHeader, Badge, Card, FilterBar, ConfirmDialog, Button, Input, Select, PlatformDataTable, type ColumnConfig, ErrorState } from '../../components/platformAdmin'
 import { EntitySelect } from '../../components/common/EntitySelect'
 import { canPerformAction } from '../../utils/platformAdminPermissions'
 import { getEnvironment } from '../../utils/featureFlags'
@@ -25,6 +25,7 @@ export default function FeatureFlags() {
   const [flags, setFlags] = useState<AdminFeatureFlag[]>([])
   const [overrides, setOverrides] = useState<FeatureFlagOverride[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [environmentFilter, setEnvironmentFilter] = useState<FeatureFlagEnvironment>(getEnvironment())
   const [showDeleted, setShowDeleted] = useState(false)
@@ -64,6 +65,7 @@ export default function FeatureFlags() {
 
   const fetchFlags = useCallback(async () => {
     setLoading(true)
+    setError(null)
 
     try {
       let query = supabase
@@ -89,14 +91,17 @@ export default function FeatureFlags() {
 
       if (error) {
         console.error('Error fetching feature flags:', error)
+        setError(error.message || 'Failed to load feature flags')
         setFlags([])
         setTotalCount(0)
       } else {
         setFlags(data || [])
         setTotalCount(count || 0)
+        setError(null)
       }
     } catch (err) {
       console.error('Error:', err)
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
       setFlags([])
     } finally {
       setLoading(false)
@@ -713,17 +718,28 @@ export default function FeatureFlags() {
       
       {/* Content */}
       {activeTab === 'flags' && (
-        <PlatformDataTable
-          columns={flagColumns}
-          rows={flags}
-          loading={loading}
-          emptyMessage="No feature flags found"
-          page={page}
-          rowsPerPage={rowsPerPage}
-          totalCount={totalCount}
-          onPageChange={setPage}
-          onRowsPerPageChange={setRowsPerPage}
-        />
+        <>
+          {error && !loading && (
+            <ErrorState
+              message={error}
+              onRetry={fetchFlags}
+              retryLabel="Retry"
+            />
+          )}
+          {!error && (
+            <PlatformDataTable
+              columns={flagColumns}
+              rows={flags}
+              loading={loading}
+              emptyMessage="No feature flags found. Try adjusting your filters."
+              page={page}
+              rowsPerPage={rowsPerPage}
+              totalCount={totalCount}
+              onPageChange={setPage}
+              onRowsPerPageChange={setRowsPerPage}
+            />
+          )}
+        </>
       )}
       
       {activeTab === 'overrides' && (

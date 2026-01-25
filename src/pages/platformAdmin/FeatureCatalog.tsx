@@ -19,6 +19,7 @@ import {
   ChangeStatusModal,
   ChangeVisibilityModal,
   UpdateCategoryModal,
+  OfflineBanner,
 } from '../../components/platformAdmin'
 import type { FeatureEntitlementWithCounts } from '../../types/licenseTiers.types'
 import { FEATURE_CATEGORIES, FEATURE_TYPES } from '../../utils/licenseTierConstants'
@@ -858,6 +859,7 @@ export default function FeatureCatalog() {
   return (
     <DiscoveryErrorBoundary>
         <div>
+        <OfflineBanner />
         <PageHeader
             title="Feature Catalog"
             subtitle="Manage all platform features and entitlements"
@@ -990,7 +992,7 @@ export default function FeatureCatalog() {
             columns={columns}
             rows={rows}
             loading={loading}
-            emptyMessage="No features found"
+            emptyMessage="No features found. Try adjusting your filters or run feature discovery."
             page={page}
             rowsPerPage={rowsPerPage}
             totalCount={totalCount}

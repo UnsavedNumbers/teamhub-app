@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
+import { startTransition } from 'react'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
 import { useOffline } from '../../hooks/useOffline'
@@ -20,6 +21,7 @@ import {
   Checkbox
 } from '../../components/platformAdmin'
 import { ConfirmDialog } from '../../components/platformAdmin/ConfirmDialog'
+import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
 import { 
     EventFormData, 
     EVENT_TYPE_LABELS, 
@@ -54,7 +56,7 @@ export default function EditEvent() {
   const t = useT()
   const { isOffline } = useOffline()
 
-  const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<EventFormData>({
+  const { control, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm<EventFormData>({
     defaultValues: { 
       title: '', 
       type: 'practice', 
@@ -147,6 +149,9 @@ export default function EditEvent() {
             city: string | null
             state: string | null
             postal_code: string | null
+            place_id: string | null
+            latitude: number | null
+            longitude: number | null
             is_tbd: boolean | null
             is_virtual: boolean | null
             virtual_link: string | null
@@ -433,10 +438,13 @@ export default function EditEvent() {
           city: data.location.city || null,
           state: data.location.state || null,
           postal_code: data.location.postal_code || null,
+          place_id: data.location.place_id || null,
+          latitude: data.location.latitude ? parseFloat(data.location.latitude) : null,
+          longitude: data.location.longitude ? parseFloat(data.location.longitude) : null,
           is_tbd: data.location.is_tbd,
           is_virtual: data.location.is_virtual,
           virtual_link: data.location.virtual_link || null
-        } satisfies LocationUpdate
+        } as LocationUpdate & { place_id: string | null }
         await supabase
           .from('event_locations')
           .update(locUpdateData)
@@ -450,10 +458,13 @@ export default function EditEvent() {
           city: data.location.city || null,
           state: data.location.state || null,
           postal_code: data.location.postal_code || null,
+          place_id: data.location.place_id || null,
+          latitude: data.location.latitude ? parseFloat(data.location.latitude) : null,
+          longitude: data.location.longitude ? parseFloat(data.location.longitude) : null,
           is_tbd: data.location.is_tbd,
           is_virtual: data.location.is_virtual,
           virtual_link: data.location.virtual_link || null
-        } satisfies LocationInsert
+        } as LocationInsert & { place_id: string | null }
         const { error: locInsertError } = await supabase.from('event_locations').insert(locInsertData)
         if (locInsertError) {
           console.error('Location insert error:', locInsertError)
@@ -624,7 +635,30 @@ export default function EditEvent() {
             <div className="pa-space-y-4">
               <div className="pa-grid pa-grid-2 pa-gap-4">
                 <Controller name="location.venue_name" control={control} render={({ field }) => <Input {...field} label="Venue Name" placeholder="e.g. Field 1" />} />
-                <Controller name="location.address_line1" control={control} render={({ field }) => <Input {...field} label="Address" placeholder="123 Main St" />} />
+                <Controller
+                  name="location.address_line1"
+                  control={control}
+                  render={({ field }) => (
+                    <LocationAutocomplete
+                      value={field.value || ''}
+                      onInputChange={field.onChange}
+                      onChange={(address) => {
+                        startTransition(() => {
+                          setValue('location.address_line1', address.address_line1, { shouldValidate: false, shouldDirty: true })
+                          setValue('location.city', address.city, { shouldValidate: false, shouldDirty: true })
+                          setValue('location.state', address.state, { shouldValidate: false, shouldDirty: true })
+                          setValue('location.postal_code', address.postal_code, { shouldValidate: false, shouldDirty: true })
+                          setValue('location.place_id', address.place_id, { shouldValidate: false, shouldDirty: true })
+                          setValue('location.latitude', address.latitude.toString(), { shouldValidate: false, shouldDirty: true })
+                          setValue('location.longitude', address.longitude.toString(), { shouldValidate: false, shouldDirty: true })
+                          trigger(['location.address_line1', 'location.city', 'location.state', 'location.postal_code'])
+                        })
+                      }}
+                      label="Address"
+                      placeholder="Enter an address"
+                    />
+                  )}
+                />
               </div>
               
               {showLocationDetails && (

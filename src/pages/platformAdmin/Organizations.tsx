@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, Badge, FilterBar, PlatformDataTable, ConfirmDialog, type ColumnConfig } from '../../components/platformAdmin'
+import { PageHeader, Badge, FilterBar, PlatformDataTable, ConfirmDialog, type ColumnConfig, OfflineBanner, ErrorState } from '../../components/platformAdmin'
 import { canPerformAction, getDeniedMessage } from '../../utils/platformAdminPermissions'
 import { isRpcSuccessResponse } from '../../utils/typeAdapters'
 import type { AdminOrganization, AdminRpcResponse, PlatformAdminRole, OrganizationStatus } from '../../types/platformAdmin.types'
@@ -19,6 +19,7 @@ const statusOptions = [
 export default function Organizations() {
   const [organizations, setOrganizations] = useState<AdminOrganization[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(50)
   const [totalCount, setTotalCount] = useState(0)
@@ -43,6 +44,7 @@ export default function Organizations() {
 
   const fetchOrganizations = useCallback(async () => {
     setLoading(true)
+    setError(null)
 
     try {
       let query = supabase
@@ -67,14 +69,17 @@ export default function Organizations() {
 
       if (error) {
         console.error('Error fetching organizations:', error)
+        setError(error.message || 'Failed to load organizations')
         setOrganizations([])
         setTotalCount(0)
       } else {
         setOrganizations(data as AdminOrganization[])
         setTotalCount(count || 0)
+        setError(null)
       }
     } catch (err) {
       console.error('Error:', err)
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
       setOrganizations([])
     } finally {
       setLoading(false)
@@ -244,6 +249,7 @@ export default function Organizations() {
 
   return (
     <div>
+      <OfflineBanner />
       <PageHeader
         title="Organizations"
         subtitle={`${totalCount} organizations total`}
@@ -264,21 +270,31 @@ export default function Organizations() {
         }}
       />
 
-      <PlatformDataTable
-        columns={columns}
-        rows={organizations}
-        loading={loading}
-        emptyMessage="No organizations found."
-        page={page}
-        rowsPerPage={rowsPerPage}
-        totalCount={totalCount}
-        onPageChange={setPage}
-        onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0) }}
-        onRowClick={handleRowClick}
-        orderBy={orderBy}
-        order={order}
-        onSort={handleSort}
-      />
+      {error && !loading && (
+        <ErrorState
+          message={error}
+          onRetry={fetchOrganizations}
+          retryLabel="Retry"
+        />
+      )}
+
+      {!error && (
+        <PlatformDataTable
+          columns={columns}
+          rows={organizations}
+          loading={loading}
+          emptyMessage="No organizations found. Try adjusting your filters."
+          page={page}
+          rowsPerPage={rowsPerPage}
+          totalCount={totalCount}
+          onPageChange={setPage}
+          onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0) }}
+          onRowClick={handleRowClick}
+          orderBy={orderBy}
+          order={order}
+          onSort={handleSort}
+        />
+      )}
 
       {/* Confirm Dialog */}
       <ConfirmDialog

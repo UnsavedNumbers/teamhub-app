@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
-import { StatCard, PageHeader, Card, Badge, EmptyState } from '../../components/platformAdmin'
+import { StatCard, PageHeader, Card, Badge, EmptyState, OfflineBanner } from '../../components/platformAdmin'
 import { formatCurrency } from '../../utils/platformAdminMasking'
 import type { AdminPlatformHealth, AdminAuditLog } from '../../types/platformAdmin.types'
 import { mapEventLogsToAuditLogs, type AdminEventLog } from '../../utils/auditLogMapper'
@@ -133,11 +133,12 @@ export default function PlatformAdminDashboard() {
   }
 
   if (loading) {
-    return (
-      <div>
-        <PageHeader
-          title="Dashboard"
-          subtitle={`Signed in as ${profile?.email ?? 'unknown'}`}
+  return (
+    <div>
+      <OfflineBanner />
+      <PageHeader
+        title="Dashboard"
+        subtitle={`Signed in as ${profile?.email ?? 'unknown'}`}
         />
         <StatsSkeleton />
       </div>
@@ -146,6 +147,7 @@ export default function PlatformAdminDashboard() {
 
   return (
     <div>
+      <OfflineBanner />
       <PageHeader
         title="Dashboard"
         subtitle={`Signed in as ${profile?.email ?? 'unknown'}`}

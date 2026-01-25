@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Controller, useForm } from 'react-hook-form'
+import { startTransition } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
@@ -21,6 +22,7 @@ import {
   Badge
 } from '../../components/platformAdmin'
 import { FileUpload } from '../../components/common/FileUpload'
+import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
 
 import { 
   getOrganizationDetails, 
@@ -327,7 +329,7 @@ export default function OrganizationSettings() {
 // --- Sub-Forms ---
 
 function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (data: OrganizationUpdateDTO, file?: File) => void, loading: boolean }) {
-  const { control, handleSubmit } = useForm<OrganizationUpdateDTO>({
+  const { control, handleSubmit, setValue, trigger } = useForm<OrganizationUpdateDTO>({
     defaultValues: {
       name: org.name,
       website: org.website || '',
@@ -337,6 +339,7 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
       city: org.city || '',
       state: org.state || '',
       zip: org.zip || '',
+      place_id: (org as any).place_id || '',
     }
   })
   const [logoFile, setLogoFile] = useState<File | undefined>(undefined)
@@ -397,9 +400,28 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
         <div className="pa-mt-6">
           <h3 className="pa-h3 pa-mb-4">Location</h3>
           <div className="pa-form-group pa-mb-4">
-            <Controller name="address" control={control} render={({field}) => (
-               <Input {...field} value={field.value || ''} label="Address" />
-            )} />
+            <Controller
+              name="address"
+              control={control}
+              render={({ field }) => (
+                <LocationAutocomplete
+                  value={field.value || ''}
+                  onInputChange={field.onChange}
+                  onChange={(address) => {
+                    startTransition(() => {
+                      setValue('address', address.address_line1, { shouldValidate: false, shouldDirty: true })
+                      setValue('city', address.city, { shouldValidate: false, shouldDirty: true })
+                      setValue('state', address.state, { shouldValidate: false, shouldDirty: true })
+                      setValue('zip', address.postal_code, { shouldValidate: false, shouldDirty: true })
+                      setValue('place_id', address.place_id, { shouldValidate: false, shouldDirty: true })
+                      trigger(['address', 'city', 'state', 'zip'])
+                    })
+                  }}
+                  label="Address"
+                  placeholder="Enter organization address"
+                />
+              )}
+            />
           </div>
           <div className="pa-form-grid pa-form-grid-3">
              <Controller name="city" control={control} render={({field}) => (

@@ -235,7 +235,7 @@ export default function LicenseTiers() {
         columns={columns}
         rows={tiers}
         loading={loading}
-        emptyMessage="No license tiers found"
+        emptyMessage="No license tiers found. Try adjusting your search or create a new tier."
         page={page}
         rowsPerPage={rowsPerPage}
         totalCount={totalCount}

@@ -1,7 +1,7 @@
 
 import { supabase } from '../../lib/supabase'
 import { USE_FAKE_DATA } from '../config'
-import type { Organization } from '../../types/domain/Organization'
+import type { Organization, OrganizationStatus } from '../../types/domain/Organization'
 import {
     getOrganizationDetails as getFakeOrganizationDetails,
     updateOrganizationDetails as updateFakeOrganizationDetails,
@@ -17,6 +17,7 @@ export interface OrganizationUpdateDTO {
     city?: string | null
     state?: string | null
     zip?: string | null
+    place_id?: string | null
     logo_path?: string | null
 }
 
@@ -25,6 +26,7 @@ interface OrganizationRow {
     id: string
     name: string
     org_type?: string | null // optional as it might be missing or added later
+    status?: string | null // optional status field
     created_at: string
     updated_at: string
     website?: string | null
@@ -62,7 +64,7 @@ export async function getOrganizationDetails(orgId: string): Promise<{ data: Org
             id: data.id,
             name: data.name,
             orgType: data.org_type || null, // Assuming org_type exists from Context def, but might be missing in schema. Using fallback.
-            status: 'active', // TODO: Add status column if needed, default to active
+            status: (data.status || 'active') as OrganizationStatus, // Use status from DB (org_status enum: 'trial', 'active', 'suspended', 'inactive')
             createdAt: data.created_at,
             updatedAt: data.updated_at,
 

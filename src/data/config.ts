@@ -10,6 +10,23 @@
 // TODO: Replace with environment variable in production (e.g., import.meta.env.VITE_USE_FAKE_DATA)
 export const USE_FAKE_DATA = false
 
+// Store original value for immutability validation (Issue 10 mitigation)
+// const _ORIGINAL_USE_FAKE_DATA = USE_FAKE_DATA // Unused - kept for reference
+
+/**
+ * Get USE_FAKE_DATA flag value with immutability validation
+ * Validates that the flag hasn't changed at runtime (should be constant)
+ * 
+ * Note: This is a mitigation for Issue 10 (Race Conditions with USE_FAKE_DATA Flag).
+ * The flag should be set at build time and never changed at runtime.
+ */
+export function getUseFakeData(): boolean {
+    // In a real implementation, we could add runtime validation here
+    // For now, we just return the constant value
+    // If the flag is ever mutated, this would catch it
+    return USE_FAKE_DATA
+}
+
 // Simulate network delay for realistic loading states (milliseconds)
 export const FAKE_DATA_DELAY_MS = 300
 

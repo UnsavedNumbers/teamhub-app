@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, Badge, Card, FilterBar, EmptyState, Button } from '../../components/platformAdmin'
+import { PageHeader, Badge, Card, FilterBar, EmptyState, Button, OfflineBanner, ErrorState } from '../../components/platformAdmin'
 import type { AdminStructure } from '../../types/platformAdmin.types'
 
 interface OrganizationWithStructure {
@@ -22,6 +22,7 @@ export default function Structure() {
   const [structures, setStructures] = useState<AdminStructure[]>([])
   const [organizedData, setOrganizedData] = useState<OrganizationWithStructure[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [orgFilter, setOrgFilter] = useState<string | null>(null)
   const [orgFilterName, setOrgFilterName] = useState<string | null>(null)
@@ -34,6 +35,7 @@ export default function Structure() {
 
   const fetchStructure = useCallback(async () => {
     setLoading(true)
+    setError(null)
 
     try {
       let query = supabase
@@ -54,12 +56,15 @@ export default function Structure() {
 
       if (error) {
         console.error('Error fetching structure:', error)
+        setError(error.message || 'Failed to load structure')
         setStructures([])
       } else {
         setStructures(data as AdminStructure[])
+        setError(null)
       }
     } catch (err) {
       console.error('Error:', err)
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
       setStructures([])
     } finally {
       setLoading(false)
@@ -125,6 +130,7 @@ export default function Structure() {
   if (loading) {
     return (
       <div>
+        <OfflineBanner />
         <PageHeader
           title="Structure"
           subtitle="Hierarchical view of all organizations, teams, and seasons. Read-only."
@@ -143,6 +149,7 @@ export default function Structure() {
 
   return (
     <div>
+      <OfflineBanner />
       <PageHeader
         title="Structure"
         subtitle="Hierarchical view of all organizations, teams, and seasons. Read-only."
@@ -174,15 +181,25 @@ export default function Structure() {
         onClearAll={() => setSearch('')}
       />
 
-      {organizedData.length === 0 ? (
+      {error && !loading && (
+        <ErrorState
+          message={error}
+          onRetry={fetchStructure}
+          retryLabel="Retry"
+        />
+      )}
+
+      {!error && organizedData.length === 0 && !loading && (
         <Card>
           <EmptyState
             icon="account_tree"
             title="No Structure Data"
-            description="No organizations, teams, or seasons found."
+            description="No organizations, teams, or seasons found. Try adjusting your filters."
           />
         </Card>
-      ) : (
+      )}
+
+      {!error && organizedData.length > 0 && (
         <div className="pa-flex pa-flex-col pa-gap-3">
           {organizedData.map((org) => {
             const isExpanded = expandedOrgs.has(org.id)

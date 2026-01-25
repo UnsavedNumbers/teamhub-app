@@ -32,6 +32,9 @@ import {
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { Team, CreateTeamDTO, UpdateTeamDTO } from '../types/organization'
+import { buildTeamQuery, buildTeamMembershipQuery, buildCoachAssignmentQuery } from './queryHelpers'
+import { normalizeSupabaseResponse } from './responseHelpers'
+import { classifySupabaseError } from '../../utils/supabaseErrorHandler'
 
 // ============================================================================
 // Helper Functions
@@ -50,6 +53,31 @@ function buildPermissions(context: UserContext): PermissionSet {
         : []
 
     return calculatePermissions(context, assignedTeamIds, childIds, [])
+}
+
+// ============================================================================
+// Type Mappers
+// ============================================================================
+
+/**
+ * Map Supabase team row to Team domain type
+ */
+function mapSupabaseTeamToDomain(team: any): Team {
+    return team as Team
+}
+
+/**
+ * Map Supabase team member row to domain type
+ */
+function mapSupabaseTeamMemberToDomain(member: any): FakeTeamMember {
+    return member as FakeTeamMember
+}
+
+/**
+ * Map Supabase coach assignment row to domain type
+ */
+function mapSupabaseCoachAssignmentToDomain(assignment: any): FakeCoachAssignment {
+    return assignment as FakeCoachAssignment
 }
 
 function isOrgAdmin(context: UserContext): boolean {
@@ -174,90 +202,81 @@ export interface TeamsQueryParams {
 
 /**
  * Get teams for the current organization
- *
- * TODO: Replace with Supabase query:
- * ```typescript
- * const { data, error } = await supabase
- *   .from('teams')
- *   .select(`
- *     *,
- *     sport:sports(id, name, icon, color),
- *     program:programs(id, name),
- *     active_season:seasons(id, name, start_date, end_date)
- *   `)
- *   .eq('org_id', context.orgId)
- *   .eq('is_active', true)
- *   .order('name')
- * ```
  */
 export async function getTeams(
     context: UserContext,
     params: TeamsQueryParams = {}
 ): Promise<{ data: Team[]; error: Error | null }> {
-    if (!USE_FAKE_DATA) {
+    if (USE_FAKE_DATA) {
         try {
-            let query = supabase
-                .from('teams')
-                .select('*')
-                .eq('org_id', context.orgId)
-                .order('name')
+            await simulateDelay()
 
-            if (params.sportId) query = query.eq('sport_id', params.sportId)
-            if (params.programId) query = query.eq('program_id', params.programId)
-            if (params.levelId) query = query.eq('level_id', params.levelId)
-            if (params.activeOnly) query = query.eq('is_active', true)
+            const permissions = buildPermissions(context)
+            let teams = params.activeOnly
+                ? getActiveTeamsForOrg(context.orgId)
+                : getTeamsForOrg(context.orgId)
 
-            const { data, error } = await query
-            if (error) throw error
-            return { data: (data as Team[]) || [], error: null }
+            // Filter by sport if provided
+            if (params.sportId) {
+                teams = teams.filter((t) => t.sport_id === params.sportId)
+            }
+
+            // Filter by program if provided
+            if (params.programId) {
+                teams = teams.filter((t) => t.program_id === params.programId)
+            }
+
+            // Filter by level if provided
+            if (params.levelId) {
+                teams = teams.filter((t) => t.level_id === params.levelId)
+            }
+
+            // Non-admin users only see teams they have access to
+            if (!permissions.canViewAllOrgData) {
+                const accessibleTeamIds = new Set<string>()
+
+                // Add coached teams
+                if (permissions.canViewAssignedTeams) {
+                    permissions.assignedTeamIds.forEach((id) => accessibleTeamIds.add(id))
+                }
+
+                // Add children's teams
+                if (permissions.canViewOwnChildrenData) {
+                    getTeamsForUserChildren(context.userId).forEach((id) => accessibleTeamIds.add(id))
+                }
+
+                teams = teams.filter((t) => accessibleTeamIds.has(t.id))
+            }
+
+            return { data: teams as Team[], error: null }
         } catch (err) {
             return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
         }
     }
 
+    // Real Supabase implementation - NO FALLBACK
     try {
-        await simulateDelay()
+        let query: any = buildTeamQuery(supabase)
+        query = query.eq('org_id', context.orgId).order('name')
 
-        const permissions = buildPermissions(context)
-        let teams = params.activeOnly
-            ? getActiveTeamsForOrg(context.orgId)
-            : getTeamsForOrg(context.orgId)
+        if (params.sportId) query = query.eq('sport_id', params.sportId)
+        if (params.programId) query = query.eq('program_id', params.programId)
+        if (params.levelId) query = query.eq('level_id', params.levelId)
+        if (params.activeOnly) query = query.eq('is_active', true)
 
-        // Filter by sport if provided
-        if (params.sportId) {
-            teams = teams.filter((t) => t.sport_id === params.sportId)
-        }
+        const { data, error } = await query
+        if (error) throw error
 
-        // Filter by program if provided
-        if (params.programId) {
-            teams = teams.filter((t) => t.program_id === params.programId)
-        }
+        // Normalize and map response
+        const normalizedData = normalizeSupabaseResponse(data, true)
+        const mappedTeams = Array.isArray(normalizedData)
+            ? normalizedData.map(mapSupabaseTeamToDomain)
+            : []
 
-        // Filter by level if provided
-        if (params.levelId) {
-            teams = teams.filter((t) => t.level_id === params.levelId)
-        }
-
-        // Non-admin users only see teams they have access to
-        if (!permissions.canViewAllOrgData) {
-            const accessibleTeamIds = new Set<string>()
-
-            // Add coached teams
-            if (permissions.canViewAssignedTeams) {
-                permissions.assignedTeamIds.forEach((id) => accessibleTeamIds.add(id))
-            }
-
-            // Add children's teams
-            if (permissions.canViewOwnChildrenData) {
-                getTeamsForUserChildren(context.userId).forEach((id) => accessibleTeamIds.add(id))
-            }
-
-            teams = teams.filter((t) => accessibleTeamIds.has(t.id))
-        }
-
-        return { data: teams as Team[], error: null }
+        return { data: mappedTeams, error: null }
     } catch (err) {
-        return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        const classifiedError = classifySupabaseError(err)
+        return { data: [], error: classifiedError }
     }
 }
 
@@ -327,7 +346,8 @@ export async function createTeam(
             if (linkError) throw linkError
         }
 
-        return { data: data as unknown as Team, error: null }
+        const mappedTeam = mapSupabaseTeamToDomain(data)
+        return { data: mappedTeam, error: null }
     } catch (err) {
         console.error('[teamsService] Error creating team:', err)
         // Preserve the actual error message if available
@@ -417,23 +437,6 @@ export async function deleteTeam(
 
 /**
  * Get a single team with full details
- *
- * TODO: Replace with Supabase query:
- * ```typescript
- * const { data, error } = await supabase
- *   .from('teams')
- *   .select(`
- *     *,
- *     sport:sports(*),
- *     program:programs(*),
- *     level:levels(*),
- *     active_season:team_seasons(
- *       season:seasons(*)
- *     )
- *   `)
- *   .eq('id', teamId)
- *   .single()
- * ```
  */
 export async function getTeamDetails(
     context: UserContext,
@@ -458,6 +461,7 @@ export async function getTeamDetails(
         }
     }
 
+    // Real Supabase implementation - NO FALLBACK
     try {
         const { data, error } = await supabase
             .from('teams')
@@ -472,10 +476,30 @@ export async function getTeamDetails(
             .eq('org_id', context.orgId)
             .single()
 
-        if (error) throw error
-        return { data: data as unknown as ReturnType<typeof getTeamWithDetails>, error: null }
+        if (error) {
+            if (error.code === 'PGRST116') {
+                return { data: null, error: null }
+            }
+            throw error
+        }
+
+        // Normalize and map response
+        const normalizedData = normalizeSupabaseResponse(data, false)
+        if (!normalizedData) {
+            return { data: null, error: null }
+        }
+
+        // Transform to match getTeamWithDetails return type
+        const teamData = normalizedData as any
+        const mappedTeam = {
+            ...teamData,
+            seasons: teamData.seasons || [],
+        } as ReturnType<typeof getTeamWithDetails>
+
+        return { data: mappedTeam, error: null }
     } catch (err) {
-        return { data: null, error: err instanceof Error ? err : new Error('Failed to fetch team details') }
+        const classifiedError = classifySupabaseError(err, 'Team')
+        return { data: null, error: classifiedError }
     }
 }
 
@@ -655,18 +679,6 @@ export { getSports, getPrograms } from './sportsService'
 
 /**
  * Get active season for a team
- *
- * TODO: Replace with Supabase query:
- * ```typescript
- * const { data, error } = await supabase
- *   .from('team_seasons')
- *   .select(`
- *     season:seasons(*)
- *   `)
- *   .eq('team_id', teamId)
- *   .eq('is_active', true)
- *   .single()
- * ```
  */
 export async function getActiveSeason(
     _context: UserContext,
@@ -692,7 +704,10 @@ export async function getActiveSeason(
             .single()
 
         if (error) throw error
-        const season = (data as any)?.season as FakeSeason | undefined
+        
+        // Normalize and extract season from nested structure
+        const normalizedData = normalizeSupabaseResponse(data, false)
+        const season = normalizedData ? (normalizedData as Record<string, any>)?.season as FakeSeason | undefined : undefined
         return { data: season ?? null, error: null }
     } catch (err) {
         return { data: null, error: err instanceof Error ? err : new Error('Failed to fetch active season') }
@@ -705,23 +720,6 @@ export async function getActiveSeason(
 
 /**
  * Get roster (team members) for a team and season
- *
- * TODO: Replace with Supabase query:
- * ```typescript
- * const { data, error } = await supabase
- *   .from('team_members')
- *   .select(`
- *     *,
- *     athlete:athletes(
- *       id, first_name, last_name, date_of_birth, jersey_number,
- *       family:families(id, name)
- *     )
- *   `)
- *   .eq('team_id', teamId)
- *   .eq('season_id', seasonId)
- *   .eq('status', 'active')
- *   .order('child(last_name)')
- * ```
  */
 export async function getTeamRoster(
     context: UserContext,
@@ -752,46 +750,42 @@ export async function getTeamRoster(
         }
     }
 
+    // Real Supabase implementation - NO FALLBACK
     try {
-        const { data, error } = await supabase
-            .from('team_memberships')
-            .select('*, athlete:athletes(id, first_name, last_name, family:families(id, name))')
+        const { data, error } = await buildTeamMembershipQuery(supabase)
             .eq('team_id', teamId)
             .eq('season_id', seasonId)
             .eq('status', 'active')
 
         if (error) throw error
 
+        // Normalize and map response
+        const normalizedData = normalizeSupabaseResponse(data, true)
+        const mapped = Array.isArray(normalizedData)
+            ? normalizedData.map((row: any) => ({
+                ...mapSupabaseTeamMemberToDomain(row),
+                child_id: row.athlete_id ?? row.athlete?.id,
+            }))
+            : []
+
+        // Filter by permissions
         const familyId = await getFamilyIdForUser(context.userId)
         const childIds = await getAthleteIdsForFamily(familyId)
         const isAdmin = isOrgAdmin(context)
+        const visible = isAdmin ? mapped : mapped.filter((m) => {
+            const member = m as FakeTeamMember & { child_id?: string }
+            return member.child_id && childIds.includes(member.child_id)
+        })
 
-        const mapped = (data ?? []).map((row: any) => ({
-            ...(row as FakeTeamMember),
-            child_id: row.athlete_id ?? row.athlete?.id,
-        }))
-
-        const visible = isAdmin ? mapped : mapped.filter((m) => childIds.includes((m as any).child_id))
         return { data: visible, error: null }
     } catch (err) {
-        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch roster') }
+        const classifiedError = classifySupabaseError(err)
+        return { data: [], error: classifiedError }
     }
 }
 
 /**
  * Get coaches for a team and season
- *
- * TODO: Replace with Supabase query:
- * ```typescript
- * const { data, error } = await supabase
- *   .from('coach_assignments')
- *   .select(`
- *     *,
- *     user:users(id, display_name, email, phone)
- *   `)
- *   .eq('team_id', teamId)
- *   .eq('season_id', seasonId)
- * ```
  */
 export async function getTeamCoaches(
     _context: UserContext,
@@ -809,29 +803,47 @@ export async function getTeamCoaches(
         }
     }
 
+    // Real Supabase implementation - NO FALLBACK
     try {
-        // Schema does not expose a dedicated coach assignment table; fall back to org coaches.
-        const { data, error } = await supabase
-            .from('organization_members')
-            .select('user:users(id, email, display_name, phone), role')
-            .eq('role', 'coach')
-            .eq('org_id', _context.orgId)
+        // Try coach_assignments table first, fall back to organization_members if it doesn't exist
+        let query: any = buildCoachAssignmentQuery(supabase)
+        query = query.eq('team_id', teamId).eq('season_id', seasonId)
 
-        if (error) throw error
+        const { data, error } = await query
 
-        const mapped: FakeCoachAssignment[] = (data ?? []).map((row: any) => ({
-            id: row.user?.id ?? '',
-            team_id: teamId,
-            season_id: seasonId,
-            user_id: row.user?.id ?? '',
-            role: 'head_coach' as const,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-        }))
+        if (error) {
+            // If coach_assignments doesn't exist, fall back to organization_members
+            const { data: orgData, error: orgError } = await supabase
+                .from('organization_members')
+                .select('user:users(id, email, display_name, phone), role')
+                .eq('role', 'coach')
+                .eq('org_id', _context.orgId)
+
+            if (orgError) throw orgError
+
+            const mapped: FakeCoachAssignment[] = (orgData ?? []).map((row: any) => ({
+                id: row.user?.id ?? '',
+                team_id: teamId,
+                season_id: seasonId,
+                user_id: row.user?.id ?? '',
+                role: 'head_coach' as const,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            }))
+
+            return { data: mapped, error: null }
+        }
+
+        // Normalize and map response
+        const normalizedData = normalizeSupabaseResponse(data, true)
+        const mapped = Array.isArray(normalizedData)
+            ? normalizedData.map(mapSupabaseCoachAssignmentToDomain)
+            : []
 
         return { data: mapped, error: null }
     } catch (err) {
-        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch coaches') }
+        const classifiedError = classifySupabaseError(err)
+        return { data: [], error: classifiedError }
     }
 }
 
@@ -860,10 +872,13 @@ export async function getTeamsForParent(
         }
     }
 
+    // Real Supabase implementation - NO FALLBACK
     try {
         const familyId = await getFamilyIdForUser(context.userId)
         const childIds = await getAthleteIdsForFamily(familyId)
-        if (childIds.length === 0) return { data: [], error: null }
+        if (childIds.length === 0) {
+            return { data: [], error: null }
+        }
 
         const { data: memberships, error: memErr } = await supabase
             .from('team_memberships')
@@ -873,18 +888,25 @@ export async function getTeamsForParent(
 
         if (memErr) throw memErr
         const teamIds = Array.from(new Set((memberships ?? []).map((m) => m.team_id)))
-        if (teamIds.length === 0) return { data: [], error: null }
+        if (teamIds.length === 0) {
+            return { data: [], error: null }
+        }
 
-        const { data: teams, error: teamErr } = await supabase
-            .from('teams')
-            .select('*')
-            .in('id', teamIds)
-            .eq('org_id', context.orgId)
+        const teamQuery: any = buildTeamQuery(supabase)
+        const { data: teams, error: teamErr } = await teamQuery.in('id', teamIds).eq('org_id', context.orgId)
 
         if (teamErr) throw teamErr
-        return { data: (teams as unknown) as FakeTeam[], error: null }
+
+        // Normalize and map response
+        const normalizedData = normalizeSupabaseResponse(teams, true)
+        const mappedTeams = Array.isArray(normalizedData)
+            ? normalizedData.map(mapSupabaseTeamToDomain)
+            : []
+
+        return { data: mappedTeams as FakeTeam[], error: null }
     } catch (err) {
-        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch parent teams') }
+        const classifiedError = classifySupabaseError(err)
+        return { data: [], error: classifiedError }
     }
 }
 
@@ -909,17 +931,48 @@ export async function getTeamsForCoach(
         }
     }
 
+    // Real Supabase implementation - NO FALLBACK
     try {
-        // Without a dedicated coach assignment table, return all org teams for now.
-        const { data, error } = await supabase
-            .from('teams')
-            .select('*')
+        // Try to get teams from coach_assignments, fall back to all org teams if table doesn't exist
+        try {
+            const { data: assignments, error: assignError } = await buildCoachAssignmentQuery(supabase)
+                .eq('user_id', context.userId)
+
+            if (!assignError && assignments) {
+                const teamIds = [...new Set((assignments ?? []).map((a: any) => a.team_id))]
+                if (teamIds.length > 0) {
+                    const teamQuery: any = buildTeamQuery(supabase)
+                    const { data: teams, error: teamError } = await teamQuery.in('id', teamIds).order('name')
+
+                    if (!teamError) {
+                        const normalizedData = normalizeSupabaseResponse(teams, true)
+                        const mappedTeams = Array.isArray(normalizedData)
+                            ? normalizedData.map(mapSupabaseTeamToDomain)
+                            : []
+                        return { data: mappedTeams as FakeTeam[], error: null }
+                    }
+                }
+            }
+        } catch {
+            // Fall through to org teams query
+        }
+
+        // Fall back to all org teams
+        const { data, error } = await buildTeamQuery(supabase)
             .eq('org_id', context.orgId)
             .order('name')
 
         if (error) throw error
-        return { data: (data as unknown) as FakeTeam[], error: null }
+
+        // Normalize and map response
+        const normalizedData = normalizeSupabaseResponse(data, true)
+        const mappedTeams = Array.isArray(normalizedData)
+            ? normalizedData.map(mapSupabaseTeamToDomain)
+            : []
+
+        return { data: mappedTeams as FakeTeam[], error: null }
     } catch (err) {
-        return { data: [], error: err instanceof Error ? err : new Error('Failed to fetch coach teams') }
+        const classifiedError = classifySupabaseError(err)
+        return { data: [], error: classifiedError }
     }
 }

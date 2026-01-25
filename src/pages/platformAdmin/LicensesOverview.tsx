@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
-import { StatCard, PageHeader, Card, Button } from '../../components/platformAdmin'
+import { StatCard, PageHeader, Card, Button, OfflineBanner } from '../../components/platformAdmin'
 import type { LicenseMetrics, LicenseAlert } from '../../types/licenseTiers.types'
 
 // Loading skeleton for stats
@@ -137,6 +137,7 @@ export default function LicensesOverview() {
   if (loading) {
     return (
       <div>
+        <OfflineBanner />
         <PageHeader
           title="Licenses & Entitlements"
           subtitle={`Signed in as ${profile?.email ?? 'unknown'}`}
@@ -148,6 +149,7 @@ export default function LicensesOverview() {
 
   return (
     <div>
+      <OfflineBanner />
       <PageHeader
         title="Licenses & Entitlements"
         subtitle={`Signed in as ${profile?.email ?? 'unknown'}`}

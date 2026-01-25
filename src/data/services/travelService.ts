@@ -122,6 +122,7 @@ function convertTravelPlanToEvent(plan: FakeTravelPlan): TravelEvent {
             city: plan.destination_city,
             state: plan.destination_state,
             postal_code: null,
+            place_id: null,
             country: 'US',
             latitude: null,
             longitude: null,
@@ -172,56 +173,9 @@ export async function getTravelEvents(
     context: UserContext,
     params: TravelEventsQueryParams = {}
 ): Promise<{ data: TravelEvent[]; error: Error | null }> {
-    if (!USE_FAKE_DATA) {
+    if (USE_FAKE_DATA) {
+        // Fake data mode - use fake travel plans converted to events
         try {
-            // Query events where travel indicators are present
-            let query = supabase
-                .from('events')
-                .select(`
-          *,
-          team:teams(id, name, org_id),
-          season:seasons(id, name),
-          event_location:event_locations(*)
-        `)
-                .order('start_time', { ascending: true })
-
-            // Filter by travel indicators - events that have travel fields set
-            // or are of type 'travel' or 'tournament'
-            query = query.or(
-                'requires_travel.eq.true,overnight.eq.true,hotel_name.neq.,type.eq.travel,type.eq.tournament'
-            )
-
-            if (params.upcomingOnly) {
-                query = query.gte('start_time', new Date().toISOString())
-            }
-
-            if (params.teamId) {
-                query = query.eq('team_id', params.teamId)
-            }
-
-            if (!params.includeCancelled) {
-                query = query.eq('is_cancelled', false)
-            }
-
-            const { data, error } = await query
-
-            if (error) throw error
-
-            // Further filter using is_travel_event RPC if needed
-            // For now, client-side detection provides consistent behavior
-            const travelEvents = (data || [])
-                .map(e => e as unknown as TravelEvent)
-                .filter(e => detectTravelEvent(e).isTravel)
-
-            return { data: travelEvents, error: null }
-        } catch (err) {
-            console.error('getTravelEvents error:', err)
-            return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
-        }
-    }
-
-    // Fake data mode - use fake travel plans converted to events
-    try {
         await simulateDelay()
 
         const permissions = buildPermissions(context)
@@ -283,6 +237,54 @@ export async function getTravelEvents(
         travelEvents.sort((a, b) =>
             new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
         )
+
+        return { data: travelEvents, error: null }
+        } catch (err) {
+            console.error('getTravelEvents error:', err)
+            return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        }
+    }
+
+    // Real Supabase implementation - NO FALLBACK
+    try {
+        // Query events where travel indicators are present
+        let query: any = supabase
+            .from('events')
+            .select(`
+          *,
+          team:teams(id, name, org_id),
+          season:seasons(id, name),
+          event_location:event_locations(*)
+        `)
+            .order('start_time', { ascending: true })
+
+        // Filter by travel indicators - events that have travel fields set
+        // or are of type 'travel' or 'tournament'
+        query = query.or(
+            'requires_travel.eq.true,overnight.eq.true,hotel_name.neq.,type.eq.travel,type.eq.tournament'
+        )
+
+        if (params.upcomingOnly) {
+            query = query.gte('start_time', new Date().toISOString())
+        }
+
+        if (params.teamId) {
+            query = query.eq('team_id', params.teamId)
+        }
+
+        if (!params.includeCancelled) {
+            query = query.eq('is_cancelled', false)
+        }
+
+        const { data, error } = await query
+
+        if (error) throw error
+
+        // Further filter using is_travel_event RPC if needed
+        // For now, client-side detection provides consistent behavior
+        const travelEvents = (data || [])
+            .map((e: any) => e as unknown as TravelEvent)
+            .filter((e: TravelEvent) => detectTravelEvent(e).isTravel)
 
         return { data: travelEvents, error: null }
     } catch (err) {
@@ -448,24 +450,25 @@ export async function clearTravelOverride(
     _context: UserContext,
     eventId: string
 ): Promise<{ error: Error | null }> {
-    if (!USE_FAKE_DATA) {
-        try {
-            const { error } = await supabase.rpc('clear_travel_override', {
-                p_event_id: eventId,
-            } as any)
-
-            if (error) throw error
-
-            return { error: null }
-        } catch (err) {
-            console.error('clearTravelOverride error:', err)
-            return { error: err instanceof Error ? err : new Error('Unknown error') }
-        }
+    if (USE_FAKE_DATA) {
+        // Fake data mode
+        await simulateDelay()
+        return { error: null }
     }
 
-    // Fake data mode
-    await simulateDelay()
-    return { error: null }
+    // Real Supabase implementation - NO FALLBACK
+    try {
+        const { error } = await supabase.rpc('clear_travel_override', {
+            p_event_id: eventId,
+        } as any)
+
+        if (error) throw error
+
+        return { error: null }
+    } catch (err) {
+        console.error('clearTravelOverride error:', err)
+        return { error: err instanceof Error ? err : new Error('Unknown error') }
+    }
 }
 
 // ============================================================================
@@ -622,26 +625,30 @@ export async function cancelTravelPlan(
     context: UserContext,
     eventId: string
 ): Promise<{ data: FakeTravelPlan | null; error: Error | null }> {
-    // In the new model, cancel the event
-    if (!USE_FAKE_DATA) {
-        try {
-            type EventUpdate = Database['public']['Tables']['events']['Update']
-            const updateData = {
-                is_cancelled: true,
-                cancellation_reason: 'Cancelled via admin panel',
-                cancelled_at: new Date().toISOString(),
-            } satisfies EventUpdate
-            const { error } = await supabase
-                .from('events')
-                .update(updateData)
-                .eq('id', eventId)
-
-            if (error) throw error
-        } catch (err) {
-            console.error('cancelTravelPlan error:', err)
-            return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
-        }
+    if (USE_FAKE_DATA) {
+        // Fake data mode - just return the plan details
+        return getTravelPlanDetails(context, eventId)
     }
 
-    return getTravelPlanDetails(context, eventId)
+    // Real Supabase implementation - NO FALLBACK
+    // In the new model, cancel the event
+    try {
+        type EventUpdate = Database['public']['Tables']['events']['Update']
+        const updateData = {
+            is_cancelled: true,
+            cancellation_reason: 'Cancelled via admin panel',
+            cancelled_at: new Date().toISOString(),
+        } satisfies EventUpdate
+        const { error } = await supabase
+            .from('events')
+            .update(updateData)
+            .eq('id', eventId)
+
+        if (error) throw error
+
+        return getTravelPlanDetails(context, eventId)
+    } catch (err) {
+        console.error('cancelTravelPlan error:', err)
+        return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+    }
 }
