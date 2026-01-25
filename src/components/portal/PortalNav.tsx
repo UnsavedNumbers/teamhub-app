@@ -3,10 +3,12 @@ import { Link, useLocation } from 'react-router-dom'
 import MegaMenu from '../common/MegaMenu'
 import ThemeToggle from './ThemeToggle'
 import UserContextDropdown from '../common/UserContextDropdown'
+import MobileNavDrawer from '../common/MobileNavDrawer'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useTheme } from '../../hooks/useTheme'
 import { useT } from '../../i18n/useI18n'
+import { useMobile } from '@/hooks/useMobile'
 
 // ============================================================================
 // ORGANIZATION ADMIN MENU STRUCTURE
@@ -264,6 +266,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
   const [logoVersion, setLogoVersion] = useState(0)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const isMobile = useMobile()
 
   // Determine user role for navigation
   const determineRole = useCallback((): PortalRole => {
@@ -385,6 +388,11 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
     setMobileMenuOpen(false)
   }, [location.pathname])
 
+  // Close mobile menu handler
+  const handleMobileMenuClose = useCallback(() => {
+    setMobileMenuOpen(false)
+  }, [])
+
   // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
@@ -404,6 +412,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
   }
 
   return (
+    <>
     <nav className="gn-root" role="navigation" aria-label="Main navigation">
       {/* Left section */}
       <div className="gn-left">
@@ -430,20 +439,23 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
           )}
         </Link>
 
-        {/* Mobile toggle */}
-        <button
-          className="gn-util-btn gn-mobile-toggle"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          aria-expanded={mobileMenuOpen}
-          aria-label="Toggle navigation menu"
-        >
-          <span className="material-symbols-outlined">
-            {mobileMenuOpen ? 'close' : 'menu'}
-          </span>
-        </button>
+        {/* Mobile toggle - only show on mobile */}
+        {isMobile && (
+          <button
+            className="gn-util-btn gn-mobile-toggle"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-expanded={mobileMenuOpen}
+            aria-label="Toggle navigation menu"
+          >
+            <span className="material-symbols-outlined">
+              {mobileMenuOpen ? 'close' : 'menu'}
+            </span>
+          </button>
+        )}
 
-        {/* Navigation items */}
-        <ul className="gn-nav" role="menubar">
+        {/* Navigation items - only show on desktop */}
+        {!isMobile && (
+          <ul className="gn-nav" role="menubar">
           {navSections.map((section) => {
             const menuId = `menu-${section.label.toLowerCase().replace(/\s+/g, '-')}`
             const isOpen = openMenuId === menuId
@@ -502,7 +514,8 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
               </li>
             )
           })}
-        </ul>
+          </ul>
+        )}
       </div>
 
       {/* Right section */}
@@ -539,5 +552,13 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         <UserContextDropdown />
       </div>
     </nav>
+
+    {/* Mobile drawer */}
+    <MobileNavDrawer
+      isOpen={mobileMenuOpen}
+      onClose={handleMobileMenuClose}
+      sections={navSections}
+    />
+    </>
   )
 }

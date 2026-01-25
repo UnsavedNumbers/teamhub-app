@@ -489,6 +489,13 @@ export const en = {
         uniforms: {
             addChildrenFirst: 'Add athletes first to manage uniforms.',
             add: 'Add',
+            prerequisite: {
+                noSportsTitle: 'No sports yet',
+                noSportsDescription: 'You need to add at least one sport to your organization before you can create uniforms.',
+                addSport: 'Add Sport',
+                loadError: 'Failed to load sports: {{message}}',
+                retry: 'Retry',
+            },
         },
         joinTeam: {
             addChildFirst: 'Add an athlete first.',
@@ -627,6 +634,15 @@ export const en = {
             addPlatformAdminFailed: 'Failed to add platform admin',
             removePlatformAdminFailed: 'Failed to remove platform admin',
             updatePlatformAdminFailed: 'Failed to update platform admin role',
+        },
+        uniforms: {
+            prerequisite: {
+                noSportsTitle: 'No sports yet',
+                noSportsDescription: 'You need to add at least one sport to your organization before you can create uniforms.',
+                addSport: 'Add Sport',
+                loadError: 'Failed to load sports: {{message}}',
+                retry: 'Retry',
+            },
         },
         children: {
             title: 'ALL ATHLETES',
@@ -1338,6 +1354,13 @@ export const es: typeof en = {
         uniforms: {
             addChildrenFirst: 'Agregue atletas primero para gestionar uniformes.',
             add: 'Agregar',
+            prerequisite: {
+                noSportsTitle: 'Aún no hay deportes',
+                noSportsDescription: 'Necesita agregar al menos un deporte a su organización antes de poder crear uniformes.',
+                addSport: 'Agregar Deporte',
+                loadError: 'Error al cargar deportes: {{message}}',
+                retry: 'Reintentar',
+            },
         },
         joinTeam: {
             addChildFirst: 'Agregue un atleta primero.',
@@ -1476,6 +1499,15 @@ export const es: typeof en = {
             addPlatformAdminFailed: 'Error al agregar administrador de plataforma',
             removePlatformAdminFailed: 'Error al eliminar administrador de plataforma',
             updatePlatformAdminFailed: 'Error al actualizar rol de administrador de plataforma',
+        },
+        uniforms: {
+            prerequisite: {
+                noSportsTitle: 'Aún no hay deportes',
+                noSportsDescription: 'Necesita agregar al menos un deporte a su organización antes de poder crear uniformes.',
+                addSport: 'Agregar Deporte',
+                loadError: 'Error al cargar deportes: {{message}}',
+                retry: 'Reintentar',
+            },
         },
         children: {
             title: 'TODOS LOS ATLETAS',

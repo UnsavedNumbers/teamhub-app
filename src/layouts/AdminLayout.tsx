@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useOrganization } from '../contexts/OrganizationContext'
@@ -8,8 +8,12 @@ import AdminLoadingSpinner from '../components/admin/AdminLoadingSpinner'
 import { usePlatformAdminTheme } from '../hooks/usePlatformAdminTheme'
 import { useT } from '../i18n/useI18n'
 import { useSidebar } from '../contexts/SidebarContext'
+import { useMobile } from '@/hooks/useMobile'
+import { useScrollLock } from '@/hooks/useScrollLock'
 import { getLink, getPath, RouteKeys } from '@/utils/routes'
 import SidebarOrganizationSwitcher from '../components/admin/SidebarOrganizationSwitcher'
+import MobileNavDrawer from '../components/common/MobileNavDrawer'
+import type { NavSection } from '@/types/menu'
 
 export default function AdminLayout() {
   const { loaded: themeLoaded } = usePlatformAdminTheme()
@@ -20,8 +24,18 @@ export default function AdminLayout() {
   const { currentOrganization } = useOrganization()
   const { summary } = useLicense(currentOrganization?.id)
   const { expandedSections, toggleSection } = useSidebar()
+  const isMobile = useMobile()
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
   const hasOrg = !!currentOrganization?.id
+
+  // Close mobile sidebar on route change
+  const handleMobileSidebarClose = useCallback(() => {
+    setMobileSidebarOpen(false)
+  }, [])
+
+  // Scroll lock when mobile sidebar is open
+  useScrollLock(mobileSidebarOpen && isMobile)
 
   // Navigation menu items - four top-level items
   const menuItems = useMemo(() => [
@@ -95,14 +109,67 @@ export default function AdminLayout() {
     return location.pathname.startsWith(path)
   }
 
+  // Convert menu items to NavSection format for mobile drawer
+  const mobileNavSections: NavSection[] = useMemo(() => {
+    return menuItems.map(item => ({
+      label: item.label,
+      route: !item.children ? item.path : undefined,
+      groups: item.children ? [
+        {
+          label: '',
+          items: item.children
+            .filter(child => !child.requiresOrg || hasOrg)
+            .map(child => ({
+              text: child.text,
+              icon: child.icon,
+              path: child.path,
+              disabled: child.requiresOrg && !hasOrg,
+            }))
+        }
+      ] : [
+        {
+          label: '',
+          items: [{
+            text: item.label,
+            icon: item.icon,
+            path: item.path,
+            disabled: item.requiresOrg && !hasOrg,
+          }]
+        }
+      ]
+    }))
+  }, [menuItems, hasOrg])
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    if (mobileSidebarOpen) {
+      setMobileSidebarOpen(false)
+    }
+  }, [location.pathname, mobileSidebarOpen])
+
   if (!themeLoaded) {
     return <AdminLoadingSpinner />
   }
 
   return (
     <div className="pa-root pa-app">
-      {/* Sidebar */}
-      <aside className="pa-sidebar">
+      {/* Mobile hamburger button */}
+      {isMobile && (
+        <button
+          className="pa-mobile-sidebar-toggle"
+          onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+          aria-expanded={mobileSidebarOpen}
+          aria-label="Toggle sidebar"
+        >
+          <span className="material-symbols-outlined">
+            {mobileSidebarOpen ? 'close' : 'menu'}
+          </span>
+        </button>
+      )}
+
+      {/* Sidebar - hidden on mobile */}
+      {!isMobile && (
+        <aside className="pa-sidebar">
         {/* Brand */}
         <div className="pa-sidebar-header">
           <Link to={getLink(RouteKeys.ADMIN_DASHBOARD)} className="pa-sidebar-brand">
@@ -236,7 +303,8 @@ export default function AdminLayout() {
             </button>
           </div>
         </div>
-      </aside>
+        </aside>
+      )}
 
       {/* Main */}
       <div className="pa-main">
@@ -248,6 +316,15 @@ export default function AdminLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Mobile sidebar drawer */}
+      {isMobile && (
+        <MobileNavDrawer
+          isOpen={mobileSidebarOpen}
+          onClose={handleMobileSidebarClose}
+          sections={mobileNavSections}
+        />
+      )}
     </div>
   )
 }
