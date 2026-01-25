@@ -78,7 +78,7 @@ export default function SeasonsManagement() {
             </span>
             <h3 className="pa-h3">No seasons yet</h3>
             <p className="pa-body-m pa-text-muted pa-mb-4">Create your first season to start organizing teams and events.</p>
-            <Link to="/admin/organization/structure/forms?type=season">
+            <Link to={`/admin/organization/structure/forms?type=season&returnUrl=${encodeURIComponent('/admin/organization/structure/seasons')}`}>
               <Button>Add Season</Button>
             </Link>
           </div>
@@ -86,7 +86,7 @@ export default function SeasonsManagement() {
       ) : (
         <>
           <div className="pa-flex pa-justify-end pa-mb-4">
-            <Link to="/admin/organization/structure/forms?type=season">
+            <Link to={`/admin/organization/structure/forms?type=season&returnUrl=${encodeURIComponent('/admin/organization/structure/seasons')}`}>
               <Button>Add Season</Button>
             </Link>
           </div>
@@ -125,7 +125,7 @@ export default function SeasonsManagement() {
                         </span>
                       </td>
                       <td className="py-4 px-6 text-right">
-                        <Link to={`/admin/organization/structure/forms?edit=season&id=${season.id}`} className="invisible group-hover:visible focus:visible">
+                        <Link to={`/admin/organization/structure/forms?edit=season&id=${season.id}&returnUrl=${encodeURIComponent('/admin/organization/structure/seasons')}`} className="invisible group-hover:visible focus:visible">
                           <button className="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors">
                             Edit
                           </button>

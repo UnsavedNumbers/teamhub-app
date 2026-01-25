@@ -682,6 +682,9 @@ export const en = {
             messages: {
                 created: '{{item}} created successfully.',
                 updated: '{{item}} updated successfully.',
+                createdWithNextStep: '{{item}} created successfully. Would you like to add a {{nextItem}} now?',
+                addNextLevel: 'Add {{nextItem}}',
+                notNow: 'Not now',
             },
             errors: {
                 loadFailed: 'We couldn’t load organization data. Check your connection and try again.',
@@ -1547,6 +1550,9 @@ export const es: typeof en = {
             messages: {
                 created: '{{item}} creado correctamente.',
                 updated: '{{item}} actualizado correctamente.',
+                createdWithNextStep: '{{item}} creado correctamente. ¿Te gustaría agregar un {{nextItem}} ahora?',
+                addNextLevel: 'Agregar {{nextItem}}',
+                notNow: 'Ahora no',
             },
             errors: {
                 loadFailed: 'No pudimos cargar los datos de la organización. Verifique su conexión e inténtelo de nuevo.',

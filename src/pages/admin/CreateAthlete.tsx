@@ -16,7 +16,10 @@ import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { useUserContext } from '../../hooks/useUserContext'
 import { createAthleteWithGuardians } from '../../data/services/familyService'
 import { GuardianList } from '../../components/admin/GuardianInput'
+import { AthletePhotoUpload } from '../../components/admin/AthletePhotoUpload'
 import { getSystemSports } from '../../data/services/sportsService'
+import { uploadAthletePhoto } from '../../data/services/athletePhotoService'
+import { updateAthlete } from '../../data/services/familyService'
 import type { Gender, GuardianFormData, CreateAthleteDTO } from '../../types/family'
 import type { Sport } from '../../data/types/organization'
 import { createDefaultGuardians, validateGuardians, findDuplicateEmails } from '../../utils/guardianMatching'
@@ -87,6 +90,10 @@ export default function CreateAthlete() {
     })
 
     const [guardians, setGuardians] = useState<GuardianFormData[]>(createDefaultGuardians())
+
+    // Photo state
+    const [photoFile, setPhotoFile] = useState<File | null>(null)
+    const [photoError, setPhotoError] = useState<string | null>(null)
 
     // Sports state
     const [sports, setSports] = useState<Sport[]>([])
@@ -188,12 +195,29 @@ export default function CreateAthlete() {
 
             if (createError) throw createError
 
-            // Success - navigate to athlete list or detail page
-            if (data?.athlete_id) {
-                navigate(`/admin/athletes`)
-            } else {
-                navigate(`/admin/athletes`)
+            // If athlete was created and photo was selected, upload photo
+            if (data?.athlete_id && photoFile) {
+                const { path: photoPath, error: uploadError } = await uploadAthletePhoto(
+                    context,
+                    data.athlete_id,
+                    photoFile
+                )
+
+                if (uploadError) {
+                    // Log error but don't fail athlete creation
+                    console.error('Error uploading photo:', uploadError)
+                    setPhotoError(uploadError.message)
+                    // Continue - athlete was created successfully, photo can be added later
+                } else if (photoPath) {
+                    // Update athlete with photo_url path
+                    await updateAthlete(context, data.athlete_id, { photo_url: photoPath })
+                    // Clear photo error if upload succeeded
+                    setPhotoError(null)
+                }
             }
+
+            // Success - navigate to athlete list
+            navigate(`/admin/athletes`)
         } catch (err) {
             console.error('Error creating athlete:', err)
             setError(err instanceof Error ? err : new Error('Failed to create athlete'))
@@ -219,6 +243,22 @@ export default function CreateAthlete() {
 
             <div className="pa-form-container">
                     <form onSubmit={handleSubmit}>
+                        {/* Profile Photo */}
+                        <Card className="mb-6">
+                            <h2 className="pa-h2 pa-mb-6">Profile Photo</h2>
+                            <AthletePhotoUpload
+                                photoFile={photoFile}
+                                photoUrl={null}
+                                onPhotoSelect={setPhotoFile}
+                                onPhotoRemove={() => {
+                                    setPhotoFile(null)
+                                    setPhotoError(null)
+                                }}
+                                disabled={loading}
+                                error={photoError}
+                            />
+                        </Card>
+
                         {/* Athlete Information */}
                         <Card>
                             <h2 className="pa-h2 pa-mb-6">Athlete Information</h2>

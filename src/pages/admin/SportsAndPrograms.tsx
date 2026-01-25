@@ -62,31 +62,13 @@ export default function SportsAndPrograms() {
     load()
   }, [context, isReady])
 
-  // Filter out sports that have no teams in their hierarchy
-  // A sport is considered "empty" if it has no programs, or all programs have no levels, or all levels have no teams
+  // Show all sports that have been added to the organization
+  // Previously filtered to only show sports with teams, but that hides newly added sports
+  // Now showing all sports so users can see and manage all their sports
   const sportsWithTeams = useMemo(() => {
-    return sports.filter((sport) => {
-      // Get all programs for this sport
-      const sportPrograms = programs.filter((p) => p.sport_id === sport.id)
-      if (sportPrograms.length === 0) return false
-
-      // Check if any program has levels with teams
-      for (const program of sportPrograms) {
-        const programLevels = levels.filter((l) => l.program_id === program.id)
-        if (programLevels.length === 0) continue
-
-        // Check if any level has teams
-        for (const level of programLevels) {
-          const levelTeams = teams.filter((t) => t.level_id === level.id)
-          if (levelTeams.length > 0) {
-            return true // This sport has at least one team
-          }
-        }
-      }
-
-      return false // No teams found in this sport's hierarchy
-    })
-  }, [sports, programs, levels, teams])
+    // Return all sports - they can have programs/levels/teams or be newly added
+    return sports
+  }, [sports])
 
   const programsBySport = (sportId: string) => programs.filter((p) => p.sport_id === sportId)
 
@@ -223,10 +205,12 @@ export default function SportsAndPrograms() {
         {sportsWithTeams.length === 0 ? (
           <div className="p-12 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50">
             <span className="material-symbols-outlined text-5xl text-slate-300 mb-4">sports</span>
-            <h3 className="text-lg font-semibold text-slate-900 mb-1">No active sports</h3>
-            <p className="text-slate-500 mb-6">Sports with teams will appear here. Start by adding a sport, program, level, and team.</p>
-            <Link to="/admin/organization/structure/forms?type=sport">
-              <PrimaryButton>Add Sport</PrimaryButton>
+            <h3 className="text-lg font-semibold text-slate-900 mb-1">No sports added</h3>
+            <p className="text-slate-500 mb-6">Start by adding a sport to your organization. Then you can create programs, levels, and teams.</p>
+            <Link to="/admin/organization/structure/forms?type=sport" className={isOffline || USE_FAKE_DATA ? 'pointer-events-none opacity-50' : ''}>
+              <PrimaryButton>
+                {USE_FAKE_DATA ? 'Sign in to Add Sport' : 'Add Sport'}
+              </PrimaryButton>
             </Link>
           </div>
         ) : (
@@ -262,7 +246,7 @@ export default function SportsAndPrograms() {
                   
                   <div className="flex items-center gap-3 w-full sm:w-auto sm:justify-end" onClick={e => e.stopPropagation()}>
                     <Link 
-                      to={`/admin/organization/structure/forms?type=program&sport_id=${sport.id}`} 
+                      to={`/admin/organization/structure/forms?type=program&sport_id=${sport.id}&returnUrl=${encodeURIComponent('/admin/organization/structure/sports-programs')}`} 
                       className={`w-full sm:w-auto ${isOffline || USE_FAKE_DATA ? 'pointer-events-none opacity-50' : ''}`}
                     >
                       <SecondaryButton className="w-full sm:w-auto">
@@ -297,7 +281,12 @@ export default function SportsAndPrograms() {
                 {isExpanded && (
                   <div className="bg-slate-50/50 border-t border-slate-100 p-4 pl-14 sm:pl-16 space-y-3 pb-6">
                     {sportPrograms.length > 0 ? (
-                      sportPrograms.map((program) => (
+                      sportPrograms.map((program) => {
+                        const programLevels = levels.filter((l) => l.program_id === program.id)
+                        const hasTeams = programLevels.some((level) => 
+                          teams.some((t) => t.level_id === level.id)
+                        )
+                        return (
                         <div 
                           key={program.id} 
                           className="flex items-center justify-between p-4 bg-white border border-slate-200/60 rounded-lg shadow-sm hover:border-slate-300 transition-colors"
@@ -310,15 +299,19 @@ export default function SportsAndPrograms() {
                           </div>
                           
                           <div className="flex items-center gap-2">
-                            <Link to={`/admin/organization/structure/forms?edit=program&id=${program.id}`}>
+                            <Link to={`/admin/organization/structure/forms?edit=program&id=${program.id}&returnUrl=${encodeURIComponent('/admin/organization/structure/sports-programs')}`}>
                               <SecondaryButton>Edit</SecondaryButton>
                             </Link>
-                            <Link to={`/admin/organization/structure/forms?type=level&program_id=${program.id}&sport_id=${program.sport_id}`}>
+                            <Link 
+                              to={`/admin/organization/structure/forms?type=level&program_id=${program.id}&sport_id=${program.sport_id}&returnUrl=${encodeURIComponent('/admin/organization/structure/sports-programs')}`}
+                              className={isOffline || USE_FAKE_DATA ? 'pointer-events-none opacity-50' : ''}
+                            >
                               <SecondaryButton>Add Level</SecondaryButton>
                             </Link>
                           </div>
                         </div>
-                      ))
+                        )
+                      })
                     ) : (
                       <div className="p-6 text-center border border-dashed border-slate-200 rounded-lg bg-white/50">
                         <p className="text-sm text-slate-500 mb-3">No programs found for {sport.name}.</p>

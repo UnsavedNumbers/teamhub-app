@@ -111,7 +111,7 @@ export default function LevelsManagement() {
                   ]}
                 />
               </div>
-              <Link to="/admin/organization/structure/forms?type=level" className="w-full md:w-auto">
+              <Link to={`/admin/organization/structure/forms?type=level&returnUrl=${encodeURIComponent('/admin/organization/structure/levels')}`} className="w-full md:w-auto">
                 <Button style={{ width: '100%' }} disabled={!canCreateLevel} title={!canCreateLevel ? 'Add a Program first' : undefined}>
                   Add Level
                 </Button>
@@ -157,7 +157,7 @@ export default function LevelsManagement() {
                           </span>
                         </td>
                         <td className="py-4 px-6 text-right">
-                          <Link to={`/admin/organization/structure/forms?edit=level&id=${level.id}`} className="invisible group-hover:visible focus:visible">
+                          <Link to={`/admin/organization/structure/forms?edit=level&id=${level.id}&returnUrl=${encodeURIComponent('/admin/organization/structure/levels')}`} className="invisible group-hover:visible focus:visible">
                             <button className="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors">
                               Edit
                             </button>

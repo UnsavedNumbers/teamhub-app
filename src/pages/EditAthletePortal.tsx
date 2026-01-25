@@ -15,6 +15,8 @@ import { useUserContext } from '../hooks/useUserContext'
 import { getAthleteById, updateAthlete } from '../data/services/familyService'
 import { updateAthleteSports } from '../data/services/athleteSportsService'
 import { getSystemSports } from '../data/services/sportsService'
+import { AthletePhotoUpload } from '../components/admin/AthletePhotoUpload'
+import { uploadAthletePhoto, deleteAthletePhoto, getAthletePhotoUrl } from '../data/services/athletePhotoService'
 import type { Gender, UpdateAthleteDTO } from '../types/family'
 import type { Sport } from '../data/types/organization'
 
@@ -87,6 +89,13 @@ export default function EditAthletePortal() {
     // Form state
     const [formData, setFormData] = useState(initialFormData)
 
+    // Photo state
+    const [photoFile, setPhotoFile] = useState<File | null>(null)
+    const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+    const [photoPath, setPhotoPath] = useState<string | null>(null)
+    const [photoError, setPhotoError] = useState<string | null>(null)
+    const [photoRemoved, setPhotoRemoved] = useState(false)
+
     // Sports state
     const [sports, setSports] = useState<Sport[]>([])
     const [isLoadingSports, setIsLoadingSports] = useState(false)
@@ -158,6 +167,22 @@ export default function EditAthletePortal() {
                     emergency_contact_name: data.emergency_contact_name || '',
                     emergency_contact_phone: data.emergency_contact_phone || '',
                 })
+
+                // Load photo if exists
+                if (data.photo_url) {
+                    setPhotoPath(data.photo_url)
+                    // Generate signed URL for display
+                    getAthletePhotoUrl(data.photo_url).then(({ url, error }) => {
+                        if (url && !error) {
+                            setPhotoUrl(url)
+                        } else {
+                            console.error('Error loading photo URL:', error)
+                        }
+                    })
+                } else {
+                    setPhotoPath(null)
+                    setPhotoUrl(null)
+                }
 
                 // Pre-populate sports
                 if (data.sports && data.sports.length > 0) {
@@ -272,8 +297,43 @@ export default function EditAthletePortal() {
                 emergency_contact_phone: formData.emergency_contact_phone.trim() || null,
             }
 
+            // Handle photo changes
+            let newPhotoPath: string | null = photoPath
+
+            // If photo was removed
+            if (photoRemoved && photoPath) {
+                // Delete from storage
+                await deleteAthletePhoto(context, athleteId)
+                newPhotoPath = null
+            }
+            // If new photo was selected
+            else if (photoFile) {
+                // Upload new photo
+                const { path: uploadedPath, error: uploadError } = await uploadAthletePhoto(
+                    context,
+                    athleteId,
+                    photoFile
+                )
+
+                if (uploadError) {
+                    // Log error but don't fail athlete update
+                    console.error('Error uploading photo:', uploadError)
+                    setPhotoError(uploadError.message)
+                    // Continue with athlete update - photo can be fixed later
+                } else if (uploadedPath) {
+                    newPhotoPath = uploadedPath
+                    setPhotoError(null)
+                }
+            }
+
+            // Update athlete data (including photo_url if changed)
+            const updateData: UpdateAthleteDTO = {
+                ...normalizedData,
+                photo_url: newPhotoPath
+            }
+
             // Sequential updates: athlete first, then sports
-            const { error: athleteError } = await updateAthlete(context, athleteId, normalizedData)
+            const { error: athleteError } = await updateAthlete(context, athleteId, updateData)
             if (athleteError) throw athleteError
 
             // Then update sports
@@ -372,6 +432,28 @@ export default function EditAthletePortal() {
                         </ul>
                     </Card>
                 )}
+
+                {/* Profile Photo */}
+                <Card className="p-6 mb-6">
+                    <h2 className="text-xl font-black text-slate-900 dark:text-white mb-6">Profile Photo</h2>
+                    <AthletePhotoUpload
+                        photoFile={photoFile}
+                        photoUrl={photoUrl}
+                        onPhotoSelect={(file) => {
+                            setPhotoFile(file)
+                            setPhotoRemoved(false)
+                            setPhotoError(null)
+                        }}
+                        onPhotoRemove={() => {
+                            setPhotoFile(null)
+                            setPhotoUrl(null)
+                            setPhotoRemoved(true)
+                            setPhotoError(null)
+                        }}
+                        disabled={isSubmitting}
+                        error={photoError}
+                    />
+                </Card>
 
                 {/* Basic Information */}
                 <Card className="p-6 mb-6">

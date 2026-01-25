@@ -12,7 +12,9 @@ import { PageTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import { useUserContext } from '../hooks/useUserContext'
-import { createAthleteWithGuardians } from '../data/services/familyService'
+import { createAthleteWithGuardians, updateAthlete } from '../data/services/familyService'
+import { AthletePhotoUpload } from '../components/admin/AthletePhotoUpload'
+import { uploadAthletePhoto } from '../data/services/athletePhotoService'
 import { checkGuardianMatch, normalizeEmail, validateGuardianEmail } from '../utils/guardianMatching'
 import { getSystemSports } from '../data/services/sportsService'
 import type { Gender, CreateAthleteDTO, GuardianMatch, RelationshipType } from '../types/family'
@@ -88,6 +90,10 @@ export default function CreateAthletePortal() {
     const [isCheckingGuardian, setIsCheckingGuardian] = useState(false)
     const [guardianMatch, setGuardianMatch] = useState<GuardianMatch | null>(null)
     const [emailTouched, setEmailTouched] = useState(false)
+
+    // Photo state
+    const [photoFile, setPhotoFile] = useState<File | null>(null)
+    const [photoError, setPhotoError] = useState<string | null>(null)
 
     // Sports state
     const [sports, setSports] = useState<Sport[]>([])
@@ -275,9 +281,30 @@ export default function CreateAthletePortal() {
                 sports: selectedSports.length > 0 ? selectedSports : undefined
             }
 
-            const { error: createError } = await createAthleteWithGuardians(context, dto)
+            const { data, error: createError } = await createAthleteWithGuardians(context, dto)
 
             if (createError) throw createError
+
+            // If athlete was created and photo was selected, upload photo
+            if (data?.athlete_id && photoFile) {
+                const { path: photoPath, error: uploadError } = await uploadAthletePhoto(
+                    context,
+                    data.athlete_id,
+                    photoFile
+                )
+
+                if (uploadError) {
+                    // Log error but don't fail athlete creation
+                    console.error('Error uploading photo:', uploadError)
+                    setPhotoError(uploadError.message)
+                    // Continue - athlete was created successfully, photo can be added later
+                } else if (photoPath) {
+                    // Update athlete with photo_url path
+                    await updateAthlete(context, data.athlete_id, { photo_url: photoPath })
+                    // Clear photo error if upload succeeded
+                    setPhotoError(null)
+                }
+            }
 
             // Success - navigate back to athletes list
             navigate('/portal/athletes')
@@ -381,6 +408,22 @@ export default function CreateAthletePortal() {
                         </ul>
                     </Card>
                 )}
+
+                {/* Profile Photo */}
+                <Card className="mb-6">
+                    <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">Profile Photo</h2>
+                    <AthletePhotoUpload
+                        photoFile={photoFile}
+                        photoUrl={null}
+                        onPhotoSelect={setPhotoFile}
+                        onPhotoRemove={() => {
+                            setPhotoFile(null)
+                            setPhotoError(null)
+                        }}
+                        disabled={isSubmitting}
+                        error={photoError}
+                    />
+                </Card>
 
                 {/* Basic Information */}
                 <Card className="p-6 mb-6">
