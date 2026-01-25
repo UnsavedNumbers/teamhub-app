@@ -91,6 +91,12 @@ const portal = {
         icon: 'groups',
         description: 'Your children\'s teams',
     },
+    requestAttachment: {
+        path: '/portal/athletes/request-attachment',
+        label: 'Request Athlete Attachment',
+        icon: 'person_add',
+        description: 'Request to attach to an existing athlete',
+    },
     join: {
         path: '/portal/join',
         label: 'Join a Team',
@@ -667,6 +673,15 @@ const admin = {
             icon: 'person_add',
             requiresOrg: true,
         },
+    },
+
+    // Guardian Attachment Requests
+    guardianRequests: {
+        path: '/admin/guardian-requests',
+        label: 'Guardian Requests',
+        icon: 'person_add',
+        description: 'Review guardian attachment requests',
+        requiresOrg: true,
     },
 
     // Settings

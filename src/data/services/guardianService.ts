@@ -425,3 +425,428 @@ export async function resendInvite(
         }
     }
 }
+
+// ============================================================================
+// Guardian Attachment Requests
+// ============================================================================
+
+/**
+ * Search result for athlete in guardian attachment search
+ */
+export interface AthleteSearchResult {
+    id: string
+    first_name: string
+    last_name: string
+    birthdate: string | null
+    gender: string | null
+}
+
+/**
+ * Guardian attachment request
+ */
+export interface GuardianAttachmentRequest {
+    id: string
+    org_id: string
+    athlete_id: string
+    requested_by_user_id: string
+    status: 'pending' | 'approved' | 'denied'
+    reviewed_by_user_id: string | null
+    reviewed_at: string | null
+    decision_reason: string | null
+    expires_at: string
+    created_at: string
+    updated_at: string
+}
+
+/**
+ * Search athletes for guardian attachment
+ * Returns athletes in org that don't have existing guardians
+ */
+export async function searchAthletesForAttachment(
+    orgId: string,
+    searchText: string
+): Promise<{ data: AthleteSearchResult[]; error: Error | null }> {
+    try {
+        // Validate inputs
+        if (!orgId) {
+            return {
+                data: [],
+                error: new Error('Organization ID is required')
+            }
+        }
+
+        if (!searchText || searchText.trim().length < 2) {
+            return {
+                data: [],
+                error: null  // Not an error, just no search yet
+            }
+        }
+
+        const { data, error } = await supabase
+            .rpc('search_athletes_for_guardian' as any, {
+                p_org_id: orgId,
+                p_search: searchText.trim(),
+                p_limit: 50
+            })
+
+        if (error) throw error
+
+        // Map results to type-safe format
+        const results: AthleteSearchResult[] = (data || []).map((row: any) => ({
+            id: row.id,
+            first_name: row.first_name ?? '',
+            last_name: row.last_name ?? '',
+            birthdate: row.birthdate ?? null,
+            gender: row.gender ?? null
+        }))
+
+        return { data: results, error: null }
+    } catch (err) {
+        console.error('Error searching athletes for attachment:', err)
+        return {
+            data: [],
+            error: err instanceof Error ? err : new Error('Unknown error')
+        }
+    }
+}
+
+/**
+ * Submit guardian attachment request
+ */
+export async function submitGuardianAttachmentRequest(
+    athleteId: string,
+    orgId: string
+): Promise<{ data: GuardianAttachmentRequest | null; error: Error | null }> {
+    try {
+        // Validate inputs
+        if (!athleteId || !orgId) {
+            return {
+                data: null,
+                error: new Error('Athlete ID and Organization ID are required')
+            }
+        }
+
+        const { data, error } = await supabase
+            .rpc('submit_guardian_attachment_request' as any, {
+                p_athlete_id: athleteId,
+                p_org_id: orgId
+            })
+
+        if (error) throw error
+
+        // Check if request was successful
+        const result = data as { success?: boolean; error?: string; id?: string; status?: string; expires_at?: string; created_at?: string; already_existed?: boolean } | null
+
+        if (!result || result.success === false) {
+            return {
+                data: null,
+                error: new Error(result?.error || 'Failed to submit request')
+            }
+        }
+
+        // Map to GuardianAttachmentRequest type
+        const request: GuardianAttachmentRequest = {
+            id: result.id!,
+            org_id: orgId,
+            athlete_id: athleteId,
+            requested_by_user_id: '', // Will be set by backend
+            status: (result.status as 'pending' | 'approved' | 'denied') || 'pending',
+            reviewed_by_user_id: null,
+            reviewed_at: null,
+            decision_reason: null,
+            expires_at: result.expires_at || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            created_at: result.created_at || new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        }
+
+        // Trigger notification worker
+        triggerNotificationWorker()
+
+        return { data: request, error: null }
+    } catch (err) {
+        console.error('Error submitting guardian attachment request:', err)
+        return {
+            data: null,
+            error: err instanceof Error ? err : new Error('Unknown error')
+        }
+    }
+}
+
+/**
+ * Get guardian attachment requests for current user
+ */
+export async function getGuardianAttachmentRequests(
+    orgId: string
+): Promise<{ data: GuardianAttachmentRequest[]; error: Error | null }> {
+    try {
+        if (!orgId) {
+            return {
+                data: [],
+                error: new Error('Organization ID is required')
+            }
+        }
+
+        const { data, error } = await supabase
+            .from('guardian_attachment_requests' as any)
+            .select('*')
+            .eq('org_id', orgId)
+            .order('created_at', { ascending: false })
+
+        if (error) throw error
+
+        const requests: GuardianAttachmentRequest[] = (data || []).map((row: any) => ({
+            id: row.id,
+            org_id: row.org_id,
+            athlete_id: row.athlete_id,
+            requested_by_user_id: row.requested_by_user_id,
+            status: row.status,
+            reviewed_by_user_id: row.reviewed_by_user_id ?? null,
+            reviewed_at: row.reviewed_at ?? null,
+            decision_reason: row.decision_reason ?? null,
+            expires_at: row.expires_at,
+            created_at: row.created_at,
+            updated_at: row.updated_at
+        }))
+
+        return { data: requests, error: null }
+    } catch (err) {
+        console.error('Error getting guardian attachment requests:', err)
+        return {
+            data: [],
+            error: err instanceof Error ? err : new Error('Unknown error')
+        }
+    }
+}
+
+// ============================================================================
+// Admin Functions for Guardian Attachment Requests
+// ============================================================================
+
+/**
+ * Get pending guardian attachment requests for an organization (admin only)
+ */
+export async function getPendingGuardianAttachmentRequests(
+    orgId: string
+): Promise<{ data: GuardianAttachmentRequest[]; error: Error | null }> {
+    try {
+        if (!orgId) {
+            return {
+                data: [],
+                error: new Error('Organization ID is required')
+            }
+        }
+
+        const { data, error } = await supabase
+            .from('guardian_attachment_requests' as any)
+            .select('*')
+            .eq('org_id', orgId)
+            .eq('status', 'pending')
+            .gt('expires_at', new Date().toISOString())
+            .order('created_at', { ascending: true })
+
+        if (error) throw error
+
+        const requests: GuardianAttachmentRequest[] = (data || []).map((row: any) => ({
+            id: row.id,
+            org_id: row.org_id,
+            athlete_id: row.athlete_id,
+            requested_by_user_id: row.requested_by_user_id,
+            status: row.status,
+            reviewed_by_user_id: row.reviewed_by_user_id ?? null,
+            reviewed_at: row.reviewed_at ?? null,
+            decision_reason: row.decision_reason ?? null,
+            expires_at: row.expires_at,
+            created_at: row.created_at,
+            updated_at: row.updated_at
+        }))
+
+        return { data: requests, error: null }
+    } catch (err) {
+        console.error('Error getting pending guardian attachment requests:', err)
+        return {
+            data: [],
+            error: err instanceof Error ? err : new Error('Unknown error')
+        }
+    }
+}
+
+/**
+ * Enriched guardian attachment request with athlete and user details
+ */
+export interface GuardianAttachmentRequestEnriched extends GuardianAttachmentRequest {
+    athlete_first_name: string
+    athlete_last_name: string
+    athlete_birthdate: string | null
+    requester_email: string
+    requester_display_name: string | null
+    reviewer_email: string | null
+    reviewer_display_name: string | null
+}
+
+/**
+ * Get all guardian attachment requests for an organization with optional status filter (admin only)
+ * Returns enriched data with athlete and user details
+ */
+export async function getGuardianAttachmentRequestsForOrg(
+    orgId: string,
+    status?: 'pending' | 'approved' | 'denied'
+): Promise<{ data: GuardianAttachmentRequestEnriched[]; error: Error | null }> {
+    try {
+        if (!orgId) {
+            return {
+                data: [],
+                error: new Error('Organization ID is required')
+            }
+        }
+
+        const { data, error } = await supabase
+            .rpc('get_guardian_attachment_requests_for_admin' as any, {
+                p_org_id: orgId,
+                p_status: status || null
+            })
+
+        if (error) throw error
+
+        const requestsData = Array.isArray(data) ? data : []
+        const requests: GuardianAttachmentRequestEnriched[] = requestsData.map((row: any) => ({
+            id: row.id,
+            org_id: row.org_id,
+            athlete_id: row.athlete_id,
+            requested_by_user_id: row.requested_by_user_id,
+            status: row.status,
+            reviewed_by_user_id: row.reviewed_by_user_id ?? null,
+            reviewed_at: row.reviewed_at ?? null,
+            decision_reason: row.decision_reason ?? null,
+            expires_at: row.expires_at,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+            athlete_first_name: row.athlete_first_name ?? '',
+            athlete_last_name: row.athlete_last_name ?? '',
+            athlete_birthdate: row.athlete_birthdate ?? null,
+            requester_email: row.requester_email ?? '',
+            requester_display_name: row.requester_display_name ?? null,
+            reviewer_email: row.reviewer_email ?? null,
+            reviewer_display_name: row.reviewer_display_name ?? null
+        }))
+
+        return { data: requests, error: null }
+    } catch (err) {
+        console.error('Error getting guardian attachment requests for org:', err)
+        return {
+            data: [],
+            error: err instanceof Error ? err : new Error('Unknown error')
+        }
+    }
+}
+
+/**
+ * Get pending guardian attachment request count for an organization (admin only)
+ */
+export async function getPendingGuardianAttachmentCount(
+    orgId: string
+): Promise<{ data: number; error: Error | null }> {
+    try {
+        if (!orgId) {
+            return {
+                data: 0,
+                error: new Error('Organization ID is required')
+            }
+        }
+
+        const { data, error } = await supabase
+            .rpc('get_pending_guardian_attachment_count' as any, {
+                p_org_id: orgId
+            })
+
+        if (error) throw error
+
+        const count = typeof data === 'number' ? data : 0
+
+        return { data: count, error: null }
+    } catch (err) {
+        console.error('Error getting pending guardian attachment count:', err)
+        return {
+            data: 0,
+            error: err instanceof Error ? err : new Error('Unknown error')
+        }
+    }
+}
+
+/**
+ * Review guardian attachment request (approve or deny)
+ */
+export async function reviewGuardianAttachmentRequest(
+    requestId: string,
+    approve: boolean,
+    reason?: string | null
+): Promise<{ data: GuardianAttachmentRequest | null; error: Error | null }> {
+    try {
+        if (!requestId) {
+            return {
+                data: null,
+                error: new Error('Request ID is required')
+            }
+        }
+
+        // Require reason for denials
+        if (!approve && (!reason || reason.trim().length === 0)) {
+            return {
+                data: null,
+                error: new Error('Decision reason is required when denying a request')
+            }
+        }
+
+        const { data, error } = await supabase
+            .rpc('review_guardian_attachment_request' as any, {
+                p_request_id: requestId,
+                p_approve: approve,
+                p_decision_reason: reason || null
+            })
+
+        if (error) throw error
+
+        const result = data as { success?: boolean; error?: string; status?: string; message?: string } | null
+
+        if (!result || result.success === false) {
+            return {
+                data: null,
+                error: new Error(result?.error || 'Failed to review request')
+            }
+        }
+
+        // Fetch updated request
+        const { data: updatedRequest, error: fetchError } = await supabase
+            .from('guardian_attachment_requests' as any)
+            .select('*')
+            .eq('id', requestId)
+            .single()
+
+        if (fetchError) throw fetchError
+
+        const requestRow = updatedRequest as any
+        const request: GuardianAttachmentRequest = {
+            id: requestRow.id,
+            org_id: requestRow.org_id,
+            athlete_id: requestRow.athlete_id,
+            requested_by_user_id: requestRow.requested_by_user_id,
+            status: requestRow.status,
+            reviewed_by_user_id: requestRow.reviewed_by_user_id ?? null,
+            reviewed_at: requestRow.reviewed_at ?? null,
+            decision_reason: requestRow.decision_reason ?? null,
+            expires_at: requestRow.expires_at,
+            created_at: requestRow.created_at,
+            updated_at: requestRow.updated_at
+        }
+
+        // Trigger notification worker
+        triggerNotificationWorker()
+
+        return { data: request, error: null }
+    } catch (err) {
+        console.error('Error reviewing guardian attachment request:', err)
+        return {
+            data: null,
+            error: err instanceof Error ? err : new Error('Unknown error')
+        }
+    }
+}

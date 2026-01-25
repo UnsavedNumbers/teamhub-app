@@ -58,6 +58,12 @@ serve(async (req) => {
     const notificationJobs = (jobs ?? []) as NotificationJobRow[]
     const results: any[] = []
 
+    const platformBaseUrl =
+      Deno.env.get('PLATFORM_APP_URL') ||
+      Deno.env.get('APP_URL') ||
+      'https://platform.youthsports.team'
+    const guardianInvitePath = '/portal/accept-invite'
+
     for (const job of notificationJobs) {
       try {
         // Check user/org notification preferences
@@ -76,13 +82,21 @@ serve(async (req) => {
         }
 
         // Convert to our interface
+        const payload = { ...(job.payload ?? {}) }
+        if (job.type === 'guardian_invite') {
+          const token = payload.invite_token
+          if (token) {
+            payload.invite_url = `${platformBaseUrl}${guardianInvitePath}?token=${token}&type=guardian`
+          }
+        }
+
         const notificationJob: NotificationJob = {
           id: job.id,
           org_id: job.org_id,
           user_id: job.user_id || undefined,
           email: job.email,
           type: job.type as NotificationJob['type'],
-          payload: job.payload,
+          payload,
           status: job.status,
           error: job.error || undefined,
           created_at: job.created_at,
