@@ -204,7 +204,7 @@ export default function TeamsManagement() {
             <p className="text-slate-500 mb-6">
               You need to create at least one level before you can add teams.
             </p>
-            <Link to="/admin/organization/structure/forms?type=level">
+            <Link to={`/admin/organization/structure/forms?type=level&returnUrl=${encodeURIComponent('/admin/organization/structure/teams')}`}>
               <Button variant="primary">Add a Level</Button>
             </Link>
           </div>
@@ -269,7 +269,7 @@ export default function TeamsManagement() {
                  Actually, simpler to have filters in one block and button floating or right-aligned. 
                  Let's stick to placing it in the grid for responsive alignment. 
              */}
-             <Link to="/admin/organization/structure/forms?type=team" className="w-full lg:w-auto">
+             <Link to={`/admin/organization/structure/forms?type=team&returnUrl=${encodeURIComponent('/admin/organization/structure/teams')}`} className="w-full lg:w-auto">
                 <PrimaryButton 
                   className="w-full lg:w-auto"
                   disabled={!canCreateTeam}

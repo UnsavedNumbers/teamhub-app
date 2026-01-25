@@ -415,12 +415,34 @@ export async function deleteAthlete(
     }
 
     try {
+        // Fetch athlete's photo_url before deletion for cleanup
+        const { data: athlete, error: fetchError } = await supabase
+            .from('athletes')
+            .select('photo_url')
+            .eq('id', athleteId)
+            .maybeSingle() as { data: { photo_url: string | null } | null; error: any }
+
+        if (fetchError && fetchError.code !== 'PGRST116') {
+            // PGRST116 is "not found" which is fine, but other errors should be handled
+            console.error('[familyService] Error fetching athlete for cleanup:', fetchError)
+        }
+
+        // Delete athlete record
         const { error } = await supabase
             .from('athletes')
             .delete()
             .eq('id', athleteId)
 
         if (error) throw error
+
+        // If deletion succeeds and photo_url exists, cleanup storage file
+        if (athlete?.photo_url) {
+            // Import cleanup function dynamically to avoid circular dependencies
+            const { cleanupAthletePhoto } = await import('./athletePhotoService')
+            await cleanupAthletePhoto(athleteId)
+            // Note: cleanup errors are logged but don't fail athlete deletion
+        }
+
         return { error: null }
     } catch (err) {
         return { error: err instanceof Error ? err : new Error('Delete athlete failed') }

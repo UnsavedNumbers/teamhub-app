@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
@@ -13,14 +13,15 @@ import { getSeasons, createSeason, updateSeason } from '../../data/services/seas
 import type { Sport, Program, Level, Team, Season, GenderCategory, LevelType } from '../../data/types/organization'
 import { AdminPageHeader, Card, Button, Input, Select, Checkbox } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
+import HierarchyCreationPrompt from '../../components/admin/HierarchyCreationPrompt'
+import { getNextLevel, getParentContextKey, type FormType, type PromptState, isValidPromptState, validateEntityExists } from '../../utils/hierarchyCreation'
+import { savePromptState, loadPromptState, clearPromptState } from '../../utils/sessionStorageHelpers'
 
 interface RadioOption {
   value: string
   label: string
   helper?: string
 }
-
-type FormType = 'sport' | 'program' | 'level' | 'team' | 'season'
 
 function isFormType(value: string | null): value is FormType {
   return value === 'sport' || value === 'program' || value === 'level' || value === 'team' || value === 'season'
@@ -87,6 +88,8 @@ export default function OrganizationStructureForms() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [promptState, setPromptState] = useState<PromptState | null>(null)
+  const hasRestoredPrompt = useRef(false)
   const [submitting, setSubmitting] = useState({
     sport: false,
     program: false,
@@ -153,11 +156,108 @@ export default function OrganizationStructureForms() {
   const requestedFormType = isFormType(typeParam) ? typeParam : null
   const activeFormType = editType ?? requestedFormType
   const [editInitialized, setEditInitialized] = useState(false)
-  
-  // Context from query params for pre-populating forms
+
+  // Context from query params for pre-populating forms (declared early for useCallback)
   const contextSportId = searchParams.get('sport_id')?.trim() || null
   const contextProgramId = searchParams.get('program_id')?.trim() || null
   const contextLevelId = searchParams.get('level_id')?.trim() || null
+
+  // Determine where to navigate back to on cancel
+  const handleCancel = useCallback(() => {
+    // If returnUrl is provided and valid, use it
+    if (returnUrl && returnUrl.startsWith('/')) {
+      navigate(returnUrl)
+      return
+    }
+    
+    // If editing, try to infer where they came from based on edit type
+    if (editType) {
+      switch (editType) {
+        case 'program':
+          // Programs are typically edited from Sports & Programs page
+          navigate('/admin/organization/structure/sports-programs')
+          return
+        case 'level':
+          // Levels are typically edited from Levels page
+          navigate('/admin/organization/structure/levels')
+          return
+        case 'team':
+          // Teams are typically edited from Teams page
+          navigate('/admin/organization/structure/teams')
+          return
+        case 'season':
+          // Seasons are typically edited from Seasons page
+          navigate('/admin/organization/structure/seasons')
+          return
+        case 'sport':
+          // Sports are typically edited from Sports & Programs page
+          navigate('/admin/organization/structure/sports-programs')
+          return
+      }
+    }
+    
+    // For create forms, try to infer from context or use browser history
+    if (activeFormType) {
+      // If we have context params, we likely came from a specific page
+      if (contextProgramId || contextSportId) {
+        // Likely came from Sports & Programs page
+        navigate('/admin/organization/structure/sports-programs')
+        return
+      }
+      if (contextLevelId) {
+        // Likely came from Levels page
+        navigate('/admin/organization/structure/levels')
+        return
+      }
+    }
+    
+    // Default: try browser history, fallback to structure overview
+    if (window.history.length > 1) {
+      navigate(-1)
+    } else {
+      navigate('/admin/organization/structure')
+    }
+  }, [returnUrl, editType, activeFormType, contextProgramId, contextSportId, contextLevelId, navigate])
+
+  // Handle "Add Next" button in hierarchy creation prompt
+  const handleAddNext = useCallback(() => {
+    if (!promptState || !promptState.nextLevel) return
+
+    // Build navigation URL with parent context
+    const parentContextKey = getParentContextKey(promptState.nextLevel)
+    const parentId = promptState.entityId
+    
+    // Build query params
+    const params = new URLSearchParams()
+    params.set('type', promptState.nextLevel)
+    if (parentContextKey && parentId) {
+      params.set(parentContextKey, parentId)
+    }
+    
+    // Preserve returnUrl if it exists
+    if (returnUrl && returnUrl.startsWith('/')) {
+      params.set('returnUrl', returnUrl)
+    } else {
+      // Set returnUrl to current page so cancel brings them back
+      params.set('returnUrl', location.pathname + location.search)
+    }
+
+    // Navigate to create next level form
+    navigate(`/admin/organization/structure/forms?${params.toString()}`)
+  }, [promptState, returnUrl, location, navigate])
+
+  // Handle "Dismiss" button in hierarchy creation prompt
+  const handleDismissPrompt = useCallback(() => {
+    // Clear prompt state
+    setPromptState(null)
+    clearPromptState()
+    
+    // Show simple success message instead
+    if (promptState) {
+      const itemLabel = t(`admin.structureForms.items.${promptState.entityType}` as any) || promptState.entityType
+      setSuccessMessage(t('admin.structureForms.messages.created', { item: itemLabel }))
+    }
+  }, [promptState, t])
 
   useEffect(() => {
     if (!isReady) return
@@ -220,6 +320,78 @@ export default function OrganizationStructureForms() {
       isActive = false
     }
   }, [context, isReady, t])
+
+  // Restore prompt from sessionStorage after data is loaded
+  useEffect(() => {
+    // Only restore once, and only when data is loaded
+    if (hasRestoredPrompt.current || loading || !isReady) {
+      return
+    }
+
+    const stored = loadPromptState()
+    if (!stored) {
+      hasRestoredPrompt.current = true
+      return
+    }
+
+    // Validate stored prompt state
+    if (!isValidPromptState(stored)) {
+      console.warn('[OrganizationStructureForms] Invalid prompt state in sessionStorage, clearing')
+      clearPromptState()
+      hasRestoredPrompt.current = true
+      return
+    }
+
+    // Validate entity still exists
+    const entityExists = validateEntityExists(stored.entityType, stored.entityId, {
+      sports,
+      programs,
+      levels,
+      teams,
+      seasons,
+    })
+
+    if (!entityExists) {
+      console.warn('[OrganizationStructureForms] Entity from prompt no longer exists, clearing')
+      clearPromptState()
+      hasRestoredPrompt.current = true
+      return
+    }
+
+    // Restore prompt state
+    setPromptState(stored)
+    hasRestoredPrompt.current = true
+  }, [loading, isReady, sports, programs, levels, teams, seasons])
+
+  // Re-validate prompt state on location changes (browser back/forward)
+  useEffect(() => {
+    if (!promptState || loading) {
+      return
+    }
+
+    // Re-validate entity exists
+    const entityExists = validateEntityExists(promptState.entityType, promptState.entityId, {
+      sports,
+      programs,
+      levels,
+      teams,
+      seasons,
+    })
+
+    if (!entityExists) {
+      // Entity no longer exists, clear prompt
+      setPromptState(null)
+      clearPromptState()
+    }
+  }, [location, promptState, loading, sports, programs, levels, teams, seasons])
+
+  // Cleanup: clear prompt on unmount if it was dismissed
+  useEffect(() => {
+    return () => {
+      // Only clear if prompt was explicitly dismissed (not if component unmounts during navigation)
+      // The prompt will be restored on remount if it still exists in sessionStorage
+    }
+  }, [])
 
   const sportOptions = useMemo(() => {
     // Deduplicate by sport ID as a safety measure
@@ -723,11 +895,20 @@ export default function OrganizationStructureForms() {
         ]}
       />
 
-      {successMessage && (
+      {/* Show prompt if available, otherwise show simple success message */}
+      {!loading && promptState && promptState.nextLevel ? (
+        <HierarchyCreationPrompt
+          createdEntityType={promptState.entityType}
+          createdEntityId={promptState.entityId}
+          createdEntityName={promptState.entityName}
+          onAddNext={handleAddNext}
+          onDismiss={handleDismissPrompt}
+        />
+      ) : successMessage ? (
         <Card className="pa-mb-6">
           <div className="pa-text-success">{successMessage}</div>
         </Card>
-      )}
+      ) : null}
 
       {actionError && (
         <Card className="pa-mb-6">
@@ -860,10 +1041,18 @@ export default function OrganizationStructureForms() {
               </>
             )}
             {editType !== 'sport' && (
-              <Button
-                disabled={!canCreateSport || submitting.sport || uploadingIcon || isOffline || USE_FAKE_DATA}
-                loading={submitting.sport || uploadingIcon}
-                onClick={async () => {
+              <div className="pa-flex pa-justify-end pa-gap-3">
+                <Button
+                  variant="ghost"
+                  onClick={handleCancel}
+                  disabled={submitting.sport || uploadingIcon}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  disabled={!canCreateSport || submitting.sport || uploadingIcon || isOffline || USE_FAKE_DATA}
+                  loading={submitting.sport || uploadingIcon}
+                  onClick={async () => {
                   if (!canCreateSport || !currentOrganization?.id || submitting.sport) return
 
                   // Block if offline
@@ -928,16 +1117,46 @@ export default function OrganizationStructureForms() {
                         }
                       }
                       setSportForm((prev) => ({ ...prev, name: '', iconFile: null }))
-                      setSuccessMessage(t('admin.structureForms.messages.created', { item: formLabels.sport }))
                       
-                      // Bug Prevention #5 & #8: Check returnUrl and validate before navigating
-                      if (returnUrl && returnUrl.startsWith('/')) {
-                        // Validate returnUrl is a valid path (starts with '/') to prevent open redirect vulnerability
-                        // Small delay to show success message
-                        setTimeout(() => {
-                          navigate(returnUrl)
-                        }, 500)
-                        return // Exit early to prevent further execution
+                      // Check if there's a next level and save prompt state
+                      const nextLevel = getNextLevel('sport')
+                      if (nextLevel && result.data) {
+                        const promptData: PromptState = {
+                          entityType: 'sport',
+                          entityId: result.data.id,
+                          entityName: result.data.name,
+                          nextLevel,
+                          timestamp: Date.now(),
+                        }
+                        savePromptState(promptData)
+                        setPromptState(promptData)
+                        setSuccessMessage(null) // Don't show simple message, show prompt instead
+                        
+                        // If returnUrl is provided, navigate after a delay to show the prompt
+                        if (returnUrl && returnUrl.startsWith('/')) {
+                          // Small delay to show prompt, then navigate
+                          setTimeout(() => {
+                            navigate(returnUrl)
+                          }, 2000) // Give user time to see the prompt
+                          return // Exit early to prevent further execution
+                        }
+                        // Otherwise, stay on page to show prompt
+                      } else {
+                        // No next level, show simple success message
+                        setSuccessMessage(t('admin.structureForms.messages.created', { item: formLabels.sport }))
+                        // Clear any existing prompt
+                        clearPromptState()
+                        setPromptState(null)
+                        
+                        // Bug Prevention #5 & #8: Check returnUrl and validate before navigating
+                        if (returnUrl && returnUrl.startsWith('/')) {
+                          // Validate returnUrl is a valid path (starts with '/') to prevent open redirect vulnerability
+                          // Small delay to show success message
+                          setTimeout(() => {
+                            navigate(returnUrl)
+                          }, 500)
+                          return // Exit early to prevent further execution
+                        }
                       }
                     }
                   } catch (err) {
@@ -948,11 +1167,12 @@ export default function OrganizationStructureForms() {
                   }
                 }}
               >
-                {USE_FAKE_DATA 
-                  ? 'Sign in to Add Sport'
-                  : t('admin.structureForms.actions.createItem', { item: formLabels.sport })
-                }
-              </Button>
+                  {USE_FAKE_DATA 
+                    ? 'Sign in to Add Sport'
+                    : t('admin.structureForms.actions.createItem', { item: formLabels.sport })
+                  }
+                </Button>
+              </div>
             )}
           </div>
         </Card>
@@ -1003,7 +1223,14 @@ export default function OrganizationStructureForms() {
               error={programGenderError}
             />
             
-            <div className="pa-flex pa-justify-end">
+            <div className="pa-flex pa-justify-end pa-gap-3">
+              <Button
+                variant="ghost"
+                onClick={handleCancel}
+                disabled={submitting.program}
+              >
+                Cancel
+              </Button>
               <Button
                 disabled={!canCreateProgram || submitting.program}
                 loading={submitting.program}
@@ -1051,7 +1278,27 @@ export default function OrganizationStructureForms() {
                         gender: 'coed',
                         nameTouched: false,
                       }))
-                      setSuccessMessage(t('admin.structureForms.messages.created', { item: formLabels.program }))
+                      
+                      // Check if there's a next level and save prompt state
+                      const nextLevel = getNextLevel('program')
+                      if (nextLevel && result.data) {
+                        const promptData: PromptState = {
+                          entityType: 'program',
+                          entityId: result.data.id,
+                          entityName: result.data.name,
+                          nextLevel,
+                          timestamp: Date.now(),
+                        }
+                        savePromptState(promptData)
+                        setPromptState(promptData)
+                        setSuccessMessage(null) // Don't show simple message, show prompt instead
+                      } else {
+                        // No next level, show simple success message
+                        setSuccessMessage(t('admin.structureForms.messages.created', { item: formLabels.program }))
+                        // Clear any existing prompt
+                        clearPromptState()
+                        setPromptState(null)
+                      }
                     }
                   }
 
@@ -1166,7 +1413,14 @@ export default function OrganizationStructureForms() {
               />
             )}
             
-            <div className="pa-flex pa-justify-end">
+            <div className="pa-flex pa-justify-end pa-gap-3">
+              <Button
+                variant="ghost"
+                onClick={handleCancel}
+                disabled={submitting.level}
+              >
+                Cancel
+              </Button>
               <Button
                 disabled={!canCreateLevel || submitting.level}
                 loading={submitting.level}
@@ -1230,7 +1484,27 @@ export default function OrganizationStructureForms() {
                         gradeMax: '',
                         skillDescription: '',
                       }))
-                      setSuccessMessage(t('admin.structureForms.messages.created', { item: formLabels.level }))
+                      
+                      // Check if there's a next level and save prompt state
+                      const nextLevel = getNextLevel('level')
+                      if (nextLevel && result.data) {
+                        const promptData: PromptState = {
+                          entityType: 'level',
+                          entityId: result.data.id,
+                          entityName: result.data.name,
+                          nextLevel,
+                          timestamp: Date.now(),
+                        }
+                        savePromptState(promptData)
+                        setPromptState(promptData)
+                        setSuccessMessage(null) // Don't show simple message, show prompt instead
+                      } else {
+                        // No next level, show simple success message
+                        setSuccessMessage(t('admin.structureForms.messages.created', { item: formLabels.level }))
+                        // Clear any existing prompt
+                        clearPromptState()
+                        setPromptState(null)
+                      }
                     }
                   }
 
@@ -1290,7 +1564,14 @@ export default function OrganizationStructureForms() {
               label={t('admin.structureForms.fields.teamActive.label')}
             />
             
-            <div className="pa-flex pa-justify-end">
+            <div className="pa-flex pa-justify-end pa-gap-3">
+              <Button
+                variant="ghost"
+                onClick={handleCancel}
+                disabled={submitting.team}
+              >
+                Cancel
+              </Button>
               <Button
                 disabled={!canCreateTeam || submitting.team}
                 loading={submitting.team}
@@ -1337,7 +1618,11 @@ export default function OrganizationStructureForms() {
                         name: '',
                         isActive: true,
                       }))
+                      
+                      // Team has no next level - show simple success and clear any existing prompt
                       setSuccessMessage(t('admin.structureForms.messages.created', { item: formLabels.team }))
+                      clearPromptState()
+                      setPromptState(null)
                     }
                   }
 
@@ -1396,7 +1681,14 @@ export default function OrganizationStructureForms() {
               label={t('admin.structureForms.fields.seasonActive.label')}
             />
             
-            <div className="pa-flex pa-justify-end">
+            <div className="pa-flex pa-justify-end pa-gap-3">
+              <Button
+                variant="ghost"
+                onClick={handleCancel}
+                disabled={submitting.season}
+              >
+                Cancel
+              </Button>
               <Button
                 disabled={!canCreateSeason || submitting.season}
                 loading={submitting.season}
@@ -1441,7 +1733,11 @@ export default function OrganizationStructureForms() {
                         endDate: '',
                         isActive: false,
                       }))
+                      
+                      // Season has no next level - show simple success and clear any existing prompt
                       setSuccessMessage(t('admin.structureForms.messages.created', { item: formLabels.season }))
+                      clearPromptState()
+                      setPromptState(null)
                     }
                   }
 
