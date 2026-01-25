@@ -12,12 +12,21 @@ export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey)
 // The placeholder allows the UI to render for development/preview
 export const supabase: SupabaseClient<SupabaseExtended> = createClient<SupabaseExtended>(
     supabaseUrl || 'https://placeholder.supabase.co',
-    supabaseAnonKey || 'placeholder-key'
+    supabaseAnonKey || 'placeholder-key',
+    {
+        auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true
+        }
+    }
 )
 
 if (!isSupabaseConfigured) {
     console.warn(
         '⚠️ Supabase not configured. Create a .env file with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY'
     )
+} else {
+    console.log('[supabase] Client initialized with URL:', supabaseUrl?.substring(0, 20) + '...')
 }
 

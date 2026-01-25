@@ -1032,42 +1032,44 @@ html.dark .pa-btn:disabled {
     border-color: var(--pa-border-subtle) !important;
 }
 
-/* Primary (Dark with blue hover) */
+/* Primary (Dark solid with subtle hover) */
 .pa-btn--primary {
     background: var(--pa-n900);
     color: var(--pa-white);
 }
 
 .pa-btn--primary:hover:not(:disabled) {
-    background: var(--pa-theme-action-primary, #5468FF);
+    background: var(--pa-n700);
+    color: var(--pa-white);
 }
 
 .pa-btn--primary:active:not(:disabled) {
+    background: var(--pa-n800);
     transform: translateY(1px);
 }
 
-/* Dark Mode - Primary buttons use theme color, high contrast */
+/* Dark Mode - Primary buttons are dark solid with subtle hover */
 html.dark .pa-btn--primary {
-    background: var(--pa-theme-action-primary, #137fec);
-    color: var(--pa-theme-text-on-action, var(--pa-white));
+    background: var(--pa-n900) !important;
+    color: var(--pa-white) !important;
 }
 
 html.dark .pa-btn--primary:hover:not(:disabled) {
-    background: var(--pa-theme-action-hover, #1a8fff);
-    color: var(--pa-theme-text-on-action, var(--pa-white));
+    background: var(--pa-n700) !important;
+    color: var(--pa-white) !important;
 }
 
 html.dark .pa-btn--primary:active:not(:disabled) {
-    background: var(--pa-theme-action-active, #0d6bc2);
+    background: var(--pa-n800) !important;
     transform: translateY(1px);
 }
 
 html.dark .pa-btn--primary:focus-visible {
-    outline: 2px solid var(--pa-theme-focus-ring, rgba(19, 127, 236, 0.5));
+    outline: 2px solid var(--pa-border-emphasis);
     outline-offset: 2px;
 }
 
-/* Secondary (solid gray) */
+/* Secondary (solid gray with subtle hover) */
 .pa-btn--secondary {
     background: var(--pa-n600);
     color: var(--pa-white);
@@ -1075,51 +1077,36 @@ html.dark .pa-btn--primary:focus-visible {
 }
 
 .pa-btn--secondary:hover:not(:disabled) {
-    background: var(--pa-n700);
+    background: var(--pa-n500);
+    color: var(--pa-white);
 }
 
-/* Dark Mode - Secondary buttons are subtle, lower contrast */
+.pa-btn--secondary:active:not(:disabled) {
+    background: var(--pa-n700);
+    transform: translateY(1px);
+}
+
+/* Dark Mode - Secondary buttons are solid dark with subtle hover */
 html.dark .pa-btn--secondary {
-    background: var(--pa-surface-panel);
-    color: var(--pa-text-secondary);
-    border: 1px solid var(--pa-border-default);
+    background: var(--pa-n800) !important;
+    color: var(--pa-white) !important;
+    border: none !important;
 }
 
 html.dark .pa-btn--secondary:hover:not(:disabled) {
-    background: var(--pa-border-default);
-    color: var(--pa-text-primary);
-    border-color: var(--pa-border-emphasis);
+    background: var(--pa-n600) !important;
+    color: var(--pa-white) !important;
 }
 
 html.dark .pa-btn--secondary:active:not(:disabled) {
-    background: var(--pa-border-emphasis);
-    color: var(--pa-text-primary);
+    background: var(--pa-n700) !important;
+    color: var(--pa-white) !important;
     transform: translateY(1px);
 }
 
 html.dark .pa-btn--secondary:focus-visible {
     outline: 2px solid var(--pa-border-emphasis);
     outline-offset: 2px;
-}
-
-/* Ensure secondary buttons have visible background in dark mode */
-html.dark .pa-btn--secondary {
-    background-color: var(--pa-surface-panel) !important;
-    color: var(--pa-text-secondary) !important;
-}
-
-/* Ensure all button variants maintain their distinct appearances in dark mode */
-html.dark .pa-btn--primary,
-html.dark .pa-btn--blue {
-    /* Solid fill buttons with high contrast text */
-    background-color: var(--pa-theme-action-primary, #137fec) !important;
-    color: var(--pa-theme-text-on-action, #ffffff) !important;
-}
-
-html.dark .pa-btn--secondary {
-    /* Subtle surface with medium contrast text */
-    background-color: var(--pa-surface-panel) !important;
-    color: var(--pa-text-secondary) !important;
 }
 
 html.dark .pa-btn--ghost {
@@ -1499,7 +1486,8 @@ html.dark .pa-kpi-card:hover {
 
 /* Dark Mode - Labels with clear readable contrast */
 html.dark .pa-kpi-label {
-    color: var(--pa-text-muted);
+    color: var(--pa-text-secondary);
+    opacity: 0.9;
 }
 
 .pa-kpi-value {
@@ -1607,6 +1595,97 @@ html.dark .pa-badge--neutral {
     background: var(--pa-surface-panel);
     color: var(--pa-text-secondary);
     border: 1px solid var(--pa-border-default);
+}
+
+/* =====================================================================
+   14.1) UTILITY CLASSES FOR DARK MODE
+   ===================================================================== */
+
+/* Container classes with theme-safe backgrounds */
+.pa-bg-surface {
+    background: var(--pa-surface);
+}
+
+html.dark .pa-bg-surface {
+    background: var(--pa-surface);
+}
+
+.pa-bg-surface-panel {
+    background: var(--pa-surface-panel);
+}
+
+html.dark .pa-bg-surface-panel {
+    background: var(--pa-surface-panel);
+}
+
+/* Text utility classes */
+.pa-text-on-action {
+    color: var(--pa-theme-text-on-action);
+}
+
+html.dark .pa-text-on-action {
+    color: #ffffff;
+}
+
+.pa-text-accent {
+    color: var(--pa-theme-text-accent);
+}
+
+html.dark .pa-text-accent {
+    color: var(--pa-text-primary);
+    font-weight: 600;
+}
+
+.pa-text-white {
+    color: white !important;
+}
+
+.pa-text-primary {
+    color: var(--pa-n900);
+}
+
+html.dark .pa-text-primary {
+    color: var(--pa-text-primary);
+}
+
+.pa-text-muted {
+    color: var(--pa-n500);
+}
+
+html.dark .pa-text-muted {
+    color: var(--pa-text-muted);
+}
+
+/* =====================================================================
+   14.2) DARK MODE FORCE OVERRIDES FOR INLINE STYLES
+   ===================================================================== */
+
+/* Force dark mode colors on any element with these specific inline colors */
+html.dark span[style*="color: 'var(--pa-theme-text-accent)'"],
+html.dark div[style*="color: 'var(--pa-theme-text-accent)'"],
+html.dark button[style*="color: 'var(--pa-theme-text-accent)'"] {
+    color: var(--pa-text-primary) !important;
+}
+
+/* Force backgrounds in dark mode */
+html.dark span[style*="background: 'var(--pa-theme-action-primary'"],
+html.dark div[style*="background: 'var(--pa-theme-action-primary'"],
+html.dark button[style*="background: 'var(--pa-theme-action-primary'"] {
+    background-color: var(--pa-theme-action-primary) !important;
+}
+
+/* Override white background color in dark mode */
+html.dark span[style*="background: 'var(--pa-white)'"],
+html.dark div[style*="background: 'var(--pa-white)'"],
+html.dark button[style*="background: 'var(--pa-white)'"] {
+    background-color: var(--pa-surface-panel) !important;
+    color: var(--pa-text-primary) !important;
+}
+
+/* Override white text color in dark mode */
+html.dark *[style*="color: 'var(--pa-white)'"],
+html.dark *[style*="color: white"] {
+    color: var(--pa-text-primary) !important;
 }
 
 /* =====================================================================
@@ -2650,6 +2729,15 @@ html.dark .pa-table td.pa-cell-meta {
     color: var(--pa-n900);
 }
 
+html.dark .pa-table-action-btn {
+    color: var(--pa-text-muted);
+}
+
+html.dark .pa-table-action-btn:hover {
+    background: var(--pa-surface-panel);
+    color: var(--pa-text-primary);
+}
+
 .pa-table-action-btn:focus-visible {
     outline: 2px solid var(--pa-theme-focus-ring);
     outline-offset: 2px;
@@ -2930,7 +3018,8 @@ html.dark .pa-empty-text {
 }
 
 html.dark .pa-breadcrumbs {
-    color: var(--pa-text-muted);
+    color: var(--pa-text-primary);
+    opacity: 0.85;
 }
 
 .pa-breadcrumb-item {
@@ -2945,7 +3034,8 @@ html.dark .pa-breadcrumbs {
 }
 
 html.dark .pa-breadcrumb-chevron {
-    color: var(--pa-text-muted);
+    color: var(--pa-text-primary);
+    opacity: 0.6;
 }
 
 .pa-breadcrumb-link {
@@ -2958,29 +3048,19 @@ html.dark .pa-breadcrumb-chevron {
 }
 
 html.dark .pa-breadcrumb-link:hover {
-    color: var(--pa-text-secondary);
+    opacity: 1;
 }
 
 .pa-breadcrumb-current {
-    color: var(--pa-theme-text-accent);
+    color: var(--pa-n900);
+    background: none !important;
 }
 
 html.dark .pa-breadcrumb-current {
-    color: var(--pa-text-primary);
-}
-
-/* Ensure breadcrumb current is dark in light mode */
-.pa-root:not(.dark) .pa-breadcrumb-current,
-.pa-root:not(.dark) .pa-breadcrumb-current a {
-    color: var(--pa-n900);
-}
-
-/* Dark mode: use theme accent */
-.dark .pa-breadcrumb-current,
-.pa-root.dark .pa-breadcrumb-current,
-.dark .pa-breadcrumb-current a,
-.pa-root.dark .pa-breadcrumb-current a {
-    color: var(--pa-theme-text-accent);
+    color: var(--pa-text-primary) !important;
+    background: none !important;
+    font-weight: 700;
+    opacity: 1;
 }
 
 .pa-page-header-row {

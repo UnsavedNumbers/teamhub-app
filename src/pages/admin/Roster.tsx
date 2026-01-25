@@ -124,13 +124,12 @@ export default function Roster() {
       label: 'Actions', 
       align: 'right',
       render: (row) => (
-        <button 
-          className="pa-btn pa-btn--ghost pa-btn--dense" 
-          onClick={(e) => { e.stopPropagation(); removePlayer(row.id); }}
-          style={{ color: 'var(--pa-n900)' }}
-        >
-          <span className="material-symbols-outlined">delete</span>
-        </button>
+        <Button
+          variant="danger"
+          size="dense"
+          icon="delete"
+          onClick={(e: React.MouseEvent) => { e.stopPropagation(); removePlayer(row.id); }}
+        />
       )
     }
   ]

@@ -276,6 +276,7 @@ export default function OrganizationSettings() {
           <TabsTrigger value="registration">Registration</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="permissions">Permissions</TabsTrigger>
+          <TabsTrigger value="payments">Payments</TabsTrigger>
           <TabsTrigger value="advanced">Advanced</TabsTrigger>
         </TabsList>
 

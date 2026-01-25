@@ -506,22 +506,28 @@ export async function getTeamDetails(
 
     // Real Supabase implementation - NO FALLBACK
     try {
-        const { data, error } = await supabase
-            .from('teams')
-            .select(
-                `*,
-                sport:sports(*),
-                program:programs(*),
-                level:levels(*),
-                active_season:team_seasons(is_active, season:seasons(*))`
-            )
-            .eq('id', teamId)
-            .eq('org_id', context.orgId)
-            .single()
+        // Use buildTeamQuery pattern for consistency with list view and to avoid RLS issues
+        // Start with the standard team query builder
+        let query = buildTeamQuery(supabase)
+        query = query.eq('id', teamId).eq('org_id', context.orgId).single()
+        
+        console.log('[getTeamDetails] Query params:', { teamId, orgId: context.orgId })
+        
+        const { data, error } = await query
+
+        console.log('[getTeamDetails] Query result:', { 
+            hasData: !!data, 
+            error: error ? { code: error.code, message: error.message } : null,
+            dataKeys: data ? Object.keys(data) : []
+        })
 
         if (error) {
             if (error.code === 'PGRST116') {
-                return { data: null, error: null }
+                // Team not found - could be RLS blocking or team doesn't exist
+                return { 
+                    data: null, 
+                    error: new Error('Team not found. The team may not exist or you may not have permission to view it.') 
+                }
             }
             throw error
         }
@@ -529,7 +535,10 @@ export async function getTeamDetails(
         // Normalize and map response
         const normalizedData = normalizeSupabaseResponse(data, false)
         if (!normalizedData) {
-            return { data: null, error: null }
+            return { 
+                data: null, 
+                error: new Error('Team data could not be normalized. The team may not exist or you may not have permission to view it.') 
+            }
         }
 
         // Transform to match getTeamWithDetails return type

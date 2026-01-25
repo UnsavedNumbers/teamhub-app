@@ -112,14 +112,19 @@ function adjustForDarkMode(color: Colord): Colord {
   const hsl = color.toHsl()
   const lightness = hsl.l
 
-  // If color is already light (for dark backgrounds), make it lighter
-  // If color is dark (for light backgrounds), make it lighter for dark mode
-  if (lightness < 50) {
-    // Dark color - lighten by 20-30%
-    return color.lighten(25)
+  // For dark mode, we need colors that are vibrant but not too light
+  // Target lightness range: 45-65% for good visibility on dark backgrounds
+  if (lightness < 40) {
+    // Dark color - lighten to make visible, but cap at 55%
+    const lightenAmount = Math.min(55 - lightness, 30)
+    return color.lighten(lightenAmount)
+  } else if (lightness > 70) {
+    // Very light color - darken significantly for dark mode
+    const darkenAmount = Math.min(lightness - 55, 35)
+    return color.darken(darkenAmount)
   } else {
-    // Light color - darken slightly for better contrast on dark backgrounds
-    return color.darken(10)
+    // Already in good range - slight adjustment
+    return color
   }
 }
 

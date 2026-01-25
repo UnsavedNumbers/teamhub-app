@@ -179,7 +179,7 @@ export default function SeasonsManagement() {
                   </tr>
                 </thead>
                 <tbody>
-                  {seasons.map((season, index) => (
+                  {seasons.map((season) => (
                     <tr 
                       key={season.id}
                       className="pa-stacked-list-row group"

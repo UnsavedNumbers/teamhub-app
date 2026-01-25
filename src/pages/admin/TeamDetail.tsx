@@ -61,13 +61,17 @@ export default function TeamDetail() {
   const isMountedRef = useRef(true)
 
   useEffect(() => {
+    isMountedRef.current = true
     return () => {
       isMountedRef.current = false
     }
   }, [])
 
   const fetchTeamAndSeasons = useCallback(async () => {
+    console.log('[TeamDetail] fetchTeamAndSeasons called:', { teamId, isReady, orgId: context.orgId })
+    
     if (!teamId || !isReady) {
+      console.log('[TeamDetail] Early return - teamId or not ready')
       setLoading(false)
       return
     }
@@ -76,11 +80,24 @@ export default function TeamDetail() {
     setError(null)
     try {
       const { data: teamData, error: teamError } = await getTeamDetails(context, teamId)
+      
+      console.log('[TeamDetail] getTeamDetails response:', { 
+        hasTeamData: !!teamData, 
+        teamError: teamError ? { message: teamError.message } : null 
+      })
 
       if (teamError || !teamData) {
-        console.error('Error fetching team:', teamError)
+        console.error('Error fetching team:', {
+          teamError,
+          teamId,
+          orgId: context.orgId,
+          hasData: !!teamData,
+          errorMessage: teamError?.message
+        })
         if (isMountedRef.current) {
-          setError(teamError?.message || 'Failed to load team details')
+          // Provide more specific error message
+          const errorMessage = teamError?.message || 'Team not found. The team may not exist or you may not have permission to view it.'
+          setError(errorMessage)
           setLoading(false)
         }
         return
@@ -346,7 +363,6 @@ export default function TeamDetail() {
   // Get primary color for court texture and accents
   // Use CSS variable with fallback to ensure it works even if theme not loaded
   const primaryColor = 'var(--pa-theme-action-primary, #137fec)'
-  const primaryColorDark = 'var(--pa-theme-action-active, #0a56a4)'
 
   return (
     <div className="pa-root">
@@ -581,69 +597,14 @@ export default function TeamDetail() {
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button
+            <Button
               onClick={handleAddAthlete}
               disabled={!teamId || navigating || loading}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 'var(--pa-space-2)',
-                minWidth: '180px',
-                height: '56px',
-                padding: '0 var(--pa-space-6)',
-                background: navigating || !teamId || loading ? 'var(--pa-n400)' : primaryColor,
-                color: 'var(--pa-white)',
-                fontSize: '14px',
-                fontWeight: 900,
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em',
-                borderRadius: 'var(--pa-radius-m)',
-                border: 'none',
-                cursor: navigating || !teamId || loading ? 'not-allowed' : 'pointer',
-                boxShadow: navigating || !teamId || loading ? 'none' : `0 8px 0 0 ${primaryColorDark}`,
-                transition: 'all 75ms',
-                opacity: navigating || !teamId || loading ? 0.6 : 1,
-              }}
-              onMouseEnter={(e) => {
-                if (!navigating && teamId && !loading) {
-                  e.currentTarget.style.transform = 'translateY(2px)'
-                  e.currentTarget.style.boxShadow = `0 4px 0 0 ${primaryColorDark}`
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!navigating && teamId && !loading) {
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = `0 8px 0 0 ${primaryColorDark}`
-                }
-              }}
-              onMouseDown={(e) => {
-                if (!navigating && teamId && !loading) {
-                  e.currentTarget.style.transform = 'translateY(8px)'
-                  e.currentTarget.style.boxShadow = 'none'
-                }
-              }}
-              onMouseUp={(e) => {
-                if (!navigating && teamId && !loading) {
-                  e.currentTarget.style.transform = 'translateY(2px)'
-                  e.currentTarget.style.boxShadow = `0 4px 0 0 ${primaryColorDark}`
-                }
-              }}
+              loading={navigating}
+              icon="person_add"
             >
-              {navigating ? (
-                <>
-                  <span className="pa-spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }} />
-                  <span>LOADING...</span>
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
-                    person_add
-                  </span>
-                  <span>ADD ATHLETE</span>
-                </>
-              )}
-            </button>
+              ADD ATHLETE
+            </Button>
           </div>
         </div>
 

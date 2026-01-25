@@ -629,23 +629,10 @@ export default function ProgramDetail() {
                 <Card>
                   <div className="pa-flex pa-justify-between pa-items-center" style={{ gap: 'var(--pa-space-4)' }}>
                     <div className="pa-flex pa-items-center" style={{ gap: 'var(--pa-space-3)' }}>
-                      <span
-                        className="pa-body-s"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          padding: 'var(--pa-space-2) var(--pa-space-3)',
-                          borderRadius: 'var(--pa-radius-pill)',
-                          background: 'var(--pa-theme-action-primary)',
-                          color: 'var(--pa-theme-text-on-action)',
-                          fontWeight: 900,
-                          letterSpacing: '0.14em',
-                          textTransform: 'uppercase',
-                        }}
-                      >
+                      <span className="pa-badge pa-badge--info pa-body-s" style={{ fontWeight: 900, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
                         Status: {statusLabel}
                       </span>
-                      <span className="pa-body-m" style={{ color: 'var(--pa-n500)' }}>
+                      <span className="pa-body-m pa-text-muted">
                         {updatedLabel}
                       </span>
                     </div>
@@ -664,11 +651,6 @@ export default function ProgramDetail() {
                           variant="ghost"
                           icon="edit"
                           disabled={loading || !programId}
-                          style={{
-                            border: '2px solid var(--pa-theme-action-primary)',
-                            color: 'var(--pa-theme-text-accent)',
-                            background: 'transparent',
-                          }}
                           aria-label={`Edit ${program?.name || 'program'}`}
                         >
                           Edit Program
@@ -760,17 +742,14 @@ export default function ProgramDetail() {
                 <Card
                   title="Tactical Overview"
                   actions={
-                    <button
-                      type="button"
-                      aria-label="More options for tactical board"
-                      className="pa-btn pa-btn--ghost pa-btn--dense"
-                      style={{ padding: 0, width: 'var(--pa-space-6)', justifyContent: 'center' }}
+                    <Button
+                      variant="ghost"
+                      size="dense"
+                      icon="more_horiz"
                       onClick={handleTacticalMenuClick}
-                    >
-                      <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
-                        more_horiz
-                      </span>
-                    </button>
+                      aria-label="More options for tactical board"
+                      style={{ padding: 0, width: 'var(--pa-space-6)', justifyContent: 'center' }}
+                    />
                   }
                 >
                   <div

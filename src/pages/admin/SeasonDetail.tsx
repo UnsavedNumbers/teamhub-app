@@ -260,12 +260,7 @@ export default function SeasonDetail() {
           >
             <div className="flex flex-col gap-2">
               <div
-                className="inline-flex items-center gap-2 rounded-lg px-3 py-1 mb-4 text-xs font-bold text-white uppercase tracking-widest shadow-lg"
-                style={{
-                  background: 'var(--pa-theme-action-primary, #10b77d)',
-                  boxShadow: '0 4px 14px rgba(16, 183, 125, 0.2)',
-                  fontSize: '12px',
-                }}
+                className="inline-flex items-center gap-2 rounded-lg px-3 py-1 mb-4 text-xs font-bold text-white uppercase tracking-widest shadow-lg pa-badge pa-badge--success"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>check_circle</span>
                 Status: {season.is_active ? 'Active' : 'Upcoming'}
@@ -380,21 +375,14 @@ export default function SeasonDetail() {
                 </span>
               </div>
             </div>
-            <button
-              className="mt-auto text-sm font-bold flex items-center gap-1 hover:gap-2 transition-all"
-              style={{
-                color: 'var(--pa-theme-action-primary, #10b77d)',
-                marginTop: 'auto',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                padding: 0,
-              }}
+            <Button
+              variant="ghost"
+              iconRight="arrow_forward"
               onClick={() => navigate(getLink('admin.organization.structure'))}
+              style={{ marginTop: 'auto' }}
             >
-              VIEW PROGRAMS{' '}
-              <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>arrow_forward</span>
-            </button>
+              VIEW PROGRAMS
+            </Button>
           </Card>
 
           {/* Card 2: Teams */}
@@ -537,35 +525,20 @@ export default function SeasonDetail() {
             </span>
           </div>
           <div className="flex items-center gap-4 w-full sm:w-auto">
-            <button
-              className="flex-1 sm:flex-none px-6 py-2.5 rounded-lg border-2 font-bold text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-2"
-              style={{
-                borderColor: 'var(--pa-theme-action-primary, #10b77d)',
-                color: 'var(--pa-theme-action-primary, #10b77d)',
-                background: 'transparent',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--pa-theme-action-primary, #10b77d)'
-                e.currentTarget.style.color = 'white'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent'
-                e.currentTarget.style.color = 'var(--pa-theme-action-primary, #10b77d)'
-              }}
+            <Button
+              variant="ghost"
+              icon="edit"
               onClick={() =>
                 navigate(
                   `${getLink('admin.organization.forms')}?edit=season&id=${season.id}&returnUrl=${encodeURIComponent(window.location.pathname)}`
                 )
               }
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>edit</span>
               Edit Season
-            </button>
-            <button
-              className="flex-1 sm:flex-none px-6 py-2.5 rounded-lg bg-red-500 text-white font-bold text-sm uppercase tracking-widest hover:bg-red-600 transition-all flex items-center justify-center gap-2 shadow-lg"
-              style={{
-                boxShadow: '0 4px 14px rgba(239, 68, 68, 0.2)',
-              }}
+            </Button>
+            <Button
+              variant="danger"
+              icon="archive"
               onClick={() => {
                 // TODO: Implement archive season functionality
                 if (confirm('Are you sure you want to archive this season?')) {
@@ -573,9 +546,8 @@ export default function SeasonDetail() {
                 }
               }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>archive</span>
               Archive Season
-            </button>
+            </Button>
           </div>
         </div>
       </div>
