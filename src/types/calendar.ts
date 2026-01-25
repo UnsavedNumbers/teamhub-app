@@ -118,6 +118,7 @@ export interface EventLocation {
     city: string | null
     state: string | null
     postal_code: string | null
+    place_id: string | null // Google Place ID
     country: string
     latitude: number | null
     longitude: number | null
@@ -250,6 +251,7 @@ export interface EventLocationFormData {
     city: string
     state: string
     postal_code: string
+    place_id: string // Google Place ID
     latitude: string // String for form input
     longitude: string // String for form input
     is_tbd: boolean

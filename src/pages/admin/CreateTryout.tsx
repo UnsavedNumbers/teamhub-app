@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
+import { startTransition } from 'react'
 
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
@@ -14,6 +15,7 @@ import {
   Input,
   Select
 } from '../../components/platformAdmin'
+import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
 
 interface TryoutFormData {
   title: string
@@ -42,7 +44,7 @@ export default function CreateTryout() {
   const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
 
-  const { control, handleSubmit, formState: { errors } } = useForm<TryoutFormData>({
+  const { control, handleSubmit, setValue, formState: { errors } } = useForm<TryoutFormData>({
     defaultValues: {
       title: '',
       description: '',
@@ -187,10 +189,16 @@ export default function CreateTryout() {
                 name="location"
                 control={control}
                 render={({ field }) => (
-                  <Input
-                    {...field}
+                  <LocationAutocomplete
+                    value={field.value || ''}
+                    onInputChange={field.onChange}
+                    onChange={(address) => {
+                      startTransition(() => {
+                        setValue('location', address.formatted_address, { shouldValidate: false, shouldDirty: true })
+                      })
+                    }}
                     label="Location"
-                    placeholder="Venue address or location name"
+                    placeholder="Enter tryout location"
                   />
                 )}
               />

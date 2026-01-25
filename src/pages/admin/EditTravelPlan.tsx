@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
+import { startTransition } from 'react'
 
 import { useUserContext } from '../../hooks/useUserContext'
 import { getTravelPlanById } from '../../data/services/travelService'
@@ -13,6 +14,7 @@ import {
   Input,
   DatePicker 
 } from '../../components/platformAdmin'
+import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
 
 interface TravelFormData { 
   title: string
@@ -41,7 +43,7 @@ export default function EditTravelPlan() {
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
-  const { control, handleSubmit, reset } = useForm<TravelFormData>()
+  const { control, handleSubmit, reset, setValue } = useForm<TravelFormData>()
 
   const fetchPlan = useCallback(async () => {
     if (!isReady || !planId) return
@@ -157,9 +159,41 @@ export default function EditTravelPlan() {
             <h3 className="pa-h3 pa-mb-4 pa-mt-6">VENUE & HOTEL</h3>
             <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
               <Controller name="venue_name" control={control} render={({ field }) => <Input {...field} label="Venue Name" />} />
-              <Controller name="venue_address" control={control} render={({ field }) => <Input {...field} label="Venue Address" />} />
+              <Controller
+                name="venue_address"
+                control={control}
+                render={({ field }) => (
+                  <LocationAutocomplete
+                    value={field.value || ''}
+                    onInputChange={field.onChange}
+                    onChange={(address) => {
+                      startTransition(() => {
+                        setValue('venue_address', address.formatted_address, { shouldValidate: false, shouldDirty: true })
+                      })
+                    }}
+                    label="Venue Address"
+                    placeholder="Enter venue address"
+                  />
+                )}
+              />
               <Controller name="hotel_name" control={control} render={({ field }) => <Input {...field} label="Hotel Name" />} />
-              <Controller name="hotel_address" control={control} render={({ field }) => <Input {...field} label="Hotel Address" />} />
+              <Controller
+                name="hotel_address"
+                control={control}
+                render={({ field }) => (
+                  <LocationAutocomplete
+                    value={field.value || ''}
+                    onInputChange={field.onChange}
+                    onChange={(address) => {
+                      startTransition(() => {
+                        setValue('hotel_address', address.formatted_address, { shouldValidate: false, shouldDirty: true })
+                      })
+                    }}
+                    label="Hotel Address"
+                    placeholder="Enter hotel address"
+                  />
+                )}
+              />
               <Controller name="hotel_phone" control={control} render={({ field }) => <Input {...field} label="Hotel Phone" />} />
               <Controller name="hotel_confirmation" control={control} render={({ field }) => <Input {...field} label="Hotel Confirmation" />} />
             </div>

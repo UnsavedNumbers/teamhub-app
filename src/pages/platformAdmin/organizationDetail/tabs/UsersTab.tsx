@@ -17,7 +17,6 @@ import { isRpcSuccessResponse } from '../../../../utils/typeAdapters'
 import { showSuccess, showError } from '../../../../utils/toast'
 import { getDisplayEmail } from '../../../../utils/platformAdminMasking'
 import { safeString, safeDate, safeBoolean } from '../../../../utils/safeAccessors'
-import { USE_FAKE_DATA } from '../../../../data/config'
 import type { AdminRpcResponse, PlatformAdminRole } from '../../../../types/platformAdmin.types'
 
 interface OrganizationUser {
@@ -235,12 +234,6 @@ export function UsersTab({ organizationId, adminRole }: UsersTabProps) {
 
   const handleConfirmAction = async (reason: string) => {
     if (!confirmDialog.user) return
-
-    if (USE_FAKE_DATA) {
-      showError('This action is not available in demo mode')
-      setConfirmDialog({ open: false, type: 'disable', user: null })
-      return
-    }
 
     setDialogLoading(true)
     setDialogError(null)

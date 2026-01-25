@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { PageHeader, Badge, FilterBar, PlatformDataTable, type ColumnConfig, Button } from '../../components/platformAdmin'
 import { EventLogDetailModal } from '../../components/platformAdmin/EventLogDetailModal'
 import { useQueryParams } from '../../hooks/useQueryParams'
+import OfflineBanner from '../../components/admin/OfflineBanner'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { AdminEventLog, EventCategory } from '../../types/eventLog.types'
 
@@ -289,6 +290,7 @@ export default function EventLog() {
 
   return (
     <div>
+      <OfflineBanner />
       <PageHeader
         title="Event Log"
         subtitle="Comprehensive audit trail of all platform actions. Default view: last 90 days."

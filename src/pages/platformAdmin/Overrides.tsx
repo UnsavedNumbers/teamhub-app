@@ -4,7 +4,6 @@ import { supabase } from '../../lib/supabase'
 import { PageHeader, PlatformDataTable, FilterBar, Button, Badge, Select, type ColumnConfig, DataState } from '../../components/platformAdmin'
 import type { EntitlementOverrideWithDetails, OverrideStatus, OverrideTargetType } from '../../types/licenseTiers.types'
 import { useOffline } from '../../hooks/useOffline'
-import { isDemoMode } from '../../utils/demoMode'
 import { showError } from '../../utils/toast'
 import { useAuth } from '../../hooks/useAuth'
 import { canPerformAction } from '../../utils/platformAdminPermissions'
@@ -22,7 +21,6 @@ export default function Overrides() {
   const [totalCount, setTotalCount] = useState(0)
   const navigate = useNavigate()
   const { isOffline } = useOffline()
-  const demoMode = isDemoMode()
   const { profile } = useAuth()
   
   // Get admin role for permission checks (Issue 7)
@@ -208,10 +206,6 @@ export default function Overrides() {
   ]
 
   const handleCreateClick = () => {
-    if (demoMode) {
-      showError('Demo mode: Cannot create overrides. Please configure Supabase to enable write operations.')
-      return
-    }
     if (isOffline) {
       showError('You appear to be offline. Please reconnect and try again.')
       return
@@ -221,27 +215,6 @@ export default function Overrides() {
 
   return (
     <div>
-      {/* Demo mode indicator */}
-      {demoMode && (
-        <div
-          className="pa-card pa-mb-4"
-          style={{
-            background: 'var(--pa-info-bg)',
-            border: '1px solid var(--pa-info)',
-            padding: 'var(--pa-space-3)',
-          }}
-        >
-          <div className="pa-flex pa-items-center pa-gap-2">
-            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-info)' }}>
-              info
-            </span>
-            <span className="pa-body-s" style={{ color: 'var(--pa-n900)' }}>
-              Demo mode: Changes will not be saved to the database.
-            </span>
-          </div>
-        </div>
-      )}
-
       {/* Offline indicator */}
       {isOffline && (
         <div
@@ -270,7 +243,7 @@ export default function Overrides() {
           <Button
             variant="primary"
             onClick={handleCreateClick}
-            disabled={demoMode || isOffline || !canCreate}
+            disabled={isOffline || !canCreate}
             title={!canCreate ? 'You do not have permission to create overrides' : undefined}
           >
             Create Override
@@ -324,7 +297,7 @@ export default function Overrides() {
         emptyTitle="No overrides found"
         emptyDescription="Create your first override to get started."
         emptyAction={
-          !demoMode && !isOffline
+          !isOffline
             ? {
                 label: 'Create Override',
                 onClick: handleCreateClick,

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { PageHeader, Badge, FilterBar, PlatformDataTable, JsonViewer, type ColumnConfig } from '../../components/platformAdmin'
+import OfflineBanner from '../../components/admin/OfflineBanner'
 import type { AdminAuditLog } from '../../types/platformAdmin.types'
 import { mapEventLogsToAuditLogs, type AdminEventLog } from '../../utils/auditLogMapper'
 
@@ -177,6 +178,7 @@ export default function AuditLog() {
 
   return (
     <div>
+      <OfflineBanner />
       <PageHeader
         title="Audit Log"
         subtitle="View all platform admin actions. Default view: last 90 days."

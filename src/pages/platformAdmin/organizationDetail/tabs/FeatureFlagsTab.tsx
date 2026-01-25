@@ -13,7 +13,6 @@ import { handleRpcError } from '../../../../utils/rpcErrorHandler'
 import { isRpcSuccessResponse } from '../../../../utils/typeAdapters'
 import { showSuccess, showError } from '../../../../utils/toast'
 import { safeDate } from '../../../../utils/safeAccessors'
-import { USE_FAKE_DATA } from '../../../../data/config'
 import type { AdminFeatureFlag, AdminRpcResponse } from '../../../../types/platformAdmin.types'
 import type { PlatformAdminRole } from '../../../../types/platformAdmin.types'
 
@@ -122,23 +121,12 @@ export function FeatureFlagsTab({ organizationId, adminRole: _adminRole, onFlagT
       return
     }
 
-    if (USE_FAKE_DATA) {
-      showError('This action is not available in demo mode')
-      return
-    }
-
     setDialogError(null)
     setConfirmDialog({ open: true, flag })
   }
 
   const handleConfirmToggle = async (reason: string) => {
     if (!confirmDialog.flag) return
-
-    if (USE_FAKE_DATA) {
-      showError('This action is not available in demo mode')
-      setConfirmDialog({ open: false, flag: null })
-      return
-    }
 
     setDialogLoading(true)
     setDialogError(null)
@@ -222,12 +210,10 @@ export function FeatureFlagsTab({ organizationId, adminRole: _adminRole, onFlagT
             e.stopPropagation()
             handleToggleFlag(row)
           }}
-          disabled={!permissions.canToggleFeatureFlag || USE_FAKE_DATA}
+          disabled={!permissions.canToggleFeatureFlag}
           title={
             !permissions.canToggleFeatureFlag
               ? 'You do not have permission to toggle feature flags'
-              : USE_FAKE_DATA
-              ? 'Not available in demo mode'
               : `Toggle ${row.feature_key}`
           }
         >

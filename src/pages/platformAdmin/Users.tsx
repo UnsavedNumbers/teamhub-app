@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { showSuccess, showError } from '../../utils/toast'
-import { PageHeader, Badge, FilterBar, PlatformDataTable, ConfirmDialog, type ColumnConfig, Button } from '../../components/platformAdmin'
+import { PageHeader, Badge, FilterBar, PlatformDataTable, ConfirmDialog, type ColumnConfig, Button, OfflineBanner, ErrorState } from '../../components/platformAdmin'
 import { canPerformAction, getDeniedMessage } from '../../utils/platformAdminPermissions'
 import { getDisplayEmail } from '../../utils/platformAdminMasking'
 import { isRpcSuccessResponse } from '../../utils/typeAdapters'
@@ -13,6 +13,7 @@ import type { AdminUser, AdminRpcResponse } from '../../types/platformAdmin.type
 export default function Users() {
   const [users, setUsers] = useState<AdminUser[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(50)
   const [totalCount, setTotalCount] = useState(0)
@@ -48,6 +49,7 @@ export default function Users() {
 
   const fetchUsers = useCallback(async () => {
     setLoading(true)
+    setError(null)
 
     try {
       let query = supabase
@@ -74,6 +76,7 @@ export default function Users() {
 
       if (error) {
         console.error('Error fetching users:', error)
+        setError(error.message || 'Failed to load users')
         setUsers([])
         setTotalCount(0)
       } else {
@@ -87,9 +90,11 @@ export default function Users() {
         }
         setUsers(filteredUsers)
         setTotalCount(orgFilter ? filteredUsers.length : (count || 0))
+        setError(null)
       }
     } catch (err) {
       console.error('Error:', err)
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
       setUsers([])
     } finally {
       setLoading(false)
@@ -269,6 +274,7 @@ export default function Users() {
 
   return (
     <div>
+      <OfflineBanner />
       <PageHeader
         title="Users"
         subtitle={`${totalCount} users total`}
@@ -303,21 +309,31 @@ export default function Users() {
         }}
       />
 
-      <PlatformDataTable
-        columns={columns as ColumnConfig<{ id: string }>[]}
-        rows={users as { id: string }[]}
-        loading={loading}
-        emptyMessage="No users found."
-        page={page}
-        rowsPerPage={rowsPerPage}
-        totalCount={totalCount}
-        onPageChange={setPage}
-        onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0) }}
-        onRowClick={handleRowClick as (row: { id: string }) => void}
-        orderBy={orderBy}
-        order={order}
-        onSort={handleSort}
-      />
+      {error && !loading && (
+        <ErrorState
+          message={error}
+          onRetry={fetchUsers}
+          retryLabel="Retry"
+        />
+      )}
+
+      {!error && (
+        <PlatformDataTable
+          columns={columns as ColumnConfig<{ id: string }>[]}
+          rows={users as { id: string }[]}
+          loading={loading}
+          emptyMessage="No users found. Try adjusting your search or filters."
+          page={page}
+          rowsPerPage={rowsPerPage}
+          totalCount={totalCount}
+          onPageChange={setPage}
+          onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0) }}
+          onRowClick={handleRowClick as (row: { id: string }) => void}
+          orderBy={orderBy}
+          order={order}
+          onSort={handleSort}
+        />
+      )}
 
       {/* Confirm Dialog */}
       <ConfirmDialog

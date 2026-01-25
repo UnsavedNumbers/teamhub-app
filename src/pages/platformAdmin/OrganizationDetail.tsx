@@ -137,13 +137,6 @@ export default function OrganizationDetail() {
   const handleConfirmAction = async (reason: string) => {
     if (!organization) return
 
-    // Block in demo mode
-    if (USE_FAKE_DATA) {
-      showError('This action is not available in demo mode')
-      setConfirmDialog({ open: false, type: 'activate' })
-      return
-    }
-
     // Check offline
     if (isOffline) {
       setDialogError('You appear to be offline. Please reconnect and try again.')
@@ -217,11 +210,6 @@ export default function OrganizationDetail() {
   const handleToggleFeatureFlag = (flag: AdminFeatureFlag) => {
     if (!canPerformAction(adminRole, 'toggle_feature_flag')) {
       showError(getDeniedMessage('toggle_feature_flag'))
-      return
-    }
-
-    if (USE_FAKE_DATA) {
-      showError('This action is not available in demo mode')
       return
     }
 
@@ -373,12 +361,10 @@ export default function OrganizationDetail() {
             e.stopPropagation()
             handleToggleFeatureFlag(row)
           }}
-          disabled={!canPerformAction(adminRole, 'toggle_feature_flag') || USE_FAKE_DATA}
+          disabled={!canPerformAction(adminRole, 'toggle_feature_flag')}
           title={
             !canPerformAction(adminRole, 'toggle_feature_flag')
               ? getDeniedMessage('toggle_feature_flag')
-              : USE_FAKE_DATA
-              ? 'Not available in demo mode'
               : `Toggle ${row.feature_key}`
           }
         >
@@ -415,27 +401,6 @@ export default function OrganizationDetail() {
         </div>
       )}
 
-      {/* Demo mode indicator */}
-      {USE_FAKE_DATA && (
-        <div
-          className="pa-card pa-mb-4"
-          style={{
-            background: 'var(--pa-info-bg)',
-            border: '1px solid var(--pa-info)',
-            padding: 'var(--pa-space-3)',
-          }}
-        >
-          <div className="pa-flex pa-items-center pa-gap-2">
-            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
-              info
-            </span>
-            <span className="pa-body-s" style={{ color: 'var(--pa-n900)' }}>
-              Demo mode: Changes will not be saved to the database.
-            </span>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <div className="pa-flex pa-items-center pa-gap-3 pa-mb-5">
         <button
@@ -467,7 +432,7 @@ export default function OrganizationDetail() {
           {organization.status !== 'active' && (
             <button
               className="pa-btn pa-btn--primary pa-btn--compact"
-              disabled={!canPerformAction(adminRole, 'activate_organization') || isOffline || USE_FAKE_DATA}
+              disabled={!canPerformAction(adminRole, 'activate_organization') || isOffline}
               onClick={() => {
                 setDialogError(null)
                 setConfirmDialog({ open: true, type: 'activate' })
@@ -477,8 +442,6 @@ export default function OrganizationDetail() {
                   ? getDeniedMessage('activate_organization')
                   : isOffline
                   ? 'Offline - action unavailable'
-                  : USE_FAKE_DATA
-                  ? 'Not available in demo mode'
                   : 'Activate organization'
               }
               style={{ background: 'var(--pa-success)' }}
@@ -490,7 +453,7 @@ export default function OrganizationDetail() {
           {organization.status !== 'suspended' && (
             <button
               className="pa-btn pa-btn--secondary pa-btn--compact"
-              disabled={!canPerformAction(adminRole, 'suspend_organization') || isOffline || USE_FAKE_DATA}
+              disabled={!canPerformAction(adminRole, 'suspend_organization') || isOffline}
               onClick={() => {
                 setDialogError(null)
                 setConfirmDialog({ open: true, type: 'suspend' })
@@ -500,8 +463,6 @@ export default function OrganizationDetail() {
                   ? getDeniedMessage('suspend_organization')
                   : isOffline
                   ? 'Offline - action unavailable'
-                  : USE_FAKE_DATA
-                  ? 'Not available in demo mode'
                   : 'Suspend organization'
               }
               style={{ color: 'var(--pa-danger)', borderColor: 'var(--pa-danger)' }}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
-import { PageHeader, Badge, Card, PlatformDataTable, ConfirmDialog, type ColumnConfig } from '../../components/platformAdmin'
+import { PageHeader, Badge, Card, PlatformDataTable, ConfirmDialog, type ColumnConfig, OfflineBanner } from '../../components/platformAdmin'
 import { canPerformAction, ROLE_LABELS, ROLE_DESCRIPTIONS } from '../../utils/platformAdminPermissions'
 import { isAdminRpcResponse } from '../../utils/typeAdapters'
 import { normalizeSupabaseError } from '../../utils/errorUtils'
@@ -301,6 +301,7 @@ export default function PlatformAdmins() {
 
   return (
     <div>
+      <OfflineBanner />
       <PageHeader
         title="Platform Admins"
         subtitle="Manage users with platform-wide administrative access."
@@ -332,7 +333,7 @@ export default function PlatformAdmins() {
         columns={columns}
         rows={admins}
         loading={loading}
-        emptyMessage="No platform admins found."
+        emptyMessage="No platform admins found. Add your first platform admin to get started."
         page={page}
         rowsPerPage={rowsPerPage}
         totalCount={totalCount}

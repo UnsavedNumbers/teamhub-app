@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, StatCard, Badge, FilterBar, PlatformDataTable, type ColumnConfig } from '../../components/platformAdmin'
+import { PageHeader, StatCard, Badge, FilterBar, PlatformDataTable, type ColumnConfig, OfflineBanner, ErrorState } from '../../components/platformAdmin'
 import { useQueryParams } from '../../hooks/useQueryParams'
 import { 
   formatCurrency, 
@@ -25,6 +25,7 @@ const statusOptions = [
 export default function PlatformPayments() {
   const [payments, setPayments] = useState<AdminPayment[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(50)
   const [totalCount, setTotalCount] = useState(0)
@@ -57,6 +58,7 @@ export default function PlatformPayments() {
 
   const fetchPayments = useCallback(async () => {
     setLoading(true)
+    setError(null)
 
     try {
       let query = supabase
@@ -81,11 +83,13 @@ export default function PlatformPayments() {
 
       if (error) {
         console.error('Error fetching payments:', error)
+        setError(error.message || 'Failed to load payments')
         setPayments([])
         setTotalCount(0)
       } else {
         setPayments((data || []) as unknown as AdminPayment[])
         setTotalCount(count || 0)
+        setError(null)
       }
 
       // Fetch stats
@@ -104,6 +108,7 @@ export default function PlatformPayments() {
       }
     } catch (err) {
       console.error('Error:', err)
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
       setPayments([])
     } finally {
       setLoading(false)
@@ -215,6 +220,7 @@ export default function PlatformPayments() {
 
   return (
     <div>
+      <OfflineBanner />
       <PageHeader
         title="Payments"
         subtitle="Platform-wide payment activity"
@@ -255,20 +261,30 @@ export default function PlatformPayments() {
         }}
       />
 
-      <PlatformDataTable
-        columns={columns}
-        rows={payments}
-        loading={loading}
-        emptyMessage="No payments found."
-        page={page}
-        rowsPerPage={rowsPerPage}
-        totalCount={totalCount}
-        onPageChange={setPage}
-        onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0) }}
-        orderBy={orderBy}
-        order={order}
-        onSort={handleSort}
-      />
+      {error && !loading && (
+        <ErrorState
+          message={error}
+          onRetry={fetchPayments}
+          retryLabel="Retry"
+        />
+      )}
+
+      {!error && (
+        <PlatformDataTable
+          columns={columns}
+          rows={payments}
+          loading={loading}
+          emptyMessage="No payments found for the selected criteria."
+          page={page}
+          rowsPerPage={rowsPerPage}
+          totalCount={totalCount}
+          onPageChange={setPage}
+          onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0) }}
+          orderBy={orderBy}
+          order={order}
+          onSort={handleSort}
+        />
+      )}
 
       {/* Toast */}
     </div>

@@ -5,7 +5,6 @@ import type { SupabaseExtended as Database } from '../../lib/supabase.extended.t
 import { PageHeader, Card, Button, Badge, ConfirmDialog, DataState } from '../../components/platformAdmin'
 import type { EntitlementOverrideWithDetails } from '../../types/licenseTiers.types'
 import { useOffline } from '../../hooks/useOffline'
-import { isDemoMode, assertNotDemoMode } from '../../utils/demoMode'
 import { showError, showSuccess } from '../../utils/toast'
 import { useAuth } from '../../hooks/useAuth'
 import { useI18n } from '../../i18n/useI18n'
@@ -16,7 +15,6 @@ export default function OverrideDetail() {
   const { isOffline } = useOffline()
   const { t } = useI18n()
   const { profile } = useAuth()
-  const demoMode = isDemoMode()
   const [override, setOverride] = useState<EntitlementOverrideWithDetails | null>(null)
   const [overrideVersion, setOverrideVersion] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
@@ -113,16 +111,6 @@ export default function OverrideDetail() {
 
   const handleRevoke = async (reason: string) => {
     if (!id || !override) return
-
-    // Block in demo mode
-    try {
-      assertNotDemoMode('revoke override')
-    } catch (err: any) {
-      setError(err.message)
-      showError(err.message)
-      setRevokeDialog(false)
-      return
-    }
 
     // Block if offline
     if (isOffline) {
@@ -229,27 +217,6 @@ export default function OverrideDetail() {
 
   return (
     <div>
-      {/* Demo mode indicator */}
-      {demoMode && (
-        <div
-          className="pa-card pa-mb-4"
-          style={{
-            background: 'var(--pa-info-bg)',
-            border: '1px solid var(--pa-info)',
-            padding: 'var(--pa-space-3)',
-          }}
-        >
-          <div className="pa-flex pa-items-center pa-gap-2">
-            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-info)' }}>
-              info
-            </span>
-            <span className="pa-body-s" style={{ color: 'var(--pa-n900)' }}>
-              Demo mode: Changes will not be saved to the database.
-            </span>
-          </div>
-        </div>
-      )}
-
       {/* Offline indicator */}
       {isOffline && (
         <div
@@ -302,7 +269,7 @@ export default function OverrideDetail() {
                     <Button 
                       variant="danger" 
                       onClick={() => setRevokeDialog(true)}
-                      disabled={demoMode || isOffline || !canRevoke}
+                      disabled={isOffline || !canRevoke}
                       title={!canRevoke ? 'You do not have permission to revoke overrides' : undefined}
                     >
                       Revoke Override
