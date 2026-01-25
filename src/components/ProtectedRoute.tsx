@@ -29,65 +29,43 @@ export function ProtectedRoute({
   const location = useLocation()
   const isAdminRoute = location.pathname.startsWith('/admin')
   const isPlatformAdmin = profile?.isPlatformAdmin ?? false
-  const isMountedRef = useRef(true)
 
   const { isActive: licenseActive, isPastGracePeriod, loading: licenseLoading, summary } = useLicense(
     isAdminRoute && !isPlatformAdmin ? currentOrganization?.id : undefined,
     { requireOrganization: isAdminRoute && !isPlatformAdmin }
   )
 
-  // Cleanup on unmount
-  useEffect(() => {
-    isMountedRef.current = true
-    return () => {
-      isMountedRef.current = false
-    }
-  }, [])
+  // Track whether we've set loading to true using a ref (survives through cleanup)
+  const hasSetLoadingRef = useRef(false)
 
-  // Handle auth loading state
+  // Handle all loading states in a single effect to prevent conflicts
+  // IMPORTANT: Only call setLoading when state actually changes to avoid counter imbalance
   useEffect(() => {
-    if (!isMountedRef.current) return
-    if (loading) {
+    // Determine if we should show loading based on all conditions
+    const shouldShowLoading = 
+      loading || // Auth is loading
+      (isAdminRoute && !isPlatformAdmin && licenseLoading) || // License is loading for admin routes
+      (!user || !profile) // Waiting for user/profile
+
+    // Only update if state changed to prevent counter imbalance
+    if (shouldShowLoading && !hasSetLoadingRef.current) {
       setLoading(true)
-    } else {
+      hasSetLoadingRef.current = true
+    } else if (!shouldShowLoading && hasSetLoadingRef.current) {
       setLoading(false)
+      hasSetLoadingRef.current = false
     }
+  }, [loading, isAdminRoute, isPlatformAdmin, licenseLoading, user, profile, setLoading])
+
+  // Cleanup loading state on unmount - always decrement if we incremented
+  useEffect(() => {
     return () => {
-      if (isMountedRef.current) {
+      if (hasSetLoadingRef.current) {
         setLoading(false)
+        hasSetLoadingRef.current = false
       }
     }
-  }, [loading, setLoading])
-
-  // Handle license loading state
-  useEffect(() => {
-    if (!isMountedRef.current) return
-    if (isAdminRoute && !isPlatformAdmin && licenseLoading) {
-      setLoading(true)
-    } else {
-      setLoading(false)
-    }
-    return () => {
-      if (isMountedRef.current) {
-        setLoading(false)
-      }
-    }
-  }, [isAdminRoute, isPlatformAdmin, licenseLoading, setLoading])
-
-  // Handle profile loading state
-  useEffect(() => {
-    if (!isMountedRef.current) return
-    if (!user || !profile) {
-      setLoading(true)
-    } else {
-      setLoading(false)
-    }
-    return () => {
-      if (isMountedRef.current) {
-        setLoading(false)
-      }
-    }
-  }, [user, profile, setLoading])
+  }, [setLoading])
 
   // Always wait for auth loading. Do NOT globally block on orgLoading;
   // platform admins and admin routes must be able to render without an org selected.

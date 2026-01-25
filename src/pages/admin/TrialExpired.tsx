@@ -68,7 +68,6 @@ export default function TrialExpired() {
   const { resolvedTheme } = useTheme()
   const orgId = currentOrganization?.id
   const { loading: licenseLoading, error: licenseError } = useLicense(orgId)
-  const isMountedRef = useRef(true)
   const [logoError, setLogoError] = useState(false)
   const [logoVersion, setLogoVersion] = useState(0)
 
@@ -99,28 +98,29 @@ export default function TrialExpired() {
     await signOut()
   }
 
-  // Cleanup on unmount
-  useEffect(() => {
-    isMountedRef.current = true
-    return () => {
-      isMountedRef.current = false
-    }
-  }, [])
+  // Track whether we've set loading to true using a ref (survives through cleanup)
+  const hasSetLoadingRef = useRef(false)
 
-  // Handle loading state
+  // Handle loading state - only call setLoading when state actually changes to avoid counter imbalance
   useEffect(() => {
-    if (!isMountedRef.current) return
-    if (licenseLoading) {
+    if (licenseLoading && !hasSetLoadingRef.current) {
       setLoading(true)
-    } else {
+      hasSetLoadingRef.current = true
+    } else if (!licenseLoading && hasSetLoadingRef.current) {
       setLoading(false)
-    }
-    return () => {
-      if (isMountedRef.current) {
-        setLoading(false)
-      }
+      hasSetLoadingRef.current = false
     }
   }, [licenseLoading, setLoading])
+
+  // Cleanup loading state on unmount
+  useEffect(() => {
+    return () => {
+      if (hasSetLoadingRef.current) {
+        setLoading(false)
+        hasSetLoadingRef.current = false
+      }
+    }
+  }, [setLoading])
 
   if (!orgId) {
     return (
