@@ -114,6 +114,7 @@ export const RouteKeys = {
     PORTAL_MESSAGES: 'portal.messages',
     PORTAL_PAYMENTS: 'portal.payments',
     PORTAL_ATHLETES: 'portal.athletes',
+    PORTAL_ATHLETES_REQUEST_ATTACHMENT: 'portal.athletes.requestAttachment',
     PORTAL_JOIN: 'portal.join',
     PORTAL_TRYOUTS: 'portal.tryouts',
     PORTAL_UNIFORMS: 'portal.uniforms',
@@ -157,6 +158,7 @@ export const RouteKeys = {
     ADMIN_GUARDIANS: 'admin.guardians.list',
     ADMIN_GUARDIAN_DETAIL: 'admin.guardians.detail',
     ADMIN_CREATE_GUARDIAN: 'admin.guardians.create',
+    ADMIN_GUARDIAN_REQUESTS: 'admin.guardianRequests',
     // Legacy (deprecated)
     ADMIN_FAMILIES: 'admin.families.list',
     ADMIN_FAMILY_DETAIL: 'admin.families.detail',

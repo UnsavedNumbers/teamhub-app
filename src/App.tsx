@@ -48,6 +48,7 @@ import { RoleSelection } from './pages/RoleSelection'
 // Portal Pages - Lazy loaded
 const CreateAthletePortal = lazy(() => import('./pages/CreateAthletePortal'))
 const EditAthletePortal = lazy(() => import('./pages/EditAthletePortal'))
+const RequestAthleteAttachment = lazy(() => import('./pages/RequestAthleteAttachment').then(m => ({ default: m.default })))
 
 // Admin Layout (Material Dashboard)
 import AdminLayout from './layouts/AdminLayout'
@@ -131,6 +132,7 @@ const AthleteDetail = lazy(() => import('./pages/admin/AthleteDetail'))
 const EditAthlete = lazy(() => import('./pages/admin/EditAthlete'))
 const AdminChildren = lazy(() => import('./pages/admin/AdminChildren'))
 const ImportAthletes = lazy(() => import('./pages/admin/ImportAthletes'))
+const GuardianAttachmentRequests = lazy(() => import('./pages/admin/GuardianAttachmentRequests').then(m => ({ default: m.default })))
 
 function HostHomeRoute() {
   const appContext = getHostAppContext()
@@ -241,6 +243,7 @@ function AppWithTheme() {
             <Route path="athletes" element={<ProtectedRoute><Athletes /></ProtectedRoute>} />
             <Route path="athletes/new" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><CreateAthletePortal /></Suspense></ProtectedRoute>} />
             <Route path="athletes/:id/edit" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><EditAthletePortal /></Suspense></ProtectedRoute>} />
+            <Route path="athletes/request-attachment" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><RequestAthleteAttachment /></Suspense></ProtectedRoute>} />
             <Route path="join" element={<ProtectedRoute><JoinTeam /></ProtectedRoute>} />
             <Route path="calendar/events/:eventId" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />
             <Route path="calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
@@ -329,6 +332,7 @@ function AppWithTheme() {
               <Route path="guardians/new" element={<CreateFamily />} />
               <Route path="guardians/:id" element={<FamilyDetail />} />
               <Route path="guardians" element={<AdminFamilies />} />
+              <Route path="guardian-requests" element={<GuardianAttachmentRequests />} />
 
               {/* Backward Compatibility Redirects */}
               <Route path="organization/sports/:id" element={<RedirectWithParams to="/admin/sports" />} />

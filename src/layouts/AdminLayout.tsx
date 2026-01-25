@@ -64,14 +64,15 @@ export default function AdminLayout() {
       ],
     },
     {
-      label: 'Management',
-      icon: 'groups',
-      path: getLink('admin.guardians.list'),
-      requiresOrg: true,
-      children: [
-        { text: 'Guardians', icon: 'home', path: getLink('admin.guardians.list'), requiresOrg: true },
-        { text: 'Athletes', icon: 'child_care', path: getPath(RouteKeys.ADMIN_ATHLETES), requiresOrg: true },
-      ],
+        label: 'Management',
+        icon: 'groups',
+        path: getLink('admin.guardians.list'),
+        requiresOrg: true,
+        children: [
+            { text: 'Guardians', icon: 'home', path: getLink('admin.guardians.list'), requiresOrg: true },
+            { text: 'Athletes', icon: 'child_care', path: getPath(RouteKeys.ADMIN_ATHLETES), requiresOrg: true },
+            { text: 'Guardian Requests', icon: 'person_add', path: getLink('admin.guardianRequests'), requiresOrg: true },
+        ],
     },
     {
       label: 'Operations',

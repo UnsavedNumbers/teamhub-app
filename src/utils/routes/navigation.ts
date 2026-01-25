@@ -85,6 +85,7 @@ export const parentNavSections: NavigationSection[] = [
                 label: 'Programs',
                 items: [
                     { routeKey: 'portal.athletes', text: 'My Athletes', icon: 'groups', description: 'Your children\'s profiles' },
+                    { routeKey: 'portal.athletes.requestAttachment', text: 'Request Athlete Attachment', icon: 'person_add', description: 'Request to attach to an existing athlete' },
                     { routeKey: 'portal.join', text: 'Join a Team', icon: 'group_add', description: 'Enter an invite code' },
                     { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', description: 'Tryout sessions' },
                 ],
@@ -261,6 +262,7 @@ export const adminMenuItems: MenuItemDefinition[] = [
         children: [
             { text: 'Guardians', icon: 'home', routeKey: 'admin.guardians.list', requiresOrg: true },
             { text: 'Athletes', icon: 'child_care', routeKey: 'admin.athletes.list', requiresOrg: true },
+            { text: 'Guardian Requests', icon: 'person_add', routeKey: 'admin.guardianRequests', requiresOrg: true },
         ],
     },
     {
@@ -377,6 +379,7 @@ export const adminGlobalNavSections: NavigationSection[] = [
                     { routeKey: 'admin.teams.list', text: 'Teams', icon: 'groups', description: 'Manage teams & rosters' },
                     { routeKey: 'admin.guardians.list', text: 'Guardians', icon: 'home', description: 'Guardian management' },
                     { routeKey: 'admin.athletes.list', text: 'Athletes', icon: 'child_care', description: 'Player registry' },
+                    { routeKey: 'admin.guardianRequests', text: 'Guardian Requests', icon: 'person_add', description: 'Review attachment requests' },
                 ],
             },
         ],
