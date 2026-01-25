@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useUserContext } from '../hooks/useUserContext'
 import { getChildren } from '../data/services/familyService'
 import { getTeamsForParent } from '../data/services/teamsService'
+import { getUserPreferences, updateUserPreferences } from '../data/services/preferencesService'
 import { useT, useLocale } from '../i18n/useI18n'
 import type { Locale } from '../i18n'
 import PortalLayout from '../components/portal/PortalLayout'
@@ -27,7 +28,7 @@ interface Team {
 }
 
 export default function Settings() {
-  const { profile, signOut } = useAuth()
+  const { profile, signOut, updatePassword, user } = useAuth()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
   const t = useT()
@@ -47,8 +48,14 @@ export default function Settings() {
     quiet_hours: false,
   })
 
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [changingPassword, setChangingPassword] = useState(false)
+
   const fetchData = useCallback(async () => {
-    if (!isReady) return
+    if (!isReady || !user?.id) return
     
     setLoading(true)
     
@@ -68,8 +75,17 @@ export default function Settings() {
       name: t.name,
     })))
 
+    // Load notification preferences
+    const { data: prefs } = await getUserPreferences(user.id)
+    if (prefs?.notifications) {
+      setNotifications(prev => ({
+        ...prev,
+        ...prefs.notifications,
+      }))
+    }
+
     setLoading(false)
-  }, [context, isReady])
+  }, [context, isReady, user?.id])
 
   useEffect(() => {
     if (isReady) fetchData()
@@ -80,8 +96,44 @@ export default function Settings() {
     navigate('/portal/login')
   }
 
-  function toggleNotification(key: keyof typeof notifications) {
-    setNotifications(prev => ({ ...prev, [key]: !prev[key] }))
+  async function toggleNotification(key: keyof typeof notifications) {
+    const updated = { ...notifications, [key]: !notifications[key] }
+    setNotifications(updated)
+    
+    if (user?.id) {
+      await updateUserPreferences(user.id, {
+        notifications: updated as any,
+      })
+    }
+  }
+
+  async function handleChangePassword() {
+    setPasswordError(null)
+    
+    if (!newPassword || newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match')
+      return
+    }
+    
+    if (newPassword.length < 8) {
+      setPasswordError('Password must be at least 8 characters')
+      return
+    }
+    
+    setChangingPassword(true)
+    
+    try {
+      const { error } = await updatePassword(newPassword)
+      if (error) throw error
+      
+      setShowPasswordModal(false)
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : 'Failed to change password')
+    } finally {
+      setChangingPassword(false)
+    }
   }
 
   if (loading) {
@@ -133,7 +185,10 @@ export default function Settings() {
                 </div>
                 <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-3 py-1 rounded-full font-bold uppercase tracking-widest">{t('portal.settings.account.emailLogin')}</span>
               </div>
-              <div className="p-6 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors">
+              <div 
+                className="p-6 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
+                onClick={() => setShowPasswordModal(true)}
+              >
                 <div>
                   <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('portal.settings.account.password')}</p>
                   <p className="font-black text-slate-900 dark:text-white">{t('portal.settings.account.passwordPlaceholder')}</p>
@@ -312,6 +367,77 @@ export default function Settings() {
             </Card>
           </section>
         </div>
+
+        {showPasswordModal && (
+          <div 
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            onClick={() => setShowPasswordModal(false)}
+          >
+            <Card 
+              className="w-full max-w-md m-4"
+              onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
+            >
+              <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">Change Password</h3>
+                <button
+                  onClick={() => setShowPasswordModal(false)}
+                  className="text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                >
+                  <Icon name="close" />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                    placeholder="Enter new password"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                    Confirm Password
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                    placeholder="Confirm new password"
+                  />
+                </div>
+                {passwordError && (
+                  <p className="text-sm text-red-600 dark:text-red-400">{passwordError}</p>
+                )}
+              </div>
+              <div className="p-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setShowPasswordModal(false)
+                    setPasswordError(null)
+                    setNewPassword('')
+                    setConfirmPassword('')
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleChangePassword}
+                  disabled={changingPassword || !newPassword || newPassword !== confirmPassword}
+                >
+                  {changingPassword ? 'Changing...' : 'Change Password'}
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
       </PortalLayout>
   )
 }

@@ -115,19 +115,39 @@ export default function JoinTeam() {
   }, [searchParams, isReady, handleLookup])
 
   async function handleJoin() {
-    if (!selectedChild || !selectedSeason || !team) return
+    if (!selectedChild || !selectedSeason || !team || !isReady) return
     
     setJoining(true)
     setError(null)
 
-    // In fake data mode, just show success
-    // TODO: Replace with real Supabase insert when migrating
-    // Check for existing membership and insert new one
-    
-    setTimeout(() => {
+    try {
+      // Create team membership using real database operation
+      const { data: membershipData, error: membershipError } = await createTeamMembership(
+        context,
+        selectedChild,
+        team.id,
+        selectedSeason
+      )
+
+      if (membershipError) {
+        setError(membershipError.message || 'Failed to join team. Please try again.')
+        setJoining(false)
+        return
+      }
+
+      if (!membershipData) {
+        setError('Failed to create membership. Please try again.')
+        setJoining(false)
+        return
+      }
+
+      // Success - show success step
       setStep('success')
       setJoining(false)
-    }, 500)
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.')
+      setJoining(false)
+    }
   }
 
   return (
@@ -165,9 +185,6 @@ export default function JoinTeam() {
                     maxLength={8}
                     autoFocus
                   />
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 text-center">
-                    Try: LIGHTNING, THUNDER, HAWKS, or EAGLES
-                  </p>
                 </div>
                 <Button variant="primary" onClick={handleLookup} disabled={loading || !inviteCode.trim()} className="w-full">
                   {loading ? 'Looking up' : 'Find Team'}

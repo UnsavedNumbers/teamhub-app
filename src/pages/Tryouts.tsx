@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 
 import { useUserContext } from '../hooks/useUserContext'
 import { useOrganization } from '../contexts/OrganizationContext'
-import { getTryouts, getTryoutRegistrations, registerChildForTryout } from '../data/services/tryoutsService'
+import { getTryouts, getTryoutRegistrations, registerAthleteForTryout } from '../data/services/tryoutsService'
 import { getChildren } from '../data/services/familyService'
 import type { Tryout, TryoutRegistration } from '../data/services/tryoutsService'
 import PortalLayout from '../components/portal/PortalLayout'
@@ -45,7 +45,7 @@ export default function Tryouts() {
 
   async function handleRegister() {
     if (!selectedTryout || !selectedChild) return
-    await registerChildForTryout(context, selectedTryout.id, selectedChild)
+    await registerAthleteForTryout(context, selectedTryout.id, selectedChild)
     setSelectedTryout(null)
     setSelectedChild('')
     await fetchData()

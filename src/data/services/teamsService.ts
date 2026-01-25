@@ -67,7 +67,7 @@ async function getFamilyIdForUser(userId: string): Promise<string | null> {
     return data?.family_id ?? null
 }
 
-async function getChildIdsForFamily(familyId: string | null): Promise<string[]> {
+async function getAthleteIdsForFamily(familyId: string | null): Promise<string[]> {
     if (!familyId) return []
     const { data, error } = await supabase
         .from('athletes')
@@ -543,24 +543,13 @@ export async function createTeamMembership(
             return { data: null, error: new Error('Family not found. Please contact support.') }
         }
 
-        const childIds = await getChildIdsForFamily(familyId)
+        const childIds = await getAthleteIdsForFamily(familyId)
         if (!childIds.includes(athleteId)) {
             return { data: null, error: new Error('Selected child not found or access denied.') }
         }
 
         // Validate season belongs to team
-        // Check via team_seasons junction table or season's team_id
-        const { data: seasonData, error: seasonError } = await supabase
-            .from('seasons')
-            .select('id, team_id, organization_id')
-            .eq('id', seasonId)
-            .single()
-
-        if (seasonError || !seasonData) {
-            return { data: null, error: new Error('Selected season is not available for this team.') }
-        }
-
-        // Check if season belongs to team via team_seasons or direct team_id
+        // Check via team_seasons junction table (primary method)
         const { data: teamSeasonData, error: teamSeasonError } = await supabase
             .from('team_seasons')
             .select('team_id')
@@ -568,10 +557,24 @@ export async function createTeamMembership(
             .eq('season_id', seasonId)
             .single()
 
-        // If team_seasons doesn't have the relationship, check if season has direct team_id
-        if (teamSeasonError && seasonData.team_id !== teamId) {
-            return { data: null, error: new Error('Selected season is not available for this team.') }
+        // If team_seasons doesn't have the relationship, check if season has direct team_id as fallback
+        if (teamSeasonError || !teamSeasonData) {
+            const { data: seasonData, error: seasonError } = await supabase
+                .from('seasons')
+                .select('id, team_id')
+                .eq('id', seasonId)
+                .single()
+
+            if (seasonError || !seasonData) {
+                return { data: null, error: new Error('Selected season is not available for this team.') }
+            }
+
+            // Check if season has direct team_id that matches
+            if (!seasonData.team_id || seasonData.team_id !== teamId) {
+                return { data: null, error: new Error('Selected season is not available for this team.') }
+            }
         }
+        // If we get here, either teamSeasonData exists (relationship valid) or seasonData.team_id matches
 
         // Check if membership already exists to determine if this is a new or updated membership
         const { data: existingMembership } = await supabase
@@ -760,7 +763,7 @@ export async function getTeamRoster(
         if (error) throw error
 
         const familyId = await getFamilyIdForUser(context.userId)
-        const childIds = await getChildIdsForFamily(familyId)
+        const childIds = await getAthleteIdsForFamily(familyId)
         const isAdmin = isOrgAdmin(context)
 
         const mapped = (data ?? []).map((row: any) => ({
@@ -859,7 +862,7 @@ export async function getTeamsForParent(
 
     try {
         const familyId = await getFamilyIdForUser(context.userId)
-        const childIds = await getChildIdsForFamily(familyId)
+        const childIds = await getAthleteIdsForFamily(familyId)
         if (childIds.length === 0) return { data: [], error: null }
 
         const { data: memberships, error: memErr } = await supabase

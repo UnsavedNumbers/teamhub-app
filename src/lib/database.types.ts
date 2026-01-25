@@ -5850,6 +5850,7 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          invite_code: string
           is_active: boolean
           level_id: string | null
           max_roster_size: number | null
@@ -5862,6 +5863,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          invite_code?: string
           is_active?: boolean
           level_id?: string | null
           max_roster_size?: number | null
@@ -5874,6 +5876,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          invite_code?: string
           is_active?: boolean
           level_id?: string | null
           max_roster_size?: number | null

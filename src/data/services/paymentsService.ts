@@ -51,7 +51,7 @@ function buildPermissions(context: UserContext): PermissionSet {
     return calculatePermissions(context, assignedTeamIds, childIds, [])
 }
 
-async function getChildIdsForUser(userId: string): Promise<string[]> {
+async function getAthleteIdsForUser(userId: string): Promise<string[]> {
     const { data: userRow, error: userError } = await supabase
         .from('users')
         .select('family_id')
@@ -232,7 +232,7 @@ export async function getFeeAssignmentsForUser(
 
     try {
         const isAdmin = isOrgAdmin(context)
-        const childIds = isAdmin ? [] : await getChildIdsForUser(context.userId)
+        const childIds = isAdmin ? [] : await getAthleteIdsForUser(context.userId)
 
         let query = supabase
             .from('fee_assignments')
@@ -302,7 +302,7 @@ export async function getUnpaidFeeAssignments(
     }
 
     try {
-        const childIds = await getChildIdsForUser(context.userId)
+        const childIds = await getAthleteIdsForUser(context.userId)
         if (childIds.length === 0) return { data: [], error: null }
 
         const { data, error } = await supabase
@@ -620,7 +620,7 @@ export async function getParentPaymentSummary(
     }
 
     try {
-        const childIds = await getChildIdsForUser(context.userId)
+        const childIds = await getAthleteIdsForUser(context.userId)
         if (childIds.length === 0) return { data: null, error: null }
 
         const { data, error } = await supabase
