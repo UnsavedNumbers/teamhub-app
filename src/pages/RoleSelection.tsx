@@ -29,7 +29,6 @@ export function RoleSelection() {
   const { isOffline } = useOffline()
   const navigate = useNavigate()
   const t = useT()
-  const isMountedRef = useRef(true)
   const [selectedCard, setSelectedCard] = useState<string | null>(null)
   const [helpModalOpen, setHelpModalOpen] = useState(false)
   const [logoError, setLogoError] = useState(false)
@@ -301,28 +300,31 @@ export function RoleSelection() {
     }
   }, [profile, t])
 
-  // Cleanup on unmount
-  useEffect(() => {
-    isMountedRef.current = true
-    return () => {
-      isMountedRef.current = false
-    }
-  }, [])
+  // Track whether we've set loading to true using a ref (survives through cleanup)
+  const hasSetLoadingRef = useRef(false)
 
-  // Handle loading state
+  // Handle loading state - only call setLoading when state actually changes to avoid counter imbalance
   useEffect(() => {
-    if (!isMountedRef.current) return
-    if (authLoading || orgLoading) {
+    const shouldShowLoading = authLoading || orgLoading
+    
+    if (shouldShowLoading && !hasSetLoadingRef.current) {
       setLoading(true)
-    } else {
+      hasSetLoadingRef.current = true
+    } else if (!shouldShowLoading && hasSetLoadingRef.current) {
       setLoading(false)
-    }
-    return () => {
-      if (isMountedRef.current) {
-        setLoading(false)
-      }
+      hasSetLoadingRef.current = false
     }
   }, [authLoading, orgLoading, setLoading])
+
+  // Cleanup loading state on unmount
+  useEffect(() => {
+    return () => {
+      if (hasSetLoadingRef.current) {
+        setLoading(false)
+        hasSetLoadingRef.current = false
+      }
+    }
+  }, [setLoading])
 
   // Loading state
   if (authLoading || orgLoading) {

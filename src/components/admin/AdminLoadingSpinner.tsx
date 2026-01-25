@@ -4,23 +4,18 @@ import FullScreenLoader from '../common/FullScreenLoader'
 
 export default function AdminLoadingSpinner() {
   const { setLoading } = useLoadingState()
-  const isMountedRef = useRef(true)
+  const hasSetLoadingRef = useRef(false)
 
-  // Cleanup on unmount
+  // Set loading state when component mounts, cleanup on unmount
   useEffect(() => {
-    isMountedRef.current = true
-    return () => {
-      isMountedRef.current = false
+    if (!hasSetLoadingRef.current) {
+      setLoading(true)
+      hasSetLoadingRef.current = true
     }
-  }, [])
-
-  // Set loading state when component mounts
-  useEffect(() => {
-    if (!isMountedRef.current) return
-    setLoading(true)
     return () => {
-      if (isMountedRef.current) {
+      if (hasSetLoadingRef.current) {
         setLoading(false)
+        hasSetLoadingRef.current = false
       }
     }
   }, [setLoading])
