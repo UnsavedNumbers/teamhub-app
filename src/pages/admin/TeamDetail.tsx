@@ -1,214 +1,1048 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useTeamParams } from '../../hooks/useRouteParams'
-import { getTeamDetails } from '../../data/services/teamsService'
-import { 
-  AdminPageHeader,
-  PageHeader, 
-  Card, 
-  Button, 
-  Badge, 
-  Input,
-  DatePicker, 
-  EmptyState 
-} from '../../components/platformAdmin'
+import { getTeamDetails, getTeamRoster } from '../../data/services/teamsService'
+import { supabase } from '../../lib/supabase'
+import { getLink } from '../../utils/routes/helpers'
+import type { FakeTeamMember } from '../../data/fake/fakeTeams'
+import { Button, EmptyState } from '../../components/platformAdmin'
 
-interface Team { id: string; name: string }
-interface Season { id: string; name: string; start_date: string; end_date: string; is_active: boolean }
+interface Team {
+  id: string
+  name: string
+  sport?: { name: string; id?: string }
+  program?: { name: string; id?: string }
+  level?: { name: string; id?: string }
+  max_roster_size?: number
+}
+
+interface Season {
+  id: string
+  name: string
+  start_date: string
+  end_date: string
+  is_active: boolean
+}
+
+interface RosterMember {
+  id: string
+  child_id: string
+  athlete?: {
+    id: string
+    first_name: string
+    last_name: string
+    jersey_number: string | null
+  }
+  jersey_number?: string | null
+  position?: string | null
+  status: 'active' | 'inactive' | 'pending'
+}
 
 export default function TeamDetail() {
   const { teamId } = useTeamParams()
   const [team, setTeam] = useState<Team | null>(null)
-  const [seasons, setSeasons] = useState<Season[]>([])
+  const [activeSeason, setActiveSeason] = useState<Season | null>(null)
+  const [roster, setRoster] = useState<RosterMember[]>([])
   const [loading, setLoading] = useState(true)
-  const [showSeasonModal, setShowSeasonModal] = useState(false)
-  const [seasonForm, setSeasonForm] = useState({ name: '', start_date: '', end_date: '' })
-  const [creating, setCreating] = useState(false)
+  const [rosterLoading, setRosterLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState('roster')
+  const [navigating, setNavigating] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState('overview')
-
+  const [teamStats, setTeamStats] = useState({
+    totalAthletes: 0,
+    activeAthletes: 0,
+    vacancies: 0,
+    rank: 1,
+  })
 
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
+  const isMountedRef = useRef(true)
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
 
   const fetchTeamAndSeasons = useCallback(async () => {
     if (!teamId || !isReady) return
-    
+
     setLoading(true)
-    const { data: teamData, error: teamError } = await getTeamDetails(context, teamId)
-    
-    if (teamError || !teamData) {
-      setLoading(false)
-      return
+    setError(null)
+    try {
+      const { data: teamData, error: teamError } = await getTeamDetails(context, teamId)
+
+      if (teamError || !teamData) {
+        console.error('Error fetching team:', teamError)
+        if (isMountedRef.current) {
+          setError(teamError?.message || 'Failed to load team details')
+          setLoading(false)
+        }
+        return
+      }
+
+      if (!isMountedRef.current) return
+
+      setTeam({
+        id: teamData.id,
+        name: teamData.name,
+        sport: (teamData as any).sport,
+        program: (teamData as any).program,
+        level: (teamData as any).level,
+        max_roster_size: (teamData as any).max_roster_size,
+      })
+
+      // Get seasons for this team
+      if (teamData.seasons && teamData.seasons.length > 0) {
+        const seasonList = teamData.seasons.map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          start_date: s.start_date,
+          end_date: s.end_date,
+          is_active: s.is_active,
+        }))
+        const active = seasonList.find((s: Season) => s.is_active) || seasonList[0]
+        setActiveSeason(active)
+        if (active) {
+          await fetchRoster(active.id)
+        }
+      } else {
+        // Try to fetch seasons directly
+        const { data: seasonsData, error: seasonsError } = await supabase
+          .from('team_seasons')
+          .select('season:seasons(id, name, start_date, end_date, is_active)')
+          .eq('team_id', teamId)
+
+        if (seasonsError) {
+          console.error('Error fetching seasons:', seasonsError)
+        } else if (seasonsData && seasonsData.length > 0) {
+          const seasonList = seasonsData.map((s: any) => ({
+            id: s.season.id,
+            name: s.season.name,
+            start_date: s.season.start_date,
+            end_date: s.season.end_date,
+            is_active: s.season.is_active,
+          }))
+          const active = seasonList.find((s: Season) => s.is_active) || seasonList[0]
+          setActiveSeason(active)
+          if (active) {
+            await fetchRoster(active.id)
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error in fetchTeamAndSeasons:', error)
+      if (isMountedRef.current) {
+        setError(error instanceof Error ? error.message : 'An unexpected error occurred')
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setLoading(false)
+      }
     }
-
-    // Note: sport_name, program_name, level_name are computed properties, not stored on Team
-    setTeam({
-      id: teamData.id,
-      name: teamData.name,
-      // These would need to be added to the Team type or computed separately
-      // sport_name: teamData.sport?.name,
-      // program_name: teamData.program?.name,
-      // level_name: teamData.level?.name
-    })
-
-    // Transform seasons from fake data
-    if (teamData.seasons) {
-      setSeasons(teamData.seasons.map(s => ({
-        id: s.id,
-        name: s.name,
-        start_date: s.start_date,
-        end_date: s.end_date,
-        is_active: s.is_active,
-      })))
-    }
-
-    setLoading(false)
   }, [teamId, context, isReady])
 
-  useEffect(() => { 
-    fetchTeamAndSeasons() 
+  const fetchRoster = useCallback(
+    async (seasonId: string) => {
+      if (!teamId || !isReady || !seasonId) return
+
+      setRosterLoading(true)
+      try {
+        const { data, error } = await getTeamRoster(context, teamId, seasonId)
+
+        if (error) {
+          console.error('Error fetching roster:', error)
+          if (isMountedRef.current) {
+            setRoster([])
+          }
+          return
+        }
+
+        if (!isMountedRef.current) return
+
+        // Transform roster data
+        const rosterMembers: RosterMember[] = data.map((member: FakeTeamMember) => ({
+          id: member.id,
+          child_id: member.child_id,
+          jersey_number: member.jersey_number,
+          position: member.position,
+          status: member.status,
+        }))
+
+        // Fetch athlete details for each member
+        const athleteIds = rosterMembers.map((m) => m.child_id).filter(Boolean)
+        if (athleteIds.length > 0) {
+          const { data: athletesData, error: athletesError } = await supabase
+            .from('athletes')
+            .select('id, first_name, last_name')
+            .in('id', athleteIds)
+
+          if (!athletesError && athletesData && Array.isArray(athletesData)) {
+            const athleteMap = new Map(
+              (athletesData as any[]).map((a) => [a.id, { id: a.id, first_name: a.first_name, last_name: a.last_name, jersey_number: null }])
+            )
+
+            rosterMembers.forEach((member) => {
+              const athlete = athleteMap.get(member.child_id)
+              if (athlete) {
+                member.athlete = athlete
+                // Use jersey_number from athlete if not in membership
+                if (!member.jersey_number && athlete.jersey_number) {
+                  member.jersey_number = athlete.jersey_number
+                }
+              }
+            })
+          }
+        }
+
+        setRoster(rosterMembers)
+
+        // Calculate stats
+        const activeCount = rosterMembers.filter((m) => m.status === 'active').length
+        const maxRoster = team?.max_roster_size || 18
+        setTeamStats({
+          totalAthletes: rosterMembers.length,
+          activeAthletes: activeCount,
+          vacancies: Math.max(0, maxRoster - activeCount),
+          rank: 1, // TODO: Calculate actual rank
+        })
+      } catch (error) {
+        console.error('Error in fetchRoster:', error)
+        if (isMountedRef.current) {
+          setRoster([])
+        }
+      } finally {
+        if (isMountedRef.current) {
+          setRosterLoading(false)
+        }
+      }
+    },
+    [teamId, context, isReady, team]
+  )
+
+  useEffect(() => {
+    fetchTeamAndSeasons()
   }, [fetchTeamAndSeasons])
 
-  const handleCreateSeason = async () => {
-    if (!seasonForm.name.trim() || !teamId) return
-    
-    setCreating(true)
-    setError(null)
-
-    // In fake data mode, just add locally
-    const newSeason: Season = {
-      id: `season-new-${Date.now()}`,
-      name: seasonForm.name.trim(),
-      start_date: seasonForm.start_date,
-      end_date: seasonForm.end_date,
-      is_active: false,
+  useEffect(() => {
+    if (activeSeason) {
+      fetchRoster(activeSeason.id)
     }
+  }, [activeSeason, fetchRoster])
 
-    setSeasons(prev => [newSeason, ...prev])
-    setSeasonForm({ name: '', start_date: '', end_date: '' })
-    setShowSeasonModal(false)
-    setCreating(false)
-
-    // TODO: Replace with real Supabase insert when migrating
-    // const { error } = await supabase.from('seasons').insert({ ... })
+  const getInitials = (firstName: string, lastName: string): string => {
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
   }
 
-  if (loading) return <div className="pa-skeleton" style={{ height: '400px' }} />
-  if (!team) return <PageHeader title="Team not found" actions={<Button variant="blue" onClick={() => navigate('/admin/teams')}>Back</Button>} />
+  const handleAddAthlete = useCallback(() => {
+    if (!teamId || navigating) return
+
+    setNavigating(true)
+    navigate(`/admin/teams/${teamId}/roster`)
+  }, [teamId, navigate, navigating])
+
+  const handleAthleteClick = useCallback(
+    (athleteId: string) => {
+      if (!athleteId || navigating) return
+
+      setNavigating(true)
+      navigate(getLink('admin.athletes.detail', { id: athleteId }))
+    },
+    [navigate, navigating]
+  )
+
+  const handleTabChange = useCallback(
+    (tab: string) => {
+      if (navigating) return
+
+      if (tab === 'schedule') {
+        setNavigating(true)
+        navigate(`/admin/events?teamId=${teamId}`)
+      } else if (tab === 'attendance') {
+        setNavigating(true)
+        navigate(`/admin/attendance?teamId=${teamId}`)
+      } else if (tab === 'settings') {
+        // For now, navigate to teams list - in future could have team settings page
+        setNavigating(true)
+        navigate(getLink('admin.teams.list'))
+      } else {
+        setActiveTab(tab)
+      }
+    },
+    [teamId, navigate, navigating]
+  )
+
+  const handleBreadcrumbClick = useCallback(
+    (path: string, id?: string) => {
+      if (navigating || !path) return
+
+      setNavigating(true)
+      if (id) {
+        navigate(`${path}/${id}`)
+      } else {
+        navigate(path)
+      }
+    },
+    [navigate, navigating]
+  )
+
+  if (loading) {
+    return (
+      <div className="pa-root">
+        <div className="pa-skeleton" style={{ height: '400px' }} />
+      </div>
+    )
+  }
+
+  if (!team) {
+    return (
+      <div className="pa-root">
+        <div className="pa-page-header">
+          <h1 className="pa-page-title">Team not found</h1>
+          {error && <p className="pa-body-m" style={{ color: 'var(--pa-danger)', marginTop: 'var(--pa-space-2)' }}>{error}</p>}
+          <div style={{ marginTop: 'var(--pa-space-4)' }}>
+            <Button variant="blue" onClick={() => navigate(getLink('admin.teams.list'))}>
+              Back to Teams
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const sportName = team.sport?.name || ''
+  const programName = team.program?.name || ''
+  const levelName = team.level?.name || ''
+  const sportId = team.sport?.id
+  const programId = team.program?.id
 
   return (
     <div className="pa-root">
-      <AdminPageHeader 
-        title={team.name} 
-        breadcrumbs={[
-            { label: 'Teams', path: '/admin/teams' },
-            { label: team.name }
-        ]}
-      />
-      {/* Detail Context Banner */}
-      <div className="pa-mb-6 pa-p-4 pa-bg-gray-50 pa-border pa-rounded pa-flex pa-gap-6 pa-items-center">
-         {(team as any).sport_name && (
-             <div className="pa-flex pa-flex-col">
-                 <span className="pa-text-xs pa-text-muted pa-uppercase">Sport</span>
-                 <span className="pa-font-medium">{(team as any).sport_name}</span>
-             </div>
-         )}
-         {(team as any).program_name && (
-             <div className="pa-flex pa-flex-col">
-                 <span className="pa-text-xs pa-text-muted pa-uppercase">Program</span>
-                 <span className="pa-font-medium">{(team as any).program_name}</span>
-             </div>
-         )}
-         {(team as any).level_name && (
-             <div className="pa-flex pa-flex-col">
-                 <span className="pa-text-xs pa-text-muted pa-uppercase">Level</span>
-                 <span className="pa-font-medium">{(team as any).level_name}</span>
-             </div>
-         )}
+      {/* Header Band with Court Texture */}
+      <div
+        style={{
+          width: '100%',
+          height: '128px',
+          background: 'var(--pa-n900)',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: `
+              linear-gradient(45deg, rgba(19, 127, 236, 0.1) 25%, transparent 25%),
+              linear-gradient(-45deg, rgba(19, 127, 236, 0.1) 25%, transparent 25%),
+              linear-gradient(45deg, transparent 75%, rgba(19, 127, 236, 0.1) 75%),
+              linear-gradient(-45deg, transparent 75%, rgba(19, 127, 236, 0.1) 75%)
+            `,
+            backgroundSize: '40px 40px',
+            backgroundPosition: '0 0, 0 20px, 20px -20px, -20px 0px',
+            opacity: 0.3,
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(to top, var(--pa-n50), transparent)',
+          }}
+        />
       </div>
 
-      {/* Custom Tabs */}
-      <div className="pa-tabs pa-mb-6">
-        {['overview', 'seasons', 'roster'].map(tab => (
-          <button 
-            key={tab} 
-            className={`pa-tab ${activeTab === tab ? 'pa-tab--active' : ''}`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab.toUpperCase()}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === 'overview' && (
-        <div className="pa-grid pa-grid-3">
-          <Card className="pa-clickable" onClick={() => navigate(`/admin/teams/${teamId}/roster`)}>
-            <div className="pa-flex pa-items-center pa-gap-4">
-              <div style={{ background: 'var(--pa-n900)', color: 'var(--pa-white)', padding: 'var(--pa-space-3)', display: 'flex' }}><span className="material-symbols-outlined">people</span></div>
-              <div>
-                <h3 className="pa-h3 pa-mb-1">MANAGE ROSTER</h3>
-                <div className="pa-body-s pa-text-muted">Add or remove players</div>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {activeTab === 'seasons' && (
-        <div>
-          <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
-            <h3 className="pa-h3">SEASONS</h3>
-            <Button variant="primary" onClick={() => setShowSeasonModal(true)}>New Season</Button>
-          </div>
-          {seasons.length === 0 ? (
-            <Card><EmptyState icon="calendar_today" title="NO SEASONS" description="Create a season to start assigning rosters." action={{ label: 'Create Season', onClick: () => setShowSeasonModal(true) }} /></Card>
-          ) : (
-            <div className="pa-grid pa-grid-2">
-              {seasons.map(s => (
-                <Card key={s.id}>
-                  <div className="pa-flex pa-justify-between pa-items-start">
-                    <div>
-                      <h4 className="pa-h4 pa-mb-1">{s.name}</h4>
-                      <div className="pa-body-s pa-text-muted">{new Date(s.start_date).toLocaleDateString()} - {new Date(s.end_date).toLocaleDateString()}</div>
-                      {s.is_active && <div className="pa-mt-2"><Badge variant="success">ACTIVE</Badge></div>}
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+      <div
+        style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          width: '100%',
+          marginTop: '-64px',
+          position: 'relative',
+          zIndex: 10,
+          padding: '0 var(--pa-space-4)',
+          paddingBottom: 'var(--pa-space-10)',
+        }}
+      >
+        {/* Breadcrumbs */}
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            gap: 'var(--pa-space-2)',
+            marginBottom: 'var(--pa-space-2)',
+          }}
+        >
+          {sportName && (
+            <>
+              {sportId ? (
+                <button
+                  onClick={() => handleBreadcrumbClick('/admin/sports', sportId)}
+                  disabled={navigating}
+                  style={{
+                    color: '#5468FF',
+                    fontSize: '12px',
+                    fontWeight: 900,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                    textDecoration: 'none',
+                    background: 'none',
+                    border: 'none',
+                    cursor: navigating ? 'not-allowed' : 'pointer',
+                    opacity: navigating ? 0.6 : 1,
+                    padding: 0,
+                  }}
+                >
+                  {sportName.toUpperCase()}
+                </button>
+              ) : (
+                <Link
+                  to={getLink('admin.sports.list')}
+                  style={{
+                    color: '#5468FF',
+                    fontSize: '12px',
+                    fontWeight: 900,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                    textDecoration: 'none',
+                  }}
+                >
+                  {sportName.toUpperCase()}
+                </Link>
+              )}
+              <span style={{ color: 'rgba(84, 104, 255, 0.5)', fontSize: '12px', fontWeight: 900 }}>/</span>
+            </>
+          )}
+          {programName && (
+            <>
+              {programId ? (
+                <button
+                  onClick={() => handleBreadcrumbClick('/admin/programs', programId)}
+                  disabled={navigating}
+                  style={{
+                    color: '#5468FF',
+                    fontSize: '12px',
+                    fontWeight: 900,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                    textDecoration: 'none',
+                    background: 'none',
+                    border: 'none',
+                    cursor: navigating ? 'not-allowed' : 'pointer',
+                    opacity: navigating ? 0.6 : 1,
+                    padding: 0,
+                  }}
+                >
+                  {programName.toUpperCase()}
+                </button>
+              ) : (
+                <Link
+                  to={getLink('admin.programs.list')}
+                  style={{
+                    color: '#5468FF',
+                    fontSize: '12px',
+                    fontWeight: 900,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                    textDecoration: 'none',
+                  }}
+                >
+                  {programName.toUpperCase()}
+                </Link>
+              )}
+              <span style={{ color: 'rgba(84, 104, 255, 0.5)', fontSize: '12px', fontWeight: 900 }}>/</span>
+            </>
+          )}
+          {levelName && (
+            <span
+              style={{
+                color: 'var(--pa-n900)',
+                fontSize: '12px',
+                fontWeight: 900,
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+              }}
+            >
+              {levelName.toUpperCase()}
+            </span>
           )}
         </div>
-      )}
 
-      {activeTab === 'roster' && (
-        <Card>
-          <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
-            <h3 className="pa-h3">ROSTER</h3>
-            <Button onClick={() => navigate(`/admin/teams/${teamId}/roster`)}>Manage Roster</Button>
+        {/* Page Heading & Add Athlete Button */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--pa-space-6)',
+            marginBottom: 'var(--pa-space-8)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-6)' }}>
+            <div
+              className="hidden md:flex"
+              style={{
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '80px',
+                height: '80px',
+                background: 'var(--pa-white)',
+                borderRadius: 'var(--pa-radius-l)',
+                border: '1px solid var(--pa-n200)',
+                boxShadow: 'var(--pa-shadow-1)',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#5468FF', fontVariationSettings: "'FILL' 1" }}>
+                apparel
+              </span>
+            </div>
+            <div>
+              <h1
+                style={{
+                  fontFamily: 'var(--pa-font-display)',
+                  fontSize: 'clamp(2.5rem, 5vw, 4.5rem)',
+                  fontWeight: 900,
+                  lineHeight: 1,
+                  letterSpacing: '-0.04em',
+                  textTransform: 'uppercase',
+                  color: 'var(--pa-n900)',
+                  margin: 0,
+                }}
+              >
+                {team.name.toUpperCase()}
+              </h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)', marginTop: 'var(--pa-space-2)' }}>
+                <span
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: '#5468FF',
+                  }}
+                />
+                <p
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    color: 'var(--pa-n500)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                    margin: 0,
+                  }}
+                >
+                  TeamHub Athletic v1.0.4
+                </p>
+              </div>
+            </div>
           </div>
-          <p className="pa-body-m">View and manage the players assigned to this team across all seasons.</p>
-        </Card>
-      )}
-
-      {showSeasonModal && (
-        <div className="pa-modal-overlay" onClick={() => setShowSeasonModal(false)}>
-          <div className="pa-card pa-modal" onClick={e => e.stopPropagation()}>
-            <h2 className="pa-h2 pa-mb-4">CREATE SEASON</h2>
-            {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
-            <div className="pa-flex pa-flex-col pa-gap-4">
-              <Input label="Season Name" value={seasonForm.name} onChange={e => setSeasonForm({...seasonForm, name: e.target.value})} placeholder="e.g. Spring 2024" />
-              <DatePicker label="Start Date" value={seasonForm.start_date} onChange={value => setSeasonForm({...seasonForm, start_date: value})} />
-              <DatePicker label="End Date" value={seasonForm.end_date} onChange={value => setSeasonForm({...seasonForm, end_date: value})} minValue={seasonForm.start_date} />
-            </div>
-            <div className="pa-flex pa-gap-3 pa-mt-6 pa-justify-end">
-              <Button variant="blue" onClick={() => setShowSeasonModal(false)}>Cancel</Button>
-              <Button onClick={handleCreateSeason} loading={creating} disabled={creating || !seasonForm.name.trim()}>Create</Button>
-            </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              onClick={handleAddAthlete}
+              disabled={!teamId || navigating || loading}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 'var(--pa-space-2)',
+                minWidth: '180px',
+                height: '56px',
+                padding: '0 var(--pa-space-6)',
+                background: navigating || !teamId || loading ? 'var(--pa-n400)' : '#5468FF',
+                color: 'var(--pa-white)',
+                fontSize: '14px',
+                fontWeight: 900,
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                borderRadius: 'var(--pa-radius-m)',
+                border: 'none',
+                cursor: navigating || !teamId || loading ? 'not-allowed' : 'pointer',
+                boxShadow: navigating || !teamId || loading ? 'none' : '0 8px 0 0 #4054E8',
+                transition: 'all 75ms',
+                opacity: navigating || !teamId || loading ? 0.6 : 1,
+              }}
+              onMouseEnter={(e) => {
+                if (!navigating && teamId && !loading) {
+                  e.currentTarget.style.transform = 'translateY(2px)'
+                  e.currentTarget.style.boxShadow = '0 4px 0 0 #4054E8'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!navigating && teamId && !loading) {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = '0 8px 0 0 #4054E8'
+                }
+              }}
+              onMouseDown={(e) => {
+                if (!navigating && teamId && !loading) {
+                  e.currentTarget.style.transform = 'translateY(8px)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }
+              }}
+              onMouseUp={(e) => {
+                if (!navigating && teamId && !loading) {
+                  e.currentTarget.style.transform = 'translateY(2px)'
+                  e.currentTarget.style.boxShadow = '0 4px 0 0 #4054E8'
+                }
+              }}
+            >
+              {navigating ? (
+                <>
+                  <span className="pa-spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }} />
+                  <span>LOADING...</span>
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+                    person_add
+                  </span>
+                  <span>ADD ATHLETE</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
-      )}
+
+        {/* Navigation Tabs */}
+        <div style={{ marginBottom: 'var(--pa-space-6)' }}>
+          <div
+            style={{
+              display: 'flex',
+              borderBottom: '1px solid var(--pa-n200)',
+              gap: 'var(--pa-space-8)',
+              overflowX: 'auto',
+            }}
+          >
+            {['roster', 'schedule', 'attendance', 'settings'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => handleTabChange(tab)}
+                disabled={navigating}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderBottom: activeTab === tab ? '4px solid #5468FF' : '4px solid transparent',
+                  color: activeTab === tab ? 'var(--pa-n900)' : 'var(--pa-n500)',
+                  paddingBottom: '14px',
+                  paddingTop: 'var(--pa-space-4)',
+                  fontSize: '14px',
+                  fontWeight: 900,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.15em',
+                  background: 'none',
+                  borderTop: 'none',
+                  borderLeft: 'none',
+                  borderRight: 'none',
+                  cursor: navigating ? 'not-allowed' : 'pointer',
+                  transition: 'color 200ms',
+                  opacity: navigating ? 0.6 : 1,
+                }}
+                onMouseEnter={(e) => {
+                  if (!navigating && activeTab !== tab) {
+                    e.currentTarget.style.color = '#5468FF'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!navigating && activeTab !== tab) {
+                    e.currentTarget.style.color = 'var(--pa-n500)'
+                  }
+                }}
+              >
+                {tab.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Main Content */}
+        {activeTab === 'roster' && (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--pa-space-6)',
+            }}
+            className="lg:flex-row"
+          >
+            {/* Roster Table */}
+            <div style={{ flex: 1 }}>
+              {rosterLoading ? (
+                <div className="pa-card">
+                  <div className="pa-skeleton" style={{ height: '200px' }} />
+                </div>
+              ) : roster.length === 0 ? (
+                <div className="pa-card">
+                  <EmptyState
+                    icon="people"
+                    title="NO ATHLETES ON ROSTER"
+                    description="Add athletes to this team to start building your roster."
+                    action={{
+                      label: 'Add Athlete',
+                      onClick: handleAddAthlete,
+                    }}
+                  />
+                </div>
+              ) : (
+                <div
+                  style={{
+                    overflow: 'hidden',
+                    borderRadius: 'var(--pa-radius-l)',
+                    border: '1px solid var(--pa-n200)',
+                    background: 'var(--pa-white)',
+                    boxShadow: 'var(--pa-shadow-1)',
+                  }}
+                >
+                  <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ background: 'var(--pa-n50)' }}>
+                        <th
+                          style={{
+                            padding: 'var(--pa-space-4) var(--pa-space-6)',
+                            color: 'var(--pa-n500)',
+                            fontSize: '12px',
+                            fontWeight: 900,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.1em',
+                            borderBottom: '1px solid var(--pa-n200)',
+                          }}
+                        >
+                          Athlete Name
+                        </th>
+                        <th
+                          style={{
+                            padding: 'var(--pa-space-4) var(--pa-space-6)',
+                            color: 'var(--pa-n500)',
+                            fontSize: '12px',
+                            fontWeight: 900,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.1em',
+                            borderBottom: '1px solid var(--pa-n200)',
+                          }}
+                        >
+                          Jersey #
+                        </th>
+                        <th
+                          style={{
+                            padding: 'var(--pa-space-4) var(--pa-space-6)',
+                            color: 'var(--pa-n500)',
+                            fontSize: '12px',
+                            fontWeight: 900,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.1em',
+                            borderBottom: '1px solid var(--pa-n200)',
+                          }}
+                        >
+                          Position
+                        </th>
+                        <th
+                          style={{
+                            padding: 'var(--pa-space-4) var(--pa-space-6)',
+                            color: 'var(--pa-n500)',
+                            fontSize: '12px',
+                            fontWeight: 900,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.1em',
+                            borderBottom: '1px solid var(--pa-n200)',
+                          }}
+                        >
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {roster.map((member) => {
+                        const firstName = member.athlete?.first_name || ''
+                        const lastName = member.athlete?.last_name || ''
+                        const fullName = `${firstName} ${lastName}`.trim() || 'Unknown Athlete'
+                        const initials = firstName && lastName ? getInitials(firstName, lastName) : '??'
+                        const jerseyNumber = member.jersey_number || member.athlete?.jersey_number || '—'
+                        const position = member.position || '—'
+                        const isActive = member.status === 'active'
+                        const athleteId = member.athlete?.id || member.child_id
+
+                        return (
+                          <tr
+                            key={member.id}
+                            onClick={() => athleteId && handleAthleteClick(athleteId)}
+                            style={{
+                              transition: 'background-color 200ms',
+                              cursor: athleteId && !navigating ? 'pointer' : 'default',
+                            }}
+                            onMouseEnter={(e) => {
+                              if (athleteId && !navigating) {
+                                e.currentTarget.style.background = 'var(--pa-n50)'
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'transparent'
+                            }}
+                          >
+                            <td style={{ padding: 'var(--pa-space-5) var(--pa-space-6)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)' }}>
+                                <div
+                                  style={{
+                                    width: '40px',
+                                    height: '40px',
+                                    borderRadius: '50%',
+                                    background: isActive ? 'rgba(84, 104, 255, 0.1)' : 'var(--pa-n200)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: isActive ? '#5468FF' : 'var(--pa-n500)',
+                                    fontWeight: 900,
+                                    fontSize: '14px',
+                                  }}
+                                >
+                                  {initials}
+                                </div>
+                                <span style={{ color: 'var(--pa-n900)', fontWeight: 700 }}>{fullName}</span>
+                              </div>
+                            </td>
+                            <td style={{ padding: 'var(--pa-space-5) var(--pa-space-6)', color: '#5468FF', fontWeight: 900, letterSpacing: '-0.02em' }}>
+                              {jerseyNumber !== '—' ? `#${jerseyNumber}` : jerseyNumber}
+                            </td>
+                            <td style={{ padding: 'var(--pa-space-5) var(--pa-space-6)', color: 'var(--pa-n600)', fontWeight: 500 }}>
+                              {position}
+                            </td>
+                            <td style={{ padding: 'var(--pa-space-5) var(--pa-space-6)' }}>
+                              <div
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  padding: '4px 12px',
+                                  borderRadius: '9999px',
+                                  background: isActive ? 'rgba(16, 185, 129, 0.1)' : 'var(--pa-n100)',
+                                  color: isActive ? 'rgb(16, 185, 129)' : 'var(--pa-n500)',
+                                  fontSize: '10px',
+                                  fontWeight: 900,
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.1em',
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    width: '6px',
+                                    height: '6px',
+                                    borderRadius: '50%',
+                                    background: isActive ? 'rgb(16, 185, 129)' : 'var(--pa-n400)',
+                                    marginRight: '8px',
+                                  }}
+                                />
+                                {isActive ? 'ACTIVE' : 'INACTIVE'}
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Sidebar */}
+            <div
+              className="w-full lg:w-80"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--pa-space-6)',
+              }}
+            >
+              {/* Team Summary Card */}
+              <div
+                style={{
+                  padding: 'var(--pa-space-6)',
+                  borderRadius: 'var(--pa-radius-l)',
+                  border: '1px solid rgba(84, 104, 255, 0.2)',
+                  background: 'rgba(84, 104, 255, 0.05)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-4)' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#5468FF', fontWeight: 700 }}>
+                    analytics
+                  </span>
+                  <h3
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 900,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.1em',
+                      color: 'var(--pa-n700)',
+                      margin: 0,
+                    }}
+                  >
+                    Team Summary
+                  </h3>
+                </div>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: 'var(--pa-space-4)',
+                  }}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '24px', fontWeight: 900, color: '#5468FF', letterSpacing: '-0.02em' }}>
+                      {teamStats.totalAthletes}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        color: 'var(--pa-n500)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.1em',
+                      }}
+                    >
+                      Athletes
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '24px', fontWeight: 900, color: '#5468FF', letterSpacing: '-0.02em' }}>
+                      {teamStats.activeAthletes}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        color: 'var(--pa-n500)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.1em',
+                      }}
+                    >
+                      Active
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '24px', fontWeight: 900, color: '#5468FF', letterSpacing: '-0.02em' }}>
+                      {teamStats.vacancies}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        color: 'var(--pa-n500)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.1em',
+                      }}
+                    >
+                      Vacancies
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '24px', fontWeight: 900, color: '#5468FF', letterSpacing: '-0.02em' }}>
+                      #{teamStats.rank}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        color: 'var(--pa-n500)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.1em',
+                      }}
+                    >
+                      Rank
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent Activity Card */}
+              <div
+                style={{
+                  padding: 'var(--pa-space-6)',
+                  borderRadius: 'var(--pa-radius-l)',
+                  border: '1px solid var(--pa-n200)',
+                  background: 'var(--pa-white)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-4)' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-n400)', fontWeight: 700 }}>
+                    notifications
+                  </span>
+                  <h3
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 900,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.1em',
+                      color: 'var(--pa-n700)',
+                      margin: 0,
+                    }}
+                  >
+                    Recent Activity
+                  </h3>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-4)' }}>
+                  <div style={{ display: 'flex', gap: 'var(--pa-space-3)' }}>
+                    <div
+                      style={{
+                        width: '6px',
+                        height: '6px',
+                        marginTop: '6px',
+                        borderRadius: '50%',
+                        background: '#5468FF',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <p style={{ fontSize: '12px', fontWeight: 700, lineHeight: 1.2, margin: 0, color: 'var(--pa-n900)' }}>
+                        New athlete added to roster
+                      </p>
+                      <p
+                        style={{
+                          fontSize: '10px',
+                          color: 'var(--pa-n400)',
+                          textTransform: 'uppercase',
+                          fontWeight: 900,
+                          letterSpacing: '0.1em',
+                          marginTop: '4px',
+                        }}
+                      >
+                        2 hours ago
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 'var(--pa-space-3)' }}>
+                    <div
+                      style={{
+                        width: '6px',
+                        height: '6px',
+                        marginTop: '6px',
+                        borderRadius: '50%',
+                        background: '#5468FF',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <p style={{ fontSize: '12px', fontWeight: 700, lineHeight: 1.2, margin: 0, color: 'var(--pa-n900)' }}>
+                        Jersey # assignment updated
+                      </p>
+                      <p
+                        style={{
+                          fontSize: '10px',
+                          color: 'var(--pa-n400)',
+                          textTransform: 'uppercase',
+                          fontWeight: 900,
+                          letterSpacing: '0.1em',
+                          marginTop: '4px',
+                        }}
+                      >
+                        Yesterday
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

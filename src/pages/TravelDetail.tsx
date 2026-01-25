@@ -11,6 +11,7 @@ import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
+import VenueInsights from '../components/portal/VenueInsights'
 
 interface MeetingLocation {
   name: string
@@ -517,6 +518,12 @@ export default function TravelDetail() {
                           </Button>
                         </a>
                       </div>
+                      {/* Venue Insights for this event */}
+                      {event.event_location?.place_id && (
+                        <div className="mt-4">
+                          <VenueInsights placeId={event.event_location.place_id} />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

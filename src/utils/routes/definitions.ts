@@ -222,6 +222,8 @@ const admin = {
             label: 'Sports',
             icon: 'sports',
             requiresOrg: true,
+            deprecated: true,
+            deprecatedInFavorOf: 'admin.sports.list',
         },
         sportDetail: {
             path: '/admin/organization/sports/:id',
@@ -229,12 +231,16 @@ const admin = {
             label: 'Sport Details',
             icon: 'sports',
             requiresOrg: true,
+            deprecated: true,
+            deprecatedInFavorOf: 'admin.sports.detail',
         },
         programs: {
             path: '/admin/organization/programs',
             label: 'Programs',
             icon: 'category',
             requiresOrg: true,
+            deprecated: true,
+            deprecatedInFavorOf: 'admin.programs.list',
         },
         programDetail: {
             path: '/admin/organization/programs/:id',
@@ -242,10 +248,19 @@ const admin = {
             label: 'Program Details',
             icon: 'category',
             requiresOrg: true,
+            deprecated: true,
+            deprecatedInFavorOf: 'admin.programs.detail',
         },
         levels: {
             path: '/admin/organization/levels',
             label: 'Levels',
+            icon: 'grade',
+            requiresOrg: true,
+        },
+        levelDetail: {
+            path: '/admin/organization/levels/:id',
+            params: ['id'] as const,
+            label: 'Level Details',
             icon: 'grade',
             requiresOrg: true,
         },
@@ -254,12 +269,16 @@ const admin = {
             label: 'Teams',
             icon: 'groups',
             requiresOrg: true,
+            deprecated: true,
+            deprecatedInFavorOf: 'admin.teams.list',
         },
         seasons: {
             path: '/admin/organization/seasons',
             label: 'Seasons',
             icon: 'calendar_month',
             requiresOrg: true,
+            deprecated: true,
+            deprecatedInFavorOf: 'admin.seasons.list',
         },
         seasonDetail: {
             path: '/admin/organization/seasons/:id',
@@ -267,6 +286,8 @@ const admin = {
             label: 'Season Details',
             icon: 'calendar_month',
             requiresOrg: true,
+            deprecated: true,
+            deprecatedInFavorOf: 'admin.seasons.detail',
         },
         forms: {
             path: '/admin/organization/forms',
@@ -322,7 +343,7 @@ const admin = {
         requiresOrg: false,
     },
 
-    // Teams
+    // Teams (standardized - already correct)
     teams: {
         list: {
             path: '/admin/teams',
@@ -347,7 +368,75 @@ const admin = {
         },
     },
 
-    // Families
+    // Sports (standardized)
+    sports: {
+        list: {
+            path: '/admin/sports',
+            label: 'Sports',
+            icon: 'sports',
+            requiresOrg: true,
+        },
+        detail: {
+            path: '/admin/sports/:id',
+            params: ['id'] as const,
+            label: 'Sport Details',
+            icon: 'sports',
+            requiresOrg: true,
+        },
+    },
+
+    // Programs (standardized)
+    programs: {
+        list: {
+            path: '/admin/programs',
+            label: 'Programs',
+            icon: 'category',
+            requiresOrg: true,
+        },
+        detail: {
+            path: '/admin/programs/:id',
+            params: ['id'] as const,
+            label: 'Program Details',
+            icon: 'category',
+            requiresOrg: true,
+        },
+    },
+
+    // Levels (standardized)
+    levels: {
+        list: {
+            path: '/admin/levels',
+            label: 'Levels',
+            icon: 'grade',
+            requiresOrg: true,
+        },
+        detail: {
+            path: '/admin/levels/:id',
+            params: ['id'] as const,
+            label: 'Level Details',
+            icon: 'grade',
+            requiresOrg: true,
+        },
+    },
+
+    // Seasons (standardized)
+    seasons: {
+        list: {
+            path: '/admin/seasons',
+            label: 'Seasons',
+            icon: 'calendar_month',
+            requiresOrg: true,
+        },
+        detail: {
+            path: '/admin/seasons/:id',
+            params: ['id'] as const,
+            label: 'Season Details',
+            icon: 'calendar_month',
+            requiresOrg: true,
+        },
+    },
+
+    // Families (deprecated - use guardians)
     families: {
         list: {
             path: '/admin/families',
@@ -355,12 +444,16 @@ const admin = {
             icon: 'home',
             description: 'Family management',
             requiresOrg: true,
+            deprecated: true,
+            deprecatedInFavorOf: 'admin.guardians.list',
         },
         create: {
             path: '/admin/families/new',
             label: 'Create Family',
             icon: 'add',
             requiresOrg: true,
+            deprecated: true,
+            deprecatedInFavorOf: 'admin.guardians.create',
         },
         detail: {
             path: '/admin/families/:id',
@@ -368,11 +461,46 @@ const admin = {
             label: 'Family Details',
             icon: 'home',
             requiresOrg: true,
+            deprecated: true,
+            deprecatedInFavorOf: 'admin.guardians.detail',
         },
         createAthlete: {
             path: '/admin/families/:familyId/athletes/new',
             params: ['familyId'] as const,
             label: 'Add Athlete to Family',
+            icon: 'person_add',
+            requiresOrg: true,
+            deprecated: true,
+            deprecatedInFavorOf: 'admin.guardians.createAthlete',
+        },
+    },
+
+    // Guardians (standardized - renamed from families)
+    guardians: {
+        list: {
+            path: '/admin/guardians',
+            label: 'Guardians',
+            icon: 'home',
+            description: 'Guardian management',
+            requiresOrg: true,
+        },
+        create: {
+            path: '/admin/guardians/new',
+            label: 'Create Guardian',
+            icon: 'add',
+            requiresOrg: true,
+        },
+        detail: {
+            path: '/admin/guardians/:id',
+            params: ['id'] as const,
+            label: 'Guardian Details',
+            icon: 'home',
+            requiresOrg: true,
+        },
+        createAthlete: {
+            path: '/admin/guardians/:familyId/athletes/new',
+            params: ['familyId'] as const,
+            label: 'Add Athlete to Guardian',
             icon: 'person_add',
             requiresOrg: true,
         },
@@ -391,6 +519,13 @@ const admin = {
             path: '/admin/athletes/new',
             label: 'Create Athlete',
             icon: 'person_add',
+            requiresOrg: true,
+        },
+        detail: {
+            path: '/admin/athletes/:id',
+            params: ['id'] as const,
+            label: 'Athlete Details',
+            icon: 'child_care',
             requiresOrg: true,
         },
         import: {

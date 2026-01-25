@@ -709,6 +709,10 @@ export async function uploadSportIcon(
  */
 export function getSportIconUrl(iconPath: string | null): string | null {
     if (!iconPath) return null
+
+    // If the value is already a usable URL (e.g. a hosted asset or data URI), return as-is.
+    // Some legacy/system sports may store a full URL in `sports.icon`.
+    if (/^(https?:\/\/|data:)/i.test(iconPath)) return iconPath
     
     const { data } = supabase.storage
         .from('organization-assets')

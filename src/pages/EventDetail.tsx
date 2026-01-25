@@ -10,6 +10,7 @@ import { SportHero } from '../components/portal/SportHero'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
+import VenueInsights from '../components/portal/VenueInsights'
 import { useT } from '../i18n/useI18n'
 
 interface Event {
@@ -22,6 +23,10 @@ interface Event {
   location: string | null
   notes: string | null
   team: { name: string }
+  event_location?: {
+    place_id: string | null
+    venue_name: string | null
+  } | null
 }
 
 interface Child {
@@ -79,6 +84,10 @@ export default function EventDetail() {
       location: eventData.event_location?.venue_name ?? null,
       notes: eventData.notes,
       team: { name: eventData.team?.name ?? 'Team' },
+      event_location: eventData.event_location ? {
+        place_id: eventData.event_location.place_id,
+        venue_name: eventData.event_location.venue_name,
+      } : null,
     })
 
     // Fetch children
@@ -227,6 +236,11 @@ export default function EventDetail() {
             )}
           </div>
         </Card>
+
+        {/* Venue Insights */}
+        {event.event_location?.place_id && (
+          <VenueInsights placeId={event.event_location.place_id} className="mb-8" />
+        )}
 
         <SectionHeader className="mb-6">RSVP</SectionHeader>
         

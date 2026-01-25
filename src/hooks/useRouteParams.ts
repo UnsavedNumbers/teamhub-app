@@ -52,15 +52,23 @@ export function useEventParams() {
 }
 
 /**
- * Extract family ID from route parameters
- * Route: /admin/families/:id
+ * Extract family/guardian ID from route parameters
+ * Route: /admin/guardians/:id (or /admin/families/:id for backward compatibility)
  */
 export function useFamilyParams() {
   const { id } = useParams<{ id: string }>()
   if (!id) {
-    throw new Error('Family ID is required in route parameters')
+    throw new Error('Family/Guardian ID is required in route parameters')
   }
   return { familyId: id }
+}
+
+/**
+ * Extract guardian ID from route parameters (alias for useFamilyParams)
+ * Route: /admin/guardians/:id
+ */
+export function useGuardianParams() {
+  return useFamilyParams()
 }
 
 /**
@@ -113,7 +121,7 @@ export function useUniformOrderParams() {
 
 /**
  * Extract sport ID from route parameters
- * Route: /admin/organization/sports/:id
+ * Route: /admin/sports/:id
  */
 export function useSportParams() {
   const { id } = useParams<{ id: string }>()

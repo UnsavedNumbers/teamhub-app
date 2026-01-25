@@ -135,9 +135,9 @@ export default function Sports() {
     </button>
   )
 
-  const sportsRoute = getLink('admin.organization.sports')
-  const sportDetailRoute = (id: string) => getLink('admin.organization.sportDetail', { id })
-  const programsRoute = getLink('admin.organization.programs')
+  const sportsRoute = getLink('admin.sports.list')
+  const sportDetailRoute = (id: string) => getLink('admin.sports.detail', { id })
+  const programsRoute = getLink('admin.programs.list')
   const formsRoute = getLink('admin.organization.forms')
   const structureRoute = getLink('admin.organization.structure')
 

@@ -152,7 +152,7 @@ export default function SeasonsManagement() {
             </span>
             <h3 className="pa-h3">No seasons yet</h3>
             <p className="pa-body-m pa-text-muted pa-mb-4">Create your first season to start organizing teams and events.</p>
-            <Link to={`${getLink('admin.organization.forms')}?type=season&returnUrl=${encodeURIComponent(getLink('admin.organization.seasons'))}`}>
+            <Link to={`${getLink('admin.organization.forms')}?type=season&returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`}>
               <Button>Add Season</Button>
             </Link>
           </div>
@@ -160,7 +160,7 @@ export default function SeasonsManagement() {
       ) : (
         <>
           <div className="pa-flex pa-justify-end pa-mb-4">
-            <Link to={`${getLink('admin.organization.forms')}?type=season&returnUrl=${encodeURIComponent(getLink('admin.organization.seasons'))}`}>
+            <Link to={`${getLink('admin.organization.forms')}?type=season&returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`}>
               <Button>Add Season</Button>
             </Link>
           </div>
@@ -183,7 +183,7 @@ export default function SeasonsManagement() {
                     <tr 
                       key={season.id} 
                       className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
-                      onClick={() => navigate(getLink('admin.organization.seasonDetail', { id: season.id }))}
+                      onClick={() => navigate(getLink('admin.seasons.detail', { id: season.id }))}
                     >
                       <td className="py-4 px-6">
                         <div className="font-bold text-slate-900">{season.name}</div>
@@ -204,7 +204,7 @@ export default function SeasonsManagement() {
                       </td>
                       <td className="py-4 px-6 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-3">
-                          <Link to={`${getLink('admin.organization.forms')}?edit=season&id=${season.id}&returnUrl=${encodeURIComponent(getLink('admin.organization.seasons'))}`} className="invisible group-hover:visible focus:visible">
+                          <Link to={`${getLink('admin.organization.forms')}?edit=season&id=${season.id}&returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`} className="invisible group-hover:visible focus:visible">
                             <button className="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors">
                               Edit
                             </button>

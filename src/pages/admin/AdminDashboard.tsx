@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
+import { getLink } from '../../utils/routes'
 import { getTeams } from '../../data/services/teamsService'
 import { getAthletes } from '../../data/services/familyService'
 import { getUnpaidFeeAssignments } from '../../data/services/paymentsService'
@@ -93,8 +94,8 @@ export default function AdminDashboard() {
       />
 
       <div className="pa-grid pa-grid-3 pa-gap-4 pa-mb-8">
-        <StatCard label={t('admin.dashboard.totalTeams')} value={stats.totalTeams} icon="groups" onClick={() => navigate('/admin/teams')} />
-        <StatCard label={t('admin.dashboard.totalAthletes')} value={stats.totalPlayers} icon="person" onClick={() => navigate('/admin/athletes')} />
+        <StatCard label={t('admin.dashboard.totalTeams')} value={stats.totalTeams} icon="groups" onClick={() => navigate(getLink('admin.teams.list'))} />
+        <StatCard label={t('admin.dashboard.totalAthletes')} value={stats.totalPlayers} icon="person" onClick={() => navigate(getLink('admin.athletes.list'))} />
         <StatCard label={t('admin.dashboard.activeSeasons')} value={stats.activeSeasons} icon="calendar_today" />
         <StatCard label={t('admin.dashboard.unpaidFees')} value={stats.outstandingPayments} icon="payments" onClick={() => navigate('/admin/payments')} />
         <StatCard label={t('admin.dashboard.upcomingEvents')} value={stats.upcomingEvents} icon="event" onClick={() => navigate('/admin/events')} />

@@ -182,23 +182,23 @@ export default function OrganizationStructureForms() {
       switch (editType) {
         case 'program':
           // Programs are typically edited from Programs page
-          navigate(getLink('admin.organization.programs'), { replace: true })
+          navigate(getLink('admin.programs.list'), { replace: true })
           return
         case 'level':
           // Levels are typically edited from Levels page
-          navigate(getLink('admin.organization.levels'), { replace: true })
+          navigate(getLink('admin.levels.list'), { replace: true })
           return
         case 'team':
           // Teams are typically edited from Teams page
-          navigate(getLink('admin.organization.teamsManagement'), { replace: true })
+          navigate(getLink('admin.teams.list'), { replace: true })
           return
         case 'season':
           // Seasons are typically edited from Seasons page
-          navigate(getLink('admin.organization.seasons'), { replace: true })
+          navigate(getLink('admin.seasons.list'), { replace: true })
           return
         case 'sport':
           // Sports are typically edited from Sports page
-          navigate(getLink('admin.organization.sports'), { replace: true })
+          navigate(getLink('admin.sports.list'), { replace: true })
           return
       }
     }
@@ -208,17 +208,17 @@ export default function OrganizationStructureForms() {
       // If we have context params, we likely came from a specific page
       if (contextProgramId) {
         // Likely came from Programs page
-        navigate(getLink('admin.organization.programs'), { replace: true })
+        navigate(getLink('admin.programs.list'), { replace: true })
         return
       }
       if (contextSportId) {
         // Likely came from Sports page
-        navigate(getLink('admin.organization.sports'), { replace: true })
+        navigate(getLink('admin.sports.list'), { replace: true })
         return
       }
       if (contextLevelId) {
         // Likely came from Levels page
-        navigate(getLink('admin.organization.levels'), { replace: true })
+        navigate(getLink('admin.levels.list'), { replace: true })
         return
       }
     }

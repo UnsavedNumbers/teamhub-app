@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { useEffect, useMemo, useState, useCallback } from 'react'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOffline } from '../../hooks/useOffline'
 import { USE_FAKE_DATA } from '../../data/config'
@@ -44,24 +44,30 @@ function formatUpdatedRelative(iso: string | null | undefined): string {
   return `Updated ${rtf.format(-diffDay, 'day')}`
 }
 
-function downloadCsv(filename: string, rows: Array<Record<string, unknown>>) {
-  if (rows.length === 0) return
-  const headers = Object.keys(rows[0])
-  const escape = (value: unknown) => {
-    const s = value === null || value === undefined ? '' : String(value)
-    if (/[,"\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`
-    return s
+function downloadCsv(filename: string, rows: Array<Record<string, unknown>>): boolean {
+  if (rows.length === 0) return false
+  try {
+    const headers = Object.keys(rows[0])
+    const escape = (value: unknown) => {
+      const s = value === null || value === undefined ? '' : String(value)
+      if (/[,"\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`
+      return s
+    }
+    const csv = [headers.join(','), ...rows.map((r) => headers.map((h) => escape(r[h])).join(','))].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+    return true
+  } catch (err) {
+    console.error('[ProgramDetail] CSV export failed:', err)
+    return false
   }
-  const csv = [headers.join(','), ...rows.map((r) => headers.map((h) => escape(r[h])).join(','))].join('\n')
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  URL.revokeObjectURL(url)
 }
 
 export default function ProgramDetail() {
@@ -71,11 +77,13 @@ export default function ProgramDetail() {
   const { context, isReady } = useUserContext()
   const { isOffline } = useOffline()
   const location = useLocation()
+  const navigate = useNavigate()
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [exportingCsv, setExportingCsv] = useState(false)
 
   const [program, setProgram] = useState<Program | null>(null)
   const [sport, setSport] = useState<Sport | null>(null)
@@ -93,12 +101,12 @@ export default function ProgramDetail() {
     }
   }, [location.state])
 
-  const programsRoute = getLink('admin.organization.programs')
-  const sportsRoute = getLink('admin.organization.sports')
-  const levelsRoute = getLink('admin.organization.levels')
+  const programsRoute = getLink('admin.programs.list')
+  const sportsRoute = getLink('admin.sports.list')
+  const levelsRoute = getLink('admin.levels.list')
   const formsRoute = getLink('admin.organization.forms')
   const structureRoute = getLink('admin.organization.structure')
-  const detailRoute = getLink('admin.organization.programDetail', { id: programId })
+  const detailRoute = getLink('admin.programs.detail', { id: programId })
 
   const heroImage = useMemo(() => getRandomSportImagePath(sport?.name ?? null, 'hero'), [sport?.name])
   const updatedLabel = useMemo(() => formatUpdatedRelative(program?.updated_at), [program?.updated_at])
@@ -110,7 +118,7 @@ export default function ProgramDetail() {
     return 'Planning'
   }, [levels.length, teams])
 
-  useEffect(() => {
+  const loadProgramData = useCallback(async () => {
     if (!isReady) return
     if (!programId) {
       setError('Program ID is required.')
@@ -118,50 +126,50 @@ export default function ProgramDetail() {
       return
     }
 
-    const load = async () => {
-      setLoading(true)
-      setError(null)
-      setActionError(null)
+    setLoading(true)
+    setError(null)
+    setActionError(null)
 
-      try {
-        const [programRes, sportsRes, levelsRes, teamsRes] = await Promise.all([
-          getProgram(context, programId),
-          getSports(context),
-          getLevels(context, programId),
-          getTeams(context, { programId }),
-        ])
+    try {
+      const [programRes, sportsRes, levelsRes, teamsRes] = await Promise.all([
+        getProgram(context, programId),
+        getSports(context),
+        getLevels(context, programId),
+        getTeams(context, { programId }),
+      ])
 
-        if (programRes.error) throw programRes.error
-        if (sportsRes.error) throw sportsRes.error
-        if (levelsRes.error) throw levelsRes.error
-        if (teamsRes.error) throw teamsRes.error
+      if (programRes.error) throw programRes.error
+      if (sportsRes.error) throw sportsRes.error
+      if (levelsRes.error) throw levelsRes.error
+      if (teamsRes.error) throw teamsRes.error
 
-        const foundProgram = programRes.data as Program | null
-        if (!foundProgram) {
-          setProgram(null)
-          setSport(null)
-          setLevels([])
-          setTeams([])
-          setError('Program not found (or you may not have access).')
-          return
-        }
-
-        const allSports = Array.isArray(sportsRes.data) ? (sportsRes.data as Sport[]) : []
-        const foundSport = allSports.find((s) => s.id === foundProgram.sport_id) ?? null
-
-        setProgram(foundProgram)
-        setSport(foundSport)
-        setLevels(Array.isArray(levelsRes.data) ? levelsRes.data : [])
-        setTeams(Array.isArray(teamsRes.data) ? teamsRes.data : [])
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load program.')
-      } finally {
-        setLoading(false)
+      const foundProgram = programRes.data as Program | null
+      if (!foundProgram) {
+        setProgram(null)
+        setSport(null)
+        setLevels([])
+        setTeams([])
+        setError('Program not found (or you may not have access).')
+        return
       }
-    }
 
-    load()
+      const allSports = Array.isArray(sportsRes.data) ? (sportsRes.data as Sport[]) : []
+      const foundSport = allSports.find((s) => s.id === foundProgram.sport_id) ?? null
+
+      setProgram(foundProgram)
+      setSport(foundSport)
+      setLevels(Array.isArray(levelsRes.data) ? levelsRes.data : [])
+      setTeams(Array.isArray(teamsRes.data) ? teamsRes.data : [])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load program.')
+    } finally {
+      setLoading(false)
+    }
   }, [context, isReady, programId])
+
+  useEffect(() => {
+    loadProgramData()
+  }, [loadProgramData])
 
   // Compute athlete counts (best effort). If offline, show as unavailable.
   useEffect(() => {
@@ -269,6 +277,73 @@ export default function ProgramDetail() {
     })
   }, [athleteCountByLevel, levels, teams])
 
+  // Navigation handlers with validation
+  const handleNavigateToLevel = useCallback(
+    (levelIdOrRow: string | LevelRow) => {
+      const levelId = typeof levelIdOrRow === 'string' ? levelIdOrRow : levelIdOrRow.id
+      if (!levelId || !levelId.trim()) {
+        setActionError('Level ID is required to view level details.')
+        return
+      }
+      const levelDetailRoute = getLink('admin.levels.detail', { id: levelId.trim() })
+      navigate(levelDetailRoute)
+    },
+    [navigate]
+  )
+
+  const handleNavigateToSport = useCallback(
+    (sportId: string | null | undefined) => {
+      if (!sportId || !sportId.trim()) {
+        setActionError('Sport ID is required to view sport details.')
+        return
+      }
+      const sportDetailRoute = getLink('admin.sports.detail', { id: sportId.trim() })
+      navigate(sportDetailRoute)
+    },
+    [navigate]
+  )
+
+  const handleExportCsv = useCallback(() => {
+    if (levelRows.length === 0) {
+      setActionError('No levels to export.')
+      return
+    }
+
+    setExportingCsv(true)
+    setActionError(null)
+    setSuccessMessage(null)
+
+    try {
+      const rows = levelRows.map((r) => ({
+        level_id: r.id,
+        level_name: r.name,
+        teams: r.teams,
+        athletes: r.athletes ?? '',
+        status: r.status,
+      }))
+      const filename = `${program?.name || 'program'}-levels.csv`.replace(/[^a-z0-9.-]/gi, '_')
+      const success = downloadCsv(filename, rows)
+      if (success) {
+        setSuccessMessage(`Exported ${levelRows.length} level(s) to ${filename}`)
+        setTimeout(() => setSuccessMessage(null), 5000)
+      } else {
+        setActionError('Failed to export CSV. Please try again.')
+      }
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to export CSV.')
+    } finally {
+      setExportingCsv(false)
+    }
+  }, [levelRows, program?.name])
+
+  const handleTacticalMenuClick = useCallback(() => {
+    // Future: Could open a menu with options like "Edit Formation", "View Analytics", etc.
+    // For now, this is informational only per design
+    setActionError(null)
+    setSuccessMessage('Tactical board menu - coming soon')
+    setTimeout(() => setSuccessMessage(null), 3000)
+  }, [])
+
   const columns: TableColumn<LevelRow>[] = useMemo(() => {
     return [
       {
@@ -336,15 +411,21 @@ export default function ProgramDetail() {
         label: 'ACTION',
         align: 'right',
         render: (row) => (
-          <Link to={`${formsRoute}?edit=level&id=${row.id}&returnUrl=${encodeURIComponent(detailRoute)}`}>
-            <Button variant="ghost" size="dense">
-              View
-            </Button>
-          </Link>
+          <Button
+            variant="ghost"
+            size="dense"
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation()
+              handleNavigateToLevel(row.id)
+            }}
+            aria-label={`View details for ${row.name}`}
+          >
+            View
+          </Button>
         ),
       },
     ]
-  }, [detailRoute, formsRoute])
+  }, [handleNavigateToLevel])
 
   if (loading) {
     return (
@@ -377,15 +458,29 @@ export default function ProgramDetail() {
           actions={
             <div className="pa-flex pa-gap-2">
               <Link to={programsRoute}>
-                <Button variant="ghost">Back to Programs</Button>
+                <Button variant="ghost" disabled={loading} aria-label="Navigate back to programs list">
+                  Back to Programs
+                </Button>
               </Link>
-              {sport ? (
-                <Link to={getLink('admin.organization.sportDetail', { id: sport.id })}>
-                  <Button variant="secondary">View Sport</Button>
+              {sport?.id ? (
+                <Link
+                  to={getLink('admin.sports.detail', { id: sport.id })}
+                  onClick={(e: React.MouseEvent) => {
+                    if (!sport.id) {
+                      e.preventDefault()
+                      setActionError('Sport ID is required to view sport details.')
+                    }
+                  }}
+                >
+                  <Button variant="secondary" disabled={loading || !sport.id} aria-label={`View ${sport.name} sport details`}>
+                    View Sport
+                  </Button>
                 </Link>
               ) : (
                 <Link to={sportsRoute}>
-                  <Button variant="secondary">View Sports</Button>
+                  <Button variant="secondary" disabled={loading} aria-label="Navigate to sports list">
+                    View Sports
+                  </Button>
                 </Link>
               )}
             </div>
@@ -412,6 +507,11 @@ export default function ProgramDetail() {
           <Card className="pa-mb-4" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
             <div className="pa-body-m pa-text-danger" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
               {error}
+            </div>
+            <div style={{ padding: '0 var(--pa-space-4) var(--pa-space-3)' }}>
+              <Button variant="ghost" size="dense" onClick={loadProgramData} disabled={loading}>
+                Retry
+              </Button>
             </div>
           </Card>
         )}
@@ -457,16 +557,45 @@ export default function ProgramDetail() {
                   right: 'var(--pa-space-6)',
                 }}
               >
-                <div
-                  className="pa-overline"
-                  style={{
-                    color: 'rgba(255,255,255,0.75)',
-                    marginBottom: 'var(--pa-space-2)',
-                    letterSpacing: '0.16em',
-                  }}
-                >
-                  Parent Sport: {sport?.name || '—'}
-                </div>
+                {sport?.id ? (
+                  <button
+                    onClick={() => handleNavigateToSport(sport.id)}
+                    className="pa-overline"
+                    style={{
+                      color: 'rgba(255,255,255,0.75)',
+                      marginBottom: 'var(--pa-space-2)',
+                      letterSpacing: '0.16em',
+                      background: 'transparent',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      textDecoration: 'none',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = 'rgba(255,255,255,0.95)'
+                      e.currentTarget.style.textDecoration = 'underline'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = 'rgba(255,255,255,0.75)'
+                      e.currentTarget.style.textDecoration = 'none'
+                    }}
+                    aria-label={`View ${sport.name} sport details`}
+                  >
+                    Parent Sport: {sport.name}
+                  </button>
+                ) : (
+                  <div
+                    className="pa-overline"
+                    style={{
+                      color: 'rgba(255,255,255,0.75)',
+                      marginBottom: 'var(--pa-space-2)',
+                      letterSpacing: '0.16em',
+                    }}
+                  >
+                    Parent Sport: —
+                  </div>
+                )}
                 <div
                   className="pa-display-xl"
                   style={{
@@ -522,15 +651,25 @@ export default function ProgramDetail() {
                     </div>
 
                     <div className="pa-flex pa-items-center pa-gap-2" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                      <Link to={`${formsRoute}?edit=program&id=${programId}&returnUrl=${encodeURIComponent(detailRoute)}`}>
+                      <Link
+                        to={`${formsRoute}?edit=program&id=${programId}&returnUrl=${encodeURIComponent(detailRoute)}`}
+                        onClick={(e) => {
+                          if (!programId) {
+                            e.preventDefault()
+                            setActionError('Program ID is required to edit program.')
+                          }
+                        }}
+                      >
                         <Button
                           variant="ghost"
                           icon="edit"
+                          disabled={loading || !programId}
                           style={{
                             border: '2px solid var(--pa-theme-action-primary)',
                             color: 'var(--pa-theme-text-accent)',
                             background: 'transparent',
                           }}
+                          aria-label={`Edit ${program?.name || 'program'}`}
                         >
                           Edit Program
                         </Button>
@@ -538,18 +677,34 @@ export default function ProgramDetail() {
                       <Link
                         to={`${formsRoute}?type=level&program_id=${programId}&sport_id=${program.sport_id}&returnUrl=${encodeURIComponent(detailRoute)}`}
                         className={isOffline || USE_FAKE_DATA ? 'pa-disabled-link' : ''}
+                        onClick={(e) => {
+                          if (isOffline || USE_FAKE_DATA) {
+                            e.preventDefault()
+                            setActionError(
+                              isOffline
+                                ? 'You appear to be offline. Please reconnect and try again.'
+                                : 'This action is not available in demo mode. Please sign in to add levels.'
+                            )
+                          } else if (!programId || !program.sport_id) {
+                            e.preventDefault()
+                            setActionError('Program and sport information is required to add a level.')
+                          }
+                        }}
                       >
                         <Button
                           variant="blue"
                           icon="add_circle"
-                          disabled={isOffline || USE_FAKE_DATA}
+                          disabled={loading || isOffline || USE_FAKE_DATA || !programId || !program.sport_id}
                           title={
                             isOffline
                               ? 'Offline - cannot add levels'
                               : USE_FAKE_DATA
                                 ? 'Sign in to add levels'
-                                : undefined
+                                : !programId || !program.sport_id
+                                  ? 'Missing required information'
+                                  : undefined
                           }
+                          aria-label="Add a new level to this program"
                         >
                           Add Level
                         </Button>
@@ -565,17 +720,10 @@ export default function ProgramDetail() {
                     <Button
                       variant="ghost"
                       size="dense"
-                      onClick={() => {
-                        const rows = levelRows.map((r) => ({
-                          level_id: r.id,
-                          level_name: r.name,
-                          teams: r.teams,
-                          athletes: r.athletes ?? '',
-                          status: r.status,
-                        }))
-                        downloadCsv(`${program.name}-levels.csv`, rows)
-                      }}
-                      disabled={levelRows.length === 0}
+                      onClick={handleExportCsv}
+                      disabled={levelRows.length === 0 || exportingCsv}
+                      loading={exportingCsv}
+                      title={levelRows.length === 0 ? 'No levels to export' : 'Export levels data as CSV'}
                     >
                       Export CSV
                     </Button>
@@ -585,6 +733,7 @@ export default function ProgramDetail() {
                   <Table
                     columns={columns}
                     data={levelRows}
+                    onRowClick={handleNavigateToLevel}
                     emptyState={
                       <div style={{ padding: 'var(--pa-space-8) var(--pa-space-5)' }}>
                         <div className="pa-h3" style={{ textAlign: 'center', marginBottom: 'var(--pa-space-2)' }}>
@@ -607,7 +756,149 @@ export default function ProgramDetail() {
                   gap: 'var(--pa-space-5)',
                 }}
               >
+                {/* Tactical overview */}
+                <Card
+                  title="Tactical Overview"
+                  actions={
+                    <button
+                      type="button"
+                      aria-label="More options for tactical board"
+                      className="pa-btn pa-btn--ghost pa-btn--dense"
+                      style={{ padding: 0, width: 'var(--pa-space-6)', justifyContent: 'center' }}
+                      onClick={handleTacticalMenuClick}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                        more_horiz
+                      </span>
+                    </button>
+                  }
+                >
+                  <div
+                    style={{
+                      borderRadius: 'var(--pa-radius-s)',
+                      border: '1px solid var(--pa-n200)',
+                      overflow: 'hidden',
+                      background: 'var(--pa-theme-action-primary)',
+                      position: 'relative',
+                      aspectRatio: '3 / 4',
+                    }}
+                    aria-label="Tactical board"
+                  >
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        opacity: 0.18,
+                        backgroundImage: 'radial-gradient(var(--pa-white) 1px, transparent 1px)',
+                        backgroundSize: 'calc(var(--pa-space-5) - var(--pa-space-1)) calc(var(--pa-space-5) - var(--pa-space-1))',
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        boxShadow: 'inset 0 0 0 2px rgba(255,255,255,0.18)',
+                      }}
+                    />
+                    <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: '1px', background: 'rgba(255,255,255,0.25)' }} />
+                    <div style={{ position: 'absolute', left: 0, right: 0, top: 0, height: '1px', background: 'rgba(255,255,255,0.18)' }} />
+                    <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '1px', background: 'rgba(255,255,255,0.18)' }} />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: '50%',
+                        top: '50%',
+                        width: 'calc(var(--pa-space-9) + var(--pa-space-1))',
+                        height: 'calc(var(--pa-space-9) + var(--pa-space-1))',
+                        transform: 'translate(-50%, -50%)',
+                        borderRadius: '999px',
+                        border: '2px solid rgba(255,255,255,0.22)',
+                      }}
+                    />
 
+                    {/* Dots */}
+                    <div style={{ position: 'absolute', inset: 0 }}>
+                      {[
+                        { x: '35%', y: '22%', label: '7', filled: true },
+                        { x: '65%', y: '22%', label: '10', filled: true },
+                        { x: '50%', y: '50%', label: '4', filled: false },
+                        { x: '32%', y: '72%', label: '2', filled: false },
+                        { x: '68%', y: '72%', label: '5', filled: false },
+                      ].map((p) => (
+                        <div
+                          key={p.label}
+                          style={{
+                            position: 'absolute',
+                            left: p.x,
+                            top: p.y,
+                            width: 'var(--pa-space-5)',
+                            height: 'var(--pa-space-5)',
+                            transform: 'translate(-50%, -50%)',
+                            borderRadius: '999px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '10px',
+                            fontWeight: 900,
+                            background: p.filled ? 'var(--pa-theme-action-active)' : 'var(--pa-white)',
+                            color: p.filled ? 'var(--pa-theme-text-on-action)' : 'var(--pa-theme-text-accent)',
+                            border: `2px solid ${p.filled ? 'var(--pa-white)' : 'var(--pa-theme-action-active)'}`,
+                          }}
+                          aria-hidden="true"
+                        >
+                          {p.label}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Legend */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: 'var(--pa-space-3)',
+                        bottom: 'var(--pa-space-3)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 'var(--pa-space-1)',
+                      }}
+                    >
+                      {[
+                        { label: 'Offense', dot: 'var(--pa-theme-action-active)' },
+                        { label: 'Defense', dot: 'var(--pa-white)' },
+                      ].map((l) => (
+                        <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}>
+                          <span style={{ width: 'var(--pa-space-2)', height: 'var(--pa-space-2)', borderRadius: '999px', background: l.dot }} />
+                          <span
+                            style={{
+                              fontSize: '10px',
+                              fontWeight: 800,
+                              color: 'rgba(255,255,255,0.9)',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.04em',
+                            }}
+                          >
+                            {l.label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: 'var(--pa-space-4)',
+                      padding: 'var(--pa-space-3)',
+                      borderRadius: 'var(--pa-radius-s)',
+                      background: 'var(--pa-surface-panel)',
+                      color: 'var(--pa-n600)',
+                      fontStyle: 'italic',
+                      fontSize: '11px',
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    “The tactical board provides a visual representation of team formations and age-group progression across the program.”
+                  </div>
+                </Card>
 
                 {/* Totals */}
                 <Card
@@ -666,10 +957,40 @@ export default function ProgramDetail() {
                     </div>
                     <div className="pa-flex pa-gap-2" style={{ flexWrap: 'wrap' }}>
                       <Link to={levelsRoute}>
-                        <Button variant="ghost">Open Levels</Button>
+                        <Button variant="ghost" disabled={loading} aria-label="Navigate to all levels">
+                          Open Levels
+                        </Button>
                       </Link>
-                      <Link to={`${formsRoute}?type=team&program_id=${programId}&sport_id=${program.sport_id}&returnUrl=${encodeURIComponent(detailRoute)}`}>
-                        <Button variant="secondary" disabled={isOffline || USE_FAKE_DATA} title={isOffline ? 'Offline' : USE_FAKE_DATA ? 'Sign in' : undefined}>
+                      <Link
+                        to={`${formsRoute}?type=team&program_id=${programId}&sport_id=${program.sport_id}&returnUrl=${encodeURIComponent(detailRoute)}`}
+                        onClick={(e) => {
+                          if (isOffline || USE_FAKE_DATA) {
+                            e.preventDefault()
+                            setActionError(
+                              isOffline
+                                ? 'You appear to be offline. Please reconnect and try again.'
+                                : 'This action is not available in demo mode. Please sign in to add teams.'
+                            )
+                          } else if (!programId || !program.sport_id) {
+                            e.preventDefault()
+                            setActionError('Program and sport information is required to add a team.')
+                          }
+                        }}
+                      >
+                        <Button
+                          variant="secondary"
+                          disabled={loading || isOffline || USE_FAKE_DATA || !programId || !program.sport_id}
+                          title={
+                            isOffline
+                              ? 'Offline - cannot add teams'
+                              : USE_FAKE_DATA
+                                ? 'Sign in to add teams'
+                                : !programId || !program.sport_id
+                                  ? 'Missing required information'
+                                  : undefined
+                          }
+                          aria-label="Add a new team to this program"
+                        >
                           Add Team
                         </Button>
                       </Link>

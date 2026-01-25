@@ -217,7 +217,7 @@ export default function OrganizationStructureNew() {
             <QuickActionButton
               icon="person_add"
               label="Add Player"
-              onClick={() => navigate('/admin/athletes')}
+              onClick={() => navigate(getLink('admin.athletes.list'))}
             />
           </div>
         </div>

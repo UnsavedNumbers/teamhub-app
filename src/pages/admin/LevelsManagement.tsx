@@ -4,7 +4,7 @@
  * Table view with filtering and contextual creation.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOffline } from '../../hooks/useOffline'
@@ -22,11 +22,22 @@ export default function LevelsManagement() {
   const { isOffline } = useOffline()
   const location = useLocation()
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [deletingLevelId, setDeletingLevelId] = useState<string | null>(null)
   const [levelToDelete, setLevelToDelete] = useState<{ id: string; name: string } | null>(null)
+  const [dialogError, setDialogError] = useState<string | null>(null)
+
+  const isMountedRef = useRef(true)
+
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
 
   // Check for success message from navigation state
   useEffect(() => {
@@ -34,48 +45,81 @@ export default function LevelsManagement() {
       setSuccessMessage(location.state.successMessage)
       // Clear the state to prevent showing it again on refresh
       window.history.replaceState({}, document.title)
+      // Refresh data after successful form submission
+      if (isReady) {
+        setRefreshing(true)
+        loadData()
+      }
     }
-  }, [location.state])
+  }, [location.state, isReady])
 
   const [levels, setLevels] = useState<Level[]>([])
   const [programs, setPrograms] = useState<Program[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [filterProgramId, setFilterProgramId] = useState<string>('')
 
-  useEffect(() => {
+  const loadData = useCallback(async () => {
     if (!isReady) return
 
-    const load = async () => {
+    if (!refreshing) {
       setLoading(true)
-      setError(null)
+    }
+    setError(null)
+    setActionError(null)
 
-      try {
-        const [levelsResult, programsResult, teamsResult] = await Promise.all([
-          getLevels(context), 
-          getPrograms(context),
-          getTeams(context)
-        ])
+    try {
+      const [levelsResult, programsResult, teamsResult] = await Promise.all([
+        getLevels(context), 
+        getPrograms(context),
+        getTeams(context)
+      ])
 
-        setLevels(Array.isArray(levelsResult.data) ? levelsResult.data : [])
-        setPrograms(Array.isArray(programsResult.data) ? programsResult.data : [])
-        setTeams(Array.isArray(teamsResult.data) ? teamsResult.data : [])
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load data')
-      } finally {
+      if (!isMountedRef.current) return
+
+      if (levelsResult.error) {
+        throw levelsResult.error
+      }
+      if (programsResult.error) {
+        throw programsResult.error
+      }
+      if (teamsResult.error) {
+        throw teamsResult.error
+      }
+
+      setLevels(Array.isArray(levelsResult.data) ? levelsResult.data : [])
+      setPrograms(Array.isArray(programsResult.data) ? programsResult.data : [])
+      setTeams(Array.isArray(teamsResult.data) ? teamsResult.data : [])
+    } catch (err) {
+      if (!isMountedRef.current) return
+      setError(err instanceof Error ? err.message : 'Failed to load data')
+    } finally {
+      if (isMountedRef.current) {
         setLoading(false)
+        setRefreshing(false)
       }
     }
+  }, [context, isReady, refreshing])
 
-    load()
-  }, [context, isReady])
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  const handleRetry = useCallback(() => {
+    setError(null)
+    setActionError(null)
+    loadData()
+  }, [loadData])
 
   const programById = new Map(programs.map((p) => [p.id, p]))
   const filteredLevels = filterProgramId ? levels.filter((l) => l.program_id === filterProgramId) : levels
   const canCreateLevel = programs.length > 0
 
-  const levelTeams = (levelId: string) => teams.filter((t) => t.level_id === levelId)
+  const handleDeleteLevel = useCallback((levelId: string, levelName: string) => {
+    if (!levelId || !levelName) {
+      setActionError('Invalid level information')
+      return
+    }
 
-  const handleDeleteLevel = (levelId: string, levelName: string) => {
     // Block if offline
     if (isOffline) {
       setActionError('You appear to be offline. Please reconnect and try again.')
@@ -88,39 +132,63 @@ export default function LevelsManagement() {
       return
     }
 
-    setLevelToDelete({ id: levelId, name: levelName })
-  }
+    // Check if level has teams
+    const teamCount = teams.filter((t) => t.level_id === levelId).length
+    if (teamCount > 0) {
+      setActionError(`Cannot remove: This level contains ${teamCount} ${teamCount === 1 ? 'team' : 'teams'} and cannot be removed.`)
+      return
+    }
 
-  const confirmDeleteLevel = async (_reason: string) => {
+    setDialogError(null)
+    setLevelToDelete({ id: levelId, name: levelName })
+  }, [isOffline, teams])
+
+  const confirmDeleteLevel = useCallback(async () => {
     if (!levelToDelete) return
 
     setDeletingLevelId(levelToDelete.id)
+    setDialogError(null)
     setActionError(null)
     setSuccessMessage(null)
 
     try {
       const result = await deleteLevel(context, levelToDelete.id)
 
-      if (result.error) {
-        setActionError(result.error.message || 'Failed to remove level. Please try again.')
-      } else {
-        // Remove from local state
-        setLevels((prev) => prev.filter((l) => l.id !== levelToDelete.id))
-        setSuccessMessage(`"${levelToDelete.name}" has been removed from your organization.`)
+      if (!isMountedRef.current) return
 
-        // Clear success message after 5 seconds
-        setTimeout(() => {
-          setSuccessMessage(null)
-        }, 5000)
+      if (result.error) {
+        setDialogError(result.error.message || 'Failed to remove level. Please try again.')
+        return
       }
-    } catch (err) {
-      console.error('[LevelsManagement] Unexpected error deleting level:', err)
-      setActionError(err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.')
-    } finally {
-      setDeletingLevelId(null)
+
+      // Remove from local state
+      setLevels((prev) => prev.filter((l) => l.id !== levelToDelete.id))
+      setSuccessMessage(`"${levelToDelete.name}" has been removed from your organization.`)
+
+      // Clear success message after 5 seconds
+      const timeoutId = setTimeout(() => {
+        if (isMountedRef.current) {
+          setSuccessMessage(null)
+        }
+      }, 5000)
+
+      // Close dialog
       setLevelToDelete(null)
+      setDeletingLevelId(null)
+
+      return () => clearTimeout(timeoutId)
+    } catch (err) {
+      if (!isMountedRef.current) return
+      console.error('[LevelsManagement] Unexpected error deleting level:', err)
+      setDialogError(err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.')
     }
-  }
+  }, [levelToDelete, context])
+
+  const handleCancelDelete = useCallback(() => {
+    setLevelToDelete(null)
+    setDialogError(null)
+    setDeletingLevelId(null)
+  }, [])
 
   const levelTypeLabel = (type: string) => {
     switch (type) {
@@ -135,8 +203,13 @@ export default function LevelsManagement() {
     }
   }
 
-  if (loading) {
-    return <div className="pa-skeleton" style={{ height: '500px' }} />
+  if (loading && !refreshing) {
+    return (
+      <div className="pa-root">
+        <OfflineBanner />
+        <div className="pa-skeleton" style={{ height: '500px' }} />
+      </div>
+    )
   }
 
   return (
@@ -152,20 +225,29 @@ export default function LevelsManagement() {
       />
 
       {error && (
-        <Card className="pa-mb-4">
-          <div className="pa-text-danger">{error}</div>
+        <Card className="pa-mb-4" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
+          <div className="pa-flex pa-items-center pa-justify-between" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
+            <div className="pa-body-m pa-text-danger">{error}</div>
+            <Button variant="ghost" size="dense" onClick={handleRetry} disabled={loading || refreshing}>
+              Retry
+            </Button>
+          </div>
         </Card>
       )}
 
       {successMessage && (
-        <Card className="pa-mb-4">
-          <div className="pa-text-success">{successMessage}</div>
+        <Card className="pa-mb-4" style={{ borderLeft: '3px solid var(--pa-success)' }}>
+          <div className="pa-body-m" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)', color: 'var(--pa-n900)' }}>
+            {successMessage}
+          </div>
         </Card>
       )}
 
       {actionError && (
-        <Card className="pa-mb-4">
-          <div className="pa-text-danger">{actionError}</div>
+        <Card className="pa-mb-4" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
+          <div className="pa-body-m pa-text-danger" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
+            {actionError}
+          </div>
         </Card>
       )}
 
@@ -177,8 +259,17 @@ export default function LevelsManagement() {
             </span>
             <h3 className="pa-h3">No levels yet</h3>
             <p className="pa-body-m pa-text-muted pa-mb-4">Create programs first, then add levels to define eligibility.</p>
-            <Link to={`${getLink('admin.organization.forms')}?type=program`}>
-              <Button>Add a Program</Button>
+            <Link
+              to={`${getLink('admin.organization.forms')}?type=program&returnUrl=${encodeURIComponent(getLink('admin.organization.levels'))}`}
+              onClick={(e) => {
+                if (loading || refreshing) {
+                  e.preventDefault()
+                }
+              }}
+            >
+              <Button disabled={loading || refreshing}>
+                Add a Program
+              </Button>
             </Link>
           </div>
         </Card>
@@ -190,15 +281,48 @@ export default function LevelsManagement() {
                 <Select
                   label="Filter by program"
                   value={filterProgramId}
-                  onChange={(e) => setFilterProgramId(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    setFilterProgramId(value)
+                  }}
+                  disabled={loading || refreshing}
                   options={[
                     { value: '', label: 'All programs' },
-                    ...programs.map((p) => ({ value: p.id, label: p.name })),
+                    ...programs.map((p) => ({ value: p.id, label: p.name || 'Unnamed Program' })),
                   ]}
                 />
               </div>
-              <Link to={`${getLink('admin.organization.forms')}?type=level&returnUrl=${encodeURIComponent(getLink('admin.organization.levels'))}`} className="w-full md:w-auto">
-                <Button style={{ width: '100%' }} disabled={!canCreateLevel} title={!canCreateLevel ? 'Add a Program first' : undefined}>
+              <Link
+                to={`${getLink('admin.organization.forms')}?type=level&returnUrl=${encodeURIComponent(getLink('admin.levels.list'))}`}
+                className={isOffline || USE_FAKE_DATA || !canCreateLevel ? 'pa-disabled-link' : 'w-full md:w-auto'}
+                onClick={(e) => {
+                  if (isOffline || USE_FAKE_DATA || !canCreateLevel || loading || refreshing) {
+                    e.preventDefault()
+                    if (isOffline) {
+                      setActionError('You appear to be offline. Please reconnect and try again.')
+                    } else if (USE_FAKE_DATA) {
+                      setActionError('Sign in to add levels')
+                    } else if (!canCreateLevel) {
+                      setActionError('Add a Program first before creating levels')
+                    }
+                  }
+                }}
+              >
+                <Button
+                  style={{ width: '100%' }}
+                  disabled={!canCreateLevel || isOffline || USE_FAKE_DATA || loading || refreshing}
+                  title={
+                    loading || refreshing
+                      ? 'Loading...'
+                      : !canCreateLevel
+                        ? 'Add a Program first'
+                        : isOffline
+                          ? 'Offline - cannot add levels'
+                          : USE_FAKE_DATA
+                            ? 'Sign in to add levels'
+                            : undefined
+                  }
+                >
                   Add Level
                 </Button>
               </Link>
@@ -222,14 +346,54 @@ export default function LevelsManagement() {
                   {filteredLevels.map((level) => {
                     const program = programById.get(level.program_id)
                     const eligibility = level.age_min && level.age_max ? `${level.age_min}-${level.age_max} years` : level.grade_min && level.grade_max ? `Grades ${level.grade_min}-${level.grade_max}` : level.description || '—'
-                    const teamCount = levelTeams(level.id).length
+                    const teamCount = teams.filter((t) => t.level_id === level.id).length
 
                     return (
                       <tr key={level.id} className="hover:bg-slate-50/80 transition-colors group">
                         <td className="py-4 px-6">
-                          <div className="font-bold text-slate-900">{level.name}</div>
+                          {level.id ? (
+                            <Link
+                              to={getLink('admin.levels.detail', { id: level.id })}
+                              className="font-bold text-slate-900 hover:text-blue-600 transition-colors"
+                              style={{ textDecoration: 'none' }}
+                              onClick={(e) => {
+                                if (!level.id) {
+                                  e.preventDefault()
+                                  setActionError('Invalid level ID')
+                                } else if (loading || refreshing) {
+                                  e.preventDefault()
+                                }
+                              }}
+                              title={loading || refreshing ? 'Loading...' : 'View level details'}
+                            >
+                              {level.name}
+                            </Link>
+                          ) : (
+                            <div className="font-bold text-slate-900">{level.name}</div>
+                          )}
                         </td>
-                        <td className="py-4 px-6 text-sm text-slate-700">{program?.name || '—'}</td>
+                        <td className="py-4 px-6 text-sm text-slate-700">
+                          {program && program.id ? (
+                            <Link
+                              to={getLink('admin.programs.detail', { id: program.id })}
+                              className="hover:text-blue-600 transition-colors"
+                              style={{ textDecoration: 'none' }}
+                              onClick={(e) => {
+                                if (!program.id) {
+                                  e.preventDefault()
+                                  setActionError('Invalid program ID')
+                                } else if (loading || refreshing) {
+                                  e.preventDefault()
+                                }
+                              }}
+                              title={loading || refreshing ? 'Loading...' : 'View program details'}
+                            >
+                              {program.name}
+                            </Link>
+                          ) : (
+                            <span>{program?.name || '—'}</span>
+                          )}
+                        </td>
                         <td className="py-4 px-6 text-sm text-slate-500">{levelTypeLabel(level.level_type)}</td>
                         <td className="py-4 px-6 text-sm text-slate-500">{eligibility}</td>
                         <td className="py-4 px-6">
@@ -245,25 +409,97 @@ export default function LevelsManagement() {
                         </td>
                         <td className="py-4 px-6 text-right">
                           <div className="flex items-center justify-end gap-3">
-                            <Link to={`${getLink('admin.organization.forms')}?edit=level&id=${level.id}&returnUrl=${encodeURIComponent(getLink('admin.organization.levels'))}`} className="invisible group-hover:visible focus:visible">
-                              <button className="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors">
+                            {level.id ? (
+                              <Link
+                                to={getLink('admin.levels.detail', { id: level.id })}
+                                className="invisible group-hover:visible focus:visible"
+                                onClick={(e) => {
+                                  if (!level.id) {
+                                    e.preventDefault()
+                                    setActionError('Invalid level ID')
+                                  }
+                                }}
+                              >
+                                <button
+                                  className="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors"
+                                  disabled={loading || refreshing}
+                                  title={loading || refreshing ? 'Loading...' : 'View level details'}
+                                >
+                                  View
+                                </button>
+                              </Link>
+                            ) : (
+                              <button
+                                className="invisible group-hover:visible focus:visible text-sm font-semibold text-slate-400 cursor-not-allowed"
+                                disabled
+                                title="Invalid level ID"
+                              >
+                                View
+                              </button>
+                            )}
+                            {level.id ? (
+                              <Link
+                                to={`${getLink('admin.organization.forms')}?edit=level&id=${level.id}&returnUrl=${encodeURIComponent(getLink('admin.levels.list'))}`}
+                                className="invisible group-hover:visible focus:visible"
+                                onClick={(e) => {
+                                  if (!level.id) {
+                                    e.preventDefault()
+                                    setActionError('Invalid level ID')
+                                  } else if (loading || refreshing) {
+                                    e.preventDefault()
+                                  }
+                                }}
+                              >
+                                <button
+                                  className="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors"
+                                  disabled={loading || refreshing}
+                                  title={loading || refreshing ? 'Loading...' : 'Edit level'}
+                                >
+                                  Edit
+                                </button>
+                              </Link>
+                            ) : (
+                              <button
+                                className="invisible group-hover:visible focus:visible text-sm font-semibold text-slate-400 cursor-not-allowed"
+                                disabled
+                                title="Invalid level ID"
+                              >
                                 Edit
                               </button>
-                            </Link>
+                            )}
                             <button
-                              onClick={() => handleDeleteLevel(level.id, level.name)}
-                              disabled={deletingLevelId === level.id || isOffline || USE_FAKE_DATA || teamCount > 0 || !!level.deleted_at}
+                              onClick={() => {
+                                if (level.id && level.name) {
+                                  handleDeleteLevel(level.id, level.name)
+                                } else {
+                                  setActionError('Invalid level information')
+                                }
+                              }}
+                              disabled={
+                                !level.id ||
+                                deletingLevelId === level.id ||
+                                isOffline ||
+                                USE_FAKE_DATA ||
+                                teamCount > 0 ||
+                                !!level.deleted_at ||
+                                loading ||
+                                refreshing
+                              }
                               className="invisible group-hover:visible focus:visible inline-flex items-center justify-center h-8 px-3 font-medium text-xs text-red-700 bg-white border border-red-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                               title={
-                                level.deleted_at
-                                  ? 'Cannot remove archived level'
-                                  : USE_FAKE_DATA 
-                                  ? 'Sign in to remove level' 
-                                  : isOffline 
-                                  ? 'Offline - cannot remove level' 
-                                  : teamCount > 0
-                                  ? `Cannot remove: This level contains ${teamCount} ${teamCount === 1 ? 'team' : 'teams'} and cannot be removed.`
-                                  : 'Remove level from organization'
+                                !level.id
+                                  ? 'Invalid level ID'
+                                  : level.deleted_at
+                                    ? 'Cannot remove archived level'
+                                    : USE_FAKE_DATA
+                                      ? 'Sign in to remove level'
+                                      : isOffline
+                                        ? 'Offline - cannot remove level'
+                                        : teamCount > 0
+                                          ? `Cannot remove: This level contains ${teamCount} ${teamCount === 1 ? 'team' : 'teams'} and cannot be removed.`
+                                          : loading || refreshing
+                                            ? 'Loading...'
+                                            : 'Remove level from organization'
                               }
                             >
                               {deletingLevelId === level.id ? (
@@ -299,8 +535,10 @@ export default function LevelsManagement() {
         }
         confirmLabel="Remove"
         variant="danger"
+        loading={deletingLevelId !== null}
+        error={dialogError}
         onConfirm={confirmDeleteLevel}
-        onCancel={() => setLevelToDelete(null)}
+        onCancel={handleCancelDelete}
       />
     </div>
   )

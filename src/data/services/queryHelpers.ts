@@ -110,7 +110,7 @@ export function buildTeamMembershipQuery(
 ) {
     return supabase.from('team_memberships').select(`
         *,
-        athlete:athletes(id, first_name, last_name, date_of_birth, photo_url)
+        athlete:athletes(id, first_name, last_name, date_of_birth, photo_url, jersey_number)
     `)
 }
 

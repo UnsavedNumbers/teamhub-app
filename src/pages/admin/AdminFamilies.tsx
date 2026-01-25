@@ -7,6 +7,7 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { getFamilies } from '../../data/services/familyService'
 import type { Family } from '../../types/family'
 import { Info } from 'lucide-react'
+import { getLink } from '../../utils/routes'
 
 export default function AdminFamilies() {
   const navigate = useNavigate()
@@ -57,7 +58,7 @@ export default function AdminFamilies() {
       <AdminPageHeader 
         title="FAMILIES" 
         actions={
-          <Button onClick={() => navigate('/admin/athletes/new')}>
+          <Button onClick={() => navigate(getLink('admin.athletes.create'))}>
             <span className="material-symbols-outlined">add</span>
             Add Athlete
           </Button>
@@ -88,7 +89,7 @@ export default function AdminFamilies() {
             rows={families}
             columns={columns}
             loading={loading}
-            onRowClick={(f) => navigate(`/admin/families/${f.id}`)}
+            onRowClick={(f) => navigate(getLink('admin.guardians.detail', { id: f.id }))}
             emptyMessage="No families yet. Add athletes with guardians to automatically create families."
             page={0}
             rowsPerPage={100}

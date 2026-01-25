@@ -94,6 +94,21 @@ export function useRouteActive(routeKey: string): boolean {
             return location.pathname === route.path
         }
 
+        // For list routes, also match detail routes (e.g., /admin/sports matches /admin/sports/:id)
+        const isListRoute = route.path.endsWith('/sports') || 
+                           route.path.endsWith('/programs') || 
+                           route.path.endsWith('/levels') || 
+                           route.path.endsWith('/teams') || 
+                           route.path.endsWith('/seasons') || 
+                           route.path.endsWith('/athletes') || 
+                           route.path.endsWith('/guardians')
+        
+        if (isListRoute) {
+            // Match list route exactly or detail routes that start with list route
+            return location.pathname === route.path || 
+                   location.pathname.startsWith(route.path + '/')
+        }
+
         return location.pathname.startsWith(route.path)
     }, [location.pathname, routeKey])
 }

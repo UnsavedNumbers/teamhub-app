@@ -18,6 +18,7 @@ import { uploadAthletePhoto, deleteAthletePhoto, getAthletePhotoUrl } from '../.
 import type { Gender, UpdateAthleteDTO } from '../../types/family'
 import type { Sport } from '../../data/types/organization'
 import { AlertCircle } from 'lucide-react'
+import { getLink } from '../../utils/routes'
 
 type SportType = 'plays' | 'interested'
 
@@ -154,7 +155,7 @@ export default function EditAthlete() {
                     // Auto-redirect after 3 seconds
                     redirectTimeoutRef.current = setTimeout(() => {
                         if (isMountedRef.current) {
-                            navigate('/admin/athletes')
+                            navigate(getLink('admin.athletes.list'))
                         }
                     }, 3000)
                     return
@@ -364,7 +365,7 @@ export default function EditAthlete() {
                     title="Athlete Not Found"
                     subtitle="The athlete you're looking for doesn't exist or you don't have access."
                     breadcrumbs={[
-                        { label: 'Athletes', path: '/admin/athletes' },
+                        { label: 'Athletes', path: getLink('admin.athletes.list') },
                         { label: 'Edit Athlete', path: '#' }
                     ]}
                 />
@@ -393,7 +394,7 @@ export default function EditAthlete() {
                 title="Edit Athlete"
                 subtitle="Update athlete information, sports preferences, and profile photo"
                 breadcrumbs={[
-                    { label: 'Athletes', path: '/admin/athletes' },
+                    { label: 'Athletes', path: getLink('admin.athletes.list') },
                     { label: 'Edit Athlete', path: '#' }
                 ]}
             />
@@ -582,7 +583,7 @@ export default function EditAthlete() {
                         <Button
                             type="button"
                             variant="ghost"
-                            onClick={() => navigate('/admin/athletes')}
+                            onClick={() => navigate(getLink('admin.athletes.list'))}
                             disabled={isSubmitting}
                         >
                             Cancel

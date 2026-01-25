@@ -7,6 +7,7 @@ import { FileUpload } from '../../components/common/FileUpload'
 import { useUserContext } from '../../hooks/useUserContext'
 import { supabase } from '../../lib/supabase'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
+import { getLink } from '../../utils/routes'
 
 // Type for RPC result
 interface ImportAthletesResult {
@@ -373,7 +374,7 @@ export default function ImportAthletes() {
         })),
       })
 
-      navigate('/admin/athletes', { state: { importSuccess: true } })
+      navigate(getLink('admin.athletes.list'), { state: { importSuccess: true } })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Import failed')
     } finally {
@@ -761,7 +762,7 @@ export default function ImportAthletes() {
               </div>
               <div className="flex items-center gap-4">
                 <button
-                  onClick={() => navigate('/admin/athletes')}
+                  onClick={() => navigate(getLink('admin.athletes.list'))}
                   className="px-6 py-2.5 rounded border border-slate-200 text-sm font-bold uppercase tracking-wide hover:bg-slate-50 transition-colors"
                 >
                   Cancel

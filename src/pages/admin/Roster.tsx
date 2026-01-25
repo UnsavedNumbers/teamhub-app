@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useTeamParams } from '../../hooks/useRouteParams'
 import { getTeamDetails, getTeamRoster } from '../../data/services/teamsService'
+import { getLink } from '../../utils/routes'
 import { 
   AdminPageHeader,
   Card, 
@@ -143,7 +144,7 @@ export default function Roster() {
             <Button onClick={() => navigate(`/admin/athletes/import?teamId=${teamId}&seasonId=${selectedSeason}`)} variant="secondary" icon="upload_file">
               Import Athletes
             </Button>
-            <Button onClick={() => navigate('/admin/athletes/new')} icon="add">
+            <Button onClick={() => navigate(getLink('admin.athletes.create'))} icon="add">
               Add Athlete
             </Button>
           </div>
