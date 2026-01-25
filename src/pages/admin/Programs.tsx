@@ -143,6 +143,7 @@ export default function Programs() {
 
   const sportsRoute = getLink('admin.organization.sports')
   const programsRoute = getLink('admin.organization.programs')
+  const programDetailRoute = (id: string) => getLink('admin.organization.programDetail', { id })
   const formsRoute = getLink('admin.organization.forms')
   const structureRoute = getLink('admin.organization.structure')
 
@@ -272,9 +273,11 @@ export default function Programs() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-bold text-slate-900">
-                        {program.name}
-                      </h3>
+                      <Link to={programDetailRoute(program.id)} className="inline-block">
+                        <h3 className="text-lg font-bold text-slate-900 hover:underline">
+                          {program.name}
+                        </h3>
+                      </Link>
                       {sport && (
                         <Link 
                           to={`${sportsRoute}`}
@@ -296,6 +299,11 @@ export default function Programs() {
                   </div>
                   
                   <div className="flex items-center gap-2">
+                    <Link to={programDetailRoute(program.id)}>
+                      <button className="inline-flex items-center justify-center h-9 px-4 font-medium text-xs text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 hover:border-slate-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-200">
+                        Details
+                      </button>
+                    </Link>
                     <Link 
                       to={`${formsRoute}?edit=program&id=${program.id}&returnUrl=${encodeURIComponent(programsRoute)}`}
                     >

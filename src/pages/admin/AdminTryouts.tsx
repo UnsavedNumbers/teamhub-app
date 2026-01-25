@@ -54,7 +54,6 @@ export default function AdminTryouts() {
     <div className="pa-root">
       <AdminPageHeader 
         title="Tryouts" 
-        actions={<Button onClick={() => navigate('/admin/tryouts/new')}><span className="material-symbols-outlined">add</span>Create Tryout</Button>}
       />
       <PlatformDataTable
         columns={columns}

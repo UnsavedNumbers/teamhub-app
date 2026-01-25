@@ -136,6 +136,7 @@ export default function Sports() {
   )
 
   const sportsRoute = getLink('admin.organization.sports')
+  const sportDetailRoute = (id: string) => getLink('admin.organization.sportDetail', { id })
   const programsRoute = getLink('admin.organization.programs')
   const formsRoute = getLink('admin.organization.forms')
   const structureRoute = getLink('admin.organization.structure')
@@ -234,9 +235,11 @@ export default function Sports() {
                 <div className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-4 w-full sm:w-auto">
                     <div>
-                      <h3 className="text-lg font-bold text-slate-900 leading-tight">
-                        {sport.name}
-                      </h3>
+                      <Link to={sportDetailRoute(sport.id)} className="inline-block">
+                        <h3 className="text-lg font-bold text-slate-900 leading-tight hover:underline">
+                          {sport.name}
+                        </h3>
+                      </Link>
                       <p className="text-sm font-medium text-slate-400 mt-0.5">
                         {programCount} {programCount === 1 ? 'program' : 'programs'}
                       </p>
@@ -244,6 +247,14 @@ export default function Sports() {
                   </div>
                   
                   <div className="flex items-center gap-3 w-full sm:w-auto sm:justify-end">
+                    <Link
+                      to={sportDetailRoute(sport.id)}
+                      className="w-full sm:w-auto"
+                    >
+                      <SecondaryButton className="w-full sm:w-auto">
+                        Details
+                      </SecondaryButton>
+                    </Link>
                     <Link 
                       to={`${programsRoute}?sport_id=${sport.id}`}
                       className="w-full sm:w-auto"

@@ -112,6 +112,18 @@ export function useUniformOrderParams() {
 }
 
 /**
+ * Extract sport ID from route parameters
+ * Route: /admin/organization/sports/:id
+ */
+export function useSportParams() {
+  const { id } = useParams<{ id: string }>()
+  if (!id) {
+    throw new Error('Sport ID is required in route parameters')
+  }
+  return { sportId: id }
+}
+
+/**
  * Extract message ID from route parameters
  * Route: /admin/messages/:id
  */
