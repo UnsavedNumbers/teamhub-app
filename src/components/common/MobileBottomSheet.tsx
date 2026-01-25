@@ -121,7 +121,15 @@ export default function MobileBottomSheet({
   // Handle backdrop click
   const handleBackdropClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     // Only close if clicking the backdrop itself, not sheet content
-    if (e.target === backdropRef.current && isMountedRef.current && stateRef.current !== 'closing') {
+    const target = e.target as HTMLElement
+    if (
+      backdropRef.current &&
+      sheetRef.current &&
+      backdropRef.current.contains(target) &&
+      !sheetRef.current.contains(target) &&
+      isMountedRef.current &&
+      stateRef.current !== 'closing'
+    ) {
       onClose()
     }
   }, [onClose])
@@ -130,6 +138,15 @@ export default function MobileBottomSheet({
   const handleSheetClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation()
   }, [])
+  
+  // Handle close button click
+  const handleCloseClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (isMountedRef.current) {
+      onClose()
+    }
+  }, [onClose])
   
   // Don't render if closed and isOpen is false
   if (!isOpen && state === 'closed') {
@@ -162,8 +179,9 @@ export default function MobileBottomSheet({
                 <h2 className="mobile-sheet-title">{title}</h2>
                 <button
                   className="mobile-sheet-close"
-                  onClick={onClose}
+                  onClick={handleCloseClick}
                   aria-label="Close menu"
+                  type="button"
                 >
                   <span className="material-symbols-outlined">close</span>
                 </button>

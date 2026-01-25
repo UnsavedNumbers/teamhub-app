@@ -109,8 +109,16 @@ export default function MobileNavDrawer({ isOpen, onClose, sections }: MobileNav
   
   // Handle backdrop click
   const handleBackdropClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    // Only close if clicking the backdrop itself, not menu content
-    if (e.target === backdropRef.current && isMountedRef.current && stateRef.current !== 'closing') {
+    // Only close if clicking the backdrop itself, not drawer content
+    const target = e.target as HTMLElement
+    if (
+      backdropRef.current &&
+      drawerRef.current &&
+      backdropRef.current.contains(target) &&
+      !drawerRef.current.contains(target) &&
+      isMountedRef.current &&
+      stateRef.current !== 'closing'
+    ) {
       onClose()
     }
   }, [onClose])
@@ -119,6 +127,15 @@ export default function MobileNavDrawer({ isOpen, onClose, sections }: MobileNav
   const handleDrawerClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation()
   }, [])
+  
+  // Handle close button click
+  const handleCloseClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (isMountedRef.current) {
+      onClose()
+    }
+  }, [onClose])
   
   // Don't render if closed and isOpen is false
   if (!isOpen && state === 'closed') {
@@ -148,8 +165,9 @@ export default function MobileNavDrawer({ isOpen, onClose, sections }: MobileNav
             <div className="mobile-drawer-header">
               <button
                 className="mobile-drawer-close"
-                onClick={onClose}
+                onClick={handleCloseClick}
                 aria-label="Close navigation menu"
+                type="button"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>

@@ -8,7 +8,9 @@ import { useEffect, useState, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
-import { getSports, getPrograms } from '../../data/services/sportsService'
+import { useOffline } from '../../hooks/useOffline'
+import { USE_FAKE_DATA } from '../../data/config'
+import { getSports, getPrograms, deleteSport } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
 import { getTeams } from '../../data/services/teamsService'
 import type { Sport, Program, Level, Team } from '../../data/types/organization'
@@ -17,9 +19,13 @@ import OfflineBanner from '../../components/admin/OfflineBanner'
 
 export default function SportsAndPrograms() {
   const { context, isReady } = useUserContext()
+  const { isOffline } = useOffline()
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [deletingSportId, setDeletingSportId] = useState<string | null>(null)
 
   const [sports, setSports] = useState<Sport[]>([])
   const [programs, setPrograms] = useState<Program[]>([])
@@ -88,6 +94,54 @@ export default function SportsAndPrograms() {
     setExpandedSportId(expandedSportId === sportId ? null : sportId)
   }
 
+  const handleDeleteSport = async (sportId: string, sportName: string) => {
+    // Block if offline
+    if (isOffline) {
+      setActionError('You appear to be offline. Please reconnect and try again.')
+      return
+    }
+
+    // Block if in demo mode
+    if (USE_FAKE_DATA) {
+      setActionError('This action is not available in demo mode. Please sign in to remove sports from your organization.')
+      return
+    }
+
+    // Confirm deletion
+    const confirmed = window.confirm(
+      `Are you sure you want to remove "${sportName}" from your organization?\n\n` +
+      `This will unlink the sport from your organization. Programs, levels, and teams associated with this sport will not be deleted, but you may need to reassign them.`
+    )
+
+    if (!confirmed) return
+
+    setDeletingSportId(sportId)
+    setActionError(null)
+    setSuccessMessage(null)
+
+    try {
+      const result = await deleteSport(context, sportId)
+      
+      if (result.error) {
+        setActionError(result.error.message || 'Failed to remove sport. Please try again.')
+      } else {
+        // Remove from local state
+        setSports((prev) => prev.filter((s) => s.id !== sportId))
+        setSuccessMessage(`"${sportName}" has been removed from your organization.`)
+        
+        // Clear success message after 5 seconds
+        setTimeout(() => {
+          setSuccessMessage(null)
+        }, 5000)
+      }
+    } catch (err) {
+      console.error('[SportsAndPrograms] Unexpected error deleting sport:', err)
+      setActionError(err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.')
+    } finally {
+      setDeletingSportId(null)
+    }
+  }
+
   // --- Components ---
 
   const PrimaryButton = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
@@ -145,11 +199,25 @@ export default function SportsAndPrograms() {
           { label: 'Sports & Programs' },
         ]}
         actions={
-          <Link to="/admin/organization/structure/forms?type=sport">
-            <PrimaryButton>Add Sport</PrimaryButton>
+          <Link to="/admin/organization/structure/forms?type=sport" className={isOffline || USE_FAKE_DATA ? 'pointer-events-none opacity-50' : ''}>
+            <PrimaryButton>
+              {USE_FAKE_DATA ? 'Sign in to Add Sport' : 'Add Sport'}
+            </PrimaryButton>
           </Link>
         }
       />
+
+      {successMessage && (
+        <div className="p-4 bg-green-50 text-green-700 rounded-xl border border-green-100 mb-4">
+          {successMessage}
+        </div>
+      )}
+
+      {actionError && (
+        <div className="p-4 bg-red-50 text-red-700 rounded-xl border border-red-100 mb-4">
+          {actionError}
+        </div>
+      )}
 
       <div className="flex flex-col gap-4">
         {sportsWithTeams.length === 0 ? (
@@ -193,9 +261,35 @@ export default function SportsAndPrograms() {
                   </div>
                   
                   <div className="flex items-center gap-3 w-full sm:w-auto sm:justify-end" onClick={e => e.stopPropagation()}>
-                    <Link to={`/admin/organization/structure/forms?type=program&sport_id=${sport.id}`} className="w-full sm:w-auto">
-                      <SecondaryButton className="w-full sm:w-auto">Add Program</SecondaryButton>
+                    <Link 
+                      to={`/admin/organization/structure/forms?type=program&sport_id=${sport.id}`} 
+                      className={`w-full sm:w-auto ${isOffline || USE_FAKE_DATA ? 'pointer-events-none opacity-50' : ''}`}
+                    >
+                      <SecondaryButton className="w-full sm:w-auto">
+                        Add Program
+                      </SecondaryButton>
                     </Link>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDeleteSport(sport.id, sport.name)
+                      }}
+                      disabled={deletingSportId === sport.id || isOffline || USE_FAKE_DATA}
+                      className="inline-flex items-center justify-center h-12 md:h-9 px-4 font-medium text-xs text-red-700 bg-white border border-red-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={USE_FAKE_DATA ? 'Sign in to remove sport' : isOffline ? 'Offline - cannot remove sport' : 'Remove sport from organization'}
+                    >
+                      {deletingSportId === sport.id ? (
+                        <>
+                          <span className="material-symbols-outlined animate-spin" style={{ fontSize: '16px', marginRight: '4px' }}>refresh</span>
+                          Removing...
+                        </>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '4px' }}>delete</span>
+                          Remove
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
 

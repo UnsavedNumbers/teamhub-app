@@ -12,6 +12,7 @@ import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { UserContext } from '../fake/userContext'
+import { logSportEvent } from '../../utils/eventLogger'
 import {
     getSportById,
     getSportsForOrg,
@@ -55,22 +56,55 @@ function isSystemSport(sport: { org_id: string | null } | null | undefined): boo
 
 /**
  * Get all system sports (predefined sports available to all organizations)
- * System sports are identified by org_id IS NULL
+ * System sports are identified by org_id IS NULL and is_system = true
  */
 export async function getSystemSports(): Promise<{ data: Sport[]; error: Error | null }> {
     try {
-        // System sports are identified by org_id IS NULL
+        // System sports are identified by org_id IS NULL and is_system = true
         const { data, error } = await supabase
             .from('sports')
             .select('*')
             .is('org_id', null)
+            .eq('is_system', true)
+            .is('deleted_at', null) // Exclude soft-deleted sports
             .order('name')
 
-        if (error) throw error
-        return { data: data as Sport[], error: null }
+        if (error) {
+            // Check for network errors
+            if (error.message?.includes('network') || error.message?.includes('fetch') || error.message?.includes('timeout')) {
+                return { data: [], error: new Error('Network error. Please check your internet connection and try again.') }
+            }
+            // Check for RLS/permission errors
+            if (error.message?.includes('row-level security') || error.message?.includes('RLS') || error.code === '42501') {
+                return { data: [], error: new Error('Permission denied. You do not have access to view system sports.') }
+            }
+            throw error
+        }
+
+        // Normalize sports to ensure required fields
+        const normalizedSports = (data || []).map((sport: any): Sport => ({
+            id: sport.id,
+            org_id: sport.org_id,
+            name: sport.name || 'Unknown Sport',
+            icon: sport.icon || null,
+            color: sport.color || '#137fec',
+            created_at: sport.created_at || new Date().toISOString(),
+            updated_at: sport.updated_at || new Date().toISOString(),
+            deleted_at: sport.deleted_at || null,
+            is_system: sport.is_system ?? true,
+        }))
+
+        return { data: normalizedSports, error: null }
     } catch (err) {
         console.error('[sportsService] Error getting system sports:', err)
-        return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        // Handle network errors in catch block
+        if (err instanceof Error) {
+            if (err.message?.includes('network') || err.message?.includes('fetch') || err.message?.includes('timeout')) {
+                return { data: [], error: new Error('Network error. Please check your internet connection and try again.') }
+            }
+            return { data: [], error: err }
+        }
+        return { data: [], error: new Error('An unexpected error occurred while loading system sports. Please try again.') }
     }
 }
 
@@ -88,6 +122,17 @@ export async function getSports(
     }
 
     try {
+        // Validate context
+        if (!context.orgId) {
+            return { data: [], error: new Error('Organization ID is required') }
+        }
+
+        // Validate UUID format
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        if (!uuidRegex.test(context.orgId)) {
+            return { data: [], error: new Error('Invalid organization ID format') }
+        }
+
         // Get sports linked to this organization via organization_sports junction table
         const { data, error } = await supabase
             .from('organization_sports')
@@ -96,14 +141,57 @@ export async function getSports(
             `)
             .eq('org_id', context.orgId)
 
-        if (error) throw error
+        if (error) {
+            // Check for network errors
+            if (error.message?.includes('network') || error.message?.includes('fetch') || error.message?.includes('timeout')) {
+                return { data: [], error: new Error('Network error. Please check your internet connection and try again.') }
+            }
+            // Check for RLS/permission errors
+            if (error.message?.includes('row-level security') || error.message?.includes('RLS') || error.code === '42501') {
+                return { data: [], error: new Error('Permission denied. You do not have access to view sports for this organization.') }
+            }
+            throw error
+        }
 
-        // Extract sports from the joined data
+        // Get organization customizations for these sports
+        const sportIds = (data || []).map((row: any) => row.sport?.id).filter(Boolean)
+        let customizations: Record<string, { icon_path: string | null; color: string | null }> = {}
+        
+        if (sportIds.length > 0) {
+            const { data: customizationsData, error: customizationsError } = await supabase
+                .from('organization_sport_customizations' as any)
+                .select('sport_id, icon_path, color')
+                .eq('org_id', context.orgId)
+                .in('sport_id', sportIds)
+
+            if (!customizationsError && customizationsData && Array.isArray(customizationsData)) {
+                type CustomizationRow = { sport_id: string; icon_path: string | null; color: string | null }
+                customizations = (customizationsData as unknown as CustomizationRow[]).reduce((acc, cust) => {
+                    acc[cust.sport_id] = { icon_path: cust.icon_path, color: cust.color }
+                    return acc
+                }, {} as Record<string, { icon_path: string | null; color: string | null }>)
+            }
+        }
+
+        // Extract sports from the joined data and apply customizations
         const sportsMap = new Map<string, Sport>()
         ;(data || []).forEach((row: any) => {
             const sport = row.sport
             if (sport && sport.id && !sportsMap.has(sport.id)) {
-                sportsMap.set(sport.id, sport)
+                const customization = customizations[sport.id]
+                // Ensure required fields have defaults, apply customizations
+                const normalizedSport: Sport = {
+                    id: sport.id,
+                    org_id: sport.org_id,
+                    name: sport.name || 'Unknown Sport',
+                    icon: customization?.icon_path || sport.icon || null,
+                    color: customization?.color || sport.color || '#137fec',
+                    created_at: sport.created_at || new Date().toISOString(),
+                    updated_at: sport.updated_at || new Date().toISOString(),
+                    deleted_at: sport.deleted_at || null,
+                    is_system: sport.is_system ?? (sport.org_id === null),
+                }
+                sportsMap.set(sport.id, normalizedSport)
             }
         })
         const sports = Array.from(sportsMap.values()).sort((a: Sport, b: Sport) => a.name.localeCompare(b.name))
@@ -111,7 +199,14 @@ export async function getSports(
         return { data: sports as Sport[], error: null }
     } catch (err) {
         console.error('[sportsService] Error getting sports:', err)
-        return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        // Handle network errors in catch block
+        if (err instanceof Error) {
+            if (err.message?.includes('network') || err.message?.includes('fetch') || err.message?.includes('timeout')) {
+                return { data: [], error: new Error('Network error. Please check your internet connection and try again.') }
+            }
+            return { data: [], error: err }
+        }
+        return { data: [], error: new Error('An unexpected error occurred while loading sports. Please try again.') }
     }
 }
 
@@ -155,44 +250,79 @@ export async function createSport(
         await simulateDelay()
         return {
             data: null,
-            error: new Error('Create operations are not available in demo mode')
+            error: new Error('Create operations are not available in demo mode. Please sign in to add sports to your organization.')
         }
     }
 
     try {
+        // Validate input
+        if (!dto.org_id || !dto.org_id.trim()) {
+            return { data: null, error: new Error('Organization ID is required') }
+        }
+
+        // Validate UUID format for org_id
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        if (!uuidRegex.test(dto.org_id)) {
+            return { data: null, error: new Error('Invalid organization ID format') }
+        }
+
         // Find the system sport by name (case-insensitive)
         const normalizedName = dto.name.trim()
         if (!normalizedName || normalizedName.length > 100) {
             return { data: null, error: new Error('Invalid sport name: must be between 1 and 100 characters') }
         }
 
-        // Find the system sport (org_id IS NULL)
+        // Find the system sport (org_id IS NULL and is_system = true)
         const { data: systemSports, error: findError } = await supabase
             .from('sports')
             .select('*')
             .is('org_id', null)
+            .eq('is_system', true)
             .ilike('name', normalizedName)
             .limit(1)
-            .single()
+            .maybeSingle()
 
-        if (findError || !systemSports) {
+        if (findError) {
+            // Check for network errors
+            if (findError.message?.includes('network') || findError.message?.includes('fetch') || findError.message?.includes('timeout')) {
+                return { data: null, error: new Error('Network error. Please check your internet connection and try again.') }
+            }
+            // Check for RLS/permission errors
+            if (findError.message?.includes('row-level security') || findError.message?.includes('RLS') || findError.code === '42501') {
+                return { data: null, error: new Error('Permission denied. You do not have access to view system sports.') }
+            }
+            console.error('[sportsService] Error finding system sport:', findError)
+            return { data: null, error: new Error(`Failed to find sport: ${findError.message || 'Unknown error'}`) }
+        }
+
+        if (!systemSports) {
             return { data: null, error: new Error('Sport not found. Please select from the available system sports.') }
         }
 
         // Check if already linked
-        const { data: existingLink } = await supabase
+        const { data: existingLink, error: checkError } = await supabase
             .from('organization_sports')
             .select('*')
             .eq('org_id', dto.org_id)
             .eq('sport_id', systemSports.id)
-            .single()
+            .maybeSingle()
+
+        if (checkError) {
+            // Check for network errors
+            if (checkError.message?.includes('network') || checkError.message?.includes('fetch') || checkError.message?.includes('timeout')) {
+                return { data: null, error: new Error('Network error. Please check your internet connection and try again.') }
+            }
+            console.error('[sportsService] Error checking existing link:', checkError)
+            // Continue - this might be a permission issue, but we'll try to insert anyway
+        }
 
         if (existingLink) {
+            // Already linked - return success with the sport data
             return { data: systemSports as Sport, error: null }
         }
 
         // Link the system sport to the organization
-        const { data: _, error: linkError } = await supabase
+        const { data: linkData, error: linkError } = await supabase
             .from('organization_sports')
             .insert({
                 org_id: dto.org_id,
@@ -201,12 +331,62 @@ export async function createSport(
             .select()
             .single()
 
-        if (linkError) throw linkError
+        if (linkError) {
+            // Check for network errors
+            if (linkError.message?.includes('network') || linkError.message?.includes('fetch') || linkError.message?.includes('timeout')) {
+                return { data: null, error: new Error('Network error. Please check your internet connection and try again.') }
+            }
+            // Check for RLS/permission errors
+            if (linkError.message?.includes('row-level security') || linkError.message?.includes('RLS') || linkError.code === '42501') {
+                return { data: null, error: new Error('Permission denied. You do not have permission to add sports to this organization.') }
+            }
+            // Check for constraint violations (duplicate key)
+            if (linkError.code === '23505' || linkError.message?.includes('duplicate key') || linkError.message?.includes('unique constraint')) {
+                // This shouldn't happen since we checked above, but handle gracefully
+                return { data: systemSports as Sport, error: null }
+            }
+            // Check for foreign key violations
+            if (linkError.code === '23503' || linkError.message?.includes('foreign key')) {
+                return { data: null, error: new Error('Invalid organization or sport. Please refresh the page and try again.') }
+            }
+            console.error('[sportsService] Error linking sport:', linkError)
+            return { data: null, error: new Error(`Failed to add sport: ${linkError.message || 'Unknown error'}`) }
+        }
+
+        if (!linkData) {
+            return { data: null, error: new Error('Failed to create sport link. Please try again.') }
+        }
+
+        // Log audit event (best effort - don't fail if logging fails)
+        try {
+            const { data: { user } } = await supabase.auth.getUser()
+            await logSportEvent(
+                'SPORT_LINKED',
+                dto.org_id,
+                systemSports.id,
+                user?.id,
+                'org_admin',
+                {
+                    sport_name: systemSports.name,
+                    sport_id: systemSports.id,
+                }
+            )
+        } catch (logError) {
+            console.error('[sportsService] Failed to log SPORT_LINKED event:', logError)
+            // Continue - audit logging failure shouldn't break the operation
+        }
 
         return { data: systemSports as Sport, error: null }
     } catch (err) {
         console.error('[sportsService] Error linking sport:', err)
-        return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        // Handle network errors in catch block
+        if (err instanceof Error) {
+            if (err.message?.includes('network') || err.message?.includes('fetch') || err.message?.includes('timeout')) {
+                return { data: null, error: new Error('Network error. Please check your internet connection and try again.') }
+            }
+            return { data: null, error: err }
+        }
+        return { data: null, error: new Error('An unexpected error occurred. Please try again.') }
     }
 }
 
@@ -281,18 +461,51 @@ export async function deleteSport(
 ): Promise<{ error: Error | null }> {
     if (USE_FAKE_DATA) {
         await simulateDelay()
-        return { error: new Error('Delete operations are not available in demo mode') }
+        return { error: new Error('Delete operations are not available in demo mode. Please sign in to remove sports from your organization.') }
     }
 
     try {
+        // Validate input
+        if (!sportId || !sportId.trim()) {
+            return { error: new Error('Sport ID is required') }
+        }
+
+        // Validate UUID format
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        if (!uuidRegex.test(sportId)) {
+            return { error: new Error('Invalid sport ID format') }
+        }
+
+        if (!context.orgId) {
+            return { error: new Error('Organization ID is required') }
+        }
+
         // Check if this is a system sport (org_id IS NULL)
         const { data: sport, error: fetchError } = await supabase
             .from('sports')
-            .select('org_id')
+            .select('org_id, is_system')
             .eq('id', sportId)
-            .single()
+            .maybeSingle()
 
-        if (fetchError) throw fetchError
+        if (fetchError) {
+            // Check for network errors
+            if (fetchError.message?.includes('network') || fetchError.message?.includes('fetch') || fetchError.message?.includes('timeout')) {
+                return { error: new Error('Network error. Please check your internet connection and try again.') }
+            }
+            // Check for RLS/permission errors
+            if (fetchError.message?.includes('row-level security') || fetchError.message?.includes('RLS') || fetchError.code === '42501') {
+                return { error: new Error('Permission denied. You do not have access to view this sport.') }
+            }
+            if (fetchError.code === 'PGRST116') {
+                return { error: new Error('Sport not found.') }
+            }
+            console.error('[sportsService] Error fetching sport:', fetchError)
+            return { error: new Error(`Failed to find sport: ${fetchError.message || 'Unknown error'}`) }
+        }
+
+        if (!sport) {
+            return { error: new Error('Sport not found.') }
+        }
 
         // For system sports, remove the organization link
         if (isSystemSport(sport)) {
@@ -302,7 +515,41 @@ export async function deleteSport(
                 .eq('sport_id', sportId)
                 .eq('org_id', context.orgId)
 
-            if (unlinkError) throw unlinkError
+            if (unlinkError) {
+                // Check for network errors
+                if (unlinkError.message?.includes('network') || unlinkError.message?.includes('fetch') || unlinkError.message?.includes('timeout')) {
+                    return { error: new Error('Network error. Please check your internet connection and try again.') }
+                }
+                // Check for RLS/permission errors
+                if (unlinkError.message?.includes('row-level security') || unlinkError.message?.includes('RLS') || unlinkError.code === '42501') {
+                    return { error: new Error('Permission denied. You do not have permission to remove sports from this organization.') }
+                }
+                // Check for foreign key violations (sport might be in use)
+                if (unlinkError.code === '23503' || unlinkError.message?.includes('foreign key')) {
+                    return { error: new Error('Cannot remove sport: It is currently in use by programs, teams, or other entities.') }
+                }
+                console.error('[sportsService] Error unlinking sport:', unlinkError)
+                return { error: new Error(`Failed to remove sport: ${unlinkError.message || 'Unknown error'}`) }
+            }
+
+            // Log audit event (best effort - don't fail if logging fails)
+            try {
+                const { data: { user } } = await supabase.auth.getUser()
+                await logSportEvent(
+                    'SPORT_UNLINKED',
+                    context.orgId,
+                    sportId,
+                    user?.id,
+                    'org_admin',
+                    {
+                        sport_id: sportId,
+                    }
+                )
+            } catch (logError) {
+                console.error('[sportsService] Failed to log SPORT_UNLINKED event:', logError)
+                // Continue - audit logging failure shouldn't break the operation
+            }
+
             return { error: null }
         }
 
@@ -313,11 +560,311 @@ export async function deleteSport(
             .eq('id', sportId)
             .eq('org_id', context.orgId)
 
-        if (error) throw error
+        if (error) {
+            // Check for network errors
+            if (error.message?.includes('network') || error.message?.includes('fetch') || error.message?.includes('timeout')) {
+                return { error: new Error('Network error. Please check your internet connection and try again.') }
+            }
+            // Check for RLS/permission errors
+            if (error.message?.includes('row-level security') || error.message?.includes('RLS') || error.code === '42501') {
+                return { error: new Error('Permission denied. You do not have permission to delete this sport.') }
+            }
+            // Check for foreign key violations
+            if (error.code === '23503' || error.message?.includes('foreign key')) {
+                return { error: new Error('Cannot delete sport: It is currently in use by programs, teams, or other entities.') }
+            }
+            console.error('[sportsService] Error deleting sport:', error)
+            return { error: new Error(`Failed to delete sport: ${error.message || 'Unknown error'}`) }
+        }
         return { error: null }
     } catch (err) {
         console.error('[sportsService] Error deleting sport:', err)
-        return { error: err instanceof Error ? err : new Error('Unknown error') }
+        // Handle network errors in catch block
+        if (err instanceof Error) {
+            if (err.message?.includes('network') || err.message?.includes('fetch') || err.message?.includes('timeout')) {
+                return { error: new Error('Network error. Please check your internet connection and try again.') }
+            }
+            return { error: err }
+        }
+        return { error: new Error('An unexpected error occurred. Please try again.') }
+    }
+}
+
+// ============================================================================
+// Sport Icon Upload and Customization
+// ============================================================================
+
+/**
+ * Upload sport icon to storage
+ * Path: sports/{org_id}/{sport_id}/icon.{ext}
+ */
+export async function uploadSportIcon(
+    context: UserContext,
+    sportId: string,
+    file: File
+): Promise<{ path: string | null; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+        return {
+            path: null,
+            error: new Error('Icon upload is not available in demo mode')
+        }
+    }
+
+    try {
+        if (!context.orgId) {
+            return { path: null, error: new Error('Organization ID is required') }
+        }
+
+        if (!sportId) {
+            return { path: null, error: new Error('Sport ID is required') }
+        }
+
+        // Validate file type
+        const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/svg+xml']
+        if (!allowedTypes.includes(file.type)) {
+            return { path: null, error: new Error('Invalid file type. Please upload a PNG, JPEG, WebP, or SVG image.') }
+        }
+
+        // Validate file size (max 5MB)
+        const maxSize = 5 * 1024 * 1024 // 5MB
+        if (file.size > maxSize) {
+            return { path: null, error: new Error('File size exceeds 5MB limit. Please upload a smaller image.') }
+        }
+
+        const fileExt = file.name.split('.').pop() || 'png'
+        const filePath = `sports/${context.orgId}/${sportId}/icon.${fileExt}`
+
+        const { error: uploadError } = await supabase.storage
+            .from('organization-assets')
+            .upload(filePath, file, { upsert: true })
+
+        if (uploadError) {
+            // Check for network errors
+            if (uploadError.message?.includes('network') || uploadError.message?.includes('fetch') || uploadError.message?.includes('timeout')) {
+                return { path: null, error: new Error('Network error. Please check your internet connection and try again.') }
+            }
+            // Check for RLS/permission errors
+            if (uploadError.message?.includes('row-level security') || uploadError.message?.includes('RLS') || uploadError.message?.includes('permission')) {
+                return { path: null, error: new Error('Permission denied. You do not have permission to upload sport icons.') }
+            }
+            throw uploadError
+        }
+
+        // Update or create customization record
+        const { error: updateError } = await supabase
+            .from('organization_sport_customizations' as any)
+            .upsert({
+                org_id: context.orgId,
+                sport_id: sportId,
+                icon_path: filePath,
+            }, {
+                onConflict: 'org_id,sport_id'
+            })
+
+        if (updateError) {
+            console.error('[sportsService] Error updating customization:', updateError)
+            // Don't fail - the file was uploaded, we can update the customization later
+        }
+
+        // Log audit event
+        try {
+            const { data: { user } } = await supabase.auth.getUser()
+            await logSportEvent(
+                'SPORT_ICON_UPLOADED',
+                context.orgId,
+                sportId,
+                user?.id,
+                'org_admin',
+                {
+                    icon_path: filePath,
+                    file_size: file.size,
+                    file_type: file.type,
+                }
+            )
+        } catch (logError) {
+            console.error('[sportsService] Failed to log SPORT_ICON_UPLOADED event:', logError)
+        }
+
+        return { path: filePath, error: null }
+    } catch (err) {
+        console.error('[sportsService] Error uploading sport icon:', err)
+        return { path: null, error: err instanceof Error ? err : new Error('Unknown error uploading icon') }
+    }
+}
+
+/**
+ * Get public URL for sport icon
+ */
+export function getSportIconUrl(iconPath: string | null): string | null {
+    if (!iconPath) return null
+    
+    const { data } = supabase.storage
+        .from('organization-assets')
+        .getPublicUrl(iconPath)
+    
+    return data.publicUrl
+}
+
+/**
+ * Delete sport icon
+ */
+export async function deleteSportIcon(
+    context: UserContext,
+    sportId: string
+): Promise<{ error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+        return { error: new Error('Icon deletion is not available in demo mode') }
+    }
+
+    try {
+        if (!context.orgId) {
+            return { error: new Error('Organization ID is required') }
+        }
+
+        // Get customization to find icon path
+        const { data: customization, error: fetchError } = await supabase
+            .from('organization_sport_customizations' as any)
+            .select('icon_path')
+            .eq('org_id', context.orgId)
+            .eq('sport_id', sportId)
+            .maybeSingle()
+
+        if (fetchError) {
+            console.error('[sportsService] Error fetching customization:', fetchError)
+        }
+
+        // Delete file from storage if it exists
+        type CustomizationRow = { icon_path: string | null }
+        const customizationRow = customization && !('error' in customization) 
+            ? (customization as unknown as CustomizationRow)
+            : null
+        if (customizationRow?.icon_path) {
+            const { error: deleteError } = await supabase.storage
+                .from('organization-assets')
+                .remove([customizationRow.icon_path])
+
+            if (deleteError) {
+                console.error('[sportsService] Error deleting icon file:', deleteError)
+                // Continue - try to update customization anyway
+            }
+        }
+
+        // Remove icon_path from customization (keep color if exists)
+        const { error: updateError } = await supabase
+            .from('organization_sport_customizations' as any)
+            .update({ icon_path: null } as any)
+            .eq('org_id', context.orgId)
+            .eq('sport_id', sportId)
+
+        if (updateError) {
+            // If no customization exists, that's fine - nothing to delete
+            if (updateError.code !== 'PGRST116') {
+                throw updateError
+            }
+        }
+
+        // Log audit event
+        try {
+            const { data: { user } } = await supabase.auth.getUser()
+            await logSportEvent(
+                'SPORT_ICON_DELETED',
+                context.orgId,
+                sportId,
+                user?.id,
+                'org_admin',
+                {}
+            )
+        } catch (logError) {
+            console.error('[sportsService] Failed to log SPORT_ICON_DELETED event:', logError)
+        }
+
+        return { error: null }
+    } catch (err) {
+        console.error('[sportsService] Error deleting sport icon:', err)
+        return { error: err instanceof Error ? err : new Error('Unknown error deleting icon') }
+    }
+}
+
+/**
+ * Update sport customization (icon and/or color)
+ */
+export async function updateSportCustomization(
+    context: UserContext,
+    sportId: string,
+    updates: { icon_path?: string | null; color?: string | null }
+): Promise<{ error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+        return { error: new Error('Customization updates are not available in demo mode') }
+    }
+
+    try {
+        if (!context.orgId) {
+            return { error: new Error('Organization ID is required') }
+        }
+
+        // Validate color format if provided
+        if (updates.color && !/^#[0-9A-Fa-f]{6}$/.test(updates.color)) {
+            return { error: new Error('Invalid color format. Please use hex format (e.g., #137fec)') }
+        }
+
+        const updateData: any = {}
+        if (updates.icon_path !== undefined) updateData.icon_path = updates.icon_path
+        if (updates.color !== undefined) updateData.color = updates.color
+
+        // Upsert customization
+        const { error: upsertError } = await supabase
+            .from('organization_sport_customizations' as any)
+            .upsert({
+                org_id: context.orgId,
+                sport_id: sportId,
+                ...updateData,
+            }, {
+                onConflict: 'org_id,sport_id'
+            })
+
+        if (upsertError) {
+            // Check for network errors
+            if (upsertError.message?.includes('network') || upsertError.message?.includes('fetch') || upsertError.message?.includes('timeout')) {
+                return { error: new Error('Network error. Please check your internet connection and try again.') }
+            }
+            // Check for RLS/permission errors
+            if (upsertError.message?.includes('row-level security') || upsertError.message?.includes('RLS') || upsertError.code === '42501') {
+                return { error: new Error('Permission denied. You do not have permission to customize sports.') }
+            }
+            throw upsertError
+        }
+
+        // Log audit event
+        try {
+            const { data: { user } } = await supabase.auth.getUser()
+            const eventType = updates.icon_path !== undefined && updates.color !== undefined
+                ? 'SPORT_CUSTOMIZED'
+                : updates.icon_path !== undefined
+                ? 'SPORT_ICON_UPLOADED'
+                : 'SPORT_CUSTOMIZATION_UPDATED'
+            
+            await logSportEvent(
+                eventType,
+                context.orgId,
+                sportId,
+                user?.id,
+                'org_admin',
+                {
+                    icon_path: updates.icon_path,
+                    color: updates.color,
+                }
+            )
+        } catch (logError) {
+            console.error('[sportsService] Failed to log customization event:', logError)
+        }
+
+        return { error: null }
+    } catch (err) {
+        console.error('[sportsService] Error updating sport customization:', err)
+        return { error: err instanceof Error ? err : new Error('Unknown error updating customization') }
     }
 }
 

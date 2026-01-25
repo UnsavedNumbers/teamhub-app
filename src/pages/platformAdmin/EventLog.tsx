@@ -320,7 +320,7 @@ export default function EventLog() {
           searchPlaceholder="Search by actor email or name..."
           statusOptions={categoryOptions}
           statusValue={categoryFilter as string}
-          onStatusChange={(value) => { setCategoryFilter(value as EventCategory); setPage(0) }}
+          onStatusChange={(value) => { setCategoryFilter(value as Database["public"]["Enums"]["event_category"] | null); setPage(0) }}
           statusLabel="Category"
           showDateRange
           dateFrom={dateFrom}

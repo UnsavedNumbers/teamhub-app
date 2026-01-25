@@ -443,9 +443,12 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {isMobile && (
           <button
             className="gn-util-btn gn-mobile-toggle"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            onClick={() => {
+              setMobileMenuOpen(prev => !prev)
+            }}
             aria-expanded={mobileMenuOpen}
             aria-label="Toggle navigation menu"
+            type="button"
           >
             <span className="material-symbols-outlined">
               {mobileMenuOpen ? 'close' : 'menu'}

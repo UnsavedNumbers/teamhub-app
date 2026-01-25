@@ -157,9 +157,12 @@ export default function AdminLayout() {
       {isMobile && (
         <button
           className="pa-mobile-sidebar-toggle"
-          onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+          onClick={() => {
+            setMobileSidebarOpen(prev => !prev)
+          }}
           aria-expanded={mobileSidebarOpen}
           aria-label="Toggle sidebar"
+          type="button"
         >
           <span className="material-symbols-outlined">
             {mobileSidebarOpen ? 'close' : 'menu'}
