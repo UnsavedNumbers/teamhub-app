@@ -9,7 +9,7 @@ import { getSports, getPrograms } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
 import { getTeams } from '../../data/services/teamsService'
 import { getSeasons } from '../../data/services/seasonsService'
-import { getChildren } from '../../data/services/familyService'
+import { getAthletes } from '../../data/services/familyService'
 import type { Sport, Program, Level, Team, Season } from '../../data/types/organization'
 import type { Child } from '../../types/family'
 
@@ -41,7 +41,7 @@ export default function OrganizationStructureNew() {
           getLevels(context),
           getTeams(context),
           getSeasons(context),
-          getChildren(context),
+          getAthletes(context),
         ])
 
       if (sportsResult.error || programsResult.error || levelsResult.error || teamsResult.error || seasonsResult.error || childrenResult.error) {

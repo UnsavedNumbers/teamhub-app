@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
-import { getEventDetails, updateRSVP, getChildren } from '../data/services'
+import { getEventDetails, updateRSVP, getAthletes } from '../data/services'
 import type { RSVPStatus } from '../types/calendar'
 import { getSportFromEvent, type SportInfo } from '../utils/sportContext'
 import PortalLayout from '../components/portal/PortalLayout'
@@ -82,7 +82,7 @@ export default function EventDetail() {
     })
 
     // Fetch children
-    const { data: childData } = await getChildren(context)
+    const { data: childData } = await getAthletes(context)
     setChildren(childData.map(c => ({
       id: c.id,
       first_name: c.first_name,

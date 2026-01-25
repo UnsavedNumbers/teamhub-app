@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { AdminPageHeader, Card, Input, Button, Select, DatePicker, ErrorState } from '../../components/platformAdmin'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { useUserContext } from '../../hooks/useUserContext'
-import { createChild, getFamilyDetails } from '../../data/services/familyService'
+import { createAthleteBasic, getFamilyDetails } from '../../data/services/familyService'
 import { useT } from '../../i18n/useI18n'
 import type { Gender } from '../../types/family'
 
@@ -55,7 +55,7 @@ export default function CreateChild() {
     setError(null)
 
     try {
-      const { error: createError } = await createChild(context, {
+      const { error: createError } = await createAthleteBasic(context, {
         family_id: familyId,
         first_name: formData.first_name,
         last_name: formData.last_name,

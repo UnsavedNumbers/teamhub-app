@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { getTeamByInviteCode, getTeamDetails, createTeamMembership } from '../data/services/teamsService'
-import { getChildren } from '../data/services/familyService'
+import { getAthletes } from '../data/services/familyService'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
@@ -47,7 +47,7 @@ export default function JoinTeam() {
   const fetchChildren = useCallback(async () => {
     if (!isReady) return
     
-    const { data } = await getChildren(context)
+    const { data } = await getAthletes(context)
     setChildren(data.map(c => ({
       id: c.id,
       first_name: c.first_name,

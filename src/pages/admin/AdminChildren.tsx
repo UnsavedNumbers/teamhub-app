@@ -4,7 +4,7 @@ import { AdminPageHeader, PlatformDataTable, Button } from '../../components/pla
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
 import { useUserContext } from '../../hooks/useUserContext'
-import { getChildren } from '../../data/services/familyService'
+import { getAthletes } from '../../data/services/familyService'
 import { useT } from '../../i18n/useI18n'
 import type { Child } from '../../types/family'
 
@@ -20,7 +20,7 @@ export default function AdminChildren() {
     if (!isReady) return
 
     async function fetch() {
-      const { data, error } = await getChildren(context)
+      const { data, error } = await getAthletes(context)
       if (error) setError(error)
       else setChildren(data)
       setLoading(false)
