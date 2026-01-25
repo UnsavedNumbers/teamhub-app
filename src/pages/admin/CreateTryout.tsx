@@ -13,7 +13,9 @@ import {
   Card,
   Button,
   Input,
-  Select
+  Select,
+  DatePicker,
+  TimePicker
 } from '../../components/platformAdmin'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
 
@@ -220,29 +222,55 @@ export default function CreateTryout() {
             </div>
 
             {/* SECTION 4: DATES AND TIMES */}
-            <div className="pa-grid pa-grid-2 pa-mb-4 pa-gap-4">
-              <Controller
-                name="start_at"
-                control={control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    label="Start Date & Time"
-                    type="datetime-local"
+            <div className="pa-mb-4">
+              <div className="pa-form-grid pa-form-grid-3 pa-form-grid-tablet-2col">
+                <Controller
+                  name="start_at"
+                  control={control}
+                  render={({ field }) => (
+                    <DatePicker
+                      label="Tryout Date"
+                      value={field.value ? field.value.split('T')[0] : ''}
+                      onChange={(date) => {
+                        const time = field.value?.split('T')[1] || '09:00'
+                        field.onChange(`${date}T${time}`)
+                      }}
+                    />
+                  )}
+                />
+                <div className="pa-max-w-xs">
+                  <Controller
+                    name="start_at"
+                    control={control}
+                    render={({ field }) => (
+                      <TimePicker
+                        label="Start Time"
+                        value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                        onChange={(time) => {
+                          const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
+                          field.onChange(`${date}T${time}`)
+                        }}
+                      />
+                    )}
                   />
-                )}
-              />
-              <Controller
-                name="registration_deadline_at"
-                control={control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    label="Registration Deadline"
-                    type="datetime-local"
+                </div>
+                <div className="pa-max-w-xs">
+                  <Controller
+                    name="registration_deadline_at"
+                    control={control}
+                    render={({ field }) => (
+                      <TimePicker
+                        label="Registration Deadline"
+                        value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                        onChange={(time) => {
+                          const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
+                          field.onChange(time ? `${date}T${time}` : '')
+                        }}
+                      />
+                    )}
                   />
-                )}
-              />
+                </div>
+              </div>
             </div>
 
             {/* SECTION 5: CAPACITY */}

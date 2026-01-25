@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 
@@ -15,6 +15,7 @@ import {
   Input, 
   Select,
   DatePicker,
+  TimePicker,
   Checkbox
 } from '../../components/platformAdmin'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
@@ -24,6 +25,8 @@ import {
     EVENT_TYPE_LABELS, 
     EventType,
 } from '../../types/calendar'
+
+const STORAGE_KEY = 'createEvent_formData'
 
 interface Team { id: string; name: string }
 interface Season { id: string; name: string; team_id: string; is_active?: boolean }
@@ -37,55 +40,155 @@ export default function CreateEvent() {
   const [showLocationDetails, setShowLocationDetails] = useState(false)
   const [showRecurring, setShowRecurring] = useState(false)
 
-
   const t = useT()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
+  const hasRestoredRef = useRef(false)
 
-  const { control, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm<EventFormData>({
-    defaultValues: { 
-      title: '', 
-      type: 'practice', 
-      team_id: '', 
-      season_id: '', 
-      start_time: '', 
-      end_time: '', 
-      arrival_time: '', 
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      notes: '',
-      uniform_notes: '',
-      equipment_notes: '',
-      weather_dependent: false,
-      external_link: '',
-      location: {
-         venue_name: '',
-         address_line1: '',
-         address_line2: '',
-         city: '',
-         state: '',
-         postal_code: '',
-         place_id: '',
-         latitude: '',
-         longitude: '',
-         is_tbd: false,
-         is_virtual: false,
-         virtual_link: ''
-      },
-      recurring: {
-        enabled: false,
-        frequency: 'weekly',
-        days_of_week: [],
-        end_date: '',
-        max_occurrences: ''
-      },
-      rsvp_enabled: false,
-      rsvp_type: null
+  // Default form values
+  const getDefaultValues = (): EventFormData => ({ 
+    title: '', 
+    type: 'practice', 
+    team_id: '', 
+    season_id: '', 
+    start_time: '', 
+    end_time: '', 
+    arrival_time: '', 
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    notes: '',
+    uniform_notes: '',
+    equipment_notes: '',
+    weather_dependent: false,
+    external_link: '',
+    location: {
+       venue_name: '',
+       address_line1: '',
+       address_line2: '',
+       city: '',
+       state: '',
+       postal_code: '',
+       place_id: '',
+       latitude: '',
+       longitude: '',
+       is_tbd: false,
+       is_virtual: false,
+       virtual_link: ''
     },
+    recurring: {
+      enabled: false,
+      frequency: 'weekly',
+      days_of_week: [],
+      end_date: '',
+      max_occurrences: ''
+    },
+    rsvp_enabled: false,
+    rsvp_type: null
   })
 
-  const watchTeamId = watch('team_id')
+  // Get initial values from sessionStorage (computed once during render)
+  const initialValues: EventFormData = (() => {
+    try {
+      const saved = sessionStorage.getItem(STORAGE_KEY)
+      if (saved) {
+        const savedData = JSON.parse(saved) as any
+        // Remove UI state from saved data (we'll restore it in useEffect)
+        const { _uiState, ...formData } = savedData
+        // Merge saved data with defaults
+        return { ...getDefaultValues(), ...formData }
+      }
+    } catch (err) {
+      console.error('Failed to restore form data:', err)
+      try {
+        sessionStorage.removeItem(STORAGE_KEY)
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+    return getDefaultValues()
+  })()
 
+  const { control, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm<EventFormData>({
+    defaultValues: initialValues,
+  })
+
+  // Restore UI state after form initialization
+  useEffect(() => {
+    if (hasRestoredRef.current) return
+    hasRestoredRef.current = true
+    
+    try {
+      const saved = sessionStorage.getItem(STORAGE_KEY)
+      if (saved) {
+        const savedData = JSON.parse(saved) as any
+        if (savedData._uiState) {
+          if (savedData._uiState.showLocationDetails) {
+            setShowLocationDetails(true)
+          }
+          if (savedData._uiState.showRecurring) {
+            setShowRecurring(true)
+          }
+        }
+      }
+    } catch (err) {
+      // Ignore errors
+    }
+  }, [])
+
+  const watchTeamId = watch('team_id')
   const watchRSVPEnabled = watch('rsvp_enabled')
+  
+  // Watch all form values for persistence
+  const formValues = watch()
+
+  // Save form data to sessionStorage whenever it changes
+  useEffect(() => {
+    // Skip saving until we've restored initial state
+    if (!hasRestoredRef.current) return
+    
+    try {
+      // Only save if form has actual data (not just defaults)
+      const hasData = formValues.title || formValues.team_id || formValues.start_time
+      if (!hasData) return
+      
+      const dataToSave = {
+        ...formValues,
+        // Also save UI state
+        _uiState: {
+          showLocationDetails,
+          showRecurring
+        }
+      }
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave))
+    } catch (err) {
+      console.error('Failed to save form data:', err)
+    }
+  }, [formValues, showLocationDetails, showRecurring])
+
+  // Save form data when page visibility changes (user switches tabs)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Save when user switches away
+        try {
+          const dataToSave = {
+            ...formValues,
+            _uiState: {
+              showLocationDetails,
+              showRecurring
+            }
+          }
+          sessionStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave))
+        } catch (err) {
+          console.error('Failed to save form data on visibility change:', err)
+        }
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [formValues, showLocationDetails, showRecurring])
 
   const fetchTeams = useCallback(async () => {
     if (!isReady) return
@@ -100,14 +203,30 @@ export default function CreateEvent() {
     
     if (!error && data) {
       setTeams(data)
+      
+      // After teams are loaded, if we have a restored team_id, ensure it's valid
+      // Use a small delay to ensure form is initialized
+      setTimeout(() => {
+        const currentTeamId = watch('team_id')
+        if (currentTeamId) {
+          const teamExists = data.some(t => t.id === currentTeamId)
+          if (!teamExists) {
+            // Restored team doesn't exist, clear it
+            setValue('team_id', '', { shouldValidate: false })
+          } else {
+            // Team exists, trigger validation to clear any false errors
+            trigger('team_id')
+          }
+        }
+      }, 100)
     } else if (error) {
        console.error(error)
     }
     setLoading(false)
-  }, [context, isReady])
+  }, [context, isReady, watch, setValue, trigger])
 
-  const fetchSeasons = useCallback(async (teamId: string) => {
-    if (!isReady) return
+  const fetchSeasons = useCallback(async (teamId: string, restoreSeasonId?: string) => {
+    if (!isReady || !teamId) return
     
     const { data, error } = await supabase
         .from('team_seasons_view')
@@ -125,13 +244,34 @@ export default function CreateEvent() {
           is_active: s.is_active ?? false
         }))
       setSeasons(mappedSeasons)
-      // Auto-select the active season if it exists, otherwise select the first one
+      
+      // If we have a restored season_id, try to use it if it's valid
+      if (restoreSeasonId) {
+        const restoredSeason = mappedSeasons.find(s => s.id === restoreSeasonId)
+        if (restoredSeason) {
+          setValue('season_id', restoredSeason.id, { shouldValidate: false })
+          // Trigger validation after a small delay to clear any false errors
+          setTimeout(() => trigger('season_id'), 100)
+          return
+        }
+      }
+      
+      // Otherwise, auto-select the active season if it exists, otherwise select the first one
       const activeSeason = mappedSeasons.find(s => s.is_active)
       if (activeSeason) {
-        setValue('season_id', activeSeason.id)
+        setValue('season_id', activeSeason.id, { shouldValidate: false })
+        setTimeout(() => trigger('season_id'), 100)
       } else if (mappedSeasons.length > 0) {
-        setValue('season_id', mappedSeasons[0].id)
+        setValue('season_id', mappedSeasons[0].id, { shouldValidate: false })
+        setTimeout(() => trigger('season_id'), 100)
+      } else {
+        // No seasons available, clear the selection
+        setValue('season_id', '', { shouldValidate: false })
       }
+    } else {
+      // No seasons found or error, clear the selection
+      setSeasons([])
+      setValue('season_id', '', { shouldValidate: false })
     }
   }, [context, isReady, setValue])
 
@@ -140,8 +280,16 @@ export default function CreateEvent() {
   }, [isReady, fetchTeams])
 
   useEffect(() => { 
-    if (watchTeamId && isReady) fetchSeasons(watchTeamId) 
-  }, [watchTeamId, isReady, fetchSeasons])
+    if (watchTeamId && isReady) {
+      // Check if we have a season_id that needs to be restored
+      const currentSeasonId = watch('season_id')
+      fetchSeasons(watchTeamId, currentSeasonId || undefined)
+    } else if (!watchTeamId) {
+      // Team cleared, clear seasons
+      setSeasons([])
+      setValue('season_id', '', { shouldValidate: false })
+    }
+  }, [watchTeamId, isReady, fetchSeasons, watch, setValue])
 
   const onSubmit = async (data: EventFormData) => {
     setSaving(true)
@@ -208,6 +356,13 @@ export default function CreateEvent() {
            if (recurError) throw recurError
       }
 
+      // Clear saved form data on successful submission
+      try {
+        sessionStorage.removeItem(STORAGE_KEY)
+      } catch (err) {
+        console.error('Failed to clear saved form data:', err)
+      }
+
       navigate('/admin/events')
     } catch (err: unknown) { 
       setError(getErrorMessage(err) || 'Failed to create event') 
@@ -248,10 +403,46 @@ export default function CreateEvent() {
                 <Controller name="type" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label="Event Type" options={eventTypeOptions} />} />
               </div>
               <div className="pa-select-wrapper">
-                <Controller name="team_id" control={control} rules={{ required: 'Team is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label="Team" options={teams.map(t => ({value:t.id, label:t.name}))} required error={errors.team_id?.message || undefined} />} />
+                <Controller 
+                  name="team_id" 
+                  control={control} 
+                  rules={{ required: 'Team is required' }} 
+                  render={({ field }) => (
+                    <Select 
+                      {...field} 
+                      value={field.value || ''} 
+                      label="Team" 
+                      options={teams.map(t => ({value:t.id, label:t.name}))} 
+                      required 
+                      error={errors.team_id?.message || undefined}
+                      onChange={(value) => {
+                        field.onChange(value)
+                        // Clear season when team changes
+                        if (value !== field.value) {
+                          setValue('season_id', '', { shouldValidate: false })
+                        }
+                      }}
+                    />
+                  )} 
+                />
               </div>
               <div className="pa-select-wrapper">
-                <Controller name="season_id" control={control} rules={{ required: 'Season is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label="Season" options={seasons.map(s => ({value:s.id, label:s.name}))} required disabled={!watchTeamId} />} />
+                <Controller 
+                  name="season_id" 
+                  control={control} 
+                  rules={{ required: 'Season is required' }} 
+                  render={({ field }) => (
+                    <Select 
+                      {...field} 
+                      value={field.value || ''} 
+                      label="Season" 
+                      options={seasons.map(s => ({value:s.id, label:s.name}))} 
+                      required 
+                      disabled={!watchTeamId || loading}
+                      error={errors.season_id?.message || undefined}
+                    />
+                  )} 
+                />
               </div>
             </div>
 
@@ -281,13 +472,12 @@ export default function CreateEvent() {
                     name="start_time" 
                     control={control} 
                     render={({ field }) => (
-                      <Input 
+                      <TimePicker 
                         label="Start Time" 
-                        type="time"
                         value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
-                        onChange={(e) => {
+                        onChange={(time) => {
                           const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
-                          field.onChange(`${date}T${e.target.value}`)
+                          field.onChange(`${date}T${time}`)
                         }}
                         required
                       />
@@ -299,13 +489,12 @@ export default function CreateEvent() {
                     name="end_time" 
                     control={control} 
                     render={({ field }) => (
-                      <Input 
+                      <TimePicker 
                         label="End Time" 
-                        type="time"
                         value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
-                        onChange={(e) => {
+                        onChange={(time) => {
                           const startDate = watch('start_time')?.split('T')[0] || new Date().toISOString().split('T')[0]
-                          field.onChange(e.target.value ? `${startDate}T${e.target.value}` : '')
+                          field.onChange(time ? `${startDate}T${time}` : '')
                         }}
                       />
                     )} 
@@ -316,13 +505,12 @@ export default function CreateEvent() {
                     name="arrival_time" 
                     control={control} 
                     render={({ field }) => (
-                      <Input 
+                      <TimePicker 
                         label="Arrival Time" 
-                        type="time"
                         value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
-                        onChange={(e) => {
+                        onChange={(time) => {
                           const startDate = watch('start_time')?.split('T')[0] || new Date().toISOString().split('T')[0]
-                          field.onChange(e.target.value ? `${startDate}T${e.target.value}` : '')
+                          field.onChange(time ? `${startDate}T${time}` : '')
                         }}
                       />
                     )} 
@@ -474,7 +662,20 @@ export default function CreateEvent() {
           {/* SECTION 6: ACTIONS */}
           {/* Mobile: Full-width stacked | Tablet: Full-width or right-aligned | Desktop: Right-aligned */}
           <div className="pa-form-actions">
-            <Button variant="blue" onClick={() => navigate(-1)}>Cancel</Button>
+            <Button 
+              variant="blue" 
+              onClick={() => {
+                // Clear saved form data when canceling
+                try {
+                  sessionStorage.removeItem(STORAGE_KEY)
+                } catch (err) {
+                  console.error('Failed to clear saved form data:', err)
+                }
+                navigate(-1)
+              }}
+            >
+              Cancel
+            </Button>
             <Button type="submit" loading={saving} className="pa-form-submit-btn">Create Event</Button>
           </div>
         </form>

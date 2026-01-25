@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
-import { PageHeader, Card, Button, Input, Select, Checkbox } from '../../components/platformAdmin'
+import { PageHeader, Card, Button, Input, Select, Checkbox, DatePicker, TimePicker } from '../../components/platformAdmin'
 import Badge from '../../components/platformAdmin/Badge'
 import { EntitySelect } from '../../components/common/EntitySelect'
 import { mapFeatureEntitlement } from '../../utils/domainMappers'
@@ -636,11 +636,24 @@ export default function OverrideCreate() {
 
             <div className="pa-form-group">
               <label className="pa-label">Expiration Date (Optional)</label>
-              <Input
-                type="datetime-local"
-                value={expiresAt}
-                onChange={(e) => setExpiresAt(e.target.value)}
-              />
+              <div className="pa-form-grid pa-form-grid-2 pa-form-grid-tablet-2col">
+                <DatePicker
+                  value={expiresAt ? expiresAt.split('T')[0] : ''}
+                  onChange={(date) => {
+                    const time = expiresAt?.split('T')[1] || '23:59'
+                    setExpiresAt(date ? `${date}T${time}` : '')
+                  }}
+                />
+                <div className="pa-max-w-xs">
+                  <TimePicker
+                    value={expiresAt ? expiresAt.split('T')[1]?.substring(0, 5) || '' : ''}
+                    onChange={(time) => {
+                      const date = expiresAt?.split('T')[0] || new Date().toISOString().split('T')[0]
+                      setExpiresAt(time ? `${date}T${time}` : '')
+                    }}
+                  />
+                </div>
+              </div>
             </div>
 
             <div style={{ marginTop: 'var(--pa-space-5)', display: 'flex', gap: 'var(--pa-space-3)' }}>

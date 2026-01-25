@@ -1543,6 +1543,95 @@ html.dark .pa-datepicker-cell[data-unavailable] {
     color: #6b7280;
 }
 
+/* TimePicker - React Aria Components */
+.pa-timepicker-group {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+    width: 100%;
+    height: 44px;
+    
+    @media (max-width: 768px) {
+        height: 48px;
+    }
+    
+    border: 1px solid var(--pa-n200);
+    border-radius: var(--pa-radius-s);
+    background: var(--pa-surface);
+    padding: 0 var(--pa-space-3);
+    transition: all var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.pa-timepicker-group:hover {
+    border-color: var(--pa-n300);
+}
+
+.pa-timepicker-group:focus-within {
+    border-color: var(--pa-n700);
+    outline: 2px solid rgba(43, 52, 61, 0.25);
+    box-shadow: var(--pa-shadow-1);
+}
+
+.pa-timepicker-group--error {
+    border-color: var(--pa-n800);
+}
+
+.pa-timepicker-group--error:focus-within {
+    outline-color: rgba(11, 15, 20, 0.25);
+}
+
+html.dark .pa-timepicker-group {
+    background: var(--pa-surface);
+    border-color: #374151;
+}
+
+html.dark .pa-timepicker-group:hover {
+    border-color: #4b5563;
+}
+
+html.dark .pa-timepicker-group:focus-within {
+    border-color: #6b7280;
+    outline: 2px solid rgba(107, 114, 128, 0.25);
+}
+
+.pa-timepicker-segment {
+    padding: 4px 8px;
+    font: var(--pa-text-body-m);
+    color: var(--pa-n900);
+    border-radius: var(--pa-radius-xs);
+    outline: none;
+    min-width: 32px;
+    text-align: center;
+    transition: all var(--pa-motion-fast) var(--pa-ease-out);
+}
+
+html.dark .pa-timepicker-segment {
+    color: #f9fafb;
+}
+
+.pa-timepicker-segment:focus {
+    background: var(--pa-primary-500);
+    color: var(--pa-white);
+}
+
+html.dark .pa-timepicker-segment:focus {
+    background: #3b82f6;
+    color: #ffffff;
+}
+
+.pa-timepicker-segment[data-placeholder] {
+    color: var(--pa-n500);
+}
+
+html.dark .pa-timepicker-segment[data-placeholder] {
+    color: #9ca3af;
+}
+
+.pa-timepicker-segment[data-type="literal"] {
+    padding: 4px 2px;
+    min-width: auto;
+}
+
 /* Checkbox */
 .pa-checkbox {
     display: flex;
