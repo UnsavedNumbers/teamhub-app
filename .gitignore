@@ -140,3 +140,4 @@ docs
 # Logs
 logs
 *.log
+dist/index.html

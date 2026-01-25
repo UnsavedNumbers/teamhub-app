@@ -63,6 +63,7 @@ const PlatformPayments = lazy(() => import('./pages/platformAdmin/PlatformPaymen
 const PlatformFees = lazy(() => import('./pages/platformAdmin/Fees'))
 const PlatformEventLog = lazy(() => import('./pages/platformAdmin/EventLog'))
 const PlatformFeatureFlags = lazy(() => import('./pages/platformAdmin/FeatureFlags'))
+const PlatformFeatureFlagDetail = lazy(() => import('./pages/platformAdmin/FeatureFlagDetail'))
 const PlatformAdmins = lazy(() => import('./pages/platformAdmin/PlatformAdmins'))
 const LicensesOverview = lazy(() => import('./pages/platformAdmin/LicensesOverview'))
 const LicenseTiers = lazy(() => import('./pages/platformAdmin/LicenseTiers'))
@@ -79,7 +80,9 @@ const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
 const CreateUser = lazy(() => import('./pages/admin/CreateUser'))
 const OrganizationStructureOverview = lazy(() => import('./pages/admin/OrganizationStructureNew'))
 const Sports = lazy(() => import('./pages/admin/Sports'))
+const SportDetail = lazy(() => import('./pages/admin/SportDetail'))
 const Programs = lazy(() => import('./pages/admin/Programs'))
+const ProgramDetail = lazy(() => import('./pages/admin/ProgramDetail'))
 const LevelsManagement = lazy(() => import('./pages/admin/LevelsManagement'))
 const TeamsManagement = lazy(() => import('./pages/admin/TeamsManagement'))
 const SeasonsManagement = lazy(() => import('./pages/admin/SeasonsManagement'))
@@ -89,6 +92,7 @@ const TeamDetail = lazy(() => import('./pages/admin/TeamDetail'))
 const Roster = lazy(() => import('./pages/admin/Roster'))
 const Events = lazy(() => import('./pages/admin/Events'))
 const CreateEvent = lazy(() => import('./pages/admin/CreateEvent'))
+const EditEvent = lazy(() => import('./pages/admin/EditEvent'))
 const AttendanceRoster = lazy(() => import('./pages/admin/AttendanceRoster'))
 const AdminAttendance = lazy(() => import('./pages/admin/AdminAttendance'))
 const Payments = lazy(() => import('./pages/admin/Payments'))
@@ -285,9 +289,11 @@ function AppWithTheme() {
               <Route index element={<AdminDashboard />} />
             
               {/* Organizational Structure */}
-              <Route path="organization" element={<OrganizationStructureOverview />} />
+              <Route path="organization/structure" element={<OrganizationStructureOverview />} />
               <Route path="organization/sports" element={<Sports />} />
+              <Route path="organization/sports/:id" element={<SportDetail />} />
               <Route path="organization/programs" element={<Programs />} />
+              <Route path="organization/programs/:id" element={<ProgramDetail />} />
               <Route path="organization/levels" element={<LevelsManagement />} />
               <Route path="organization/teams" element={<TeamsManagement />} />
               <Route path="organization/seasons" element={<SeasonsManagement />} />
@@ -315,6 +321,7 @@ function AppWithTheme() {
               {/* Events */}
               <Route path="events" element={<Events />} />
               <Route path="events/new" element={<CreateEvent />} />
+              <Route path="events/:id/edit" element={<EditEvent />} />
               <Route path="events/:id/attendance" element={<AttendanceRoster />} />
 
               {/* Attendance */}
@@ -399,6 +406,7 @@ function AppWithTheme() {
               
               {/* Feature Flags */}
               <Route path="feature-flags" element={<PlatformFeatureFlags />} />
+              <Route path="feature-flags/:id" element={<PlatformFeatureFlagDetail />} />
               
               {/* Platform Admins */}
               <Route path="admins" element={<PlatformAdmins />} />

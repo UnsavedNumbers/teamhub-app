@@ -217,9 +217,23 @@ const admin = {
             icon: 'sports',
             requiresOrg: true,
         },
+        sportDetail: {
+            path: '/admin/organization/sports/:id',
+            params: ['id'] as const,
+            label: 'Sport Details',
+            icon: 'sports',
+            requiresOrg: true,
+        },
         programs: {
             path: '/admin/organization/programs',
             label: 'Programs',
+            icon: 'category',
+            requiresOrg: true,
+        },
+        programDetail: {
+            path: '/admin/organization/programs/:id',
+            params: ['id'] as const,
+            label: 'Program Details',
             icon: 'category',
             requiresOrg: true,
         },
