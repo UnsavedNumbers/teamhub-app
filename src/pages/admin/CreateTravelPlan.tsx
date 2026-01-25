@@ -12,6 +12,7 @@ import {
   Input, 
   Select 
 } from '../../components/platformAdmin'
+import { FileUpload } from '../../components/common/FileUpload'
 
 interface Team { id: string; name: string }
 interface Season { id: string; name: string }
@@ -197,8 +198,14 @@ export default function CreateTravelPlan() {
 
             <h3 className="pa-h3 pa-mb-4">ITINERARY FILE</h3>
             <div className="pa-mb-6">
-              <input type="file" onChange={e => setItineraryFile(e.target.files?.[0] ?? null)} className="pa-mb-2" />
-              {itineraryFile && <div className="pa-body-s">Selected: {itineraryFile.name}</div>}
+              <FileUpload
+                label="Itinerary File"
+                value={itineraryFile}
+                onFileSelect={setItineraryFile}
+                buttonText="Choose file"
+                replaceText="Replace file"
+                fullWidth
+              />
             </div>
 
             <div className="pa-mb-8">

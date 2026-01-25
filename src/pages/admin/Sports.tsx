@@ -6,7 +6,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOffline } from '../../hooks/useOffline'
 import { USE_FAKE_DATA } from '../../data/config'
@@ -20,6 +20,7 @@ import { getLink } from '../../utils/routes'
 export default function Sports() {
   const { context, isReady } = useUserContext()
   const { isOffline } = useOffline()
+  const location = useLocation()
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -27,6 +28,15 @@ export default function Sports() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [deletingSportId, setDeletingSportId] = useState<string | null>(null)
   const [sportToDelete, setSportToDelete] = useState<{ id: string; name: string } | null>(null)
+
+  // Check for success message from navigation state
+  useEffect(() => {
+    if (location.state?.successMessage) {
+      setSuccessMessage(location.state.successMessage)
+      // Clear the state to prevent showing it again on refresh
+      window.history.replaceState({}, document.title)
+    }
+  }, [location.state])
 
   const [sports, setSports] = useState<Sport[]>([])
   const [programs, setPrograms] = useState<Array<{ sport_id: string }>>([])

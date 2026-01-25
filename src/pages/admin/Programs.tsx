@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState, useMemo } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams, useLocation } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOffline } from '../../hooks/useOffline'
 import { USE_FAKE_DATA } from '../../data/config'
@@ -21,6 +21,7 @@ export default function Programs() {
   const { context, isReady } = useUserContext()
   const { isOffline } = useOffline()
   const [searchParams, setSearchParams] = useSearchParams()
+  const location = useLocation()
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -28,6 +29,15 @@ export default function Programs() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [deletingProgramId, setDeletingProgramId] = useState<string | null>(null)
   const [programToDelete, setProgramToDelete] = useState<{ id: string; name: string } | null>(null)
+
+  // Check for success message from navigation state
+  useEffect(() => {
+    if (location.state?.successMessage) {
+      setSuccessMessage(location.state.successMessage)
+      // Clear the state to prevent showing it again on refresh
+      window.history.replaceState({}, document.title)
+    }
+  }, [location.state])
 
   const [sports, setSports] = useState<Sport[]>([])
   const [programs, setPrograms] = useState<Program[]>([])

@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOffline } from '../../hooks/useOffline'
 import { USE_FAKE_DATA } from '../../data/config'
@@ -20,12 +20,22 @@ import { getLink } from '../../utils/routes'
 export default function LevelsManagement() {
   const { context, isReady } = useUserContext()
   const { isOffline } = useOffline()
+  const location = useLocation()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [deletingLevelId, setDeletingLevelId] = useState<string | null>(null)
   const [levelToDelete, setLevelToDelete] = useState<{ id: string; name: string } | null>(null)
+
+  // Check for success message from navigation state
+  useEffect(() => {
+    if (location.state?.successMessage) {
+      setSuccessMessage(location.state.successMessage)
+      // Clear the state to prevent showing it again on refresh
+      window.history.replaceState({}, document.title)
+    }
+  }, [location.state])
 
   const [levels, setLevels] = useState<Level[]>([])
   const [programs, setPrograms] = useState<Program[]>([])
