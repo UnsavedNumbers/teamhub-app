@@ -246,3 +246,26 @@ export async function logSystemEvent(
     metadata,
   })
 }
+
+/**
+ * Helper: Log sport events
+ */
+export async function logSportEvent(
+  eventType: 'SPORT_LINKED' | 'SPORT_UNLINKED' | 'SPORT_CUSTOMIZED' | 'SPORT_CUSTOMIZATION_UPDATED' | 'SPORT_CUSTOMIZATION_REMOVED' | 'SPORT_ICON_UPLOADED' | 'SPORT_ICON_DELETED',
+  orgId: string,
+  targetEntityId: string,
+  actorUserId?: string,
+  actorRole: EventActorRole = 'org_admin',
+  metadata?: Record<string, unknown>
+): Promise<EventLogResponse> {
+  return logEvent({
+    category: 'SPORT',
+    eventType,
+    actorUserId,
+    actorRole,
+    orgId,
+    targetEntityType: 'sport',
+    targetEntityId,
+    metadata,
+  })
+}

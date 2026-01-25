@@ -21,6 +21,7 @@ export type EventCategory =
   | 'FEATURE_FLAG'
   | 'ADMIN'
   | 'SYSTEM'
+  | 'SPORT'
 
 export type EventActorRole =
   | 'platform_admin'
@@ -183,6 +184,15 @@ export type SystemEventType =
   | 'DATABASE_BACKUP'
   | 'SYSTEM_ALERT'
 
+export type SportEventType =
+  | 'SPORT_LINKED'
+  | 'SPORT_UNLINKED'
+  | 'SPORT_CUSTOMIZED'
+  | 'SPORT_CUSTOMIZATION_UPDATED'
+  | 'SPORT_CUSTOMIZATION_REMOVED'
+  | 'SPORT_ICON_UPLOADED'
+  | 'SPORT_ICON_DELETED'
+
 // Discriminated union for type-safe event logging
 export type EventTypeMap = {
   AUTH: AuthEventType
@@ -200,6 +210,7 @@ export type EventTypeMap = {
   FEATURE_FLAG: FeatureFlagEventType
   ADMIN: AdminEventType
   SYSTEM: SystemEventType
+  SPORT: SportEventType
 }
 
 // Base event log parameters

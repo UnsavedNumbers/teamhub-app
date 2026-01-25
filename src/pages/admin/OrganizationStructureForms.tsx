@@ -3,7 +3,9 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
-import { getSports, getSystemSports, getPrograms, createSport, createProgram, updateProgram } from '../../data/services/sportsService'
+import { useOffline } from '../../hooks/useOffline'
+import { USE_FAKE_DATA } from '../../data/config'
+import { getSports, getSystemSports, getPrograms, createSport, createProgram, updateProgram, uploadSportIcon } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
 import { createLevel, updateLevel } from '../../data/services/levelsService'
 import { getTeams, createTeam, updateTeam } from '../../data/services/teamsService'
@@ -79,6 +81,7 @@ export default function OrganizationStructureForms() {
   const { currentOrganization } = useOrganization()
   const location = useLocation()
   const navigate = useNavigate()
+  const { isOffline } = useOffline()
 
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -104,7 +107,9 @@ export default function OrganizationStructureForms() {
 
   const [sportForm, setSportForm] = useState({
     name: '',
+    iconFile: null as File | null,
   })
+  const [uploadingIcon, setUploadingIcon] = useState(false)
 
   const [programForm, setProgramForm] = useState({
     sportId: '',
@@ -535,7 +540,20 @@ export default function OrganizationStructureForms() {
     : t('admin.structureForms.pageSubtitle.select')
 
   if (loading) {
-    return <div className="pa-skeleton" style={{ height: '500px' }} />
+    return (
+      <div className="pa-root">
+        <OfflineBanner />
+        <AdminPageHeader
+          title={pageTitle}
+          subtitle={pageSubtitle}
+          breadcrumbs={[
+            { label: t('admin.structureForms.breadcrumbs.organizations'), path: '/admin/organization/structure' },
+            { label: activeFormLabel },
+          ]}
+        />
+        <div className="pa-skeleton" style={{ height: '500px' }} />
+      </div>
+    )
   }
 
   // Validate context query params exist in loaded data
@@ -768,67 +786,172 @@ export default function OrganizationStructureForms() {
               <>
                 {availableSystemSports.length === 0 ? (
                   <div className="pa-text-muted">
-                    All available sports have been added to your organization.
+                    <p className="pa-mb-2">All available sports have been added to your organization.</p>
+                    {systemSports.length === 0 && (
+                      <p className="pa-text-sm pa-text-muted">
+                        No system sports are available. Please contact support if you need additional sports.
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <div className="pa-grid pa-grid-2">
                     <Select
                       label={t('admin.structureForms.fields.sportName.label')}
                       value={sportForm.name}
-                      onChange={(e) => setSportForm((prev) => ({ ...prev, name: e.target.value }))}
+                      onChange={(e) => {
+                        setSportForm((prev) => ({ ...prev, name: e.target.value }))
+                        setActionError(null) // Clear errors when user changes selection
+                      }}
                       onBlur={() => markTouched('sport.name')}
                       options={[
                         { value: '', label: 'Select a sport...' },
                         ...availableSystemSports.map(sport => ({ value: sport.name, label: sport.name }))
                       ]}
                       required
+                      disabled={isOffline || USE_FAKE_DATA}
                       error={sportNameError ? 'Please select a sport' : undefined}
                     />
+                  </div>
+                )}
+                {availableSystemSports.length > 0 && (
+                  <div className="pa-form-group">
+                    <label className="pa-label">Sport Icon (Optional)</label>
+                    <div className="pa-helper pa-mb-2">
+                      Upload a custom icon for this sport. PNG, JPEG, WebP, or SVG. Max 5MB.
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null
+                        setSportForm((prev) => ({ ...prev, iconFile: file }))
+                        setActionError(null)
+                      }}
+                      disabled={isOffline || USE_FAKE_DATA || submitting.sport}
+                      className="pa-input"
+                    />
+                    {sportForm.iconFile && (
+                      <div className="pa-mt-2 pa-text-sm pa-text-muted">
+                        Selected: {sportForm.iconFile.name} ({(sportForm.iconFile.size / 1024).toFixed(1)} KB)
+                      </div>
+                    )}
+                  </div>
+                )}
+                {USE_FAKE_DATA && (
+                  <div className="pa-card pa-mt-4" style={{ background: 'var(--pa-info-bg)', border: '1px solid var(--pa-info)', padding: 'var(--pa-space-3)' }}>
+                    <div className="pa-flex pa-items-center pa-gap-2">
+                      <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-info)' }}>info</span>
+                      <span className="pa-body-s" style={{ color: 'var(--pa-n900)' }}>
+                        Demo mode: Sign in to add sports to your organization.
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {isOffline && (
+                  <div className="pa-card pa-mt-4" style={{ background: 'var(--pa-warning-bg)', border: '1px solid var(--pa-warning)', padding: 'var(--pa-space-3)' }}>
+                    <div className="pa-flex pa-items-center pa-gap-2">
+                      <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-warning)' }}>wifi_off</span>
+                      <span className="pa-body-s" style={{ color: 'var(--pa-n900)' }}>
+                        You are offline. Please reconnect to add sports.
+                      </span>
+                    </div>
                   </div>
                 )}
               </>
             )}
             {editType !== 'sport' && (
               <Button
-                disabled={!canCreateSport || submitting.sport}
-                loading={submitting.sport}
+                disabled={!canCreateSport || submitting.sport || uploadingIcon || isOffline || USE_FAKE_DATA}
+                loading={submitting.sport || uploadingIcon}
                 onClick={async () => {
-                  if (!canCreateSport || !currentOrganization?.id) return
+                  if (!canCreateSport || !currentOrganization?.id || submitting.sport) return
+
+                  // Block if offline
+                  if (isOffline) {
+                    setActionError('You appear to be offline. Please reconnect and try again.')
+                    return
+                  }
+
+                  // Block if in demo mode (already handled by disabled state, but add explicit check)
+                  if (USE_FAKE_DATA) {
+                    setActionError('This action is not available in demo mode. Please sign in to add sports to your organization.')
+                    return
+                  }
+
                   setSubmitting((prev) => ({ ...prev, sport: true }))
                   setActionError(null)
                   setSuccessMessage(null)
 
-                  const result = await createSport({
-                    org_id: currentOrganization.id,
-                    name: sportForm.name.trim(),
-                    color: '#137fec',
-                  })
-                  if (result.error) {
-                    setActionError(result.error.message || t('admin.structureForms.errors.saveFailed', { item: formLabels.sport }))
-                  } else if (result.data) {
-                    // Refetch sports to ensure UI is up to date
-                    const freshSportsResult = await getSports(context)
-                    if (!freshSportsResult.error && freshSportsResult.data) {
-                      setSports(Array.isArray(freshSportsResult.data) ? freshSportsResult.data : [])
-                    } else {
-                      // Fallback to optimistic update
-                      setSports((prev) => [result.data as Sport, ...prev])
-                    }
-                    setSportForm((prev) => ({ ...prev, name: '' }))
-                    setSuccessMessage(t('admin.structureForms.messages.created', { item: formLabels.sport }))
+                  try {
+                    const result = await createSport({
+                      org_id: currentOrganization.id,
+                      name: sportForm.name.trim(),
+                      color: '#137fec',
+                    })
                     
-                    // Bug Prevention #5 & #8: Check returnUrl and validate before navigating
-                    if (returnUrl && returnUrl.startsWith('/')) {
-                      // Validate returnUrl is a valid path (starts with '/') to prevent open redirect vulnerability
-                      navigate(returnUrl)
-                      return // Exit early to prevent further execution
-                    }
-                  }
+                    if (result.error) {
+                      setActionError(result.error.message || t('admin.structureForms.errors.saveFailed', { item: formLabels.sport }))
+                    } else if (result.data) {
+                      // Upload icon if provided
+                      if (sportForm.iconFile && result.data.id) {
+                        setUploadingIcon(true)
+                        try {
+                          const iconResult = await uploadSportIcon(context, result.data.id, sportForm.iconFile)
+                          if (iconResult.error) {
+                            console.error('[OrganizationStructureForms] Error uploading icon:', iconResult.error)
+                            // Don't fail the whole operation - sport was created successfully
+                            setActionError(`Sport added successfully, but icon upload failed: ${iconResult.error.message}`)
+                          }
+                        } catch (iconErr) {
+                          console.error('[OrganizationStructureForms] Unexpected error uploading icon:', iconErr)
+                          // Don't fail the whole operation
+                        } finally {
+                          setUploadingIcon(false)
+                        }
+                      }
 
-                  setSubmitting((prev) => ({ ...prev, sport: false }))
+                      // Refetch sports to ensure UI is up to date
+                      const freshSportsResult = await getSports(context)
+                      if (!freshSportsResult.error && freshSportsResult.data) {
+                        setSports(Array.isArray(freshSportsResult.data) ? freshSportsResult.data : [])
+                      } else {
+                        // Fallback to optimistic update
+                        if (result.data) {
+                          setSports((prev) => {
+                            // Check if already exists to avoid duplicates
+                            const data = result.data
+                            if (!data) return prev
+                            const exists = prev.some(s => s.id === data.id)
+                            if (exists) return prev
+                            return [data as Sport, ...prev]
+                          })
+                        }
+                      }
+                      setSportForm((prev) => ({ ...prev, name: '', iconFile: null }))
+                      setSuccessMessage(t('admin.structureForms.messages.created', { item: formLabels.sport }))
+                      
+                      // Bug Prevention #5 & #8: Check returnUrl and validate before navigating
+                      if (returnUrl && returnUrl.startsWith('/')) {
+                        // Validate returnUrl is a valid path (starts with '/') to prevent open redirect vulnerability
+                        // Small delay to show success message
+                        setTimeout(() => {
+                          navigate(returnUrl)
+                        }, 500)
+                        return // Exit early to prevent further execution
+                      }
+                    }
+                  } catch (err) {
+                    console.error('[OrganizationStructureForms] Unexpected error creating sport:', err)
+                    setActionError(err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.')
+                  } finally {
+                    setSubmitting((prev) => ({ ...prev, sport: false }))
+                  }
                 }}
               >
-                {t('admin.structureForms.actions.createItem', { item: formLabels.sport })}
+                {USE_FAKE_DATA 
+                  ? 'Sign in to Add Sport'
+                  : t('admin.structureForms.actions.createItem', { item: formLabels.sport })
+                }
               </Button>
             )}
           </div>
