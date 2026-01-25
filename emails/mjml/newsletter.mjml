@@ -1,0 +1,106 @@
+<mjml>
+  <mj-head>
+    <mj-title>{{subject}}</mj-title>
+    <mj-preview>{{preheader}}</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Arial, sans-serif" />
+      <mj-text font-size="14px" color="#333333" line-height="1.5" />
+      <mj-section background-color="#ffffff" />
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#f8fafc">
+    <!-- Header -->
+    <mj-section padding="20px" background-color="#ffffff">
+      <mj-column>
+         <mj-image src="{{logo_url}}" alt="{{organization_name}}" width="200px" align="left" />
+      </mj-column>
+    </mj-section>
+
+    <!-- Featured Article -->
+    <mj-section padding="0 20px 40px 20px">
+      <mj-column>
+        <mj-image src="{{featured_image_url}}" alt="Featured" width="600px" border-radius="8px" />
+        <mj-text font-size="28px" font-weight="bold" color="#1e293b" padding-top="20px">
+          {{featured_title}}
+        </mj-text>
+        <mj-text font-size="16px" color="#475569" padding-top="10px">
+          {{featured_excerpt}}
+        </mj-text>
+        <mj-button align="left" href="{{featured_url}}" background-color="#2563eb" color="#ffffff" font-weight="bold" border-radius="6px" padding-top="20px">
+          Read More
+        </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <!-- Secondary Content / How it Works -->
+    <mj-section padding="40px 20px" background-color="#f1f5f9">
+      <mj-column width="100%">
+        <mj-text font-size="22px" font-weight="bold" color="#1e293b" padding-bottom="20px">
+          Latest Updates
+        </mj-text>
+      </mj-column>
+      
+      <!-- Item 1 -->
+      <mj-column width="100%">
+        <mj-text font-size="18px" font-weight="bold" color="#1e293b">
+          1. {{update_1_title}}
+        </mj-text>
+        <mj-text color="#475569" padding-bottom="20px">
+          {{update_1_description}}
+        </mj-text>
+      </mj-column>
+      
+      <!-- Item 2 -->
+      <mj-column width="100%">
+        <mj-text font-size="18px" font-weight="bold" color="#1e293b">
+          2. {{update_2_title}}
+        </mj-text>
+        <mj-text color="#475569" padding-bottom="20px">
+          {{update_2_description}}
+        </mj-text>
+      </mj-column>
+
+      <!-- Item 3 -->
+      <mj-column width="100%">
+        <mj-text font-size="18px" font-weight="bold" color="#1e293b">
+          3. {{update_3_title}}
+        </mj-text>
+        <mj-text color="#475569" padding-bottom="20px">
+          {{update_3_description}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Promo Section -->
+    <mj-section padding="40px 20px" background-color="#e2e8f0">
+      <mj-column>
+        <mj-text font-size="20px" font-weight="bold" color="#1e293b" align="center">
+          {{promo_title}}
+        </mj-text>
+        <mj-button href="{{promo_url}}" background-color="#dc2626" color="#ffffff" font-weight="bold" border-radius="6px">
+          {{promo_button_text}}
+        </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <!-- Footer -->
+    <mj-section padding="20px" background-color="#1e293b">
+      <mj-column>
+        <mj-text align="center" color="#ffffff" font-size="14px" font-weight="bold" padding-bottom="20px">
+          {{organization_name}}
+        </mj-text>
+        <mj-social font-size="15px" icon-size="30px" mode="horizontal" padding-bottom="20px">
+          <mj-social-element name="facebook" href="{{facebook_url}}"></mj-social-element>
+          <mj-social-element name="twitter" href="{{twitter_url}}"></mj-social-element>
+          <mj-social-element name="instagram" href="{{instagram_url}}"></mj-social-element>
+        </mj-social>
+        <mj-text align="center" color="#94a3b8" font-size="12px">
+          <a href="{{unsubscribe_url}}" style="color: #94a3b8; text-decoration: none;">Unsubscribe</a> | <a href="{{privacy_url}}" style="color: #94a3b8; text-decoration: none;">Privacy Policy</a>
+        </mj-text>
+         <mj-text align="center" color="#94a3b8" font-size="12px" padding-top="10px">
+          © 2026 YouthSports Team Hub. All rights reserved.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

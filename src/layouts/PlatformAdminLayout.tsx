@@ -56,6 +56,12 @@ const navSections: NavSection[] = [
     ],
   },
   {
+    label: 'Emails',
+    items: [
+      { text: 'Email Preview', icon: 'email', path: getLink('platformAdmin.emailPreview'), requiredAction: 'view_email_preview' },
+    ],
+  },
+  {
     label: 'Licenses & Entitlements',
     items: [
       { text: 'Overview', icon: 'dashboard', path: getPath(RouteKeys.PLATFORM_LICENSES), requiredAction: 'view_licenses' },

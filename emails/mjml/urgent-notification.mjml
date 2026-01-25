@@ -1,0 +1,58 @@
+<mjml>
+  <mj-head>
+    <mj-title>{{subject}}</mj-title>
+    <mj-preview>{{preheader}}</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Arial, sans-serif" />
+      <mj-text font-size="14px" color="#333333" line-height="1.5" />
+      <mj-section background-color="#ffffff" />
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#f8fafc">
+    <!-- Hero Header with Image Background -->
+    <mj-section padding="60px 20px" background-url="{{hero_background_url}}" background-size="cover" background-repeat="no-repeat" background-color="#000000">
+      <mj-column width="100%" background-color="#ffffff" padding="20px" border-radius="8px">
+        <mj-text font-size="24px" font-weight="bold" color="#1e293b" padding-bottom="10px">
+          {{notification_title}}
+        </mj-text>
+        <mj-text font-size="14px" color="#333333" padding-bottom="20px">
+          {{notification_summary}}
+        </mj-text>
+        
+        <mj-table padding="0">
+            <tr>
+                <td width="60%" valign="middle">
+                     <mj-button align="left" href="{{action_url}}" background-color="#000000" color="#ffffff" font-weight="bold" border-radius="6px" padding="0">
+                        {{action_button_text}}
+                    </mj-button>
+                </td>
+                <td width="40%" align="right" valign="middle">
+                    <img src="{{secondary_image_url}}" width="100px" style="display:block;" />
+                </td>
+            </tr>
+        </mj-table>
+      </mj-column>
+    </mj-section>
+
+    <!-- Content Block -->
+    <mj-section padding="40px 20px">
+        <mj-column>
+            <mj-text>
+                {{body_content}}
+            </mj-text>
+        </mj-column>
+    </mj-section>
+
+    <!-- Footer -->
+    <mj-section padding="20px" background-color="#000000">
+        <mj-column>
+            <mj-text align="center" color="#ffffff" font-size="20px" padding-bottom="10px">
+                {{organization_name}}
+            </mj-text>
+             <mj-text align="center" color="#94a3b8" font-size="12px">
+                <a href="{{help_url}}" style="color: #ffffff;">Help</a> | <a href="{{unsubscribe_url}}" style="color: #ffffff;">Unsubscribe</a>
+            </mj-text>
+        </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

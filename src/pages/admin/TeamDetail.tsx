@@ -318,6 +318,11 @@ export default function TeamDetail() {
   const sportId = team.sport?.id
   const programId = team.program?.id
 
+  // Get primary color for court texture and accents
+  // Use CSS variable with fallback to ensure it works even if theme not loaded
+  const primaryColor = 'var(--pa-theme-action-primary, #137fec)'
+  const primaryColorDark = 'var(--pa-theme-action-active, #0a56a4)'
+
   return (
     <div className="pa-root">
       {/* Header Band with Court Texture */}
@@ -330,15 +335,17 @@ export default function TeamDetail() {
           overflow: 'hidden',
         }}
       >
+        {/* Court texture pattern using theme primary color */}
         <div
+          className="court-texture"
           style={{
             position: 'absolute',
             inset: 0,
             backgroundImage: `
-              linear-gradient(45deg, rgba(19, 127, 236, 0.1) 25%, transparent 25%),
-              linear-gradient(-45deg, rgba(19, 127, 236, 0.1) 25%, transparent 25%),
-              linear-gradient(45deg, transparent 75%, rgba(19, 127, 236, 0.1) 75%),
-              linear-gradient(-45deg, transparent 75%, rgba(19, 127, 236, 0.1) 75%)
+              linear-gradient(45deg, color-mix(in srgb, ${primaryColor} 10%, transparent) 25%, transparent 25%),
+              linear-gradient(-45deg, color-mix(in srgb, ${primaryColor} 10%, transparent) 25%, transparent 25%),
+              linear-gradient(45deg, transparent 75%, color-mix(in srgb, ${primaryColor} 10%, transparent) 75%),
+              linear-gradient(-45deg, transparent 75%, color-mix(in srgb, ${primaryColor} 10%, transparent) 75%)
             `,
             backgroundSize: '40px 40px',
             backgroundPosition: '0 0, 0 20px, 20px -20px, -20px 0px',
@@ -349,8 +356,9 @@ export default function TeamDetail() {
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'linear-gradient(to top, var(--pa-n50), transparent)',
+            background: 'linear-gradient(to top, var(--pa-surface-subtle), transparent)',
           }}
+          className="dark:bg-gradient-to-t dark:from-background-dark dark:to-transparent"
         />
       </div>
 
@@ -365,6 +373,7 @@ export default function TeamDetail() {
           padding: '0 var(--pa-space-4)',
           paddingBottom: 'var(--pa-space-10)',
         }}
+        className="md:px-8"
       >
         {/* Breadcrumbs */}
         <div
@@ -383,7 +392,7 @@ export default function TeamDetail() {
                   onClick={() => handleBreadcrumbClick('/admin/sports', sportId)}
                   disabled={navigating}
                   style={{
-                    color: '#5468FF',
+                    color: primaryColor,
                     fontSize: '12px',
                     fontWeight: 900,
                     textTransform: 'uppercase',
@@ -394,6 +403,7 @@ export default function TeamDetail() {
                     cursor: navigating ? 'not-allowed' : 'pointer',
                     opacity: navigating ? 0.6 : 1,
                     padding: 0,
+                    lineHeight: 'normal',
                   }}
                 >
                   {sportName.toUpperCase()}
@@ -402,18 +412,19 @@ export default function TeamDetail() {
                 <Link
                   to={getLink('admin.sports.list')}
                   style={{
-                    color: '#5468FF',
+                    color: primaryColor,
                     fontSize: '12px',
                     fontWeight: 900,
                     textTransform: 'uppercase',
                     letterSpacing: '0.1em',
                     textDecoration: 'none',
+                    lineHeight: 'normal',
                   }}
                 >
                   {sportName.toUpperCase()}
                 </Link>
               )}
-              <span style={{ color: 'rgba(84, 104, 255, 0.5)', fontSize: '12px', fontWeight: 900 }}>/</span>
+              <span style={{ color: `color-mix(in srgb, ${primaryColor} 50%, transparent)`, fontSize: '12px', fontWeight: 900, lineHeight: 'normal' }}>/</span>
             </>
           )}
           {programName && (
@@ -423,7 +434,7 @@ export default function TeamDetail() {
                   onClick={() => handleBreadcrumbClick('/admin/programs', programId)}
                   disabled={navigating}
                   style={{
-                    color: '#5468FF',
+                    color: primaryColor,
                     fontSize: '12px',
                     fontWeight: 900,
                     textTransform: 'uppercase',
@@ -434,6 +445,7 @@ export default function TeamDetail() {
                     cursor: navigating ? 'not-allowed' : 'pointer',
                     opacity: navigating ? 0.6 : 1,
                     padding: 0,
+                    lineHeight: 'normal',
                   }}
                 >
                   {programName.toUpperCase()}
@@ -442,18 +454,19 @@ export default function TeamDetail() {
                 <Link
                   to={getLink('admin.programs.list')}
                   style={{
-                    color: '#5468FF',
+                    color: primaryColor,
                     fontSize: '12px',
                     fontWeight: 900,
                     textTransform: 'uppercase',
                     letterSpacing: '0.1em',
                     textDecoration: 'none',
+                    lineHeight: 'normal',
                   }}
                 >
                   {programName.toUpperCase()}
                 </Link>
               )}
-              <span style={{ color: 'rgba(84, 104, 255, 0.5)', fontSize: '12px', fontWeight: 900 }}>/</span>
+              <span style={{ color: `color-mix(in srgb, ${primaryColor} 50%, transparent)`, fontSize: '12px', fontWeight: 900, lineHeight: 'normal' }}>/</span>
             </>
           )}
           {levelName && (
@@ -464,14 +477,16 @@ export default function TeamDetail() {
                 fontWeight: 900,
                 textTransform: 'uppercase',
                 letterSpacing: '0.1em',
+                lineHeight: 'normal',
               }}
+              className="dark:text-white"
             >
               {levelName.toUpperCase()}
             </span>
           )}
         </div>
 
-        {/* Page Heading & Add Athlete Button */}
+        {/* Page Heading & Tactile Primary Button */}
         <div
           style={{
             display: 'flex',
@@ -479,10 +494,11 @@ export default function TeamDetail() {
             gap: 'var(--pa-space-6)',
             marginBottom: 'var(--pa-space-8)',
           }}
+          className="md:flex-row md:items-end md:justify-between"
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-6)' }}>
             <div
-              className="hidden md:flex"
+              className="hidden md:flex dark:bg-slate-800 dark:border-slate-700"
               style={{
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -494,7 +510,7 @@ export default function TeamDetail() {
                 boxShadow: 'var(--pa-shadow-1)',
               }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#5468FF', fontVariationSettings: "'FILL' 1" }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '48px', color: primaryColor, fontVariationSettings: "'FILL' 1" }}>
                 apparel
               </span>
             </div>
@@ -510,6 +526,7 @@ export default function TeamDetail() {
                   color: 'var(--pa-n900)',
                   margin: 0,
                 }}
+                className="dark:text-white"
               >
                 {team.name.toUpperCase()}
               </h1>
@@ -519,7 +536,7 @@ export default function TeamDetail() {
                     width: '8px',
                     height: '8px',
                     borderRadius: '50%',
-                    background: '#5468FF',
+                    background: primaryColor,
                   }}
                 />
                 <p
@@ -531,6 +548,7 @@ export default function TeamDetail() {
                     letterSpacing: '0.1em',
                     margin: 0,
                   }}
+                  className="dark:text-slate-400"
                 >
                   TeamHub Athletic v1.0.4
                 </p>
@@ -549,7 +567,7 @@ export default function TeamDetail() {
                 minWidth: '180px',
                 height: '56px',
                 padding: '0 var(--pa-space-6)',
-                background: navigating || !teamId || loading ? 'var(--pa-n400)' : '#5468FF',
+                background: navigating || !teamId || loading ? 'var(--pa-n400)' : primaryColor,
                 color: 'var(--pa-white)',
                 fontSize: '14px',
                 fontWeight: 900,
@@ -558,20 +576,20 @@ export default function TeamDetail() {
                 borderRadius: 'var(--pa-radius-m)',
                 border: 'none',
                 cursor: navigating || !teamId || loading ? 'not-allowed' : 'pointer',
-                boxShadow: navigating || !teamId || loading ? 'none' : '0 8px 0 0 #4054E8',
+                boxShadow: navigating || !teamId || loading ? 'none' : `0 8px 0 0 ${primaryColorDark}`,
                 transition: 'all 75ms',
                 opacity: navigating || !teamId || loading ? 0.6 : 1,
               }}
               onMouseEnter={(e) => {
                 if (!navigating && teamId && !loading) {
                   e.currentTarget.style.transform = 'translateY(2px)'
-                  e.currentTarget.style.boxShadow = '0 4px 0 0 #4054E8'
+                  e.currentTarget.style.boxShadow = `0 4px 0 0 ${primaryColorDark}`
                 }
               }}
               onMouseLeave={(e) => {
                 if (!navigating && teamId && !loading) {
                   e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = '0 8px 0 0 #4054E8'
+                  e.currentTarget.style.boxShadow = `0 8px 0 0 ${primaryColorDark}`
                 }
               }}
               onMouseDown={(e) => {
@@ -583,7 +601,7 @@ export default function TeamDetail() {
               onMouseUp={(e) => {
                 if (!navigating && teamId && !loading) {
                   e.currentTarget.style.transform = 'translateY(2px)'
-                  e.currentTarget.style.boxShadow = '0 4px 0 0 #4054E8'
+                  e.currentTarget.style.boxShadow = `0 4px 0 0 ${primaryColorDark}`
                 }
               }}
             >
@@ -613,6 +631,7 @@ export default function TeamDetail() {
               gap: 'var(--pa-space-8)',
               overflowX: 'auto',
             }}
+            className="dark:border-slate-700"
           >
             {['roster', 'schedule', 'attendance', 'settings'].map((tab) => (
               <button
@@ -624,7 +643,7 @@ export default function TeamDetail() {
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  borderBottom: activeTab === tab ? '4px solid #5468FF' : '4px solid transparent',
+                  borderBottom: activeTab === tab ? `4px solid ${primaryColor}` : '4px solid transparent',
                   color: activeTab === tab ? 'var(--pa-n900)' : 'var(--pa-n500)',
                   paddingBottom: '14px',
                   paddingTop: 'var(--pa-space-4)',
@@ -640,9 +659,10 @@ export default function TeamDetail() {
                   transition: 'color 200ms',
                   opacity: navigating ? 0.6 : 1,
                 }}
+                className={activeTab === tab ? 'dark:text-white' : 'dark:text-slate-500'}
                 onMouseEnter={(e) => {
                   if (!navigating && activeTab !== tab) {
-                    e.currentTarget.style.color = '#5468FF'
+                    e.currentTarget.style.color = primaryColor
                   }
                 }}
                 onMouseLeave={(e) => {
@@ -694,10 +714,11 @@ export default function TeamDetail() {
                     background: 'var(--pa-white)',
                     boxShadow: 'var(--pa-shadow-1)',
                   }}
+                  className="dark:border-slate-700 dark:bg-slate-900"
                 >
                   <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
                     <thead>
-                      <tr style={{ background: 'var(--pa-n50)' }}>
+                      <tr style={{ background: 'var(--pa-n50)' }} className="dark:bg-slate-800/50">
                         <th
                           style={{
                             padding: 'var(--pa-space-4) var(--pa-space-6)',
@@ -708,6 +729,7 @@ export default function TeamDetail() {
                             letterSpacing: '0.1em',
                             borderBottom: '1px solid var(--pa-n200)',
                           }}
+                          className="dark:text-slate-400 dark:border-slate-700"
                         >
                           Athlete Name
                         </th>
@@ -721,6 +743,7 @@ export default function TeamDetail() {
                             letterSpacing: '0.1em',
                             borderBottom: '1px solid var(--pa-n200)',
                           }}
+                          className="dark:text-slate-400 dark:border-slate-700"
                         >
                           Jersey #
                         </th>
@@ -734,6 +757,7 @@ export default function TeamDetail() {
                             letterSpacing: '0.1em',
                             borderBottom: '1px solid var(--pa-n200)',
                           }}
+                          className="dark:text-slate-400 dark:border-slate-700"
                         >
                           Position
                         </th>
@@ -747,12 +771,13 @@ export default function TeamDetail() {
                             letterSpacing: '0.1em',
                             borderBottom: '1px solid var(--pa-n200)',
                           }}
+                          className="dark:text-slate-400 dark:border-slate-700"
                         >
                           Status
                         </th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-[#cfdbe7] dark:divide-slate-700">
                       {roster.map((member) => {
                         const firstName = member.athlete?.first_name || ''
                         const lastName = member.athlete?.last_name || ''
@@ -771,6 +796,7 @@ export default function TeamDetail() {
                               transition: 'background-color 200ms',
                               cursor: athleteId && !navigating ? 'pointer' : 'default',
                             }}
+                            className="hover:bg-slate-50 dark:hover:bg-slate-800/30"
                             onMouseEnter={(e) => {
                               if (athleteId && !navigating) {
                                 e.currentTarget.style.background = 'var(--pa-n50)'
@@ -787,24 +813,27 @@ export default function TeamDetail() {
                                     width: '40px',
                                     height: '40px',
                                     borderRadius: '50%',
-                                    background: isActive ? 'rgba(84, 104, 255, 0.1)' : 'var(--pa-n200)',
+                                    background: isActive ? `color-mix(in srgb, ${primaryColor} 10%, transparent)` : 'var(--pa-n200)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    color: isActive ? '#5468FF' : 'var(--pa-n500)',
+                                    color: isActive ? primaryColor : 'var(--pa-n500)',
                                     fontWeight: 900,
                                     fontSize: '14px',
                                   }}
+                                  className={!isActive ? 'dark:bg-slate-700 dark:text-slate-400' : ''}
                                 >
                                   {initials}
                                 </div>
-                                <span style={{ color: 'var(--pa-n900)', fontWeight: 700 }}>{fullName}</span>
+                                <span style={{ color: 'var(--pa-n900)', fontWeight: 700 }} className="dark:text-white">
+                                  {fullName}
+                                </span>
                               </div>
                             </td>
-                            <td style={{ padding: 'var(--pa-space-5) var(--pa-space-6)', color: '#5468FF', fontWeight: 900, letterSpacing: '-0.02em' }}>
+                            <td style={{ padding: 'var(--pa-space-5) var(--pa-space-6)', color: primaryColor, fontWeight: 900, letterSpacing: '-0.02em' }}>
                               {jerseyNumber !== '—' ? `#${jerseyNumber}` : jerseyNumber}
                             </td>
-                            <td style={{ padding: 'var(--pa-space-5) var(--pa-space-6)', color: 'var(--pa-n600)', fontWeight: 500 }}>
+                            <td style={{ padding: 'var(--pa-space-5) var(--pa-space-6)', color: 'var(--pa-n600)', fontWeight: 500 }} className="dark:text-slate-400">
                               {position}
                             </td>
                             <td style={{ padding: 'var(--pa-space-5) var(--pa-space-6)' }}>
@@ -821,6 +850,7 @@ export default function TeamDetail() {
                                   textTransform: 'uppercase',
                                   letterSpacing: '0.1em',
                                 }}
+                                className={isActive ? 'dark:bg-emerald-900/30 dark:text-emerald-400' : 'dark:bg-slate-800 dark:text-slate-400'}
                               >
                                 <span
                                   style={{
@@ -830,6 +860,7 @@ export default function TeamDetail() {
                                     background: isActive ? 'rgb(16, 185, 129)' : 'var(--pa-n400)',
                                     marginRight: '8px',
                                   }}
+                                  className={!isActive ? 'dark:bg-slate-400' : ''}
                                 />
                                 {isActive ? 'ACTIVE' : 'INACTIVE'}
                               </div>
@@ -857,12 +888,13 @@ export default function TeamDetail() {
                 style={{
                   padding: 'var(--pa-space-6)',
                   borderRadius: 'var(--pa-radius-l)',
-                  border: '1px solid rgba(84, 104, 255, 0.2)',
-                  background: 'rgba(84, 104, 255, 0.05)',
+                  border: `1px solid color-mix(in srgb, ${primaryColor} 20%, transparent)`,
+                  background: `color-mix(in srgb, ${primaryColor} 5%, transparent)`,
                 }}
+                className="dark:bg-primary/10"
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-4)' }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#5468FF', fontWeight: 700 }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '20px', color: primaryColor, fontWeight: 700 }}>
                     analytics
                   </span>
                   <h3
@@ -874,6 +906,7 @@ export default function TeamDetail() {
                       color: 'var(--pa-n700)',
                       margin: 0,
                     }}
+                    className="dark:text-slate-300"
                   >
                     Team Summary
                   </h3>
@@ -886,7 +919,7 @@ export default function TeamDetail() {
                   }}
                 >
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: '24px', fontWeight: 900, color: '#5468FF', letterSpacing: '-0.02em' }}>
+                    <span style={{ fontSize: '24px', fontWeight: 900, color: primaryColor, letterSpacing: '-0.02em' }}>
                       {teamStats.totalAthletes}
                     </span>
                     <span
@@ -897,12 +930,13 @@ export default function TeamDetail() {
                         textTransform: 'uppercase',
                         letterSpacing: '0.1em',
                       }}
+                      className="dark:text-slate-400"
                     >
                       Athletes
                     </span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: '24px', fontWeight: 900, color: '#5468FF', letterSpacing: '-0.02em' }}>
+                    <span style={{ fontSize: '24px', fontWeight: 900, color: primaryColor, letterSpacing: '-0.02em' }}>
                       {teamStats.activeAthletes}
                     </span>
                     <span
@@ -913,12 +947,13 @@ export default function TeamDetail() {
                         textTransform: 'uppercase',
                         letterSpacing: '0.1em',
                       }}
+                      className="dark:text-slate-400"
                     >
                       Active
                     </span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: '24px', fontWeight: 900, color: '#5468FF', letterSpacing: '-0.02em' }}>
+                    <span style={{ fontSize: '24px', fontWeight: 900, color: primaryColor, letterSpacing: '-0.02em' }}>
                       {teamStats.vacancies}
                     </span>
                     <span
@@ -929,12 +964,13 @@ export default function TeamDetail() {
                         textTransform: 'uppercase',
                         letterSpacing: '0.1em',
                       }}
+                      className="dark:text-slate-400"
                     >
                       Vacancies
                     </span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: '24px', fontWeight: 900, color: '#5468FF', letterSpacing: '-0.02em' }}>
+                    <span style={{ fontSize: '24px', fontWeight: 900, color: primaryColor, letterSpacing: '-0.02em' }}>
                       #{teamStats.rank}
                     </span>
                     <span
@@ -945,6 +981,7 @@ export default function TeamDetail() {
                         textTransform: 'uppercase',
                         letterSpacing: '0.1em',
                       }}
+                      className="dark:text-slate-400"
                     >
                       Rank
                     </span>
@@ -960,6 +997,7 @@ export default function TeamDetail() {
                   border: '1px solid var(--pa-n200)',
                   background: 'var(--pa-white)',
                 }}
+                className="dark:border-slate-700 dark:bg-slate-900"
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-4)' }}>
                   <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-n400)', fontWeight: 700 }}>
@@ -974,6 +1012,7 @@ export default function TeamDetail() {
                       color: 'var(--pa-n700)',
                       margin: 0,
                     }}
+                    className="dark:text-slate-300"
                   >
                     Recent Activity
                   </h3>
@@ -986,12 +1025,12 @@ export default function TeamDetail() {
                         height: '6px',
                         marginTop: '6px',
                         borderRadius: '50%',
-                        background: '#5468FF',
+                        background: primaryColor,
                         flexShrink: 0,
                       }}
                     />
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <p style={{ fontSize: '12px', fontWeight: 700, lineHeight: 1.2, margin: 0, color: 'var(--pa-n900)' }}>
+                      <p style={{ fontSize: '12px', fontWeight: 700, lineHeight: 1.2, margin: 0, color: 'var(--pa-n900)' }} className="dark:text-white">
                         New athlete added to roster
                       </p>
                       <p
@@ -1003,6 +1042,7 @@ export default function TeamDetail() {
                           letterSpacing: '0.1em',
                           marginTop: '4px',
                         }}
+                        className="dark:text-slate-400"
                       >
                         2 hours ago
                       </p>
@@ -1015,12 +1055,12 @@ export default function TeamDetail() {
                         height: '6px',
                         marginTop: '6px',
                         borderRadius: '50%',
-                        background: '#5468FF',
+                        background: primaryColor,
                         flexShrink: 0,
                       }}
                     />
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <p style={{ fontSize: '12px', fontWeight: 700, lineHeight: 1.2, margin: 0, color: 'var(--pa-n900)' }}>
+                      <p style={{ fontSize: '12px', fontWeight: 700, lineHeight: 1.2, margin: 0, color: 'var(--pa-n900)' }} className="dark:text-white">
                         Jersey # assignment updated
                       </p>
                       <p
@@ -1032,6 +1072,7 @@ export default function TeamDetail() {
                           letterSpacing: '0.1em',
                           marginTop: '4px',
                         }}
+                        className="dark:text-slate-400"
                       >
                         Yesterday
                       </p>

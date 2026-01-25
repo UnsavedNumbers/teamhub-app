@@ -771,6 +771,14 @@ const platformAdmin = {
         description: 'Feature toggles',
     },
 
+    // Email Preview
+    emailPreview: {
+        path: '/platform-admin/email-preview',
+        label: 'Email Preview',
+        icon: 'email',
+        description: 'Email template testing',
+    },
+
     // Licenses
     licenses: {
         overview: {

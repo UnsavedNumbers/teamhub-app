@@ -1,0 +1,42 @@
+<mjml>
+  <mj-head>
+    <mj-title>{{subject}}</mj-title>
+    <mj-attributes>
+      <mj-all font-family="Arial, sans-serif" />
+      <mj-text font-size="16px" color="#333333" line-height="1.6" />
+      <mj-section background-color="#ffffff" />
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#f8fafc">
+    <mj-section padding="20px">
+      <mj-column>
+        <mj-text>
+          Hi {{recipient_name}},
+        </mj-text>
+        <mj-text>
+          My name is {{sender_name}} from {{organization_name}}.
+        </mj-text>
+        <mj-text>
+          We are looking to partner with local organizations like {{target_organization}} to help streamline youth sports management.
+        </mj-text>
+        <mj-text>
+          I'd love to chat briefly about how we can support your teams this season. Are you available for a quick call next week?
+        </mj-text>
+        <mj-text padding-top="20px">
+          Best regards,<br>
+          {{sender_name}}<br>
+          {{sender_title}}<br>
+          {{organization_name}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    
+    <mj-section padding="20px" background-color="#f8fafc">
+      <mj-column>
+        <mj-text font-size="12px" color="#94a3b8">
+          {{organization_address}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

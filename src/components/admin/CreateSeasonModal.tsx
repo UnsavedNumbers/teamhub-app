@@ -4,13 +4,17 @@
  * Modal for creating a new Season inline from the Team form.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
 import { createSeason } from '../../data/services/seasonsService'
+import { getTeams } from '../../data/services/teamsService'
+import { supabase } from '../../lib/supabase'
 import type { Season } from '../../data/types/organization'
-import { Button, Input, DatePicker, Checkbox } from '../platformAdmin'
+import { Button, Input, DatePicker, Checkbox, Select } from '../platformAdmin'
+
+interface Team { id: string; name: string }
 
 interface CreateSeasonModalProps {
   open: boolean
@@ -31,9 +35,39 @@ export function CreateSeasonModal({
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [isActive, setIsActive] = useState(false)
+  const [teamId, setTeamId] = useState('')
+  const [teams, setTeams] = useState<Team[]>([])
+  const [loadingTeams, setLoadingTeams] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
+
+  // Load teams when modal opens
+  const fetchTeams = useCallback(async () => {
+    if (!isReady || !open) return
+    setLoadingTeams(true)
+    setError(null)
+    try {
+      const { data, error } = await getTeams(context, { activeOnly: true })
+      if (!error && data) {
+        setTeams(data.map(t => ({ id: t.id, name: t.name })))
+      } else if (error) {
+        console.error('[CreateSeasonModal] Error fetching teams:', error)
+        setError('Unable to load teams. Please check your internet connection.')
+      }
+    } catch (err) {
+      console.error('[CreateSeasonModal] Error fetching teams:', err)
+      setError('Unable to load teams. Please check your internet connection.')
+    } finally {
+      setLoadingTeams(false)
+    }
+  }, [context, isReady, open])
+
+  useEffect(() => {
+    if (open && isReady) {
+      fetchTeams()
+    }
+  }, [open, isReady, fetchTeams])
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -42,6 +76,8 @@ export function CreateSeasonModal({
       setStartDate('')
       setEndDate('')
       setIsActive(false)
+      setTeamId('')
+      setTeams([])
       setError(null)
       setTouched({})
     }
@@ -53,6 +89,10 @@ export function CreateSeasonModal({
 
   const nameError = touched.name && !name.trim()
     ? t('admin.structureForms.validation.seasonNameRequired')
+    : undefined
+
+  const teamError = touched.teamId && !teamId
+    ? 'Team is required'
     : undefined
 
   const startError = touched.startDate && !startDate
@@ -68,15 +108,16 @@ export function CreateSeasonModal({
     : undefined
 
   const isSeasonRangeValid = !!startDate && !!endDate && endDate >= startDate
-  const canCreate = !!name.trim() && isSeasonRangeValid
+  const canCreate = !!name.trim() && isSeasonRangeValid && !!teamId && !loadingTeams && teams.length > 0
 
   const handleSubmit = async () => {
-    if (!canCreate || !currentOrganization?.id || submitting || !isReady) return
+    if (!canCreate || !currentOrganization?.id || submitting || !isReady || !teamId) return
 
     setSubmitting(true)
     setError(null)
 
     try {
+      // Create the season
       const result = await createSeason(context, {
         org_id: currentOrganization.id,
         name: name.trim(),
@@ -87,15 +128,66 @@ export function CreateSeasonModal({
 
       if (result.error) {
         setError(result.error.message || 'Failed to create season')
-      } else if (result.data) {
-        // Call the callback with the newly created season
-        onSeasonCreated(result.data)
-        // Close modal - form will be reset by useEffect
-        onClose()
+        setSubmitting(false)
+        return
       }
+
+      if (!result.data) {
+        setError('Failed to create season. Please try again.')
+        setSubmitting(false)
+        return
+      }
+
+      // Create the team_seasons link
+      const { error: linkError } = await supabase
+        .from('team_seasons')
+        .insert({
+          team_id: teamId,
+          season_id: result.data.id,
+          is_active: isActive,
+        })
+
+      if (linkError) {
+        // Handle duplicate entry (idempotent - treat as success)
+        if (linkError.code === '23505') {
+          // Unique constraint violation - link already exists, treat as success
+          console.warn('[CreateSeasonModal] team_seasons link already exists:', linkError)
+          // Proceed with success flow
+        } else {
+          // Other error - rollback by deleting the season
+          console.error('[CreateSeasonModal] Error creating team_seasons link:', linkError)
+          await supabase
+            .from('seasons')
+            .delete()
+            .eq('id', result.data.id)
+          
+          // Determine specific error message
+          if (linkError.message?.includes('network') || linkError.message?.includes('fetch')) {
+            setError('Unable to connect. Please check your internet connection.')
+          } else {
+            setError('Season created but failed to link to team. Please try again.')
+          }
+          setSubmitting(false)
+          return
+        }
+      }
+
+      // Success - both season and link created
+      onSeasonCreated(result.data)
+      onClose()
     } catch (err) {
       console.error('[CreateSeasonModal] Error creating season:', err)
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
+      
+      // Determine specific error message
+      if (err instanceof Error) {
+        if (err.message.includes('network') || err.message.includes('fetch')) {
+          setError('Unable to connect. Please check your internet connection.')
+        } else {
+          setError(err.message || 'An unexpected error occurred')
+        }
+      } else {
+        setError('An unexpected error occurred')
+      }
     } finally {
       setSubmitting(false)
     }
@@ -155,6 +247,38 @@ export function CreateSeasonModal({
             )}
 
             <div className="pa-flex pa-flex-col pa-gap-4">
+              {teams.length === 0 && !loadingTeams && (
+                <div
+                  className="pa-card pa-mb-4"
+                  style={{
+                    background: 'var(--pa-warning-bg)',
+                    border: '1px solid var(--pa-warning)',
+                    padding: 'var(--pa-space-3)',
+                  }}
+                >
+                  <div className="pa-body-m pa-text-warning">
+                    No active teams available. Please create a team first.
+                  </div>
+                </div>
+              )}
+
+              <Select
+                label="Team"
+                value={teamId}
+                onChange={(e) => {
+                  setTeamId(e.target.value)
+                  setError(null)
+                }}
+                onBlur={() => markTouched('teamId')}
+                options={loadingTeams 
+                  ? [{ value: '', label: 'Loading teams...' }]
+                  : teams.map(t => ({ value: t.id, label: t.name }))
+                }
+                required
+                error={teamError}
+                disabled={loadingTeams || submitting || teams.length === 0}
+              />
+
               <Input
                 label={t('admin.structureForms.fields.seasonName.label')}
                 placeholder={t('admin.structureForms.fields.seasonName.placeholder')}
@@ -166,6 +290,7 @@ export function CreateSeasonModal({
                 onBlur={() => markTouched('name')}
                 required
                 error={nameError}
+                disabled={loadingTeams || submitting}
               />
 
               <div className="pa-grid pa-grid-2 pa-gap-4">
@@ -178,6 +303,7 @@ export function CreateSeasonModal({
                   }}
                   required
                   error={startError}
+                  isDisabled={loadingTeams || submitting}
                 />
                 <DatePicker
                   label={t('admin.structureForms.fields.seasonEnd.label')}
@@ -189,6 +315,7 @@ export function CreateSeasonModal({
                   minValue={startDate}
                   required
                   error={endError || rangeError}
+                  isDisabled={loadingTeams || submitting}
                 />
               </div>
 
@@ -196,6 +323,7 @@ export function CreateSeasonModal({
                 checked={isActive}
                 onChange={(e) => setIsActive(e.target.checked)}
                 label={t('admin.structureForms.fields.seasonActive.label')}
+                disabled={loadingTeams || submitting}
               />
             </div>
           </div>
@@ -216,7 +344,7 @@ export function CreateSeasonModal({
             <Button
               variant="primary"
               onClick={handleSubmit}
-              disabled={!canCreate || submitting}
+              disabled={!canCreate || submitting || loadingTeams}
               loading={submitting}
             >
               Save

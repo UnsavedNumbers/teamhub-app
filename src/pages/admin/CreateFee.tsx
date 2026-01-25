@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 
@@ -64,10 +64,12 @@ export default function CreateFee() {
   const [error, setError] = useState<string | null>(null)
   const [rosterSearch, setRosterSearch] = useState('')
 
+  const hasAutoSelectedTeam = useRef(false)
+
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
-  const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<FeeFormData>({
+  const { control, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm<FeeFormData>({
     defaultValues: { 
       title: '',
       description: '',
@@ -97,6 +99,8 @@ export default function CreateFee() {
     const { data, error } = await getTeams(context, { activeOnly: true })
     if (!error) {
       setTeams(data.map(t => ({ id: t.id, name: t.name })))
+      // Reset auto-selection flag when teams change
+      hasAutoSelectedTeam.current = false
     }
     setLoading(false)
   }, [context, isReady])
@@ -158,13 +162,40 @@ export default function CreateFee() {
   // Effects
   useEffect(() => { if (isReady) fetchTeams() }, [isReady, fetchTeams])
 
+  // Auto-select team when there's only one team
+  useEffect(() => {
+    // Only auto-select if:
+    // - We have exactly one team
+    // - No team is currently selected
+    // - We haven't already auto-selected
+    // - Context is ready
+    // - Not currently loading
+    if (teams.length === 1 && !watchTeamId && !hasAutoSelectedTeam.current && isReady && !loading) {
+      setValue('team_id', teams[0].id, { shouldValidate: false })
+      hasAutoSelectedTeam.current = true
+      // Trigger validation after state settles
+      setTimeout(() => trigger('team_id'), 100)
+    }
+    // Reset flag when teams array changes (new fetch or multiple teams)
+    if (teams.length !== 1) {
+      hasAutoSelectedTeam.current = false
+    }
+  }, [teams, watchTeamId, isReady, loading, setValue, trigger])
+
   useEffect(() => { 
     if (watchTeamId && isReady) { 
+      // Team selected: fetch seasons and clear dependent data
       fetchSeasons(watchTeamId)
-      setValue('season_id', '')
+      setValue('season_id', '', { shouldValidate: false })
       setValue('selected_athlete_ids', {})
       setRoster([])
-    } 
+    } else if (!watchTeamId && isReady) {
+      // Team cleared - clear all dependent data
+      setSeasons([])
+      setValue('season_id', '', { shouldValidate: false })
+      setValue('selected_athlete_ids', {})
+      setRoster([])
+    }
   }, [watchTeamId, isReady, setValue, fetchSeasons])
 
   useEffect(() => {

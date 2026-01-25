@@ -8,7 +8,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getSeason } from '../../data/services/seasonsService'
-import { getTeams } from '../../data/services/teamsService'
 import { getEvents } from '../../data/services/eventsService'
 import { getOrganizationUsers } from '../../data/services/usersService'
 import { supabase } from '../../lib/supabase'
@@ -161,7 +160,7 @@ export default function SeasonDetail() {
           })
 
           if (!eventsError && eventsData) {
-            gamesCount = eventsData.filter((e) => e.type === 'game' || e.type === 'match').length
+            gamesCount = eventsData.filter((e) => e.type === 'game').length
 
             // Get unique venues from events
             const eventIds = eventsData.map((e) => e.id)

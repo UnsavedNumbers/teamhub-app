@@ -1,11 +1,4 @@
-import {
-  TimeField as AriaTimeField,
-  Label,
-  DateInput,
-  DateSegment,
-} from 'react-aria-components'
-import type { TimeValue } from 'react-aria-components'
-import { parseTime, Time } from '@internationalized/date'
+import { useState, useRef, useEffect } from 'react'
 
 interface TimePickerProps {
   /** Input label */
@@ -28,16 +21,13 @@ interface TimePickerProps {
   className?: string
   /** Name attribute for forms */
   name?: string
-  /** Placeholder time */
-  placeholderValue?: TimeValue
 }
 
 /**
- * TimePicker - ARIA-compliant time picker using React Aria Components
+ * TimePicker - Custom time picker with dropdown
  * 
  * Features:
- * - Full keyboard navigation (arrows, tab)
- * - Screen reader support with ARIA labels
+ * - Dropdown with hour/minute/period selectors
  * - 12-hour format with AM/PM
  * - Disabled and read-only states
  * - Consistent styling with design system
@@ -51,71 +41,139 @@ export function TimePicker({
   onChange,
   isDisabled = false,
   isReadOnly = false,
-  className = '',
   name,
-  placeholderValue = new Time(9, 0),
 }: TimePickerProps) {
   const hasError = !!error
   const isRequired = required === true
+  const [isOpen, setIsOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
 
-  // Convert string value to TimeValue
-  let timeValue: TimeValue | null = null
-  if (value) {
-    try {
-      timeValue = parseTime(value)
-    } catch (_e) {
-      console.error('Invalid time format:', value)
+  // Parse value to hour, minute, period
+  const parseValue = (val: string) => {
+    if (!val) return { hour: 9, minute: 0, period: 'AM' }
+    const [hours, minutes] = val.split(':').map(Number)
+    const period = hours >= 12 ? 'PM' : 'AM'
+    const hour = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
+    return { hour, minute: minutes || 0, period }
+  }
+
+  const { hour, minute, period } = parseValue(value || '')
+
+  const formatDisplayValue = () => {
+    if (!value) return ''
+    const { hour, minute, period } = parseValue(value)
+    return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} ${period}`
+  }
+
+  const handleTimeChange = (newHour: number, newMinute: number, newPeriod: string) => {
+    if (onChange) {
+      let hour24 = newHour
+      if (newPeriod === 'PM' && newHour !== 12) hour24 = newHour + 12
+      if (newPeriod === 'AM' && newHour === 12) hour24 = 0
+      onChange(`${hour24.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')}`)
     }
   }
 
-  // Handle time change
-  const handleChange = (time: TimeValue | null) => {
-    if (onChange) {
-      if (time) {
-        // Convert to HH:MM format
-        const hours = time.hour.toString().padStart(2, '0')
-        const minutes = time.minute.toString().padStart(2, '0')
-        onChange(`${hours}:${minutes}`)
-      } else {
-        onChange('')
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
       }
     }
-  }
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isOpen])
+
+  const hours = Array.from({ length: 12 }, (_, i) => i + 1)
+  const minutes = Array.from({ length: 60 }, (_, i) => i)
 
   return (
-    <div className="pa-form-group">
-      <AriaTimeField
-        value={timeValue}
-        onChange={handleChange}
-        isDisabled={isDisabled}
-        isReadOnly={isReadOnly}
-        isRequired={isRequired}
-        name={name}
-        className={className}
-        hourCycle={12}
-        placeholderValue={placeholderValue}
-      >
-        {label && (
-          <Label className={`pa-label ${isRequired ? 'pa-label--required' : ''}`}>
-            {label}
-          </Label>
+    <div className="pa-form-group" ref={containerRef}>
+      {label && (
+        <label className={`pa-label ${isRequired ? 'pa-label--required' : ''}`}>
+          {label}
+        </label>
+      )}
+      
+      <div style={{ position: 'relative' }}>
+        <button
+          type="button"
+          onClick={() => !isDisabled && !isReadOnly && setIsOpen(!isOpen)}
+          disabled={isDisabled}
+          className={`pa-timepicker-button ${hasError ? 'pa-timepicker-button--error' : ''}`}
+        >
+          <span className="pa-timepicker-button-text">
+            {formatDisplayValue() || 'Select time'}
+          </span>
+          <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+            schedule
+          </span>
+        </button>
+
+        {isOpen && (
+          <div className="pa-timepicker-dropdown">
+            <div className="pa-timepicker-column">
+              <div className="pa-timepicker-column-header">Hour</div>
+              <div className="pa-timepicker-column-scroll">
+                {hours.map((h) => (
+                  <button
+                    key={h}
+                    type="button"
+                    className={`pa-timepicker-option ${h === hour ? 'pa-timepicker-option--selected' : ''}`}
+                    onClick={() => handleTimeChange(h, minute, period)}
+                  >
+                    {h.toString().padStart(2, '0')}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div className="pa-timepicker-column">
+              <div className="pa-timepicker-column-header">Minute</div>
+              <div className="pa-timepicker-column-scroll">
+                {minutes.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    className={`pa-timepicker-option ${m === minute ? 'pa-timepicker-option--selected' : ''}`}
+                    onClick={() => handleTimeChange(hour, m, period)}
+                  >
+                    {m.toString().padStart(2, '0')}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div className="pa-timepicker-column pa-timepicker-column--period">
+              <div className="pa-timepicker-column-header">Period</div>
+              <div className="pa-timepicker-column-scroll">
+                {['AM', 'PM'].map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    className={`pa-timepicker-option ${p === period ? 'pa-timepicker-option--selected' : ''}`}
+                    onClick={() => handleTimeChange(hour, minute, p)}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
-        
-        <DateInput className={`pa-timepicker-group ${hasError ? 'pa-timepicker-group--error' : ''}`}>
-          {(segment) => (
-            <DateSegment
-              segment={segment}
-              className="pa-timepicker-segment"
-            />
-          )}
-        </DateInput>
-      </AriaTimeField>
+      </div>
 
       {(helper || error) && (
         <div className={`pa-helper ${hasError ? 'pa-helper--error' : ''}`}>
           {error || helper}
         </div>
       )}
+      
+      <input type="hidden" name={name} value={value || ''} />
     </div>
   )
 }

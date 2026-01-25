@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganization } from '@/contexts/OrganizationContext'
+import { useLoadingState } from '@/contexts/LoadingStateContext'
 import { useTheme } from '@/hooks/useTheme'
 import { useT } from '@/i18n/useI18n'
 import { useOffline } from '@/hooks/useOffline'
@@ -23,10 +24,12 @@ interface RoleCard {
 export function RoleSelection() {
   const { profile, signOut, loading: authLoading } = useAuth()
   const { setCurrentOrganization, isLoading: orgLoading } = useOrganization()
+  const { setLoading } = useLoadingState()
   const { resolvedTheme } = useTheme()
   const { isOffline } = useOffline()
   const navigate = useNavigate()
   const t = useT()
+  const isMountedRef = useRef(true)
   const [selectedCard, setSelectedCard] = useState<string | null>(null)
   const [helpModalOpen, setHelpModalOpen] = useState(false)
   const [logoError, setLogoError] = useState(false)
@@ -298,18 +301,32 @@ export function RoleSelection() {
     }
   }, [profile, t])
 
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  // Handle loading state
+  useEffect(() => {
+    if (!isMountedRef.current) return
+    if (authLoading || orgLoading) {
+      setLoading(true)
+    } else {
+      setLoading(false)
+    }
+    return () => {
+      if (isMountedRef.current) {
+        setLoading(false)
+      }
+    }
+  }, [authLoading, orgLoading, setLoading])
+
   // Loading state
   if (authLoading || orgLoading) {
-    return (
-      <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light dark:bg-slate-900">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-slate-600 dark:text-slate-400">{t('common.loading')}</p>
-          </div>
-        </div>
-      </div>
-    )
+    return null
   }
 
   // No profile (should be handled by ProtectedRoute, but safety check)

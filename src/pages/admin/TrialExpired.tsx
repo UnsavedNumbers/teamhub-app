@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useLicense } from '../../hooks/useLicense'
 import { useAuth } from '../../hooks/useAuth'
+import { useLoadingState } from '../../contexts/LoadingStateContext'
 import { useCheckoutSession } from '../../hooks/useCheckoutSession'
 import { useTheme } from '../../hooks/useTheme'
 import { hasAnyRole } from '../../utils/roleHelpers'
@@ -63,9 +64,11 @@ const planCards: PlanCard[] = [
 export default function TrialExpired() {
   const { currentOrganization } = useOrganization()
   const { profile, signOut } = useAuth()
+  const { setLoading } = useLoadingState()
   const { resolvedTheme } = useTheme()
   const orgId = currentOrganization?.id
   const { loading: licenseLoading, error: licenseError } = useLicense(orgId)
+  const isMountedRef = useRef(true)
   const [logoError, setLogoError] = useState(false)
   const [logoVersion, setLogoVersion] = useState(0)
 
@@ -96,6 +99,29 @@ export default function TrialExpired() {
     await signOut()
   }
 
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  // Handle loading state
+  useEffect(() => {
+    if (!isMountedRef.current) return
+    if (licenseLoading) {
+      setLoading(true)
+    } else {
+      setLoading(false)
+    }
+    return () => {
+      if (isMountedRef.current) {
+        setLoading(false)
+      }
+    }
+  }, [licenseLoading, setLoading])
+
   if (!orgId) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
@@ -107,14 +133,7 @@ export default function TrialExpired() {
   }
 
   if (licenseLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-[#4c739a]">{t('common.loading')}</p>
-        </div>
-      </div>
-    )
+    return null
   }
 
   if (licenseError) {

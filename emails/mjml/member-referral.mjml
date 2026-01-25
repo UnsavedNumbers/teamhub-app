@@ -1,0 +1,62 @@
+<mjml>
+  <mj-head>
+    <mj-title>{{sender_firstname}} sent you a referral!</mj-title>
+    <mj-attributes>
+      <mj-all font-family="Arial, sans-serif" />
+      <mj-text font-size="14px" color="#333333" line-height="1.5" />
+      <mj-section background-color="#ffffff" />
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#f8fafc">
+     <!-- Header Image -->
+    <mj-section padding="20px">
+        <mj-column>
+            <mj-image src="{{header_image_url}}" width="600px" alt="Referral" />
+        </mj-column>
+    </mj-section>
+
+     <!-- Split Content -->
+    <mj-section padding="20px">
+        <mj-column width="30%">
+            <mj-image src="{{sender_image_url}}" width="150px" border-radius="50%" alt="Sender" />
+        </mj-column>
+        <mj-column width="70%">
+            <mj-text font-size="16px" font-weight="bold" padding-bottom="15px">
+               Hey {{recipient_firstname}}!
+            </mj-text>
+            <mj-text padding-bottom="15px">
+               {{sender_name}} thinks you should check out {{organization_name}}!
+            </mj-text>
+            <mj-text padding-bottom="15px">
+               We connect local athletes with the best coaching and facilities in the area. {{sender_name}} is already a member and wants you to join the team.
+            </mj-text>
+             <mj-text padding-bottom="15px">
+               <a href="{{referral_url}}" style="color: #2563eb; font-weight: bold;">Check it out here</a> to see available programs and get a special welcome offer.
+            </mj-text>
+            <mj-text>
+                Cheers,<br>
+                {{sender_firstname}}
+            </mj-text>
+        </mj-column>
+    </mj-section>
+
+    <mj-section padding="20px">
+        <mj-column>
+             <mj-image src="{{promo_image_url}}" width="500px" alt="Promo" />
+        </mj-column>
+    </mj-section>
+
+    <!-- Footer -->
+    <mj-section padding="20px" background-color="#1e293b">
+        <mj-column>
+            <mj-text align="center" color="#ffffff" font-size="14px">
+                YouthSports Team Hub
+            </mj-text>
+             <mj-social font-size="15px" icon-size="20px" mode="horizontal" padding-top="10px">
+                <mj-social-element name="facebook" href="#"></mj-social-element>
+                <mj-social-element name="instagram" href="#"></mj-social-element>
+             </mj-social>
+        </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

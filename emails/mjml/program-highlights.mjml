@@ -1,0 +1,118 @@
+<mjml>
+  <mj-head>
+    <mj-title>{{subject}}</mj-title>
+    <mj-preview>{{preheader}}</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Arial, sans-serif" />
+      <mj-text font-size="14px" color="#333333" line-height="1.5" />
+      <mj-section background-color="#ffffff" />
+    </mj-attributes>
+    <mj-style>
+        .feature-icon {
+            border-radius: 50%;
+            background-color: #f1f5f9;
+            padding: 10px;
+        }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f8fafc">
+    <!-- Hero Header -->
+    <mj-section padding="40px 20px" background-color="#7c3aed">
+      <mj-column>
+        <mj-text align="center" font-size="30px" font-weight="bold" color="#ffffff" line-height="1.2">
+          {{hero_title}}
+        </mj-text>
+        <mj-text align="center" font-size="18px" color="#e9d5ff" padding-top="10px">
+          {{hero_subtitle}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Intro Text -->
+    <mj-section padding="40px 20px">
+        <mj-column>
+            <mj-text font-size="16px" color="#333333">
+                {{intro_text}}
+            </mj-text>
+            <mj-button href="{{action_url}}" background-color="#000000" color="#ffffff" font-weight="bold" border-radius="6px">
+                {{action_button_text}}
+            </mj-button>
+        </mj-column>
+    </mj-section>
+
+    <!-- Features Grid -->
+    <mj-section padding="20px">
+        <!-- Feature 1 -->
+        <mj-column width="100%" padding-bottom="30px">
+            <mj-table padding="0">
+                <tr>
+                    <td width="60" valign="top">
+                        <img src="{{feature_1_icon_url}}" width="40" height="40" />
+                    </td>
+                    <td padding-left="20px">
+                        <div style="font-size: 18px; font-weight: bold; color: #1e293b; margin-bottom: 5px;">{{feature_1_title}}</div>
+                        <div style="font-size: 14px; color: #475569; line-height: 1.5;">{{feature_1_description}}</div>
+                    </td>
+                </tr>
+            </mj-table>
+        </mj-column>
+
+         <!-- Feature 2 -->
+        <mj-column width="100%" padding-bottom="30px">
+            <mj-table padding="0">
+                <tr>
+                    <td width="60" valign="top">
+                        <img src="{{feature_2_icon_url}}" width="40" height="40" />
+                    </td>
+                    <td padding-left="20px">
+                        <div style="font-size: 18px; font-weight: bold; color: #1e293b; margin-bottom: 5px;">{{feature_2_title}}</div>
+                        <div style="font-size: 14px; color: #475569; line-height: 1.5;">{{feature_2_description}}</div>
+                    </td>
+                </tr>
+            </mj-table>
+        </mj-column>
+
+         <!-- Feature 3 -->
+        <mj-column width="100%" padding-bottom="30px">
+            <mj-table padding="0">
+                <tr>
+                    <td width="60" valign="top">
+                        <img src="{{feature_3_icon_url}}" width="40" height="40" />
+                    </td>
+                    <td padding-left="20px">
+                        <div style="font-size: 18px; font-weight: bold; color: #1e293b; margin-bottom: 5px;">{{feature_3_title}}</div>
+                        <div style="font-size: 14px; color: #475569; line-height: 1.5;">{{feature_3_description}}</div>
+                    </td>
+                </tr>
+            </mj-table>
+        </mj-column>
+    </mj-section>
+    
+    <!-- Secondary CTA -->
+    <mj-section padding="20px">
+        <mj-column>
+             <mj-button href="{{secondary_url}}" background-color="#000000" color="#ffffff" font-weight="bold" border-radius="6px">
+                Learn More
+            </mj-button>
+        </mj-column>
+    </mj-section>
+    
+    <mj-section padding="20px">
+        <mj-column>
+            <mj-text font-size="12px" color="#64748b">
+                {{disclaimer_text}}
+            </mj-text>
+        </mj-column>
+    </mj-section>
+
+    <!-- Footer -->
+    <mj-section padding="40px 20px" background-color="#1e293b">
+      <mj-column>
+        <mj-text color="#ffffff" font-weight="bold">Help Center | Terms | Community</mj-text>
+        <mj-text color="#94a3b8" font-size="12px" padding-top="10px">
+          © 2026 YouthSports Team Hub
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

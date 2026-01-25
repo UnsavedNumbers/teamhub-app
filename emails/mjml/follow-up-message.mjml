@@ -1,0 +1,42 @@
+<mjml>
+  <mj-head>
+    <mj-title>{{subject}}</mj-title>
+    <mj-attributes>
+      <mj-all font-family="Arial, sans-serif" />
+      <mj-text font-size="16px" color="#333333" line-height="1.6" />
+      <mj-section background-color="#ffffff" />
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#f8fafc">
+    <mj-section padding="20px">
+      <mj-column>
+        <mj-text>
+          Hi {{recipient_name}},
+        </mj-text>
+        <mj-text>
+          I know you're busy running things at {{target_organization}}, but I wanted to follow up on my previous email.
+        </mj-text>
+        <mj-text>
+          We've helped many similar leagues improve their scheduling and registration process, and I think we could do the same for you.
+        </mj-text>
+        <mj-text>
+          Check out this <a href="{{video_url}}" style="color: #2563eb;">short video</a> explaining how it works.
+        </mj-text>
+        <mj-text>
+          Let me know if you have any questions!
+        </mj-text>
+        <mj-text padding-top="20px">
+          Thanks,<br>
+          {{sender_name}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+        <mj-section padding="20px" background-color="#f8fafc">
+      <mj-column>
+        <mj-text font-size="12px" color="#94a3b8">
+          {{organization_address}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

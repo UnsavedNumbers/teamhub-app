@@ -61,11 +61,22 @@
     --pa-topbar-bg: var(--pa-n0);
 }
 
-/* Dark mode variable overrides */
+/* Dark Mode - Layered Surface System */
 html.dark {
-    --pa-surface: #1f2937;
-    --pa-surface-subtle: #111827;
-    --pa-surface-panel: #374151;
+    /* Surface Layers - Clear hierarchy through distinct backgrounds */
+    --pa-surface-subtle: #0f1419;      /* Page background - darkest */
+    --pa-surface: #1a1f26;             /* Card background - elevated */
+    --pa-surface-panel: #252b35;       /* Panel/Input background - most elevated */
+    
+    /* Dark Mode Text Hierarchy */
+    --pa-text-primary: #f9fafb;        /* High contrast - for metrics and headlines */
+    --pa-text-secondary: #d1d5db;      /* Medium contrast - for labels */
+    --pa-text-muted: #9ca3af;          /* Low contrast - for hints and meta */
+    
+    /* Border Colors - Subtle separation */
+    --pa-border-subtle: #252b35;
+    --pa-border-default: #374151;
+    --pa-border-emphasis: #4b5563;
 
     /* Glass/Translucent Surfaces */
     --pa-glass-bg: rgba(255, 255, 255, 0.85);
@@ -89,13 +100,11 @@ html.dark {
     --z-bottom-sheet: 900;
     --z-drawer: 1000;
     --z-nav: 100;
-}
-
-/* Dark mode variable overrides */
-html.dark {
-    --pa-surface: #1f2937;
-    --pa-surface-subtle: #111827;
-    --pa-surface-panel: #374151;
+    
+    /* Shadow System for Dark Mode - More prominent lift */
+    --pa-shadow-1: 0 2px 8px rgba(0, 0, 0, 0.4);
+    --pa-shadow-2: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --pa-shadow-3: 0 16px 48px rgba(0, 0, 0, 0.6);
 }
 
 /* =====================================================================
@@ -184,6 +193,10 @@ html.dark {
     -moz-osx-font-smoothing: grayscale;
 }
 
+html.dark .pa-root {
+    color: var(--pa-text-secondary);
+}
+
 .pa-root *,
 .pa-root *::before,
 .pa-root *::after {
@@ -196,14 +209,26 @@ html.dark {
     transition: color var(--pa-motion-normal) var(--pa-ease-out);
 }
 
+html.dark .pa-root a {
+    color: var(--pa-text-secondary);
+}
+
 .pa-root a:hover {
     color: var(--pa-n900);
     text-decoration: underline;
 }
 
+html.dark .pa-root a:hover {
+    color: var(--pa-text-primary);
+}
+
 .pa-root a:focus-visible {
     outline: 2px solid var(--pa-n700);
     outline-offset: 2px;
+}
+
+html.dark .pa-root a:focus-visible {
+    outline-color: rgba(96, 165, 250, 0.5);
 }
 
 /* =====================================================================
@@ -217,11 +242,19 @@ html.dark {
     color: var(--pa-n900);
 }
 
+html.dark .pa-display-xxl {
+    color: var(--pa-text-primary);
+}
+
 .pa-display-xl {
     font: var(--pa-text-display-xl);
     letter-spacing: -0.02em;
     text-transform: uppercase;
     color: var(--pa-n900);
+}
+
+html.dark .pa-display-xl {
+    color: var(--pa-text-primary);
 }
 
 .pa-h1 {
@@ -231,6 +264,10 @@ html.dark {
     color: var(--pa-n900);
 }
 
+html.dark .pa-h1 {
+    color: var(--pa-text-primary);
+}
+
 .pa-h2 {
     font: var(--pa-text-h2);
     letter-spacing: -0.01em;
@@ -238,9 +275,17 @@ html.dark {
     color: var(--pa-n900);
 }
 
+html.dark .pa-h2 {
+    color: var(--pa-text-primary);
+}
+
 .pa-h3 {
     font: var(--pa-text-h3);
     color: var(--pa-n700);
+}
+
+html.dark .pa-h3 {
+    color: var(--pa-text-primary);
 }
 
 .pa-body-l {
@@ -248,14 +293,26 @@ html.dark {
     color: var(--pa-n700);
 }
 
+html.dark .pa-body-l {
+    color: var(--pa-text-secondary);
+}
+
 .pa-body-m {
     font: var(--pa-text-body-m);
     color: var(--pa-n700);
 }
 
+html.dark .pa-body-m {
+    color: var(--pa-text-secondary);
+}
+
 .pa-body-s {
     font: var(--pa-text-body-s);
     color: var(--pa-n500);
+}
+
+html.dark .pa-body-s {
+    color: var(--pa-text-muted);
 }
 
 .pa-caption {
@@ -264,11 +321,19 @@ html.dark {
     color: var(--pa-n500);
 }
 
+html.dark .pa-caption {
+    color: var(--pa-text-muted);
+}
+
 .pa-overline {
     font: var(--pa-text-overline);
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--pa-n500);
+}
+
+html.dark .pa-overline {
+    color: var(--pa-text-muted);
 }
 
 .pa-mono {
@@ -792,6 +857,12 @@ html.dark {
     z-index: 50;
 }
 
+html.dark .pa-topbar {
+    background: var(--pa-surface);
+    border-bottom: 1px solid var(--pa-border-subtle);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
 .pa-topbar-left {
     display: flex;
     align-items: center;
@@ -802,6 +873,10 @@ html.dark {
     font: var(--pa-text-h3);
     color: var(--pa-n700);
     margin: 0;
+}
+
+html.dark .pa-topbar-title {
+    color: var(--pa-text-primary);
 }
 
 .pa-topbar-right {
@@ -827,14 +902,31 @@ html.dark {
     transition: all var(--pa-motion-normal) var(--pa-ease-out);
 }
 
+/* Dark Mode - Search with clear surface */
+html.dark .pa-search-input {
+    background: var(--pa-surface-panel);
+    color: var(--pa-text-primary);
+    border: 1px solid var(--pa-border-default);
+}
+
 .pa-search-input::placeholder {
     color: var(--pa-n500);
+}
+
+html.dark .pa-search-input::placeholder {
+    color: var(--pa-text-muted);
 }
 
 .pa-search-input:focus {
     background: var(--pa-white);
     outline: 2px solid var(--pa-theme-focus-ring);
     box-shadow: var(--pa-shadow-1);
+}
+
+html.dark .pa-search-input:focus {
+    background: var(--pa-surface-panel);
+    border-color: var(--pa-border-emphasis);
+    outline: 2px solid rgba(96, 165, 250, 0.4);
 }
 
 .pa-search-icon {
@@ -844,6 +936,10 @@ html.dark {
     transform: translateY(-50%);
     color: var(--pa-n500);
     pointer-events: none;
+}
+
+html.dark .pa-search-icon {
+    color: var(--pa-text-muted);
 }
 
 .pa-search-icon .material-symbols-outlined {
@@ -864,6 +960,10 @@ html.dark {
     background: var(--pa-n50);
 }
 
+html.dark .pa-user-menu:hover {
+    background: var(--pa-surface-panel);
+}
+
 .pa-user-avatar {
     width: 32px;
     height: 32px;
@@ -873,6 +973,11 @@ html.dark {
     align-items: center;
     justify-content: center;
     color: var(--pa-n500);
+}
+
+html.dark .pa-user-avatar {
+    background: var(--pa-surface-panel);
+    color: var(--pa-text-muted);
 }
 
 .pa-user-avatar .material-symbols-outlined {
@@ -1016,6 +1121,18 @@ html.dark {
     box-shadow: var(--pa-shadow-1);
 }
 
+/* Dark Mode - Cards with clear elevation */
+html.dark .pa-card {
+    background: var(--pa-surface);
+    border: 1px solid var(--pa-border-subtle);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+html.dark .pa-card:hover {
+    box-shadow: var(--pa-shadow-2);
+    border-color: var(--pa-border-default);
+}
+
 .pa-card-header {
     display: flex;
     align-items: center;
@@ -1027,6 +1144,10 @@ html.dark {
     font: var(--pa-text-h3);
     color: var(--pa-n700);
     margin: 0;
+}
+
+html.dark .pa-card-title {
+    color: var(--pa-text-primary);
 }
 
 .pa-card-actions {
@@ -1049,10 +1170,27 @@ html.dark {
     border-color: var(--pa-n200);
 }
 
+/* Dark Mode - Stat Cards with prominent elevation */
+html.dark .pa-kpi-card {
+    background: var(--pa-surface);
+    border: 1px solid var(--pa-border-subtle);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+html.dark .pa-kpi-card:hover {
+    box-shadow: var(--pa-shadow-2);
+    border-color: var(--pa-border-emphasis);
+}
+
 .pa-kpi-label {
     font: var(--pa-text-overline);
     color: var(--pa-n500);
     margin-bottom: var(--pa-space-2);
+}
+
+/* Dark Mode - Labels with clear readable contrast */
+html.dark .pa-kpi-label {
+    color: var(--pa-text-muted);
 }
 
 .pa-kpi-value {
@@ -1061,9 +1199,20 @@ html.dark {
     margin-bottom: var(--pa-space-1);
 }
 
+/* Dark Mode - Metrics with maximum contrast */
+html.dark .pa-kpi-value {
+    color: var(--pa-text-primary);
+    font-weight: 600;
+}
+
 .pa-kpi-meta {
     font: var(--pa-text-body-s);
     color: var(--pa-n500);
+}
+
+/* Dark Mode - Meta text clearly secondary */
+html.dark .pa-kpi-meta {
+    color: var(--pa-text-muted);
 }
 
 .pa-kpi-delta {
@@ -1105,9 +1254,19 @@ html.dark {
     color: var(--pa-success);
 }
 
+html.dark .pa-badge--success {
+    background: rgba(110, 231, 183, 0.15);
+    color: #6ee7b7;
+}
+
 .pa-badge--warning {
     background: var(--pa-warning-bg);
     color: var(--pa-warning);
+}
+
+html.dark .pa-badge--warning {
+    background: rgba(251, 191, 36, 0.15);
+    color: #fbbf24;
 }
 
 .pa-badge--danger {
@@ -1115,14 +1274,30 @@ html.dark {
     color: var(--pa-danger);
 }
 
+html.dark .pa-badge--danger {
+    background: rgba(252, 165, 165, 0.15);
+    color: #fca5a5;
+}
+
 .pa-badge--info {
     background: var(--pa-info-bg);
     color: var(--pa-info);
 }
 
+html.dark .pa-badge--info {
+    background: rgba(147, 197, 253, 0.15);
+    color: #93c5fd;
+}
+
 .pa-badge--neutral {
     background: var(--pa-n100);
     color: var(--pa-n500);
+}
+
+html.dark .pa-badge--neutral {
+    background: var(--pa-surface-panel);
+    color: var(--pa-text-secondary);
+    border: 1px solid var(--pa-border-default);
 }
 
 /* =====================================================================
@@ -1141,9 +1316,17 @@ html.dark {
     margin-bottom: var(--pa-space-2);
 }
 
+html.dark .pa-label {
+    color: var(--pa-text-secondary);
+}
+
 .pa-label--required::after {
     content: ' *';
     color: var(--pa-n500);
+}
+
+html.dark .pa-label--required::after {
+    color: var(--pa-text-muted);
 }
 
 .pa-input {
@@ -1543,93 +1726,170 @@ html.dark .pa-datepicker-cell[data-unavailable] {
     color: #6b7280;
 }
 
-/* TimePicker - React Aria Components */
-.pa-timepicker-group {
+/* TimePicker - Custom Dropdown */
+.pa-timepicker-button {
     display: flex;
     align-items: center;
-    gap: var(--pa-space-2);
+    justify-content: space-between;
     width: 100%;
     height: 44px;
+    padding: 0 var(--pa-space-3);
+    border: 1px solid var(--pa-n200);
+    border-radius: var(--pa-radius-s);
+    background: var(--pa-surface);
+    font: var(--pa-text-body-m);
+    color: var(--pa-n900);
+    cursor: pointer;
+    transition: all var(--pa-motion-normal) var(--pa-ease-out);
+    text-align: left;
     
     @media (max-width: 768px) {
         height: 48px;
     }
-    
-    border: 1px solid var(--pa-n200);
-    border-radius: var(--pa-radius-s);
-    background: var(--pa-surface);
-    padding: 0 var(--pa-space-3);
-    transition: all var(--pa-motion-normal) var(--pa-ease-out);
 }
 
-.pa-timepicker-group:hover {
+.pa-timepicker-button:hover:not(:disabled) {
     border-color: var(--pa-n300);
 }
 
-.pa-timepicker-group:focus-within {
+.pa-timepicker-button:focus {
     border-color: var(--pa-n700);
     outline: 2px solid rgba(43, 52, 61, 0.25);
     box-shadow: var(--pa-shadow-1);
 }
 
-.pa-timepicker-group--error {
+.pa-timepicker-button--error {
     border-color: var(--pa-n800);
 }
 
-.pa-timepicker-group--error:focus-within {
+.pa-timepicker-button--error:focus {
     outline-color: rgba(11, 15, 20, 0.25);
 }
 
-html.dark .pa-timepicker-group {
-    background: var(--pa-surface);
-    border-color: #374151;
+.pa-timepicker-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
-html.dark .pa-timepicker-group:hover {
+html.dark .pa-timepicker-button {
+    background: var(--pa-surface);
+    border-color: #374151;
+    color: #f9fafb;
+}
+
+html.dark .pa-timepicker-button:hover:not(:disabled) {
     border-color: #4b5563;
 }
 
-html.dark .pa-timepicker-group:focus-within {
+html.dark .pa-timepicker-button:focus {
     border-color: #6b7280;
     outline: 2px solid rgba(107, 114, 128, 0.25);
 }
 
-.pa-timepicker-segment {
-    padding: 4px 8px;
+.pa-timepicker-button-text {
+    flex: 1;
+}
+
+.pa-timepicker-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: var(--pa-space-1);
+    background: var(--pa-surface);
+    border: 1px solid var(--pa-n200);
+    border-radius: var(--pa-radius-m);
+    box-shadow: var(--pa-shadow-4);
+    display: flex;
+    gap: 1px;
+    overflow: hidden;
+    z-index: 1000;
+}
+
+html.dark .pa-timepicker-dropdown {
+    background: #1f2937;
+    border-color: #374151;
+}
+
+.pa-timepicker-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--pa-surface);
+}
+
+html.dark .pa-timepicker-column {
+    background: #1f2937;
+}
+
+.pa-timepicker-column--period {
+    flex: 0.6;
+}
+
+.pa-timepicker-column-header {
+    padding: var(--pa-space-2) var(--pa-space-3);
+    font: var(--pa-text-body-s);
+    font-weight: 600;
+    color: var(--pa-n600);
+    text-align: center;
+    border-bottom: 1px solid var(--pa-n200);
+    background: var(--pa-n50);
+}
+
+html.dark .pa-timepicker-column-header {
+    color: #9ca3af;
+    background: #111827;
+    border-color: #374151;
+}
+
+.pa-timepicker-column-scroll {
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.pa-timepicker-option {
+    display: block;
+    width: 100%;
+    padding: var(--pa-space-2) var(--pa-space-3);
     font: var(--pa-text-body-m);
     color: var(--pa-n900);
-    border-radius: var(--pa-radius-xs);
-    outline: none;
-    min-width: 32px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
     text-align: center;
     transition: all var(--pa-motion-fast) var(--pa-ease-out);
 }
 
-html.dark .pa-timepicker-segment {
+html.dark .pa-timepicker-option {
     color: #f9fafb;
 }
 
-.pa-timepicker-segment:focus {
-    background: var(--pa-primary-500);
-    color: var(--pa-white);
+.pa-timepicker-option:hover {
+    background: var(--pa-n100);
 }
 
-html.dark .pa-timepicker-segment:focus {
+html.dark .pa-timepicker-option:hover {
+    background: #374151;
+}
+
+.pa-timepicker-option--selected {
+    background: var(--pa-primary-500);
+    color: var(--pa-white);
+    font-weight: 600;
+}
+
+html.dark .pa-timepicker-option--selected {
     background: #3b82f6;
     color: #ffffff;
 }
 
-.pa-timepicker-segment[data-placeholder] {
-    color: var(--pa-n500);
+.pa-timepicker-option--selected:hover {
+    background: var(--pa-primary-600);
 }
 
-html.dark .pa-timepicker-segment[data-placeholder] {
-    color: #9ca3af;
-}
-
-.pa-timepicker-segment[data-type="literal"] {
-    padding: 4px 2px;
-    min-width: auto;
+html.dark .pa-timepicker-option--selected:hover {
+    background: #2563eb;
 }
 
 /* Checkbox */
@@ -1728,10 +1988,25 @@ html.dark .pa-timepicker-segment[data-placeholder] {
     box-shadow: var(--pa-shadow-1);
 }
 
+/* Dark Mode - Tables with clear elevation */
+html.dark .pa-table-card {
+    background: var(--pa-surface);
+    border: 1px solid var(--pa-border-subtle);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+html.dark .pa-table-card:hover {
+    box-shadow: var(--pa-shadow-2);
+}
+
 /* Optional card header above table */
 .pa-table-card-header {
     padding: var(--pa-space-4) var(--pa-space-5);
     border-bottom: 1px solid var(--pa-n100);
+}
+
+html.dark .pa-table-card-header {
+    border-bottom-color: var(--pa-border-subtle);
 }
 
 /* Table wrapper (no padding - table is flush to card edges) */
@@ -1755,6 +2030,10 @@ html.dark .pa-timepicker-segment[data-placeholder] {
     background: var(--pa-n50);
 }
 
+html.dark .pa-table thead {
+    background: var(--pa-surface-subtle);
+}
+
 .pa-table thead tr {
     height: 40px;
 }
@@ -1773,6 +2052,11 @@ html.dark .pa-timepicker-segment[data-placeholder] {
     white-space: nowrap;
     vertical-align: middle;
     position: relative;
+}
+
+html.dark .pa-table th {
+    color: var(--pa-text-muted);
+    border-bottom-color: var(--pa-border-subtle);
 }
 
 /* First column gets extra left padding */
@@ -1831,6 +2115,10 @@ html.dark .pa-timepicker-segment[data-placeholder] {
     position: relative;
 }
 
+html.dark .pa-table tbody tr {
+    background: var(--pa-surface);
+}
+
 /* Compact mode */
 .pa-table--compact tbody tr {
     height: 44px;
@@ -1841,13 +2129,25 @@ html.dark .pa-timepicker-segment[data-placeholder] {
     background: var(--pa-n25);
 }
 
+html.dark .pa-table--zebra tbody tr:nth-child(even) {
+    background: var(--pa-surface-subtle);
+}
+
 /* Hover state */
 .pa-table tbody tr:hover {
     background: var(--pa-n50);
 }
 
+html.dark .pa-table tbody tr:hover {
+    background: var(--pa-surface-panel);
+}
+
 .pa-table--zebra tbody tr:nth-child(even):hover {
     background: var(--pa-n50);
+}
+
+html.dark .pa-table--zebra tbody tr:nth-child(even):hover {
+    background: var(--pa-surface-panel);
 }
 
 /* Clickable rows */
@@ -1859,9 +2159,17 @@ html.dark .pa-timepicker-segment[data-placeholder] {
     background: var(--pa-n100);
 }
 
+html.dark .pa-table tbody tr.pa-clickable:active {
+    background: var(--pa-border-default);
+}
+
 /* Selected row (Gray tint + Black accent) */
 .pa-table tbody tr.pa-selected {
     background: var(--pa-n100);
+}
+
+html.dark .pa-table tbody tr.pa-selected {
+    background: var(--pa-surface-panel);
 }
 
 .pa-table tbody tr.pa-selected::before {
@@ -1872,6 +2180,10 @@ html.dark .pa-timepicker-segment[data-placeholder] {
     bottom: 0;
     width: 3px;
     background: var(--pa-n900);
+}
+
+html.dark .pa-table tbody tr.pa-selected::before {
+    background: #60a5fa;
 }
 
 /* Focus state for keyboard navigation */
@@ -1894,6 +2206,11 @@ html.dark .pa-timepicker-segment[data-placeholder] {
     padding: var(--pa-space-4);
     border-bottom: 1px solid var(--pa-n100);
     vertical-align: middle;
+}
+
+html.dark .pa-table td {
+    color: var(--pa-text-primary);
+    border-bottom-color: var(--pa-border-subtle);
 }
 
 .pa-table--compact td {
@@ -2088,9 +2405,18 @@ html.dark .pa-timepicker-segment[data-placeholder] {
     background: var(--pa-white);
 }
 
+html.dark .pa-table-footer {
+    border-top-color: var(--pa-border-subtle);
+    background: var(--pa-surface);
+}
+
 .pa-table-footer-info {
     font: var(--pa-text-body-s);
     color: var(--pa-n500);
+}
+
+html.dark .pa-table-footer-info {
+    color: var(--pa-text-secondary);
 }
 
 .pa-table-pagination {
@@ -2103,6 +2429,10 @@ html.dark .pa-timepicker-segment[data-placeholder] {
     font: var(--pa-text-body-s);
     color: var(--pa-n500);
     margin-right: var(--pa-space-2);
+}
+
+html.dark .pa-table-pagination-label {
+    color: var(--pa-text-secondary);
 }
 
 .pa-table-pagination-select {
@@ -2121,8 +2451,19 @@ html.dark .pa-timepicker-segment[data-placeholder] {
     background-position: right 8px center;
 }
 
+html.dark .pa-table-pagination-select {
+    background: var(--pa-surface-panel);
+    border-color: var(--pa-border-default);
+    color: var(--pa-text-primary);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%239ca3af' viewBox='0 0 16 16'%3E%3Cpath d='M4.646 5.646a.5.5 0 0 1 .708 0L8 8.293l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+}
+
 .pa-table-pagination-select:hover {
     border-color: var(--pa-n300);
+}
+
+html.dark .pa-table-pagination-select:hover {
+    border-color: var(--pa-border-emphasis);
 }
 
 .pa-table-pagination-select:focus {
@@ -2150,9 +2491,21 @@ html.dark .pa-timepicker-segment[data-placeholder] {
     transition: all var(--pa-motion-fast) var(--pa-ease-out);
 }
 
+html.dark .pa-table-pagination-btn {
+    background: var(--pa-surface-panel);
+    border-color: var(--pa-border-default);
+    color: var(--pa-text-secondary);
+}
+
 .pa-table-pagination-btn:hover:not(:disabled) {
     background: var(--pa-n50);
     border-color: var(--pa-n300);
+}
+
+html.dark .pa-table-pagination-btn:hover:not(:disabled) {
+    background: var(--pa-border-default);
+    border-color: var(--pa-border-emphasis);
+    color: var(--pa-text-primary);
 }
 
 .pa-table-pagination-btn:disabled {
@@ -2189,6 +2542,11 @@ html.dark .pa-timepicker-segment[data-placeholder] {
     color: var(--pa-n300);
 }
 
+/* Dark Mode - Empty state icons visible but subtle */
+html.dark .pa-empty-icon {
+    color: var(--pa-text-muted);
+}
+
 .pa-empty-icon .material-symbols-outlined {
     font-size: 48px;
 }
@@ -2199,11 +2557,22 @@ html.dark .pa-timepicker-segment[data-placeholder] {
     margin-bottom: var(--pa-space-2);
 }
 
+/* Dark Mode - Empty state title with high contrast */
+html.dark .pa-empty-title {
+    color: var(--pa-text-primary);
+    font-weight: 600;
+}
+
 .pa-empty-text {
     font: var(--pa-text-body-m);
     color: var(--pa-n500);
     margin-bottom: var(--pa-space-5);
     max-width: 320px;
+}
+
+/* Dark Mode - Empty state text clearly readable */
+html.dark .pa-empty-text {
+    color: var(--pa-text-secondary);
 }
 
 /* =====================================================================
@@ -2226,6 +2595,10 @@ html.dark .pa-timepicker-segment[data-placeholder] {
     margin-bottom: var(--pa-space-4);
 }
 
+html.dark .pa-breadcrumbs {
+    color: var(--pa-text-muted);
+}
+
 .pa-breadcrumb-item {
     display: inline-flex;
     align-items: center;
@@ -2237,6 +2610,10 @@ html.dark .pa-timepicker-segment[data-placeholder] {
     color: #94A3B8;
 }
 
+html.dark .pa-breadcrumb-chevron {
+    color: var(--pa-text-muted);
+}
+
 .pa-breadcrumb-link {
     color: inherit;
     text-decoration: none;
@@ -2246,8 +2623,16 @@ html.dark .pa-timepicker-segment[data-placeholder] {
     color: var(--pa-theme-text-accent);
 }
 
+html.dark .pa-breadcrumb-link:hover {
+    color: var(--pa-text-secondary);
+}
+
 .pa-breadcrumb-current {
     color: var(--pa-theme-text-accent);
+}
+
+html.dark .pa-breadcrumb-current {
+    color: var(--pa-text-primary);
 }
 
 /* Ensure breadcrumb current is dark in light mode */
@@ -2286,7 +2671,15 @@ html.dark .pa-timepicker-segment[data-placeholder] {
     margin: 0 0 var(--pa-space-2) 0;
 }
 
+html.dark .pa-page-title {
+    color: var(--pa-text-primary);
+}
+
 .pa-page-title .pa-title-accent {
+    color: var(--pa-blue);
+}
+
+html.dark .pa-page-title .pa-title-accent {
     color: var(--pa-blue);
 }
 
@@ -2295,6 +2688,10 @@ html.dark .pa-timepicker-segment[data-placeholder] {
     color: #64748B;
     font-weight: 500;
     margin: 0;
+}
+
+html.dark .pa-page-subtitle {
+    color: var(--pa-text-secondary);
 }
 
 .pa-page-actions {
@@ -2464,16 +2861,32 @@ html.dark .pa-timepicker-segment[data-placeholder] {
     color: var(--pa-n500);
 }
 
+html.dark .pa-text-muted {
+    color: var(--pa-text-muted);
+}
+
 .pa-text-success {
     color: var(--pa-success);
+}
+
+html.dark .pa-text-success {
+    color: #6ee7b7;
 }
 
 .pa-text-warning {
     color: var(--pa-warning);
 }
 
+html.dark .pa-text-warning {
+    color: #fbbf24;
+}
+
 .pa-text-danger {
     color: var(--pa-danger);
+}
+
+html.dark .pa-text-danger {
+    color: #fca5a5;
 }
 
 /* =====================================================================
