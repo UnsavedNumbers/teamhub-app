@@ -12,7 +12,8 @@ import {
   Tabs,
   TabsList,
   TabsTrigger,
-  TabsContent
+  TabsContent,
+  ConfirmDialog
 } from '../../components/platformAdmin'
 import { getUserPreferences, updateUserPreferences, type UserPreferences } from '../../data/services/preferencesService'
 import { supabase } from '../../lib/supabase'
@@ -414,18 +415,17 @@ export default function AdminSettings() {
     }
   }
   
+  const [showSignOutAllDialog, setShowSignOutAllDialog] = useState(false)
+
   // Handle sign out all sessions
   const handleSignOutAll = async () => {
-    if (!confirm('Are you sure you want to sign out of all sessions? You will need to log in again.')) {
-      return
-    }
-    
     try {
       await supabase.auth.signOut({ scope: 'global' })
       window.location.href = '/login'
     } catch (err) {
       console.error('Error signing out:', err)
       setError('Failed to sign out')
+      setShowSignOutAllDialog(false)
     }
   }
   
@@ -524,7 +524,7 @@ export default function AdminSettings() {
           <SecuritySettings 
             user={user}
             onShowPasswordModal={() => setShowPasswordModal(true)}
-            onSignOutAll={handleSignOutAll}
+            onSignOutAll={() => setShowSignOutAllDialog(true)}
             passwordSuccess={passwordSuccess}
           />
         </TabsContent>

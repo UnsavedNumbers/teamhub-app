@@ -46,7 +46,7 @@ export function TeamOverviewTab({
           <h3 className="pa-h3" style={{ margin: 0 }}>
             Overview
           </h3>
-          <p className="pa-body-s" style={{ color: 'var(--pa-n500)', margin: 'var(--pa-space-1) 0 0 0' }} className="dark:text-slate-400">
+          <p className="pa-body-s dark:text-slate-400" style={{ color: 'var(--pa-n500)', margin: 'var(--pa-space-1) 0 0 0' }}>
             {teamName}
           </p>
         </div>

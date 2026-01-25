@@ -11,7 +11,8 @@ import {
   Button, 
   Select, 
   PlatformDataTable, 
-  type ColumnConfig 
+  type ColumnConfig,
+  ConfirmDialog
 } from '../../components/platformAdmin'
 
 interface Season {
@@ -34,6 +35,7 @@ export default function Roster() {
   const [roster, setRoster] = useState<Membership[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [playerToRemove, setPlayerToRemove] = useState<string | null>(null)
 
   const { context, isReady } = useUserContext()
 
@@ -106,14 +108,20 @@ export default function Roster() {
     return families[childId] ?? 'Family'
   }
 
-  async function removePlayer(membershipId: string) {
-    if (!window.confirm('Are you sure you want to remove this player from the roster?')) return
+  function handleRemovePlayerClick(membershipId: string) {
+    setPlayerToRemove(membershipId)
+  }
+
+  async function handleConfirmRemovePlayer() {
+    if (!playerToRemove) return
     
     // In fake data mode, just remove locally
-    setRoster(prev => prev.filter(m => m.id !== membershipId))
+    setRoster(prev => prev.filter(m => m.id !== playerToRemove))
 
     // TODO: Replace with real Supabase update when migrating
-    // await supabase.from('team_memberships').update({ status: 'inactive' }).eq('id', membershipId)
+    // await supabase.from('team_memberships').update({ status: 'inactive' }).eq('id', playerToRemove)
+    
+    setPlayerToRemove(null)
   }
 
   const columns: ColumnConfig<Membership>[] = [
@@ -128,7 +136,7 @@ export default function Roster() {
           variant="danger"
           size="dense"
           icon="delete"
-          onClick={(e: React.MouseEvent) => { e.stopPropagation(); removePlayer(row.id); }}
+          onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleRemovePlayerClick(row.id); }}
         />
       )
     }
@@ -198,6 +206,18 @@ export default function Roster() {
           </div>
         </div>
       )}
+
+      {/* Remove Player Confirmation Dialog */}
+      <ConfirmDialog
+        open={!!playerToRemove}
+        title="Remove Player"
+        description="Are you sure you want to remove this player from the roster?"
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmRemovePlayer}
+        onCancel={() => setPlayerToRemove(null)}
+      />
     </div>
   )
 }

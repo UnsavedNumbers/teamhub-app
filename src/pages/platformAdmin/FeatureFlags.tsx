@@ -42,6 +42,7 @@ export default function FeatureFlags() {
   const [userOverrideDialog, setUserOverrideDialog] = useState<{ open: boolean; flag: AdminFeatureFlag | null }>({ open: false, flag: null })
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; flag: AdminFeatureFlag | null }>({ open: false, flag: null })
   const [restoreDialog, setRestoreDialog] = useState<{ open: boolean; flag: AdminFeatureFlag | null }>({ open: false, flag: null })
+  const [overrideToRemove, setOverrideToRemove] = useState<FeatureFlagOverride | null>(null)
   
   const [dialogLoading, setDialogLoading] = useState(false)
   const [dialogError, setDialogError] = useState<string | null>(null)
@@ -643,12 +644,7 @@ export default function FeatureFlags() {
       render: (row) => (
         <Button
           variant="ghost"
-          onClick={() => {
-            // We'll use ConfirmDialog for this
-            if (window.confirm(`Remove ${row.override_type} override for ${row.scope_name}?`)) {
-              handleRemoveOverride(row, 'Removed via admin UI')
-            }
-          }}
+          onClick={() => setOverrideToRemove(row)}
         >
           Remove
         </Button>
@@ -1264,6 +1260,23 @@ export default function FeatureFlags() {
           setRestoreDialog({ open: false, flag: null })
           setDialogError(null)
         }}
+      />
+
+      {/* Remove Override Confirmation Dialog */}
+      <ConfirmDialog
+        open={!!overrideToRemove}
+        title="Remove Override"
+        description={`Remove ${overrideToRemove?.override_type} override for ${overrideToRemove?.scope_name}?`}
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => {
+          if (overrideToRemove) {
+            handleRemoveOverride(overrideToRemove, 'Removed via admin UI')
+            setOverrideToRemove(null)
+          }
+        }}
+        onCancel={() => setOverrideToRemove(null)}
       />
 
       {/* Toast */}

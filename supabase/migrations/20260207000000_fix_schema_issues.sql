@@ -74,6 +74,43 @@ BEGIN
 END;
 $$;
 
+-- Update get_athlete_guardians function to ensure it uses org_id instead of organization_id
+CREATE OR REPLACE FUNCTION get_athlete_guardians(
+  p_athlete_id UUID,
+  p_org_id UUID
+)
+RETURNS TABLE(
+  guardian_id UUID,
+  user_id UUID,
+  email TEXT,
+  display_name TEXT,
+  phone TEXT,
+  relationship_type TEXT,
+  status athlete_guardian_status,
+  created_at TIMESTAMPTZ
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+AS $$
+  SELECT 
+    ag.id AS guardian_id,
+    u.id AS user_id,
+    u.email,
+    u.display_name,
+    u.phone,
+    'parent' AS relationship_type,  -- Future: store in athlete_guardians
+    ag.status,
+    ag.created_at
+  FROM athlete_guardians ag
+  JOIN users u ON u.id = ag.user_id
+  WHERE ag.athlete_id = p_athlete_id
+    AND ag.org_id = p_org_id
+  ORDER BY ag.created_at ASC;
+$$;
+
+COMMENT ON FUNCTION get_athlete_guardians IS 'Returns all guardians for an athlete with their details. Uses org_id (not organization_id).';
+
 -- Recreate link_guardian_to_athlete function to ensure it uses org_id instead of organization_id
 -- This fixes the issue where the function may have been created before the column rename migration
 CREATE OR REPLACE FUNCTION link_guardian_to_athlete(

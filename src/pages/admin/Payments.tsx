@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { useUserContext } from '../../hooks/useUserContext'
 import { getFeeAssignmentsForUser, getOrgPaymentSummary, formatCurrency } from '../../data/services/paymentsService'
-import { getAthletes } from '../../data/services/familyService'
+import { supabase } from '../../lib/supabase'
 import { getLink, RouteKeys } from '../../utils/routes'
 import { 
   AdminPageHeader, 
@@ -120,7 +120,8 @@ export default function Payments() {
     }
   }, [])
 
-  // Check if organization has athletes
+  // Check if organization has athletes with guardians (who can receive fees)
+  // This matches the logic in admin-create-fee function
   const checkAthletesExists = useCallback(async () => {
     if (!isReady || !orgId) {
       if (isMountedRef.current) {
@@ -134,16 +135,32 @@ export default function Payments() {
         setAthleteCheckError(null)
       }
       
-      const { data, error } = await getAthletes(context)
+      // Check athlete_guardians table - fees can only be assigned to athletes with guardians
+      // This matches the check in admin-create-fee edge function
+      // Note: Database column is org_id (migration renamed organization_id to org_id)
+      const { count, error } = await supabase
+        .from('athlete_guardians')
+        .select('athlete_id', { count: 'exact', head: true })
+        .eq('org_id', orgId)
+        .eq('status', 'active')
+        .limit(1)
 
-      // Type guard and null safety
+      console.log('[Payments] Athlete guardian check:', { orgId, count, error })
+
+      // Debug: Check all athlete_guardians records (regardless of org)
+      const { data: allGuardians, error: debugError } = await supabase
+        .from('athlete_guardians')
+        .select('athlete_id, org_id, status')
+        .limit(10)
+      console.log('[Payments] DEBUG all athlete_guardians:', { allGuardians, debugError })
+
       if (error) {
         throw error
       }
 
-      // Safe array access with null coalescing
-      const athletes = data || []
-      const hasAny = athletes.length > 0
+      // Count queries return { count: number | null }
+      const hasAny = (count ?? 0) > 0
+      console.log('[Payments] hasAthletes result:', hasAny)
 
       // Check mounted before state update
       if (isMountedRef.current) {
@@ -159,7 +176,7 @@ export default function Payments() {
         setHasAthletes(false)
       }
     }
-  }, [isReady, orgId, context])
+  }, [isReady, orgId])
 
   // Effect to check athletes when dependencies change
   useEffect(() => {
@@ -168,6 +185,29 @@ export default function Payments() {
     }
     check()
   }, [checkAthletesExists])
+
+  // Re-check athletes when page becomes visible (user returns from adding athlete)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isReady && orgId) {
+        checkAthletesExists()
+      }
+    }
+
+    const handleFocus = () => {
+      if (isReady && orgId) {
+        checkAthletesExists()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [isReady, orgId, checkAthletesExists])
 
   // Helper to get athlete name (in real implementation, comes from joined data)
   const getAthleteName = (childId: string): string => {
@@ -204,7 +244,7 @@ export default function Payments() {
 
   const isButtonDisabled = hasAthletes === false || hasAthletes === null
   const buttonTooltip = hasAthletes === false 
-    ? "No athletes available. Add athletes before creating fees."
+    ? "No athletes with guardians found. Athletes must have a guardian linked before fees can be assigned."
     : hasAthletes === null 
     ? "Checking athletes..."
     : ""
@@ -239,10 +279,10 @@ export default function Payments() {
         </Card>
       )}
 
-      {/* Show info message when no athletes found */}
+      {/* Show info message when no athletes with guardians found */}
       {hasAthletes === false && !athleteCheckError && (
         <Card className="pa-mb-4" style={{ background: 'var(--pa-info-bg)', border: '1px solid var(--pa-info)' }}>
-          <div style={{ color: 'var(--pa-info)' }}>No athletes found in this organization. Please add athletes before creating fees.</div>
+          <div style={{ color: 'var(--pa-info)' }}>No athletes with guardians found. To assign fees, athletes must have a guardian linked to them (the guardian is responsible for payment).</div>
         </Card>
       )}
 

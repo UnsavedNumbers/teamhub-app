@@ -127,6 +127,7 @@ const CreateFamily = lazy(() => import('./pages/admin/CreateFamily'))
 const FamilyDetail = lazy(() => import('./pages/admin/FamilyDetail'))
 const CreateChild = lazy(() => import('./pages/admin/CreateChild'))
 const CreateAthlete = lazy(() => import('./pages/admin/CreateAthlete'))
+const AthleteDetail = lazy(() => import('./pages/admin/AthleteDetail'))
 const EditAthlete = lazy(() => import('./pages/admin/EditAthlete'))
 const AdminChildren = lazy(() => import('./pages/admin/AdminChildren'))
 const ImportAthletes = lazy(() => import('./pages/admin/ImportAthletes'))
@@ -319,7 +320,8 @@ function AppWithTheme() {
               <Route path="teams/:id/roster" element={<Roster />} />
               <Route path="teams/:id" element={<TeamDetail />} />
               <Route path="teams" element={<Teams />} />
-              <Route path="athletes/:id" element={<EditAthlete />} />
+              <Route path="athletes/:id/edit" element={<EditAthlete />} />
+              <Route path="athletes/:id" element={<AthleteDetail />} />
               <Route path="athletes/new" element={<CreateAthlete />} />
               <Route path="athletes/import" element={<ImportAthletes />} />
               <Route path="athletes" element={<AdminChildren />} />

@@ -5,7 +5,7 @@ interface ConfirmDialogProps {
   title: string
   description: string
   confirmLabel?: string
-  cancelLabel?: string
+  cancelLabel?: string | null
   variant?: 'info' | 'warning' | 'danger'
   requireReason?: boolean
   loading?: boolean
@@ -130,13 +130,15 @@ export function ConfirmDialog({
               justifyContent: 'flex-end',
             }}
           >
-            <button
-              className="pa-btn pa-btn--secondary"
-              onClick={onCancel}
-              disabled={loading}
-            >
-              {cancelLabel}
-            </button>
+            {cancelLabel !== null && (
+              <button
+                className="pa-btn pa-btn--secondary"
+                onClick={onCancel}
+                disabled={loading}
+              >
+                {cancelLabel}
+              </button>
+            )}
             <button
               className={`pa-btn ${variant === 'danger' ? 'pa-btn--danger' : 'pa-btn--primary'}`}
               onClick={handleConfirm}
