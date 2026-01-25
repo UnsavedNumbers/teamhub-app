@@ -71,7 +71,7 @@ export async function createFee(params: CreateFeeParams) {
     // First, test if other Edge Functions work to isolate the issue
     console.log('[createFee] Testing billing function to compare authentication...')
     try {
-        const { data: billingData, error: billingError } = await supabase.functions.invoke('billing-create-checkout-session', {
+        const { error: billingError } = await supabase.functions.invoke('billing-create-checkout-session', {
             body: {
                 organization_id: params.org_id,
                 requested_plan: 'starter',

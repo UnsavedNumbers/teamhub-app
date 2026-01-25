@@ -1,4 +1,5 @@
 import type { InputHTMLAttributes } from 'react'
+import { cn } from '../../utils/cn'
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   /** Input label */
@@ -41,50 +42,34 @@ export function Input({
   return (
     <div className="pa-form-group">
       {label && (
-        <label className={`pa-label ${isRequired ? 'pa-label--required' : ''}`}>
+        <label className={cn('pa-label', isRequired && 'pa-label--required')}>
           {label}
         </label>
       )}
       
-      <div style={{ position: 'relative' }}>
+      <div className="pa-input-wrapper">
         {icon && (
-          <span
-            style={{
-              position: 'absolute',
-              left: '12px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: 'var(--pa-n500)',
-              pointerEvents: 'none',
-            }}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+          <span className="pa-input-icon-left">
+            <span className={cn('material-symbols-outlined', 'pa-icon-md')}>
               {icon}
             </span>
           </span>
         )}
         
         <input
-          className={`pa-input ${hasError ? 'pa-input--error' : ''} ${className}`.trim()}
-          style={{
-            paddingLeft: icon ? '40px' : undefined,
-            paddingRight: iconRight ? '40px' : undefined,
-          }}
+          className={cn(
+            'pa-input',
+            hasError && 'pa-input--error',
+            icon && 'pa-input--has-icon-left',
+            iconRight && 'pa-input--has-icon-right',
+            className
+          )}
           {...props}
         />
         
         {iconRight && (
-          <span
-            style={{
-              position: 'absolute',
-              right: '12px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: 'var(--pa-n500)',
-              pointerEvents: 'none',
-            }}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+          <span className="pa-input-icon-right">
+            <span className={cn('material-symbols-outlined', 'pa-icon-md')}>
               {iconRight}
             </span>
           </span>
@@ -92,7 +77,7 @@ export function Input({
       </div>
       
       {(helper || error) && (
-        <div className={`pa-helper ${hasError ? 'pa-helper--error' : ''}`}>
+        <div className={cn('pa-helper', hasError && 'pa-helper--error')}>
           {error || helper}
         </div>
       )}

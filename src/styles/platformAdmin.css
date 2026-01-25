@@ -64,15 +64,21 @@
 /* Dark Mode - Layered Surface System */
 html.dark {
     /* Surface Layers - Clear hierarchy through distinct backgrounds */
-    --pa-surface-subtle: #0f1419;      /* Page background - darkest */
-    --pa-surface: #1a1f26;             /* Card background - elevated */
-    --pa-surface-panel: #252b35;       /* Panel/Input background - most elevated */
-    
+    --pa-surface-subtle: #0f1419;
+    /* Page background - darkest */
+    --pa-surface: #1a1f26;
+    /* Card background - elevated */
+    --pa-surface-panel: #252b35;
+    /* Panel/Input background - most elevated */
+
     /* Dark Mode Text Hierarchy */
-    --pa-text-primary: #f9fafb;        /* High contrast - for metrics and headlines */
-    --pa-text-secondary: #d1d5db;      /* Medium contrast - for labels */
-    --pa-text-muted: #9ca3af;          /* Low contrast - for hints and meta */
-    
+    --pa-text-primary: #f9fafb;
+    /* High contrast - for metrics and headlines */
+    --pa-text-secondary: #d1d5db;
+    /* Medium contrast - for labels */
+    --pa-text-muted: #9ca3af;
+    /* Low contrast - for hints and meta */
+
     /* Border Colors - Subtle separation */
     --pa-border-subtle: #252b35;
     --pa-border-default: #374151;
@@ -100,7 +106,7 @@ html.dark {
     --z-bottom-sheet: 900;
     --z-drawer: 1000;
     --z-nav: 100;
-    
+
     /* Shadow System for Dark Mode - More prominent lift */
     --pa-shadow-1: 0 2px 8px rgba(0, 0, 0, 0.4);
     --pa-shadow-2: 0 8px 24px rgba(0, 0, 0, 0.5);
@@ -554,6 +560,7 @@ html.dark .pa-overline {
     from {
         transform: rotate(0deg);
     }
+
     to {
         transform: rotate(360deg);
     }
@@ -1806,11 +1813,11 @@ html.dark .pa-input:focus {
     align-items: center;
     width: 100%;
     height: 44px;
-    
+
     @media (max-width: 768px) {
         height: 48px;
     }
-    
+
     border: 1px solid var(--pa-n200);
     border-radius: var(--pa-radius-s);
     background: var(--pa-surface);
@@ -1951,6 +1958,7 @@ html.dark .pa-datepicker-popover {
         opacity: 0;
         transform: translateY(-8px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -1962,6 +1970,7 @@ html.dark .pa-datepicker-popover {
         opacity: 1;
         transform: translateY(0);
     }
+
     to {
         opacity: 0;
         transform: translateY(-8px);
@@ -2130,7 +2139,7 @@ html.dark .pa-datepicker-cell[data-unavailable] {
     cursor: pointer;
     transition: all var(--pa-motion-normal) var(--pa-ease-out);
     text-align: left;
-    
+
     @media (max-width: 768px) {
         height: 48px;
     }
@@ -3838,7 +3847,7 @@ html.dark .pa-text-danger {
     opacity: 0;
     visibility: hidden;
     transition: opacity 200ms cubic-bezier(0.33, 1, 0.68, 1),
-                visibility 200ms cubic-bezier(0.33, 1, 0.68, 1);
+        visibility 200ms cubic-bezier(0.33, 1, 0.68, 1);
     touch-action: manipulation;
 }
 
@@ -4031,7 +4040,7 @@ html.dark .pa-text-danger {
     opacity: 0;
     visibility: hidden;
     transition: opacity 200ms cubic-bezier(0.33, 1, 0.68, 1),
-                visibility 200ms cubic-bezier(0.33, 1, 0.68, 1);
+        visibility 200ms cubic-bezier(0.33, 1, 0.68, 1);
     touch-action: manipulation;
 }
 
@@ -4887,10 +4896,13 @@ html.dark .pa-text-danger {
 /* Table Container - matches Teams page styling */
 .pa-standard-table-container {
     background: white;
-    border: 1px solid rgb(226, 232, 240); /* slate-200 */
-    border-radius: 0.75rem; /* rounded-xl */
+    border: 1px solid rgb(226, 232, 240);
+    /* slate-200 */
+    border-radius: 0.75rem;
+    /* rounded-xl */
     overflow: hidden;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    /* shadow-sm */
 }
 
 /* Table Wrapper for horizontal scroll */
@@ -4907,18 +4919,25 @@ html.dark .pa-text-danger {
 
 /* Table Header Row */
 .pa-standard-table thead tr {
-    background-color: rgb(248, 250, 252); /* slate-50 */
-    border-bottom: 1px solid rgb(226, 232, 240); /* slate-200 */
+    background-color: rgb(248, 250, 252);
+    /* slate-50 */
+    border-bottom: 1px solid rgb(226, 232, 240);
+    /* slate-200 */
 }
 
 /* Table Header Cell */
 .pa-standard-table thead th {
-    padding: 1rem 1.5rem; /* py-4 px-6 */
-    font-size: 0.75rem; /* text-xs */
-    font-weight: 700; /* font-bold */
-    color: rgb(100, 116, 139); /* slate-500 */
+    padding: 1rem 1.5rem;
+    /* py-4 px-6 */
+    font-size: 0.75rem;
+    /* text-xs */
+    font-weight: 700;
+    /* font-bold */
+    color: rgb(100, 116, 139);
+    /* slate-500 */
     text-transform: uppercase;
-    letter-spacing: 0.05em; /* tracking-wider */
+    letter-spacing: 0.05em;
+    /* tracking-wider */
 }
 
 /* Table Body */
@@ -4927,7 +4946,8 @@ html.dark .pa-text-danger {
 }
 
 .pa-standard-table tbody tr {
-    border-top: 1px solid rgb(241, 245, 249); /* divide-slate-100 */
+    border-top: 1px solid rgb(241, 245, 249);
+    /* divide-slate-100 */
 }
 
 .pa-standard-table tbody tr:first-child {
@@ -4940,12 +4960,14 @@ html.dark .pa-text-danger {
 }
 
 .pa-standard-table tbody tr:hover {
-    background-color: rgba(248, 250, 252, 0.8); /* hover:bg-slate-50/80 */
+    background-color: rgba(248, 250, 252, 0.8);
+    /* hover:bg-slate-50/80 */
 }
 
 /* Table Body Cell */
 .pa-standard-table tbody td {
-    padding: 1rem 1.5rem; /* py-4 px-6 */
+    padding: 1rem 1.5rem;
+    /* py-4 px-6 */
 }
 
 /* Group hover visibility for action buttons */
@@ -4963,25 +4985,34 @@ html.dark .pa-text-danger {
 
 /* Empty State */
 .pa-standard-table-empty {
-    padding: 3rem; /* p-12 */
+    padding: 3rem;
+    /* p-12 */
     text-align: center;
 }
 
 .pa-standard-table-empty-icon {
-    font-size: 3rem; /* text-5xl */
-    color: rgb(226, 232, 240); /* slate-200 */
-    margin-bottom: 1rem; /* mb-4 */
+    font-size: 3rem;
+    /* text-5xl */
+    color: rgb(226, 232, 240);
+    /* slate-200 */
+    margin-bottom: 1rem;
+    /* mb-4 */
 }
 
 .pa-standard-table-empty-text {
-    color: rgb(100, 116, 139); /* slate-500 */
-    font-weight: 500; /* font-medium */
+    color: rgb(100, 116, 139);
+    /* slate-500 */
+    font-weight: 500;
+    /* font-medium */
 }
 
 .pa-standard-table-empty-subtext {
-    font-size: 0.875rem; /* text-sm */
-    color: rgb(148, 163, 184); /* slate-400 */
-    margin-top: 0.5rem; /* mt-2 */
+    font-size: 0.875rem;
+    /* text-sm */
+    color: rgb(148, 163, 184);
+    /* slate-400 */
+    margin-top: 0.5rem;
+    /* mt-2 */
 }
 
 /* =====================================================================
@@ -5000,7 +5031,8 @@ html.dark .pa-text-danger {
     border-bottom: 1px solid var(--pa-n200);
     margin-bottom: var(--pa-space-6);
     overflow-x: auto;
-    scrollbar-width: none; /* Hide scrollbar Firefox */
+    scrollbar-width: none;
+    /* Hide scrollbar Firefox */
 }
 
 /* Hide scrollbar WebKit */
@@ -5042,8 +5074,15 @@ html.dark .pa-text-danger {
 }
 
 @keyframes pa-fade-in {
-    from { opacity: 0; transform: translateY(4px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .pa-tabs-mobile-select {
@@ -5062,7 +5101,7 @@ html.dark .pa-text-danger {
     .pa-tabs-list {
         display: none;
     }
-    
+
     .pa-tabs-mobile-select {
         display: block;
     }
@@ -5077,21 +5116,23 @@ html.dark .pa-text-danger {
     display: grid;
     gap: var(--pa-space-5);
     width: 100%;
-    grid-template-columns: 1fr; /* Mobile: Single column */
+    grid-template-columns: 1fr;
+    /* Mobile: Single column */
 }
 
 /* Tablet: Two-column for obvious pairs (like colors), single column for selects */
 @media (min-width: 640px) and (max-width: 1023px) {
+
     /* Two-column for sections that benefit (colors, dates) */
     .pa-form-grid-2.pa-form-grid-tablet-2col {
         grid-template-columns: repeat(2, 1fr);
     }
-    
+
     /* Single column for select-heavy sections */
     .pa-form-grid-2:not(.pa-form-grid-tablet-2col) {
         grid-template-columns: 1fr;
     }
-    
+
     /* Selects can be slightly narrower on tablet but not constrained too much */
     .pa-select-wrapper {
         max-width: 100%;
@@ -5103,11 +5144,11 @@ html.dark .pa-text-danger {
     .pa-form-grid-2 {
         grid-template-columns: repeat(2, 1fr);
     }
-    
+
     .pa-form-grid-3 {
         grid-template-columns: repeat(3, 1fr);
     }
-    
+
     .pa-form-grid-4 {
         grid-template-columns: repeat(4, 1fr);
     }
@@ -5115,11 +5156,11 @@ html.dark .pa-text-danger {
     .pa-col-span-2 {
         grid-column: span 2;
     }
-    
+
     .pa-col-span-3 {
         grid-column: span 3;
     }
-    
+
     .pa-col-span-4 {
         grid-column: span 4;
     }
@@ -5127,18 +5168,46 @@ html.dark .pa-text-danger {
 
 /* Width Utilities for Desktop Intentionality */
 @media (min-width: 1024px) {
-    .pa-w-auto { width: auto; }
-    .pa-w-full { width: 100%; }
-    .pa-w-1-2 { width: 50%; }
-    .pa-w-1-3 { width: 33.33%; }
-    .pa-w-2-3 { width: 66.66%; }
-    .pa-w-1-4 { width: 25%; }
-    .pa-w-3-4 { width: 75%; }
-    
+    .pa-w-auto {
+        width: auto;
+    }
+
+    .pa-w-full {
+        width: 100%;
+    }
+
+    .pa-w-1-2 {
+        width: 50%;
+    }
+
+    .pa-w-1-3 {
+        width: 33.33%;
+    }
+
+    .pa-w-2-3 {
+        width: 66.66%;
+    }
+
+    .pa-w-1-4 {
+        width: 25%;
+    }
+
+    .pa-w-3-4 {
+        width: 75%;
+    }
+
     /* Max widths to prevent comically wide inputs */
-    .pa-max-w-xs { max-width: 320px; }
-    .pa-max-w-sm { max-width: 480px; }
-    .pa-max-w-md { max-width: 640px; }
+    .pa-max-w-xs {
+        max-width: 320px;
+    }
+
+    .pa-max-w-sm {
+        max-width: 480px;
+    }
+
+    .pa-max-w-md {
+        max-width: 640px;
+    }
 }
 
 /* Form Actions */
@@ -5166,6 +5235,7 @@ html.dark .pa-text-danger {
 }
 
 @media (min-width: 1024px) {
+
     .pa-checkbox-group--inline,
     .pa-radio-group--inline {
         flex-direction: row;
@@ -5228,3 +5298,167 @@ html.dark .pa-text-danger {
     width: 100%;
 }
 
+/* =====================================================================
+   11) UTILITIES (Refactoring Phase 1)
+   ===================================================================== */
+
+/* Positioning */
+.pa-relative {
+    position: relative;
+}
+
+.pa-absolute {
+    position: absolute;
+}
+
+/* Cursor */
+.pa-cursor-pointer {
+    cursor: pointer;
+}
+
+.pa-cursor-not-allowed {
+    cursor: not-allowed;
+}
+
+.pa-cursor-default {
+    cursor: default;
+}
+
+/* User Select */
+.pa-select-none {
+    user-select: none;
+}
+
+/* Opacity */
+.pa-opacity-60 {
+    opacity: 0.6;
+}
+
+/* Flex Utilities */
+.pa-flex {
+    display: flex;
+}
+
+.pa-inline-flex {
+    display: inline-flex;
+}
+
+.pa-items-center {
+    align-items: center;
+}
+
+.pa-justify-between {
+    justify-content: space-between;
+}
+
+.pa-gap-2 {
+    gap: var(--pa-space-2);
+}
+
+.pa-gap-1 {
+    gap: var(--pa-space-1);
+}
+
+/* Spacing */
+.pa-mt-1 {
+    margin-top: var(--pa-space-1);
+}
+
+.pa-mt-2 {
+    margin-top: var(--pa-space-2);
+}
+
+.pa-p-0 {
+    padding: 0;
+}
+
+/* Colors */
+.pa-text-primary {
+    color: var(--pa-text-primary);
+}
+
+.pa-text-muted {
+    color: var(--pa-text-muted);
+}
+
+.pa-text-n300 {
+    color: var(--pa-n300);
+}
+
+.pa-text-n500 {
+    color: var(--pa-n500);
+}
+
+/* Typography */
+.pa-font-xs {
+    font-size: 13px;
+}
+
+.pa-font-semibold {
+    font-weight: 600;
+}
+
+/* Icon Sizes */
+.pa-icon-sm {
+    font-size: 14px;
+}
+
+.pa-icon-md {
+    font-size: 20px;
+}
+
+.pa-icon-lg {
+    font-size: 24px;
+}
+
+/* Input Icon Positioning */
+.pa-input-wrapper {
+    position: relative;
+}
+
+.pa-input-icon-left {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--pa-n500);
+    pointer-events: none;
+}
+
+.pa-input-icon-right {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--pa-n500);
+    pointer-events: none;
+}
+
+.pa-input--has-icon-left {
+    padding-left: 40px;
+}
+
+.pa-input--has-icon-right {
+    padding-right: 40px;
+}
+
+/* Checkbox */
+.pa-checkbox-input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--pa-n900);
+}
+
+.pa-checkbox-helper-offset {
+    margin-left: calc(18px + var(--pa-space-2));
+}
+
+/* Card Variants */
+.pa-card--no-padding {
+    padding: 0;
+}
+
+/* Z-index */
+.z-loader {
+    z-index: var(--z-loader);
+}

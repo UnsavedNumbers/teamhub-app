@@ -321,6 +321,149 @@ export async function getUnpaidFeeAssignments(
 }
 
 /**
+ * Get fee assignments for a specific team (team-scoped)
+ * Filters by team's season(s) and athletes on the team
+ */
+export async function getFeeAssignmentsForTeam(
+    context: UserContext,
+    teamId: string,
+    seasonId: string | null
+): Promise<{ data: Array<FakeFeeAssignment & { fee?: FakeFee; payments?: FakePayment[] }>; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+            const permissions = buildPermissions(context)
+            if (!permissions.canViewAllOrgData) {
+                return { data: [], error: new Error('Access denied: Admin only') }
+            }
+            
+            // Filter fake assignments by team (simplified - would need team membership data)
+            const allAssignments = fakeFeeAssignments
+                .filter(fa => {
+                    const fee = getFeeById(fa.fee_id)
+                    // In fake data, we'd need to check if fee.season_id matches team's season
+                    return fee && fee.org_id === context.orgId
+                })
+                .map(fa => ({
+                    ...fa,
+                    fee: getFeeById(fa.fee_id),
+                    payments: getPaymentsForAssignment(fa.id),
+                }))
+            
+            return { data: allAssignments, error: null }
+        } catch (err) {
+            return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        }
+    }
+
+    // Real Supabase implementation
+    try {
+        // Step 1: Get athletes on this team for this season
+        const { data: memberships } = await supabase
+            .from('team_memberships')
+            .select('athlete_id')
+            .eq('team_id', teamId)
+            .eq('status', 'active')
+        
+        if (seasonId) {
+            // Further filter by season if provided
+            const { data: seasonMemberships } = await supabase
+                .from('team_memberships')
+                .select('athlete_id')
+                .eq('team_id', teamId)
+                .eq('season_id', seasonId)
+                .eq('status', 'active')
+            
+            const athleteIds = (seasonMemberships || []).map((m: { athlete_id: string }) => m.athlete_id)
+            
+            if (athleteIds.length === 0) {
+                return { data: [], error: null }
+            }
+
+            // Step 2: Get fees for this season
+            const { data: fees } = await supabase
+                .from('fees')
+                .select('id')
+                .eq('org_id', context.orgId)
+                .eq('season_id', seasonId)
+            
+            const feeIds = (fees || []).map((f: { id: string }) => f.id)
+            
+            if (feeIds.length === 0) {
+                return { data: [], error: null }
+            }
+
+            // Step 3: Get fee assignments for these fees and athletes
+            let query = buildFeeAssignmentQuery(supabase)
+                .eq('org_id', context.orgId)
+                .in('fee_id', feeIds)
+                .in('athlete_id', athleteIds)
+
+            const { data, error } = await query.order('created_at', { ascending: false })
+            if (error) throw error
+
+            const normalizedData = normalizeSupabaseResponse(data, true)
+            const mappedAssignments = Array.isArray(normalizedData)
+                ? normalizedData.map(mapSupabaseFeeAssignmentToDomain)
+                : []
+
+            return { data: mappedAssignments, error: null }
+        } else {
+            // No season filter - get all fees for team's seasons
+            const athleteIds = (memberships || []).map((m: { athlete_id: string }) => m.athlete_id)
+            
+            if (athleteIds.length === 0) {
+                return { data: [], error: null }
+            }
+
+            // Get seasons for this team
+            const { data: teamSeasons } = await supabase
+                .from('team_seasons')
+                .select('season_id')
+                .eq('team_id', teamId)
+            
+            const seasonIds = (teamSeasons || []).map((ts: { season_id: string }) => ts.season_id)
+            
+            if (seasonIds.length === 0) {
+                return { data: [], error: null }
+            }
+
+            // Get fees for these seasons
+            const { data: fees } = await supabase
+                .from('fees')
+                .select('id')
+                .eq('org_id', context.orgId)
+                .in('season_id', seasonIds)
+            
+            const feeIds = (fees || []).map((f: { id: string }) => f.id)
+            
+            if (feeIds.length === 0) {
+                return { data: [], error: null }
+            }
+
+            // Get fee assignments
+            let query = buildFeeAssignmentQuery(supabase)
+                .eq('org_id', context.orgId)
+                .in('fee_id', feeIds)
+                .in('athlete_id', athleteIds)
+
+            const { data, error } = await query.order('created_at', { ascending: false })
+            if (error) throw error
+
+            const normalizedData = normalizeSupabaseResponse(data, true)
+            const mappedAssignments = Array.isArray(normalizedData)
+                ? normalizedData.map(mapSupabaseFeeAssignmentToDomain)
+                : []
+
+            return { data: mappedAssignments, error: null }
+        }
+    } catch (err) {
+        const classifiedError = classifySupabaseError(err)
+        return { data: [], error: classifiedError }
+    }
+}
+
+/**
  * Get fee assignments for a specific fee (admin view)
  */
 export async function getFeeAssignmentsByFee(

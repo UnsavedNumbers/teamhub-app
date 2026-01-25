@@ -230,26 +230,10 @@ export async function deleteAthletePhoto(
             return { error: new Error('Invalid athlete ID') }
         }
 
-        // Fetch athlete's photo_url to get the storage path
-        const { data: athlete, error: fetchError } = await supabase
-            .from('athletes')
-            .select('photo_url')
-            .eq('id', athleteId)
-            .single() as { data: { photo_url: string | null } | null; error: any }
-
-        if (fetchError) {
-            // If athlete doesn't exist or no photo, that's fine
-            if (fetchError.code === 'PGRST116') {
-                return { error: null }
-            }
-            throw fetchError
-        }
-
-        // If no photo_url, nothing to delete
-        const photoPath = athlete?.photo_url
-        if (!photoPath) {
-            return { error: null }
-        }
+        // Note: photo_url column doesn't exist yet in database
+        // Return success - no photo to delete
+        // TODO: Re-enable when photo_url column is added
+        return { error: null }
 
         // Validate path format
         if (!isValidAthletePhotoPath(photoPath)) {
@@ -287,16 +271,10 @@ export async function cleanupAthletePhoto(athleteId: string): Promise<void> {
     }
 
     try {
-        // Fetch athlete's photo_url
-        const { data: athlete, error: fetchError } = await supabase
-            .from('athletes')
-            .select('photo_url')
-            .eq('id', athleteId)
-            .maybeSingle() as { data: { photo_url: string | null } | null; error: any }
-
-        if (fetchError || !athlete?.photo_url) {
-            return // No photo to cleanup
-        }
+        // Note: photo_url column doesn't exist yet in database
+        // Return early - no photo to cleanup
+        // TODO: Re-enable when photo_url column is added
+        return
 
         const photoPath = athlete.photo_url
 

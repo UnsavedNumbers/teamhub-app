@@ -1,4 +1,5 @@
 import type { ReactNode, MouseEvent } from 'react'
+import { cn } from '../../utils/cn'
 
 interface StatCardProps {
   /** Card label (uppercase overline style) */
@@ -47,12 +48,12 @@ export function StatCard({
 
   return (
     <div
-      className="pa-kpi-card"
+      className={cn(
+        'pa-kpi-card',
+        onClick ? 'pa-cursor-pointer' : 'pa-cursor-default',
+        loading && 'pa-opacity-60'
+      )}
       onClick={handleClick}
-      style={{
-        cursor: onClick ? 'pointer' : 'default',
-        opacity: loading ? 0.6 : 1,
-      }}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={(e) => {
@@ -62,12 +63,11 @@ export function StatCard({
         }
       }}
     >
-      <div className="pa-flex pa-justify-between pa-items-center">
+      <div className={cn('pa-flex', 'pa-justify-between', 'pa-items-center')}>
         <p className="pa-kpi-label">{label}</p>
         {icon && (
           <span
-            className="material-symbols-outlined"
-            style={{ fontSize: '24px', color: 'var(--pa-n300)' }}
+            className={cn('material-symbols-outlined', 'pa-icon-lg', 'pa-text-n300')}
           >
             {icon}
           </span>
@@ -79,16 +79,16 @@ export function StatCard({
       </p>
       
       {(delta || meta) && (
-        <div className="pa-flex pa-items-center pa-gap-2 pa-mt-2">
+        <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-2', 'pa-mt-2')}>
           {delta && (
             <span
               className={`pa-kpi-delta pa-kpi-delta--${delta.direction === 'up' ? 'up' : delta.direction === 'down' ? 'down' : 'neutral'}`}
             >
               {delta.direction === 'up' && (
-                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>trending_up</span>
+                <span className={cn('material-symbols-outlined', 'pa-icon-sm')}>trending_up</span>
               )}
               {delta.direction === 'down' && (
-                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>trending_down</span>
+                <span className={cn('material-symbols-outlined', 'pa-icon-sm')}>trending_down</span>
               )}
               {delta.value}
             </span>

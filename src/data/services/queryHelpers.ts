@@ -53,14 +53,16 @@ export function buildEventQuery(
 export function buildFeeAssignmentQuery(
     supabase: SupabaseClient<SupabaseExtended>
 ) {
+    // Note: Removed nested team:teams join from season due to ambiguous relationship
+    // (seasons.team_id FK and team_seasons junction table both exist)
+    // Teams can be fetched separately via team_seasons if needed
     return supabase.from('fee_assignments').select(`
         *,
         fee:fees(
             *,
             season:seasons(
                 id,
-                name,
-                team:teams(id, name)
+                name
             )
         ),
         athlete:athletes(id, first_name, last_name),
@@ -109,7 +111,7 @@ export function buildTeamMembershipQuery(
 ) {
     return supabase.from('team_memberships').select(`
         *,
-        athlete:athletes(id, first_name, last_name, date_of_birth, photo_url, jersey_number)
+        athlete:athletes(id, first_name, last_name, birthdate, jersey_number)
     `)
 }
 

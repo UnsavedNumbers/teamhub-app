@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useUserContext } from '../hooks/useUserContext'
 import { getFeeAssignmentsForUser } from '../data/services/paymentsService'
 import { createParentCheckoutSession } from '../api/payments'
+import { supabase } from '../lib/supabase'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, SectionHeader } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
@@ -23,7 +24,7 @@ interface FeeAssignment {
     description: string | null
     due_date: string | null
     fee_type: string
-    season?: { team?: { id: string; name: string } | null } | null
+    season?: { id?: string; name?: string; team?: { id: string; name: string } | null } | null
   } | null
   child?: { id: string; first_name: string; last_name: string } | null
 }
@@ -65,33 +66,79 @@ export default function MyPayments() {
 
     if (queryError) {
       setError(queryError.message)
-    } else {
-      // Transform service data to component format
-      const transformed: FeeAssignment[] = data.map(fa => ({
-        id: fa.id,
-        amount_cents: fa.amount_due_cents,
-        balance_cents: fa.amount_due_cents - fa.amount_paid_cents,
-        paid_cents_total: fa.amount_paid_cents,
-        due_date: fa.due_date ?? null,
-        status: fa.status as FeeAssignmentStatus,
-        fee: fa.fee ? {
-          id: fa.fee.id,
-          title: fa.fee.title,
-          description: fa.fee.description ?? null,
-          due_date: fa.fee.due_date,
-          fee_type: fa.fee.fee_type ?? '',
-          season: (fa.fee as any).season ? {
-            team: (fa.fee as any).season.team || null,
-          } : null,
-        } : null,
-        child: (fa as any).athlete ? {
-          id: (fa as any).athlete.id,
-          first_name: (fa as any).athlete.first_name,
-          last_name: (fa as any).athlete.last_name,
-        } : null,
-      }))
-      setAssignments(transformed)
+      setLoading(false)
+      return
     }
+
+    // Transform service data to component format
+    const transformed: FeeAssignment[] = data.map(fa => ({
+      id: fa.id,
+      amount_cents: fa.amount_due_cents,
+      balance_cents: fa.amount_due_cents - fa.amount_paid_cents,
+      paid_cents_total: fa.amount_paid_cents,
+      due_date: fa.due_date ?? null,
+      status: fa.status as FeeAssignmentStatus,
+      fee: fa.fee ? {
+        id: fa.fee.id,
+        title: fa.fee.title,
+        description: fa.fee.description ?? null,
+        due_date: fa.fee.due_date,
+        fee_type: fa.fee.fee_type ?? '',
+        season: (fa.fee as any).season ? {
+          id: (fa.fee as any).season.id,
+          name: (fa.fee as any).season.name,
+          team: null, // Will be fetched separately
+        } : null,
+      } : null,
+      child: (fa as any).athlete ? {
+        id: (fa as any).athlete.id,
+        first_name: (fa as any).athlete.first_name,
+        last_name: (fa as any).athlete.last_name,
+      } : null,
+    }))
+
+    // Fetch teams for seasons that have them
+    const seasonIds = transformed
+      .map(a => a.fee?.season?.id)
+      .filter((id): id is string => !!id)
+    
+    if (seasonIds.length > 0) {
+      try {
+        // Get teams for these seasons via team_seasons junction table
+        const { data: teamSeasonsData, error: teamSeasonsError } = await supabase
+          .from('team_seasons')
+          .select('season_id, team:teams(id, name)')
+          .in('season_id', seasonIds)
+
+        if (!teamSeasonsError && teamSeasonsData) {
+          // Create a map of season_id -> team
+          const seasonTeamMap = new Map<string, { id: string; name: string }>()
+          teamSeasonsData.forEach((ts: any) => {
+            if (ts.team && ts.season_id) {
+              seasonTeamMap.set(ts.season_id, {
+                id: ts.team.id,
+                name: ts.team.name,
+              })
+            }
+          })
+
+          // Update transformed assignments with team info
+          transformed.forEach(assignment => {
+            if (assignment.fee?.season?.id) {
+              const team = seasonTeamMap.get(assignment.fee.season.id)
+              if (team && assignment.fee.season) {
+                assignment.fee.season.team = team
+              }
+            }
+          })
+        }
+      } catch (err) {
+        console.error('Error fetching teams for seasons:', err)
+        // Continue without team info - it's optional
+      }
+    }
+
+    setAssignments(transformed)
     setLoading(false)
   }
 
