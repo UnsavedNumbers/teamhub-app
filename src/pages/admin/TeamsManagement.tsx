@@ -8,18 +8,26 @@ import { useEffect, useState, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
-import { getTeams } from '../../data/services/teamsService'
+import { useOffline } from '../../hooks/useOffline'
+import { USE_FAKE_DATA } from '../../data/config'
+import { getTeams, deleteTeam } from '../../data/services/teamsService'
 import { getSports, getPrograms } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
 import { getSeasons } from '../../data/services/seasonsService'
 import type { Team, Sport, Program, Level, Season } from '../../data/types/organization'
-import { AdminPageHeader, Button } from '../../components/platformAdmin'
+import { AdminPageHeader, Button, ConfirmDialog } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
+import { getLink } from '../../utils/routes'
 
 export default function TeamsManagement() {
   const { context, isReady } = useUserContext()
+  const { isOffline } = useOffline()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [deletingTeamId, setDeletingTeamId] = useState<string | null>(null)
+  const [teamToDelete, setTeamToDelete] = useState<{ id: string; name: string } | null>(null)
 
   const [teams, setTeams] = useState<Team[]>([])
   const [sports, setSports] = useState<Sport[]>([])
@@ -73,6 +81,53 @@ export default function TeamsManagement() {
     () => !loading && Array.isArray(levels) && levels.length > 0,
     [loading, levels.length]
   )
+
+  const handleDeleteTeam = (teamId: string, teamName: string) => {
+    // Block if offline
+    if (isOffline) {
+      setActionError('You appear to be offline. Please reconnect and try again.')
+      return
+    }
+
+    // Block if in demo mode
+    if (USE_FAKE_DATA) {
+      setActionError('This action is not available in demo mode. Please sign in to remove teams from your organization.')
+      return
+    }
+
+    setTeamToDelete({ id: teamId, name: teamName })
+  }
+
+  const confirmDeleteTeam = async (_reason: string) => {
+    if (!teamToDelete) return
+
+    setDeletingTeamId(teamToDelete.id)
+    setActionError(null)
+    setSuccessMessage(null)
+
+    try {
+      const result = await deleteTeam(context, teamToDelete.id)
+
+      if (result.error) {
+        setActionError(result.error.message || 'Failed to remove team. Please try again.')
+      } else {
+        // Remove from local state
+        setTeams((prev) => prev.filter((t) => t.id !== teamToDelete.id))
+        setSuccessMessage(`"${teamToDelete.name}" has been removed from your organization.`)
+
+        // Clear success message after 5 seconds
+        setTimeout(() => {
+          setSuccessMessage(null)
+        }, 5000)
+      }
+    } catch (err) {
+      console.error('[TeamsManagement] Unexpected error deleting team:', err)
+      setActionError(err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.')
+    } finally {
+      setDeletingTeamId(null)
+      setTeamToDelete(null)
+    }
+  }
 
   // Filter available programs based on selected sport
   const availablePrograms = filterSportId ? programs.filter((p) => p.sport_id === filterSportId) : programs
@@ -168,7 +223,7 @@ export default function TeamsManagement() {
             title="Teams"
             subtitle="Manage your rostered competition units and their assignments."
             breadcrumbs={[
-              { label: 'Organizations', path: '/admin/organization/structure' },
+              { label: 'Organizations', path: getLink('admin.organization.structure') },
               { label: 'Teams' },
             ]}
           />
@@ -178,7 +233,7 @@ export default function TeamsManagement() {
             <p className="text-slate-500 mb-6">
               You need to create at least one program before you can add teams. Teams require levels, and levels require programs.
             </p>
-            <Link to="/admin/organization/structure/forms?type=program">
+            <Link to={`${getLink('admin.organization.forms')}?type=program`}>
               <Button variant="primary">Add a Program</Button>
             </Link>
           </div>
@@ -194,7 +249,7 @@ export default function TeamsManagement() {
             title="Teams"
             subtitle="Manage your rostered competition units and their assignments."
             breadcrumbs={[
-              { label: 'Organizations', path: '/admin/organization/structure' },
+              { label: 'Organizations', path: getLink('admin.organization.structure') },
               { label: 'Teams' },
             ]}
           />
@@ -228,6 +283,18 @@ export default function TeamsManagement() {
       {error && (
         <div className="p-4 mb-6 bg-red-50 text-red-700 rounded-xl border border-red-100">
           {error}
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="p-3 bg-green-50 text-green-700 rounded-lg border-l-4 border-green-500 mb-4">
+          <div className="text-sm font-medium">{successMessage}</div>
+        </div>
+      )}
+
+      {actionError && (
+        <div className="p-3 bg-red-50 text-red-700 rounded-lg border-l-4 border-red-500 mb-4">
+          <div className="text-sm font-medium">{actionError}</div>
         </div>
       )}
 
@@ -269,7 +336,7 @@ export default function TeamsManagement() {
                  Actually, simpler to have filters in one block and button floating or right-aligned. 
                  Let's stick to placing it in the grid for responsive alignment. 
              */}
-             <Link to={`/admin/organization/structure/forms?type=team&returnUrl=${encodeURIComponent('/admin/organization/structure/teams')}`} className="w-full lg:w-auto">
+             <Link to={`${getLink('admin.organization.forms')}?type=team&returnUrl=${encodeURIComponent(getLink('admin.organization.teamsManagement'))}`} className="w-full lg:w-auto">
                 <PrimaryButton 
                   className="w-full lg:w-auto"
                   disabled={!canCreateTeam}
@@ -378,11 +445,37 @@ export default function TeamsManagement() {
                         <StatusBadge active={team.is_active ?? false} />
                       </td>
                       <td className="py-4 px-6 text-right">
-                        <Link to={`/admin/teams/${team.id}`} className="invisible group-hover:visible focus:visible">
-                          <button className="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors">
-                            Manage
+                        <div className="flex items-center justify-end gap-3">
+                          <Link to={`/admin/teams/${team.id}`} className="invisible group-hover:visible focus:visible">
+                            <button className="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors">
+                              Manage
+                            </button>
+                          </Link>
+                          <button
+                            onClick={() => handleDeleteTeam(team.id, team.name)}
+                            disabled={deletingTeamId === team.id || isOffline || USE_FAKE_DATA}
+                            className="invisible group-hover:visible focus:visible inline-flex items-center justify-center h-8 px-3 font-medium text-xs text-red-700 bg-white border border-red-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={
+                              USE_FAKE_DATA 
+                                ? 'Sign in to remove team' 
+                                : isOffline 
+                                ? 'Offline - cannot remove team' 
+                                : 'Remove team from organization'
+                            }
+                          >
+                            {deletingTeamId === team.id ? (
+                              <>
+                                <span className="material-symbols-outlined animate-spin" style={{ fontSize: '14px', marginRight: '4px' }}>refresh</span>
+                                Removing...
+                              </>
+                            ) : (
+                              <>
+                                <span className="material-symbols-outlined" style={{ fontSize: '14px', marginRight: '4px' }}>delete</span>
+                                Remove
+                              </>
+                            )}
                           </button>
-                        </Link>
+                        </div>
                       </td>
                     </tr>
                   )
@@ -392,6 +485,19 @@ export default function TeamsManagement() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={Boolean(teamToDelete)}
+        title="Remove team?"
+        description={
+          teamToDelete
+            ? `Are you sure you want to remove "${teamToDelete.name}" from your organization? This action cannot be undone.`
+            : ''
+        }
+        confirmLabel="Remove"
+        variant="danger"
+        onConfirm={confirmDeleteTeam}
+        onCancel={() => setTeamToDelete(null)}
+      />
     </div>
   )
 }

@@ -59,6 +59,13 @@
     --pa-surface-panel: var(--pa-n50);
     --pa-sidebar-bg: var(--pa-n900);
     --pa-topbar-bg: var(--pa-n0);
+}
+
+/* Dark mode variable overrides */
+html.dark {
+    --pa-surface: #1f2937;
+    --pa-surface-subtle: #111827;
+    --pa-surface-panel: #374151;
 
     /* Glass/Translucent Surfaces */
     --pa-glass-bg: rgba(255, 255, 255, 0.85);
@@ -82,6 +89,13 @@
     --z-bottom-sheet: 900;
     --z-drawer: 1000;
     --z-nav: 100;
+}
+
+/* Dark mode variable overrides */
+html.dark {
+    --pa-surface: #1f2937;
+    --pa-surface-subtle: #111827;
+    --pa-surface-panel: #374151;
 }
 
 /* =====================================================================
@@ -1161,6 +1175,26 @@
     border-color: var(--pa-n700);
     outline: 2px solid rgba(43, 52, 61, 0.25);
     box-shadow: var(--pa-shadow-1);
+}
+
+/* Dark mode styles - uses CSS variables defined above */
+html.dark .pa-input {
+    background: var(--pa-surface);
+    border-color: #374151;
+    color: #f9fafb;
+}
+
+html.dark .pa-input::placeholder {
+    color: #9ca3af;
+}
+
+html.dark .pa-input:hover {
+    border-color: #4b5563;
+}
+
+html.dark .pa-input:focus {
+    border-color: #6b7280;
+    outline: 2px solid rgba(107, 114, 128, 0.25);
 }
 
 .pa-input--error {

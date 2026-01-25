@@ -16,6 +16,7 @@ import OfflineBanner from '../../components/admin/OfflineBanner'
 import HierarchyCreationPrompt from '../../components/admin/HierarchyCreationPrompt'
 import { getNextLevel, getParentContextKey, type FormType, type PromptState, isValidPromptState, validateEntityExists } from '../../utils/hierarchyCreation'
 import { savePromptState, loadPromptState, clearPromptState } from '../../utils/sessionStorageHelpers'
+import { getLink } from '../../utils/routes'
 
 interface RadioOption {
   value: string
@@ -174,24 +175,24 @@ export default function OrganizationStructureForms() {
     if (editType) {
       switch (editType) {
         case 'program':
-          // Programs are typically edited from Sports & Programs page
-          navigate('/admin/organization/structure/sports-programs')
+          // Programs are typically edited from Programs page
+          navigate(getLink('admin.organization.programs'))
           return
         case 'level':
           // Levels are typically edited from Levels page
-          navigate('/admin/organization/structure/levels')
+          navigate(getLink('admin.organization.levels'))
           return
         case 'team':
           // Teams are typically edited from Teams page
-          navigate('/admin/organization/structure/teams')
+          navigate(getLink('admin.organization.teamsManagement'))
           return
         case 'season':
           // Seasons are typically edited from Seasons page
-          navigate('/admin/organization/structure/seasons')
+          navigate(getLink('admin.organization.seasons'))
           return
         case 'sport':
-          // Sports are typically edited from Sports & Programs page
-          navigate('/admin/organization/structure/sports-programs')
+          // Sports are typically edited from Sports page
+          navigate(getLink('admin.organization.sports'))
           return
       }
     }
@@ -199,14 +200,19 @@ export default function OrganizationStructureForms() {
     // For create forms, try to infer from context or use browser history
     if (activeFormType) {
       // If we have context params, we likely came from a specific page
-      if (contextProgramId || contextSportId) {
-        // Likely came from Sports & Programs page
-        navigate('/admin/organization/structure/sports-programs')
+      if (contextProgramId) {
+        // Likely came from Programs page
+        navigate(getLink('admin.organization.programs'))
+        return
+      }
+      if (contextSportId) {
+        // Likely came from Sports page
+        navigate(getLink('admin.organization.sports'))
         return
       }
       if (contextLevelId) {
         // Likely came from Levels page
-        navigate('/admin/organization/structure/levels')
+        navigate(getLink('admin.organization.levels'))
         return
       }
     }
@@ -363,8 +369,21 @@ export default function OrganizationStructureForms() {
     hasRestoredPrompt.current = true
   }, [loading, isReady, sports, programs, levels, teams, seasons])
 
-  // Re-validate prompt state on location changes (browser back/forward)
+  // Clear prompt state when navigating away from forms page
   useEffect(() => {
+    // If we're not on the forms page, clear the prompt
+    if (!location.pathname.includes('/organization/structure/forms')) {
+      if (promptState) {
+        setPromptState(null)
+        clearPromptState()
+      }
+      if (successMessage) {
+        setSuccessMessage(null)
+      }
+      return
+    }
+
+    // If we're on the forms page, re-validate prompt state
     if (!promptState || loading) {
       return
     }
@@ -383,7 +402,7 @@ export default function OrganizationStructureForms() {
       setPromptState(null)
       clearPromptState()
     }
-  }, [location, promptState, loading, sports, programs, levels, teams, seasons])
+  }, [location.pathname, promptState, loading, sports, programs, levels, teams, seasons, successMessage])
 
   // Cleanup: clear prompt on unmount if it was dismissed
   useEffect(() => {
@@ -448,6 +467,16 @@ export default function OrganizationStructureForms() {
   useEffect(() => {
     setEditInitialized(false)
   }, [editType, editId])
+
+  // Clear success messages and prompt state when form type or edit mode changes
+  useEffect(() => {
+    setSuccessMessage(null)
+    // Clear prompt state when entering edit mode (prompts are only for newly created entities)
+    if (editType) {
+      setPromptState(null)
+      clearPromptState()
+    }
+  }, [editType, activeFormType])
 
   useEffect(() => {
     if (editTypeParam && !editType) {
@@ -905,20 +934,26 @@ export default function OrganizationStructureForms() {
           onDismiss={handleDismissPrompt}
         />
       ) : successMessage ? (
-        <Card className="pa-mb-6">
-          <div className="pa-text-success">{successMessage}</div>
+        <Card className="mb-4" style={{ borderLeft: '3px solid var(--pa-success)' }}>
+          <div className="pa-body-m pa-text-success" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
+            {successMessage}
+          </div>
         </Card>
       ) : null}
 
       {actionError && (
-        <Card className="pa-mb-6">
-          <div className="pa-text-danger">{actionError}</div>
+        <Card className="mb-4" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
+          <div className="pa-body-m pa-text-danger" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
+            {actionError}
+          </div>
         </Card>
       )}
 
       {loadError && (
-        <Card className="pa-mb-6">
-          <div className="pa-text-danger">{loadError}</div>
+        <Card className="mb-4" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
+          <div className="pa-body-m pa-text-danger" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
+            {loadError}
+          </div>
         </Card>
       )}
 

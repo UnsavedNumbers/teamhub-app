@@ -11,6 +11,7 @@ import { getSeasons } from '../../data/services/seasonsService'
 import type { Season } from '../../data/types/organization'
 import { AdminPageHeader, Card, Button } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
+import { getLink } from '../../utils/routes'
 
 export default function SeasonsManagement() {
   const { context, isReady } = useUserContext()
@@ -59,7 +60,7 @@ export default function SeasonsManagement() {
         title="Seasons"
         subtitle="Manage organization-wide time periods"
         breadcrumbs={[
-          { label: 'Organizations', path: '/admin/organization/structure' },
+          { label: 'Organizations', path: getLink('admin.organization.structure') },
           { label: 'Seasons' },
         ]}
       />
@@ -125,7 +126,7 @@ export default function SeasonsManagement() {
                         </span>
                       </td>
                       <td className="py-4 px-6 text-right">
-                        <Link to={`/admin/organization/structure/forms?edit=season&id=${season.id}&returnUrl=${encodeURIComponent('/admin/organization/structure/seasons')}`} className="invisible group-hover:visible focus:visible">
+                        <Link to={`${getLink('admin.organization.forms')}?edit=season&id=${season.id}&returnUrl=${encodeURIComponent(getLink('admin.organization.seasons'))}`} className="invisible group-hover:visible focus:visible">
                           <button className="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors">
                             Edit
                           </button>

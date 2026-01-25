@@ -293,7 +293,21 @@ export async function deleteTeam(
             .eq('id', teamId)
             .eq('org_id', context.orgId)
 
-        if (error) throw error
+        if (error) {
+            // Check for network errors
+            if (error.message?.includes('network') || error.message?.includes('fetch') || error.message?.includes('timeout')) {
+                return { error: new Error('Network error. Please check your internet connection and try again.') }
+            }
+            // Check for RLS/permission errors
+            if (error.message?.includes('row-level security') || error.message?.includes('RLS') || error.code === '42501') {
+                return { error: new Error('Permission denied. You do not have permission to delete this team.') }
+            }
+            // Check for foreign key violations
+            if (error.code === '23503' || error.message?.includes('foreign key')) {
+                return { error: new Error('Cannot delete team: It is currently in use.') }
+            }
+            throw error
+        }
         return { error: null }
     } catch (err) {
         return { error: err instanceof Error ? err : new Error('Delete team failed') }

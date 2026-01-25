@@ -132,6 +132,8 @@ export const RouteKeys = {
     ADMIN_DASHBOARD: 'admin.dashboard',
     ADMIN_ORGANIZATION: 'admin.organization.base',
     ADMIN_ORGANIZATION_STRUCTURE: 'admin.organization.structure',
+    ADMIN_ORGANIZATION_SPORTS: 'admin.organization.sports',
+    ADMIN_ORGANIZATION_PROGRAMS: 'admin.organization.programs',
     ADMIN_ORGANIZATION_BILLING: 'admin.organization.billing',
     ADMIN_ORGANIZATION_USERS: 'admin.organization.users',
     ADMIN_TRIAL_EXPIRED: 'admin.organization.trialExpired',

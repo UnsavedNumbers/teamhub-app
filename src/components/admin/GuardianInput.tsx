@@ -99,7 +99,7 @@ export function GuardianInput({
         : null
 
     return (
-        <div className="border border-gray-200 rounded-lg p-4 bg-white">
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800">
             {/* Header with Remove Button */}
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
@@ -129,8 +129,8 @@ export function GuardianInput({
                     type="email"
                     value={value.email}
                     onChange={(e) => handleEmailChange(e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        emailError ? 'border-red-300' : 'border-gray-300'
+                    className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        emailError ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-600'
                     }`}
                     placeholder="guardian@example.com"
                     required
@@ -158,7 +158,7 @@ export function GuardianInput({
                 <select
                     value={value.relationship_type}
                     onChange={(e) => handleFieldChange('relationship_type', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                 >
                     <option value="parent">Parent</option>
@@ -178,7 +178,7 @@ export function GuardianInput({
                             type="text"
                             value={value.first_name || ''}
                             onChange={(e) => handleFieldChange('first_name', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             placeholder="First name"
                         />
                     </div>
@@ -191,7 +191,7 @@ export function GuardianInput({
                             type="text"
                             value={value.last_name || ''}
                             onChange={(e) => handleFieldChange('last_name', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             placeholder="Last name"
                         />
                     </div>
@@ -204,7 +204,7 @@ export function GuardianInput({
                             type="tel"
                             value={value.phone || ''}
                             onChange={(e) => handleFieldChange('phone', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             placeholder="(555) 123-4567"
                         />
                     </div>

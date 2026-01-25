@@ -66,12 +66,28 @@ export function HierarchyCreationPrompt({
   const notNowLabel = t('admin.structureForms.messages.notNow') || 'Not now'
 
   return (
-    <Card className="pa-mb-6" style={{ borderLeft: '3px solid var(--pa-success)' }}>
-      <div style={{ padding: 'var(--pa-space-4)' }}>
-        <div className="pa-body-m" style={{ color: 'var(--pa-success)', marginBottom: 'var(--pa-space-4)' }}>
+    <Card className="mb-4" style={{ borderLeft: '3px solid var(--pa-success)' }}>
+      <div style={{ 
+        padding: 'var(--pa-space-3) var(--pa-space-4)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 'var(--pa-space-4)',
+        flexWrap: 'wrap'
+      }}>
+        <div className="pa-body-m" style={{ 
+          color: 'var(--pa-success)',
+          flex: '1 1 auto',
+          minWidth: 0
+        }}>
           {successMessage}
         </div>
-        <div style={{ display: 'flex', gap: 'var(--pa-space-3)', justifyContent: 'flex-end' }}>
+        <div style={{ 
+          display: 'flex', 
+          gap: 'var(--pa-space-2)', 
+          flexShrink: 0,
+          flexWrap: 'wrap'
+        }}>
           <Button variant="secondary" onClick={onDismiss}>
             {notNowLabel}
           </Button>

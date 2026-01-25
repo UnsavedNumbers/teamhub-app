@@ -569,6 +569,11 @@ export async function deleteSport(
             if (error.message?.includes('row-level security') || error.message?.includes('RLS') || error.code === '42501') {
                 return { error: new Error('Permission denied. You do not have permission to delete this sport.') }
             }
+            // Check for trigger errors (deletion blocked due to children)
+            if (error.code === 'P0001' || error.message?.includes('Cannot delete sport')) {
+                // Database trigger error - sport has programs
+                return { error: new Error(error.message || 'Cannot delete sport: It contains programs and cannot be removed.') }
+            }
             // Check for foreign key violations
             if (error.code === '23503' || error.message?.includes('foreign key')) {
                 return { error: new Error('Cannot delete sport: It is currently in use by programs, teams, or other entities.') }
@@ -1022,6 +1027,7 @@ export async function updateProgram(
 /**
  * Delete a program
  * Note: deleted_at column doesn't exist, so this performs a hard delete
+ * Will fail if program has levels (enforced by database trigger)
  */
 export async function deleteProgram(
     context: UserContext,
@@ -1039,7 +1045,26 @@ export async function deleteProgram(
             .eq('id', programId)
             .eq('org_id', context.orgId)
 
-        if (error) throw error
+        if (error) {
+            // Check for trigger errors (deletion blocked due to children)
+            if (error.code === 'P0001' || error.message?.includes('Cannot delete program')) {
+                // Database trigger error - program has levels
+                return { error: new Error(error.message || 'Cannot delete program: It contains levels and cannot be removed.') }
+            }
+            // Check for network errors
+            if (error.message?.includes('network') || error.message?.includes('fetch') || error.message?.includes('timeout')) {
+                return { error: new Error('Network error. Please check your internet connection and try again.') }
+            }
+            // Check for RLS/permission errors
+            if (error.message?.includes('row-level security') || error.message?.includes('RLS') || error.code === '42501') {
+                return { error: new Error('Permission denied. You do not have permission to delete this program.') }
+            }
+            // Check for foreign key violations
+            if (error.code === '23503' || error.message?.includes('foreign key')) {
+                return { error: new Error('Cannot delete program: It is currently in use.') }
+            }
+            throw error
+        }
         return { error: null }
     } catch (err) {
         console.error('[sportsService] Error deleting program:', err)

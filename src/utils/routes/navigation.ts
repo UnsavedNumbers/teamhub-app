@@ -246,7 +246,8 @@ export const adminMenuItems: MenuItemDefinition[] = [
         requiresOrg: false,
         children: [
             { text: 'Overview', icon: 'info', routeKey: 'admin.organization.structure', requiresOrg: true },
-            { text: 'Sports & Programs', icon: 'sports', routeKey: 'admin.organization.sportsPrograms', requiresOrg: true },
+            { text: 'Sports', icon: 'sports', routeKey: 'admin.organization.sports', requiresOrg: true },
+            { text: 'Programs', icon: 'category', routeKey: 'admin.organization.programs', requiresOrg: true },
             { text: 'Levels', icon: 'grade', routeKey: 'admin.organization.levels', requiresOrg: true },
             { text: 'Teams', icon: 'groups', routeKey: 'admin.organization.teamsManagement', requiresOrg: true },
             { text: 'Seasons', icon: 'calendar_month', routeKey: 'admin.organization.seasons', requiresOrg: true },
