@@ -159,69 +159,74 @@ export default function SeasonsManagement() {
         </Card>
       ) : (
         <>
-          <div className="pa-flex pa-justify-end pa-mb-4">
+          <div className="pa-flex pa-justify-end" style={{ marginBottom: 'var(--pa-space-4)' }}>
             <Link to={`${getLink('admin.organization.forms')}?type=season&returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`}>
               <Button>Add Season</Button>
             </Link>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+          <Card noPadding>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Season Name</th>
-                    <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Term</th>
-                    <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Start Date</th>
-                    <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">End Date</th>
-                    <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                    <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                  <tr style={{ background: 'var(--pa-n50)', borderBottom: '1px solid var(--pa-n200)' }} className="dark:bg-slate-800/50 dark:border-slate-700">
+                    <th className="pa-overline" style={{ padding: 'var(--pa-space-4) var(--pa-space-6)', color: 'var(--pa-n500)', textAlign: 'left' }}>Season Name</th>
+                    <th className="pa-overline" style={{ padding: 'var(--pa-space-4) var(--pa-space-6)', color: 'var(--pa-n500)', textAlign: 'left' }}>Term</th>
+                    <th className="pa-overline" style={{ padding: 'var(--pa-space-4) var(--pa-space-6)', color: 'var(--pa-n500)', textAlign: 'left' }}>Start Date</th>
+                    <th className="pa-overline" style={{ padding: 'var(--pa-space-4) var(--pa-space-6)', color: 'var(--pa-n500)', textAlign: 'left' }}>End Date</th>
+                    <th className="pa-overline" style={{ padding: 'var(--pa-space-4) var(--pa-space-6)', color: 'var(--pa-n500)', textAlign: 'left' }}>Status</th>
+                    <th className="pa-overline" style={{ padding: 'var(--pa-space-4) var(--pa-space-6)', color: 'var(--pa-n500)', textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {seasons.map((season) => (
+                <tbody>
+                  {seasons.map((season, index) => (
                     <tr 
-                      key={season.id} 
-                      className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                      key={season.id}
+                      className="pa-stacked-list-row group"
+                      style={{ cursor: 'pointer' }}
                       onClick={() => navigate(getLink('admin.seasons.detail', { id: season.id }))}
                     >
-                      <td className="py-4 px-6">
-                        <div className="font-bold text-slate-900">{season.name}</div>
+                      <td style={{ padding: 'var(--pa-space-4) var(--pa-space-6)' }}>
+                        <div className="pa-body-m" style={{ fontWeight: 700, color: 'var(--pa-n900)' }}>{season.name}</div>
                       </td>
-                      <td className="py-4 px-6 text-sm text-slate-500">—</td>
-                      <td className="py-4 px-6 text-sm text-slate-500">{season.start_date ? new Date(season.start_date).toLocaleDateString() : '—'}</td>
-                      <td className="py-4 px-6 text-sm text-slate-500">{season.end_date ? new Date(season.end_date).toLocaleDateString() : '—'}</td>
-                      <td className="py-4 px-6">
+                      <td style={{ padding: 'var(--pa-space-4) var(--pa-space-6)' }} className="pa-body-s pa-text-muted">—</td>
+                      <td style={{ padding: 'var(--pa-space-4) var(--pa-space-6)' }} className="pa-body-s pa-text-muted">{season.start_date ? new Date(season.start_date).toLocaleDateString() : '—'}</td>
+                      <td style={{ padding: 'var(--pa-space-4) var(--pa-space-6)' }} className="pa-body-s pa-text-muted">{season.end_date ? new Date(season.end_date).toLocaleDateString() : '—'}</td>
+                      <td style={{ padding: 'var(--pa-space-4) var(--pa-space-6)' }}>
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                            season.is_active
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                              : 'bg-slate-100 text-slate-600 border border-slate-200'
-                          }`}
+                          className={`pa-badge ${season.is_active ? 'pa-badge--success' : ''}`}
+                          style={{
+                            background: season.is_active ? 'rgba(16, 185, 129, 0.1)' : 'var(--pa-n100)',
+                            color: season.is_active ? 'rgb(16, 185, 129)' : 'var(--pa-n600)',
+                            border: season.is_active ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid var(--pa-n200)'
+                          }}
                         >
                           {season.is_active ? 'Active' : 'Upcoming'}
                         </span>
                       </td>
-                      <td className="py-4 px-6 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-3">
-                          <Link to={`${getLink('admin.organization.forms')}?edit=season&id=${season.id}&returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`} className="invisible group-hover:visible focus:visible">
-                            <button className="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors">
+                      <td style={{ padding: 'var(--pa-space-4) var(--pa-space-6)', textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
+                        <div className="pa-flex pa-items-center pa-justify-end" style={{ gap: 'var(--pa-space-3)' }}>
+                          <Link to={`${getLink('admin.organization.forms')}?edit=season&id=${season.id}&returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`} className="pa-opacity-0 group-hover:pa-opacity-100 focus:pa-opacity-100" style={{ transition: 'opacity 200ms' }}>
+                            <Button variant="ghost" size="dense">
                               Edit
-                            </button>
+                            </Button>
                           </Link>
                           {emptySeasons.has(season.id) && (
-                            <button
-                              onClick={(e) => {
+                            <Button
+                              variant="danger"
+                              size="dense"
+                              icon="delete"
+                              onClick={(e: React.MouseEvent) => {
                                 e.stopPropagation()
                                 handleDeleteClick(season)
                               }}
                               disabled={deleting}
-                              className="invisible group-hover:visible focus:visible inline-flex items-center justify-center h-8 px-3 font-medium text-xs text-red-700 bg-white border border-red-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="pa-opacity-0 group-hover:pa-opacity-100 focus:pa-opacity-100"
+                              style={{ transition: 'opacity 200ms' }}
                               title="Delete empty season"
                             >
-                              <span className="material-symbols-outlined" style={{ fontSize: '14px', marginRight: '4px' }}>delete</span>
                               Delete
-                            </button>
+                            </Button>
                           )}
                         </div>
                       </td>
@@ -230,7 +235,7 @@ export default function SeasonsManagement() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </Card>
         </>
       )}
 

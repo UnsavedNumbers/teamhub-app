@@ -108,26 +108,43 @@ export default function CreateFee() {
   // Load Seasons when Team changes
   const fetchSeasons = useCallback(async (teamId: string) => {
     if (!isReady) return
+    
+    let mappedSeasons: { id: string; name: string; is_active?: boolean }[] = []
+    
     const { data, error } = await getTeamDetails(context, teamId)
     // Note: getTeamDetails might return fake data structure which has 'seasons'
     // or real data. The updated teamsService usually returns null for 'data' if real data not impl,
     // but we need active seasons.
     // Let's use direct Supabase fallback if service fails or returns empty for seasons
     if (!error && data?.seasons && data.seasons.length > 0) {
-      setSeasons(data.seasons.map(s => ({ id: s.id, name: s.name })))
+      mappedSeasons = data.seasons.map(s => ({ id: s.id, name: s.name, is_active: (s as any).is_active }))
     } else {
         // Direct Query
         const { data: seasonsData } = await supabase
             .from('team_seasons')
-            .select('season_id, season:seasons(id, name)')
+            .select('season_id, is_active, season:seasons(id, name)')
             .eq('team_id', teamId)
             .eq('is_active', true)
         
         if (seasonsData) {
-             setSeasons(seasonsData.map((s: any) => ({ id: s.season.id, name: s.season.name })))
+             mappedSeasons = seasonsData.map((s: any) => ({ id: s.season.id, name: s.season.name, is_active: s.is_active }))
         }
     }
-  }, [context, isReady])
+    
+    setSeasons(mappedSeasons)
+    
+    // Auto-select the active season if it exists, otherwise select the first one
+    if (mappedSeasons.length > 0) {
+      const activeSeason = mappedSeasons.find(s => s.is_active)
+      if (activeSeason) {
+        setValue('season_id', activeSeason.id, { shouldValidate: false })
+        setTimeout(() => trigger('season_id'), 100)
+      } else {
+        setValue('season_id', mappedSeasons[0].id, { shouldValidate: false })
+        setTimeout(() => trigger('season_id'), 100)
+      }
+    }
+  }, [context, isReady, setValue, trigger])
 
   // Load Roster when Season changes
   const fetchRoster = useCallback(async (teamId: string, seasonId: string) => {
@@ -184,9 +201,9 @@ export default function CreateFee() {
 
   useEffect(() => { 
     if (watchTeamId && isReady) { 
-      // Team selected: fetch seasons and clear dependent data
+      // Team selected: fetch seasons (which will auto-select) and clear dependent data
       fetchSeasons(watchTeamId)
-      setValue('season_id', '', { shouldValidate: false })
+      // Don't clear season_id here - fetchSeasons will handle setting it
       setValue('selected_athlete_ids', {})
       setRoster([])
     } else if (!watchTeamId && isReady) {

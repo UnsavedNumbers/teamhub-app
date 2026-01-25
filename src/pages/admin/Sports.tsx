@@ -5,7 +5,6 @@
  */
 
 import { useEffect, useState, useMemo } from 'react'
-import type { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOffline } from '../../hooks/useOffline'
@@ -13,7 +12,7 @@ import { USE_FAKE_DATA } from '../../data/config'
 import { getSports, deleteSport } from '../../data/services/sportsService'
 import { getPrograms } from '../../data/services/sportsService'
 import type { Sport } from '../../data/types/organization'
-import { AdminPageHeader, ConfirmDialog } from '../../components/platformAdmin'
+import { AdminPageHeader, ConfirmDialog, Button, Card } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 
@@ -123,18 +122,6 @@ export default function Sports() {
 
   // --- Components ---
 
-  const PrimaryButton = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
-    <button className={`inline-flex items-center justify-center h-12 md:h-10 px-6 font-medium text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 ${className}`}>
-      {children}
-    </button>
-  )
-
-  const SecondaryButton = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
-    <button className={`inline-flex items-center justify-center h-12 md:h-9 px-4 font-medium text-xs text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 hover:border-slate-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-200 ${className}`}>
-      {children}
-    </button>
-  )
-
   const sportsRoute = getLink('admin.sports.list')
   const sportDetailRoute = (id: string) => getLink('admin.sports.detail', { id })
   const programsRoute = getLink('admin.programs.list')
@@ -188,9 +175,9 @@ export default function Sports() {
             to={`${formsRoute}?type=sport&returnUrl=${encodeURIComponent(sportsRoute)}`} 
             className={isOffline || USE_FAKE_DATA ? 'pointer-events-none opacity-50' : ''}
           >
-            <PrimaryButton>
+            <Button disabled={isOffline || USE_FAKE_DATA}>
               {USE_FAKE_DATA ? 'Sign in to Add Sport' : 'Add Sport'}
-            </PrimaryButton>
+            </Button>
           </Link>
         }
       />
@@ -209,91 +196,79 @@ export default function Sports() {
 
       <div className="flex flex-col gap-4">
         {allSports.length === 0 ? (
-          <div className="p-12 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50">
-            <span className="material-symbols-outlined text-5xl text-slate-300 mb-4">sports</span>
-            <h3 className="text-lg font-semibold text-slate-900 mb-1">No sports added</h3>
-            <p className="text-slate-500 mb-6">Start by adding a sport to your organization. Then you can create programs, levels, and teams.</p>
-            <Link 
-              to={`${formsRoute}?type=sport&returnUrl=${encodeURIComponent(sportsRoute)}`} 
-              className={isOffline || USE_FAKE_DATA ? 'pointer-events-none opacity-50' : ''}
-            >
-              <PrimaryButton>
-                {USE_FAKE_DATA ? 'Sign in to Add Sport' : 'Add Sport'}
-              </PrimaryButton>
-            </Link>
-          </div>
+          <Card>
+            <div className="pa-flex pa-flex-col pa-items-center pa-justify-center pa-text-center pa-p-6">
+              <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--pa-n300)', marginBottom: '16px' }}>sports</span>
+              <h3 className="pa-h3">No sports added</h3>
+              <p className="pa-body-m pa-text-muted pa-mb-4">Start by adding a sport to your organization. Then you can create programs, levels, and teams.</p>
+              <Link 
+                to={`${formsRoute}?type=sport&returnUrl=${encodeURIComponent(sportsRoute)}`} 
+                className={isOffline || USE_FAKE_DATA ? 'pointer-events-none opacity-50' : ''}
+              >
+                <Button disabled={isOffline || USE_FAKE_DATA}>
+                  {USE_FAKE_DATA ? 'Sign in to Add Sport' : 'Add Sport'}
+                </Button>
+              </Link>
+            </div>
+          </Card>
         ) : (
           allSports.map((sport) => {
             const programCount = programCountBySport(sport.id)
 
             return (
-              <div 
-                key={sport.id} 
-                className="group bg-white border border-slate-200 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md"
+              <Card 
+                key={sport.id}
+                className="pa-stacked-list"
+                noPadding
               >
-                {/* Sport Header */}
-                <div className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-4 w-full sm:w-auto">
-                    <div>
-                      <Link to={sportDetailRoute(sport.id)} className="inline-block">
-                        <h3 className="text-lg font-bold text-slate-900 leading-tight hover:underline">
-                          {sport.name}
-                        </h3>
+                <div className="pa-stacked-list-row">
+                  <div className="pa-stacked-list-row-content">
+                    <div className="pa-flex-1">
+                      <Link to={sportDetailRoute(sport.id)} className="pa-stacked-list-row-title" style={{ textDecoration: 'none', display: 'block' }}>
+                        {sport.name}
                       </Link>
-                      <Link to={`${programsRoute}?sport_id=${sport.id}`}>
-                        <p className="text-sm font-medium text-slate-400 mt-0.5 hover:text-slate-600 transition-colors">
-                          {programCount} {programCount === 1 ? 'program' : 'programs'}
-                        </p>
+                      <Link to={`${programsRoute}?sport_id=${sport.id}`} className="pa-stacked-list-row-meta" style={{ textDecoration: 'none', display: 'block' }}>
+                        {programCount} {programCount === 1 ? 'program' : 'programs'}
                       </Link>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 w-full sm:w-auto sm:justify-end">
-                    <Link 
-                      to={`${programsRoute}?sport_id=${sport.id}`}
-                      className="w-full sm:w-auto"
-                    >
-                      <SecondaryButton className="w-full sm:w-auto">
-                        View {sport.name} Programs
-                      </SecondaryButton>
-                    </Link>
-                    <Link 
-                      to={`${formsRoute}?type=program&sport_id=${sport.id}&returnUrl=${encodeURIComponent(sportsRoute)}`} 
-                      className={`w-full sm:w-auto ${isOffline || USE_FAKE_DATA ? 'pointer-events-none opacity-50' : ''}`}
-                    >
-                      <SecondaryButton className="w-full sm:w-auto">
-                        Add Program
-                      </SecondaryButton>
-                    </Link>
-                    <button
-                      onClick={() => handleDeleteSport(sport.id, sport.name)}
-                      disabled={deletingSportId === sport.id || isOffline || USE_FAKE_DATA || programCount > 0}
-                      className="inline-flex items-center justify-center h-12 md:h-9 px-4 font-medium text-xs text-red-700 bg-white border border-red-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title={
-                        USE_FAKE_DATA 
-                          ? 'Sign in to remove sport' 
-                          : isOffline 
-                          ? 'Offline - cannot remove sport' 
-                          : programCount > 0
-                          ? `Cannot remove: This sport contains ${programCount} ${programCount === 1 ? 'program' : 'programs'} and cannot be removed.`
-                          : 'Remove sport from organization'
-                      }
-                    >
-                      {deletingSportId === sport.id ? (
-                        <>
-                          <span className="material-symbols-outlined animate-spin" style={{ fontSize: '16px', marginRight: '4px' }}>refresh</span>
-                          Removing...
-                        </>
-                      ) : (
-                        <>
-                          <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '4px' }}>delete</span>
-                          Remove
-                        </>
-                      )}
-                    </button>
+                    
+                    <div className="pa-stacked-list-row-actions">
+                      <Link to={`${programsRoute}?sport_id=${sport.id}`}>
+                        <Button variant="secondary" size="dense">
+                          View {sport.name} Programs
+                        </Button>
+                      </Link>
+                      <Link 
+                        to={`${formsRoute}?type=program&sport_id=${sport.id}&returnUrl=${encodeURIComponent(sportsRoute)}`}
+                        className={isOffline || USE_FAKE_DATA ? 'pointer-events-none opacity-50' : ''}
+                      >
+                        <Button variant="secondary" size="dense" disabled={isOffline || USE_FAKE_DATA}>
+                          Add Program
+                        </Button>
+                      </Link>
+                      <Button
+                        variant="danger"
+                        size="dense"
+                        icon="delete"
+                        onClick={() => handleDeleteSport(sport.id, sport.name)}
+                        disabled={deletingSportId === sport.id || isOffline || USE_FAKE_DATA || programCount > 0}
+                        loading={deletingSportId === sport.id}
+                        title={
+                          USE_FAKE_DATA 
+                            ? 'Sign in to remove sport' 
+                            : isOffline 
+                            ? 'Offline - cannot remove sport' 
+                            : programCount > 0
+                            ? `Cannot remove: This sport contains ${programCount} ${programCount === 1 ? 'program' : 'programs'} and cannot be removed.`
+                            : 'Remove sport from organization'
+                        }
+                      >
+                        {deletingSportId === sport.id ? 'Removing...' : 'Remove'}
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </Card>
             )
           })
         )}

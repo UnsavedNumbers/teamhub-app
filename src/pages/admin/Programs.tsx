@@ -13,7 +13,7 @@ import { getSports, getPrograms, deleteProgram } from '../../data/services/sport
 import { getLevels } from '../../data/services/levelsService'
 import { getTeams } from '../../data/services/teamsService'
 import type { Sport, Program, Level, Team } from '../../data/types/organization'
-import { AdminPageHeader, Select, ConfirmDialog, Button } from '../../components/platformAdmin'
+import { AdminPageHeader, Select, ConfirmDialog, Button, Card } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 
@@ -362,9 +362,9 @@ export default function Programs() {
         </div>
       )}
 
-      <div className="mb-6 p-4 bg-white border border-slate-200 rounded-xl">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="w-full md:w-auto md:min-w-[200px]">
+      <Card className="pa-mb-6">
+        <div className="pa-flex pa-flex-col md:pa-flex-row pa-justify-between pa-items-center" style={{ gap: 'var(--pa-space-4)' }}>
+          <div style={{ width: '100%', minWidth: '200px' }} className="md:pa-w-auto">
             <Select
               label="Filter by sport"
               value={filterSportId}
@@ -378,10 +378,9 @@ export default function Programs() {
             />
           </div>
           {filterSportId && (
-            <button
+            <Button
               onClick={() => handleNavigateToAddProgram(filterSportId)}
               disabled={loading || isOffline || USE_FAKE_DATA || !filterSportId}
-              className="w-full md:w-auto inline-flex items-center justify-center h-12 md:h-10 px-6 font-medium text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label={USE_FAKE_DATA ? 'Sign in to add program' : `Add program for ${sportById.get(filterSportId)?.name || 'selected sport'}`}
               title={
                 isOffline
@@ -394,52 +393,52 @@ export default function Programs() {
               }
             >
               {USE_FAKE_DATA ? 'Sign in to Add Program' : 'Add Program'}
-            </button>
+            </Button>
           )}
         </div>
-      </div>
+      </Card>
 
       <div className="flex flex-col gap-4">
         {filteredPrograms.length === 0 ? (
-          <div className="p-12 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50">
-            <span className="material-symbols-outlined text-5xl text-slate-300 mb-4">category</span>
-            <h3 className="text-lg font-semibold text-slate-900 mb-1">
-              {filterSportId ? 'No programs for this sport' : 'No programs yet'}
-            </h3>
-            <p className="text-slate-500 mb-6">
-              {filterSportId 
-                ? `Create a program for ${sportById.get(filterSportId)?.name || 'this sport'}.`
-                : 'Start by selecting a sport or create a program from the Sports page.'}
-            </p>
-            {filterSportId ? (
-              <button
-                onClick={() => handleNavigateToAddProgram(filterSportId)}
-                disabled={loading || isOffline || USE_FAKE_DATA || !filterSportId}
-                className="inline-flex items-center justify-center h-12 md:h-10 px-6 font-medium text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
-                aria-label={USE_FAKE_DATA ? 'Sign in to add program' : `Add program for ${sportById.get(filterSportId)?.name || 'selected sport'}`}
-                title={
-                  isOffline
-                    ? 'Offline - cannot add programs'
-                    : USE_FAKE_DATA
-                      ? 'Sign in to add programs'
-                      : !filterSportId
-                        ? 'Select a sport first'
-                        : undefined
-                }
-              >
-                {USE_FAKE_DATA ? 'Sign in to Add Program' : 'Add Program'}
-              </button>
-            ) : (
-              <button
-                onClick={handleNavigateToSports}
-                disabled={loading}
-                className="inline-flex items-center justify-center h-12 md:h-10 px-6 font-medium text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
-                aria-label="Navigate to sports list"
-              >
-                View Sports
-              </button>
-            )}
-          </div>
+          <Card>
+            <div className="pa-flex pa-flex-col pa-items-center pa-justify-center pa-text-center pa-p-6">
+              <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--pa-n300)', marginBottom: '16px' }}>category</span>
+              <h3 className="pa-h3">
+                {filterSportId ? 'No programs for this sport' : 'No programs yet'}
+              </h3>
+              <p className="pa-body-m pa-text-muted pa-mb-4">
+                {filterSportId 
+                  ? `Create a program for ${sportById.get(filterSportId)?.name || 'this sport'}.`
+                  : 'Start by selecting a sport or create a program from the Sports page.'}
+              </p>
+              {filterSportId ? (
+                <Button
+                  onClick={() => handleNavigateToAddProgram(filterSportId)}
+                  disabled={loading || isOffline || USE_FAKE_DATA || !filterSportId}
+                  aria-label={USE_FAKE_DATA ? 'Sign in to add program' : `Add program for ${sportById.get(filterSportId)?.name || 'selected sport'}`}
+                  title={
+                    isOffline
+                      ? 'Offline - cannot add programs'
+                      : USE_FAKE_DATA
+                        ? 'Sign in to add programs'
+                        : !filterSportId
+                          ? 'Select a sport first'
+                          : undefined
+                  }
+                >
+                  {USE_FAKE_DATA ? 'Sign in to Add Program' : 'Add Program'}
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleNavigateToSports}
+                  disabled={loading}
+                  aria-label="Navigate to sports list"
+                >
+                  View Sports
+                </Button>
+              )}
+            </div>
+          </Card>
         ) : (
           filteredPrograms.map((program) => {
             const sport = sportById.get(program.sport_id)
@@ -448,113 +447,144 @@ export default function Programs() {
             const levelCount = programLevelsList.length
 
             return (
-              <div 
-                key={program.id} 
-                className="group bg-white border border-slate-200 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md p-6"
+              <Card 
+                key={program.id}
+                className="pa-stacked-list"
+                noPadding
               >
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <button
-                        onClick={() => handleNavigateToProgramDetail(program.id)}
-                        disabled={loading || !program.id}
-                        className="text-left text-lg font-bold text-slate-900 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-                        aria-label={`View details for ${program.name}`}
-                      >
-                        {program.name}
-                      </button>
-                      {sport && (
+                <div className="pa-stacked-list-row">
+                  <div className="pa-stacked-list-row-content">
+                    <div className="pa-flex-1">
+                      <div className="pa-flex pa-items-center" style={{ gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-2)' }}>
                         <button
-                          onClick={handleNavigateToSports}
-                          disabled={loading}
-                          className="text-sm font-medium text-slate-500 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                          aria-label={`View ${sport.name} sport details`}
+                          onClick={() => handleNavigateToProgramDetail(program.id)}
+                          disabled={loading || !program.id}
+                          className="pa-stacked-list-row-title"
+                          style={{ 
+                            textAlign: 'left',
+                            background: 'none',
+                            border: 'none',
+                            padding: 0,
+                            cursor: loading || !program.id ? 'not-allowed' : 'pointer',
+                            opacity: loading || !program.id ? 0.5 : 1,
+                            textDecoration: 'none'
+                          }}
+                          aria-label={`View details for ${program.name}`}
                         >
-                          ({sport.name})
+                          {program.name}
                         </button>
-                      )}
+                        {sport && (
+                          <button
+                            onClick={handleNavigateToSports}
+                            disabled={loading}
+                            className="pa-stacked-list-row-meta"
+                            style={{ 
+                              background: 'none',
+                              border: 'none',
+                              padding: 0,
+                              cursor: loading ? 'not-allowed' : 'pointer',
+                              opacity: loading ? 0.5 : 1,
+                              textDecoration: 'none'
+                            }}
+                            aria-label={`View ${sport.name} sport details`}
+                          >
+                            ({sport.name})
+                          </button>
+                        )}
+                      </div>
+                      <div className="pa-flex pa-items-center" style={{ gap: 'var(--pa-space-4)' }}>
+                        <span className="pa-body-s pa-text-muted" style={{ textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>
+                          {program.gender_category}
+                        </span>
+                        <span className="pa-body-s pa-text-muted">•</span>
+                        <button
+                          onClick={() => handleNavigateToLevels(program.id)}
+                          disabled={loading || !program.id}
+                          className="pa-body-s pa-text-muted"
+                          style={{ 
+                            background: 'none',
+                            border: 'none',
+                            padding: 0,
+                            cursor: loading || !program.id ? 'not-allowed' : 'pointer',
+                            opacity: loading || !program.id ? 0.5 : 1,
+                            textDecoration: 'none'
+                          }}
+                          aria-label={`View ${levelCount} ${levelCount === 1 ? 'level' : 'levels'} for ${program.name}`}
+                        >
+                          {levelCount} {levelCount === 1 ? 'level' : 'levels'}
+                        </button>
+                        <span className="pa-body-s pa-text-muted">•</span>
+                        <button
+                          onClick={() => handleNavigateToTeams(program.id)}
+                          disabled={loading || !program.id}
+                          className="pa-body-s pa-text-muted"
+                          style={{ 
+                            background: 'none',
+                            border: 'none',
+                            padding: 0,
+                            cursor: loading || !program.id ? 'not-allowed' : 'pointer',
+                            opacity: loading || !program.id ? 0.5 : 1,
+                            textDecoration: 'none'
+                          }}
+                          aria-label={`View ${totalTeams} ${totalTeams === 1 ? 'team' : 'teams'} for ${program.name}`}
+                        >
+                          {totalTeams} {totalTeams === 1 ? 'team' : 'teams'}
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-slate-500">
-                      <span className="uppercase tracking-wide font-medium">
-                        {program.gender_category}
-                      </span>
-                      <span>•</span>
-                      <button
-                        onClick={() => handleNavigateToLevels(program.id)}
-                        disabled={loading || !program.id}
-                        className="hover:text-slate-700 hover:underline disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        aria-label={`View ${levelCount} ${levelCount === 1 ? 'level' : 'levels'} for ${program.name}`}
+                    
+                    <div className="pa-stacked-list-row-actions">
+                      <Button
+                        variant="secondary"
+                        size="dense"
+                        onClick={() => handleNavigateToEditProgram(program.id)}
+                        disabled={loading || !program.id || deletingProgramId === program.id}
+                        aria-label={`Edit ${program.name}`}
                       >
-                        {levelCount} {levelCount === 1 ? 'level' : 'levels'}
-                      </button>
-                      <span>•</span>
-                      <button
-                        onClick={() => handleNavigateToTeams(program.id)}
-                        disabled={loading || !program.id}
-                        className="hover:text-slate-700 hover:underline disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        aria-label={`View ${totalTeams} ${totalTeams === 1 ? 'team' : 'teams'} for ${program.name}`}
+                        Edit
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="dense"
+                        onClick={() => handleNavigateToAddLevel(program.id, program.sport_id)}
+                        disabled={loading || isOffline || USE_FAKE_DATA || !program.id || !program.sport_id || deletingProgramId === program.id}
+                        aria-label={`Add level to ${program.name}`}
+                        title={
+                          isOffline
+                            ? 'Offline - cannot add levels'
+                            : USE_FAKE_DATA
+                              ? 'Sign in to add levels'
+                              : !program.id || !program.sport_id
+                                ? 'Missing required information'
+                                : undefined
+                        }
                       >
-                        {totalTeams} {totalTeams === 1 ? 'team' : 'teams'}
-                      </button>
+                        Add Level
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="dense"
+                        icon="delete"
+                        onClick={() => handleDeleteProgram(program.id, program.name)}
+                        disabled={deletingProgramId === program.id || loading || isOffline || USE_FAKE_DATA || levelCount > 0 || !program.id}
+                        loading={deletingProgramId === program.id}
+                        aria-label={`Remove ${program.name} from organization`}
+                        title={
+                          USE_FAKE_DATA 
+                            ? 'Sign in to remove program' 
+                            : isOffline 
+                            ? 'Offline - cannot remove program' 
+                            : levelCount > 0
+                            ? `Cannot remove: This program contains ${levelCount} ${levelCount === 1 ? 'level' : 'levels'} and cannot be removed.`
+                            : 'Remove program from organization'
+                        }
+                      >
+                        {deletingProgramId === program.id ? 'Removing...' : 'Remove'}
+                      </Button>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleNavigateToEditProgram(program.id)}
-                      disabled={loading || !program.id || deletingProgramId === program.id}
-                      className="inline-flex items-center justify-center h-9 px-4 font-medium text-xs text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 hover:border-slate-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                      aria-label={`Edit ${program.name}`}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleNavigateToAddLevel(program.id, program.sport_id)}
-                      disabled={loading || isOffline || USE_FAKE_DATA || !program.id || !program.sport_id || deletingProgramId === program.id}
-                      className="inline-flex items-center justify-center h-9 px-4 font-medium text-xs text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 hover:border-slate-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                      aria-label={`Add level to ${program.name}`}
-                      title={
-                        isOffline
-                          ? 'Offline - cannot add levels'
-                          : USE_FAKE_DATA
-                            ? 'Sign in to add levels'
-                            : !program.id || !program.sport_id
-                              ? 'Missing required information'
-                              : undefined
-                      }
-                    >
-                      Add Level
-                    </button>
-                    <button
-                      onClick={() => handleDeleteProgram(program.id, program.name)}
-                      disabled={deletingProgramId === program.id || loading || isOffline || USE_FAKE_DATA || levelCount > 0 || !program.id}
-                      className="inline-flex items-center justify-center h-9 px-4 font-medium text-xs text-red-700 bg-white border border-red-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                      aria-label={`Remove ${program.name} from organization`}
-                      title={
-                        USE_FAKE_DATA 
-                          ? 'Sign in to remove program' 
-                          : isOffline 
-                          ? 'Offline - cannot remove program' 
-                          : levelCount > 0
-                          ? `Cannot remove: This program contains ${levelCount} ${levelCount === 1 ? 'level' : 'levels'} and cannot be removed.`
-                          : 'Remove program from organization'
-                      }
-                    >
-                      {deletingProgramId === program.id ? (
-                        <>
-                          <span className="material-symbols-outlined animate-spin" style={{ fontSize: '16px', marginRight: '4px' }} aria-hidden="true">refresh</span>
-                          Removing...
-                        </>
-                      ) : (
-                        <>
-                          <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '4px' }} aria-hidden="true">delete</span>
-                          Remove
-                        </>
-                      )}
-                    </button>
                   </div>
                 </div>
-              </div>
+              </Card>
             )
           })
         )}

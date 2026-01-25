@@ -169,6 +169,7 @@ export default function SportDetail() {
                     justifyContent: 'center',
                     overflow: 'hidden',
                   }}
+                  className="dark:border-slate-700 dark:bg-slate-800"
                 >
                   {iconUrl ? (
                     <img src={iconUrl} alt={`${sport.name} icon`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -332,31 +333,34 @@ export default function SportDetail() {
             </div>
           </Card>
 
-          <Card title={`Programs (${programs.length})`}>
+          <Card 
+            title={
+              <span>
+                Programs <span className="pa-text-muted" style={{ fontSize: '0.85em', fontWeight: 500 }}>({programs.length})</span>
+              </span>
+            }
+            noPadding
+          >
             {programs.length === 0 ? (
-              <div className="pa-text-muted">
+              <div style={{ padding: 'var(--pa-space-5)' }} className="pa-text-muted">
                 No programs yet for this sport. Create one to start building out levels and teams.
               </div>
             ) : (
-              <div className="pa-flex pa-flex-col pa-gap-2">
+              <div className="pa-stacked-list">
                 {programs.map((p) => (
                   <div
                     key={p.id}
-                    className="pa-flex pa-justify-between pa-items-center"
-                    style={{
-                      border: '1px solid var(--pa-n200)',
-                      borderRadius: '12px',
-                      padding: '12px 14px',
-                      background: 'var(--pa-white)',
-                    }}
+                    className="pa-stacked-list-row"
                   >
-                    <div>
-                      <div className="pa-body-m" style={{ fontWeight: 700 }}>{p.name}</div>
-                      <div className="pa-text-sm pa-text-muted">{p.gender_category}</div>
+                    <div className="pa-stacked-list-row-content">
+                      <div>
+                        <div className="pa-stacked-list-row-title">{p.name}</div>
+                        <div className="pa-stacked-list-row-meta">{p.gender_category}</div>
+                      </div>
+                      <Link to={`${programsRoute}?sport_id=${sportId}`}>
+                        <Button variant="ghost" size="dense">Open</Button>
+                      </Link>
                     </div>
-                    <Link to={`${programsRoute}?sport_id=${sportId}`}>
-                      <Button variant="ghost">Open</Button>
-                    </Link>
                   </div>
                 ))}
               </div>

@@ -67,7 +67,10 @@ export default function TeamDetail() {
   }, [])
 
   const fetchTeamAndSeasons = useCallback(async () => {
-    if (!teamId || !isReady) return
+    if (!teamId || !isReady) {
+      setLoading(false)
+      return
+    }
 
     setLoading(true)
     setError(null)
@@ -83,18 +86,24 @@ export default function TeamDetail() {
         return
       }
 
-      if (!isMountedRef.current) return
+      if (!isMountedRef.current) {
+        setLoading(false)
+        return
+      }
 
-      setTeam({
+      const teamInfo = {
         id: teamData.id,
         name: teamData.name,
         sport: (teamData as any).sport,
         program: (teamData as any).program,
         level: (teamData as any).level,
         max_roster_size: (teamData as any).max_roster_size,
-      })
+      }
+      setTeam(teamInfo)
 
       // Get seasons for this team
+      let activeSeason: Season | null = null
+      
       if (teamData.seasons && teamData.seasons.length > 0) {
         const seasonList = teamData.seasons.map((s: any) => ({
           id: s.id,
@@ -103,11 +112,7 @@ export default function TeamDetail() {
           end_date: s.end_date,
           is_active: s.is_active,
         }))
-        const active = seasonList.find((s: Season) => s.is_active) || seasonList[0]
-        setActiveSeason(active)
-        if (active) {
-          await fetchRoster(active.id)
-        }
+        activeSeason = seasonList.find((s: Season) => s.is_active) || seasonList[0]
       } else {
         // Try to fetch seasons directly
         const { data: seasonsData, error: seasonsError } = await supabase
@@ -125,20 +130,23 @@ export default function TeamDetail() {
             end_date: s.season.end_date,
             is_active: s.season.is_active,
           }))
-          const active = seasonList.find((s: Season) => s.is_active) || seasonList[0]
-          setActiveSeason(active)
-          if (active) {
-            await fetchRoster(active.id)
-          }
+          activeSeason = seasonList.find((s: Season) => s.is_active) || seasonList[0]
+        }
+      }
+
+      // Set active season - this will trigger the useEffect to fetch roster
+      if (activeSeason) {
+        setActiveSeason(activeSeason)
+      } else {
+        // No season found, ensure loading is set to false
+        if (isMountedRef.current) {
+          setLoading(false)
         }
       }
     } catch (error) {
       console.error('Error in fetchTeamAndSeasons:', error)
       if (isMountedRef.current) {
         setError(error instanceof Error ? error.message : 'An unexpected error occurred')
-      }
-    } finally {
-      if (isMountedRef.current) {
         setLoading(false)
       }
     }
@@ -146,7 +154,10 @@ export default function TeamDetail() {
 
   const fetchRoster = useCallback(
     async (seasonId: string) => {
-      if (!teamId || !isReady || !seasonId) return
+      if (!teamId || !isReady || !seasonId) {
+        setRosterLoading(false)
+        return
+      }
 
       setRosterLoading(true)
       try {
@@ -156,14 +167,18 @@ export default function TeamDetail() {
           console.error('Error fetching roster:', error)
           if (isMountedRef.current) {
             setRoster([])
+            setRosterLoading(false)
           }
           return
         }
 
-        if (!isMountedRef.current) return
+        if (!isMountedRef.current) {
+          setRosterLoading(false)
+          return
+        }
 
         // Transform roster data
-        const rosterMembers: RosterMember[] = data.map((member: FakeTeamMember) => ({
+        const rosterMembers: RosterMember[] = (data || []).map((member: FakeTeamMember) => ({
           id: member.id,
           child_id: member.child_id,
           jersey_number: member.jersey_number,
@@ -197,17 +212,19 @@ export default function TeamDetail() {
           }
         }
 
-        setRoster(rosterMembers)
+        if (isMountedRef.current) {
+          setRoster(rosterMembers)
 
-        // Calculate stats
-        const activeCount = rosterMembers.filter((m) => m.status === 'active').length
-        const maxRoster = team?.max_roster_size || 18
-        setTeamStats({
-          totalAthletes: rosterMembers.length,
-          activeAthletes: activeCount,
-          vacancies: Math.max(0, maxRoster - activeCount),
-          rank: 1, // TODO: Calculate actual rank
-        })
+          // Calculate stats - use current team state or fallback
+          const currentTeam = team || { max_roster_size: 18 }
+          const activeCount = rosterMembers.filter((m) => m.status === 'active').length
+          setTeamStats({
+            totalAthletes: rosterMembers.length,
+            activeAthletes: activeCount,
+            vacancies: Math.max(0, (currentTeam.max_roster_size || 18) - activeCount),
+            rank: 1, // TODO: Calculate actual rank
+          })
+        }
       } catch (error) {
         console.error('Error in fetchRoster:', error)
         if (isMountedRef.current) {
@@ -216,6 +233,8 @@ export default function TeamDetail() {
       } finally {
         if (isMountedRef.current) {
           setRosterLoading(false)
+          // Also ensure main loading is false after roster loads
+          setLoading(false)
         }
       }
     },
@@ -223,14 +242,20 @@ export default function TeamDetail() {
   )
 
   useEffect(() => {
-    fetchTeamAndSeasons()
-  }, [fetchTeamAndSeasons])
+    if (teamId && isReady) {
+      fetchTeamAndSeasons()
+    } else if (!isReady) {
+      setLoading(true)
+    } else {
+      setLoading(false)
+    }
+  }, [teamId, isReady, fetchTeamAndSeasons])
 
   useEffect(() => {
-    if (activeSeason) {
+    if (activeSeason && teamId && isReady) {
       fetchRoster(activeSeason.id)
     }
-  }, [activeSeason, fetchRoster])
+  }, [activeSeason, teamId, isReady, fetchRoster])
 
   const getInitials = (firstName: string, lastName: string): string => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
