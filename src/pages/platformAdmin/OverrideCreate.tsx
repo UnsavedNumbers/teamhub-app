@@ -47,6 +47,8 @@ export default function OverrideCreate() {
   const [expiresAt, setExpiresAt] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showViewOverrideDialog, setShowViewOverrideDialog] = useState(false)
+  const [existingOverrideId, setExistingOverrideId] = useState<string | null>(null)
 
   // Restore form state from session storage (Issue 10)
   useEffect(() => {

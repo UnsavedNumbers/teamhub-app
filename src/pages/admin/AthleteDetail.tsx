@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, useParams } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getAthleteById } from '../../data/services/familyService'
 import { getAthleteSports } from '../../data/services/athleteSportsService'
-import { getAthleteGuardians, linkGuardianToAthlete, removeGuardianFromAthlete, findGuardianByEmail, validateGuardianEmail, getAthleteInvites, cancelInvite, resendInvite } from '../../data/services/guardianService'
+import { getAthleteGuardians, linkGuardianToAthlete, removeGuardianFromAthlete, validateGuardianEmail, getAthleteInvites, cancelInvite, resendInvite } from '../../data/services/guardianService'
 import { getAthletePhotoUrl } from '../../data/services/athletePhotoService'
 import { supabase } from '../../lib/supabase'
 import { getLink } from '../../utils/routes'
@@ -235,14 +235,6 @@ export default function AthleteDetail() {
     [navigate, navigating]
   )
 
-  const _handleGuardianClick = useCallback(
-    (familyId: string | null) => {
-      if (navigating || !familyId) return
-      setNavigating(true)
-      navigate(getLink('admin.guardians.detail', { id: familyId }))
-    },
-    [navigate, navigating]
-  )
 
   // Debounced guardian email check
   const debouncedCheckGuardian = useMemo(
@@ -338,7 +330,7 @@ export default function AthleteDetail() {
     setLinkGuardianError(null)
 
     try {
-      const { data, error } = await linkGuardianToAthlete(
+      const { error } = await linkGuardianToAthlete(
         athleteId,
         guardianEmail,
         context.orgId,
@@ -646,7 +638,7 @@ export default function AthleteDetail() {
         <Button
           variant="secondary"
           size="compact"
-          onClick={(e) => {
+          onClick={(e: React.MouseEvent) => {
             e.stopPropagation()
             handleRemoveGuardianClick(guardian.user_id, guardian.email)
           }}
@@ -697,7 +689,7 @@ export default function AthleteDetail() {
           <Button
             variant="secondary"
             size="compact"
-            onClick={(e) => {
+            onClick={(e: React.MouseEvent) => {
               e.stopPropagation()
               handleResendInvite(invite.id)
             }}
@@ -709,7 +701,7 @@ export default function AthleteDetail() {
           <Button
             variant="secondary"
             size="compact"
-            onClick={(e) => {
+            onClick={(e: React.MouseEvent) => {
               e.stopPropagation()
               handleCancelInvite(invite.id)
             }}

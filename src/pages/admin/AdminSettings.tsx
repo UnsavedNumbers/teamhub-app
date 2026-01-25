@@ -13,7 +13,7 @@ import {
   TabsList,
   TabsTrigger,
   TabsContent,
-  ConfirmDialog
+  ConfirmDialog,
 } from '../../components/platformAdmin'
 import { getUserPreferences, updateUserPreferences, type UserPreferences } from '../../data/services/preferencesService'
 import { supabase } from '../../lib/supabase'
@@ -631,6 +631,18 @@ export default function AdminSettings() {
           </div>
         </div>
       )}
+
+      {/* Sign Out All Sessions Confirmation Dialog */}
+      <ConfirmDialog
+        open={showSignOutAllDialog}
+        title="Sign Out All Sessions"
+        description="Are you sure you want to sign out from all devices? You will need to sign in again on all devices."
+        confirmLabel="Sign Out All"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleSignOutAll}
+        onCancel={() => setShowSignOutAllDialog(false)}
+      />
     </div>
   )
 }
