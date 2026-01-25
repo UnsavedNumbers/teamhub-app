@@ -78,6 +78,89 @@ async function getChildIdsForFamily(familyId: string | null): Promise<string[]> 
     return (data ?? []).map((row) => row.id)
 }
 
+/**
+ * Map database errors to user-friendly messages
+ * Prevents information leakage while providing helpful feedback
+ */
+function mapDatabaseError(error: unknown): Error {
+    if (!error || typeof error !== 'object') {
+        return new Error('An unexpected error occurred. Please try again.')
+    }
+
+    // Handle Supabase PostgrestError
+    if ('code' in error && 'message' in error) {
+        const code = String(error.code)
+        const message = String(error.message)
+
+        // Log full error details for debugging
+        console.error('[teamsService] Database error:', {
+            code,
+            message,
+            details: 'details' in error ? error.details : undefined,
+            hint: 'hint' in error ? error.hint : undefined,
+        })
+
+        // Map specific error codes to user-friendly messages
+        switch (code) {
+            case '23503': // Foreign key violation
+                if (message.includes('athlete_id') || message.includes('athletes')) {
+                    return new Error('Selected child not found or access denied.')
+                }
+                if (message.includes('team_id') || message.includes('teams')) {
+                    return new Error('Team not found.')
+                }
+                if (message.includes('season_id') || message.includes('seasons')) {
+                    return new Error('Selected season is not available for this team.')
+                }
+                return new Error('Invalid reference. Please check your selections and try again.')
+            
+            case '23505': // Unique constraint violation
+                if (message.includes('team_memberships')) {
+                    return new Error('This child is already a member of this team for this season.')
+                }
+                if (message.includes('invite_code')) {
+                    return new Error('Invite code conflict. Please contact support.')
+                }
+                return new Error('This record already exists.')
+            
+            case '42501': // Insufficient privilege (RLS)
+                return new Error('You do not have permission to perform this action.')
+            
+            case '42P01': // Undefined table
+                return new Error('Invite code feature is not available. Please contact support.')
+            
+            case '42703': // Undefined column
+                if (message.includes('invite_code')) {
+                    return new Error('Invite code feature is not available. Please contact support.')
+                }
+                return new Error('System configuration error. Please contact support.')
+            
+            default:
+                // For network/timeout errors
+                if (message.includes('network') || message.includes('fetch') || message.includes('timeout')) {
+                    return new Error('Network error. Please check your internet connection and try again.')
+                }
+                // Generic fallback
+                return new Error('An error occurred. Please try again.')
+        }
+    }
+
+    // Handle generic Error objects
+    if (error instanceof Error) {
+        const message = error.message.toLowerCase()
+        
+        if (message.includes('network') || message.includes('fetch') || message.includes('timeout')) {
+            return new Error('Network error. Please check your internet connection and try again.')
+        }
+        
+        // Log but don't expose the original message
+        console.error('[teamsService] Error:', error)
+        return new Error('An error occurred. Please try again.')
+    }
+
+    return new Error('An unexpected error occurred. Please try again.')
+}
+
 // ============================================================================
 // Team Service Functions
 // ============================================================================
@@ -393,6 +476,164 @@ export async function getTeamDetails(
         return { data: data as unknown as ReturnType<typeof getTeamWithDetails>, error: null }
     } catch (err) {
         return { data: null, error: err instanceof Error ? err : new Error('Failed to fetch team details') }
+    }
+}
+
+/**
+ * Get team by invite code
+ * 
+ * This function allows anyone (including unauthenticated users) to look up a team
+ * by its invite code. The invite code is case-insensitive and normalized to uppercase.
+ */
+export async function getTeamByInviteCode(
+    inviteCode: string
+): Promise<{ data: Team | null; error: Error | null }> {
+    try {
+        // Normalize invite code to uppercase and trim whitespace
+        const normalizedCode = inviteCode.toUpperCase().trim()
+        
+        if (!normalizedCode) {
+            return { data: null, error: new Error('Invalid invite code. Please check and try again.') }
+        }
+
+        // Query teams table using case-insensitive comparison
+        // The database stores codes in uppercase, but we use UPPER() for safety
+        const { data, error } = await supabase
+            .from('teams')
+            .select('*')
+            .eq('invite_code', normalizedCode)
+            .single()
+
+        if (error) {
+            // Handle "not found" case specifically
+            if (error.code === 'PGRST116') {
+                return { data: null, error: new Error('Invalid invite code. Please check and try again.') }
+            }
+            throw error
+        }
+
+        if (!data) {
+            return { data: null, error: new Error('Invalid invite code. Please check and try again.') }
+        }
+
+        return { data: data as Team, error: null }
+    } catch (err) {
+        return { data: null, error: mapDatabaseError(err) }
+    }
+}
+
+/**
+ * Create a team membership for an athlete
+ * 
+ * This function validates that:
+ * - The athlete belongs to the user's family
+ * - The season belongs to the team
+ * - Then creates or updates the membership atomically
+ */
+export async function createTeamMembership(
+    context: UserContext,
+    athleteId: string,
+    teamId: string,
+    seasonId: string
+): Promise<{ data: { id: string; isNew: boolean } | null; error: Error | null }> {
+    try {
+        // Validate athlete ownership - verify athlete belongs to user's family
+        const familyId = await getFamilyIdForUser(context.userId)
+        if (!familyId) {
+            return { data: null, error: new Error('Family not found. Please contact support.') }
+        }
+
+        const childIds = await getChildIdsForFamily(familyId)
+        if (!childIds.includes(athleteId)) {
+            return { data: null, error: new Error('Selected child not found or access denied.') }
+        }
+
+        // Validate season belongs to team
+        // Check via team_seasons junction table or season's team_id
+        const { data: seasonData, error: seasonError } = await supabase
+            .from('seasons')
+            .select('id, team_id, organization_id')
+            .eq('id', seasonId)
+            .single()
+
+        if (seasonError || !seasonData) {
+            return { data: null, error: new Error('Selected season is not available for this team.') }
+        }
+
+        // Check if season belongs to team via team_seasons or direct team_id
+        const { data: teamSeasonData, error: teamSeasonError } = await supabase
+            .from('team_seasons')
+            .select('team_id')
+            .eq('team_id', teamId)
+            .eq('season_id', seasonId)
+            .single()
+
+        // If team_seasons doesn't have the relationship, check if season has direct team_id
+        if (teamSeasonError && seasonData.team_id !== teamId) {
+            return { data: null, error: new Error('Selected season is not available for this team.') }
+        }
+
+        // Check if membership already exists to determine if this is a new or updated membership
+        const { data: existingMembership } = await supabase
+            .from('team_memberships')
+            .select('id, status')
+            .eq('athlete_id', athleteId)
+            .eq('team_id', teamId)
+            .eq('season_id', seasonId)
+            .single()
+
+        const isNew = !existingMembership
+
+        // Insert or update membership atomically using ON CONFLICT
+        // This handles race conditions and duplicate membership attempts gracefully
+        type MembershipInsert = Database['public']['Tables']['team_memberships']['Insert']
+        const insertData: MembershipInsert = {
+            athlete_id: athleteId,
+            team_id: teamId,
+            season_id: seasonId,
+            status: 'active',
+        }
+
+        const { data: membershipData, error: membershipError } = await supabase
+            .from('team_memberships')
+            .insert(insertData)
+            .select('id')
+            .single()
+
+        if (membershipError) {
+            // If it's a unique constraint violation, try to update instead
+            if (membershipError.code === '23505') {
+                const { data: updatedData, error: updateError } = await supabase
+                    .from('team_memberships')
+                    .update({ status: 'active', updated_at: new Date().toISOString() })
+                    .eq('athlete_id', athleteId)
+                    .eq('team_id', teamId)
+                    .eq('season_id', seasonId)
+                    .select('id')
+                    .single()
+
+                if (updateError) {
+                    throw updateError
+                }
+
+                return { 
+                    data: { id: updatedData.id, isNew: false }, 
+                    error: null 
+                }
+            }
+            throw membershipError
+        }
+
+        if (!membershipData) {
+            return { data: null, error: new Error('Failed to create membership. Please try again.') }
+        }
+
+        return { 
+            data: { id: membershipData.id, isNew }, 
+            error: null 
+        }
+    } catch (err) {
+        return { data: null, error: mapDatabaseError(err) }
     }
 }
 

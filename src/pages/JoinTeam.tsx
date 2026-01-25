@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
-import { getTeamDetails } from '../data/services/teamsService'
+import { getTeamByInviteCode, getTeamDetails, createTeamMembership } from '../data/services/teamsService'
 import { getChildren } from '../data/services/familyService'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
@@ -61,27 +61,20 @@ export default function JoinTeam() {
     setLoading(true)
     setError(null)
 
-    // In fake data mode, simulate team lookup by invite code
-    // For demo, we'll use a simple mapping
-    const teamMapping: Record<string, string> = {
-      'LIGHTNING': 'team-u10-soccer-001',
-      'THUNDER': 'team-u12-soccer-002',
-      'HAWKS': 'team-u10-basketball-003',
-      'EAGLES': 'team-u12-basketball-004',
-    }
+    // Look up team by invite code using real database query
+    const { data: teamData, error: teamError } = await getTeamByInviteCode(inviteCode)
 
-    const teamId = teamMapping[inviteCode.toUpperCase().trim()]
-    
-    if (!teamId) {
-      setError('Invalid invite code. Please check and try again.')
+    if (teamError || !teamData) {
+      setError(teamError?.message || 'Invalid invite code. Please check and try again.')
       setLoading(false)
       return
     }
 
-    const { data: teamData, error: teamError } = await getTeamDetails(context, teamId)
+    // Fetch team details with seasons
+    const { data: teamDetails, error: detailsError } = await getTeamDetails(context, teamData.id)
 
-    if (teamError || !teamData) {
-      setError('Invalid invite code. Please check and try again.')
+    if (detailsError || !teamDetails) {
+      setError('Failed to load team details. Please try again.')
       setLoading(false)
       return
     }
@@ -91,8 +84,9 @@ export default function JoinTeam() {
       name: teamData.name,
     })
 
-    if (teamData.seasons) {
-      const seasonList = teamData.seasons.map(s => ({
+    // Extract seasons from team details
+    if (teamDetails.seasons) {
+      const seasonList = teamDetails.seasons.map((s: any) => ({
         id: s.id,
         name: s.name,
       }))
@@ -100,6 +94,10 @@ export default function JoinTeam() {
       if (seasonList.length > 0) {
         setSelectedSeason(seasonList[0].id)
       }
+    } else {
+      // If no seasons in details, try to get them from team_seasons
+      // This is a fallback in case the relationship isn't loaded
+      setSeasons([])
     }
     
     setStep('select')
