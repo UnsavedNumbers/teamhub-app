@@ -400,15 +400,16 @@ export async function resendInvite(
 ): Promise<{ success: boolean; error: Error | null }> {
     try {
         const { data, error } = await supabase
-            .rpc('resend_guardian_invite', {
+            .rpc('resend_guardian_invite' as any, {
                 p_invite_id: inviteId
             })
 
         if (error) throw error
 
         // Check the result from the RPC
-        if (data && !data.success) {
-            throw new Error(data.error || 'Failed to resend invite')
+        const result = data as { success?: boolean; error?: string } | null
+        if (result && result.success === false) {
+            throw new Error(result.error || 'Failed to resend invite')
         }
 
         // Trigger notification worker to send the invite email
