@@ -246,7 +246,7 @@ export default function CreateTryout() {
                       <TimePicker
                         label="Start Time"
                         value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
-                        onChange={(time) => {
+                        onChange={(time: string) => {
                           const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
                           field.onChange(`${date}T${time}`)
                         }}
@@ -262,7 +262,7 @@ export default function CreateTryout() {
                       <TimePicker
                         label="Registration Deadline"
                         value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
-                        onChange={(time) => {
+                        onChange={(time: string) => {
                           const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
                           field.onChange(time ? `${date}T${time}` : '')
                         }}

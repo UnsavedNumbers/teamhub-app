@@ -1,0 +1,65 @@
+<mjml>
+  <mj-head>
+    <mj-title>You're invited to join the staff!</mj-title>
+    <mj-attributes>
+      <mj-all font-family="Arial, sans-serif" />
+      <mj-text font-size="14px" color="#333333" line-height="1.5" />
+      <mj-section background-color="#ffffff" />
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#f8fafc">
+     <!-- Header Image -->
+    <mj-section padding="20px">
+        <mj-column>
+            <mj-image src="{{header_image_url}}" width="600px" alt="Team Staff" />
+        </mj-column>
+    </mj-section>
+
+     <!-- Split Content -->
+    <mj-section padding="20px">
+        <mj-column width="30%">
+            <mj-image src="{{sender_image_url}}" width="150px" border-radius="50%" alt="Sender" />
+        </mj-column>
+        <mj-column width="70%">
+            <mj-text font-size="16px" font-weight="bold" padding-bottom="15px">
+               Hey {{recipient_firstname}}!
+            </mj-text>
+            <mj-text padding-bottom="15px">
+               {{sender_name}} ({{sender_email}}) wants you to join the staff at {{organization_name}}!
+            </mj-text>
+            <mj-text padding-bottom="15px">
+               As a staff member, you'll be able to manage rosters, view schedules, and communicate with the team.
+            </mj-text>
+            <mj-text padding-bottom="15px">
+               It's free to join and takes less than a minute.
+            </mj-text>
+            <mj-text>
+                Cheers,<br>
+                {{sender_name}}
+            </mj-text>
+        </mj-column>
+    </mj-section>
+    
+    <!-- CTA -->
+    <mj-section padding="20px">
+        <mj-column>
+             <mj-button href="{{join_url}}" background-color="#2563eb" color="#ffffff" font-weight="bold" border-radius="6px" width="200px">
+                Join Staff
+            </mj-button>
+        </mj-column>
+    </mj-section>
+
+    <!-- Footer -->
+    <mj-section padding="20px" background-color="#1e293b">
+        <mj-column>
+            <mj-text align="center" color="#ffffff" font-size="14px">
+                YouthSports Team Hub
+            </mj-text>
+             <mj-social font-size="15px" icon-size="20px" mode="horizontal" padding-top="10px">
+                <mj-social-element name="facebook" href="#"></mj-social-element>
+                <mj-social-element name="twitter" href="#"></mj-social-element>
+             </mj-social>
+        </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

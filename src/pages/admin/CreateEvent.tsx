@@ -418,7 +418,7 @@ export default function CreateEvent() {
                       onChange={(value) => {
                         field.onChange(value)
                         // Clear season when team changes
-                        if (value !== field.value) {
+                        if (String(value) !== String(field.value)) {
                           setValue('season_id', '', { shouldValidate: false })
                         }
                       }}

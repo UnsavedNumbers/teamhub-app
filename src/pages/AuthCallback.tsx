@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useI18n } from '../i18n/useI18n'
+import { useLoadingState } from '../contexts/LoadingStateContext'
 import { getHostAppContext } from '../utils/host'
 import {
   getSetupOrganizationFlag,
@@ -17,7 +18,28 @@ export default function AuthCallback() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { t } = useI18n()
+  const { setLoading } = useLoadingState()
+  const isMountedRef = useRef(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  // Set loading state - show loader while processing callback
+  useEffect(() => {
+    if (!isMountedRef.current) return
+    setLoading(true)
+    return () => {
+      if (isMountedRef.current) {
+        setLoading(false)
+      }
+    }
+  }, [setLoading])
 
   useEffect(() => {
     // Clean up any stale flags first
@@ -30,7 +52,10 @@ export default function AuthCallback() {
       
       if (errorParam) {
         const errorMessage = errorDescription || errorParam
-        setError(mapAuthError(errorMessage, t))
+        if (isMountedRef.current) {
+          setError(mapAuthError(errorMessage, t))
+          setLoading(false)
+        }
         return
       }
 
@@ -194,7 +219,7 @@ export default function AuthCallback() {
     }
 
     handleCallback()
-  }, [navigate, searchParams])
+  }, [navigate, searchParams, t, setLoading])
 
   if (error) {
     return (

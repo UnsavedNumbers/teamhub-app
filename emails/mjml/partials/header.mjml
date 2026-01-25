@@ -1,29 +1,3 @@
-<mjml>
-  <mj-head>
-    <mj-title>{{subject}}</mj-title>
-    <mj-preview>{{preview}}</mj-preview>
-    <mj-attributes>
-      <mj-all font-family="Arial, sans-serif" />
-      <mj-text font-size="14px" color="#333333" line-height="1.5" />
-      <mj-section background-color="#ffffff" />
-    </mj-attributes>
-    <mj-style>
-      .button {
-        background-color: #2563eb !important;
-        color: #ffffff !important;
-        padding: 12px 24px !important;
-        text-decoration: none !important;
-        border-radius: 6px !important;
-        display: inline-block !important;
-        font-weight: 600 !important;
-      }
-      .footer-text {
-        color: #666666 !important;
-        font-size: 12px !important;
-      }
-    </mj-style>
-  </mj-head>
-  <mj-body background-color="#f8fafc">
     <mj-section padding="20px">
       <mj-column>
         <mj-text align="center" font-size="24px" font-weight="bold" color="#1e293b">

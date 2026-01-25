@@ -1,7 +1,9 @@
 import { Navigate, useLocation } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useOrganization } from '../contexts/OrganizationContext'
 import { useLicense } from '../hooks/useLicense'
+import { useLoadingState } from '../contexts/LoadingStateContext'
 import { NoOrganizationEmptyState } from './admin/NoOrganizationEmptyState'
 import { hasAnyRole } from '@/utils/roleHelpers'
 import { getLink, getPath, RouteKeys } from '@/utils/routes'
@@ -23,37 +25,78 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { user, profile, loading } = useAuth()
   const { isLoading: _orgLoading, currentOrganization } = useOrganization()
+  const { setLoading } = useLoadingState()
   const location = useLocation()
   const isAdminRoute = location.pathname.startsWith('/admin')
   const isPlatformAdmin = profile?.isPlatformAdmin ?? false
+  const isMountedRef = useRef(true)
 
   const { isActive: licenseActive, isPastGracePeriod, loading: licenseLoading, summary } = useLicense(
     isAdminRoute && !isPlatformAdmin ? currentOrganization?.id : undefined,
     { requireOrganization: isAdminRoute && !isPlatformAdmin }
   )
 
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  // Handle auth loading state
+  useEffect(() => {
+    if (!isMountedRef.current) return
+    if (loading) {
+      setLoading(true)
+    } else {
+      setLoading(false)
+    }
+    return () => {
+      if (isMountedRef.current) {
+        setLoading(false)
+      }
+    }
+  }, [loading, setLoading])
+
+  // Handle license loading state
+  useEffect(() => {
+    if (!isMountedRef.current) return
+    if (isAdminRoute && !isPlatformAdmin && licenseLoading) {
+      setLoading(true)
+    } else {
+      setLoading(false)
+    }
+    return () => {
+      if (isMountedRef.current) {
+        setLoading(false)
+      }
+    }
+  }, [isAdminRoute, isPlatformAdmin, licenseLoading, setLoading])
+
+  // Handle profile loading state
+  useEffect(() => {
+    if (!isMountedRef.current) return
+    if (!user || !profile) {
+      setLoading(true)
+    } else {
+      setLoading(false)
+    }
+    return () => {
+      if (isMountedRef.current) {
+        setLoading(false)
+      }
+    }
+  }, [user, profile, setLoading])
+
   // Always wait for auth loading. Do NOT globally block on orgLoading;
   // platform admins and admin routes must be able to render without an org selected.
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-slate-900 dark:border-white mx-auto"></div>
-          <p className="mt-4 text-slate-600 dark:text-slate-400">Loading...</p>
-        </div>
-      </div>
-    )
+    return null
   }
 
   if (isAdminRoute && !isPlatformAdmin && licenseLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-slate-900 dark:border-white mx-auto"></div>
-          <p className="mt-4 text-slate-600 dark:text-slate-400">Loading...</p>
-        </div>
-      </div>
-    )
+    return null
   }
 
   // Redirect to login if not authenticated
@@ -63,14 +106,7 @@ export function ProtectedRoute({
 
   // Wait for profile to load
   if (!profile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-slate-900 dark:border-white mx-auto"></div>
-          <p className="mt-4 text-slate-600 dark:text-slate-400">Loading profile...</p>
-        </div>
-      </div>
-    )
+    return null
   }
 
   // Check organization setup requirement flag

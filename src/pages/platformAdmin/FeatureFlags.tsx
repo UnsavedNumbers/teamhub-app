@@ -68,20 +68,17 @@ export default function FeatureFlags() {
     setError(null)
 
     try {
+      // Use the simpler admin_feature_flags view that exists in production
+      // Columns: id, org_id, organization_name, feature_key, enabled, created_at, updated_at
       let query = supabase
-        .from('admin_feature_flags_list')
+        .from('admin_feature_flags')
         .select('*', { count: 'exact' })
-        .eq('environment', environmentFilter)
 
       if (search) {
-        query = query.or(`key.ilike.%${search}%,description.ilike.%${search}%`)
+        query = query.or(`feature_key.ilike.%${search}%,organization_name.ilike.%${search}%`)
       }
       
-      if (!showDeleted) {
-        query = query.is('deleted_at', null)
-      }
-      
-      query = query.order('key', { ascending: true })
+      query = query.order('feature_key', { ascending: true })
       
       const from = page * rowsPerPage
       const to = from + rowsPerPage - 1
@@ -95,7 +92,28 @@ export default function FeatureFlags() {
         setFlags([])
         setTotalCount(0)
       } else {
-        setFlags(data || [])
+        // Map to AdminFeatureFlag type for compatibility
+        const mappedFlags = (data || []).map((row: any) => ({
+          id: row.id,
+          key: row.feature_key,
+          value_type: 'boolean' as FeatureFlagValueType,
+          description: `Organization: ${row.organization_name}`,
+          environment: currentEnvironment,
+          deleted_at: null,
+          version: 1,
+          created_at: row.created_at,
+          updated_at: row.updated_at,
+          default_value_boolean: row.enabled,
+          default_value_integer: null,
+          default_value_double: null,
+          org_override_count: 0,
+          user_override_count: 0,
+          // Keep original fields for reference
+          org_id: row.org_id,
+          organization_name: row.organization_name,
+          enabled: row.enabled,
+        })) as AdminFeatureFlag[]
+        setFlags(mappedFlags)
         setTotalCount(count || 0)
         setError(null)
       }
@@ -106,17 +124,24 @@ export default function FeatureFlags() {
     } finally {
       setLoading(false)
     }
-  }, [page, rowsPerPage, search, environmentFilter, showDeleted])
+  }, [page, rowsPerPage, search, currentEnvironment])
   
   const fetchOverrides = useCallback(async () => {
     try {
+      // The admin_feature_flag_overrides view may not exist in production
+      // Skip fetching overrides if the view doesn't exist
       const { data, error } = await supabase
         .from('admin_feature_flag_overrides')
         .select('*')
-        .eq('environment', environmentFilter)
         .order('created_at', { ascending: false })
       
       if (error) {
+        // If table doesn't exist, just return empty array instead of showing error
+        if (error.code === 'PGRST204' || error.message?.includes('does not exist')) {
+          console.log('admin_feature_flag_overrides view not available')
+          setOverrides([])
+          return
+        }
         console.error('Error fetching overrides:', error)
         setOverrides([])
       } else {
@@ -128,7 +153,7 @@ export default function FeatureFlags() {
       console.error('Error:', err)
       setOverrides([])
     }
-  }, [environmentFilter])
+  }, [])
   
   useEffect(() => {
     if (activeTab === 'flags') {

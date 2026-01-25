@@ -2,9 +2,11 @@ import { Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-r
 import { lazy, Suspense } from 'react'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import { OrganizationProvider } from './contexts/OrganizationContext'
+import { LoadingStateProvider } from './contexts/LoadingStateContext'
 import { SidebarProvider } from './contexts/SidebarContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import AdminLoadingSpinner from './components/admin/AdminLoadingSpinner'
+import FullScreenLoader from './components/common/FullScreenLoader'
 import { getHostAppContext } from './utils/host'
 import { useOrganizationTheme } from './hooks/useOrganizationTheme'
 import { getLink, getPath, RouteKeys } from './utils/routes'
@@ -75,6 +77,9 @@ const Overrides = lazy(() => import('./pages/platformAdmin/Overrides'))
 const OverrideCreate = lazy(() => import('./pages/platformAdmin/OverrideCreate'))
 const OverrideDetail = lazy(() => import('./pages/platformAdmin/OverrideDetail'))
 const LicensesAudit = lazy(() => import('./pages/platformAdmin/LicensesAudit'))
+
+// Email Preview - Platform Admin Feature
+const EmailPreview = lazy(() => import('./pages/platformAdmin/EmailPreview'))
 
 // Admin Pages - Lazy loaded for code splitting
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
@@ -183,7 +188,9 @@ function App() {
   return (
     <OrganizationProvider>
       <AuthProvider>
-        <AppWithTheme />
+        <LoadingStateProvider>
+          <AppWithTheme />
+        </LoadingStateProvider>
       </AuthProvider>
     </OrganizationProvider>
   )
@@ -209,6 +216,7 @@ function AppWithTheme() {
   return (
     <>
       <Toaster />
+      <FullScreenLoader />
       <Routes>
           {/* Marketing Landing Page - Public */}
           <Route path="/" element={<HostHomeRoute />} />
@@ -446,6 +454,9 @@ function AppWithTheme() {
               <Route path="licenses/overrides/new" element={<OverrideCreate />} />
               <Route path="licenses/overrides/:id" element={<OverrideDetail />} />
               <Route path="licenses/audit" element={<LicensesAudit />} />
+
+              {/* Email Preview */}
+              <Route path="email-preview" element={<EmailPreview />} />
             </Route>
           </Route>
         </Routes>

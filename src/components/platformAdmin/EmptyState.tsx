@@ -25,7 +25,6 @@ function EmptyState({ icon = 'inbox', title, description, action, children }: Em
       style={{
         textAlign: 'center',
         padding: 'var(--pa-space-8) var(--pa-space-5)',
-        background: 'var(--pa-n50)',
       }}
     >
       <span
@@ -42,7 +41,7 @@ function EmptyState({ icon = 'inbox', title, description, action, children }: Em
         {title}
       </h3>
       {description && (
-        <p className="pa-body-m" style={{ color: 'var(--pa-n600)', marginBottom: action ? 'var(--pa-space-4)' : 0 }}>
+        <p className="pa-body-m pa-text-muted" style={{ marginBottom: action ? 'var(--pa-space-4)' : 0 }}>
           {description}
         </p>
       )}

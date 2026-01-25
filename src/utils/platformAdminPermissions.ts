@@ -55,6 +55,9 @@ export type PlatformAdminAction =
     | 'manage_features'
     | 'manage_overrides'
     | 'view_licenses_audit'
+    // Email system
+    | 'view_email_preview'
+    | 'send_test_emails'
 
 /**
  * Permission matrix: maps actions to allowed roles
@@ -105,6 +108,10 @@ const PERMISSION_MATRIX: Record<PlatformAdminAction, PlatformAdminRole[]> = {
     manage_features: ['super_admin', 'ops_admin'],
     manage_overrides: ['super_admin', 'ops_admin'],
     view_licenses_audit: ['super_admin', 'ops_admin'],
+
+    // Email system - ops/super (development/testing only)
+    view_email_preview: ['super_admin', 'ops_admin'],
+    send_test_emails: ['super_admin', 'ops_admin'],
 }
 
 /**
