@@ -8,6 +8,8 @@ import { isDemoMode } from '@/utils/demoMode'
 import { useOffline } from '@/hooks/useOffline'
 import { useEventListener } from '@/hooks/useEventListener'
 import { usePrevious } from '@/hooks/usePrevious'
+import { useMobile } from '@/hooks/useMobile'
+import MobileBottomSheet from '../common/MobileBottomSheet'
 import type { OrgMemberRole } from '@/contexts/OrganizationContext'
 
 /**
@@ -36,6 +38,7 @@ export default function SidebarOrganizationSwitcher() {
   } | null>(null)
   const [highlightedIndex, setHighlightedIndex] = useState(0)
   const [portalReady, setPortalReady] = useState(false)
+  const isMobile = useMobile()
   
   // Refs for bug prevention
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -390,9 +393,10 @@ export default function SidebarOrganizationSwitcher() {
     }
   }, [isOpen])
   
-  // Bug 4: Create portal container synchronously with useLayoutEffect
+  // Bug 4: Create portal container synchronously with useLayoutEffect (desktop only)
   useLayoutEffect(() => {
-    if (isOpen) {
+    // Only create portal on desktop
+    if (!isMobile && isOpen) {
       // Create container if it doesn't exist
       if (!portalContainerRef.current) {
         const container = document.createElement('div')
@@ -411,14 +415,14 @@ export default function SidebarOrganizationSwitcher() {
         setPortalReady(true)
       }
     } else {
-      // Clean up container when closed
+      // Clean up container when closed or on mobile
       setPortalReady(false)
       if (portalContainerRef.current && portalContainerRef.current.parentNode) {
         portalContainerRef.current.parentNode.removeChild(portalContainerRef.current)
         portalContainerRef.current = null
       }
     }
-  }, [isOpen])
+  }, [isOpen, isMobile])
   
   // Bug 8: Early return if no organization
   if (!currentOrganization) {
@@ -426,6 +430,42 @@ export default function SidebarOrganizationSwitcher() {
   }
   
   const hasAnyOrgs = organizations.length > 0
+  
+  // Menu content (reused for both desktop portal and mobile bottom sheet)
+  const menuContent = hasAnyOrgs ? (
+    <div role="listbox" aria-label="Select organization and role">
+      {orgRoleCombinations.map((combo, index) => (
+        <button
+          key={`${combo.orgId}-${combo.role}`}
+          ref={index === 0 && !isMobile ? firstItemRef : null}
+          onClick={() => handleSwitchRole(combo.orgId, combo.role)}
+          disabled={switching}
+          className={`pa-org-switcher-item ${
+            combo.isActive ? 'active' : ''
+          } ${
+            !isMobile && highlightedIndex === index ? 'highlighted' : ''
+          } ${switching ? 'disabled' : ''}`}
+          role="option"
+          aria-selected={combo.isActive}
+          style={{ minHeight: '44px' }}
+        >
+          <div className="pa-org-switcher-item-content">
+            <span className="pa-org-switcher-item-name">{combo.orgName}</span>
+            <span className="pa-org-switcher-item-role">{formatRoleName(combo.role)}</span>
+          </div>
+          {combo.isActive && (
+            <span className="material-symbols-outlined pa-org-switcher-item-check" aria-hidden="true">
+              check
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
+  ) : (
+    <div className="px-4 py-2 text-sm text-slate-700 dark:text-slate-300">
+      No organizations available
+    </div>
+  )
   
   return (
     <>
@@ -456,8 +496,8 @@ export default function SidebarOrganizationSwitcher() {
         </button>
       </div>
       
-      {/* Dropdown via Portal (Bug 2, Issue 2) */}
-      {isOpen && portalReady && portalContainerRef.current && hasAnyOrgs && createPortal(
+      {/* Desktop: Dropdown via Portal */}
+      {!isMobile && isOpen && portalReady && portalContainerRef.current && createPortal(
         <div
           ref={dropdownRef}
           className="pa-org-switcher-dropdown"
@@ -473,33 +513,20 @@ export default function SidebarOrganizationSwitcher() {
             visibility: dropdownPosition ? 'visible' : 'hidden',
           }}
         >
-          {orgRoleCombinations.map((combo, index) => (
-            <button
-              key={`${combo.orgId}-${combo.role}`}
-              ref={index === 0 ? firstItemRef : null}
-              onClick={() => handleSwitchRole(combo.orgId, combo.role)}
-              disabled={switching}
-              className={`pa-org-switcher-item ${
-                combo.isActive ? 'active' : ''
-              } ${
-                highlightedIndex === index ? 'highlighted' : ''
-              } ${switching ? 'disabled' : ''}`}
-              role="option"
-              aria-selected={combo.isActive}
-            >
-              <div className="pa-org-switcher-item-content">
-                <span className="pa-org-switcher-item-name">{combo.orgName}</span>
-                <span className="pa-org-switcher-item-role">{formatRoleName(combo.role)}</span>
-              </div>
-              {combo.isActive && (
-                <span className="material-symbols-outlined pa-org-switcher-item-check" aria-hidden="true">
-                  check
-                </span>
-              )}
-            </button>
-          ))}
+          {menuContent}
         </div>,
         portalContainerRef.current
+      )}
+      
+      {/* Mobile: Bottom Sheet */}
+      {isMobile && (
+        <MobileBottomSheet
+          isOpen={isOpen}
+          onClose={closeDropdown}
+          title="Switch Organization"
+        >
+          {menuContent}
+        </MobileBottomSheet>
       )}
     </>
   )

@@ -3,8 +3,11 @@ import { Link } from 'react-router-dom'
 import MegaMenu, { type NavGroup } from './MegaMenu'
 import ThemeSwitcher from './ThemeSwitcher'
 import UserContextDropdown from './UserContextDropdown'
+import MobileNavDrawer from './MobileNavDrawer'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
+import { useMobile } from '@/hooks/useMobile'
+import type { NavSection } from '@/types/menu'
 
 interface GlobalNavProps {
   variant: 'admin' | 'platform-admin'
@@ -22,7 +25,7 @@ export default function GlobalNav({ variant }: GlobalNavProps) {
   const hasOrg = !!currentOrganization?.id
 
   // Navigation configuration for Organization Admin
-  const adminNavSections: { label: string; groups: NavGroup[] }[] = useMemo(() => [
+  const adminNavSections: NavSection[] = useMemo(() => [
     {
       label: 'Overview',
       groups: [
@@ -147,6 +150,7 @@ export default function GlobalNav({ variant }: GlobalNavProps) {
   ]
 
   const navSections = isAdmin ? adminNavSections : platformAdminNavSections
+  const isMobile = useMobile()
 
   // Filter nav items based on org requirement (admin variant only)
   const getFilteredGroups = useCallback((groups: NavGroup[]): NavGroup[] => {
@@ -236,40 +240,55 @@ export default function GlobalNav({ variant }: GlobalNavProps) {
   useEffect(() => {
     handleMenuClose()
     setMobileMenuOpen(false)
+  }, []) // Empty deps - close on any route change
+
+  // Close mobile menu handler
+  const handleMobileMenuClose = useCallback(() => {
+    setMobileMenuOpen(false)
   }, [])
 
   const brandPath = isAdmin ? '/admin' : '/platform-admin'
   const brandIcon = isAdmin ? 'sports' : 'shield_person'
   const brandText = isAdmin ? 'YOUTH SPORTS' : 'ADMIN'
 
+  // Prepare filtered sections for mobile drawer
+  const mobileNavSections: NavSection[] = useMemo(() => {
+    if (!isAdmin) return []
+    return navSections.map(section => ({
+      ...section,
+      groups: getFilteredGroups(section.groups)
+    }))
+  }, [isAdmin, navSections, getFilteredGroups])
+
   return (
-    <nav className="gn-root" role="navigation" aria-label="Main navigation">
-      {/* Left section */}
-      <div className="gn-left">
-        {/* Brand */}
-        <Link to={brandPath} className="gn-brand">
-          <div className="gn-logo">
-            <span className="material-symbols-outlined">{brandIcon}</span>
-          </div>
-          <span className="gn-brand-text">{brandText}</span>
-        </Link>
+    <>
+      <nav className="gn-root" role="navigation" aria-label="Main navigation">
+        {/* Left section */}
+        <div className="gn-left">
+          {/* Brand */}
+          <Link to={brandPath} className="gn-brand">
+            <div className="gn-logo">
+              <span className="material-symbols-outlined">{brandIcon}</span>
+            </div>
+            <span className="gn-brand-text">{brandText}</span>
+          </Link>
 
-        {/* Mobile toggle - only show for admin variant */}
-        {isAdmin && (
-          <button
-            className="gn-util-btn gn-mobile-toggle"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-expanded={mobileMenuOpen}
-            aria-label="Toggle navigation menu"
-          >
-            <span className="material-symbols-outlined">
-              {mobileMenuOpen ? 'close' : 'menu'}
-            </span>
-          </button>
-        )}
+          {/* Mobile toggle - only show for admin variant on mobile */}
+          {isAdmin && isMobile && (
+            <button
+              className="gn-util-btn gn-mobile-toggle"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-expanded={mobileMenuOpen}
+              aria-label="Toggle navigation menu"
+            >
+              <span className="material-symbols-outlined">
+                {mobileMenuOpen ? 'close' : 'menu'}
+              </span>
+            </button>
+          )}
 
-        {/* Navigation items - only show for admin variant */}
-        {isAdmin && (
+          {/* Navigation items - only show for admin variant on desktop */}
+          {isAdmin && !isMobile && (
           <ul className="gn-nav" role="menubar">
             {navSections.map((section) => {
               const menuId = `menu-${section.label.toLowerCase().replace(/\s+/g, '-')}`
@@ -338,5 +357,15 @@ export default function GlobalNav({ variant }: GlobalNavProps) {
         <UserContextDropdown />
       </div>
     </nav>
+
+    {/* Mobile drawer - only show for admin variant */}
+    {isAdmin && (
+      <MobileNavDrawer
+        isOpen={mobileMenuOpen}
+        onClose={handleMobileMenuClose}
+        sections={mobileNavSections}
+      />
+    )}
+    </>
   )
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
@@ -78,6 +78,7 @@ export default function OrganizationStructureForms() {
   const { context, isReady } = useUserContext()
   const { currentOrganization } = useOrganization()
   const location = useLocation()
+  const navigate = useNavigate()
 
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -142,6 +143,8 @@ export default function OrganizationStructureForms() {
   const editType = isFormType(editTypeParam) ? editTypeParam : null
   const editId = searchParams.get('id')?.trim() || null
   const typeParam = searchParams.get('type')
+  // Bug Prevention #5: Use URLSearchParams API to handle encoding
+  const returnUrl = searchParams.get('returnUrl')
   const requestedFormType = isFormType(typeParam) ? typeParam : null
   const activeFormType = editType ?? requestedFormType
   const [editInitialized, setEditInitialized] = useState(false)
@@ -413,7 +416,17 @@ export default function OrganizationStructureForms() {
   // Get available system sports (exclude ones already linked to this org)
   const availableSystemSports = useMemo(() => {
     const existingSportIds = new Set(sports.map(s => s.id))
-    return systemSports.filter(sport => !existingSportIds.has(sport.id))
+    const filteredSports = systemSports.filter(sport => !existingSportIds.has(sport.id))
+    
+    // Deduplicate by name (keep only system sports)
+    const seenNames = new Set<string>()
+    return filteredSports.filter(sport => {
+      if (seenNames.has(sport.name)) {
+        return false
+      }
+      seenNames.add(sport.name)
+      return true
+    })
   }, [sports, systemSports])
 
   const sportNameError = touched['sport.name'] && !sportForm.name.trim()
@@ -803,6 +816,13 @@ export default function OrganizationStructureForms() {
                     }
                     setSportForm((prev) => ({ ...prev, name: '' }))
                     setSuccessMessage(t('admin.structureForms.messages.created', { item: formLabels.sport }))
+                    
+                    // Bug Prevention #5 & #8: Check returnUrl and validate before navigating
+                    if (returnUrl && returnUrl.startsWith('/')) {
+                      // Validate returnUrl is a valid path (starts with '/') to prevent open redirect vulnerability
+                      navigate(returnUrl)
+                      return // Exit early to prevent further execution
+                    }
                   }
 
                   setSubmitting((prev) => ({ ...prev, sport: false }))

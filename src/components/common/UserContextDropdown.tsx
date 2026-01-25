@@ -7,6 +7,8 @@ import { getLink, RouteKeys } from '@/utils/routes'
 import { formatRoleName, hasRole } from '@/utils/roleHelpers'
 import { isDemoMode } from '@/utils/demoMode'
 import { useOffline } from '@/hooks/useOffline'
+import { useMobile } from '@/hooks/useMobile'
+import MobileBottomSheet from './MobileBottomSheet'
 import type { OrgMemberRole } from '@/contexts/OrganizationContext'
 
 export default function UserContextDropdown() {
@@ -19,6 +21,7 @@ export default function UserContextDropdown() {
   const [isOpen, setIsOpen] = useState(false)
   const [switching, setSwitching] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const isMobile = useMobile()
 
   // Infer active role from current route
   // Admin routes (starting with /admin) indicate org_admin or coach role
@@ -141,133 +144,154 @@ export default function UserContextDropdown() {
 
   const hasAnyOrgs = organizations.length > 0
 
+  // Close handler
+  const handleClose = useCallback(() => {
+    setIsOpen(false)
+  }, [])
+
+  // Menu content component (reused for both desktop dropdown and mobile sheet)
+  const menuContent = (
+    <>
+      {/* 1. User Identity */}
+      <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700">
+        <p className="text-sm font-medium text-slate-900 dark:text-white truncate" title={displayName}>{displayName}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 truncate" title={email}>{email}</p>
+        {currentOrganization && (
+          <span className="mt-1 inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300">
+            {currentOrganization.name}
+          </span>
+        )}
+      </div>
+
+      {/* 2. Organization Context - Role Switcher */}
+      <div className="py-1 border-b border-slate-100 dark:border-slate-700">
+        <div className="px-4 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+          Organization
+        </div>
+        {hasAnyOrgs ? (
+          organizations.flatMap(org => 
+            org.roles?.map(role => {
+              const isActive = currentOrganization?.id === org.id && role === inferredActiveRole
+              return (
+                <button
+                  key={`${org.id}-${role}`}
+                  onClick={() => handleSwitchRole(org.id, role)}
+                  disabled={switching}
+                  className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between group transition-colors min-h-[44px] ${
+                    isActive 
+                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium' 
+                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                  } ${switching ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <div className="flex flex-col">
+                    <span>{org.name}</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">
+                      {formatRoleName(role)}
+                    </span>
+                  </div>
+                  {isActive && (
+                    <span className="material-symbols-outlined text-lg text-blue-600 dark:text-blue-400">check</span>
+                  )}
+                </button>
+              )
+            }) || []
+          )
+        ) : (
+          <div className="px-4 py-2 text-sm text-slate-700 dark:text-slate-300" title="You are not a member of any organization">
+            No Organization
+          </div>
+        )}
+      </div>
+
+      {/* 3. Personal Settings */}
+      <div className="py-1 border-b border-slate-100 dark:border-slate-700">
+        <Link 
+          to={getLink(RouteKeys.PORTAL_SETTINGS)}
+          onClick={handleClose}
+          className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors min-h-[44px]"
+        >
+          <span className="material-symbols-outlined mr-3 text-lg text-slate-400 dark:text-slate-500">settings</span>
+          My Settings
+        </Link>
+      </div>
+
+      {/* 4. Role-Specific Links */}
+      {visibleRoleLinks.length > 0 && (
+        <div className="py-1 border-b border-slate-100 dark:border-slate-700">
+          {visibleRoleLinks.map(link => (
+            <Link 
+              key={link.path}
+              to={link.path} 
+              onClick={handleClose} 
+              className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors min-h-[44px]"
+            >
+              <span className="material-symbols-outlined mr-3 text-lg text-slate-400 dark:text-slate-500">{link.icon}</span>
+              {link.label}
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {/* 5. Support */}
+      <div className="py-1 border-b border-slate-100 dark:border-slate-700">
+        <Link 
+          to={getLink(RouteKeys.PORTAL_SETTINGS)} 
+          onClick={handleClose} 
+          className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors min-h-[44px]"
+        >
+          <span className="material-symbols-outlined mr-3 text-lg text-slate-400 dark:text-slate-500">help</span>
+          Help & Support
+        </Link>
+      </div>
+
+      {/* 6. Logout */}
+      <div className="py-1">
+        <button
+          onClick={handleLogout}
+          className="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 min-h-[44px]"
+        >
+          <span className="material-symbols-outlined mr-3 text-lg text-red-500">logout</span>
+          Log out
+        </button>
+      </div>
+    </>
+  )
+
   return (
-    <div className="relative" ref={dropdownRef}>
+    <>
+      <div className="relative" ref={dropdownRef}>
         {/* Trigger */}
         <button 
-            onClick={() => setIsOpen(!isOpen)}
-            className="flex items-center justify-center p-0 border-none bg-transparent cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-full"
-            aria-expanded={isOpen}
-            aria-haspopup="true"
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center justify-center p-0 border-none bg-transparent cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-full"
+          aria-expanded={isOpen}
+          aria-haspopup="true"
         >
-            <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-700 bg-cover bg-center border border-slate-100 dark:border-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold transition-transform hover:scale-105 active:scale-95">
-                {initials}
-            </div>
+          <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-700 bg-cover bg-center border border-slate-100 dark:border-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold transition-transform hover:scale-105 active:scale-95">
+            {initials}
+          </div>
         </button>
 
-        {/* Menu */}
-        {isOpen && (
-            <div 
-                className="absolute right-0 mt-2 w-72 origin-top-right rounded-xl overflow-hidden z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg"
-            >
-                
-                {/* 1. User Identity */}
-                <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700">
-                    <p className="text-sm font-medium text-slate-900 dark:text-white truncate" title={displayName}>{displayName}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate" title={email}>{email}</p>
-                    {currentOrganization && (
-                         <span className="mt-1 inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300">
-                            {currentOrganization.name}
-                         </span>
-                    )}
-                </div>
-
-                {/* 2. Organization Context - Role Switcher */}
-                <div className="py-1 border-b border-slate-100 dark:border-slate-700">
-                    <div className="px-4 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                        Organization
-                    </div>
-                    {hasAnyOrgs ? (
-                        // Show each organization with each role as a separate selectable item
-                        // This matches the RoleSelection page behavior
-                        organizations.flatMap(org => 
-                            org.roles?.map(role => {
-                                const isActive = currentOrganization?.id === org.id && role === inferredActiveRole
-                                return (
-                                    <button
-                                        key={`${org.id}-${role}`}
-                                        onClick={() => handleSwitchRole(org.id, role)}
-                                        disabled={switching}
-                                        className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between group transition-colors ${
-                                            isActive 
-                                                ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium' 
-                                                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'
-                                        } ${switching ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    >
-                                        <div className="flex flex-col">
-                                            <span>{org.name}</span>
-                                            <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">
-                                                {formatRoleName(role)}
-                                            </span>
-                                        </div>
-                                        {isActive && (
-                                            <span className="material-symbols-outlined text-lg text-blue-600 dark:text-blue-400">check</span>
-                                        )}
-                                    </button>
-                                )
-                            }) || []
-                        )
-                    ) : (
-                        <div className="px-4 py-2 text-sm text-slate-700 dark:text-slate-300" title="You are not a member of any organization">
-                            No Organization
-                        </div>
-                    )}
-                </div>
-
-                {/* 3. Personal Settings */}
-                <div className="py-1 border-b border-slate-100 dark:border-slate-700">
-                     <Link 
-                        to={getLink(RouteKeys.PORTAL_SETTINGS)}
-                        onClick={() => setIsOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                    >
-                        <span className="material-symbols-outlined mr-3 text-lg text-slate-400 dark:text-slate-500">settings</span>
-                        My Settings
-                    </Link>
-                </div>
-
-                {/* 4. Role-Specific Links */}
-                {visibleRoleLinks.length > 0 && (
-                    <div className="py-1 border-b border-slate-100 dark:border-slate-700">
-                         {visibleRoleLinks.map(link => (
-                            <Link 
-                                key={link.path}
-                                to={link.path} 
-                                onClick={() => setIsOpen(false)} 
-                                className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                            >
-                                <span className="material-symbols-outlined mr-3 text-lg text-slate-400 dark:text-slate-500">{link.icon}</span>
-                                {link.label}
-                            </Link>
-                         ))}
-                    </div>
-                )}
-
-                {/* 5. Support */}
-                <div className="py-1 border-b border-slate-100 dark:border-slate-700">
-                    <Link 
-                        to={getLink(RouteKeys.PORTAL_SETTINGS)} 
-                        onClick={() => setIsOpen(false)} 
-                        className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                    >
-                        <span className="material-symbols-outlined mr-3 text-lg text-slate-400 dark:text-slate-500">help</span>
-                        Help & Support
-                    </Link>
-                </div>
-
-                {/* 6. Logout */}
-                <div className="py-1">
-                    <button
-                        onClick={handleLogout}
-                        className="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-                    >
-                        <span className="material-symbols-outlined mr-3 text-lg text-red-500">logout</span>
-                        Log out
-                    </button>
-                </div>
-
-            </div>
+        {/* Desktop Menu - absolute dropdown */}
+        {!isMobile && isOpen && (
+          <div 
+            className="absolute right-0 mt-2 w-72 origin-top-right rounded-xl overflow-hidden z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg"
+          >
+            {menuContent}
+          </div>
         )}
-    </div>
+      </div>
+
+      {/* Mobile Menu - bottom sheet */}
+      {isMobile && (
+        <MobileBottomSheet
+          isOpen={isOpen}
+          onClose={handleClose}
+          title="Account"
+        >
+          {menuContent}
+        </MobileBottomSheet>
+      )}
+    </>
   )
 }

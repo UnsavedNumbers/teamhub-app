@@ -4,16 +4,21 @@
  * Page for creating new uniforms (org-level or team-level).
  */
 
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganizationSports } from '../../hooks/useOrganizationSports'
+import { useT } from '../../i18n/useI18n'
 import { createUniformKit } from '../../data/services/uniformsService'
-import { AdminPageHeader } from '../../components/platformAdmin'
+import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
+import { AdminPageHeader, Card, Button } from '../../components/platformAdmin'
 import { SportUniformForm } from '../../components/uniforms/SportUniformForm'
 import type { CreateUniformKitDTO } from '../../types/uniforms'
 
 export default function CreateUniform() {
   const { context, isReady } = useUserContext()
+  const { sports, loading: sportsLoading, error: sportsError, refetch: refetchSports } = useOrganizationSports()
   const navigate = useNavigate()
+  const t = useT()
 
   const handleSubmit = async (data: CreateUniformKitDTO) => {
     if (!context || !isReady) {
@@ -29,8 +34,56 @@ export default function CreateUniform() {
     navigate('/admin/uniforms')
   }
 
-  if (!isReady) {
-    return <div>Loading...</div>
+  // Guard: Check if context is ready
+  if (!isReady || !context?.orgId) {
+    return <AdminLoadingSpinner />
+  }
+
+  // Show loading state while sports are loading
+  if (sportsLoading) {
+    return (
+      <div className="pa-root">
+        <AdminPageHeader title="Create Uniform" actions={null} />
+        <AdminLoadingSpinner />
+      </div>
+    )
+  }
+
+  // Show error state if sports failed to load
+  if (sportsError) {
+    return (
+      <div className="pa-root">
+        <AdminPageHeader title="Create Uniform" actions={null} />
+        <Card>
+          <div className="p-6 text-center">
+            <p className="text-red-600 mb-4">{t('admin.uniforms.prerequisite.loadError', { message: sportsError.message })}</p>
+            <Button onClick={refetchSports} variant="primary">
+              {t('admin.uniforms.prerequisite.retry')}
+            </Button>
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
+  // Show empty state if no sports exist
+  if ((sports?.length ?? 0) === 0) {
+    const returnUrl = encodeURIComponent('/admin/uniforms/new')
+    return (
+      <div className="pa-root">
+        <AdminPageHeader title="Create Uniform" actions={null} />
+        <div className="bg-white border border-slate-200 rounded-xl p-12 text-center shadow-sm">
+          <span className="material-symbols-outlined text-5xl text-slate-200 mb-4 block">checkroom</span>
+          <h3 className="text-lg font-bold text-slate-900 mb-2">{t('admin.uniforms.prerequisite.noSportsTitle')}</h3>
+          <p className="text-slate-500 mb-6">
+            {t('admin.uniforms.prerequisite.noSportsDescription')}
+          </p>
+          <Link to={`/admin/organization/structure/forms?type=sport&returnUrl=${returnUrl}`}>
+            <Button variant="primary">{t('admin.uniforms.prerequisite.addSport')}</Button>
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (

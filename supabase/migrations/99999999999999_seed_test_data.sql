@@ -15,23 +15,57 @@ values
   ('org-mountain', 'Mountain View Sports Club', 'America/Denver', 'active')
 on conflict (org_id) do nothing;
 
--- Sports
-insert into sports (id, org_id, name, icon)
-values
-  ('sport-soccer', null, 'Soccer', 'soccer-ball'),
-  ('sport-basketball', null, 'Basketball', 'basketball'),
-  ('sport-baseball', null, 'Baseball', 'baseball'),
-  ('sport-volleyball', null, 'Volleyball', 'volleyball')
-on conflict (id) do nothing;
+-- Link organizations to system sports via organization_sports junction table
+-- First, ensure we have variables to hold the sport IDs
+DO $$
+DECLARE
+  sport_soccer_id UUID;
+  sport_basketball_id UUID;
+  sport_baseball_id UUID;
+  sport_volleyball_id UUID;
+BEGIN
+  -- Get system sport IDs
+  SELECT id INTO sport_soccer_id FROM sports WHERE name = 'Soccer' AND is_system = true LIMIT 1;
+  SELECT id INTO sport_basketball_id FROM sports WHERE name = 'Basketball' AND is_system = true LIMIT 1;
+  SELECT id INTO sport_baseball_id FROM sports WHERE name = 'Baseball' AND is_system = true LIMIT 1;
+  SELECT id INTO sport_volleyball_id FROM sports WHERE name = 'Volleyball' AND is_system = true LIMIT 1;
 
--- Programs
+  -- Link organizations to sports
+  INSERT INTO organization_sports (org_id, sport_id)
+  VALUES
+    ('org-springfield', sport_soccer_id),
+    ('org-riverside', sport_basketball_id),
+    ('org-mountain', sport_baseball_id),
+    ('org-mountain', sport_volleyball_id)
+  ON CONFLICT (org_id, sport_id) DO NOTHING;
+
+  -- Update programs to use correct sport_id
+  UPDATE programs SET sport_id = sport_soccer_id WHERE id IN ('prog-soc-rec', 'prog-soc-comp');
+  UPDATE programs SET sport_id = sport_basketball_id WHERE id = 'prog-bb-youth';
+  UPDATE programs SET sport_id = sport_baseball_id WHERE id = 'prog-base-u12';
+
+  -- Update teams to use correct sport_id
+  UPDATE teams SET sport_id = sport_soccer_id WHERE id IN ('team-soc-u12-a', 'team-soc-u10-a');
+  UPDATE teams SET sport_id = sport_basketball_id WHERE id = 'team-bb-u14-a';
+  UPDATE teams SET sport_id = sport_baseball_id WHERE id = 'team-base-u12';
+END $$;
+
+-- Programs (sport_id will be updated by the script above)
 insert into programs (id, org_id, sport_id, name)
-values
-  ('prog-soc-rec', 'org-springfield', 'sport-soccer', 'Recreational Soccer'),
-  ('prog-soc-comp', 'org-springfield', 'sport-soccer', 'Competitive Soccer'),
-  ('prog-bb-youth', 'org-riverside', 'sport-basketball', 'Youth Basketball'),
-  ('prog-base-u12', 'org-mountain', 'sport-baseball', 'U12 Baseball')
-on conflict (id) do nothing;
+SELECT 'prog-soc-rec', 'org-springfield', id, 'Recreational Soccer' FROM sports WHERE name = 'Soccer' AND is_system = true LIMIT 1
+ON CONFLICT (id) DO NOTHING;
+
+insert into programs (id, org_id, sport_id, name)
+SELECT 'prog-soc-comp', 'org-springfield', id, 'Competitive Soccer' FROM sports WHERE name = 'Soccer' AND is_system = true LIMIT 1
+ON CONFLICT (id) DO NOTHING;
+
+insert into programs (id, org_id, sport_id, name)
+SELECT 'prog-bb-youth', 'org-riverside', id, 'Youth Basketball' FROM sports WHERE name = 'Basketball' AND is_system = true LIMIT 1
+ON CONFLICT (id) DO NOTHING;
+
+insert into programs (id, org_id, sport_id, name)
+SELECT 'prog-base-u12', 'org-mountain', id, 'U12 Baseball' FROM sports WHERE name = 'Baseball' AND is_system = true LIMIT 1
+ON CONFLICT (id) DO NOTHING;
 
 -- Levels
 insert into levels (id, org_id, program_id, name, level_type)
@@ -50,14 +84,22 @@ values
   ('season-fall', 'org-mountain', 'Fall Season', now() + interval '30 days', now() + interval '180 days')
 on conflict (id) do nothing;
 
--- Teams
+-- Teams (sport_id will be updated by the script above)
 insert into teams (id, org_id, name, level_id, program_id, sport_id, is_active)
-values
-  ('team-soc-u12-a', 'org-springfield', 'U12 Lions', 'lvl-soc-u12', 'prog-soc-comp', 'sport-soccer', true),
-  ('team-soc-u10-a', 'org-springfield', 'U10 Eagles', 'lvl-soc-u10', 'prog-soc-rec', 'sport-soccer', true),
-  ('team-bb-u14-a', 'org-riverside', 'U14 Hoops', 'lvl-bb-u14', 'prog-bb-youth', 'sport-basketball', true),
-  ('team-base-u12', 'org-mountain', 'U12 Bears', 'lvl-base-u12', 'prog-base-u12', 'sport-baseball', true)
-on conflict (id) do nothing;
+SELECT 'team-soc-u12-a', 'org-springfield', 'U12 Lions', 'lvl-soc-u12', 'prog-soc-comp', id, true FROM sports WHERE name = 'Soccer' AND is_system = true LIMIT 1
+ON CONFLICT (id) DO NOTHING;
+
+insert into teams (id, org_id, name, level_id, program_id, sport_id, is_active)
+SELECT 'team-soc-u10-a', 'org-springfield', 'U10 Eagles', 'lvl-soc-u10', 'prog-soc-rec', id, true FROM sports WHERE name = 'Soccer' AND is_system = true LIMIT 1
+ON CONFLICT (id) DO NOTHING;
+
+insert into teams (id, org_id, name, level_id, program_id, sport_id, is_active)
+SELECT 'team-bb-u14-a', 'org-riverside', 'U14 Hoops', 'lvl-bb-u14', 'prog-bb-youth', id, true FROM sports WHERE name = 'Basketball' AND is_system = true LIMIT 1
+ON CONFLICT (id) DO NOTHING;
+
+insert into teams (id, org_id, name, level_id, program_id, sport_id, is_active)
+SELECT 'team-base-u12', 'org-mountain', 'U12 Bears', 'lvl-base-u12', 'prog-base-u12', id, true FROM sports WHERE name = 'Baseball' AND is_system = true LIMIT 1
+ON CONFLICT (id) DO NOTHING;
 
 -- Team seasons
 insert into team_seasons (team_id, season_id, is_active)

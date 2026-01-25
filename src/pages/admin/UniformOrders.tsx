@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganizationSports } from '../../hooks/useOrganizationSports'
+import { useT } from '../../i18n/useI18n'
 import { getAllUniformSubmissions, type UniformSubmission } from '../../data/services/uniformsService'
+import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { 
   AdminPageHeader, 
   Card, 
@@ -19,7 +22,9 @@ export default function UniformOrders() {
   const [rowsPerPage, setRowsPerPage] = useState(25)
 
   const { context, isReady } = useUserContext()
+  const { sports, loading: sportsLoading, error: sportsError, refetch: refetchSports } = useOrganizationSports()
   const navigate = useNavigate()
+  const t = useT()
 
   const fetchSubmissions = useCallback(async () => {
     if (!isReady) return
@@ -78,15 +83,69 @@ export default function UniformOrders() {
     },
   ]
 
+  // Guard: Check if context is ready
+  if (!isReady || !context?.orgId) {
+    return <AdminLoadingSpinner />
+  }
+
+  // Show loading state while sports are loading
+  if (sportsLoading) {
+    return (
+      <div className="pa-root">
+        <AdminPageHeader title="Uniforms" actions={null} />
+        <AdminLoadingSpinner />
+      </div>
+    )
+  }
+
+  // Show error state if sports failed to load
+  if (sportsError) {
+    return (
+      <div className="pa-root">
+        <AdminPageHeader title="Uniforms" actions={null} />
+        <Card>
+          <div className="p-6 text-center">
+            <p className="text-red-600 mb-4">{t('admin.uniforms.prerequisite.loadError', { message: sportsError.message })}</p>
+            <Button onClick={refetchSports} variant="primary">
+              {t('admin.uniforms.prerequisite.retry')}
+            </Button>
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
+  // Show empty state if no sports exist
+  if ((sports?.length ?? 0) === 0) {
+    const returnUrl = encodeURIComponent('/admin/uniforms')
+    return (
+      <div className="pa-root">
+        <AdminPageHeader title="Uniforms" actions={null} />
+        <div className="bg-white border border-slate-200 rounded-xl p-12 text-center shadow-sm">
+          <span className="material-symbols-outlined text-5xl text-slate-200 mb-4 block">checkroom</span>
+          <h3 className="text-lg font-bold text-slate-900 mb-2">{t('admin.uniforms.prerequisite.noSportsTitle')}</h3>
+          <p className="text-slate-500 mb-6">
+            {t('admin.uniforms.prerequisite.noSportsDescription')}
+          </p>
+          <Link to={`/admin/organization/structure/forms?type=sport&returnUrl=${returnUrl}`}>
+            <Button variant="primary">{t('admin.uniforms.prerequisite.addSport')}</Button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="pa-root">
       <AdminPageHeader 
         title="Uniforms" 
         actions={
-          <Button onClick={() => navigate('/admin/uniforms/new')}>
-            <span className="material-symbols-outlined">add</span>
-            Create Uniform
-          </Button>
+          (sports?.length ?? 0) > 0 ? (
+            <Button onClick={() => navigate('/admin/uniforms/new')}>
+              <span className="material-symbols-outlined">add</span>
+              Create Uniform
+            </Button>
+          ) : null
         }
       />
 
