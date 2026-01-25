@@ -53,7 +53,13 @@ export default function AdminTryouts() {
   return (
     <div className="pa-root">
       <AdminPageHeader 
-        title="Tryouts" 
+        title="Tryouts"
+        actions={
+          <Button variant="primary" onClick={() => navigate('/admin/tryouts/new')}>
+            <span className="material-symbols-outlined">add</span>
+            Create Tryout
+          </Button>
+        }
       />
       <PlatformDataTable
         columns={columns}
