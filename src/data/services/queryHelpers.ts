@@ -89,7 +89,7 @@ export function buildTeamQuery(
         sport:sports(id, name, icon, color),
         program:programs(id, name),
         level:levels(id, name),
-        active_season:seasons(id, name, start_date, end_date)
+        active_season:seasons!seasons_team_id_fkey(id, name, start_date, end_date)
     `)
 }
 

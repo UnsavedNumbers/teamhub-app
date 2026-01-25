@@ -240,27 +240,21 @@ export default function Sports() {
                           {sport.name}
                         </h3>
                       </Link>
-                      <p className="text-sm font-medium text-slate-400 mt-0.5">
-                        {programCount} {programCount === 1 ? 'program' : 'programs'}
-                      </p>
+                      <Link to={`${programsRoute}?sport_id=${sport.id}`}>
+                        <p className="text-sm font-medium text-slate-400 mt-0.5 hover:text-slate-600 transition-colors">
+                          {programCount} {programCount === 1 ? 'program' : 'programs'}
+                        </p>
+                      </Link>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-3 w-full sm:w-auto sm:justify-end">
-                    <Link
-                      to={sportDetailRoute(sport.id)}
-                      className="w-full sm:w-auto"
-                    >
-                      <SecondaryButton className="w-full sm:w-auto">
-                        Details
-                      </SecondaryButton>
-                    </Link>
                     <Link 
                       to={`${programsRoute}?sport_id=${sport.id}`}
                       className="w-full sm:w-auto"
                     >
                       <SecondaryButton className="w-full sm:w-auto">
-                        View Programs
+                        View {sport.name} Programs
                       </SecondaryButton>
                     </Link>
                     <Link 
@@ -271,39 +265,32 @@ export default function Sports() {
                         Add Program
                       </SecondaryButton>
                     </Link>
-                    <div className="flex flex-col items-end gap-1">
-                      <button
-                        onClick={() => handleDeleteSport(sport.id, sport.name)}
-                        disabled={deletingSportId === sport.id || isOffline || USE_FAKE_DATA || programCount > 0}
-                        className="inline-flex items-center justify-center h-12 md:h-9 px-4 font-medium text-xs text-red-700 bg-white border border-red-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                        title={
-                          USE_FAKE_DATA 
-                            ? 'Sign in to remove sport' 
-                            : isOffline 
-                            ? 'Offline - cannot remove sport' 
-                            : programCount > 0
-                            ? `Cannot remove: This sport contains ${programCount} ${programCount === 1 ? 'program' : 'programs'} and cannot be removed.`
-                            : 'Remove sport from organization'
-                        }
-                      >
-                        {deletingSportId === sport.id ? (
-                          <>
-                            <span className="material-symbols-outlined animate-spin" style={{ fontSize: '16px', marginRight: '4px' }}>refresh</span>
-                            Removing...
-                          </>
-                        ) : (
-                          <>
-                            <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '4px' }}>delete</span>
-                            Remove
-                          </>
-                        )}
-                      </button>
-                      {programCount > 0 && (
-                        <p className="text-xs text-slate-500 text-right max-w-[200px]">
-                          This item contains sub-items and cannot be removed.
-                        </p>
+                    <button
+                      onClick={() => handleDeleteSport(sport.id, sport.name)}
+                      disabled={deletingSportId === sport.id || isOffline || USE_FAKE_DATA || programCount > 0}
+                      className="inline-flex items-center justify-center h-12 md:h-9 px-4 font-medium text-xs text-red-700 bg-white border border-red-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={
+                        USE_FAKE_DATA 
+                          ? 'Sign in to remove sport' 
+                          : isOffline 
+                          ? 'Offline - cannot remove sport' 
+                          : programCount > 0
+                          ? `Cannot remove: This sport contains ${programCount} ${programCount === 1 ? 'program' : 'programs'} and cannot be removed.`
+                          : 'Remove sport from organization'
+                      }
+                    >
+                      {deletingSportId === sport.id ? (
+                        <>
+                          <span className="material-symbols-outlined animate-spin" style={{ fontSize: '16px', marginRight: '4px' }}>refresh</span>
+                          Removing...
+                        </>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '4px' }}>delete</span>
+                          Remove
+                        </>
                       )}
-                    </div>
+                    </button>
                   </div>
                 </div>
               </div>

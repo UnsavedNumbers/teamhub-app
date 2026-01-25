@@ -35,10 +35,42 @@ import type { Team, CreateTeamDTO, UpdateTeamDTO } from '../types/organization'
 import { buildTeamQuery, buildTeamMembershipQuery, buildCoachAssignmentQuery } from './queryHelpers'
 import { normalizeSupabaseResponse } from './responseHelpers'
 import { classifySupabaseError } from '../../utils/supabaseErrorHandler'
+import { logEvent } from '../../utils/eventLogger'
 
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+/**
+ * Log database errors to the event log system
+ */
+async function logDatabaseError(
+    context: UserContext,
+    functionName: string,
+    err: unknown,
+    additionalMetadata: Record<string, any> = {}
+): Promise<void> {
+    try {
+        await logEvent({
+            category: 'SYSTEM',
+            eventType: 'SYSTEM_ALERT',
+            actorRole: 'system',
+            orgId: context.orgId,
+            metadata: {
+                service: 'teamsService',
+                function: functionName,
+                errorCode: (err as any)?.code,
+                errorMessage: (err as any)?.message,
+                errorDetails: (err as any)?.details,
+                errorHint: (err as any)?.hint,
+                errorName: (err as any)?.name,
+                ...additionalMetadata
+            }
+        })
+    } catch (logErr) {
+        console.warn('Failed to log database error event:', logErr)
+    }
+}
 
 async function simulateDelay(): Promise<void> {
     if (FAKE_DATA_DELAY_MS > 0) {
@@ -276,6 +308,17 @@ export async function getTeams(
         return { data: mappedTeams, error: null }
     } catch (err) {
         const classifiedError = classifySupabaseError(err)
+        
+        // Log database query errors to event log with full details
+        await logDatabaseError(context, 'getTeams', err, {
+            params: { 
+                sportId: params.sportId, 
+                programId: params.programId, 
+                levelId: params.levelId, 
+                activeOnly: params.activeOnly 
+            }
+        })
+        
         return { data: [], error: classifiedError }
     }
 }

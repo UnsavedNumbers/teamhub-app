@@ -460,6 +460,7 @@ export async function updateRSVP(
                     responded_at: new Date().toISOString(),
                     responded_by_user_id: context.userId,
                     updated_at: new Date().toISOString(),
+                    created_at: existing.created_at,
                 }
                 : {
                     id: `rsvp-${eventId}-${childId}`,

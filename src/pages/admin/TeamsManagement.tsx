@@ -455,37 +455,30 @@ export default function TeamsManagement() {
                         <StatusBadge active={team.is_active ?? false} />
                       </td>
                       <td className="py-4 px-6 text-right">
-                        <div className="flex items-center justify-end gap-3">
-                          <Link to={`/admin/teams/${team.id}`} className="invisible group-hover:visible focus:visible">
-                            <button className="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors">
-                              Manage
-                            </button>
-                          </Link>
-                          <button
-                            onClick={() => handleDeleteTeam(team.id, team.name)}
-                            disabled={deletingTeamId === team.id || isOffline || USE_FAKE_DATA}
-                            className="invisible group-hover:visible focus:visible inline-flex items-center justify-center h-8 px-3 font-medium text-xs text-red-700 bg-white border border-red-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                            title={
-                              USE_FAKE_DATA 
-                                ? 'Sign in to remove team' 
-                                : isOffline 
-                                ? 'Offline - cannot remove team' 
-                                : 'Remove team from organization'
-                            }
-                          >
-                            {deletingTeamId === team.id ? (
-                              <>
-                                <span className="material-symbols-outlined animate-spin" style={{ fontSize: '14px', marginRight: '4px' }}>refresh</span>
-                                Removing...
-                              </>
-                            ) : (
-                              <>
-                                <span className="material-symbols-outlined" style={{ fontSize: '14px', marginRight: '4px' }}>delete</span>
-                                Remove
-                              </>
-                            )}
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => handleDeleteTeam(team.id, team.name)}
+                          disabled={deletingTeamId === team.id || isOffline || USE_FAKE_DATA}
+                          className="invisible group-hover:visible focus:visible inline-flex items-center justify-center h-8 px-3 font-medium text-xs text-red-700 bg-white border border-red-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={
+                            USE_FAKE_DATA 
+                              ? 'Sign in to remove team' 
+                              : isOffline 
+                              ? 'Offline - cannot remove team' 
+                              : 'Remove team from organization'
+                          }
+                        >
+                          {deletingTeamId === team.id ? (
+                            <>
+                              <span className="material-symbols-outlined animate-spin" style={{ fontSize: '14px', marginRight: '4px' }}>refresh</span>
+                              Removing...
+                            </>
+                          ) : (
+                            <>
+                              <span className="material-symbols-outlined" style={{ fontSize: '14px', marginRight: '4px' }}>delete</span>
+                              Remove
+                            </>
+                          )}
+                        </button>
                       </td>
                     </tr>
                   )
