@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useUserContext } from '../../hooks/useUserContext'
-import { AdminPageHeader } from '../../components/platformAdmin'
+import { AdminPageHeader, Button } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 import { getSports, getPrograms } from '../../data/services/sportsService'
@@ -128,9 +128,9 @@ export default function OrganizationStructureNew() {
         />
         <div className="pa-card">
           <div className="pa-text-danger pa-mb-3">{error}</div>
-          <button className="pa-btn pa-btn--primary" onClick={loadData}>
+          <Button onClick={loadData}>
             Retry
-          </button>
+          </Button>
         </div>
       </div>
     )

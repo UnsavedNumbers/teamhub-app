@@ -420,22 +420,25 @@ export default function LevelsManagement() {
                                   }
                                 }}
                               >
-                                <button
-                                  className="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors"
+                                <Button
+                                  variant="ghost"
+                                  size="dense"
                                   disabled={loading || refreshing}
                                   title={loading || refreshing ? 'Loading...' : 'View level details'}
                                 >
                                   View
-                                </button>
+                                </Button>
                               </Link>
                             ) : (
-                              <button
-                                className="invisible group-hover:visible focus:visible text-sm font-semibold text-slate-400 cursor-not-allowed"
+                              <Button
+                                variant="ghost"
+                                size="dense"
                                 disabled
+                                className="invisible group-hover:visible focus:visible"
                                 title="Invalid level ID"
                               >
                                 View
-                              </button>
+                              </Button>
                             )}
                             {level.id ? (
                               <Link
@@ -450,24 +453,30 @@ export default function LevelsManagement() {
                                   }
                                 }}
                               >
-                                <button
-                                  className="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors"
+                                <Button
+                                  variant="ghost"
+                                  size="dense"
                                   disabled={loading || refreshing}
                                   title={loading || refreshing ? 'Loading...' : 'Edit level'}
                                 >
                                   Edit
-                                </button>
+                                </Button>
                               </Link>
                             ) : (
-                              <button
-                                className="invisible group-hover:visible focus:visible text-sm font-semibold text-slate-400 cursor-not-allowed"
+                              <Button
+                                variant="ghost"
+                                size="dense"
                                 disabled
+                                className="invisible group-hover:visible focus:visible"
                                 title="Invalid level ID"
                               >
                                 Edit
-                              </button>
+                              </Button>
                             )}
-                            <button
+                            <Button
+                              variant="danger"
+                              size="dense"
+                              icon="delete"
                               onClick={() => {
                                 if (level.id && level.name) {
                                   handleDeleteLevel(level.id, level.name)
@@ -485,7 +494,8 @@ export default function LevelsManagement() {
                                 loading ||
                                 refreshing
                               }
-                              className="invisible group-hover:visible focus:visible inline-flex items-center justify-center h-8 px-3 font-medium text-xs text-red-700 bg-white border border-red-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              loading={deletingLevelId === level.id}
+                              className="invisible group-hover:visible focus:visible"
                               title={
                                 !level.id
                                   ? 'Invalid level ID'
@@ -502,18 +512,8 @@ export default function LevelsManagement() {
                                             : 'Remove level from organization'
                               }
                             >
-                              {deletingLevelId === level.id ? (
-                                <>
-                                  <span className="material-symbols-outlined animate-spin" style={{ fontSize: '14px', marginRight: '4px' }}>refresh</span>
-                                  Removing...
-                                </>
-                              ) : (
-                                <>
-                                  <span className="material-symbols-outlined" style={{ fontSize: '14px', marginRight: '4px' }}>delete</span>
-                                  Remove
-                                </>
-                              )}
-                            </button>
+                              {deletingLevelId === level.id ? 'Removing...' : 'Remove'}
+                            </Button>
                           </div>
                         </td>
                       </tr>

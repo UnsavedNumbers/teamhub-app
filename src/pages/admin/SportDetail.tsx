@@ -334,11 +334,7 @@ export default function SportDetail() {
           </Card>
 
           <Card 
-            title={
-              <span>
-                Programs <span className="pa-text-muted" style={{ fontSize: '0.85em', fontWeight: 500 }}>({programs.length})</span>
-              </span>
-            }
+            title={`Programs (${programs.length})`}
             noPadding
           >
             {programs.length === 0 ? (

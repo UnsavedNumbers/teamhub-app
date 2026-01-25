@@ -269,31 +269,6 @@ export default function TeamsManagement() {
     </div>
   )
 
-  const PrimaryButton = ({
-    children,
-    className = '',
-    disabled = false,
-    title,
-    style,
-    onClick,
-  }: {
-    children: ReactNode
-    className?: string
-    disabled?: boolean
-    title?: string
-    style?: React.CSSProperties
-    onClick?: () => void
-  }) => (
-    <button
-      className={`inline-flex items-center justify-center h-11 px-6 font-semibold text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
-      disabled={disabled}
-      title={title}
-      style={style}
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  )
 
   const StatusBadge = ({ active }: { active: boolean }) => (
     <span
@@ -480,14 +455,15 @@ export default function TeamsManagement() {
           </div>
 
           <div className="flex items-end justify-end md:col-span-2 lg:col-span-1">
-            <PrimaryButton
+            <Button
+              variant="primary"
               className="w-full lg:w-auto"
               disabled={!canCreateTeam || navigating || loading}
               title={!canCreateTeam ? 'Add a Level first' : undefined}
               onClick={handleAddTeam}
             >
               Add Team
-            </PrimaryButton>
+            </Button>
           </div>
 
           {/* Row 2 */}
@@ -613,10 +589,14 @@ export default function TeamsManagement() {
                         <StatusBadge active={team.is_active ?? false} />
                       </td>
                       <td className="py-4 px-6 text-right">
-                        <button
-                          onClick={(e) => handleDeleteTeam(team.id, team.name, e)}
+                        <Button
+                          variant="danger"
+                          size="dense"
+                          icon="delete"
+                          onClick={(e: React.MouseEvent) => handleDeleteTeam(team.id, team.name, e)}
                           disabled={deletingTeamId === team.id || isOffline || USE_FAKE_DATA || navigating}
-                          className="invisible group-hover:visible focus:visible inline-flex items-center justify-center h-8 px-3 font-medium text-xs text-red-700 bg-white border border-red-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          loading={deletingTeamId === team.id}
+                          className="invisible group-hover:visible focus:visible"
                           title={
                             USE_FAKE_DATA
                               ? 'Sign in to remove team'
@@ -627,22 +607,8 @@ export default function TeamsManagement() {
                               : 'Remove team from organization'
                           }
                         >
-                          {deletingTeamId === team.id ? (
-                            <>
-                              <span className="material-symbols-outlined animate-spin" style={{ fontSize: '14px', marginRight: '4px' }}>
-                                refresh
-                              </span>
-                              Removing...
-                            </>
-                          ) : (
-                            <>
-                              <span className="material-symbols-outlined" style={{ fontSize: '14px', marginRight: '4px' }}>
-                                delete
-                              </span>
-                              Remove
-                            </>
-                          )}
-                        </button>
+                          {deletingTeamId === team.id ? 'Removing...' : 'Remove'}
+                        </Button>
                       </td>
                     </tr>
                   )

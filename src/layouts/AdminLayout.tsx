@@ -13,10 +13,12 @@ import { useScrollLock } from '@/hooks/useScrollLock'
 import { getLink, getPath, RouteKeys } from '@/utils/routes'
 import SidebarOrganizationSwitcher from '../components/admin/SidebarOrganizationSwitcher'
 import MobileNavDrawer from '../components/common/MobileNavDrawer'
+import { useTheme } from '../hooks/useTheme'
 import type { NavSection } from '@/types/menu'
 
 export default function AdminLayout() {
   const { loaded: themeLoaded } = usePlatformAdminTheme()
+  const { resolvedTheme, toggle: toggleTheme } = useTheme()
   const t = useT()
   const location = useLocation()
   const navigate = useNavigate()
@@ -292,7 +294,20 @@ export default function AdminLayout() {
         {/* Footer */}
         <div className="pa-sidebar-footer">
           <div className="pa-sidebar-user">
-            <span className="pa-sidebar-email">{profile?.email || 'Unknown'}</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span className="pa-sidebar-email">{profile?.email || 'Unknown'}</span>
+              <button
+                onClick={toggleTheme}
+                className="pa-btn pa-btn--ghost pa-btn--compact"
+                style={{ padding: '6px', minWidth: 'auto' }}
+                aria-label={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
+                title={`Current: ${resolvedTheme} mode`}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+                  {resolvedTheme === 'dark' ? 'light_mode' : 'dark_mode'}
+                </span>
+              </button>
+            </div>
             <button
               className="pa-btn pa-btn--secondary pa-btn--compact"
               onClick={handleSignOut}

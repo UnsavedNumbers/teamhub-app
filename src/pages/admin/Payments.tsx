@@ -1,14 +1,17 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { useUserContext } from '../../hooks/useUserContext'
 import { getFeeAssignmentsForUser, getOrgPaymentSummary, formatCurrency } from '../../data/services/paymentsService'
+import { getAthletes } from '../../data/services/familyService'
 import { getLink, RouteKeys } from '../../utils/routes'
 import { 
   AdminPageHeader, 
   Badge, 
   StatCard, 
   PlatformDataTable, 
+  Button,
+  Card,
   type ColumnConfig 
 } from '../../components/platformAdmin'
 
@@ -33,16 +36,23 @@ export default function Payments() {
     outstanding: 0,
     collected: 0,
   })
+  const [hasAthletes, setHasAthletes] = useState<boolean | null>(null)
+  const [athleteCheckError, setAthleteCheckError] = useState<string | null>(null)
+  const [paymentsError, setPaymentsError] = useState<string | null>(null)
 
-
+  const isMountedRef = useRef(true)
 
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
+  
+  // Extract primitive values to avoid infinite loops in useEffect dependencies
+  const orgId = context.orgId
 
   const fetchPayments = useCallback(async () => {
     if (!isReady) return
 
     setLoading(true)
+    setPaymentsError(null)
 
     try {
       // Fetch fee assignments
@@ -50,6 +60,8 @@ export default function Payments() {
 
       if (error) {
         console.error('Error fetching payments:', error)
+        const errorMessage = error instanceof Error ? error.message : 'Failed to load payments'
+        setPaymentsError(errorMessage)
         setLoading(false)
         return
       }
@@ -101,6 +113,62 @@ export default function Payments() {
     fetchPayments()
   }, [fetchPayments])
 
+  // Cleanup effect to prevent state updates after unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  // Check if organization has athletes
+  const checkAthletesExists = useCallback(async () => {
+    if (!isReady || !orgId) {
+      if (isMountedRef.current) {
+        setHasAthletes(null)
+      }
+      return
+    }
+
+    try {
+      if (isMountedRef.current) {
+        setAthleteCheckError(null)
+      }
+      
+      const { data, error } = await getAthletes(context)
+
+      // Type guard and null safety
+      if (error) {
+        throw error
+      }
+
+      // Safe array access with null coalescing
+      const athletes = data || []
+      const hasAny = athletes.length > 0
+
+      // Check mounted before state update
+      if (isMountedRef.current) {
+        setHasAthletes(hasAny)
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      console.error('Error checking athletes:', errorMsg)
+
+      // Fail closed - disable button on error
+      if (isMountedRef.current) {
+        setAthleteCheckError('Unable to verify athletes. Please refresh or contact support.')
+        setHasAthletes(false)
+      }
+    }
+  }, [isReady, orgId, context])
+
+  // Effect to check athletes when dependencies change
+  useEffect(() => {
+    const check = async () => {
+      await checkAthletesExists()
+    }
+    check()
+  }, [checkAthletesExists])
+
   // Helper to get athlete name (in real implementation, comes from joined data)
   const getAthleteName = (childId: string): string => {
     const names: Record<string, string> = {
@@ -134,17 +202,49 @@ export default function Payments() {
     },
   ]
 
+  const isButtonDisabled = hasAthletes === false || hasAthletes === null
+  const buttonTooltip = hasAthletes === false 
+    ? "No athletes available. Add athletes before creating fees."
+    : hasAthletes === null 
+    ? "Checking athletes..."
+    : ""
+
   return (
     <div className="pa-root">
       <AdminPageHeader 
         title="Payments" 
         actions={
-          <button className="pa-btn pa-btn--primary" onClick={() => navigate(getLink(RouteKeys.ADMIN_CREATE_FEE))}>
-            <span className="material-symbols-outlined">add</span>
+          <Button 
+            icon="add" 
+            onClick={() => navigate(getLink(RouteKeys.ADMIN_CREATE_FEE))}
+            disabled={isButtonDisabled}
+            title={buttonTooltip}
+          >
             Assign Fee
-          </button>
+          </Button>
         }
       />
+
+      {/* Show error message if athlete check failed */}
+      {athleteCheckError && (
+        <Card className="pa-mb-4" style={{ background: 'var(--pa-danger-bg)', border: '1px solid var(--pa-danger-text)' }}>
+          <div className="pa-text-danger">{athleteCheckError}</div>
+        </Card>
+      )}
+
+      {/* Show error message if payments fetch failed */}
+      {paymentsError && (
+        <Card className="pa-mb-4" style={{ background: 'var(--pa-danger-bg)', border: '1px solid var(--pa-danger-text)' }}>
+          <div className="pa-text-danger">{paymentsError}</div>
+        </Card>
+      )}
+
+      {/* Show info message when no athletes found */}
+      {hasAthletes === false && !athleteCheckError && (
+        <Card className="pa-mb-4" style={{ background: 'var(--pa-info-bg)', border: '1px solid var(--pa-info)' }}>
+          <div style={{ color: 'var(--pa-info)' }}>No athletes found in this organization. Please add athletes before creating fees.</div>
+        </Card>
+      )}
 
       <div className="pa-grid pa-grid-2 pa-mb-5">
         <StatCard 
@@ -161,16 +261,17 @@ export default function Payments() {
 
       <div className="pa-flex pa-gap-2 pa-mb-4">
         {(['all', 'unpaid', 'partial', 'paid'] as const).map((f) => (
-          <button
+          <Button
             key={f}
-            className={`pa-btn pa-btn--compact ${filter === f ? 'pa-btn--primary' : 'pa-btn--secondary'}`}
+            variant={filter === f ? 'primary' : 'secondary'}
+            size="compact"
             onClick={() => {
               setFilter(f)
               setPage(0)
             }}
           >
             {f.toUpperCase()}
-          </button>
+          </Button>
         ))}
       </div>
 

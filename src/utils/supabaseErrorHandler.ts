@@ -168,10 +168,16 @@ export function classifySupabaseError(
         }
 
         // Return unknown error with original message
-        return new UnknownSupabaseError(
-            errorObj.details || message || 'An unexpected error occurred.',
-            error
-        )
+        let errorMessage = 'An unexpected error occurred.'
+        if (typeof errorObj.details === 'string' && errorObj.details) {
+            errorMessage = errorObj.details
+        } else if (typeof message === 'string' && message) {
+            errorMessage = message
+        } else if (errorObj.details && typeof errorObj.details === 'object') {
+            // If details is an object, try to extract a meaningful message
+            errorMessage = JSON.stringify(errorObj.details)
+        }
+        return new UnknownSupabaseError(errorMessage, error)
     }
 
     // Handle Error objects
