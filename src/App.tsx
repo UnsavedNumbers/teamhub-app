@@ -78,7 +78,8 @@ const LicensesAudit = lazy(() => import('./pages/platformAdmin/LicensesAudit'))
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
 const CreateUser = lazy(() => import('./pages/admin/CreateUser'))
 const OrganizationStructureOverview = lazy(() => import('./pages/admin/OrganizationStructureNew'))
-const SportsAndPrograms = lazy(() => import('./pages/admin/SportsAndPrograms'))
+const Sports = lazy(() => import('./pages/admin/Sports'))
+const Programs = lazy(() => import('./pages/admin/Programs'))
 const LevelsManagement = lazy(() => import('./pages/admin/LevelsManagement'))
 const TeamsManagement = lazy(() => import('./pages/admin/TeamsManagement'))
 const SeasonsManagement = lazy(() => import('./pages/admin/SeasonsManagement'))
@@ -284,7 +285,8 @@ function AppWithTheme() {
             
               {/* Organizational Structure */}
               <Route path="organization/structure" element={<OrganizationStructureOverview />} />
-              <Route path="organization/structure/sports-programs" element={<SportsAndPrograms />} />
+              <Route path="organization/structure/sports" element={<Sports />} />
+              <Route path="organization/structure/programs" element={<Programs />} />
               <Route path="organization/structure/levels" element={<LevelsManagement />} />
               <Route path="organization/structure/teams" element={<TeamsManagement />} />
               <Route path="organization/structure/seasons" element={<SeasonsManagement />} />

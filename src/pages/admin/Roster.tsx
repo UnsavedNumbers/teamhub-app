@@ -140,11 +140,11 @@ export default function Roster() {
         title="Team Roster" 
         actions={
           <div className="pa-flex pa-gap-2">
-            <Button onClick={() => navigate(`/admin/athletes/import?teamId=${teamId}&seasonId=${selectedSeason}`)} variant="primary" icon="upload_file">
+            <Button onClick={() => navigate(`/admin/athletes/import?teamId=${teamId}&seasonId=${selectedSeason}`)} variant="secondary" icon="upload_file">
               Import Athletes
             </Button>
-            <Button onClick={() => setShowAddModal(true)} icon="add">
-              Add Player
+            <Button onClick={() => navigate('/admin/athletes/new')} icon="add">
+              Add Athlete
             </Button>
           </div>
         }

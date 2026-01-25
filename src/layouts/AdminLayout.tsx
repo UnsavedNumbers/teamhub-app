@@ -53,7 +53,8 @@ export default function AdminLayout() {
       requiresOrg: false,
       children: [
         { text: 'Overview', icon: 'info', path: getPath(RouteKeys.ADMIN_ORGANIZATION_STRUCTURE), requiresOrg: true },
-        { text: 'Sports & Programs', icon: 'sports', path: getLink('admin.organization.sportsPrograms'), requiresOrg: true },
+        { text: 'Sports', icon: 'sports', path: getLink('admin.organization.sports'), requiresOrg: true },
+        { text: 'Programs', icon: 'category', path: getLink('admin.organization.programs'), requiresOrg: true },
         { text: 'Levels', icon: 'grade', path: getLink('admin.organization.levels'), requiresOrg: true },
         { text: 'Teams', icon: 'groups', path: getLink('admin.organization.teamsManagement'), requiresOrg: true },
         { text: 'Seasons', icon: 'calendar_month', path: getLink('admin.organization.seasons'), requiresOrg: true },

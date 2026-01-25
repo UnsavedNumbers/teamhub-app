@@ -211,10 +211,16 @@ const admin = {
             description: 'Structure overview',
             requiresOrg: true,
         },
-        sportsPrograms: {
-            path: '/admin/organization/structure/sports-programs',
-            label: 'Sports & Programs',
+        sports: {
+            path: '/admin/organization/structure/sports',
+            label: 'Sports',
             icon: 'sports',
+            requiresOrg: true,
+        },
+        programs: {
+            path: '/admin/organization/structure/programs',
+            label: 'Programs',
+            icon: 'category',
             requiresOrg: true,
         },
         levels: {

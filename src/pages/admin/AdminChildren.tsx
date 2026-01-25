@@ -65,9 +65,14 @@ export default function AdminChildren() {
       <AdminPageHeader 
         title={t('admin.children.title')}
         actions={
-          <Button onClick={() => navigate('/admin/athletes/import')} icon="upload_file">
-            Import Athletes
-          </Button>
+          <div className="pa-flex pa-gap-2">
+            <Button onClick={() => navigate('/admin/athletes/import')} icon="upload_file" variant="secondary">
+              Import Athletes
+            </Button>
+            <Button onClick={() => navigate('/admin/athletes/new')} icon="add">
+              Add Athlete
+            </Button>
+          </div>
         }
       />
 
