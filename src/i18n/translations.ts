@@ -99,6 +99,31 @@ export const en = {
         errorCreatingSession: 'Unable to start checkout. Please try again.',
         errorCreatingPortal: 'Unable to open customer portal.',
         billingHistoryEmpty: 'No billing events yet.',
+        licenseOverview: 'License Overview',
+        statusMessage: {
+            active: 'Your license is active and will renew automatically',
+            trial: 'Trial ends on {{date}}. Upgrade to continue after trial.',
+            pastDue: 'Payment failed. Please update billing information.',
+            expired: 'Trial expired. Upgrade required to continue.',
+            canceled: 'Subscription cancels on {{date}}. Renew to stay active.',
+        },
+        eventLabels: {
+            'checkout.session.completed': 'Subscription Started',
+            'invoice.paid': 'Payment Successful',
+            'invoice.payment_failed': 'Payment Failed',
+            'customer.subscription.updated': 'Subscription Updated',
+            'customer.subscription.deleted': 'Subscription Canceled',
+            'customer.subscription.created': 'Subscription Created',
+            'payment_intent.succeeded': 'Payment Processed',
+            'payment_intent.payment_failed': 'Payment Failed',
+            'invoice.created': 'Invoice Created',
+            'invoice.updated': 'Invoice Updated',
+            'customer.updated': 'Customer Updated',
+        },
+        emptyState: {
+            noSubscription: 'Get started by selecting a plan',
+            noEvents: 'No billing events yet. Events will appear here after your first payment.',
+        },
     },
     plans: {
         starter: {
@@ -923,6 +948,31 @@ export const es: typeof en = {
         errorCreatingSession: 'No se pudo iniciar el pago. Inténtelo de nuevo.',
         errorCreatingPortal: 'No se pudo abrir el portal del cliente.',
         billingHistoryEmpty: 'Aún no hay eventos de facturación.',
+        licenseOverview: 'Resumen de Licencia',
+        statusMessage: {
+            active: 'Su licencia está activa y se renovará automáticamente',
+            trial: 'La prueba termina el {{date}}. Actualice para continuar después de la prueba.',
+            pastDue: 'Pago fallido. Por favor actualice la información de facturación.',
+            expired: 'Prueba expirada. Se requiere actualización para continuar.',
+            canceled: 'La suscripción se cancela el {{date}}. Renueve para mantenerse activo.',
+        },
+        eventLabels: {
+            'checkout.session.completed': 'Suscripción Iniciada',
+            'invoice.paid': 'Pago Exitoso',
+            'invoice.payment_failed': 'Pago Fallido',
+            'customer.subscription.updated': 'Suscripción Actualizada',
+            'customer.subscription.deleted': 'Suscripción Cancelada',
+            'customer.subscription.created': 'Suscripción Creada',
+            'payment_intent.succeeded': 'Pago Procesado',
+            'payment_intent.payment_failed': 'Pago Fallido',
+            'invoice.created': 'Factura Creada',
+            'invoice.updated': 'Factura Actualizada',
+            'customer.updated': 'Cliente Actualizado',
+        },
+        emptyState: {
+            noSubscription: 'Comience seleccionando un plan',
+            noEvents: 'Aún no hay eventos de facturación. Los eventos aparecerán aquí después de su primer pago.',
+        },
     },
     plans: {
         starter: {
