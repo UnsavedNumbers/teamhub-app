@@ -340,7 +340,7 @@ serve(async (req) => {
         const { count, error: athleteCheckError } = await supabaseClient
             .from('athlete_guardians')
             .select('athlete_id', { count: 'exact', head: true })
-            .eq('organization_id', requestData.org_id)
+            .eq('org_id', requestData.org_id)
             .eq('status', 'active')
             .limit(1) // Performance: only need to know if any exist
 

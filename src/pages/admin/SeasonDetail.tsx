@@ -12,7 +12,7 @@ import { getEvents } from '../../data/services/eventsService'
 import { getOrganizationUsers } from '../../data/services/usersService'
 import { supabase } from '../../lib/supabase'
 import type { Season } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, ConfirmDialog } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 
@@ -35,6 +35,7 @@ export default function SeasonDetail() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false)
   const [season, setSeason] = useState<Season | null>(null)
   const [stats, setStats] = useState<SeasonStats>({
     teams: 0,
@@ -539,18 +540,29 @@ export default function SeasonDetail() {
             <Button
               variant="danger"
               icon="archive"
-              onClick={() => {
-                // TODO: Implement archive season functionality
-                if (confirm('Are you sure you want to archive this season?')) {
-                  console.log('Archive season:', season.id)
-                }
-              }}
+              onClick={() => setShowArchiveDialog(true)}
             >
               Archive Season
             </Button>
           </div>
         </div>
       </div>
+
+      {/* Archive Season Confirmation Dialog */}
+      <ConfirmDialog
+        open={showArchiveDialog}
+        title="Archive Season"
+        description="Are you sure you want to archive this season?"
+        confirmLabel="Archive"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => {
+          // TODO: Implement archive season functionality
+          console.log('Archive season:', season.id)
+          setShowArchiveDialog(false)
+        }}
+        onCancel={() => setShowArchiveDialog(false)}
+      />
     </div>
   )
 }

@@ -235,6 +235,8 @@ export async function deleteAthletePhoto(
         // TODO: Re-enable when photo_url column is added
         return { error: null }
 
+        // TODO: Uncomment when photo_url column is added
+        /*
         // Validate path format
         if (!isValidAthletePhotoPath(photoPath)) {
             console.warn('[athletePhotoService] Invalid photo path format:', photoPath)
@@ -253,6 +255,7 @@ export async function deleteAthletePhoto(
         }
 
         return { error: null }
+        */
     } catch (err) {
         console.error('[athletePhotoService] Error deleting photo:', err)
         return { 
@@ -265,7 +268,7 @@ export async function deleteAthletePhoto(
  * Cleanup athlete photo (helper for athlete deletion)
  * This is called from deleteAthlete in familyService
  */
-export async function cleanupAthletePhoto(athleteId: string): Promise<void> {
+export async function cleanupAthletePhoto(_athleteId: string): Promise<void> {
     if (USE_FAKE_DATA) {
         return
     }
@@ -276,6 +279,8 @@ export async function cleanupAthletePhoto(athleteId: string): Promise<void> {
         // TODO: Re-enable when photo_url column is added
         return
 
+        // TODO: Uncomment when photo_url column is added
+        /*
         const photoPath = athlete.photo_url
 
         // Validate and delete
@@ -288,6 +293,7 @@ export async function cleanupAthletePhoto(athleteId: string): Promise<void> {
                 console.error('[athletePhotoService] Error cleaning up photo:', deleteError)
             }
         }
+        */
     } catch (err) {
         console.error('[athletePhotoService] Error in cleanup:', err)
         // Don't throw - cleanup failures shouldn't block athlete deletion

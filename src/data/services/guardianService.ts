@@ -21,6 +21,28 @@ import type {
 type ParentInvite = Database['public']['Tables']['parent_invites']['Row']
 
 // ============================================================================
+// Notification Helper
+// ============================================================================
+
+/**
+ * Trigger the notification worker to process queued emails
+ * This is called after creating or resending an invite
+ */
+async function triggerNotificationWorker(): Promise<void> {
+    try {
+        const { error } = await supabase.functions.invoke('notification-worker', {
+            body: {}
+        })
+        if (error) {
+            console.warn('Failed to trigger notification worker:', error)
+        }
+    } catch (err) {
+        // Don't fail the operation if notification trigger fails
+        console.warn('Error triggering notification worker:', err)
+    }
+}
+
+// ============================================================================
 // Helper Functions
 // ============================================================================
 
@@ -73,30 +95,19 @@ export async function findGuardianByEmail(
         }
 
         // Call RPC function that does normalized email matching
+        // Note: This function returns a TABLE, so we get an array of rows
         const { data, error } = await supabase
             .rpc('find_guardian_by_email', {
                 p_email: email,
                 p_org_id: orgId
             })
-            .single()
 
         if (error) {
-            // No user found is not an error - just return no match
-            if (error.code === 'PGRST116') {
-                return {
-                    data: {
-                        exists: false,
-                        user: null,
-                        linkedAthletes: [],
-                        suggestion: 'create_invite'
-                    },
-                    error: null
-                }
-            }
             throw error
         }
 
-        if (!data) {
+        // If no rows returned, user doesn't exist
+        if (!data || !Array.isArray(data) || data.length === 0) {
             return {
                 data: {
                     exists: false,
@@ -108,21 +119,24 @@ export async function findGuardianByEmail(
             }
         }
 
+        // Get the first (and should be only) row
+        const row = data[0]
+
         type LinkedAthlete = { id: string; first_name: string; last_name: string; birthdate: string }
 
         // Parse linked_athletes JSONB
-        const linkedAthletes = Array.isArray(data.linked_athletes)
-            ? data.linked_athletes as LinkedAthlete[]
+        const linkedAthletes = Array.isArray(row.linked_athletes)
+            ? row.linked_athletes as LinkedAthlete[]
             : []
 
         return {
             data: {
                 exists: true,
                 user: {
-                    id: data.user_id,
-                    email: data.email,
-                    display_name: data.display_name,
-                    phone: data.phone
+                    id: row.user_id,
+                    email: row.email,
+                    display_name: row.display_name,
+                    phone: row.phone
                 },
                 linkedAthletes,
                 suggestion: 'link'
@@ -196,6 +210,10 @@ export async function linkGuardianToAthlete(
             })
 
         if (error) throw error
+
+        // Trigger notification worker to send the invite email
+        // This runs in the background and doesn't block the response
+        triggerNotificationWorker()
 
         return { data: data as AthleteGuardian | ParentInvite | null, error: null }
     } catch (err) {
@@ -375,24 +393,27 @@ export async function cancelInvite(
 }
 
 /**
- * Resend invite (extend expiration)
+ * Resend invite (extend expiration and queue new email notification)
  */
 export async function resendInvite(
     inviteId: string
 ): Promise<{ success: boolean; error: Error | null }> {
     try {
-        const expiresAt = new Date()
-        expiresAt.setDate(expiresAt.getDate() + 30)  // Extend by 30 days
-
-        const { error } = await supabase
-            .from('parent_invites')
-            .update({
-                expires_at: expiresAt.toISOString(),
-                updated_at: new Date().toISOString()
+        const { data, error } = await supabase
+            .rpc('resend_guardian_invite', {
+                p_invite_id: inviteId
             })
-            .eq('id', inviteId)
 
         if (error) throw error
+
+        // Check the result from the RPC
+        if (data && !data.success) {
+            throw new Error(data.error || 'Failed to resend invite')
+        }
+
+        // Trigger notification worker to send the invite email
+        // This runs in the background and doesn't block the response
+        triggerNotificationWorker()
 
         return { success: true, error: null }
     } catch (err) {

@@ -6,7 +6,7 @@ export interface NotificationJob {
   org_id: string;
   user_id?: string;
   email: string;
-  type: 'new_event' | 'new_message' | 'payment_receipt' | 'event_reminder' | 'registration_confirmation' | 'team_invite' | 'password_reset' | 'welcome_email';
+  type: 'new_event' | 'new_message' | 'payment_receipt' | 'event_reminder' | 'registration_confirmation' | 'team_invite' | 'password_reset' | 'welcome_email' | 'guardian_invite';
   payload: Record<string, any>;
   status: 'queued' | 'sent' | 'failed';
   error?: string;
@@ -53,6 +53,10 @@ const EMAIL_CONFIG = {
   welcome_email: {
     subject: 'Welcome to YouthSports Team Hub',
     preview: 'Get started with your new account'
+  },
+  guardian_invite: {
+    subject: 'You\'re invited to connect with {{athlete_name}}',
+    preview: 'Accept your guardian invite on YouthSports Team Hub'
   }
 };
 
@@ -209,6 +213,39 @@ async function loadTemplate(type: string, payload: Record<string, any>): Promise
               <a href="{{url}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">View Receipt</a>
             </div>
             <p>If you have any questions about this payment, please contact your organization administrator.</p>
+          </div>
+        </body>
+      </html>
+    `,
+    guardian_invite: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Guardian Invite</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; background-color: #f8fafc; padding: 20px;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 8px;">
+            <h1 style="color: #1e293b; margin-bottom: 20px;">YouthSports Team Hub</h1>
+            <h2 style="color: #1e293b;">You're Invited!</h2>
+            <p>Hello,</p>
+            <p>You've been invited to connect as a guardian for <strong>{{athlete_name}}</strong> at <strong>{{organization_name}}</strong>.</p>
+            <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">What's Next?</h3>
+              <p>As a guardian, you'll be able to:</p>
+              <ul style="color: #475569;">
+                <li>View {{athlete_first_name}}'s schedule and events</li>
+                <li>Receive important team communications</li>
+                <li>RSVP to events on their behalf</li>
+                <li>Manage payments and registrations</li>
+              </ul>
+            </div>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="{{invite_url}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Accept Invitation</a>
+            </div>
+            <p style="color: #64748b; font-size: 14px;">This invitation will expire in 7 days. If you didn't expect this invitation, you can safely ignore this email.</p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+            <p style="color: #94a3b8; font-size: 12px;">YouthSports Team Hub - Connecting families with their athletes' teams.</p>
           </div>
         </body>
       </html>

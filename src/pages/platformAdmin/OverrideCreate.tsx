@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
-import { PageHeader, Card, Button, Input, Select, Checkbox, DatePicker, TimePicker } from '../../components/platformAdmin'
+import { PageHeader, Card, Button, Input, Select, Checkbox, DatePicker, TimePicker, ConfirmDialog } from '../../components/platformAdmin'
 import Badge from '../../components/platformAdmin/Badge'
 import { EntitySelect } from '../../components/common/EntitySelect'
 import { mapFeatureEntitlement } from '../../utils/domainMappers'
@@ -262,12 +262,11 @@ export default function OverrideCreate() {
       setError(errorMessage)
       showError(errorMessage)
       
-      // If we found an existing override, show link to view it
+      // If we found an existing override, show dialog to view it
       if (existingOverrideId) {
         setTimeout(() => {
-          if (window.confirm('Would you like to view the existing override?')) {
-            navigate(`/platform-admin/licenses/overrides/${existingOverrideId}`)
-          }
+          setExistingOverrideId(existingOverrideId)
+          setShowViewOverrideDialog(true)
         }, 100)
       }
     } finally {
@@ -667,6 +666,27 @@ export default function OverrideCreate() {
           </div>
         )}
       </Card>
+
+      {/* View Existing Override Dialog */}
+      <ConfirmDialog
+        open={showViewOverrideDialog}
+        title="Existing Override Found"
+        description="Would you like to view the existing override?"
+        confirmLabel="View Override"
+        cancelLabel="Cancel"
+        variant="info"
+        onConfirm={() => {
+          if (existingOverrideId) {
+            navigate(`/platform-admin/licenses/overrides/${existingOverrideId}`)
+          }
+          setShowViewOverrideDialog(false)
+          setExistingOverrideId(null)
+        }}
+        onCancel={() => {
+          setShowViewOverrideDialog(false)
+          setExistingOverrideId(null)
+        }}
+      />
     </div>
   )
 }

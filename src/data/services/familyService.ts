@@ -120,10 +120,10 @@ export async function getFamilies(
         }
 
         // Real Supabase Query
+        // Note: families table does not have deleted_at column
         let query = supabase
             .from('families')
             .select('*', { count: 'exact' })
-            .is('deleted_at', null)
             .order('created_at', { ascending: false })
 
         // Apply Org Filter (RLS usually handles this, but good to be explicit)
@@ -182,11 +182,11 @@ export async function getFamilyDetails(
         }
 
         // Real Data
+        // Note: families table does not have deleted_at column
         const { data: family, error: familyError } = await supabase
             .from('families')
             .select('*')
             .eq('id', familyId)
-            .is('deleted_at', null)
             .single()
 
         if (familyError) throw familyError
@@ -202,11 +202,11 @@ export async function getFamilyDetails(
         if (childrenError) throw childrenError
 
         // Fetch members
+        // Note: family_members table does not have deleted_at column
         const { data: members, error: membersError } = await supabase
             .from('family_members')
             .select('*')
             .eq('family_id', familyId)
-            .is('deleted_at', null)
 
         if (membersError) throw membersError
 

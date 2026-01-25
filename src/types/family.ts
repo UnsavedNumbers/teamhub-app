@@ -173,6 +173,21 @@ export interface GuardianMatch {
 }
 
 // ============================================================================
+// Guardian Invite Types
+// ============================================================================
+
+export type GuardianInviteStatus = 'pending' | 'accepted' | 'cancelled' | 'expired'
+
+export interface PendingGuardianInvite {
+    id: string
+    email: string
+    status: GuardianInviteStatus
+    expires_at: string
+    created_at: string | null
+    token: string
+}
+
+// ============================================================================
 // Derived Family Types
 // ============================================================================
 

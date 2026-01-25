@@ -34,6 +34,7 @@ export default function FamilyDetail() {
     // Delete Dialog States
     const [deleteFamilyOpen, setDeleteFamilyOpen] = useState(false)
     const [childToDelete, setChildToDelete] = useState<string | null>(null)
+    const [alertDialog, setAlertDialog] = useState<{ open: boolean; title: string; message: string } | null>(null)
 
     const fetchDetail = async () => {
         if (!id || !isReady) return
@@ -52,7 +53,11 @@ export default function FamilyDetail() {
         if (!family || !isReady) return
         const { error } = await deleteFamily(context, family.id)
         if (error) {
-            alert('Failed to delete family: ' + error.message) 
+            setAlertDialog({
+                open: true,
+                title: 'Failed to delete family',
+                message: error.message
+            })
             return
         }
         navigate(getLink('admin.guardians.list'))
@@ -62,7 +67,11 @@ export default function FamilyDetail() {
         if (!childToDelete || !isReady) return
         const { error } = await deleteAthlete(context, childToDelete)
         if (error) {
-            alert(t('admin.families.errorDeleteChild') + ': ' + error.message)
+            setAlertDialog({
+                open: true,
+                title: t('admin.families.errorDeleteChild'),
+                message: error.message
+            })
         } else {
             await fetchDetail() 
         }
@@ -212,6 +221,19 @@ export default function FamilyDetail() {
                 onConfirm={() => handleDeleteChild()}
                 onCancel={() => setChildToDelete(null)}
             />
+
+            {alertDialog && (
+                <ConfirmDialog
+                    open={alertDialog.open}
+                    title={alertDialog.title}
+                    description={alertDialog.message}
+                    confirmLabel="OK"
+                    cancelLabel={null}
+                    variant="danger"
+                    onConfirm={() => setAlertDialog(null)}
+                    onCancel={() => setAlertDialog(null)}
+                />
+            )}
         </div>
     )
 }

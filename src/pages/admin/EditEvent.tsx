@@ -41,6 +41,8 @@ export default function EditEvent() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showRsvpChangeDialog, setShowRsvpChangeDialog] = useState(false)
+  const [pendingRsvpChange, setPendingRsvpChange] = useState<EventFormData | null>(null)
   const [showLocationDetails, setShowLocationDetails] = useState(false)
   const [showRecurring, setShowRecurring] = useState(false)
   const [hasExistingRSVPs, setHasExistingRSVPs] = useState(false)
@@ -318,6 +320,14 @@ export default function EditEvent() {
     if (watchTeamId && isReady) fetchSeasons(watchTeamId) 
   }, [watchTeamId, isReady, fetchSeasons])
 
+  const handleConfirmRsvpChange = async () => {
+    if (!pendingRsvpChange) return
+    setShowRsvpChangeDialog(false)
+    // Continue with the submission
+    await onSubmit(pendingRsvpChange)
+    setPendingRsvpChange(null)
+  }
+
   const onSubmit = async (data: EventFormData) => {
     if (!eventId) {
       setError('Event ID is required')
@@ -369,13 +379,11 @@ export default function EditEvent() {
           .single() as { data: { rsvp_type: string | null } | null; error: { message?: string } | null }
 
         if (!currentEventError && currentEvent?.rsvp_type && currentEvent.rsvp_type !== data.rsvp_type) {
-          const confirmChange = window.confirm(
-            'Changing RSVP type will delete existing RSVP responses. Are you sure?'
-          )
-          if (!confirmChange) {
-            setSaving(false)
-            return
-          }
+          // Store the data to save after confirmation
+          setPendingRsvpChange(data)
+          setShowRsvpChangeDialog(true)
+          setSaving(false)
+          return
         }
       }
 
@@ -967,6 +975,21 @@ export default function EditEvent() {
         onCancel={() => {
           setCancelDialog(false)
           setActionError(null)
+        }}
+      />
+
+      {/* RSVP Change Confirmation Dialog */}
+      <ConfirmDialog
+        open={showRsvpChangeDialog}
+        title="Change RSVP Type"
+        description="Changing RSVP type will delete existing RSVP responses. Are you sure?"
+        confirmLabel="Continue"
+        cancelLabel="Cancel"
+        variant="warning"
+        onConfirm={handleConfirmRsvpChange}
+        onCancel={() => {
+          setShowRsvpChangeDialog(false)
+          setPendingRsvpChange(null)
         }}
       />
     </div>
