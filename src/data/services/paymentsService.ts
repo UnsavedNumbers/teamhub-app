@@ -238,7 +238,14 @@ export async function getFeeAssignmentsForUser(
             .from('fee_assignments')
             .select(
                 `*,
-                fee:fees(*),
+                fee:fees(
+                    *,
+                    season:seasons(
+                        id,
+                        name,
+                        team:teams(id, name)
+                    )
+                ),
                 athlete:athletes(id, first_name, last_name),
                 payments:payment_allocations(payment:payments(*))`
             )
@@ -254,7 +261,11 @@ export async function getFeeAssignmentsForUser(
 
         const assignments = (data ?? []).map((row: any) => ({
             ...(row as FakeFeeAssignment),
-            fee: row.fee as FakeFee,
+            fee: row.fee ? {
+                ...(row.fee as FakeFee),
+                season: row.fee.season || null,
+            } : undefined,
+            athlete: row.athlete || null,
             payments: ((row.payments as any[]) ?? [])
                 .map((p) => p.payment)
                 .filter(Boolean) as FakePayment[],

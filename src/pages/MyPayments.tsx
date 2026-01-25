@@ -80,17 +80,14 @@ export default function MyPayments() {
           description: fa.fee.description ?? null,
           due_date: fa.fee.due_date,
           fee_type: fa.fee.fee_type ?? '',
-          season: fa.fee.team_id ? { 
-            team: { 
-              id: fa.fee.team_id, 
-              name: getTeamName(fa.fee.team_id) 
-            } 
+          season: (fa.fee as any).season ? {
+            team: (fa.fee as any).season.team || null,
           } : null,
         } : null,
-        child: fa.child_id ? {
-          id: fa.child_id,
-          first_name: getChildFirstName(fa.child_id),
-          last_name: getChildLastName(fa.child_id),
+        child: (fa as any).athlete ? {
+          id: (fa as any).athlete.id,
+          first_name: (fa as any).athlete.first_name,
+          last_name: (fa as any).athlete.last_name,
         } : null,
       }))
       setAssignments(transformed)
@@ -98,36 +95,6 @@ export default function MyPayments() {
     setLoading(false)
   }
 
-  // Helper functions to get names (in real implementation, these come from joined data)
-  const getTeamName = (teamId: string): string => {
-    const teamNames: Record<string, string> = {
-      'team-u10-soccer-001': 'U10 Lightning',
-      'team-u12-soccer-002': 'U12 Thunder',
-      'team-u10-basketball-003': 'U10 Hawks',
-      'team-u12-basketball-004': 'U12 Eagles',
-    }
-    return teamNames[teamId] ?? 'Team'
-  }
-
-  const getChildFirstName = (childId: string): string => {
-    const names: Record<string, string> = {
-      'child-emma-001': 'Emma',
-      'child-liam-002': 'Liam',
-      'child-sophia-003': 'Sophia',
-      'child-jackson-004': 'Jackson',
-    }
-    return names[childId] ?? 'Child'
-  }
-
-  const getChildLastName = (childId: string): string => {
-    const names: Record<string, string> = {
-      'child-emma-001': 'Johnson',
-      'child-liam-002': 'Williams',
-      'child-sophia-003': 'Brown',
-      'child-jackson-004': 'Davis',
-    }
-    return names[childId] ?? ''
-  }
 
   const filteredAssignments = useMemo(() => {
     return assignments.filter((a) => {
