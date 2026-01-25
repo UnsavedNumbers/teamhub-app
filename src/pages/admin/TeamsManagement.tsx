@@ -269,7 +269,7 @@ export default function TeamsManagement() {
             <p className="text-slate-500 mb-6">
               You need to create at least one level before you can add teams.
             </p>
-            <Link to={`/admin/organization/structure/forms?type=level&returnUrl=${encodeURIComponent('/admin/organization/structure/teams')}`}>
+            <Link to={`${getLink('admin.organization.forms')}?type=level&returnUrl=${encodeURIComponent(getLink('admin.organization.teamsManagement'))}`}>
               <Button variant="primary">Add a Level</Button>
             </Link>
           </div>
@@ -285,7 +285,7 @@ export default function TeamsManagement() {
         title="Teams"
         subtitle="Manage your rostered competition units and their assignments."
         breadcrumbs={[
-          { label: 'Organizations', path: '/admin/organization/structure' },
+          { label: 'Organizations', path: getLink('admin.organization.structure') },
           { label: 'Teams' },
         ]}
       />

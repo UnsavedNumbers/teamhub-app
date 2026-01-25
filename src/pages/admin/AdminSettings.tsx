@@ -17,6 +17,7 @@ import {
 import { getUserPreferences, updateUserPreferences, type UserPreferences } from '../../data/services/preferencesService'
 import { supabase } from '../../lib/supabase'
 import { showSuccess, showError } from '../../utils/toast'
+import { getLink } from '../../utils/routes'
 
 // ============================================================================
 // Helper Functions
@@ -941,7 +942,7 @@ function WorkflowSettings({ preferences, setPreferences, onSave, saving, success
             })}
             options={[
               { value: '/admin', label: 'Dashboard' },
-              { value: '/admin/organization/structure/teams', label: 'Teams' },
+              { value: getLink('admin.organization.teamsManagement'), label: 'Teams' },
               { value: '/admin/athletes', label: 'Athletes' },
               { value: '/admin/families', label: 'Families' },
               { value: '/admin/attendance', label: 'Attendance' },

@@ -11,6 +11,7 @@ import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
+import { PortalDatePicker } from '../components/portal/DatePicker'
 import { useUserContext } from '../hooks/useUserContext'
 import { getAthleteById, updateAthlete } from '../data/services/familyService'
 import { updateAthleteSports } from '../data/services/athleteSportsService'
@@ -491,18 +492,12 @@ export default function EditAthletePortal() {
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-2 mb-4">
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
-                                Date of Birth *
-                            </label>
-                            <input
-                                type="date"
-                                value={formData.date_of_birth}
-                                onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
-                                className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white"
-                                required
-                            />
-                        </div>
+                        <PortalDatePicker
+                            label="Date of Birth"
+                            value={formData.date_of_birth}
+                            onChange={(value) => setFormData({ ...formData, date_of_birth: value })}
+                            required
+                        />
                         <div>
                             <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
                                 Gender

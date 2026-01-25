@@ -11,7 +11,7 @@ import { createLevel, updateLevel } from '../../data/services/levelsService'
 import { getTeams, createTeam, updateTeam } from '../../data/services/teamsService'
 import { getSeasons, createSeason, updateSeason } from '../../data/services/seasonsService'
 import type { Sport, Program, Level, Team, Season, GenderCategory, LevelType } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button, Input, Select, Checkbox } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, Input, Select, DatePicker, Checkbox } from '../../components/platformAdmin'
 import { FileUpload } from '../../components/common/FileUpload'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import HierarchyCreationPrompt from '../../components/admin/HierarchyCreationPrompt'
@@ -227,7 +227,7 @@ export default function OrganizationStructureForms() {
     if (window.history.length > 1) {
       navigate(-1) // navigate(-1) doesn't support replace option
     } else {
-      navigate('/admin/organization/structure', { replace: true })
+      navigate(getLink('admin.organization.structure'), { replace: true })
     }
   }, [returnUrl, editType, activeFormType, contextProgramId, contextSportId, contextLevelId, navigate])
 
@@ -262,7 +262,7 @@ export default function OrganizationStructureForms() {
     isNavigatingRef.current = true
 
     // Navigate to next form
-    navigate(`/admin/organization/structure/forms?${params.toString()}`, { replace: true })
+    navigate(`${getLink('admin.organization.forms')}?${params.toString()}`, { replace: true })
     
     // Clear navigation lock after a short delay (navigation is async)
     setTimeout(() => {
@@ -516,7 +516,7 @@ export default function OrganizationStructureForms() {
   // Clear success state on route/location changes (user navigates away from forms page)
   useEffect(() => {
     // Only clear if we're actually leaving the forms page
-    if (location.pathname !== '/admin/organization/structure/forms') {
+    if (location.pathname !== getLink('admin.organization.forms')) {
       if (isMountedRef.current) {
         setSuccessMessage(null)
         setPromptState(null)
@@ -816,7 +816,7 @@ export default function OrganizationStructureForms() {
           title={pageTitle}
           subtitle={pageSubtitle}
           breadcrumbs={[
-            { label: t('admin.structureForms.breadcrumbs.organizations'), path: '/admin/organization/structure' },
+            { label: t('admin.structureForms.breadcrumbs.organizations'), path: getLink('admin.organization.structure') },
             { label: activeFormLabel },
           ]}
         />
@@ -836,7 +836,7 @@ export default function OrganizationStructureForms() {
             title={pageTitle}
             subtitle={pageSubtitle}
             breadcrumbs={[
-              { label: t('admin.structureForms.breadcrumbs.organizations'), path: '/admin/organization/structure' },
+              { label: t('admin.structureForms.breadcrumbs.organizations'), path: getLink('admin.organization.structure') },
               { label: activeFormLabel },
             ]}
           />
@@ -844,7 +844,7 @@ export default function OrganizationStructureForms() {
             <div className="pa-text-muted pa-mb-4">
               {t('admin.structureForms.empty.noSportsForProgram')}
             </div>
-            <Link to="/admin/organization/structure/forms?type=sport">
+            <Link to={`${getLink('admin.organization.forms')}?type=sport`}>
               <Button>{t('admin.structureForms.empty.createSportFirst')}</Button>
             </Link>
           </Card>
@@ -863,7 +863,7 @@ export default function OrganizationStructureForms() {
             title={pageTitle}
             subtitle={pageSubtitle}
             breadcrumbs={[
-              { label: t('admin.structureForms.breadcrumbs.organizations'), path: '/admin/organization/structure' },
+              { label: t('admin.structureForms.breadcrumbs.organizations'), path: getLink('admin.organization.structure') },
               { label: activeFormLabel },
             ]}
           />
@@ -871,7 +871,7 @@ export default function OrganizationStructureForms() {
             <div className="pa-text-muted pa-mb-4">
               {t('admin.structureForms.empty.noProgramsForLevel')}
             </div>
-            <Link to="/admin/organization/structure/forms?type=program">
+            <Link to={`${getLink('admin.organization.forms')}?type=program`}>
               <Button>{t('admin.structureForms.empty.createProgramFirst')}</Button>
             </Link>
           </Card>
@@ -890,7 +890,7 @@ export default function OrganizationStructureForms() {
             title={pageTitle}
             subtitle={pageSubtitle}
             breadcrumbs={[
-              { label: t('admin.structureForms.breadcrumbs.organizations'), path: '/admin/organization/structure' },
+              { label: t('admin.structureForms.breadcrumbs.organizations'), path: getLink('admin.organization.structure') },
               { label: activeFormLabel },
             ]}
           />
@@ -898,7 +898,7 @@ export default function OrganizationStructureForms() {
             <div className="pa-text-muted pa-mb-4">
               {t('admin.structureForms.empty.noLevelsForTeam')}
             </div>
-            <Link to="/admin/organization/structure/forms?type=level">
+            <Link to={`${getLink('admin.organization.forms')}?type=level`}>
               <Button>{t('admin.structureForms.empty.createLevelFirst')}</Button>
             </Link>
           </Card>
@@ -916,7 +916,7 @@ export default function OrganizationStructureForms() {
           title={pageTitle}
           subtitle={pageSubtitle}
           breadcrumbs={[
-            { label: t('admin.structureForms.breadcrumbs.organizations'), path: '/admin/organization/structure' },
+            { label: t('admin.structureForms.breadcrumbs.organizations'), path: getLink('admin.organization.structure') },
             { label: activeFormLabel },
           ]}
         />
@@ -924,7 +924,7 @@ export default function OrganizationStructureForms() {
           <div className="pa-text-muted pa-mb-4">
             {t('admin.structureForms.empty.noSportsForProgram')}
           </div>
-          <Link to="/admin/organization/structure/forms?type=sport">
+          <Link to={`${getLink('admin.organization.forms')}?type=sport`}>
             <Button>{t('admin.structureForms.empty.createSportFirst')}</Button>
           </Link>
         </Card>
@@ -940,7 +940,7 @@ export default function OrganizationStructureForms() {
           title={pageTitle}
           subtitle={pageSubtitle}
           breadcrumbs={[
-            { label: t('admin.structureForms.breadcrumbs.organizations'), path: '/admin/organization/structure' },
+            { label: t('admin.structureForms.breadcrumbs.organizations'), path: getLink('admin.organization.structure') },
             { label: activeFormLabel },
           ]}
         />
@@ -948,7 +948,7 @@ export default function OrganizationStructureForms() {
           <div className="pa-text-muted pa-mb-4">
             {t('admin.structureForms.empty.noProgramsForLevel')}
           </div>
-          <Link to="/admin/organization/structure/forms?type=program">
+          <Link to={`${getLink('admin.organization.forms')}?type=program`}>
             <Button>{t('admin.structureForms.empty.createProgramFirst')}</Button>
           </Link>
         </Card>
@@ -964,7 +964,7 @@ export default function OrganizationStructureForms() {
           title={pageTitle}
           subtitle={pageSubtitle}
           breadcrumbs={[
-            { label: t('admin.structureForms.breadcrumbs.organizations'), path: '/admin/organization/structure' },
+            { label: t('admin.structureForms.breadcrumbs.organizations'), path: getLink('admin.organization.structure') },
             { label: activeFormLabel },
           ]}
         />
@@ -972,7 +972,7 @@ export default function OrganizationStructureForms() {
           <div className="pa-text-muted pa-mb-4">
             {t('admin.structureForms.empty.noLevelsForTeam')}
           </div>
-          <Link to="/admin/organization/structure/forms?type=level">
+          <Link to={`${getLink('admin.organization.forms')}?type=level`}>
             <Button>{t('admin.structureForms.empty.createLevelFirst')}</Button>
           </Link>
         </Card>
@@ -987,7 +987,7 @@ export default function OrganizationStructureForms() {
         title={pageTitle}
         subtitle={pageSubtitle}
         breadcrumbs={[
-          { label: t('admin.structureForms.breadcrumbs.organizations'), path: '/admin/organization/structure' },
+          { label: t('admin.structureForms.breadcrumbs.organizations'), path: getLink('admin.organization.structure') },
           { label: activeFormLabel },
         ]}
       />
@@ -1023,19 +1023,19 @@ export default function OrganizationStructureForms() {
         <div className="pa-form-container">
           <Card title={t('admin.structureForms.selector.title')} className="pa-mb-6">
             <div className="pa-flex pa-flex-col pa-gap-3">
-              <Link to="/admin/organization/structure/forms?type=sport">
+              <Link to={`${getLink('admin.organization.forms')}?type=sport`}>
                 <Button>{t('admin.structureForms.actions.addItem', { item: formLabels.sport })}</Button>
               </Link>
-              <Link to="/admin/organization/structure/forms?type=program">
+              <Link to={`${getLink('admin.organization.forms')}?type=program`}>
                 <Button variant="primary">{t('admin.structureForms.actions.addItem', { item: formLabels.program })}</Button>
               </Link>
-              <Link to="/admin/organization/structure/forms?type=level">
+              <Link to={`${getLink('admin.organization.forms')}?type=level`}>
                 <Button variant="primary">{t('admin.structureForms.actions.addItem', { item: formLabels.level })}</Button>
               </Link>
-              <Link to="/admin/organization/structure/forms?type=team">
+              <Link to={`${getLink('admin.organization.forms')}?type=team`}>
                 <Button variant="primary">{t('admin.structureForms.actions.addItem', { item: formLabels.team })}</Button>
               </Link>
-              <Link to="/admin/organization/structure/forms?type=season">
+              <Link to={`${getLink('admin.organization.forms')}?type=season`}>
                 <Button variant="primary">{t('admin.structureForms.actions.addItem', { item: formLabels.season })}</Button>
               </Link>
             </div>
@@ -1735,17 +1735,52 @@ export default function OrganizationStructureForms() {
                       setSuccessMessage(t('admin.structureForms.messages.updated', { item: formLabels.team }))
                     }
                   } else {
+                    // Validate level exists before creating team
+                    if (teamForm.levelId) {
+                      const levelExists = levels.some(l => l.id === teamForm.levelId)
+                      if (!levelExists) {
+                        setActionError('The selected level is no longer available. Please select a different level.')
+                        setSubmitting((prev) => ({ ...prev, team: false }))
+                        return
+                      }
+                    }
+
+                    // Validate season exists in the seasons list before creating team
+                    const seasonExists = teamForm.seasonId 
+                      ? seasons.some(s => s.id === teamForm.seasonId)
+                      : false
+                    
+                    if (teamForm.seasonId && !seasonExists) {
+                      setActionError('The selected season is no longer available. Please select a different season.')
+                      setSubmitting((prev) => ({ ...prev, team: false }))
+                      return
+                    }
+
+                    // Ensure seasonId is a valid non-empty string or undefined
+                    const seasonId = teamForm.seasonId && teamForm.seasonId.trim() 
+                      ? teamForm.seasonId.trim() 
+                      : undefined
+
+                    // Ensure level_id is a valid UUID or null (not empty string)
+                    const levelId = teamForm.levelId && teamForm.levelId.trim()
+                      ? teamForm.levelId.trim()
+                      : null
+
                     const result = await createTeam(context, {
                       org_id: currentOrganization.id,
                       name: teamForm.name.trim(),
-                      level_id: teamForm.levelId,
+                      level_id: levelId,
                       program_id: selectedLevel?.program_id ?? null,
                       sport_id: selectedProgram?.sport_id ?? null,
                       is_active: teamForm.isActive,
-                      season_id: teamForm.seasonId,
+                      season_id: seasonId,
                     })
                     if (result.error) {
-                      setActionError(t('admin.structureForms.errors.saveFailed', { item: formLabels.team }))
+                      // Log the actual error for debugging
+                      console.error('[OrganizationStructureForms] Error creating team:', result.error)
+                      // Show more specific error if available
+                      const errorMessage = result.error.message || t('admin.structureForms.errors.saveFailed', { item: formLabels.team })
+                      setActionError(errorMessage)
                     } else if (result.data) {
                       setTeams((prev) => [result.data as Team, ...prev])
                       setTeamForm((prev) => ({
@@ -1793,18 +1828,34 @@ export default function OrganizationStructureForms() {
             try {
               const seasonsResult = await getSeasons(context)
               if (!seasonsResult.error && seasonsResult.data) {
-                setSeasons(Array.isArray(seasonsResult.data) ? seasonsResult.data : [])
-                // Auto-select the newly created season
+                const updatedSeasons = Array.isArray(seasonsResult.data) ? seasonsResult.data : []
+                setSeasons(updatedSeasons)
+                
+                // Verify the new season is in the list before setting it
+                const seasonInList = updatedSeasons.find(s => s.id === newSeason.id)
+                if (seasonInList) {
+                  // Auto-select the newly created season
+                  setTeamForm((prev) => ({ ...prev, seasonId: newSeason.id }))
+                  // Clear any validation errors
+                  setTouched((prev) => {
+                    const updated = { ...prev }
+                    delete updated['team.season']
+                    return updated
+                  })
+                } else {
+                  console.warn('[OrganizationStructureForms] Newly created season not found in refreshed list')
+                  // Still set it - it might be a timing issue
+                  setTeamForm((prev) => ({ ...prev, seasonId: newSeason.id }))
+                }
+              } else {
+                console.error('[OrganizationStructureForms] Error refreshing seasons:', seasonsResult.error)
+                // Still set the seasonId even if refresh failed - the season was created
                 setTeamForm((prev) => ({ ...prev, seasonId: newSeason.id }))
-                // Clear any validation errors
-                setTouched((prev) => {
-                  const updated = { ...prev }
-                  delete updated['team.season']
-                  return updated
-                })
               }
             } catch (err) {
               console.error('[OrganizationStructureForms] Error refreshing seasons:', err)
+              // Still set the seasonId even if refresh failed - the season was created
+              setTeamForm((prev) => ({ ...prev, seasonId: newSeason.id }))
             } finally {
               setRefreshingSeasons(false)
             }
@@ -1830,21 +1881,18 @@ export default function OrganizationStructureForms() {
             />
             
             <div className="pa-grid pa-grid-2 pa-gap-4">
-              <Input
+              <DatePicker
                 label={t('admin.structureForms.fields.seasonStart.label')}
-                type="date"
                 value={seasonForm.startDate}
-                onChange={(e) => setSeasonForm((prev) => ({ ...prev, startDate: e.target.value }))}
-                onBlur={() => markTouched('season.startDate')}
+                onChange={(value) => setSeasonForm((prev) => ({ ...prev, startDate: value }))}
                 required
                 error={seasonStartError}
               />
-              <Input
+              <DatePicker
                 label={t('admin.structureForms.fields.seasonEnd.label')}
-                type="date"
                 value={seasonForm.endDate}
-                onChange={(e) => setSeasonForm((prev) => ({ ...prev, endDate: e.target.value }))}
-                onBlur={() => markTouched('season.endDate')}
+                onChange={(value) => setSeasonForm((prev) => ({ ...prev, endDate: value }))}
+                minValue={seasonForm.startDate}
                 required
                 error={seasonEndError || seasonRangeError}
               />

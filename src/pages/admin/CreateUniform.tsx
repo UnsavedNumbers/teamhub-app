@@ -13,6 +13,7 @@ import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { AdminPageHeader, Card, Button } from '../../components/platformAdmin'
 import { SportUniformForm } from '../../components/uniforms/SportUniformForm'
 import type { CreateUniformKitDTO } from '../../types/uniforms'
+import { getLink } from '../../utils/routes'
 
 export default function CreateUniform() {
   const { context, isReady } = useUserContext()
@@ -78,7 +79,7 @@ export default function CreateUniform() {
           <p className="text-slate-500 mb-6">
             {t('admin.uniforms.prerequisite.noSportsDescription')}
           </p>
-          <Link to={`/admin/organization/structure/forms?type=sport&returnUrl=${returnUrl}`}>
+          <Link to={`${getLink('admin.organization.forms')}?type=sport&returnUrl=${returnUrl}`}>
             <Button variant="primary">{t('admin.uniforms.prerequisite.addSport')}</Button>
           </Link>
         </div>

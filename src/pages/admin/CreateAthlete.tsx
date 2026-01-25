@@ -11,7 +11,7 @@
 
 import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AdminPageHeader, Card, Input, Button, Select, ErrorState } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Input, Button, Select, DatePicker, ErrorState } from '../../components/platformAdmin'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { useUserContext } from '../../hooks/useUserContext'
 import { createAthleteWithGuardians } from '../../data/services/familyService'
@@ -307,11 +307,10 @@ export default function CreateAthlete() {
                             </div>
 
                             <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
-                                <Input
+                                <DatePicker
                                     label="Date of Birth"
-                                    type="date"
                                     value={formData.date_of_birth}
-                                    onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+                                    onChange={(value) => setFormData({ ...formData, date_of_birth: value })}
                                     required
                                 />
                                 <Select

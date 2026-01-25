@@ -12,6 +12,7 @@ import {
   Button, 
   Input, 
   Select,
+  DatePicker,
   Checkbox
 } from '../../components/platformAdmin'
 import { 
@@ -485,7 +486,7 @@ export default function EditEvent() {
             {showRecurring && (
               <div className="pa-space-y-4">
                 <Controller name="recurring.frequency" control={control} render={({ field }) => <Select {...field} label="Frequency" options={[{value:'weekly', label:'Weekly'}]} />} />
-                <Controller name="recurring.end_date" control={control} render={({ field }) => <Input {...field} label="Recurs Until" type="date" />} />
+                <Controller name="recurring.end_date" control={control} render={({ field }) => <DatePicker {...field} label="Recurs Until" />} />
               </div>
             )}
           </div>

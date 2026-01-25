@@ -10,7 +10,7 @@ import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
 import { createSeason } from '../../data/services/seasonsService'
 import type { Season } from '../../data/types/organization'
-import { Button, Input, Checkbox } from '../platformAdmin'
+import { Button, Input, DatePicker, Checkbox } from '../platformAdmin'
 
 interface CreateSeasonModalProps {
   open: boolean
@@ -169,27 +169,24 @@ export function CreateSeasonModal({
               />
 
               <div className="pa-grid pa-grid-2 pa-gap-4">
-                <Input
+                <DatePicker
                   label={t('admin.structureForms.fields.seasonStart.label')}
-                  type="date"
                   value={startDate}
-                  onChange={(e) => {
-                    setStartDate(e.target.value)
+                  onChange={(value) => {
+                    setStartDate(value)
                     setError(null)
                   }}
-                  onBlur={() => markTouched('startDate')}
                   required
                   error={startError}
                 />
-                <Input
+                <DatePicker
                   label={t('admin.structureForms.fields.seasonEnd.label')}
-                  type="date"
                   value={endDate}
-                  onChange={(e) => {
-                    setEndDate(e.target.value)
+                  onChange={(value) => {
+                    setEndDate(value)
                     setError(null)
                   }}
-                  onBlur={() => markTouched('endDate')}
+                  minValue={startDate}
                   required
                   error={endError || rangeError}
                 />

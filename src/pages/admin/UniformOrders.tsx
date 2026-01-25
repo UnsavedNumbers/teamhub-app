@@ -14,6 +14,7 @@ import {
   EmptyState,
   type ColumnConfig 
 } from '../../components/platformAdmin'
+import { getLink } from '../../utils/routes'
 
 export default function UniformOrders() {
   const [submissions, setSubmissions] = useState<UniformSubmission[]>([])
@@ -127,7 +128,7 @@ export default function UniformOrders() {
           <p className="text-slate-500 mb-6">
             {t('admin.uniforms.prerequisite.noSportsDescription')}
           </p>
-          <Link to={`/admin/organization/structure/forms?type=sport&returnUrl=${returnUrl}`}>
+          <Link to={`${getLink('admin.organization.forms')}?type=sport&returnUrl=${returnUrl}`}>
             <Button variant="primary">{t('admin.uniforms.prerequisite.addSport')}</Button>
           </Link>
         </div>
