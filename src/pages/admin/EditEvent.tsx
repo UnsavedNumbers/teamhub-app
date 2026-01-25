@@ -18,6 +18,7 @@ import {
   Input, 
   Select,
   DatePicker,
+  TimePicker,
   Checkbox
 } from '../../components/platformAdmin'
 import { ConfirmDialog } from '../../components/platformAdmin/ConfirmDialog'
@@ -619,10 +620,75 @@ export default function EditEvent() {
             </div>
 
             {/* SECTION 2: DATE + TIME */}
-            <div className="pa-grid pa-grid-3 pa-mb-4 pa-gap-4">
-              <Controller name="start_time" control={control} rules={{ required: 'Start time is required' }} render={({ field }) => <Input {...field} label="Start Time" type="datetime-local" required />} />
-              <Controller name="end_time" control={control} render={({ field }) => <Input {...field} label="End Time" type="datetime-local" />} />
-              <Controller name="arrival_time" control={control} render={({ field }) => <Input {...field} label="Arrival Time" type="datetime-local" />} />
+            <div className="pa-mb-4">
+              <div className="pa-form-grid pa-form-grid-4 pa-form-grid-tablet-2col">
+                <Controller 
+                  name="start_time" 
+                  control={control} 
+                  rules={{ required: 'Start date and time are required' }} 
+                  render={({ field }) => (
+                    <DatePicker 
+                      label="Event Date" 
+                      value={field.value ? field.value.split('T')[0] : ''}
+                      onChange={(date) => {
+                        const time = field.value?.split('T')[1] || '09:00'
+                        field.onChange(`${date}T${time}`)
+                      }}
+                      required
+                      error={errors.start_time?.message}
+                    />
+                  )} 
+                />
+                <div className="pa-max-w-xs">
+                  <Controller 
+                    name="start_time" 
+                    control={control} 
+                    render={({ field }) => (
+                      <TimePicker 
+                        label="Start Time" 
+                        value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                        onChange={(time) => {
+                          const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
+                          field.onChange(`${date}T${time}`)
+                        }}
+                        required
+                      />
+                    )} 
+                  />
+                </div>
+                <div className="pa-max-w-xs">
+                  <Controller 
+                    name="end_time" 
+                    control={control} 
+                    render={({ field }) => (
+                      <TimePicker 
+                        label="End Time" 
+                        value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                        onChange={(time) => {
+                          const startDate = watch('start_time')?.split('T')[0] || new Date().toISOString().split('T')[0]
+                          field.onChange(time ? `${startDate}T${time}` : '')
+                        }}
+                      />
+                    )} 
+                  />
+                </div>
+                <div className="pa-max-w-xs">
+                  <Controller 
+                    name="arrival_time" 
+                    control={control} 
+                    render={({ field }) => (
+                      <TimePicker 
+                        label="Arrival Time" 
+                        value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                        onChange={(time) => {
+                          const startDate = watch('start_time')?.split('T')[0] || new Date().toISOString().split('T')[0]
+                          field.onChange(time ? `${startDate}T${time}` : '')
+                        }}
+                      />
+                    )} 
+                  />
+                </div>
+              </div>
             </div>
 
           {/* SECTION 3: LOCATION */}

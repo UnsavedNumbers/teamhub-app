@@ -12,7 +12,7 @@ import { getSports } from '../../data/services/sportsService'
 import { getSeasons } from '../../data/services/seasonsService'
 import { getTeams } from '../../data/services/teamsService'
 import { getUniformConfigForSport } from '../../config/uniformFieldConfigs'
-import { Input, Select, Button, Card } from '../platformAdmin'
+import { Input, Select, Button, Card, DatePicker, TimePicker } from '../platformAdmin'
 import { SportFieldRenderer } from './SportFieldRenderer'
 import { UniformPartsSelector } from './UniformPartsSelector'
 import type { CreateUniformKitDTO } from '../../types/uniforms'
@@ -447,12 +447,27 @@ export function SportUniformForm({
               name="deadline_at"
               control={control}
               render={({ field }) => (
-                <Input
-                  label="Order Deadline (Optional)"
-                  type="datetime-local"
-                  {...field}
-                  value={field.value ?? ''}
-                />
+                <div>
+                  <label className="pa-label">Order Deadline (Optional)</label>
+                  <div className="pa-form-grid pa-form-grid-2 pa-form-grid-tablet-2col">
+                    <DatePicker
+                      value={field.value ? field.value.split('T')[0] : ''}
+                      onChange={(date) => {
+                        const time = field.value?.split('T')[1] || '23:59'
+                        field.onChange(date ? `${date}T${time}` : '')
+                      }}
+                    />
+                    <div className="pa-max-w-xs">
+                      <TimePicker
+                        value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                        onChange={(time) => {
+                          const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
+                          field.onChange(time ? `${date}T${time}` : '')
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
               )}
             />
           </div>
