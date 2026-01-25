@@ -228,7 +228,7 @@ html.dark .pa-root a:hover {
 }
 
 html.dark .pa-root a:focus-visible {
-    outline-color: rgba(96, 165, 250, 0.5);
+    outline-color: var(--pa-theme-focus-ring, rgba(96, 165, 250, 0.5));
 }
 
 /* =====================================================================
@@ -1009,6 +1009,9 @@ html.dark .pa-user-avatar {
     cursor: pointer;
     transition: all 300ms ease;
     text-decoration: none;
+    /* Ensure variants can set their own colors */
+    background: transparent;
+    color: inherit;
 }
 
 .pa-btn:focus-visible {
@@ -1021,6 +1024,14 @@ html.dark .pa-user-avatar {
     cursor: not-allowed;
 }
 
+html.dark .pa-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    background: var(--pa-surface-panel) !important;
+    color: var(--pa-text-muted) !important;
+    border-color: var(--pa-border-subtle) !important;
+}
+
 /* Primary (Dark with blue hover) */
 .pa-btn--primary {
     background: var(--pa-n900);
@@ -1028,23 +1039,32 @@ html.dark .pa-user-avatar {
 }
 
 .pa-btn--primary:hover:not(:disabled) {
-    background: #5468FF;
-}
-
-.dark .pa-btn--primary,
-.pa-root.dark .pa-btn--primary {
-    background: var(--pa-white);
-    color: var(--pa-n900);
-}
-
-.dark .pa-btn--primary:hover:not(:disabled),
-.pa-root.dark .pa-btn--primary:hover:not(:disabled) {
-    background: #5468FF;
-    color: var(--pa-white);
+    background: var(--pa-theme-action-primary, #5468FF);
 }
 
 .pa-btn--primary:active:not(:disabled) {
     transform: translateY(1px);
+}
+
+/* Dark Mode - Primary buttons use theme color, high contrast */
+html.dark .pa-btn--primary {
+    background: var(--pa-theme-action-primary, #137fec);
+    color: var(--pa-theme-text-on-action, var(--pa-white));
+}
+
+html.dark .pa-btn--primary:hover:not(:disabled) {
+    background: var(--pa-theme-action-hover, #1a8fff);
+    color: var(--pa-theme-text-on-action, var(--pa-white));
+}
+
+html.dark .pa-btn--primary:active:not(:disabled) {
+    background: var(--pa-theme-action-active, #0d6bc2);
+    transform: translateY(1px);
+}
+
+html.dark .pa-btn--primary:focus-visible {
+    outline: 2px solid var(--pa-theme-focus-ring, rgba(19, 127, 236, 0.5));
+    outline-offset: 2px;
 }
 
 /* Secondary (solid gray) */
@@ -1058,15 +1078,94 @@ html.dark .pa-user-avatar {
     background: var(--pa-n700);
 }
 
+/* Dark Mode - Secondary buttons are subtle, lower contrast */
+html.dark .pa-btn--secondary {
+    background: var(--pa-surface-panel);
+    color: var(--pa-text-secondary);
+    border: 1px solid var(--pa-border-default);
+}
+
+html.dark .pa-btn--secondary:hover:not(:disabled) {
+    background: var(--pa-border-default);
+    color: var(--pa-text-primary);
+    border-color: var(--pa-border-emphasis);
+}
+
+html.dark .pa-btn--secondary:active:not(:disabled) {
+    background: var(--pa-border-emphasis);
+    color: var(--pa-text-primary);
+    transform: translateY(1px);
+}
+
+html.dark .pa-btn--secondary:focus-visible {
+    outline: 2px solid var(--pa-border-emphasis);
+    outline-offset: 2px;
+}
+
+/* Ensure secondary buttons have visible background in dark mode */
+html.dark .pa-btn--secondary {
+    background-color: var(--pa-surface-panel) !important;
+    color: var(--pa-text-secondary) !important;
+}
+
+/* Ensure all button variants maintain their distinct appearances in dark mode */
+html.dark .pa-btn--primary,
+html.dark .pa-btn--blue {
+    /* Solid fill buttons with high contrast text */
+    background-color: var(--pa-theme-action-primary, #137fec) !important;
+    color: var(--pa-theme-text-on-action, #ffffff) !important;
+}
+
+html.dark .pa-btn--secondary {
+    /* Subtle surface with medium contrast text */
+    background-color: var(--pa-surface-panel) !important;
+    color: var(--pa-text-secondary) !important;
+}
+
+html.dark .pa-btn--ghost {
+    /* Transparent with secondary text */
+    background-color: transparent !important;
+    color: var(--pa-text-secondary) !important;
+}
+
+html.dark .pa-btn--danger {
+    /* Muted by default */
+    background-color: transparent !important;
+    color: var(--pa-text-muted) !important;
+}
+
 /* Blue (Google action blue for secondary actions) */
 .pa-btn--blue {
-    background: #5468FF;
+    background: var(--pa-theme-action-primary, #5468FF);
     color: var(--pa-white);
     border: none;
 }
 
 .pa-btn--blue:hover:not(:disabled) {
-    background: #4054E8;
+    background: var(--pa-theme-action-hover, #4054E8);
+}
+
+/* Dark Mode - Blue buttons same as primary but visually distinct */
+html.dark .pa-btn--blue {
+    background-color: var(--pa-theme-action-primary, #137fec) !important;
+    color: var(--pa-theme-text-on-action, var(--pa-white)) !important;
+    border: none !important;
+}
+
+html.dark .pa-btn--blue:hover:not(:disabled) {
+    background-color: var(--pa-theme-action-hover, #1a8fff) !important;
+    color: var(--pa-theme-text-on-action, var(--pa-white)) !important;
+}
+
+html.dark .pa-btn--blue:active:not(:disabled) {
+    background-color: var(--pa-theme-action-active, #0d6bc2) !important;
+    color: var(--pa-theme-text-on-action, var(--pa-white)) !important;
+    transform: translateY(1px);
+}
+
+html.dark .pa-btn--blue:focus-visible {
+    outline: 2px solid var(--pa-theme-focus-ring, rgba(19, 127, 236, 0.5));
+    outline-offset: 2px;
 }
 
 /* Ghost */
@@ -1079,6 +1178,29 @@ html.dark .pa-user-avatar {
     background: var(--pa-n50);
 }
 
+/* Dark Mode - Ghost buttons minimal visual weight */
+html.dark .pa-btn--ghost {
+    background-color: transparent !important;
+    color: var(--pa-text-secondary) !important;
+    border: none !important;
+}
+
+html.dark .pa-btn--ghost:hover:not(:disabled) {
+    background-color: var(--pa-surface-panel) !important;
+    color: var(--pa-text-primary) !important;
+}
+
+html.dark .pa-btn--ghost:active:not(:disabled) {
+    background-color: var(--pa-border-default) !important;
+    color: var(--pa-text-primary) !important;
+    transform: translateY(1px);
+}
+
+html.dark .pa-btn--ghost:focus-visible {
+    outline: 2px solid var(--pa-border-emphasis);
+    outline-offset: 2px;
+}
+
 /* Danger (Dark gray) */
 .pa-btn--danger {
     background: var(--pa-n800);
@@ -1087,6 +1209,41 @@ html.dark .pa-user-avatar {
 
 .pa-btn--danger:hover:not(:disabled) {
     background: var(--pa-n900);
+}
+
+/* Dark Mode - Danger buttons muted by default, emphasized on hover */
+html.dark .pa-btn--danger {
+    background-color: transparent !important;
+    color: var(--pa-text-muted) !important;
+    border: 1px solid var(--pa-border-subtle) !important;
+}
+
+html.dark .pa-btn--danger:hover:not(:disabled) {
+    background-color: rgba(220, 38, 38, 0.12) !important;
+    color: #f87171 !important;
+    border-color: rgba(220, 38, 38, 0.25) !important;
+}
+
+html.dark .pa-btn--danger:active:not(:disabled) {
+    background-color: rgba(220, 38, 38, 0.18) !important;
+    color: #f87171 !important;
+    border-color: rgba(220, 38, 38, 0.35) !important;
+    transform: translateY(1px);
+}
+
+html.dark .pa-btn--danger:focus-visible {
+    outline: 2px solid rgba(220, 38, 38, 0.4);
+    outline-offset: 2px;
+}
+
+/* Ensure danger button icons are not higher contrast than text */
+html.dark .pa-btn--danger .material-symbols-outlined {
+    color: inherit;
+    opacity: 0.9;
+}
+
+html.dark .pa-btn--danger:hover:not(:disabled) .material-symbols-outlined {
+    opacity: 1;
 }
 
 /* Sizes */
@@ -1130,7 +1287,8 @@ html.dark .pa-card {
 
 html.dark .pa-card:hover {
     box-shadow: var(--pa-shadow-2);
-    border-color: var(--pa-border-default);
+    border-color: var(--pa-border-subtle);
+    background: var(--pa-surface);
 }
 
 .pa-card-header {
@@ -1153,6 +1311,156 @@ html.dark .pa-card-title {
 .pa-card-actions {
     display: flex;
     gap: var(--pa-space-2);
+    align-items: center;
+}
+
+/* Dark Mode - Card actions maintain visual hierarchy */
+html.dark .pa-card-actions .pa-btn--primary {
+    /* Primary actions stand out */
+}
+
+html.dark .pa-card-actions .pa-btn--secondary,
+html.dark .pa-card-actions .pa-btn--ghost {
+    /* Secondary actions are visually quieter */
+}
+
+html.dark .pa-card-actions .pa-btn--danger {
+    /* Destructive actions are muted, placed last */
+}
+
+/* =====================================================================
+   13.1) STACKED LISTS (CARDS WITH ROWS)
+   ===================================================================== */
+
+/* Stacked list container - typically a card containing rows */
+.pa-stacked-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+/* Stacked list row - each row is part of a single container */
+.pa-stacked-list-row {
+    padding: var(--pa-space-4) var(--pa-space-5);
+    background: var(--pa-surface);
+    border-bottom: 1px solid var(--pa-n100);
+    transition: background-color var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.pa-stacked-list-row:last-child {
+    border-bottom: none;
+}
+
+.pa-stacked-list-row:hover {
+    background: var(--pa-n50);
+}
+
+/* Dark Mode - Stacked list rows use surface shifts, not borders */
+html.dark .pa-stacked-list-row {
+    background: var(--pa-surface);
+    border-bottom: 1px solid var(--pa-border-subtle);
+}
+
+html.dark .pa-stacked-list-row:hover {
+    background: var(--pa-surface-panel);
+    border-bottom-color: var(--pa-border-subtle);
+}
+
+html.dark .pa-stacked-list-row:last-child {
+    border-bottom: none;
+}
+
+/* Active/selected row state */
+.pa-stacked-list-row--active {
+    background: var(--pa-n50);
+}
+
+html.dark .pa-stacked-list-row--active {
+    background: var(--pa-surface-panel);
+}
+
+html.dark .pa-stacked-list-row--active:hover {
+    background: var(--pa-border-default);
+}
+
+/* Stacked list row content */
+.pa-stacked-list-row-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--pa-space-4);
+}
+
+.pa-stacked-list-row-title {
+    font: var(--pa-text-h3);
+    color: var(--pa-n900);
+    margin: 0;
+}
+
+html.dark .pa-stacked-list-row-title {
+    color: var(--pa-text-primary);
+}
+
+.pa-stacked-list-row-meta {
+    font: var(--pa-text-body-s);
+    color: var(--pa-n500);
+    margin-top: var(--pa-space-1);
+}
+
+html.dark .pa-stacked-list-row-meta {
+    color: var(--pa-text-muted);
+}
+
+.pa-stacked-list-row-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+    flex-shrink: 0;
+}
+
+/* Ensure no white backgrounds in dark mode for nested elements */
+html.dark .pa-card * {
+    /* Remove any white backgrounds that might be set inline */
+}
+
+html.dark .pa-card input[type="color"],
+html.dark .pa-card input[type="text"],
+html.dark .pa-card input[type="email"],
+html.dark .pa-card input[type="number"],
+html.dark .pa-card textarea,
+html.dark .pa-card select {
+    background: var(--pa-surface-panel);
+    border-color: var(--pa-border-default);
+    color: var(--pa-text-primary);
+}
+
+/* Opacity utilities for hover states */
+.pa-opacity-0 {
+    opacity: 0;
+}
+
+.pa-opacity-100 {
+    opacity: 1;
+}
+
+.group:hover .pa-opacity-0 {
+    opacity: 1;
+}
+
+/* Ensure metadata in titles is visually secondary */
+.pa-card-title {
+    display: flex;
+    align-items: baseline;
+    gap: var(--pa-space-2);
+}
+
+.pa-card-title .pa-text-muted {
+    font-size: 0.85em;
+    font-weight: 500;
+}
+
+html.dark .pa-card-title .pa-text-muted {
+    color: var(--pa-text-muted);
 }
 
 /* KPI Card */
@@ -1179,7 +1487,8 @@ html.dark .pa-kpi-card {
 
 html.dark .pa-kpi-card:hover {
     box-shadow: var(--pa-shadow-2);
-    border-color: var(--pa-border-emphasis);
+    border-color: var(--pa-border-subtle);
+    background: var(--pa-surface);
 }
 
 .pa-kpi-label {
@@ -1997,6 +2306,7 @@ html.dark .pa-table-card {
 
 html.dark .pa-table-card:hover {
     box-shadow: var(--pa-shadow-2);
+    border-color: var(--pa-border-subtle);
 }
 
 /* Optional card header above table */
@@ -2031,7 +2341,8 @@ html.dark .pa-table-card-header {
 }
 
 html.dark .pa-table thead {
-    background: var(--pa-surface-subtle);
+    background: var(--pa-surface);
+    border-bottom: 1px solid var(--pa-border-subtle);
 }
 
 .pa-table thead tr {
@@ -2115,8 +2426,9 @@ html.dark .pa-table th {
     position: relative;
 }
 
+/* Dark Mode - Rows slightly lighter than card for hierarchy */
 html.dark .pa-table tbody tr {
-    background: var(--pa-surface);
+    background: var(--pa-surface-panel);
 }
 
 /* Compact mode */
@@ -2130,7 +2442,7 @@ html.dark .pa-table tbody tr {
 }
 
 html.dark .pa-table--zebra tbody tr:nth-child(even) {
-    background: var(--pa-surface-subtle);
+    background: var(--pa-surface);
 }
 
 /* Hover state */
@@ -2138,8 +2450,9 @@ html.dark .pa-table--zebra tbody tr:nth-child(even) {
     background: var(--pa-n50);
 }
 
+/* Dark Mode - Hover clearly visible, lighter than default row */
 html.dark .pa-table tbody tr:hover {
-    background: var(--pa-surface-panel);
+    background: var(--pa-border-default);
 }
 
 .pa-table--zebra tbody tr:nth-child(even):hover {
@@ -2147,7 +2460,7 @@ html.dark .pa-table tbody tr:hover {
 }
 
 html.dark .pa-table--zebra tbody tr:nth-child(even):hover {
-    background: var(--pa-surface-panel);
+    background: var(--pa-border-default);
 }
 
 /* Clickable rows */
@@ -2160,7 +2473,7 @@ html.dark .pa-table--zebra tbody tr:nth-child(even):hover {
 }
 
 html.dark .pa-table tbody tr.pa-clickable:active {
-    background: var(--pa-border-default);
+    background: var(--pa-border-emphasis);
 }
 
 /* Selected row (Gray tint + Black accent) */
@@ -2169,7 +2482,7 @@ html.dark .pa-table tbody tr.pa-clickable:active {
 }
 
 html.dark .pa-table tbody tr.pa-selected {
-    background: var(--pa-surface-panel);
+    background: var(--pa-border-default);
 }
 
 .pa-table tbody tr.pa-selected::before {
@@ -2228,14 +2541,27 @@ html.dark .pa-table td {
     color: var(--pa-n900);
 }
 
+html.dark .pa-table td.pa-cell-primary {
+    color: var(--pa-text-primary);
+}
+
 .pa-table td.pa-cell-primary a {
     color: var(--pa-n900);
     text-decoration: none;
     transition: color var(--pa-motion-normal) var(--pa-ease-out);
 }
 
+html.dark .pa-table td.pa-cell-primary a {
+    color: var(--pa-text-primary);
+}
+
 .pa-table td.pa-cell-primary a:hover {
-    color: var(--pa-blue);
+    color: var(--pa-theme-action-primary, #5468FF);
+    text-decoration: underline;
+}
+
+html.dark .pa-table td.pa-cell-primary a:hover {
+    color: var(--pa-theme-text-accent, #60a5fa);
     text-decoration: underline;
 }
 
@@ -2244,10 +2570,18 @@ html.dark .pa-table td {
     color: var(--pa-n700);
 }
 
+html.dark .pa-table td.pa-cell-secondary {
+    color: var(--pa-text-secondary);
+}
+
 /* Metadata / muted text */
 .pa-table td.pa-cell-meta {
     font-size: 12px;
     color: var(--pa-n500);
+}
+
+html.dark .pa-table td.pa-cell-meta {
+    color: var(--pa-text-muted);
 }
 
 /* Numeric columns - right aligned */
