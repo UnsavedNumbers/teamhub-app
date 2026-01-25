@@ -64,15 +64,15 @@ export function useFamilyParams() {
 }
 
 /**
- * Extract child ID from route parameters
+ * Extract athlete ID from route parameters
  * Route: /admin/athletes/:id (if needed)
  */
-export function useChildParams() {
+export function useAthleteParams() {
   const { id } = useParams<{ id: string }>()
   if (!id) {
-    throw new Error('Child ID is required in route parameters')
+    throw new Error('Athlete ID is required in route parameters')
   }
-  return { childId: id }
+  return { athleteId: id }
 }
 
 /**

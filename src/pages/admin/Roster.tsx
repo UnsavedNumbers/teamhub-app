@@ -51,7 +51,7 @@ export default function Roster() {
     const displayRoster: Membership[] = data.map(member => ({
       id: member.id,
       child_id: member.child_id,
-      child_name: getChildName(member.child_id),
+      child_name: getAthleteName(member.child_id),
       family_name: getFamilyName(member.child_id),
     }))
 
@@ -85,7 +85,7 @@ export default function Roster() {
   }, [teamId, isReady, fetchSeasons])
 
   // Helper functions to get names (in real implementation, comes from joined data)
-  const getChildName = (childId: string): string => {
+  const getAthleteName = (childId: string): string => {
     const names: Record<string, string> = {
       'child-emma-001': 'Emma Johnson',
       'child-liam-002': 'Liam Williams',

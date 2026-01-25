@@ -57,7 +57,7 @@ export default function Payments() {
       // Transform to display format
       const displayPayments: PaymentDisplay[] = data.map(assignment => ({
         id: assignment.id,
-        child_name: assignment.child_id ? getChildName(assignment.child_id) : 'Unknown',
+        child_name: assignment.child_id ? getAthleteName(assignment.child_id) : 'Unknown',
         fee_title: assignment.fee?.title ?? 'Fee',
         total_display: formatCurrency(assignment.amount_due_cents),
         paid_display: formatCurrency(assignment.amount_paid_cents),
@@ -101,15 +101,15 @@ export default function Payments() {
     fetchPayments()
   }, [fetchPayments])
 
-  // Helper to get child name (in real implementation, comes from joined data)
-  const getChildName = (childId: string): string => {
+  // Helper to get athlete name (in real implementation, comes from joined data)
+  const getAthleteName = (childId: string): string => {
     const names: Record<string, string> = {
       'child-emma-001': 'Emma Johnson',
       'child-liam-002': 'Liam Williams',
       'child-sophia-003': 'Sophia Brown',
       'child-jackson-004': 'Jackson Davis',
     }
-    return names[childId] ?? 'Child'
+    return names[childId] ?? 'Athlete'
   }
 
   const columns: ColumnConfig<PaymentDisplay>[] = [

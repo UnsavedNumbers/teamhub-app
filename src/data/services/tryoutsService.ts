@@ -278,7 +278,7 @@ export async function getTryoutRegistrations(
     }
 }
 
-export async function registerChildForTryout(
+export async function registerAthleteForTryout(
     _context: UserContext,
     _tryoutId: string,
     _childId: string

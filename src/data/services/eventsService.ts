@@ -392,7 +392,7 @@ export async function getEventRSVPs(
  *   .maybeSingle()
  * ```
  */
-export async function getChildEventRSVP(
+export async function getAthleteEventRSVP(
     context: UserContext,
     eventId: string,
     childId: string
