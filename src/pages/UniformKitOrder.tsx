@@ -9,7 +9,7 @@ import {
   type UniformKit,
   type UniformItem 
 } from '../data/services/uniformsService'
-import { getChildren } from '../data/services/familyService'
+import { getAthletes } from '../data/services/familyService'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
@@ -78,7 +78,7 @@ export default function UniformKitOrder() {
       }
 
       // Fetch children
-      const { data: childData } = await getChildren(context)
+      const { data: childData } = await getAthletes(context)
       const childrenList = childData.map(c => ({
         id: c.id,
         first_name: c.first_name,

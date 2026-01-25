@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useUserContext } from '../hooks/useUserContext'
-import { getChildren } from '../data/services/familyService'
+import { getAthletes } from '../data/services/familyService'
 import { getTeamsForParent } from '../data/services/teamsService'
 import { getUserPreferences, updateUserPreferences } from '../data/services/preferencesService'
 import { useT, useLocale } from '../i18n/useI18n'
@@ -60,7 +60,7 @@ export default function Settings() {
     setLoading(true)
     
     // Fetch children
-    const { data: childrenData } = await getChildren(context)
+    const { data: childrenData } = await getAthletes(context)
     setChildren(childrenData.map(c => ({
       id: c.id,
       first_name: c.first_name,

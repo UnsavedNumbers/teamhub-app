@@ -5,7 +5,7 @@ import { useUserContext } from '../hooks/useUserContext'
 import { 
   getEvents, 
   updateRSVP, 
-  getChildren, 
+  getAthletes, 
   isGeneralRSVP, 
   isAthleteRSVP 
 } from '../data/services'
@@ -94,7 +94,7 @@ export default function Calendar() {
     }
     
     // Fetch user children for RSVP matching
-    const { data: childrenData } = await getChildren(context)
+    const { data: childrenData } = await getAthletes(context)
     setChildren(childrenData)
 
     const { data, error } = await getEvents(context, {

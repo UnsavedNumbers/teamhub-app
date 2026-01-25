@@ -5,7 +5,7 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
 import { getTeams } from '../../data/services/teamsService'
-import { getChildren } from '../../data/services/familyService'
+import { getAthletes } from '../../data/services/familyService'
 import { getUnpaidFeeAssignments } from '../../data/services/paymentsService'
 import { getUpcomingEventsForUser } from '../../data/services/eventsService'
 import { 
@@ -50,7 +50,7 @@ export default function AdminDashboard() {
       // Fetch all stats in parallel
       const [teamsResult, childrenResult, unpaidResult, eventsResult] = await Promise.all([
         getTeams(context, { activeOnly: false }),
-        getChildren(context),
+        getAthletes(context),
         getUnpaidFeeAssignments(context),
         getUpcomingEventsForUser(context, 100),
       ])

@@ -311,8 +311,8 @@ export async function setAthleteRSVP(
   }
 }
 
-// Validate child eligibility for event
-export async function validateChildEventEligibility(
+// Validate athlete eligibility for event
+export async function validateAthleteEventEligibility(
   _context: UserContext,
   childId: string,
   eventId: string

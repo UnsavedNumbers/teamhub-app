@@ -15,7 +15,7 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { 
     getFamilyDetails, 
     deleteFamily, 
-    deleteChild 
+    deleteAthlete 
 } from '../../data/services/familyService'
 import { useT } from '../../i18n/useI18n'
 import type { FamilyWithDetails, Child, FamilyMember } from '../../types/family'
@@ -59,7 +59,7 @@ export default function FamilyDetail() {
 
     const handleDeleteChild = async () => {
         if (!childToDelete || !isReady) return
-        const { error } = await deleteChild(context, childToDelete)
+        const { error } = await deleteAthlete(context, childToDelete)
         if (error) {
             alert(t('admin.families.errorDeleteChild') + ': ' + error.message)
         } else {

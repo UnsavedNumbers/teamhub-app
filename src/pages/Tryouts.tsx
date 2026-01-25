@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useUserContext } from '../hooks/useUserContext'
 import { useOrganization } from '../contexts/OrganizationContext'
 import { getTryouts, getTryoutRegistrations, registerAthleteForTryout } from '../data/services/tryoutsService'
-import { getChildren } from '../data/services/familyService'
+import { getAthletes } from '../data/services/familyService'
 import type { Tryout, TryoutRegistration } from '../data/services/tryoutsService'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
@@ -30,7 +30,7 @@ export default function Tryouts() {
     const [tryoutsRes, regsRes, childrenRes] = await Promise.all([
       getTryouts(context, currentOrganization.id),
       getTryoutRegistrations(context),
-      getChildren(context)
+      getAthletes(context)
     ])
 
     setTryouts(tryoutsRes.data)

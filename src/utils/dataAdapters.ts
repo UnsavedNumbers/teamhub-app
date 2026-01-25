@@ -138,7 +138,7 @@ export interface ChildTableRow extends MaterialTableRow {
   paymentStatus: string
 }
 
-export function adaptChildToTableRow(
+export function adaptAthleteToTableRow(
   child: ChildRow,
   family: { name: string } | null,
   teams: string[] = [],
