@@ -106,6 +106,7 @@ const CreateTravelPlan = lazy(() => import('./pages/admin/CreateTravelPlan'))
 const EditTravelPlan = lazy(() => import('./pages/admin/EditTravelPlan'))
 const AdminTryouts = lazy(() => import('./pages/admin/AdminTryouts'))
 const AdminTryoutDetail = lazy(() => import('./pages/admin/AdminTryoutDetail'))
+const CreateTryout = lazy(() => import('./pages/admin/CreateTryout'))
 const OrganizationSettings = lazy(() => import('./pages/admin/OrganizationSettings'))
 const OrganizationStructureForms = lazy(() => import('./pages/admin/OrganizationStructureForms'))
 const OrganizationUsers = lazy(() => import('./pages/admin/OrganizationUsers'))
@@ -346,6 +347,7 @@ function AppWithTheme() {
             
               {/* Tryouts */}
               <Route path="tryouts" element={<AdminTryouts />} />
+              <Route path="tryouts/new" element={<CreateTryout />} />
               <Route path="tryouts/:tryoutId" element={<AdminTryoutDetail />} />
             
               {/* Users */}

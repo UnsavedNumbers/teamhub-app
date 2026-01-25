@@ -416,6 +416,13 @@ const admin = {
             icon: 'add',
             requiresOrg: true,
         },
+        edit: {
+            path: '/admin/events/:id/edit',
+            params: ['id'] as const,
+            label: 'Edit Event',
+            icon: 'edit',
+            requiresOrg: true,
+        },
         attendance: {
             path: '/admin/events/:id/attendance',
             params: ['id'] as const,
@@ -500,6 +507,12 @@ const admin = {
             label: 'Tryouts',
             icon: 'emoji_events',
             description: 'Registration and evaluation',
+            requiresOrg: true,
+        },
+        create: {
+            path: '/admin/tryouts/new',
+            label: 'Create Tryout',
+            icon: 'emoji_events',
             requiresOrg: true,
         },
         detail: {

@@ -3,9 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
+import { useOffline } from '../../hooks/useOffline'
+import { USE_FAKE_DATA } from '../../data/config'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
+import { getLink } from '../../utils/routes'
+import { showSuccess, showError } from '../../utils/toast'
 import { 
   AdminPageHeader, 
   Card, 
@@ -15,10 +19,13 @@ import {
   DatePicker,
   Checkbox
 } from '../../components/platformAdmin'
+import { ConfirmDialog } from '../../components/platformAdmin/ConfirmDialog'
 import { 
     EventFormData, 
     EVENT_TYPE_LABELS, 
     EventType,
+    isValidEventTimeOrder,
+    RecurringEditMode,
 } from '../../types/calendar'
 
 interface Team { id: string; name: string }
@@ -33,13 +40,19 @@ export default function EditEvent() {
   const [error, setError] = useState<string | null>(null)
   const [showLocationDetails, setShowLocationDetails] = useState(false)
   const [showRecurring, setShowRecurring] = useState(false)
-
   const [hasExistingRSVPs, setHasExistingRSVPs] = useState(false)
-
+  const [notFound, setNotFound] = useState(false)
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [recurringEditMode, setRecurringEditMode] = useState<RecurringEditMode>('this_only')
+  const [deleteDialog, setDeleteDialog] = useState(false)
+  const [cancelDialog, setCancelDialog] = useState(false)
+  const [actionLoading, setActionLoading] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
   const t = useT()
+  const { isOffline } = useOffline()
 
   const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<EventFormData>({
     defaultValues: { 
@@ -88,13 +101,26 @@ export default function EditEvent() {
   const fetchEvent = useCallback(async () => {
     if (!isReady || !eventId) return
     
+    // Validate eventId format (UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(eventId)) {
+      setError('Invalid event ID format')
+      setNotFound(true)
+      setLoading(false)
+      return
+    }
+    
     setLoading(true)
+    setError(null)
+    setNotFound(false)
+    
     try {
       const { data: event, error: eventError } = await supabase
         .from('events')
         .select(`
           *,
-          event_location:event_locations(*)
+          event_location:event_locations(*),
+          recurring_pattern:recurring_event_patterns(*)
         `)
         .eq('id', eventId)
         .single() as { data: {
@@ -125,10 +151,35 @@ export default function EditEvent() {
             is_virtual: boolean | null
             virtual_link: string | null
           }
-        } | null; error: { message?: string } | null }
+          recurring_pattern?: {
+            id: string
+            frequency: string
+            days_of_week: number[]
+            end_date: string | null
+            max_occurrences: number | null
+          } | null
+        } | null; error: { message?: string; code?: string } | null }
 
-      if (eventError) throw eventError
-      if (!event) throw new Error('Event not found')
+      if (eventError) {
+        // Check if it's a permission error or not found
+        if (eventError.code === 'PGRST116' || eventError.message?.includes('No rows')) {
+          setNotFound(true)
+          setError('Event not found')
+        } else if (eventError.message?.includes('permission') || eventError.message?.includes('RLS')) {
+          setError('You do not have permission to view this event')
+        } else {
+          throw eventError
+        }
+        setLoading(false)
+        return
+      }
+      
+      if (!event) {
+        setNotFound(true)
+        setError('Event not found')
+        setLoading(false)
+        return
+      }
 
       // Check for existing RSVPs with safe error handling
       let generalCount = 0
@@ -189,13 +240,28 @@ export default function EditEvent() {
         setShowLocationDetails(true)
       }
 
+      // Load recurring pattern if it exists
+      if (event.recurring_pattern) {
+        setIsRecurring(true)
+        setValue('recurring.enabled', true)
+        setValue('recurring.frequency', (event.recurring_pattern.frequency as any) || 'weekly')
+        setValue('recurring.days_of_week', event.recurring_pattern.days_of_week || [])
+        setValue('recurring.end_date', event.recurring_pattern.end_date || '')
+        setValue('recurring.max_occurrences', event.recurring_pattern.max_occurrences?.toString() || '')
+        setShowRecurring(true)
+      }
+
       // Fetch teams and seasons
       await fetchTeams()
       if (event.team_id) {
         await fetchSeasons(event.team_id)
       }
     } catch (err) {
-      setError(getErrorMessage(err) || 'Failed to load event')
+      const errorMessage = getErrorMessage(err) || 'Failed to load event'
+      setError(errorMessage)
+      if (err instanceof Error && (err.message.includes('permission') || err.message.includes('RLS'))) {
+        setError('You do not have permission to view this event')
+      }
     } finally {
       setLoading(false)
     }
@@ -247,7 +313,42 @@ export default function EditEvent() {
   }, [watchTeamId, isReady, fetchSeasons])
 
   const onSubmit = async (data: EventFormData) => {
-    if (!eventId) return
+    if (!eventId) {
+      setError('Event ID is required')
+      return
+    }
+
+    // Validate event ID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(eventId)) {
+      setError('Invalid event ID format')
+      return
+    }
+
+    // Check offline mode
+    if (isOffline) {
+      setError('Cannot save changes while offline. Please check your connection and try again.')
+      showError('You are currently offline. Changes cannot be saved.')
+      return
+    }
+
+    // Check demo mode
+    if (USE_FAKE_DATA) {
+      showError('Demo mode: Changes are not saved to the database.')
+      // Still allow navigation to show the flow works
+      setTimeout(() => {
+        navigate(getLink('admin.events.list'))
+      }, 1500)
+      return
+    }
+
+    // Validate time order
+    if (data.start_time && data.end_time) {
+      if (!isValidEventTimeOrder(data.start_time, data.end_time, data.arrival_time || null)) {
+        setError('Invalid time order: End time must be after start time, and arrival time must be before start time.')
+        return
+      }
+    }
     
     setSaving(true)
     setError(null)
@@ -353,12 +454,73 @@ export default function EditEvent() {
           is_virtual: data.location.is_virtual,
           virtual_link: data.location.virtual_link || null
         } satisfies LocationInsert
-        await supabase.from('event_locations').insert(locInsertData)
+        const { error: locInsertError } = await supabase.from('event_locations').insert(locInsertData)
+        if (locInsertError) {
+          console.error('Location insert error:', locInsertError)
+          // Don't fail the whole update if location insert fails
+        }
       }
 
-      navigate('/admin/events')
-    } catch (err: unknown) { 
-      setError(getErrorMessage(err) || 'Failed to update event') 
+      // Update recurring pattern if needed
+      if (data.recurring?.enabled) {
+        const { data: existingPattern } = await supabase
+          .from('recurring_event_patterns')
+          .select('id')
+          .eq('parent_event_id', eventId)
+          .single()
+
+        if (existingPattern) {
+          type RecurringPatternUpdate = Database['public']['Tables']['recurring_event_patterns']['Update']
+          const patternUpdate: RecurringPatternUpdate = {
+            frequency: data.recurring.frequency as Database['public']['Enums']['recurrence_frequency'],
+            days_of_week: data.recurring.days_of_week.length > 0 ? data.recurring.days_of_week : [new Date(data.start_time).getDay()],
+            end_date: data.recurring.end_date || null,
+            max_occurrences: data.recurring.max_occurrences ? parseInt(data.recurring.max_occurrences) : null
+          }
+          const { error: patternError } = await supabase
+            .from('recurring_event_patterns')
+            .update(patternUpdate)
+            .eq('id', (existingPattern as any).id)
+          if (patternError) {
+            console.error('Recurring pattern update error:', patternError)
+            // Don't fail the whole update
+          }
+        } else if (data.recurring.enabled) {
+          type RecurringPatternInsert = Database['public']['Tables']['recurring_event_patterns']['Insert']
+          const patternInsert: RecurringPatternInsert = {
+            parent_event_id: eventId,
+            frequency: data.recurring.frequency as Database['public']['Enums']['recurrence_frequency'],
+            days_of_week: data.recurring.days_of_week.length > 0 ? data.recurring.days_of_week : [new Date(data.start_time).getDay()],
+            end_date: data.recurring.end_date || null,
+            max_occurrences: data.recurring.max_occurrences ? parseInt(data.recurring.max_occurrences) : null
+          }
+          const { error: patternError } = await supabase
+            .from('recurring_event_patterns')
+            .insert(patternInsert)
+          if (patternError) {
+            console.error('Recurring pattern insert error:', patternError)
+            // Don't fail the whole update
+          }
+        }
+      }
+
+      showSuccess('Event updated successfully!')
+      navigate(getLink('admin.events.list'))
+    } catch (err: unknown) {
+      const errorMessage = getErrorMessage(err) || 'Failed to update event'
+      setError(errorMessage)
+      showError(errorMessage)
+      
+      // Handle specific error cases
+      if (err instanceof Error) {
+        if (err.message.includes('permission') || err.message.includes('RLS')) {
+          setError('You do not have permission to update this event')
+        } else if (err.message.includes('violates foreign key')) {
+          setError('Invalid team or season selected. Please verify your selections.')
+        } else if (err.message.includes('violates check constraint')) {
+          setError('Invalid data provided. Please check all fields and try again.')
+        }
+      }
     } finally { 
       setSaving(false) 
     }
@@ -371,16 +533,60 @@ export default function EditEvent() {
 
   if (loading) return <div className="pa-skeleton" style={{ height: '500px' }} />
 
+  if (notFound) {
+    return (
+      <div className="pa-root">
+        <AdminPageHeader 
+          title="Event Not Found" 
+          breadcrumbs={[
+            { label: 'Events', path: getLink('admin.events.list') },
+            { label: 'Edit Event' },
+          ]}
+        />
+        <Card>
+          <div className="pa-text-center pa-py-8">
+            <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--pa-warning)', marginBottom: 'var(--pa-space-4)' }}>
+              event_busy
+            </span>
+            <h2 className="pa-heading-2 pa-mb-2">Event Not Found</h2>
+            <p className="pa-body pa-mb-6">{error || 'The event you are looking for does not exist or has been deleted.'}</p>
+            <Button onClick={() => navigate(getLink('admin.events.list'))}>Back to Events</Button>
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="pa-root">
       <AdminPageHeader 
         title="Edit Event" 
         breadcrumbs={[
-          { label: 'Events', path: '/admin/events' },
+          { label: 'Events', path: getLink('admin.events.list') },
           { label: 'Edit Event' },
         ]}
       />
       <div className="pa-form-container">
+        {/* Offline indicator */}
+        {isOffline && (
+          <Card className="pa-mb-4" style={{ background: 'var(--pa-warning-bg)', border: '1px solid var(--pa-warning)' }}>
+            <div className="pa-flex pa-items-center pa-gap-2">
+              <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>wifi_off</span>
+              <span className="pa-body-s">You are offline. Changes cannot be saved until you reconnect.</span>
+            </div>
+          </Card>
+        )}
+
+        {/* Demo mode indicator */}
+        {USE_FAKE_DATA && (
+          <Card className="pa-mb-4" style={{ background: 'var(--pa-info-bg)', border: '1px solid var(--pa-info)' }}>
+            <div className="pa-flex pa-items-center pa-gap-2">
+              <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>info</span>
+              <span className="pa-body-s">Demo mode: Changes will not be saved to the database.</span>
+            </div>
+          </Card>
+        )}
+
         <Card>
           <form onSubmit={handleSubmit(onSubmit)}>
             {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
@@ -497,17 +703,172 @@ export default function EditEvent() {
             <div className="pa-space-y-2">
               <Controller name="uniform_notes" control={control} render={({ field }) => <Input {...field} label="Uniform Notes" placeholder="e.g. Home Kit" />} />
               <Controller name="equipment_notes" control={control} render={({ field }) => <Input {...field} label="Equipment Notes" placeholder="e.g. Bring water" />} />
+              <Controller name="external_link" control={control} render={({ field }) => <Input {...field} label="External Link" placeholder="https://..." type="url" />} />
+              <Controller name="weather_dependent" control={control} render={({ field: { value, onChange } }) => (
+                <Checkbox checked={value} onChange={(e) => onChange(e.target.checked)} label="Weather Dependent" />
+              )} />
             </div>
           </div>
 
+          {/* Recurring Event Edit Mode Selection */}
+          {isRecurring && (
+            <div className="pa-mb-4 pa-card" style={{ background: 'var(--pa-info-bg)', border: '1px solid var(--pa-info)', padding: 'var(--pa-space-4)' }}>
+              <div className="pa-label pa-mb-2">This is a recurring event. What would you like to edit?</div>
+              <div className="pa-flex pa-gap-3">
+                <label className="pa-flex pa-items-center pa-gap-2">
+                  <input
+                    type="radio"
+                    name="recurringEditMode"
+                    value="this_only"
+                    checked={recurringEditMode === 'this_only'}
+                    onChange={(e) => setRecurringEditMode(e.target.value as RecurringEditMode)}
+                  />
+                  <span className="pa-body-s">This occurrence only</span>
+                </label>
+                <label className="pa-flex pa-items-center pa-gap-2">
+                  <input
+                    type="radio"
+                    name="recurringEditMode"
+                    value="this_and_future"
+                    checked={recurringEditMode === 'this_and_future'}
+                    onChange={(e) => setRecurringEditMode(e.target.value as RecurringEditMode)}
+                  />
+                  <span className="pa-body-s">This and future occurrences</span>
+                </label>
+                <label className="pa-flex pa-items-center pa-gap-2">
+                  <input
+                    type="radio"
+                    name="recurringEditMode"
+                    value="all"
+                    checked={recurringEditMode === 'all'}
+                    onChange={(e) => setRecurringEditMode(e.target.value as RecurringEditMode)}
+                  />
+                  <span className="pa-body-s">All occurrences</span>
+                </label>
+              </div>
+            </div>
+          )}
+
           {/* SECTION 6: ACTIONS */}
-          <div className="pa-flex pa-justify-end pa-gap-3">
-            <Button variant="blue" onClick={() => navigate(-1)}>Cancel</Button>
-            <Button type="submit" loading={saving}>Update Event</Button>
+          <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
+            <div className="pa-flex pa-gap-3">
+              <Button
+                variant="ghost"
+                onClick={() => setCancelDialog(true)}
+                disabled={saving || actionLoading}
+                style={{ color: 'var(--pa-warning)' }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px', marginRight: '4px' }}>cancel</span>
+                Cancel Event
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setDeleteDialog(true)}
+                disabled={saving || actionLoading}
+                style={{ color: 'var(--pa-danger)' }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px', marginRight: '4px' }}>delete</span>
+                Delete Event
+              </Button>
+            </div>
+            <div className="pa-flex pa-justify-end pa-gap-3">
+              <Button variant="blue" onClick={() => navigate(getLink('admin.events.list'))} disabled={saving || actionLoading}>Cancel</Button>
+              <Button 
+                type="submit" 
+                loading={saving}
+                disabled={isOffline || USE_FAKE_DATA || saving || actionLoading}
+                title={isOffline ? 'Cannot save while offline' : USE_FAKE_DATA ? 'Demo mode: changes not saved' : undefined}
+              >
+                Update Event
+              </Button>
+            </div>
           </div>
         </form>
       </Card>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDialog}
+        title="Delete Event"
+        description={`Are you sure you want to delete this event? This action cannot be undone and will delete all associated data (RSVPs, attendance, etc.).`}
+        confirmLabel="Delete"
+        variant="danger"
+        requireReason
+        loading={actionLoading}
+        error={actionError}
+        onConfirm={async (_reason: string) => {
+          if (!eventId) return
+          setActionLoading(true)
+          setActionError(null)
+          
+          try {
+            const { error } = await supabase
+              .from('events')
+              .delete()
+              .eq('id', eventId)
+            
+            if (error) throw error
+            
+            showSuccess('Event deleted successfully')
+            navigate(getLink('admin.events.list'))
+          } catch (err) {
+            const errorMessage = getErrorMessage(err) || 'Failed to delete event'
+            setActionError(errorMessage)
+            showError(errorMessage)
+          } finally {
+            setActionLoading(false)
+          }
+        }}
+        onCancel={() => {
+          setDeleteDialog(false)
+          setActionError(null)
+        }}
+      />
+
+      {/* Cancel Event Dialog */}
+      <ConfirmDialog
+        open={cancelDialog}
+        title="Cancel Event"
+        description={`Are you sure you want to cancel this event? This will mark the event as cancelled and notify participants.`}
+        confirmLabel="Cancel Event"
+        variant="warning"
+        requireReason
+        loading={actionLoading}
+        error={actionError}
+        onConfirm={async (reason: string) => {
+          if (!eventId) return
+          setActionLoading(true)
+          setActionError(null)
+          
+          try {
+            const { error } = await supabase
+              .from('events')
+              .update({
+                is_cancelled: true,
+                cancellation_reason: reason || null,
+                cancelled_at: new Date().toISOString(),
+                cancelled_by_user_id: context.userId
+              })
+              .eq('id', eventId)
+            
+            if (error) throw error
+            
+            showSuccess('Event cancelled successfully')
+            navigate(getLink('admin.events.list'))
+          } catch (err) {
+            const errorMessage = getErrorMessage(err) || 'Failed to cancel event'
+            setActionError(errorMessage)
+            showError(errorMessage)
+          } finally {
+            setActionLoading(false)
+          }
+        }}
+        onCancel={() => {
+          setCancelDialog(false)
+          setActionError(null)
+        }}
+      />
     </div>
   )
 }
