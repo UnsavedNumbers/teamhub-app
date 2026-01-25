@@ -31,6 +31,17 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
+    // Remove queued payment_receipt jobs as requested
+    const { error: cleanupError } = await supabase
+      .from('notification_jobs')
+      .delete()
+      .eq('type', 'payment_receipt')
+      .eq('status', 'queued')
+
+    if (cleanupError) {
+      console.error('Failed to remove payment_receipt jobs:', cleanupError)
+    }
+
     // Fetch queued notification jobs (limit to prevent timeout)
     const { data: jobs, error: fetchError } = await supabase
       .from('notification_jobs')
