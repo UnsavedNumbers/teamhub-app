@@ -20,6 +20,7 @@ import {
   TabsContent,
   Badge
 } from '../../components/platformAdmin'
+import { FileUpload } from '../../components/common/FileUpload'
 
 import { 
   getOrganizationDetails, 
@@ -341,33 +342,10 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
   const [logoFile, setLogoFile] = useState<File | undefined>(undefined)
   const [logoError, setLogoError] = useState<string | null>(null)
 
-  const validateLogoFile = (file?: File) => {
-    if (!file) {
-      setLogoError(null)
-      return true
-    }
-
-    const allowedTypes = ['image/png', 'image/jpeg']
-    const maxSizeMb = 2
-
-    if (!allowedTypes.includes(file.type)) {
-      setLogoError('Logo must be a PNG or JPG image.')
-      return false
-    }
-
-    if (file.size > maxSizeMb * 1024 * 1024) {
-      setLogoError('Logo must be 2MB or smaller.')
-      return false
-    }
-
-    setLogoError(null)
-    return true
-  }
-
   return (
     <Card>
       <form onSubmit={handleSubmit((data) => {
-        if (!validateLogoFile(logoFile)) return
+        if (logoError) return
         onSave(data, logoFile)
       })}>
         <div className="pa-form-grid pa-form-grid-2">
@@ -399,24 +377,20 @@ function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (da
           {/* Right Column: Logo */}
           <div>
             <h3 className="pa-h3 pa-mb-2">Logo</h3>
-            <div className="pa-upload-box pa-p-4 pa-border pa-rounded pa-text-center">
-               <input
-                 type="file"
-                 accept="image/png,image/jpeg"
-                 onChange={(e) => {
-                   const file = e.target.files?.[0]
-                   setLogoFile(file)
-                   validateLogoFile(file)
-                 }}
-                 disabled={loading}
-               />
-               <p className="pa-text-sm pa-text-muted pa-mt-2">Upload a PNG or JPG logo</p>
-               {logoError && (
-                 <p className="pa-text-sm" style={{ color: 'var(--pa-danger)', marginTop: '4px' }}>
-                   {logoError}
-                 </p>
-               )}
-            </div>
+            <FileUpload
+              accept="image/png,image/jpeg"
+              maxSize={2 * 1024 * 1024}
+              helperText="Upload a PNG or JPG logo"
+              value={logoFile || null}
+              onFileSelect={(file) => {
+                setLogoFile(file || undefined)
+                setLogoError(null)
+              }}
+              disabled={loading}
+              buttonText="Choose file"
+              replaceText="Replace file"
+              error={logoError}
+            />
           </div>
         </div>
         

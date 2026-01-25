@@ -9,8 +9,9 @@
  * - Remove photo button
  */
 
-import { useState, useRef, useCallback } from 'react'
-import { X, Upload, Image as ImageIcon } from 'lucide-react'
+import { useState, useCallback } from 'react'
+import { X, Image as ImageIcon } from 'lucide-react'
+import { FileUpload } from '../common/FileUpload'
 
 interface AthletePhotoUploadProps {
     /** Current photo file (for preview before upload) */
@@ -40,7 +41,6 @@ export function AthletePhotoUpload({
 }: AthletePhotoUploadProps) {
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
     const [validationError, setValidationError] = useState<string | null>(null)
-    const fileInputRef = useRef<HTMLInputElement>(null)
 
     // Generate preview URL from file
     const generatePreview = useCallback((file: File) => {
@@ -55,9 +55,8 @@ export function AthletePhotoUpload({
         reader.readAsDataURL(file)
     }, [])
 
-    // Handle file selection
-    const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0]
+    // Handle file selection (with dimension validation)
+    const handleFileSelect = useCallback((file: File | null) => {
         if (!file) {
             onPhotoSelect(null)
             setPreviewUrl(null)
@@ -65,25 +64,8 @@ export function AthletePhotoUpload({
             return
         }
 
-        // Validate file type
-        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
-        if (!allowedTypes.includes(file.type)) {
-            setValidationError('Invalid file type. Please upload a JPEG, PNG, or WebP image.')
-            setPreviewUrl(null)
-            onPhotoSelect(null)
-            return
-        }
-
-        // Validate file size (max 5MB)
-        const maxSize = 5 * 1024 * 1024 // 5MB
-        if (file.size > maxSize) {
-            setValidationError('File size exceeds 5MB limit. Please upload a smaller image.')
-            setPreviewUrl(null)
-            onPhotoSelect(null)
-            return
-        }
-
-        // Optional: Validate image dimensions (max 2000x2000)
+        // FileUpload component handles type and size validation
+        // Here we only need to validate dimensions and generate preview
         const img = new Image()
         img.onload = () => {
             const maxDimension = 2000
@@ -109,9 +91,6 @@ export function AthletePhotoUpload({
 
     // Handle remove photo
     const handleRemove = useCallback(() => {
-        if (fileInputRef.current) {
-            fileInputRef.current.value = ''
-        }
         setPreviewUrl(null)
         setValidationError(null)
         onPhotoSelect(null)
@@ -159,41 +138,17 @@ export function AthletePhotoUpload({
                 </div>
 
                 {/* File Input */}
-                <div>
-                    <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/jpeg,image/jpg,image/png,image/webp"
-                        onChange={handleFileSelect}
-                        disabled={disabled}
-                        className="hidden"
-                        id="athlete-photo-upload"
-                    />
-                    <label
-                        htmlFor="athlete-photo-upload"
-                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
-                            disabled
-                                ? 'border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                                : 'border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300'
-                        }`}
-                    >
-                        <Upload className="w-4 h-4" />
-                        <span className="text-sm font-medium">
-                            {hasPhoto ? 'Replace Photo' : 'Upload Photo'}
-                        </span>
-                    </label>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                        JPG, PNG, or WebP. Max 5MB. Recommended: 2000x2000px or smaller.
-                    </p>
-                </div>
-
-                {/* Error Message */}
-                {displayError && (
-                    <div className="text-sm text-red-600 dark:text-red-400 flex items-start gap-2">
-                        <span className="material-symbols-outlined text-base">error</span>
-                        <span>{displayError}</span>
-                    </div>
-                )}
+                <FileUpload
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    maxSize={5 * 1024 * 1024}
+                    helperText="JPG, PNG, or WebP. Max 5MB. Recommended: 2000x2000px or smaller."
+                    value={photoFile}
+                    onFileSelect={handleFileSelect}
+                    disabled={disabled}
+                    buttonText="Upload Photo"
+                    replaceText="Replace Photo"
+                    error={displayError}
+                />
             </div>
         </div>
     )

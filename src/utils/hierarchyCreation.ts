@@ -84,6 +84,27 @@ export function getEntityLabelKey(level: FormType): string {
 }
 
 /**
+ * Get the list page route for an entity type
+ * 
+ * @param entityType - The entity type
+ * @returns The route path to the list page for that entity type
+ * 
+ * @example
+ * getListPageRoute('sport') // returns '/admin/organization/structure/sports'
+ * getListPageRoute('program') // returns '/admin/organization/structure/programs'
+ */
+export function getListPageRoute(entityType: FormType): string {
+  const routeMap: Record<FormType, string> = {
+    sport: '/admin/organization/structure/sports',
+    program: '/admin/organization/structure/programs',
+    level: '/admin/organization/structure/levels',
+    team: '/admin/organization/structure/teams',
+    season: '/admin/organization/structure/seasons',
+  }
+  return routeMap[entityType] ?? '/admin/organization/structure'
+}
+
+/**
  * Prompt state stored in sessionStorage
  */
 export interface PromptState {

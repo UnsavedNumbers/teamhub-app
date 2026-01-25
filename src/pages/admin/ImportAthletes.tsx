@@ -1,8 +1,9 @@
-import { useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 import { AdminPageHeader } from '../../components/platformAdmin'
+import { FileUpload } from '../../components/common/FileUpload'
 import { useUserContext } from '../../hooks/useUserContext'
 import { supabase } from '../../lib/supabase'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
@@ -70,7 +71,6 @@ export default function ImportAthletes() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { context, isReady } = useUserContext()
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const preSelectedTeamId = searchParams.get('teamId') || null
   const preSelectedSeasonId = searchParams.get('seasonId') || null
@@ -112,9 +112,14 @@ export default function ImportAthletes() {
   // }, [])
 
   // Handle file upload
-  const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const uploadedFile = e.target.files?.[0]
-    if (!uploadedFile) return
+  const handleFileUpload = useCallback((uploadedFile: File | null) => {
+    if (!uploadedFile) {
+      setFile(null)
+      setRawRows([])
+      setParsedRows([])
+      setStep('upload')
+      return
+    }
 
     const validExtensions = ['.csv', '.xls', '.xlsx']
     const fileExtension = uploadedFile.name.substring(uploadedFile.name.lastIndexOf('.')).toLowerCase()
@@ -637,43 +642,18 @@ export default function ImportAthletes() {
                   <span className="text-xs text-slate-400 font-bold tracking-widest uppercase">Required</span>
                 </div>
                 <div className="p-8">
-                  <div
-                    className="flex flex-col items-center gap-6 rounded border-2 border-dashed border-[#137fec]/20 bg-[#137fec]/5 px-6 py-16 hover:bg-[#137fec]/10 transition-all cursor-pointer"
-                    onClick={() => fileInputRef.current?.click()}
-                    onDragOver={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      const droppedFile = e.dataTransfer.files[0]
-                      if (droppedFile) {
-                        const fakeEvent = {
-                          target: { files: [droppedFile] },
-                        } as unknown as React.ChangeEvent<HTMLInputElement>
-                        handleFileUpload(fakeEvent)
-                      }
-                    }}
-                  >
-                    <div className="flex flex-col items-center gap-3 text-center">
-                      <span className="material-symbols-outlined text-4xl text-[#137fec]">cloud_upload</span>
-                      <div>
-                        <p className="text-lg font-bold">Drag and drop athlete roster</p>
-                        <p className="text-sm text-[#4c739a]">Max file size 5MB. CSV, XLSX only.</p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="flex min-w-[140px] items-center justify-center rounded h-11 px-6 bg-[#137fec] text-white text-sm font-bold tracking-wide uppercase transition-transform active:scale-95"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        fileInputRef.current?.click()
-                      }}
-                    >
-                      Select File
-                    </button>
-                  </div>
+                  <FileUpload
+                    accept=".csv,.xlsx,.xls"
+                    maxSize={5 * 1024 * 1024}
+                    helperText="Max file size 5MB. CSV, XLSX only."
+                    value={file}
+                    onFileSelect={handleFileUpload}
+                    buttonText="Select File"
+                    replaceText="Replace File"
+                    showDropZone={true}
+                    fullWidth={true}
+                    error={error}
+                  />
                 </div>
               </section>
 
@@ -798,13 +778,6 @@ export default function ImportAthletes() {
           </footer>
         </div>
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".csv,.xlsx,.xls"
-          onChange={handleFileUpload}
-          style={{ display: 'none' }}
-        />
       </div>
     )
   }
@@ -823,14 +796,16 @@ export default function ImportAthletes() {
             ]}
             actions={
               <div className="flex gap-3">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="sharp-btn flex items-center justify-center h-12 px-6 bg-white text-slate-900 text-sm font-bold uppercase tracking-widest border border-slate-200 hover:bg-slate-50 transition-colors"
-                  style={{ borderRadius: '2px' }}
-                >
-                  <span className="material-symbols-outlined mr-2 text-sm">upload_file</span>
-                  Re-upload CSV
-                </button>
+                <FileUpload
+                  accept=".csv,.xlsx,.xls"
+                  maxSize={5 * 1024 * 1024}
+                  value={file}
+                  onFileSelect={handleFileUpload}
+                  buttonText="Re-upload CSV"
+                  replaceText="Replace File"
+                  error={error}
+                  className="inline-block"
+                />
                 <button
                   onClick={executeImport}
                   disabled={loading || stats.errors > 0}
@@ -843,13 +818,6 @@ export default function ImportAthletes() {
             }
           />
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".csv,.xlsx,.xls"
-        onChange={handleFileUpload}
-        style={{ display: 'none' }}
-      />
 
           {/* Sticky Summary Bar */}
           <div
@@ -1110,13 +1078,6 @@ export default function ImportAthletes() {
         </main>
       </div>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".csv,.xlsx,.xls"
-        onChange={handleFileUpload}
-        style={{ display: 'none' }}
-      />
     </div>
   )
 }
