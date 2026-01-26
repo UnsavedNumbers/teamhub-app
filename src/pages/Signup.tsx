@@ -296,6 +296,7 @@ export default function Signup() {
                   name="displayName"
                   type="text"
                   autoComplete="name"
+                  tabIndex={1}
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="John Smith"
@@ -320,6 +321,7 @@ export default function Signup() {
                   autoComplete="email"
                   required
                   readOnly={isFromInvite}
+                  tabIndex={2}
                   value={email}
                   onChange={(e) => {
                     // Only allow changes if not from invite
@@ -358,6 +360,7 @@ export default function Signup() {
                   autoComplete="new-password"
                   required
                   minLength={8}
+                  tabIndex={3}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
@@ -404,6 +407,7 @@ export default function Signup() {
                   type={showConfirmPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   required
+                  tabIndex={4}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
@@ -427,9 +431,9 @@ export default function Signup() {
             {/* Terms */}
             <p className="text-xs text-slate-500 dark:text-slate-400">
               By creating an account, you agree to our{' '}
-              <a href="#" className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">Terms of Service</a>
+              <a href="#" tabIndex={6} className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">Terms of Service</a>
               {' '}and{' '}
-              <a href="#" className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">Privacy Policy</a>
+              <a href="#" tabIndex={7} className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">Privacy Policy</a>
             </p>
 
             {/* Submit */}
@@ -437,6 +441,7 @@ export default function Signup() {
               <button
                 type="submit"
                 disabled={loading || (password !== confirmPassword && confirmPassword.length > 0)}
+                tabIndex={5}
                 className="bg-slate-900 dark:bg-white text-white dark:text-black px-8 py-3 font-black text-sm tracking-widest uppercase w-full hover:bg-[#5468FF] dark:hover:bg-[#5468FF] dark:hover:text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'CREATING ACCOUNT...' : 'CONTINUE'}
@@ -448,7 +453,7 @@ export default function Signup() {
           <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800">
             <p className="text-center text-sm text-slate-500 dark:text-slate-400">
               Already have an account?{' '}
-              <Link to="/portal/login" className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">
+              <Link to="/portal/login" tabIndex={8} className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">
                 Sign in
               </Link>
             </p>

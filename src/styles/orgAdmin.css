@@ -148,14 +148,11 @@ html.dark .oa-page-subtitle {
     transition: all var(--pa-motion-normal) var(--pa-ease-out);
     overflow: hidden;
     /* Fix for children bleeding over corners */
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     position: relative;
 }
 
 .oa-card:hover {
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
     border-color: var(--org-border-tertiary, var(--pa-n200));
-    transform: translateY(-1px);
 }
 
 /* Specific fix for card headers in org admin - use secondary background */
@@ -222,7 +219,6 @@ html.dark .oa-page-subtitle {
 html.dark .oa-card {
     background: var(--org-surface-card, var(--pa-surface));
     border: 1px solid var(--org-border-default, var(--pa-border-subtle));
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 html.dark .oa-card-header,
@@ -238,7 +234,6 @@ html.dark .oa-card .pa-card-title {
 
 html.dark .oa-card:hover {
     border-color: var(--pa-theme-border-accent);
-   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
 }
 
 /* =====================================================================

@@ -239,6 +239,7 @@ export default function Login() {
                   type="email"
                   autoComplete="email"
                   required
+                  tabIndex={1}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@email.com"
@@ -257,6 +258,7 @@ export default function Login() {
                 </label>
                 <Link 
                   to="/portal/forgot-password" 
+                  tabIndex={4}
                   className="text-xs font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors"
                 >
                   FORGOT PASSWORD?
@@ -269,6 +271,7 @@ export default function Login() {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   required
+                  tabIndex={2}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
@@ -293,6 +296,7 @@ export default function Login() {
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
+                tabIndex={3}
                 className="h-4 w-4 rounded border-slate-300 dark:border-slate-700 text-[var(--org-link-color)] focus:ring-[var(--org-btn-primary-bg, #137fec)]"
               />
               <label 
@@ -307,6 +311,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
+                tabIndex={5}
                 className="bg-[var(--org-btn-primary-bg)] hover:bg-[var(--org-btn-primary-bg)]/90 text-white px-8 py-3 rounded font-bold text-sm tracking-wide w-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'SIGNING IN...' : 'CONTINUE'}
@@ -322,6 +327,7 @@ export default function Login() {
               </p>
               <Link 
                 to="/portal/signup" 
+                tabIndex={6}
                 className="block text-center font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors"
               >
                 CREATE AN ACCOUNT
@@ -334,6 +340,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={handleSetupOrganization}
+                tabIndex={7}
                 className="w-full text-center font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors"
               >
                 CREATE AN ORGANIZATION
