@@ -173,18 +173,30 @@ export default function AuthCallback() {
         // Priority 2: Check for pending invite token in sessionStorage or localStorage
         const pendingInviteToken = sessionStorage.getItem('pending_invite_token') || localStorage.getItem('pending_invite_token')
         if (pendingInviteToken) {
-          // Check for athlete_id in sessionStorage (from invite signup flow)
-          const pendingAthleteId = sessionStorage.getItem('pending_invite_athlete_id')
+          // Check if email is confirmed - if so, the auto-link trigger already ran
+          // and we should let them go to dashboard, not redirect to accept-invite
+          const emailConfirmed = data.session.user.email_confirmed_at !== null
           
-          // Build redirect URL with token and optional athlete_id
-          let acceptInviteUrl = `/portal/accept-invite?token=${pendingInviteToken}`
-          if (pendingAthleteId) {
-            acceptInviteUrl += `&athlete_id=${pendingAthleteId}`
+          if (emailConfirmed) {
+            // Email is confirmed, auto-link trigger has run
+            // Clear the stored tokens since linking is done
+            sessionStorage.removeItem('pending_invite_token')
+            localStorage.removeItem('pending_invite_token')
+            sessionStorage.removeItem('pending_invite_athlete_id')
+            // Fall through to default redirect (dashboard)
+          } else {
+            // Email not yet confirmed, redirect to accept-invite which will handle the flow
+            const pendingAthleteId = sessionStorage.getItem('pending_invite_athlete_id')
+            
+            let acceptInviteUrl = `/portal/accept-invite?token=${pendingInviteToken}`
+            if (pendingAthleteId) {
+              acceptInviteUrl += `&athlete_id=${pendingAthleteId}`
+            }
+            
+            // Navigation will unmount and cleanup will handle loading state
+            navigate(acceptInviteUrl, { replace: true })
+            return
           }
-          
-          // Navigation will unmount and cleanup will handle loading state
-          navigate(acceptInviteUrl, { replace: true })
-          return
         }
 
         // Priority 3: Check for redirect param in URL
