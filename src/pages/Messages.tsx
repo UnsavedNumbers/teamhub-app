@@ -20,6 +20,7 @@ import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import CreateAnnouncementModal from '../components/portal/CreateAnnouncementModal'
+import { showError, showSuccess } from '../utils/toast'
 
 interface Team {
   id: string
@@ -38,6 +39,10 @@ export default function Messages() {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [fetchingAnnouncements, setFetchingAnnouncements] = useState(false)
+  const [fetchingMessages, setFetchingMessages] = useState(false)
+  const [fetchingTeams, setFetchingTeams] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { user, profile } = useAuth()
@@ -67,74 +72,107 @@ export default function Messages() {
   const fetchTeams = useCallback(async () => {
     if (!isReady) return
 
-    // Use the service to get teams based on user role
-    // Safe access: isReady guarantees context.roles is an array
-    const isParent = context.roles?.includes('parent') && !context.roles?.includes('org_admin')
-    
-    // Admin/Coach can see all teams sometimes, or just their teams.
-    // For now, logic from before:
-    if (isParent) {
-      const { data, error } = await getTeamsForParent(context)
-      if (!error && data) {
-        setTeams(data.map(t => ({ id: t.id, name: t.name })))
+    setFetchingTeams(true)
+    setError(null)
+
+    try {
+      // Use the service to get teams based on user role
+      // Safe access: isReady guarantees context.roles is an array
+      const isParent = context.roles?.includes('parent') && !context.roles?.includes('org_admin')
+      
+      let result
+      if (isParent) {
+        result = await getTeamsForParent(context)
+      } else {
+        result = await getTeams(context, { activeOnly: true })
+      }
+
+      if (result.error) {
+        setError(result.error.message || 'Failed to load teams')
+        showError(result.error.message || 'Failed to load teams')
+        setTeams([])
+      } else if (result.data) {
+        setTeams(result.data.map(t => ({ id: t.id, name: t.name })))
         // Auto-select first team if none selected (use functional form to avoid dependency)
         setSelectedTeam(prev => {
-          if (!prev && data.length > 0) {
-            return data[0].id
+          if (!prev && result.data && result.data.length > 0) {
+            return result.data[0].id
           }
           return prev
         })
+      } else {
+        setTeams([])
       }
-    } else {
-      const { data, error } = await getTeams(context, { activeOnly: true })
-      if (!error && data) {
-        setTeams(data.map(t => ({ id: t.id, name: t.name })))
-        // Auto-select first team if none selected (use functional form to avoid dependency)
-        setSelectedTeam(prev => {
-          if (!prev && data.length > 0) {
-            return data[0].id
-          }
-          return prev
-        })
-      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load teams'
+      setError(errorMessage)
+      showError(errorMessage)
+      setTeams([])
+    } finally {
+      setFetchingTeams(false)
+      setLoading(false)
     }
-    setLoading(false)
   }, [context, isReady])
 
   const fetchAnnouncementsData = useCallback(async () => {
     if (!isReady || !selectedTeam) return
 
-    const { data, error } = await getAnnouncements(context, { teamId: selectedTeam, includeOrgWide: true })
-    
-    if (!error && data) {
-      // Ensure all announcements have required properties with safe defaults
-      const safeAnnouncements = (data as Announcement[]).map(ann => ({
-        ...ann,
-        priority: ann.priority || 'normal' as const,
-        title: ann.title || '',
-        content: ann.content || '',
-        created_at: ann.created_at || new Date().toISOString(),
-        updated_at: ann.updated_at || new Date().toISOString(),
-      }))
-      setAnnouncements(safeAnnouncements)
-    } else {
+    setFetchingAnnouncements(true)
+    try {
+      const { data, error } = await getAnnouncements(context, { teamId: selectedTeam, includeOrgWide: true })
+      
+      if (error) {
+        showError(error.message || 'Failed to load announcements')
+        setAnnouncements([])
+      } else if (data) {
+        // Ensure all announcements have required properties with safe defaults
+        const safeAnnouncements = (data as Announcement[]).map(ann => ({
+          ...ann,
+          priority: ann.priority || 'normal' as const,
+          title: ann.title || '',
+          content: ann.content || '',
+          created_at: ann.created_at || new Date().toISOString(),
+          updated_at: ann.updated_at || new Date().toISOString(),
+        }))
+        setAnnouncements(safeAnnouncements)
+      } else {
+        setAnnouncements([])
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load announcements'
+      showError(errorMessage)
       setAnnouncements([])
+    } finally {
+      setFetchingAnnouncements(false)
     }
   }, [context, isReady, selectedTeam])
 
   const fetchMessagesData = useCallback(async () => {
     if (!isReady || !selectedTeam) return
-    const { data, error } = await getMessages(selectedTeam)
-    if (!error && data) {
-      // Ensure all messages have required properties with safe defaults
-      const safeMessages = data.map(msg => ({
-        ...msg,
-        content: msg.content || '',
-        created_at: msg.created_at || new Date().toISOString(),
-      }))
-      setMessages(safeMessages)
-    } else {
+
+    setFetchingMessages(true)
+    try {
+      const { data, error } = await getMessages(selectedTeam)
+      if (error) {
+        showError(error.message || 'Failed to load messages')
+        setMessages([])
+      } else if (data) {
+        // Ensure all messages have required properties with safe defaults
+        const safeMessages = data.map(msg => ({
+          ...msg,
+          content: msg.content || '',
+          created_at: msg.created_at || new Date().toISOString(),
+        }))
+        setMessages(safeMessages)
+      } else {
+        setMessages([])
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load messages'
+      showError(errorMessage)
       setMessages([])
+    } finally {
+      setFetchingMessages(false)
     }
   }, [isReady, selectedTeam])
 
@@ -164,37 +202,61 @@ export default function Messages() {
   }, [messages])
 
   async function handleSendMessage() {
-    if (!newMessage.trim() || !selectedTeam || !user) return
+    if (!newMessage.trim() || !selectedTeam || !user || sending) return
     
+    const messageContent = newMessage.trim()
     setSending(true)
+    
     try {
-        const { data, error } = await createMessage(newMessage.trim(), selectedTeam, user.id)
-        if (!error && data) {
-             setNewMessage('')
-             // If local update needed immediately (before realtime):
-             // setMessages(prev => [...prev, data])
-             // But realtime should handle it usually. 
-             // If duplicate messages appear, remove this local update or debounce.
-             // Usually better to let Realtime handle it to verify server receipt.
-             // However, for better UX with latency, we might do optimistic update.
-             // Since we have subscribeToMessages, I'll rely on that or duplicate check.
-             // Let's rely on subscription to add it.
-        } else {
-            console.error(error)
-        }
-    } catch (e) {
-        console.error(e)
+      const { data, error } = await createMessage(messageContent, selectedTeam, user.id)
+      
+      if (error) {
+        showError(error.message || 'Failed to send message')
+      } else if (data) {
+        setNewMessage('')
+        // Realtime subscription will add the message, but we can also add it optimistically
+        // to avoid duplicates, check if message ID already exists
+        setMessages(prev => {
+          const exists = prev.some(m => m.id === data.id)
+          return exists ? prev : [...prev, data]
+        })
+      } else {
+        showError('Failed to send message')
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to send message'
+      showError(errorMessage)
     } finally {
-        setSending(false)
+      setSending(false)
     }
   }
 
   async function handleCreateAnnouncement(title: string, content: string, priority: 'normal' | 'urgent', teamId: string) {
-      if (!user) return
-      await createAnnouncement(title, content, priority, teamId, user.id)
-      // Refresh announcements if valid
-      if (teamId === selectedTeam) {
-          fetchAnnouncementsData()
+      if (!user) {
+        showError('You must be logged in to create announcements')
+        return
+      }
+
+      try {
+        const { data, error } = await createAnnouncement(title, content, priority, teamId, user.id)
+        
+        if (error) {
+          showError(error.message || 'Failed to create announcement')
+          throw error
+        } else if (data) {
+          showSuccess('Announcement created successfully')
+          setIsCreateModalOpen(false)
+          // Refresh announcements if valid
+          if (teamId === selectedTeam) {
+            await fetchAnnouncementsData()
+          }
+        } else {
+          showError('Failed to create announcement')
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to create announcement'
+        showError(errorMessage)
+        throw err
       }
   }
 
@@ -245,19 +307,30 @@ export default function Messages() {
 
             <div className="flex-1 overflow-y-auto p-3">
               <SectionHeader className="mb-4 px-2">All Chats</SectionHeader>
-              {teams.map((team) => (
-                <button
-                  key={team.id}
-                  onClick={() => setSelectedTeam(team.id)}
-                  className={`w-full text-left px-3 py-2 rounded mb-1 transition-colors font-bold ${
-                    selectedTeam === team.id
-                      ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-link-color)] dark:text-[var(--org-link-color)]'
-                      : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
-                  }`}
-                >
-                  {team.name}
-                </button>
-              ))}       
+              {fetchingTeams ? (
+                <div className="flex justify-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+                </div>
+              ) : teams.length === 0 ? (
+                <div className="text-center py-4 text-sm text-slate-500 dark:text-slate-400">
+                  {error ? 'Failed to load teams' : 'No teams available'}
+                </div>
+              ) : (
+                teams.map((team) => (
+                  <button
+                    key={team.id}
+                    onClick={() => setSelectedTeam(team.id)}
+                    disabled={fetchingTeams}
+                    className={`w-full text-left px-3 py-2 rounded mb-1 transition-colors font-bold disabled:opacity-50 ${
+                      selectedTeam === team.id
+                        ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-link-color)] dark:text-[var(--org-link-color)]'
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    {team.name}
+                  </button>
+                ))
+              )}       
             </div>
 
             {canCreateAnnouncements && (
@@ -312,7 +385,14 @@ export default function Messages() {
                 <div className="flex-1 overflow-y-auto p-6 scroll-smooth">
                   {tab === 'announcements' ? (
                     <div className="space-y-4 max-w-3xl mx-auto">
-                      {announcements.length === 0 ? (
+                      {fetchingAnnouncements ? (
+                        <Card className="text-center py-12">
+                          <div className="flex justify-center mb-4">
+                            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+                          </div>
+                          <p className="text-slate-500 dark:text-slate-400">Loading announcements...</p>
+                        </Card>
+                      ) : announcements.length === 0 ? (
                         <Card className="text-center py-12">
                           <p className="text-slate-500 dark:text-slate-400">No announcements yet.</p>
                         </Card>
@@ -354,12 +434,19 @@ export default function Messages() {
                     </div>
                   ) : (
                     <div className="max-w-3xl mx-auto space-y-4 pb-2">
-                      {messages.length === 0 && (
+                      {fetchingMessages ? (
+                        <Card className="text-center py-8 mb-4">
+                          <div className="flex justify-center mb-4">
+                            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+                          </div>
+                          <p className="text-slate-500 dark:text-slate-400 text-sm">Loading messages...</p>
+                        </Card>
+                      ) : messages.length === 0 ? (
                         <Card className="text-center py-8 mb-4">
                           <Icon name="chat" size="text-4xl" className="text-slate-300 mb-2" />
                           <p className="text-slate-500 dark:text-slate-400 text-sm">Start a conversation with your team</p>
                         </Card>
-                      )}
+                      ) : null}
                       {messages.map((msg) => {
                         // Safe access: guard against undefined user and author
                         const isMe = user?.id && msg.author_id === user.id
@@ -414,16 +501,26 @@ export default function Messages() {
                           type="text"
                           value={newMessage}
                           onChange={(e) => setNewMessage(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter' && !sending && newMessage.trim()) {
+                              handleSendMessage()
+                            }
+                          }}
                           placeholder="Type a message..."
-                          className="flex-1 px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-slate-800 dark:text-white placeholder:text-slate-400 font-bold focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)]/20 focus:border-[var(--org-btn-primary-bg, #137fec)] outline-none transition-all"
+                          disabled={sending || fetchingMessages}
+                          className="flex-1 px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-slate-800 dark:text-white placeholder:text-slate-400 font-bold focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)]/20 focus:border-[var(--org-btn-primary-bg, #137fec)] outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                         <button
                           onClick={handleSendMessage}
-                          disabled={sending || !newMessage.trim()}
-                          className="w-10 h-10 bg-[var(--org-btn-primary-bg)] text-white rounded-full flex items-center justify-center hover:bg-[var(--org-btn-primary-bg)]/90 disabled:opacity-50 transition-all transform active:scale-95"
+                          disabled={sending || !newMessage.trim() || fetchingMessages}
+                          className="w-10 h-10 bg-[var(--org-btn-primary-bg)] text-white rounded-full flex items-center justify-center hover:bg-[var(--org-btn-primary-bg)]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-95"
+                          title={sending ? 'Sending...' : !newMessage.trim() ? 'Enter a message' : 'Send message'}
                         >
-                          <Icon name="send" size="text-sm" />
+                          {sending ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                          ) : (
+                            <Icon name="send" size="text-sm" />
+                          )}
                         </button>
                       </div>
                     </div>

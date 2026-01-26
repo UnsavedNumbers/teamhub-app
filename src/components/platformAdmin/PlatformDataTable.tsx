@@ -203,7 +203,12 @@ export default function PlatformDataTable<T extends { id: string }>({
                   }}
                   onClick={() => column.sortable && onSort && handleSort(String(column.id))}
                 >
-                  <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-2')}>
+                  <div 
+                    className={cn('pa-flex', 'pa-items-center', 'pa-gap-2')}
+                    style={{
+                      justifyContent: column.align === 'right' ? 'flex-end' : column.align === 'center' ? 'center' : 'flex-start',
+                    }}
+                  >
                     <span>{column.label}</span>
                     {column.sortable && onSort && (
                       <span

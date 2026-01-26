@@ -395,237 +395,175 @@ export default function TeamDetail() {
 
   return (
     <div className="pa-root">
-      {/* Header Band with Court Texture */}
+      {/* Header with accent strip */}
       <div
         style={{
           width: '100%',
-          height: '128px',
-          background: 'var(--pa-n900)',
+          background: 'var(--org-surface-page)',
           position: 'relative',
-          overflow: 'hidden',
         }}
       >
-        {/* Court texture pattern using theme primary color */}
-        <div
-          className="court-texture"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            backgroundImage: `
-              linear-gradient(45deg, color-mix(in srgb, ${primaryColor} 10%, transparent) 25%, transparent 25%),
-              linear-gradient(-45deg, color-mix(in srgb, ${primaryColor} 10%, transparent) 25%, transparent 25%),
-              linear-gradient(45deg, transparent 75%, color-mix(in srgb, ${primaryColor} 10%, transparent) 75%),
-              linear-gradient(-45deg, transparent 75%, color-mix(in srgb, ${primaryColor} 10%, transparent) 75%)
-            `,
-            backgroundSize: '40px 40px',
-            backgroundPosition: '0 0, 0 20px, 20px -20px, -20px 0px',
-            opacity: 0.3,
-          }}
-        />
+        {/* Vertical accent strip on the far left */}
         <div
           style={{
             position: 'absolute',
-            inset: 0,
-            background: 'linear-gradient(to top, var(--pa-surface-subtle), transparent)',
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: '5px',
+            background: 'var(--org-btn-primary-bg)',
           }}
-          className="dark:bg-gradient-to-t dark:from-background-dark dark:to-transparent"
         />
-      </div>
-
-      <div
-        style={{
-          maxWidth: '1200px',
-          margin: '0 auto',
-          width: '100%',
-          marginTop: '-64px',
-          position: 'relative',
-          zIndex: 10,
-          padding: '0 var(--pa-space-4)',
-          paddingBottom: 'var(--pa-space-10)',
-        }}
-        className="md:px-8"
-      >
-        {/* Breadcrumbs */}
+        
+        {/* Header content constrained to main content width */}
         <div
           style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            gap: 'var(--pa-space-2)',
-            marginBottom: 'var(--pa-space-2)',
+            maxWidth: '1200px',
+            margin: '0 auto',
+            width: '100%',
+            padding: 'var(--pa-space-6) var(--pa-space-4)',
+            paddingLeft: 'calc(var(--pa-space-4) + 5px)', // Account for accent strip
           }}
+          className="md:px-8"
         >
-          {sportName && (
-            <>
-              {sportId ? (
-                <button
-                  onClick={() => handleBreadcrumbClick('/admin/sports', sportId)}
-                  disabled={navigating}
-                  style={{
-                    color: primaryColor,
-                    fontSize: '12px',
-                    fontWeight: 900,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
-                    textDecoration: 'none',
-                    background: 'none',
-                    border: 'none',
-                    cursor: navigating ? 'not-allowed' : 'pointer',
-                    opacity: navigating ? 0.6 : 1,
-                    padding: 0,
-                    lineHeight: 'normal',
-                  }}
-                >
-                  {sportName.toUpperCase()}
-                </button>
-              ) : (
-                <Link
-                  to={getLink('admin.sports.list')}
-                  style={{
-                    color: primaryColor,
-                    fontSize: '12px',
-                    fontWeight: 900,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
-                    textDecoration: 'none',
-                    lineHeight: 'normal',
-                  }}
-                >
-                  {sportName.toUpperCase()}
-                </Link>
-              )}
-              <span style={{ color: `color-mix(in srgb, ${primaryColor} 50%, transparent)`, fontSize: '12px', fontWeight: 900, lineHeight: 'normal' }}>/</span>
-            </>
-          )}
-          {programName && (
-            <>
-              {programId ? (
-                <button
-                  onClick={() => handleBreadcrumbClick('/admin/programs', programId)}
-                  disabled={navigating}
-                  style={{
-                    color: primaryColor,
-                    fontSize: '12px',
-                    fontWeight: 900,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
-                    textDecoration: 'none',
-                    background: 'none',
-                    border: 'none',
-                    cursor: navigating ? 'not-allowed' : 'pointer',
-                    opacity: navigating ? 0.6 : 1,
-                    padding: 0,
-                    lineHeight: 'normal',
-                  }}
-                >
-                  {programName.toUpperCase()}
-                </button>
-              ) : (
-                <Link
-                  to={getLink('admin.programs.list')}
-                  style={{
-                    color: primaryColor,
-                    fontSize: '12px',
-                    fontWeight: 900,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
-                    textDecoration: 'none',
-                    lineHeight: 'normal',
-                  }}
-                >
-                  {programName.toUpperCase()}
-                </Link>
-              )}
-              <span style={{ color: `color-mix(in srgb, ${primaryColor} 50%, transparent)`, fontSize: '12px', fontWeight: 900, lineHeight: 'normal' }}>/</span>
-            </>
-          )}
-          {levelName && (
-            <span
-              style={{
-                color: 'var(--pa-n900)',
-                fontSize: '12px',
-                fontWeight: 900,
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em',
-                lineHeight: 'normal',
-              }}
-              className="dark:text-white"
-            >
-              {levelName.toUpperCase()}
-            </span>
-          )}
-        </div>
-
-        {/* Page Heading & Tactile Primary Button */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 'var(--pa-space-6)',
-            marginBottom: 'var(--pa-space-8)',
-          }}
-          className="md:flex-row md:items-end md:justify-between"
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-6)' }}>
-            <div
-              className="hidden md:flex dark:bg-slate-800 dark:border-slate-700"
-              style={{
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '80px',
-                height: '80px',
-                background: 'var(--pa-white)',
-                borderRadius: 'var(--pa-radius-l)',
-                border: '1px solid var(--pa-n200)',
-                boxShadow: 'var(--pa-shadow-1)',
-              }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '48px', color: primaryColor, fontVariationSettings: "'FILL' 1" }}>
-                apparel
-              </span>
-            </div>
-            <div>
-              <h1
+          {/* Breadcrumbs */}
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              gap: 'var(--pa-space-2)',
+              marginBottom: 'var(--pa-space-4)',
+            }}
+          >
+            {sportName && (
+              <>
+                {sportId ? (
+                  <button
+                    onClick={() => handleBreadcrumbClick('/admin/sports', sportId)}
+                    disabled={navigating}
+                    style={{
+                      color: 'var(--org-text-muted)',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      textDecoration: 'none',
+                      background: 'none',
+                      border: 'none',
+                      cursor: navigating ? 'not-allowed' : 'pointer',
+                      opacity: navigating ? 0.6 : 1,
+                      padding: 0,
+                      lineHeight: 'normal',
+                    }}
+                  >
+                    {sportName}
+                  </button>
+                ) : (
+                  <Link
+                    to={getLink('admin.sports.list')}
+                    style={{
+                      color: 'var(--org-text-muted)',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      textDecoration: 'none',
+                      lineHeight: 'normal',
+                    }}
+                  >
+                    {sportName}
+                  </Link>
+                )}
+                <span style={{ color: 'var(--org-text-muted)', fontSize: '12px', fontWeight: 500, lineHeight: 'normal' }}>/</span>
+              </>
+            )}
+            {programName && (
+              <>
+                {programId ? (
+                  <button
+                    onClick={() => handleBreadcrumbClick('/admin/programs', programId)}
+                    disabled={navigating}
+                    style={{
+                      color: 'var(--org-text-muted)',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      textDecoration: 'none',
+                      background: 'none',
+                      border: 'none',
+                      cursor: navigating ? 'not-allowed' : 'pointer',
+                      opacity: navigating ? 0.6 : 1,
+                      padding: 0,
+                      lineHeight: 'normal',
+                    }}
+                  >
+                    {programName}
+                  </button>
+                ) : (
+                  <Link
+                    to={getLink('admin.programs.list')}
+                    style={{
+                      color: 'var(--org-text-muted)',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      textDecoration: 'none',
+                      lineHeight: 'normal',
+                    }}
+                  >
+                    {programName}
+                  </Link>
+                )}
+                <span style={{ color: 'var(--org-text-muted)', fontSize: '12px', fontWeight: 500, lineHeight: 'normal' }}>/</span>
+              </>
+            )}
+            {levelName && (
+              <span
                 style={{
-                  fontFamily: 'var(--pa-font-display)',
-                  fontSize: 'clamp(2.5rem, 5vw, 4.5rem)',
-                  fontWeight: 900,
-                  lineHeight: 1,
-                  letterSpacing: '-0.04em',
+                  color: 'var(--org-text-muted)',
+                  fontSize: '12px',
+                  fontWeight: 500,
                   textTransform: 'uppercase',
-                  color: 'var(--pa-n900)',
-                  margin: 0,
+                  letterSpacing: '0.05em',
+                  lineHeight: 'normal',
                 }}
-                className="dark:text-white"
               >
-                {team.name.toUpperCase()}
-              </h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)', marginTop: 'var(--pa-space-2)' }}>
-                <span
-                  style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    background: primaryColor,
-                  }}
-                />
-                <p
-                  style={{
-                    fontSize: '14px',
-                    fontWeight: 700,
-                    color: 'var(--pa-n500)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
-                    margin: 0,
-                  }}
-                  className="dark:text-slate-400"
-                >
-                  TeamHub Athletic v1.0.4
-                </p>
-              </div>
-            </div>
+                {levelName}
+              </span>
+            )}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--pa-space-3)' }}>
+
+          {/* Page title with optional icon */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-4)', marginBottom: 'var(--pa-space-6)' }}>
+            <span
+              className="material-symbols-outlined"
+              style={{
+                fontSize: '32px',
+                color: 'var(--org-btn-secondary-bg)', // Using secondary color for icon
+                fontVariationSettings: "'FILL' 1"
+              }}
+            >
+              groups
+            </span>
+            <h1
+              style={{
+                fontFamily: 'var(--pa-font-display)',
+                fontSize: 'clamp(2rem, 4vw, 3rem)',
+                fontWeight: 700,
+                lineHeight: 1.2,
+                color: 'var(--org-text-primary)',
+                margin: 0,
+              }}
+            >
+              {team.name}
+            </h1>
+          </div>
+
+          {/* Action buttons */}
+          <div style={{ display: 'flex', gap: 'var(--pa-space-3)' }}>
             {isOrgAdmin && (
               <Button
                 onClick={handleAddExistingAthlete}
@@ -646,6 +584,18 @@ export default function TeamDetail() {
             </Button>
           </div>
         </div>
+      </div>
+
+      {/* Main content area */}
+      <div
+        style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          width: '100%',
+          padding: 'var(--pa-space-6) var(--pa-space-4)',
+        }}
+        className="md:px-8"
+      >
 
         {/* Navigation Tabs */}
         <div style={{ marginBottom: 'var(--pa-space-6)' }}>

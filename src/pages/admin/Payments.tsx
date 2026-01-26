@@ -68,15 +68,28 @@ export default function Payments() {
       }
 
       // Transform to display format
-      const displayPayments: PaymentDisplay[] = data.map(assignment => ({
-        id: assignment.id,
-        child_name: assignment.child_id ? getAthleteName(assignment.child_id) : 'Unknown',
-        fee_title: assignment.fee?.title ?? 'Fee',
-        total_display: formatCurrency(assignment.amount_due_cents),
-        paid_display: formatCurrency(assignment.amount_paid_cents),
-        status: assignment.status as PaymentDisplay['status'],
-        created_at: assignment.created_at,
-      }))
+      const displayPayments: PaymentDisplay[] = data.map(assignment => {
+        // Get athlete name from the joined athlete data
+        const athlete = (assignment as any).athlete
+        const athleteName = athlete 
+          ? `${athlete.first_name || ''} ${athlete.last_name || ''}`.trim() || 'Unknown'
+          : 'Unknown'
+        
+        // Handle both fake data (amount_due_cents) and real data (amount_cents) field names
+        const raw = assignment as any
+        const totalCents = raw.amount_due_cents ?? raw.amount_cents ?? 0
+        const paidCents = raw.amount_paid_cents ?? raw.paid_cents_total ?? 0
+        
+        return {
+          id: assignment.id,
+          child_name: athleteName,
+          fee_title: assignment.fee?.title ?? 'Fee',
+          total_display: formatCurrency(totalCents),
+          paid_display: formatCurrency(paidCents),
+          status: assignment.status as PaymentDisplay['status'],
+          created_at: assignment.created_at,
+        }
+      })
 
       // Apply filter
       let filtered = displayPayments
@@ -116,6 +129,8 @@ export default function Payments() {
 
   // Cleanup effect to prevent state updates after unmount
   useEffect(() => {
+    // Reset to true on mount (handles StrictMode remounts)
+    isMountedRef.current = true
     return () => {
       isMountedRef.current = false
     }
@@ -195,16 +210,6 @@ export default function Payments() {
     }
   }, [isReady, orgId, checkAthletesExists])
 
-  // Helper to get athlete name (in real implementation, comes from joined data)
-  const getAthleteName = (childId: string): string => {
-    const names: Record<string, string> = {
-      'child-emma-001': 'Emma Johnson',
-      'child-liam-002': 'Liam Williams',
-      'child-sophia-003': 'Sophia Brown',
-      'child-jackson-004': 'Jackson Davis',
-    }
-    return names[childId] ?? 'Athlete'
-  }
 
   const columns: ColumnConfig<PaymentDisplay>[] = [
     { 

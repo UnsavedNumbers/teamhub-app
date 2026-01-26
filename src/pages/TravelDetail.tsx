@@ -40,160 +40,250 @@ function parseMeetingLocations(value: unknown): MeetingLocation[] {
 }
 
 // Helper functions for links and integrations
-function googleMapsLink(query: string) {
-  const q = encodeURIComponent(query)
+function googleMapsLink(query: string | null | undefined): string | null {
+  if (!query || query.trim() === '') return null
+  const q = encodeURIComponent(query.trim())
   return `https://www.google.com/maps/search/?api=1&query=${q}`
 }
 
-function appleMapsLink(query: string) {
-  const q = encodeURIComponent(query)
+function appleMapsLink(query: string | null | undefined): string | null {
+  if (!query || query.trim() === '') return null
+  const q = encodeURIComponent(query.trim())
   return `https://maps.apple.com/?q=${q}`
 }
 
-function wazeLink(query: string) {
-  const q = encodeURIComponent(query)
+function wazeLink(query: string | null | undefined): string | null {
+  if (!query || query.trim() === '') return null
+  const q = encodeURIComponent(query.trim())
   return `https://waze.com/ul?q=${q}`
 }
 
-function uberLink(address: string) {
-  const dest = encodeURIComponent(address)
+function uberLink(address: string | null | undefined): string | null {
+  if (!address || address.trim() === '') return null
+  const dest = encodeURIComponent(address.trim())
   return `https://m.uber.com/ul/?action=setPickup&dropoff[formatted_address]=${dest}`
 }
 
-function lyftLink(address: string) {
-  const dest = encodeURIComponent(address)
+function lyftLink(address: string | null | undefined): string | null {
+  if (!address || address.trim() === '') return null
+  const dest = encodeURIComponent(address.trim())
   return `https://lyft.com/ride?destination[address]=${dest}`
 }
 
-function googleCalendarLink(event: { title: string; startTime: string; endTime: string; location?: string; notes?: string }) {
-  const start = new Date(event.startTime).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-  const end = new Date(event.endTime).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-  const details = event.notes ? encodeURIComponent(event.notes) : ''
-  const location = event.location ? encodeURIComponent(event.location) : ''
-  const text = encodeURIComponent(event.title)
-  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${start}/${end}&details=${details}&location=${location}`
+function googleCalendarLink(event: { title: string; startTime: string; endTime: string; location?: string; notes?: string }): string | null {
+  try {
+    const startDate = new Date(event.startTime)
+    const endDate = new Date(event.endTime)
+    
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      console.error('Invalid date in calendar link:', event)
+      return null
+    }
+    
+    const start = startDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+    const end = endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+    const details = event.notes ? encodeURIComponent(event.notes) : ''
+    const location = event.location ? encodeURIComponent(event.location) : ''
+    const text = encodeURIComponent(event.title || 'Event')
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${start}/${end}&details=${details}&location=${location}`
+  } catch (err) {
+    console.error('Error generating Google Calendar link:', err)
+    return null
+  }
 }
 
-function appleCalendarLink(event: { title: string; startTime: string; endTime: string; location?: string }) {
-  // Download .ics file format
-  const start = new Date(event.startTime).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-  const end = new Date(event.endTime).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-  const location = event.location || ''
-  
-  const icsContent = `BEGIN:VCALENDAR
+function appleCalendarLink(event: { title: string; startTime: string; endTime: string; location?: string }): string | null {
+  try {
+    const startDate = new Date(event.startTime)
+    const endDate = new Date(event.endTime)
+    
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      console.error('Invalid date in calendar link:', event)
+      return null
+    }
+    
+    // Download .ics file format
+    const start = startDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+    const end = endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+    const location = event.location || ''
+    const title = event.title || 'Event'
+    
+    const icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
 BEGIN:VEVENT
 DTSTART:${start}
 DTEND:${end}
-SUMMARY:${event.title}
-LOCATION:${location}
+SUMMARY:${title.replace(/[,;\\]/g, '')}
+LOCATION:${location.replace(/[,;\\]/g, '')}
 END:VEVENT
 END:VCALENDAR`
-  
-  return `data:text/calendar;charset=utf8,${encodeURIComponent(icsContent)}`
+    
+    return `data:text/calendar;charset=utf8,${encodeURIComponent(icsContent)}`
+  } catch (err) {
+    console.error('Error generating Apple Calendar link:', err)
+    return null
+  }
 }
 
-function copyToClipboard(text: string) {
-  navigator.clipboard.writeText(text)
+async function copyToClipboard(text: string): Promise<{ success: boolean; error?: Error }> {
+  try {
+    if (!navigator.clipboard || !navigator.clipboard.writeText) {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      textArea.style.position = 'fixed'
+      textArea.style.opacity = '0'
+      document.body.appendChild(textArea)
+      textArea.select()
+      try {
+        document.execCommand('copy')
+        document.body.removeChild(textArea)
+        return { success: true }
+      } catch (err) {
+        document.body.removeChild(textArea)
+        return { success: false, error: err instanceof Error ? err : new Error('Failed to copy') }
+      }
+    }
+    await navigator.clipboard.writeText(text)
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err : new Error('Failed to copy to clipboard') }
+  }
 }
 
 export default function TravelDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { context, isReady } = useUserContext()
+
+  // Validate route param
+  useEffect(() => {
+    if (isReady && (!id || typeof id !== 'string' || id.trim() === '')) {
+      console.error('Invalid travel plan ID in route params')
+      navigate('/portal/travel', { replace: true })
+    }
+  }, [id, isReady, navigate])
   
   const [plan, setPlan] = useState<FakeTravelPlan | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
   const [tripEvents, setTripEvents] = useState<CalendarEvent[]>([])
   const [eventsLoading, setEventsLoading] = useState(false)
+  const [eventsError, setEventsError] = useState<Error | null>(null)
   const [copiedText, setCopiedText] = useState<string | null>(null)
+  const [copyError, setCopyError] = useState<string | null>(null)
   const [teamName, setTeamName] = useState<string>('')
   const [emergencyContact, setEmergencyContact] = useState<{ name: string; phone: string; role: string } | null>(null)
 
 
   useEffect(() => {
-    if (!isReady || !id) return
+    if (!isReady || !id) {
+      if (!id) {
+        setError(new Error('Travel plan ID is required'))
+        setLoading(false)
+      }
+      return
+    }
 
     async function fetchPlan() {
-      const { data, error } = await getTravelPlanById(context, id!)
-      
-      if (error || !data) {
-        console.error('Error fetching travel plan:', error)
-        navigate('/portal/travel')
-        setLoading(false)
-        return
-      }
-
-      setPlan(data)
-
-      // Fetch team name
       try {
-        const { data: teamData, error: teamError } = await supabase
-          .from('teams')
-          .select('name')
-          .eq('id', data.team_id)
-          .eq('org_id', context.orgId)
-          .single()
+        setLoading(true)
+        setError(null)
+        
+        const { data, error: fetchError } = await getTravelPlanById(context, id!)
+        
+        if (fetchError || !data) {
+          console.error('Error fetching travel plan:', fetchError)
+          setError(fetchError || new Error('Travel plan not found'))
+          setLoading(false)
+          // Don't navigate immediately - let user see error and retry
+          return
+        }
 
-        if (!teamError && teamData) {
-          setTeamName(teamData.name)
-        } else {
+        setPlan(data)
+
+        // Fetch team name
+        try {
+          const { data: teamData, error: teamError } = await supabase
+            .from('teams')
+            .select('name')
+            .eq('id', data.team_id)
+            .eq('org_id', context.orgId)
+            .single()
+
+          if (!teamError && teamData) {
+            setTeamName(teamData.name)
+          } else {
+            setTeamName('Unknown Team')
+          }
+        } catch (err) {
+          console.error('Error fetching team name:', err)
           setTeamName('Unknown Team')
         }
-      } catch (err) {
-        setTeamName('Unknown Team')
-      }
 
-      // Fetch emergency contact (first coach)
-      try {
-        const { data: coachData, error: coachError } = await supabase
-          .from('organization_members')
-          .select('user:users(display_name, phone), role')
-          .eq('org_id', context.orgId)
-          .eq('role', 'coach')
-          .limit(1)
-          .single()
+        // Fetch emergency contact (first coach)
+        try {
+          const { data: coachData, error: coachError } = await supabase
+            .from('organization_members')
+            .select('user:users(display_name, phone), role')
+            .eq('org_id', context.orgId)
+            .eq('role', 'coach')
+            .limit(1)
+            .maybeSingle()
 
-        if (!coachError && coachData?.user) {
-          const user = coachData.user as { display_name: string | null; phone: string | null }
-          setEmergencyContact({
-            name: user.display_name || 'Coach',
-            phone: user.phone || '',
-            role: 'Head Coach',
-          })
+          if (!coachError && coachData?.user) {
+            const user = coachData.user as { display_name: string | null; phone: string | null }
+            if (user.phone) {
+              setEmergencyContact({
+                name: user.display_name || 'Coach',
+                phone: user.phone,
+                role: 'Head Coach',
+              })
+            }
+          }
+        } catch (err) {
+          console.error('Error fetching emergency contact:', err)
+          // Keep emergencyContact as null, will show placeholder
         }
       } catch (err) {
-        // Keep emergencyContact as null, will show placeholder
+        console.error('Unexpected error fetching travel plan:', err)
+        setError(err instanceof Error ? err : new Error('Failed to load travel plan'))
+      } finally {
+        setLoading(false)
       }
-
-      setLoading(false)
     }
 
     fetchPlan()
-  }, [id, context, isReady, navigate])
+  }, [id, context, isReady])
 
   useEffect(() => {
     if (!plan || !isReady) return
 
     (async () => {
       setEventsLoading(true)
+      setEventsError(null)
       try {
         const startDate = new Date(plan.start_date)
         const endDate = new Date(plan.end_date)
         endDate.setHours(23, 59, 59, 999)
 
-        const { data, error } = await getEvents(context, {
+        const { data, error: fetchError } = await getEvents(context, {
           startDate,
           endDate,
           teamId: plan.team_id,
         })
 
-        if (error) {
-          console.error('Error fetching events:', error)
+        if (fetchError) {
+          console.error('Error fetching events:', fetchError)
+          setEventsError(fetchError)
           setTripEvents([])
         } else {
-          setTripEvents(data)
+          setTripEvents(data || [])
         }
+      } catch (err) {
+        console.error('Unexpected error fetching events:', err)
+        setEventsError(err instanceof Error ? err : new Error('Failed to load events'))
+        setTripEvents([])
       } finally {
         setEventsLoading(false)
       }
@@ -204,10 +294,22 @@ export default function TravelDetail() {
     return new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
   }
 
-  function handleCopy(text: string, label: string) {
-    copyToClipboard(text)
-    setCopiedText(label)
-    setTimeout(() => setCopiedText(null), 2000)
+  async function handleCopy(text: string, label: string) {
+    if (!text) {
+      setCopyError('Nothing to copy')
+      setTimeout(() => setCopyError(null), 3000)
+      return
+    }
+
+    const result = await copyToClipboard(text)
+    if (result.success) {
+      setCopiedText(label)
+      setCopyError(null)
+      setTimeout(() => setCopiedText(null), 2000)
+    } else {
+      setCopyError(result.error?.message || 'Failed to copy')
+      setTimeout(() => setCopyError(null), 3000)
+    }
   }
 
   if (loading) {
@@ -226,8 +328,34 @@ export default function TravelDetail() {
     )
   }
 
-  if (!plan) {
-    return null
+  if (error || !plan) {
+    return (
+      <PortalLayout
+        breadcrumbs={[
+          { label: 'Home', path: '/portal/dashboard' },
+          { label: 'Travel', path: '/portal/travel' },
+          { label: 'Error' },
+        ]}
+      >
+        <Card className="text-center py-12">
+          <Icon name="error" size="text-6xl" className="text-red-400 mb-4" />
+          <CardTitle className="mb-2">Error loading travel plan</CardTitle>
+          <p className="text-slate-500 dark:text-slate-400 mb-4">
+            {error?.message || 'Travel plan not found'}
+          </p>
+          <div className="flex gap-4 justify-center">
+            <Button variant="primary" onClick={() => navigate('/portal/travel')}>
+              <Icon name="arrow_back" size="text-sm" className="mr-2" />
+              Back to Travel
+            </Button>
+            <Button variant="secondary" onClick={() => window.location.reload()}>
+              <Icon name="refresh" size="text-sm" className="mr-2" />
+              Retry
+            </Button>
+          </div>
+        </Card>
+      </PortalLayout>
+    )
   }
 
   const meetingLocations = parseMeetingLocations(plan.meeting_locations)
@@ -304,32 +432,57 @@ export default function TravelDetail() {
                 <div className="mb-4">
                   <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Open in Maps</p>
                   <div className="flex flex-wrap gap-2">
-                    <a href={googleMapsLink(plan.venue_address)} target="_blank" rel="noreferrer">
-                      <Button variant="primary" className="text-sm px-4 py-2">
+                    {googleMapsLink(plan.venue_address) ? (
+                      <a href={googleMapsLink(plan.venue_address)!} target="_blank" rel="noreferrer">
+                        <Button variant="primary" className="text-sm px-4 py-2">
+                          <Icon name="map" size="text-sm" className="mr-2" />
+                          Google Maps
+                        </Button>
+                      </a>
+                    ) : (
+                      <Button variant="primary" className="text-sm px-4 py-2" disabled>
                         <Icon name="map" size="text-sm" className="mr-2" />
                         Google Maps
                       </Button>
-                    </a>
-                    <a href={appleMapsLink(plan.venue_address)} target="_blank" rel="noreferrer">
-                      <Button variant="secondary" className="text-sm px-4 py-2">
+                    )}
+                    {appleMapsLink(plan.venue_address) ? (
+                      <a href={appleMapsLink(plan.venue_address)!} target="_blank" rel="noreferrer">
+                        <Button variant="secondary" className="text-sm px-4 py-2">
+                          <Icon name="map" size="text-sm" className="mr-2" />
+                          Apple Maps
+                        </Button>
+                      </a>
+                    ) : (
+                      <Button variant="secondary" className="text-sm px-4 py-2" disabled>
                         <Icon name="map" size="text-sm" className="mr-2" />
                         Apple Maps
                       </Button>
-                    </a>
-                    <a href={wazeLink(plan.venue_address)} target="_blank" rel="noreferrer">
-                      <Button variant="secondary" className="text-sm px-4 py-2">
+                    )}
+                    {wazeLink(plan.venue_address) ? (
+                      <a href={wazeLink(plan.venue_address)!} target="_blank" rel="noreferrer">
+                        <Button variant="secondary" className="text-sm px-4 py-2">
+                          <Icon name="navigation" size="text-sm" className="mr-2" />
+                          Waze
+                        </Button>
+                      </a>
+                    ) : (
+                      <Button variant="secondary" className="text-sm px-4 py-2" disabled>
                         <Icon name="navigation" size="text-sm" className="mr-2" />
                         Waze
                       </Button>
-                    </a>
+                    )}
                     <Button 
                       variant="secondary" 
                       className="text-sm px-4 py-2"
-                      onClick={() => handleCopy(plan.venue_address!, 'Address')}
+                      onClick={() => plan.venue_address && handleCopy(plan.venue_address, 'Address')}
+                      disabled={!plan.venue_address}
                     >
                       <Icon name={copiedText === 'Address' ? 'check' : 'content_copy'} size="text-sm" className="mr-2" />
                       {copiedText === 'Address' ? 'Copied!' : 'Copy Address'}
                     </Button>
+                    {copyError && copiedText === 'Address' && (
+                      <span className="text-xs text-red-500">{copyError}</span>
+                    )}
                   </div>
                 </div>
 
@@ -337,18 +490,32 @@ export default function TravelDetail() {
                 <div>
                   <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Need a Ride?</p>
                   <div className="flex flex-wrap gap-2">
-                    <a href={uberLink(plan.venue_address)} target="_blank" rel="noreferrer">
-                      <Button variant="secondary" className="text-sm px-4 py-2">
+                    {uberLink(plan.venue_address) ? (
+                      <a href={uberLink(plan.venue_address)!} target="_blank" rel="noreferrer">
+                        <Button variant="secondary" className="text-sm px-4 py-2">
+                          <Icon name="local_taxi" size="text-sm" className="mr-2" />
+                          Uber
+                        </Button>
+                      </a>
+                    ) : (
+                      <Button variant="secondary" className="text-sm px-4 py-2" disabled>
                         <Icon name="local_taxi" size="text-sm" className="mr-2" />
                         Uber
                       </Button>
-                    </a>
-                    <a href={lyftLink(plan.venue_address)} target="_blank" rel="noreferrer">
-                      <Button variant="secondary" className="text-sm px-4 py-2">
+                    )}
+                    {lyftLink(plan.venue_address) ? (
+                      <a href={lyftLink(plan.venue_address)!} target="_blank" rel="noreferrer">
+                        <Button variant="secondary" className="text-sm px-4 py-2">
+                          <Icon name="local_taxi" size="text-sm" className="mr-2" />
+                          Lyft
+                        </Button>
+                      </a>
+                    ) : (
+                      <Button variant="secondary" className="text-sm px-4 py-2" disabled>
                         <Icon name="local_taxi" size="text-sm" className="mr-2" />
                         Lyft
                       </Button>
-                    </a>
+                    )}
                   </div>
                 </div>
                 </div>
@@ -394,23 +561,33 @@ export default function TravelDetail() {
                       </Button>
                     </a>
                   )}
-                  {plan.hotel_address && (
-                    <a href={googleMapsLink(plan.hotel_address)} target="_blank" rel="noreferrer">
+                  {plan.hotel_address && googleMapsLink(plan.hotel_address) ? (
+                    <a href={googleMapsLink(plan.hotel_address)!} target="_blank" rel="noreferrer">
                       <Button variant="secondary" className="text-sm px-4 py-2">
                         <Icon name="map" size="text-sm" className="mr-2" />
                         View on Maps
                       </Button>
                     </a>
-                  )}
-                  {plan.hotel_confirmation && (
-                    <Button 
-                      variant="secondary" 
-                      className="text-sm px-4 py-2"
-                      onClick={() => handleCopy(plan.hotel_confirmation!, 'Confirmation')}
-                    >
-                      <Icon name={copiedText === 'Confirmation' ? 'check' : 'content_copy'} size="text-sm" className="mr-2" />
-                      {copiedText === 'Confirmation' ? 'Copied!' : 'Copy Confirmation'}
+                  ) : plan.hotel_address ? (
+                    <Button variant="secondary" className="text-sm px-4 py-2" disabled>
+                      <Icon name="map" size="text-sm" className="mr-2" />
+                      View on Maps
                     </Button>
+                  ) : null}
+                  {plan.hotel_confirmation && (
+                    <>
+                      <Button 
+                        variant="secondary" 
+                        className="text-sm px-4 py-2"
+                        onClick={() => handleCopy(plan.hotel_confirmation!, 'Confirmation')}
+                      >
+                        <Icon name={copiedText === 'Confirmation' ? 'check' : 'content_copy'} size="text-sm" className="mr-2" />
+                        {copiedText === 'Confirmation' ? 'Copied!' : 'Copy Confirmation'}
+                      </Button>
+                      {copyError && copiedText === 'Confirmation' && (
+                        <span className="text-xs text-red-500">{copyError}</span>
+                      )}
+                    </>
                   )}
                 </div>
                 </div>
@@ -445,20 +622,31 @@ export default function TravelDetail() {
                       </p>
                     )}
                     <div className="flex flex-wrap gap-2">
-                      <a href={meeting.maps_url || googleMapsLink(meeting.address)} target="_blank" rel="noreferrer">
-                        <Button variant="primary" className="text-sm px-4 py-2">
+                      {(meeting.maps_url || googleMapsLink(meeting.address)) ? (
+                        <a href={meeting.maps_url || googleMapsLink(meeting.address)!} target="_blank" rel="noreferrer">
+                          <Button variant="primary" className="text-sm px-4 py-2">
+                            <Icon name="map" size="text-sm" className="mr-2" />
+                            View on Maps
+                          </Button>
+                        </a>
+                      ) : (
+                        <Button variant="primary" className="text-sm px-4 py-2" disabled>
                           <Icon name="map" size="text-sm" className="mr-2" />
                           View on Maps
                         </Button>
-                      </a>
+                      )}
                       <Button 
                         variant="secondary" 
                         className="text-sm px-4 py-2"
                         onClick={() => handleCopy(meeting.address, `Meeting ${idx}`)}
+                        disabled={!meeting.address}
                       >
                         <Icon name={copiedText === `Meeting ${idx}` ? 'check' : 'content_copy'} size="text-sm" className="mr-2" />
                         {copiedText === `Meeting ${idx}` ? 'Copied!' : 'Copy Address'}
                       </Button>
+                      {copyError && copiedText === `Meeting ${idx}` && (
+                        <span className="text-xs text-red-500">{copyError}</span>
+                      )}
                     </div>
                   </Card>
                 ))}
@@ -477,6 +665,12 @@ export default function TravelDetail() {
               {eventsLoading ? (
                 <div className="flex justify-center py-8">
                   <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-[var(--org-btn-primary-bg, #137fec)]"></div>
+                </div>
+              ) : eventsError ? (
+                <div className="text-center py-8">
+                  <Icon name="error" size="text-5xl" className="text-red-400 mb-3" />
+                  <p className="text-slate-500 dark:text-slate-400 mb-2">Error loading events</p>
+                  <p className="text-xs text-red-500">{eventsError.message}</p>
                 </div>
               ) : tripEvents.length === 0 ? (
                 <div className="text-center py-8">
@@ -501,22 +695,35 @@ export default function TravelDetail() {
                             </p>
                           )}
                         </div>
-                        <a
-                          href={googleCalendarLink({
-                            title: event.title,
-                            startTime: event.start_time,
-                            endTime: event.end_time,
-                            location: event.event_location?.venue_name || '',
-                            notes: event.notes || '',
-                          })}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          <Button variant="secondary" className="text-xs px-3 py-1">
+                        {googleCalendarLink({
+                          title: event.title,
+                          startTime: event.start_time,
+                          endTime: event.end_time,
+                          location: event.event_location?.venue_name || '',
+                          notes: event.notes || '',
+                        }) ? (
+                          <a
+                            href={googleCalendarLink({
+                              title: event.title,
+                              startTime: event.start_time,
+                              endTime: event.end_time,
+                              location: event.event_location?.venue_name || '',
+                              notes: event.notes || '',
+                            })!}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <Button variant="secondary" className="text-xs px-3 py-1">
+                              <Icon name="calendar_today" size="text-xs" className="mr-1" />
+                              Add to Calendar
+                            </Button>
+                          </a>
+                        ) : (
+                          <Button variant="secondary" className="text-xs px-3 py-1" disabled>
                             <Icon name="calendar_today" size="text-xs" className="mr-1" />
                             Add to Calendar
                           </Button>
-                        </a>
+                        )}
                       </div>
                       {/* Venue Insights for this event */}
                       {event.event_location?.place_id && (
@@ -586,38 +793,63 @@ export default function TravelDetail() {
               Add to Calendar
             </CardTitle>
             <div>
-              <a
-                href={googleCalendarLink({
-                  title: plan.title,
-                  startTime: plan.start_date,
-                  endTime: plan.end_date,
-                  location: plan.location,
-                  notes: plan.notes || '',
-                })}
-                target="_blank"
-                rel="noreferrer"
-                className="block mb-3"
-              >
-                <Button variant="secondary" className="w-full text-sm justify-start">
+              {googleCalendarLink({
+                title: plan.title,
+                startTime: plan.start_date,
+                endTime: plan.end_date,
+                location: plan.location,
+                notes: plan.notes || '',
+              }) ? (
+                <a
+                  href={googleCalendarLink({
+                    title: plan.title,
+                    startTime: plan.start_date,
+                    endTime: plan.end_date,
+                    location: plan.location,
+                    notes: plan.notes || '',
+                  })!}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block mb-3"
+                >
+                  <Button variant="secondary" className="w-full text-sm justify-start">
+                    <Icon name="event" size="text-sm" className="mr-2" />
+                    Google Calendar
+                  </Button>
+                </a>
+              ) : (
+                <Button variant="secondary" className="w-full text-sm justify-start mb-3" disabled>
                   <Icon name="event" size="text-sm" className="mr-2" />
                   Google Calendar
                 </Button>
-              </a>
-              <a
-                href={appleCalendarLink({
-                  title: plan.title,
-                  startTime: plan.start_date,
-                  endTime: plan.end_date,
-                  location: plan.location,
-                })}
-                download={`${plan.title}.ics`}
-                className="block"
-              >
-                <Button variant="secondary" className="w-full text-sm justify-start">
+              )}
+              {appleCalendarLink({
+                title: plan.title,
+                startTime: plan.start_date,
+                endTime: plan.end_date,
+                location: plan.location,
+              }) ? (
+                <a
+                  href={appleCalendarLink({
+                    title: plan.title,
+                    startTime: plan.start_date,
+                    endTime: plan.end_date,
+                    location: plan.location,
+                  })!}
+                  download={`${plan.title.replace(/[^a-z0-9]/gi, '_')}.ics`}
+                  className="block"
+                >
+                  <Button variant="secondary" className="w-full text-sm justify-start">
+                    <Icon name="event" size="text-sm" className="mr-2" />
+                    Apple Calendar
+                  </Button>
+                </a>
+              ) : (
+                <Button variant="secondary" className="w-full text-sm justify-start" disabled>
                   <Icon name="event" size="text-sm" className="mr-2" />
                   Apple Calendar
                 </Button>
-              </a>
+              )}
             </div>
           </Card>
 

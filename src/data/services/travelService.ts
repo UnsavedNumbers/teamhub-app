@@ -491,26 +491,99 @@ export async function getTravelPlans(
     context: UserContext,
     params: TravelPlansQueryParams = {}
 ): Promise<{ data: FakeTravelPlan[]; error: Error | null }> {
-    // Convert to event-based approach
-    const { data: events, error } = await getTravelEvents(context, {
-        teamId: params.teamId,
-        upcomingOnly: params.upcomingOnly,
-        includeCancelled: params.status === 'cancelled',
-    })
+    if (USE_FAKE_DATA) {
+        // Convert to event-based approach for fake data
+        const { data: events, error } = await getTravelEvents(context, {
+            teamId: params.teamId,
+            upcomingOnly: params.upcomingOnly,
+            includeCancelled: params.status === 'cancelled',
+        })
 
-    if (error) {
-        return { data: [], error }
+        if (error) {
+            return { data: [], error }
+        }
+
+        // Convert back to FakeTravelPlan format for backward compatibility
+        const plans = events.map(e => convertEventToTravelPlan(e))
+
+        // Filter by status if specified
+        if (params.status && params.status !== 'cancelled') {
+            return { data: plans.filter(p => p.status === params.status), error: null }
+        }
+
+        return { data: plans, error: null }
     }
 
-    // Convert back to FakeTravelPlan format for backward compatibility
-    const plans = events.map(e => convertEventToTravelPlan(e))
+    // Real Supabase implementation - query travel_plans table directly
+    try {
+        let query = supabase
+            .from('travel_plans')
+            .select(`
+                *,
+                team:teams(id, name, org_id),
+                season:seasons(id, name)
+            `)
+            .order('start_date', { ascending: true })
 
-    // Filter by status if specified
-    if (params.status && params.status !== 'cancelled') {
-        return { data: plans.filter(p => p.status === params.status), error: null }
+        // Filter by team
+        if (params.teamId) {
+            query = query.eq('team_id', params.teamId)
+        }
+
+        // Filter by status
+        if (params.status) {
+            query = query.eq('status', params.status)
+        } else {
+            // Default: only published and cancelled (parents can't see drafts)
+            query = query.in('status', ['published', 'cancelled'])
+        }
+
+        // Filter by upcoming only
+        if (params.upcomingOnly) {
+            const today = new Date().toISOString().split('T')[0]
+            query = query.gte('start_date', today)
+        }
+
+        const { data, error } = await query
+
+        if (error) throw error
+
+        // Map Supabase rows to FakeTravelPlan format
+        const plans: FakeTravelPlan[] = (data || []).map((row: any) => ({
+            id: row.id,
+            org_id: row.team?.org_id || '',
+            team_id: row.team_id,
+            season_id: row.season_id,
+            title: row.title,
+            location: row.location,
+            destination_city: row.destination_city || null,
+            destination_state: row.destination_state || null,
+            venue_name: row.venue_name || null,
+            venue_address: row.venue_address || null,
+            start_date: row.start_date,
+            end_date: row.end_date,
+            hotel_name: row.hotel_name || null,
+            hotel_address: row.hotel_address || null,
+            hotel_phone: row.hotel_phone || null,
+            hotel_confirmation: row.hotel_confirmation || null,
+            check_in_time: null,
+            check_out_time: null,
+            maps_url: row.maps_url || null,
+            notes: row.notes || null,
+            itinerary_file_path: row.itinerary_file_path || null,
+            meeting_locations: row.meeting_locations || null,
+            status: row.status || 'published',
+            published_at: row.published_at || null,
+            cancelled_at: row.cancelled_at || null,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+        }))
+
+        return { data: plans, error: null }
+    } catch (err) {
+        console.error('getTravelPlans error:', err)
+        return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
     }
-
-    return { data: plans, error: null }
 }
 
 /**
@@ -553,15 +626,72 @@ function convertEventToTravelPlan(event: TravelEvent): FakeTravelPlan {
  */
 export async function getTravelPlanDetails(
     context: UserContext,
-    eventId: string
+    planId: string
 ): Promise<{ data: FakeTravelPlan | null; error: Error | null }> {
-    const { data: event, error } = await getTravelEventDetails(context, eventId)
+    if (USE_FAKE_DATA) {
+        const { data: event, error } = await getTravelEventDetails(context, planId)
 
-    if (error || !event) {
-        return { data: null, error }
+        if (error || !event) {
+            return { data: null, error }
+        }
+
+        return { data: convertEventToTravelPlan(event), error: null }
     }
 
-    return { data: convertEventToTravelPlan(event), error: null }
+    // Real Supabase implementation - query travel_plans table directly
+    try {
+        const { data, error } = await supabase
+            .from('travel_plans')
+            .select(`
+                *,
+                team:teams(id, name, org_id),
+                season:seasons(id, name)
+            `)
+            .eq('id', planId)
+            .single()
+
+        if (error) throw error
+
+        if (!data) {
+            return { data: null, error: null }
+        }
+
+        // Map Supabase row to FakeTravelPlan format
+        const plan: FakeTravelPlan = {
+            id: data.id,
+            org_id: data.team?.org_id || '',
+            team_id: data.team_id,
+            season_id: data.season_id,
+            title: data.title,
+            location: data.location,
+            destination_city: data.destination_city || null,
+            destination_state: data.destination_state || null,
+            venue_name: data.venue_name || null,
+            venue_address: data.venue_address || null,
+            start_date: data.start_date,
+            end_date: data.end_date,
+            hotel_name: data.hotel_name || null,
+            hotel_address: data.hotel_address || null,
+            hotel_phone: data.hotel_phone || null,
+            hotel_confirmation: data.hotel_confirmation || null,
+            check_in_time: null,
+            check_out_time: null,
+            maps_url: data.maps_url || null,
+            notes: data.notes || null,
+            itinerary_file_path: data.itinerary_file_path || null,
+            meeting_locations: data.meeting_locations || null,
+            status: data.status || 'published',
+            published_at: data.published_at || null,
+            cancelled_at: data.cancelled_at || null,
+            created_at: data.created_at,
+            updated_at: data.updated_at,
+        }
+
+        return { data: plan, error: null }
+    } catch (err) {
+        console.error('getTravelPlanDetails error:', err)
+        return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+    }
 }
 
 /**

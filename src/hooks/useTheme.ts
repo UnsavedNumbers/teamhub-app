@@ -46,7 +46,7 @@ function getStoredTheme(): ThemeMode | null {
       return stored as ThemeMode
     }
   } catch (error) {
-    console.warn('Failed to read theme from localStorage:', error)
+    // Silently fail
   }
   
   return null
@@ -61,7 +61,7 @@ function setStoredTheme(theme: ThemeMode): void {
   try {
     localStorage.setItem('theme-preference', theme)
   } catch (error) {
-    console.warn('Failed to store theme to localStorage:', error)
+    // Silently fail
   }
 }
 
@@ -97,8 +97,6 @@ export function useTheme() {
     const initialMode = stored || 'system'
     const resolved = resolveTheme(initialMode)
     
-    console.log('[useTheme] Initializing with stored:', stored, 'mode:', initialMode, 'resolved:', resolved)
-    
     // Apply immediately (before React hydration)
     if (typeof document !== 'undefined') {
       applyTheme(resolved)
@@ -131,8 +129,8 @@ export function useTheme() {
         // If localStorage has a value, use it and sync to Supabase (localStorage wins)
         if (storedLocal) {
           // Sync localStorage value to Supabase in background (non-blocking)
-          updateUserPreference(user.id, 'theme', storedLocal).catch(err => {
-            console.warn('Failed to sync theme to Supabase (non-critical):', err)
+          updateUserPreference(user.id, 'theme', storedLocal).catch(() => {
+            // Silently fail - non-critical
           })
           
           // Keep using localStorage value
@@ -146,7 +144,6 @@ export function useTheme() {
         if (cancelled) return
 
         if (error) {
-          console.warn('Failed to load theme from Supabase, using system default:', error)
           setState(prev => ({ ...prev, loading: false }))
           return
         }
@@ -172,7 +169,6 @@ export function useTheme() {
         setState(prev => ({ ...prev, loading: false }))
       } catch (err) {
         if (cancelled) return
-        console.warn('Error loading theme from Supabase:', err)
         setState(prev => ({ ...prev, loading: false, error: err instanceof Error ? err : new Error('Unknown error') }))
       }
     }
@@ -226,7 +222,6 @@ export function useTheme() {
       try {
         await updateUserPreference(user.id, 'theme', mode)
       } catch (error) {
-        console.warn('Failed to sync theme to Supabase:', error)
         // Don't update state - localStorage is already updated
         setState(prev => ({ ...prev, error: error instanceof Error ? error : new Error('Unknown error') }))
       }

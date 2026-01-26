@@ -13,6 +13,7 @@ import { PageTitle, CardTitle } from '../components/portal/Typography'
 import { SportCardImage } from '../components/portal/SportCardImage'
 import Card from '../components/portal/Card'
 import Icon from '../components/portal/Icon'
+import Button from '../components/portal/Button'
 
 type TravelPlan = FakeTravelPlan & { team?: { name: string } }
 
@@ -54,6 +55,7 @@ export default function Travel() {
   const navigate = useNavigate()
   const [plans, setPlans] = useState<TravelPlan[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
   const [planSports, setPlanSports] = useState<Record<string, SportInfo | null>>({})
 
   const { context, isReady } = useUserContext()
@@ -62,45 +64,122 @@ export default function Travel() {
     if (!isReady) return
 
     async function fetchPlans() {
-      const { data, error } = await getUpcomingTravelPlansForUser(context)
-      
-      if (error) {
-        console.error('Error fetching travel plans:', error)
-        setPlans([])
-        setLoading(false)
-        return
-      }
+      try {
+        setLoading(true)
+        setError(null)
+        
+        const { data, error: fetchError } = await getUpcomingTravelPlansForUser(context)
+        
+        if (fetchError) {
+          console.error('Error fetching travel plans:', fetchError)
+          setError(fetchError)
+          setPlans([])
+          setLoading(false)
+          return
+        }
 
-      // Get unique team IDs from travel plans
-      const uniqueTeamIds = [...new Set(data.map(plan => plan.team_id))]
-      
-      // Fetch team names for all teams
-      const teamNameMap = await fetchTeamNames(uniqueTeamIds, context.orgId)
-      
-      // Transform data to include team name
-      const plansWithTeam = data.map(plan => ({
-        ...plan,
-        team: { name: teamNameMap[plan.team_id] || 'Unknown Team' }
-      }))
-      setPlans(plansWithTeam)
-      
-      // Load sports for travel plans
-      const sportsMap: Record<string, SportInfo | null> = {}
-      Promise.all(
-        data.map(async (plan) => {
-          const sport = await getSportFromTeam(context, plan.team_id)
-          if (sport) sportsMap[plan.id] = sport
-        })
-      ).then(() => setPlanSports(sportsMap))
-      
-      setLoading(false)
+        if (!data || data.length === 0) {
+          setPlans([])
+          setLoading(false)
+          return
+        }
+
+        // Get unique team IDs from travel plans
+        const uniqueTeamIds = [...new Set(data.map(plan => plan.team_id).filter(Boolean))]
+        
+        // Fetch team names for all teams
+        const teamNameMap = await fetchTeamNames(uniqueTeamIds, context.orgId)
+        
+        // Transform data to include team name
+        const plansWithTeam = data.map(plan => ({
+          ...plan,
+          team: { name: teamNameMap[plan.team_id] || 'Unknown Team' }
+        }))
+        setPlans(plansWithTeam)
+        
+        // Load sports for travel plans
+        const sportsMap: Record<string, SportInfo | null> = {}
+        await Promise.all(
+          data.map(async (plan) => {
+            try {
+              const sport = await getSportFromTeam(context, plan.team_id)
+              if (sport) sportsMap[plan.id] = sport
+            } catch (err) {
+              console.error(`Error loading sport for plan ${plan.id}:`, err)
+            }
+          })
+        )
+        setPlanSports(sportsMap)
+      } catch (err) {
+        console.error('Unexpected error fetching travel plans:', err)
+        setError(err instanceof Error ? err : new Error('Failed to load travel plans'))
+        setPlans([])
+      } finally {
+        setLoading(false)
+      }
     }
 
     fetchPlans()
   }, [context, isReady])
 
   function handlePlanClick(planId: string) {
+    if (!planId) {
+      console.error('Cannot navigate: planId is missing')
+      return
+    }
     navigate(`/portal/travel/${planId}`)
+  }
+
+  function handleRetry() {
+    if (isReady) {
+      const fetchPlans = async () => {
+        try {
+          setLoading(true)
+          setError(null)
+          
+          const { data, error: fetchError } = await getUpcomingTravelPlansForUser(context)
+          
+          if (fetchError) {
+            setError(fetchError)
+            setPlans([])
+            return
+          }
+
+          if (!data || data.length === 0) {
+            setPlans([])
+            return
+          }
+
+          const uniqueTeamIds = [...new Set(data.map(plan => plan.team_id).filter(Boolean))]
+          const teamNameMap = await fetchTeamNames(uniqueTeamIds, context.orgId)
+          
+          const plansWithTeam = data.map(plan => ({
+            ...plan,
+            team: { name: teamNameMap[plan.team_id] || 'Unknown Team' }
+          }))
+          setPlans(plansWithTeam)
+          
+          const sportsMap: Record<string, SportInfo | null> = {}
+          await Promise.all(
+            data.map(async (plan) => {
+              try {
+                const sport = await getSportFromTeam(context, plan.team_id)
+                if (sport) sportsMap[plan.id] = sport
+              } catch (err) {
+                console.error(`Error loading sport for plan ${plan.id}:`, err)
+              }
+            })
+          )
+          setPlanSports(sportsMap)
+        } catch (err) {
+          setError(err instanceof Error ? err : new Error('Failed to load travel plans'))
+          setPlans([])
+        } finally {
+          setLoading(false)
+        }
+      }
+      fetchPlans()
+    }
   }
 
   return (
@@ -121,6 +200,16 @@ export default function Travel() {
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
           </div>
+        ) : error ? (
+          <Card className="text-center py-12">
+            <Icon name="error" size="text-6xl" className="text-red-400 mb-4" />
+            <CardTitle className="mb-2">Error loading travel plans</CardTitle>
+            <p className="text-slate-500 dark:text-slate-400 mb-4">{error.message}</p>
+            <Button variant="primary" onClick={handleRetry}>
+              <Icon name="refresh" size="text-sm" className="mr-2" />
+              Retry
+            </Button>
+          </Card>
         ) : plans.length === 0 ? (
           <Card className="text-center py-12">
             <Icon name="flight" size="text-6xl" className="text-slate-400 mb-4" />
