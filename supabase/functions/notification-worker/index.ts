@@ -26,6 +26,16 @@ serve(async (req) => {
   }
 
   try {
+    // Parse request body to get appBaseUrl if provided
+    let appBaseUrl: string | null = null
+    try {
+      const body = await req.json()
+      appBaseUrl = body?.appBaseUrl || null
+      console.log('Received appBaseUrl from client:', appBaseUrl)
+    } catch {
+      // No body or invalid JSON - that's fine
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -58,10 +68,13 @@ serve(async (req) => {
     const notificationJobs = (jobs ?? []) as NotificationJobRow[]
     const results: any[] = []
 
+    // Use appBaseUrl from client if provided, otherwise fall back to env vars
     const platformBaseUrl =
+      appBaseUrl ||
       Deno.env.get('PLATFORM_APP_URL') ||
       Deno.env.get('APP_URL') ||
       'https://platform.youthsports.team'
+    console.log('Using platformBaseUrl for email links:', platformBaseUrl)
     const guardianInvitePath = '/portal/accept-invite'
 
     for (const job of notificationJobs) {

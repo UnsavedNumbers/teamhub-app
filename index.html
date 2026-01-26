@@ -15,29 +15,53 @@
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
   <title>Youth Sports</title>
   <script>
-    // Apply theme immediately on page load (before React hydration) to prevent flash
+    // CRITICAL: Apply theme IMMEDIATELY before any rendering to prevent flash
+    // This must run synchronously before any CSS or React loads
     (function() {
+      // First, ensure light mode is default (remove dark class if present)
+      document.documentElement.classList.remove('dark');
+      
       try {
-        const stored = localStorage.getItem('theme-preference');
-        const mode = stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system';
+        // Check both old and new localStorage keys for compatibility
+        const storedPreference = localStorage.getItem('theme-preference');
+        const storedTheme = localStorage.getItem('theme');
         
-        let resolvedTheme = 'light';
+        let mode = 'system';
+        if (storedPreference === 'light' || storedPreference === 'dark' || storedPreference === 'system') {
+          mode = storedPreference;
+        } else if (storedTheme === 'light' || storedTheme === 'dark') {
+          // Legacy support for old 'theme' key
+          mode = storedTheme;
+        }
+        
+        let resolvedTheme = 'light'; // Default to light
         if (mode === 'system') {
-          resolvedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          resolvedTheme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         } else {
           resolvedTheme = mode;
         }
         
+        // Apply the resolved theme
         if (resolvedTheme === 'dark') {
           document.documentElement.classList.add('dark');
         } else {
           document.documentElement.classList.remove('dark');
         }
       } catch (e) {
-        // Silently fail if localStorage is unavailable
+        // Silently fail if localStorage is unavailable, keep light mode default
+        document.documentElement.classList.remove('dark');
       }
     })();
   </script>
+  <style>
+    /* Prevent flash by setting light mode as default before CSS loads */
+    html:not(.dark) {
+      color-scheme: light;
+    }
+    html.dark {
+      color-scheme: dark;
+    }
+  </style>
 </head>
 
 <body>

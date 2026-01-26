@@ -223,6 +223,9 @@ function AppWithTheme() {
       <Routes>
           {/* Marketing Landing Page - Public */}
           <Route path="/" element={<HostHomeRoute />} />
+          
+          {/* Redirect /accept-invite to /portal/accept-invite for old email links */}
+          <Route path="/accept-invite" element={<AcceptInvite />} />
 
           {/* Portal Routes - Parents/Coaches */}
           <Route path="/portal" element={<HostGateLayout />}>

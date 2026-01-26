@@ -27,11 +27,15 @@ type ParentInvite = Database['public']['Tables']['parent_invites']['Row']
 /**
  * Trigger the notification worker to process queued emails
  * This is called after creating or resending an invite
+ * Passes the current app origin so email links use the correct base URL
  */
 async function triggerNotificationWorker(): Promise<void> {
     try {
+        // Pass the current origin so the worker can build correct invite links
+        const appBaseUrl = window.location.origin
+        
         const { error } = await supabase.functions.invoke('notification-worker', {
-            body: {}
+            body: { appBaseUrl }
         })
         if (error) {
             console.warn('Failed to trigger notification worker:', error)

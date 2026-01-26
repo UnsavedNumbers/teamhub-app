@@ -330,7 +330,7 @@ export default function AthleteDetail() {
     setLinkGuardianError(null)
 
     try {
-      const { error } = await linkGuardianToAthlete(
+      const { data, error } = await linkGuardianToAthlete(
         athleteId,
         guardianEmail,
         context.orgId,
@@ -350,8 +350,25 @@ export default function AthleteDetail() {
         setGuardians(guardiansData)
       }
 
-      // Close modal and show success
+      // Refresh pending invites list (in case an invite was created)
+      const { data: invitesData } = await getAthleteInvites(athleteId, context.orgId)
+      if (isMountedRef.current && invitesData) {
+        setPendingInvites(invitesData.map(invite => ({
+          id: invite.id,
+          email: invite.email,
+          status: invite.status,
+          expires_at: invite.expires_at,
+          created_at: invite.created_at,
+          token: invite.token
+        })))
+      }
+
+      // Reset form state
       if (isMountedRef.current) {
+        setGuardianEmail('')
+        setEmailTouched(false)
+        setGuardianMatch(null)
+        setLinkGuardianError(null)
         setShowLinkGuardianModal(false)
         // Could show a toast here if available
       }
@@ -365,7 +382,7 @@ export default function AthleteDetail() {
         setIsLinkingGuardian(false)
       }
     }
-  }, [athleteId, guardianEmail, guardianMatch, context.orgId, t])
+  }, [athleteId, guardianEmail, guardianMatch, context.orgId, t, isMountedRef])
 
   const handleRemoveGuardianClick = useCallback(
     (guardianUserId: string, guardianEmail: string) => {

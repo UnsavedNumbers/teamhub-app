@@ -170,11 +170,20 @@ export default function AuthCallback() {
           }
         }
 
-        // Priority 2: Check for pending invite token in sessionStorage
-        const pendingInviteToken = sessionStorage.getItem('pending_invite_token')
+        // Priority 2: Check for pending invite token in sessionStorage or localStorage
+        const pendingInviteToken = sessionStorage.getItem('pending_invite_token') || localStorage.getItem('pending_invite_token')
         if (pendingInviteToken) {
+          // Check for athlete_id in sessionStorage (from invite signup flow)
+          const pendingAthleteId = sessionStorage.getItem('pending_invite_athlete_id')
+          
+          // Build redirect URL with token and optional athlete_id
+          let acceptInviteUrl = `/portal/accept-invite?token=${pendingInviteToken}`
+          if (pendingAthleteId) {
+            acceptInviteUrl += `&athlete_id=${pendingAthleteId}`
+          }
+          
           // Navigation will unmount and cleanup will handle loading state
-          navigate(`/portal/accept-invite?token=${pendingInviteToken}`, { replace: true })
+          navigate(acceptInviteUrl, { replace: true })
           return
         }
 

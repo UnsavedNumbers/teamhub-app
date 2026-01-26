@@ -328,21 +328,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signInWithGoogle() {
+    // Import getBaseUrl to get current origin (supports localhost and production)
+    const { getBaseUrl } = await import('../utils/host')
+    const baseUrl = getBaseUrl()
+    
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/portal/auth/callback`,
+        // Use current base URL for OAuth redirect
+        // This works for localhost development and production
+        redirectTo: `${baseUrl}/portal/auth/callback`,
       },
     })
     return { error }
   }
 
   async function signUp(email: string, password: string, displayName?: string, requiresOrgSetup?: boolean) {
+    // Import getBaseUrl to get current origin (supports localhost and production)
+    const { getBaseUrl } = await import('../utils/host')
+    const baseUrl = getBaseUrl()
+    
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/portal/auth/callback`,
+        // Use current base URL for email verification links
+        // This works for localhost development and production
+        emailRedirectTo: `${baseUrl}/portal/auth/callback`,
         data: {
           display_name: displayName,
           // Pass requires_org_setup to metadata - the database trigger will read this
@@ -362,8 +374,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function resetPassword(email: string) {
+    // Import getBaseUrl to get current origin (supports localhost and production)
+    const { getBaseUrl } = await import('../utils/host')
+    const baseUrl = getBaseUrl()
+    
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      // Use current base URL for password reset links
+      // This works for localhost development and production
+      redirectTo: `${baseUrl}/reset-password`,
     })
     return { error }
   }

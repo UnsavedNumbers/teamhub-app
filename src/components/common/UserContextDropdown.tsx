@@ -208,7 +208,7 @@ export default function UserContextDropdown() {
         <Link 
           to={getLink(RouteKeys.PORTAL_SETTINGS)}
           onClick={handleClose}
-          className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors min-h-[44px]"
+          className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors min-h-[44px] no-underline hover:no-underline"
         >
           <span className="material-symbols-outlined mr-3 text-lg text-slate-400 dark:text-slate-500">settings</span>
           My Settings
@@ -223,7 +223,7 @@ export default function UserContextDropdown() {
               key={link.path}
               to={link.path} 
               onClick={handleClose} 
-              className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors min-h-[44px]"
+              className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors min-h-[44px] no-underline hover:no-underline"
             >
               <span className="material-symbols-outlined mr-3 text-lg text-slate-400 dark:text-slate-500">{link.icon}</span>
               {link.label}
@@ -237,7 +237,7 @@ export default function UserContextDropdown() {
         <Link 
           to={getLink(RouteKeys.PORTAL_SETTINGS)} 
           onClick={handleClose} 
-          className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors min-h-[44px]"
+          className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors min-h-[44px] no-underline hover:no-underline"
         >
           <span className="material-symbols-outlined mr-3 text-lg text-slate-400 dark:text-slate-500">help</span>
           Help & Support

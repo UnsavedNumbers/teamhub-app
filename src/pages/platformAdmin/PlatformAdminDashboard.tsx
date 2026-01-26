@@ -7,6 +7,7 @@ import { formatCurrency } from '../../utils/platformAdminMasking'
 import type { AdminPlatformHealth, AdminAuditLog } from '../../types/platformAdmin.types'
 import { mapEventLogsToAuditLogs, type AdminEventLog } from '../../utils/auditLogMapper'
 import { getLink, RouteKeys } from '@/utils/routes'
+import { cn } from '../../utils/cn'
 
 // Loading skeleton for stats
 function StatsSkeleton() {
@@ -14,8 +15,8 @@ function StatsSkeleton() {
     <div className="pa-grid pa-grid-4">
       {[1, 2, 3, 4].map((i) => (
         <div key={i} className="pa-kpi-card">
-          <div className="pa-skeleton" style={{ width: '60%', height: '14px', marginBottom: '8px' }} />
-          <div className="pa-skeleton" style={{ width: '40%', height: '40px' }} />
+          <div className={cn('pa-skeleton', 'pa-w-3-5', 'pa-h-4', 'pa-mb-2')} />
+          <div className={cn('pa-skeleton', 'pa-w-2-5', 'pa-h-10')} />
         </div>
       ))}
     </div>
@@ -154,9 +155,21 @@ export default function PlatformAdminDashboard() {
       />
 
       {error && (
-        <div className="pa-card pa-mb-4" style={{ borderLeft: '3px solid var(--pa-warning)', background: 'var(--pa-warning-bg)' }}>
-          <div className="pa-flex pa-items-center pa-gap-2">
-            <span className="material-symbols-outlined" style={{ color: 'var(--pa-warning)' }}>warning</span>
+        <div 
+          className={cn(
+            'pa-card',
+            'pa-mb-4',
+            'pa-border-l-3',
+            'pa-border-warning',
+            'pa-bg-warning-bg'
+          )}
+        >
+          <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-2')}>
+            <span 
+              className={cn('material-symbols-outlined', 'pa-text-warning')}
+            >
+              warning
+            </span>
             <span className="pa-body-m">{error}. The platform admin views may not be set up yet.</span>
           </div>
         </div>
@@ -245,36 +258,43 @@ export default function PlatformAdminDashboard() {
               description="Admin actions will appear here once the audit system is active."
             />
           ) : (
-            <div className="pa-flex pa-flex-col pa-gap-3">
+            <div className={cn('pa-flex', 'pa-flex-col', 'pa-gap-3')}>
               {recentActivity.map((activity) => (
                 <div
                   key={activity.id}
-                  className="pa-flex pa-items-center pa-gap-3"
-                  style={{ padding: 'var(--pa-space-3) 0', borderBottom: '1px solid var(--pa-n100)' }}
+                  className={cn(
+                    'pa-flex',
+                    'pa-items-center',
+                    'pa-gap-3',
+                    'pa-py-3',
+                    'pa-border-b'
+                  )}
                 >
                   <div
-                    style={{
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: 'var(--pa-radius-s)',
-                      background: 'var(--pa-n50)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
+                    className={cn(
+                      'pa-w-9',
+                      'pa-h-9',
+                      'pa-rounded-s',
+                      'pa-bg-n50',
+                      'pa-flex',
+                      'pa-items-center',
+                      'pa-justify-center'
+                    )}
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--pa-n500)' }}>
+                    <span 
+                      className={cn('material-symbols-outlined', 'pa-text-n500', 'pa-icon-md')}
+                    >
                       history
                     </span>
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div className="pa-flex pa-items-center pa-gap-2 pa-mb-1">
+                    <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-2', 'pa-mb-1')}>
                       <Badge variant={getBadgeVariant(activity.action)}>
                         {activity.action.replace(/_/g, ' ')}
                       </Badge>
                       <span className="pa-body-s">on {activity.entity_type}</span>
                     </div>
-                    <p className="pa-caption" style={{ margin: 0 }}>
+                    <p className={cn('pa-caption', 'pa-mb-0')}>
                       {activity.actor_email || 'System'} • {formatTimeAgo(activity.created_at)}
                     </p>
                   </div>
