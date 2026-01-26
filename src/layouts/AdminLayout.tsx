@@ -6,6 +6,7 @@ import { useLicense } from '../hooks/useLicense'
 import { LicenseWarningBanner } from '../components/admin/LicenseWarningBanner'
 import AdminLoadingSpinner from '../components/admin/AdminLoadingSpinner'
 import { usePlatformAdminTheme } from '../hooks/usePlatformAdminTheme'
+import { useTheme } from '../hooks/useTheme'
 import { useT } from '../i18n/useI18n'
 import { useSidebar } from '../contexts/SidebarContext'
 import { useMobile } from '@/hooks/useMobile'
@@ -13,12 +14,12 @@ import { useScrollLock } from '@/hooks/useScrollLock'
 import { getLink, getPath, RouteKeys } from '@/utils/routes'
 import SidebarOrganizationSwitcher from '../components/admin/SidebarOrganizationSwitcher'
 import MobileNavDrawer from '../components/common/MobileNavDrawer'
-import { useTheme } from '../hooks/useTheme'
+import GlobalNav from '../components/common/GlobalNav'
 import type { NavSection } from '@/types/menu'
 
 export default function AdminLayout() {
   const { loaded: themeLoaded } = usePlatformAdminTheme()
-  const { resolvedTheme, toggle: toggleTheme } = useTheme()
+  const { resolvedTheme } = useTheme()
   const t = useT()
   const location = useLocation()
   const navigate = useNavigate()
@@ -60,17 +61,17 @@ export default function AdminLayout() {
         { text: 'Levels', icon: 'grade', path: getLink('admin.levels.list'), requiresOrg: true },
         { text: 'Teams', icon: 'groups', path: getLink('admin.teams.list'), requiresOrg: true },
         { text: 'Seasons', icon: 'calendar_month', path: getLink('admin.seasons.list'), requiresOrg: true },
-        { text: 'People', icon: 'person', path: getPath(RouteKeys.ADMIN_ORGANIZATION_USERS), requiresOrg: true },
+        { text: 'Staff', icon: 'person', path: getPath(RouteKeys.ADMIN_ORGANIZATION_USERS), requiresOrg: true },
       ],
     },
     {
-        label: 'Management',
+        label: 'Athletes',
         icon: 'groups',
-        path: getLink('admin.guardians.list'),
+        path: getPath(RouteKeys.ADMIN_ATHLETES),
         requiresOrg: true,
         children: [
-            { text: 'Guardians', icon: 'home', path: getLink('admin.guardians.list'), requiresOrg: true },
             { text: 'Athletes', icon: 'child_care', path: getPath(RouteKeys.ADMIN_ATHLETES), requiresOrg: true },
+            { text: 'Guardians', icon: 'home', path: getLink('admin.guardians.list'), requiresOrg: true },
             { text: 'Guardian Requests', icon: 'person_add', path: getLink('admin.guardianRequests'), requiresOrg: true },
         ],
     },
@@ -181,7 +182,7 @@ export default function AdminLayout() {
         <div className="pa-sidebar-header">
           <Link to={getLink(RouteKeys.ADMIN_DASHBOARD)} className="pa-sidebar-brand">
             <img 
-              src="/images/logo-dark.png" 
+              src={resolvedTheme === 'dark' ? '/images/logo-light.png' : '/images/logo-dark.png'} 
               alt="Youth Sports" 
               className="pa-sidebar-logo-img"
               style={{ height: '32px', width: 'auto' }}
@@ -295,20 +296,7 @@ export default function AdminLayout() {
         {/* Footer */}
         <div className="pa-sidebar-footer">
           <div className="pa-sidebar-user">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span className="pa-sidebar-email">{profile?.email || 'Unknown'}</span>
-              <button
-                onClick={toggleTheme}
-                className="pa-btn pa-btn--ghost pa-btn--compact"
-                style={{ padding: '6px', minWidth: 'auto' }}
-                aria-label={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
-                title={`Current: ${resolvedTheme} mode`}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
-                  {resolvedTheme === 'dark' ? 'light_mode' : 'dark_mode'}
-                </span>
-              </button>
-            </div>
+            <span className="pa-sidebar-email">{profile?.email || 'Unknown'}</span>
             <button
               className="pa-btn pa-btn--secondary pa-btn--compact"
               onClick={handleSignOut}
@@ -328,6 +316,9 @@ export default function AdminLayout() {
 
       {/* Main */}
       <div className="pa-main">
+        {/* Global Navigation Header */}
+        <GlobalNav variant="admin" />
+
         {/* License Warning Banner */}
         {summary && <LicenseWarningBanner summary={summary} />}
 

@@ -9,6 +9,7 @@ import { isRpcSuccessResponse } from '../../utils/typeAdapters'
 import { useQueryParams } from '../../hooks/useQueryParams'
 import { useAuth } from '../../hooks/useAuth'
 import type { AdminUser, AdminRpcResponse } from '../../types/platformAdmin.types'
+import { cn } from '../../utils/cn'
 
 export default function Users() {
   const [users, setUsers] = useState<AdminUser[]>([])
@@ -182,7 +183,7 @@ export default function Users() {
       id: 'roles',
       label: 'Roles',
       render: (row) => (
-        <div className="pa-flex pa-gap-1" style={{ flexWrap: 'wrap' }}>
+        <div className={cn('pa-flex', 'pa-gap-1', 'pa-flex-wrap')}>
           {row.roles && row.roles.length > 0 ? (
             <>
               {row.roles.slice(0, 3).map((role: string) => (
@@ -238,15 +239,14 @@ export default function Users() {
       label: '',
       align: 'right',
       render: (row) => (
-        <div className="pa-table-actions" style={{ opacity: 1 }}>
+        <div className={cn('pa-table-actions', 'pa-opacity-100')}>
           {canPerformAction(adminRole, 'disable_user') && (
             <button
-              className="pa-btn pa-btn--ghost pa-btn--dense"
+              className="pa-btn pa-btn--ghost pa-btn--dense pa-text-danger"
               onClick={(e) => { e.stopPropagation(); handleDisable(row) }}
               title="Disable User"
-              style={{ color: 'var(--pa-danger)' }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>block</span>
+              <span className={cn('material-symbols-outlined', 'pa-icon-md')}>block</span>
               Disable
             </button>
           )}
@@ -282,10 +282,20 @@ export default function Users() {
 
       {/* Org Filter Indicator */}
       {orgFilter && (
-        <div className="pa-card pa-mb-4" style={{ background: 'var(--pa-primary-bg)', borderLeft: '3px solid var(--pa-primary)' }}>
-          <div className="pa-flex pa-items-center pa-justify-between">
-            <div className="pa-flex pa-items-center pa-gap-2">
-              <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-primary)' }}>
+        <div 
+          className={cn(
+            'pa-card', 
+            'pa-mb-4',
+            'pa-bg-theme-highlight',
+            'pa-border-l-3',
+            'pa-border-theme-primary'
+          )}
+        >
+          <div className={cn('pa-flex', 'pa-items-center', 'pa-justify-between')}>
+            <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-2')}>
+              <span 
+                className={cn('material-symbols-outlined', 'pa-text-theme-primary', 'pa-icon-md')}
+              >
                 filter_alt
               </span>
               <span className="pa-body-m">

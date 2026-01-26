@@ -7,6 +7,7 @@ import {
   type PlatformAdminAction,
 } from '../utils/platformAdminPermissions'
 import { usePlatformAdminTheme } from '../hooks/usePlatformAdminTheme'
+import { useTheme } from '../hooks/useTheme'
 import GlobalNav from '../components/common/GlobalNav'
 import { getLink, getPath, RouteKeys } from '@/utils/routes'
 
@@ -108,6 +109,7 @@ function LoadingSpinner() {
 
 export default function PlatformAdminLayout() {
   const { loaded: themeLoaded } = usePlatformAdminTheme()
+  const { resolvedTheme } = useTheme()
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
@@ -174,7 +176,7 @@ export default function PlatformAdminLayout() {
         <div className="pa-sidebar-header">
           <Link to={getLink(RouteKeys.PLATFORM_DASHBOARD)} className="pa-sidebar-brand" onClick={() => setMobileOpen(false)}>
             <img 
-              src="/images/logo-dark.png" 
+              src={resolvedTheme === 'dark' ? '/images/logo-light.png' : '/images/logo-dark.png'} 
               alt="Youth Sports" 
               className="pa-sidebar-logo-img"
               style={{ height: '32px', width: 'auto' }}

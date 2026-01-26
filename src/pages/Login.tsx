@@ -56,7 +56,17 @@ export default function Login() {
     const { error } = await signInWithEmail(email, password)
     
     if (error) {
-      setError(mapAuthError(error, t))
+      const errorMessage = mapAuthError(error, t)
+      
+      // Check if it's an email confirmation issue
+      if (error.message?.toLowerCase().includes('email') && 
+          (error.message?.toLowerCase().includes('confirm') || error.message?.toLowerCase().includes('verif'))) {
+        setError(`${errorMessage} Please check your email inbox for the confirmation link.`)
+      } else if (error.message === 'Invalid login credentials') {
+        setError('Invalid email or password. If you just signed up, please check your email to confirm your account first.')
+      } else {
+        setError(errorMessage)
+      }
       setLoading(false)
     } else {
       // Wait for profile to load to get organizations

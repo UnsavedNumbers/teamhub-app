@@ -7,6 +7,7 @@ import { isRpcSuccessResponse } from '../../utils/typeAdapters'
 import type { AdminOrganization, AdminRpcResponse, PlatformAdminRole, OrganizationStatus } from '../../types/platformAdmin.types'
 import { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { showSuccess, showError } from '../../utils/toast'
+import { cn } from '../../utils/cn'
 
 // Status filter options
 const statusOptions = [
@@ -219,26 +220,24 @@ export default function Organizations() {
       label: '',
       align: 'right',
       render: (row) => (
-        <div className="pa-table-actions" style={{ opacity: 1 }}>
+        <div className={cn('pa-table-actions', 'pa-opacity-100')}>
           {row.status !== 'active' && canPerformAction(adminRole, 'activate_organization') && (
             <button
-              className="pa-btn pa-btn--ghost pa-btn--dense"
+              className="pa-btn pa-btn--ghost pa-btn--dense pa-text-success"
               onClick={(e) => { e.stopPropagation(); handleActivate(row) }}
               title="Activate"
-              style={{ color: 'var(--pa-success)' }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>play_arrow</span>
+              <span className="material-symbols-outlined pa-icon-md">play_arrow</span>
               Activate
             </button>
           )}
           {row.status !== 'suspended' && canPerformAction(adminRole, 'suspend_organization') && (
             <button
-              className="pa-btn pa-btn--ghost pa-btn--dense"
+              className="pa-btn pa-btn--ghost pa-btn--dense pa-text-danger"
               onClick={(e) => { e.stopPropagation(); handleSuspend(row) }}
               title="Suspend"
-              style={{ color: 'var(--pa-danger)' }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>block</span>
+              <span className="material-symbols-outlined pa-icon-md">block</span>
               Suspend
             </button>
           )}

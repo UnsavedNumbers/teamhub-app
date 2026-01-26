@@ -124,6 +124,12 @@ BEGIN
   END IF;
 
   IF v_invite.status <> 'pending' THEN
+    -- Idempotency check: If already accepted by this user, return success
+    IF v_invite.status = 'accepted' AND v_invite.accepted_by_user_id = v_current_user THEN
+       RETURN QUERY SELECT true, v_invite.org_id, v_invite.athlete_id, 'Parent attached (already processed)';
+       RETURN;
+    END IF;
+
     RETURN QUERY SELECT false, v_invite.org_id, v_invite.athlete_id, 'Invite already processed';
     RETURN;
   END IF;

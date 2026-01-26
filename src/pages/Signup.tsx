@@ -9,6 +9,7 @@ import {
 } from '../utils/setupOrganization'
 import { AUTH_HERO_IMAGES } from '../utils/authImages'
 import { mapAuthError } from '../utils/authErrorMapper'
+import { supabase } from '../lib/supabase'
 
 export default function Signup() {
   const [email, setEmail] = useState('')
@@ -20,6 +21,8 @@ export default function Signup() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [heroImage, setHeroImage] = useState<string>('')
+  const [inviteEmail, setInviteEmail] = useState<string | null>(null)
+  const [isFromInvite, setIsFromInvite] = useState(false)
 
   const { signUp } = useAuth()
   const { resolvedTheme } = useTheme()
@@ -32,6 +35,8 @@ export default function Signup() {
   const locationState = location.state as {
     returnTo?: string
     setupOrganization?: boolean
+    inviteEmail?: string
+    athleteId?: string
   } | null
 
   // Determine if this is an organization setup flow
@@ -63,6 +68,78 @@ export default function Signup() {
     }
   }, [])
 
+  // Handle invite details from location state or sessionStorage
+  useEffect(() => {
+    const fetchInviteDetails = async () => {
+      // First, check location state (from navigation)
+      if (locationState?.inviteEmail) {
+        setEmail(locationState.inviteEmail)
+        setInviteEmail(locationState.inviteEmail)
+        setIsFromInvite(true)
+        
+        // Store athlete_id in sessionStorage if provided
+        if (locationState.athleteId) {
+          sessionStorage.setItem('pending_invite_athlete_id', locationState.athleteId)
+        }
+        return
+      }
+      
+      // Fallback: Check if there's a pending invite token in sessionStorage
+      // This handles cases where location.state is lost (page refresh, etc.)
+      const pendingToken = sessionStorage.getItem('pending_invite_token') || localStorage.getItem('pending_invite_token')
+      if (pendingToken) {
+        // Mark as from invite immediately (even before fetching details)
+        // This ensures the field is readonly while we fetch
+        setIsFromInvite(true)
+        
+        try {
+          console.log('[Signup] Fetching invite details for token:', pendingToken)
+          const { data, error: rpcError } = await supabase
+            .rpc('get_parent_invite_details', { p_token: pendingToken })
+
+          console.log('[Signup] RPC response - data:', data, 'error:', rpcError)
+
+          if (!rpcError && data && Array.isArray(data) && data.length > 0) {
+            const inviteDetails = data[0] as { 
+              valid: boolean
+              email: string | null
+              athlete_id: string | null
+              org_id: string | null
+              expired: boolean
+              already_accepted: boolean
+              message: string
+            }
+
+            console.log('[Signup] Invite details:', inviteDetails)
+
+            if (inviteDetails.valid && inviteDetails.email && inviteDetails.athlete_id) {
+              // Pre-fill email from invite
+              setEmail(inviteDetails.email)
+              setInviteEmail(inviteDetails.email)
+              
+              // Store athlete_id in sessionStorage
+              sessionStorage.setItem('pending_invite_athlete_id', inviteDetails.athlete_id)
+            } else {
+              // Invalid invite - allow editing email
+              console.warn('[Signup] Invalid invite details:', inviteDetails.message)
+              setIsFromInvite(false)
+              setInviteEmail(null)
+            }
+          } else {
+            // Error fetching or invalid response - still mark as from invite
+            // but don't pre-fill email (user can still see it's readonly)
+            console.warn('[Signup] Could not fetch invite details - rpcError:', rpcError, 'data:', data)
+          }
+        } catch (err) {
+          console.error('[Signup] Error fetching invite details:', err)
+          // Keep isFromInvite true if token exists, but don't pre-fill email
+        }
+      }
+    }
+
+    fetchInviteDetails()
+  }, [locationState])
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
@@ -86,12 +163,16 @@ export default function Signup() {
       setError(mapAuthError(error, t))
       setLoading(false)
     } else {
+      // Get athlete_id from sessionStorage if available (from invite flow)
+      const athleteId = sessionStorage.getItem('pending_invite_athlete_id')
+      
       // Navigate to email confirmation page with returnTo info
       navigate('/portal/confirm-email', {
         state: {
           email,
           returnTo,
           setupOrganization: isOrgSetupFlow,
+          athleteId: athleteId || undefined,
         },
       })
     }
@@ -181,6 +262,18 @@ export default function Signup() {
             </div>
           )}
 
+          {/* Guardian Invite Banner (visible when coming from invite) */}
+          {isFromInvite && (
+            <div className="mb-6 p-4 rounded-xl flex items-center gap-3 text-sm bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20">
+              <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-400">mail</span>
+              <span className="text-slate-700 dark:text-slate-200">
+                {inviteEmail 
+                  ? "You're signing up to accept a guardian invitation. Your email address is locked to this invite."
+                  : "You're signing up to accept a guardian invitation. Loading invite details..."}
+              </span>
+            </div>
+          )}
+
           {/* Error Message */}
           {error && (
             <div className="mb-6 p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl text-red-600 dark:text-red-400 text-sm">
@@ -226,12 +319,27 @@ export default function Signup() {
                   type="email"
                   autoComplete="email"
                   required
+                  readOnly={isFromInvite}
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@email.com"
-                  className="block w-full rounded border-0 py-3 px-4 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#137fec] sm:text-sm"
+                  onChange={(e) => {
+                    // Only allow changes if not from invite
+                    if (!isFromInvite) {
+                      setEmail(e.target.value)
+                    }
+                  }}
+                  placeholder={isFromInvite ? "Loading invite email..." : "name@email.com"}
+                  className={`block w-full rounded border-0 py-3 px-4 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#137fec] sm:text-sm ${
+                    isFromInvite ? 'bg-slate-50 dark:bg-slate-800 cursor-not-allowed' : ''
+                  }`}
                 />
               </div>
+              {isFromInvite && (
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  {inviteEmail 
+                    ? 'This email is required to accept your guardian invitation.'
+                    : 'Loading invite details...'}
+                </p>
+              )}
             </div>
 
             {/* Password */}

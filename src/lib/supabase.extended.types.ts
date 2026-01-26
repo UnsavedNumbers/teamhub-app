@@ -263,6 +263,30 @@ type AdditionalFunctions = {
     }
     Returns: boolean
   }
+  // Invite acceptance functions
+  accept_parent_invite: {
+    Args: {
+      p_token: string
+    }
+    Returns: Array<{
+      success: boolean
+      organization_id?: string
+      child_id?: string
+      message?: string
+    }>
+  }
+  accept_organization_invite: {
+    Args: {
+      p_token: string
+    }
+    Returns: Array<{
+      success: boolean
+      org_id?: string
+      organization_name?: string
+      role?: string
+      message?: string
+    }>
+  }
 }
 
 // Override status and target types for entitlement overrides

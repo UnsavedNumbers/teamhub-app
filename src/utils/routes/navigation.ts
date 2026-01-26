@@ -255,13 +255,13 @@ export const adminMenuItems: MenuItemDefinition[] = [
         ],
     },
     {
-        label: 'Management',
+        label: 'Athletes',
         icon: 'groups',
-        routeKey: 'admin.guardians.list',
+        routeKey: 'admin.athletes.list',
         requiresOrg: true,
         children: [
-            { text: 'Guardians', icon: 'home', routeKey: 'admin.guardians.list', requiresOrg: true },
             { text: 'Athletes', icon: 'child_care', routeKey: 'admin.athletes.list', requiresOrg: true },
+            { text: 'Guardians', icon: 'home', routeKey: 'admin.guardians.list', requiresOrg: true },
             { text: 'Guardian Requests', icon: 'person_add', routeKey: 'admin.guardianRequests', requiresOrg: true },
         ],
     },
@@ -371,15 +371,15 @@ export const adminGlobalNavSections: NavigationSection[] = [
         ],
     },
     {
-        label: 'Management',
+        label: 'Athletes',
         groups: [
             {
-                label: 'Teams & People',
+                label: 'Athletes & Guardians',
                 items: [
-                    { routeKey: 'admin.teams.list', text: 'Teams', icon: 'groups', description: 'Manage teams & rosters' },
-                    { routeKey: 'admin.guardians.list', text: 'Guardians', icon: 'home', description: 'Guardian management' },
                     { routeKey: 'admin.athletes.list', text: 'Athletes', icon: 'child_care', description: 'Player registry' },
+                    { routeKey: 'admin.guardians.list', text: 'Guardians', icon: 'home', description: 'Guardian management' },
                     { routeKey: 'admin.guardianRequests', text: 'Guardian Requests', icon: 'person_add', description: 'Review attachment requests' },
+                    { routeKey: 'admin.teams.list', text: 'Teams', icon: 'groups', description: 'Manage teams & rosters' },
                 ],
             },
         ],

@@ -198,9 +198,6 @@ web3 = 30
 [auth.email]
 # Allow/disallow new user signups via email to your project.
 enable_signup = true
-
-[functions.notification-worker]
-verify_jwt = false
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
@@ -214,6 +211,9 @@ max_frequency = "1s"
 otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
+
+[functions.notification-worker]
+verify_jwt = false
 
 # Use a production-ready SMTP server
 # [auth.email.smtp]
