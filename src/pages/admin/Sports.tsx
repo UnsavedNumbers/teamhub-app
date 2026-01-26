@@ -135,7 +135,7 @@ export default function Sports() {
         <div className="h-4 bg-slate-100 rounded w-1/2 mb-12"></div>
         <div className="space-y-4">
           {[1, 2, 3].map(i => (
-            <div key={i} className="h-24 bg-slate-100 rounded-xl"></div>
+            <div key={i} className="h-24 bg-slate-100 rounded-2xl"></div>
           ))}
         </div>
       </div>
@@ -153,7 +153,7 @@ export default function Sports() {
             { label: 'Sports' },
           ]}
         />
-        <div className="p-6 bg-red-50 text-red-700 rounded-xl border border-red-100">
+        <div className="p-6 bg-red-50 text-red-700 rounded-2xl border border-red-100">
           {error}
         </div>
       </div>
@@ -212,16 +212,12 @@ export default function Sports() {
             </div>
           </Card>
         ) : (
-          allSports.map((sport) => {
-            const programCount = programCountBySport(sport.id)
+          <Card className="pa-stacked-list" noPadding>
+            {allSports.map((sport) => {
+              const programCount = programCountBySport(sport.id)
 
-            return (
-              <Card 
-                key={sport.id}
-                className="pa-stacked-list"
-                noPadding
-              >
-                <div className="pa-stacked-list-row">
+              return (
+                <div key={sport.id} className="pa-stacked-list-row">
                   <div className="pa-stacked-list-row-content">
                     <div className="pa-flex-1">
                       <Link to={sportDetailRoute(sport.id)} className="pa-stacked-list-row-title" style={{ textDecoration: 'none', display: 'block' }}>
@@ -268,9 +264,9 @@ export default function Sports() {
                     </div>
                   </div>
                 </div>
-              </Card>
-            )
-          })
+              )
+            })}
+          </Card>
         )}
       </div>
       <ConfirmDialog

@@ -13,9 +13,10 @@ import { getSports, getPrograms, deleteProgram } from '../../data/services/sport
 import { getLevels } from '../../data/services/levelsService'
 import { getTeams } from '../../data/services/teamsService'
 import type { Sport, Program, Level, Team } from '../../data/types/organization'
-import { AdminPageHeader, Select, ConfirmDialog, Button, Card } from '../../components/platformAdmin'
+import { AdminPageHeader, Select, ConfirmDialog, Button, Card, EmptyState } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
+import { cn } from '../../utils/cn'
 
 export default function Programs() {
   const { context, isReady } = useUserContext()
@@ -304,21 +305,16 @@ export default function Programs() {
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto p-8 animate-pulse">
-        <div className="h-8 bg-slate-200 rounded w-1/3 mb-4"></div>
-        <div className="h-4 bg-slate-100 rounded w-1/2 mb-12"></div>
-        <div className="space-y-4">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="h-24 bg-slate-100 rounded-xl"></div>
-          ))}
-        </div>
+      <div className="pa-root">
+        <div className="pa-skeleton" style={{ width: '300px', height: '40px', marginBottom: '24px' }} />
+        <div className="pa-skeleton" style={{ width: '100%', height: '300px' }} />
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="max-w-5xl mx-auto p-8">
+      <div className="pa-root">
         <OfflineBanner />
         <AdminPageHeader
           title="Programs"
@@ -328,18 +324,20 @@ export default function Programs() {
             { label: 'Programs' },
           ]}
         />
-        <div className="p-6 bg-red-50 text-red-700 rounded-xl border border-red-100 mb-4">
-          <div className="font-medium mb-2">{error}</div>
-          <Button variant="ghost" size="dense" onClick={loadProgramsData} disabled={loading}>
-            Retry
-          </Button>
-        </div>
+        <Card className="pa-mb-4">
+          <div className="pa-p-4 pa-text-danger">
+            <div className="pa-font-medium pa-mb-2">{error}</div>
+            <Button variant="ghost" size="dense" onClick={loadProgramsData} disabled={loading}>
+              Retry
+            </Button>
+          </div>
+        </Card>
       </div>
     )
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-8">
+    <div className="pa-root">
       <OfflineBanner />
       <AdminPageHeader
         title="Programs"
@@ -351,19 +349,24 @@ export default function Programs() {
       />
 
       {successMessage && (
-        <div className="p-3 bg-green-50 text-green-700 rounded-lg border-l-4 border-green-500 mb-4">
-          <div className="text-sm font-medium">{successMessage}</div>
-        </div>
+        <Card className="pa-mb-4" noPadding>
+          <div className="pa-p-4 pa-bg-success-light pa-text-success-dark pa-rounded-lg">
+             {/* Note: using pa-bg-success-light if available or standard utility */}
+            <div className="pa-text-success pa-font-medium">{successMessage}</div>
+          </div>
+        </Card>
       )}
 
       {actionError && (
-        <div className="p-3 bg-red-50 text-red-700 rounded-lg border-l-4 border-red-500 mb-4">
-          <div className="text-sm font-medium">{actionError}</div>
-        </div>
+        <Card className="pa-mb-4" noPadding>
+          <div className="pa-p-4 pa-bg-danger-light pa-text-danger-dark pa-rounded-lg">
+             <div className="pa-text-danger pa-font-medium">{actionError}</div>
+          </div>
+        </Card>
       )}
 
       <Card className="pa-mb-6">
-        <div className="pa-flex pa-flex-col md:pa-flex-row pa-justify-between pa-items-center" style={{ gap: 'var(--pa-space-4)' }}>
+        <div className={cn('pa-flex', 'pa-flex-col', 'md:pa-flex-row', 'pa-justify-between', 'pa-items-center', 'pa-gap-4')}>
           <div style={{ width: '100%', minWidth: '200px' }} className="md:pa-w-auto">
             <Select
               label="Filter by sport"
@@ -398,19 +401,18 @@ export default function Programs() {
         </div>
       </Card>
 
-      <div className="flex flex-col gap-4">
+      <div className="pa-flex pa-flex-col pa-gap-4">
         {filteredPrograms.length === 0 ? (
           <Card>
-            <div className="pa-flex pa-flex-col pa-items-center pa-justify-center pa-text-center pa-p-6">
-              <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--pa-n300)', marginBottom: '16px' }}>category</span>
-              <h3 className="pa-h3">
-                {filterSportId ? 'No programs for this sport' : 'No programs yet'}
-              </h3>
-              <p className="pa-body-m pa-text-muted pa-mb-4">
-                {filterSportId 
+            <EmptyState
+              icon="category"
+              title={filterSportId ? 'No programs for this sport' : 'No programs yet'}
+              description={
+                filterSportId 
                   ? `Create a program for ${sportById.get(filterSportId)?.name || 'this sport'}.`
-                  : 'Start by selecting a sport or create a program from the Sports page.'}
-              </p>
+                  : 'Start by selecting a sport or create a program from the Sports page.'
+              }
+            >
               {filterSportId ? (
                 <Button
                   onClick={() => handleNavigateToAddProgram(filterSportId)}
@@ -437,25 +439,21 @@ export default function Programs() {
                   View Sports
                 </Button>
               )}
-            </div>
+            </EmptyState>
           </Card>
         ) : (
-          filteredPrograms.map((program) => {
-            const sport = sportById.get(program.sport_id)
-            const programLevelsList = programLevels(program.id)
-            const totalTeams = programLevelsList.reduce((sum, level) => sum + levelTeams(level.id).length, 0)
-            const levelCount = programLevelsList.length
+          <Card className="pa-stacked-list" noPadding>
+            {filteredPrograms.map((program) => {
+              const sport = sportById.get(program.sport_id)
+              const programLevelsList = programLevels(program.id)
+              const totalTeams = programLevelsList.reduce((sum, level) => sum + levelTeams(level.id).length, 0)
+              const levelCount = programLevelsList.length
 
-            return (
-              <Card 
-                key={program.id}
-                className="pa-stacked-list"
-                noPadding
-              >
-                <div className="pa-stacked-list-row">
+              return (
+                <div key={program.id} className="pa-stacked-list-row">
                   <div className="pa-stacked-list-row-content">
                     <div className="pa-flex-1">
-                      <div className="pa-flex pa-items-center" style={{ gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-2)' }}>
+                      <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-3', 'pa-mb-2')}>
                         <button
                           onClick={() => handleNavigateToProgramDetail(program.id)}
                           disabled={loading || !program.id}
@@ -492,8 +490,8 @@ export default function Programs() {
                           </button>
                         )}
                       </div>
-                      <div className="pa-flex pa-items-center" style={{ gap: 'var(--pa-space-4)' }}>
-                        <span className="pa-body-s pa-text-muted" style={{ textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>
+                      <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-4')}>
+                        <span className={cn('pa-body-s', 'pa-text-muted', 'pa-uppercase', 'pa-font-bold')} style={{ letterSpacing: '0.1em' }}>
                           {program.gender_category}
                         </span>
                         <span className="pa-body-s pa-text-muted">•</span>
@@ -584,9 +582,9 @@ export default function Programs() {
                     </div>
                   </div>
                 </div>
-              </Card>
-            )
-          })
+              )
+            })}
+          </Card>
         )}
       </div>
       <ConfirmDialog

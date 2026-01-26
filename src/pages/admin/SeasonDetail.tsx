@@ -15,6 +15,7 @@ import type { Season } from '../../data/types/organization'
 import { AdminPageHeader, Card, Button, ConfirmDialog } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
+import { cn } from '../../utils/cn'
 
 interface SeasonStats {
   teams: number
@@ -239,36 +240,39 @@ export default function SeasonDetail() {
   return (
     <div className="pa-root">
       <OfflineBanner />
-      <div className="pa-content" style={{ maxWidth: '1200px', margin: '0 auto', padding: 'var(--pa-space-5)' }}>
+      <div className={cn('pa-content', 'pa-w-full', 'pa-mx-auto', 'pa-p-5')} style={{ maxWidth: '1200px' }}>
         {/* Hero Header Section */}
         <div
-          className="relative mb-8 overflow-hidden rounded-xl shadow-2xl"
+          className={cn('pa-relative', 'pa-mb-8', 'pa-overflow-hidden', 'pa-rounded-xl', 'pa-shadow-xl')}
           style={{
             background: 'var(--pa-n900)',
             minHeight: '320px',
           }}
         >
           <div
-            className="absolute inset-0 opacity-60 bg-cover bg-center"
+            className={cn('pa-absolute', 'pa-inset-0', 'pa-bg-cover', 'pa-bg-center')}
             style={{
+              opacity: 0.6,
               backgroundImage: 'linear-gradient(to right, rgba(0,0,0,0.8), rgba(0,0,0,0.2)), url("https://lh3.googleusercontent.com/aida-public/AB6AXuBu4HCQ9PZNmVmyMU9yEUANgUxkHrShObpL2Ih0mcZSgLGn3ygtDw3oDxRxlY8Qi6J88chTLIZVxjMEa1XX5VDrUc9NL99j7yrzHPPCAJ9Is3Krsl_vML3K7iUnbSIuA4ybgQBZKcXiXOHR7p8itgQRn4ZCyxKOul81eWkqPWbqoZtd8gadbsk9f6zQ4uJLoedADEbyPtPBlNkPkhZb1k5Sds1VR2ZRqqgJ6A9dlggpMIzSKfjq3V91X2bXdchA-I4HsQ02gEJbxac")',
-          }}
-          data-alt="High-contrast abstract autumn field texture"
-        />
+            }}
+            data-alt="High-contrast abstract autumn field texture"
+          />
           <div
-            className="relative z-10 flex flex-col md:flex-row justify-between items-end p-8 md:p-12"
+            className={cn('pa-relative', 'pa-z-10', 'pa-flex', 'pa-flex-col', 'md:pa-flex-row', 'pa-justify-between', 'pa-items-end', 'pa-p-8', 'md:pa-p-12')}
             style={{ minHeight: '320px' }}
           >
-            <div className="flex flex-col gap-2">
+            <div className={cn('pa-flex', 'pa-flex-col', 'pa-gap-2')}>
               <div
-                className="inline-flex items-center gap-2 rounded-lg px-3 py-1 mb-4 text-xs font-bold text-white uppercase tracking-widest shadow-lg pa-badge pa-badge--success"
+                className={cn('pa-inline-flex', 'pa-items-center', 'pa-gap-2', 'pa-rounded-lg', 'pa-px-3', 'pa-py-1', 'pa-mb-4', 'pa-text-xs', 'pa-font-bold', 'pa-uppercase', 'pa-tracking-widest', 'pa-shadow-lg', 'pa-badge', 'pa-badge--success')}
+                style={{ color: 'white' }}
               >
                 <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>check_circle</span>
                 Status: {season.is_active ? 'Active' : 'Upcoming'}
               </div>
               <h1
-                className="text-white font-black leading-none uppercase tracking-tighter"
+                className={cn('pa-font-black', 'pa-leading-none', 'pa-uppercase', 'pa-tracking-tighter')}
                 style={{
+                  color: 'white',
                   fontFamily: 'var(--pa-font-display)',
                   fontSize: 'clamp(2.5rem, 8vw, 4.5rem)',
                 }}
@@ -276,7 +280,7 @@ export default function SeasonDetail() {
                 {season.name}
               </h1>
               <p
-                className="text-lg md:text-xl font-medium tracking-widest mt-2"
+                className={cn('pa-text-lg', 'md:pa-text-xl', 'pa-font-medium', 'pa-tracking-widest', 'pa-mt-2')}
                 style={{
                   color: 'var(--pa-theme-action-primary, #10b77d)',
                 }}
@@ -286,13 +290,14 @@ export default function SeasonDetail() {
             </div>
             {/* Side Panel Graphic: Stopwatch */}
             <div
-              className="hidden lg:flex items-center justify-center p-6 rounded-2xl border backdrop-blur-md"
+              className={cn('pa-hidden', 'lg:pa-flex', 'pa-items-center', 'pa-justify-center', 'pa-p-6', 'pa-rounded-xl', 'pa-border')}
               style={{
                 background: 'rgba(255, 255, 255, 0.1)',
                 borderColor: 'rgba(255, 255, 255, 0.2)',
+                backdropFilter: 'blur(12px)',
               }}
             >
-              <div className="flex flex-col items-center gap-2 text-white">
+              <div className={cn('pa-flex', 'pa-flex-col', 'pa-items-center', 'pa-gap-2')} style={{ color: 'white' }}>
                 <span
                   className="material-symbols-outlined"
                   style={{
@@ -303,13 +308,13 @@ export default function SeasonDetail() {
                   timer
                 </span>
                 <span
-                  className="font-bold uppercase tracking-widest opacity-70"
+                  className={cn('pa-font-bold', 'pa-uppercase', 'pa-tracking-widest', 'pa-opacity-70')}
                   style={{ fontSize: '10px' }}
                 >
                   Season Progress
                 </span>
                 <div
-                  className="w-32 h-2 rounded-full mt-2 overflow-hidden"
+                  className={cn('pa-w-32', 'pa-h-2', 'pa-rounded-full', 'pa-mt-2', 'pa-overflow-hidden')}
                   style={{ background: 'rgba(255, 255, 255, 0.2)' }}
                 >
                   <div
@@ -328,14 +333,14 @@ export default function SeasonDetail() {
 
         {/* Athletic Grid Cards */}
         <div
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12"
+          className={cn('pa-grid', 'pa-grid-cols-1', 'md:pa-grid-cols-3', 'pa-gap-6', 'pa-mb-12')}
           style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}
         >
           {/* Card 1: Sports & Programs */}
-          <Card className="flex flex-col gap-6" style={{ padding: 'var(--pa-space-8)' }}>
-            <div className="flex items-center justify-between">
+          <Card className={cn('pa-flex', 'pa-flex-col', 'pa-gap-6')} style={{ padding: 'var(--pa-space-8)' }}>
+            <div className={cn('pa-flex', 'pa-items-center', 'pa-justify-between')}>
               <h3
-                className="text-sm font-black uppercase tracking-widest"
+                className={cn('pa-text-sm', 'pa-font-black', 'pa-uppercase', 'pa-tracking-widest')}
                 style={{ color: 'var(--pa-n500)' }}
               >
                 Sports & Programs
@@ -347,30 +352,30 @@ export default function SeasonDetail() {
                 sports_football
               </span>
             </div>
-            <div className="space-y-4">
+            <div className="pa-space-y-4">
               <div
-                className="flex justify-between items-center pb-2"
+                className={cn('pa-flex', 'pa-justify-between', 'pa-items-center', 'pa-pb-2')}
                 style={{ borderBottom: '1px solid var(--pa-n100)' }}
               >
-                <span className="font-bold">Varsity</span>
+                <span className="pa-font-bold">Varsity</span>
                 <span style={{ color: 'var(--pa-n500)' }}>
                   {statsLoading ? '—' : `${stats.sportsPrograms.varsity} Sports`}
                 </span>
               </div>
               <div
-                className="flex justify-between items-center pb-2"
+                className={cn('pa-flex', 'pa-justify-between', 'pa-items-center', 'pa-pb-2')}
                 style={{ borderBottom: '1px solid var(--pa-n100)' }}
               >
-                <span className="font-bold">JV</span>
+                <span className="pa-font-bold">JV</span>
                 <span style={{ color: 'var(--pa-n500)' }}>
                   {statsLoading ? '—' : `${stats.sportsPrograms.jv} Sports`}
                 </span>
               </div>
               <div
-                className="flex justify-between items-center pb-2"
+                className={cn('pa-flex', 'pa-justify-between', 'pa-items-center', 'pa-pb-2')}
                 style={{ borderBottom: '1px solid var(--pa-n100)' }}
               >
-                <span className="font-bold">Freshman</span>
+                <span className="pa-font-bold">Freshman</span>
                 <span style={{ color: 'var(--pa-n500)' }}>
                   {statsLoading ? '—' : `${stats.sportsPrograms.freshman} Sports`}
                 </span>
@@ -388,16 +393,16 @@ export default function SeasonDetail() {
 
           {/* Card 2: Teams */}
           <Card
-            className="flex flex-col justify-between"
+            className={cn('pa-flex', 'pa-flex-col', 'pa-justify-between')}
             style={{
               padding: 'var(--pa-space-8)',
               borderColor: 'rgba(16, 183, 125, 0.3)',
               boxShadow: '0 4px 14px rgba(16, 183, 125, 0.05)',
             }}
           >
-            <div className="flex items-center justify-between">
+            <div className={cn('pa-flex', 'pa-items-center', 'pa-justify-between')}>
               <h3
-                className="text-sm font-black uppercase tracking-widest"
+                className={cn('pa-text-sm', 'pa-font-black', 'pa-uppercase', 'pa-tracking-widest')}
                 style={{ color: 'var(--pa-n500)' }}
               >
                 Teams
@@ -409,9 +414,9 @@ export default function SeasonDetail() {
                 groups
               </span>
             </div>
-            <div className="py-4">
+            <div className="pa-py-4">
               <span
-                className="font-black block tracking-tighter"
+                className={cn('pa-font-black', 'pa-block', 'pa-tracking-tighter')}
                 style={{
                   fontFamily: 'var(--pa-font-display)',
                   fontSize: '4.5rem',
@@ -422,7 +427,7 @@ export default function SeasonDetail() {
                 {statsLoading ? '—' : stats.teams}
               </span>
               <span
-                className="text-lg font-bold uppercase tracking-tight block mt-2"
+                className={cn('pa-text-lg', 'pa-font-bold', 'pa-uppercase', 'pa-tracking-tight', 'pa-block', 'pa-mt-2')}
                 style={{
                   color: 'var(--pa-theme-action-primary, #10b77d)',
                 }}
@@ -430,16 +435,16 @@ export default function SeasonDetail() {
                 Active Teams
               </span>
             </div>
-            <div className="text-sm" style={{ color: 'var(--pa-n500)' }}>
+            <div className="pa-text-sm" style={{ color: 'var(--pa-n500)' }}>
               {statsLoading ? 'Loading...' : '+4 from Fall 2024'}
             </div>
           </Card>
 
           {/* Card 3: Season Stats */}
-          <Card className="flex flex-col gap-6" style={{ padding: 'var(--pa-space-8)' }}>
-            <div className="flex items-center justify-between">
+          <Card className={cn('pa-flex', 'pa-flex-col', 'pa-gap-6')} style={{ padding: 'var(--pa-space-8)' }}>
+            <div className={cn('pa-flex', 'pa-items-center', 'pa-justify-between')}>
               <h3
-                className="text-sm font-black uppercase tracking-widest"
+                className={cn('pa-text-sm', 'pa-font-black', 'pa-uppercase', 'pa-tracking-widest')}
                 style={{ color: 'var(--pa-n500)' }}
               >
                 Season Stats
@@ -451,60 +456,60 @@ export default function SeasonDetail() {
                 insights
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className={cn('pa-grid', 'pa-grid-cols-2', 'pa-gap-4')}>
               <div
-                className="p-4 rounded-lg"
+                className={cn('pa-p-4', 'pa-rounded-lg')}
                 style={{ background: 'var(--pa-n50)' }}
               >
                 <p
-                  className="font-bold uppercase mb-1"
+                  className={cn('pa-font-bold', 'pa-uppercase', 'pa-mb-1')}
                   style={{ color: 'var(--pa-n500)', fontSize: '10px' }}
                 >
                   Registered
                 </p>
-                <p className="text-2xl font-black">
+                <p className={cn('pa-text-2xl', 'pa-font-black')}>
                   {statsLoading ? '—' : stats.registered >= 1000 ? `${(stats.registered / 1000).toFixed(1)}k` : stats.registered}
                 </p>
               </div>
               <div
-                className="p-4 rounded-lg"
+                className={cn('pa-p-4', 'pa-rounded-lg')}
                 style={{ background: 'var(--pa-n50)' }}
               >
                 <p
-                  className="font-bold uppercase mb-1"
+                  className={cn('pa-font-bold', 'pa-uppercase', 'pa-mb-1')}
                   style={{ color: 'var(--pa-n500)', fontSize: '10px' }}
                 >
                   Games
                 </p>
-                <p className="text-2xl font-black">
+                <p className={cn('pa-text-2xl', 'pa-font-black')}>
                   {statsLoading ? '—' : stats.games}
                 </p>
               </div>
               <div
-                className="p-4 rounded-lg"
+                className={cn('pa-p-4', 'pa-rounded-lg')}
                 style={{ background: 'var(--pa-n50)' }}
               >
                 <p
-                  className="font-bold uppercase mb-1"
+                  className={cn('pa-font-bold', 'pa-uppercase', 'pa-mb-1')}
                   style={{ color: 'var(--pa-n500)', fontSize: '10px' }}
                 >
                   Venues
                 </p>
-                <p className="text-2xl font-black">
+                <p className={cn('pa-text-2xl', 'pa-font-black')}>
                   {statsLoading ? '—' : stats.venues}
                 </p>
               </div>
               <div
-                className="p-4 rounded-lg"
+                className={cn('pa-p-4', 'pa-rounded-lg')}
                 style={{ background: 'var(--pa-n50)' }}
               >
                 <p
-                  className="font-bold uppercase mb-1"
+                  className={cn('pa-font-bold', 'pa-uppercase', 'pa-mb-1')}
                   style={{ color: 'var(--pa-n500)', fontSize: '10px' }}
                 >
                   Staff
                 </p>
-                <p className="text-2xl font-black">
+                <p className={cn('pa-text-2xl', 'pa-font-black')}>
                   {statsLoading ? '—' : stats.staff}
                 </p>
               </div>
@@ -514,18 +519,18 @@ export default function SeasonDetail() {
 
         {/* Action Bar */}
         <div
-          className="flex flex-col sm:flex-row items-center justify-between gap-4 p-6 rounded-xl"
+          className={cn('pa-flex', 'pa-flex-col', 'sm:pa-flex-row', 'pa-items-center', 'pa-justify-between', 'pa-gap-4', 'pa-p-6', 'pa-rounded-xl')}
           style={{
             background: 'var(--pa-n50)',
           }}
         >
-          <div className="flex items-center gap-3" style={{ color: 'var(--pa-n500)' }}>
+          <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-3')} style={{ color: 'var(--pa-n500)' }}>
             <span className="material-symbols-outlined">settings_suggest</span>
-            <span className="text-sm font-medium">
+            <span className={cn('pa-text-sm', 'pa-font-medium')}>
               Administrator controls for {season.name} season management
             </span>
           </div>
-          <div className="flex items-center gap-4 w-full sm:w-auto">
+          <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-4', 'pa-w-full', 'sm:pa-w-auto')}>
             <Button
               variant="ghost"
               icon="edit"

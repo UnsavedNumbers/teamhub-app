@@ -5,7 +5,6 @@ import { useAuth } from '../hooks/useAuth'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import PortalLayout from '../components/portal/PortalLayout'
-import { getLink } from '../utils/routes'
 import { showSuccess, showError } from '../utils/toast'
 
 // Minimal layout for unauthenticated users - no portal navigation

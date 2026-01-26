@@ -1,5 +1,6 @@
 import { ReactNode } from 'react'
 import { Checkbox } from './Checkbox'
+import { cn } from '../../utils/cn'
 
 /**
  * Column configuration for PlatformDataTable
@@ -191,9 +192,10 @@ export default function PlatformDataTable<T extends { id: string }>({
               {safeColumns.map((column) => (
                 <th
                   key={String(column.id)}
-                  className={`${column.sortable && onSort ? 'pa-sortable' : ''} ${
+                  className={cn(
+                    column.sortable && onSort ? 'pa-sortable' : '',
                     orderBy === column.id ? 'pa-sorted' : ''
-                  }`}
+                  )}
                   style={{
                     textAlign: column.align || 'left',
                     minWidth: column.minWidth,
@@ -201,11 +203,11 @@ export default function PlatformDataTable<T extends { id: string }>({
                   }}
                   onClick={() => column.sortable && onSort && handleSort(String(column.id))}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}>
+                  <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-2')}>
                     <span>{column.label}</span>
                     {column.sortable && onSort && (
                       <span
-                        className="material-symbols-outlined pa-sort-icon"
+                        className={cn('material-symbols-outlined', 'pa-sort-icon')}
                         style={{ fontSize: '16px' }}
                       >
                         {orderBy === column.id
@@ -228,7 +230,7 @@ export default function PlatformDataTable<T extends { id: string }>({
                 onClick={() => onRowClick?.(row)}
                 style={{
                   cursor: onRowClick ? 'pointer' : 'default',
-                  backgroundColor: selectable && selectedIds.has(row.id) ? 'var(--pa-primary-bg, rgba(59, 130, 246, 0.1))' : undefined,
+                  backgroundColor: selectable && selectedIds.has(row.id) ? 'var(--pa-primary-bg)' : undefined,
                 }}
               >
                 {/* Selection checkbox */}
@@ -270,17 +272,14 @@ export default function PlatformDataTable<T extends { id: string }>({
 
       {/* Pagination */}
       <div
+        className={cn('pa-flex', 'pa-items-center', 'pa-justify-between', 'pa-bg-n50')}
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
           padding: 'var(--pa-space-4)',
           borderTop: '1px solid var(--pa-n100)',
-          background: 'var(--pa-n25)',
         }}
       >
         {/* Rows per page */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)' }}>
+        <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-3')}>
           <span className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
             Rows per page:
           </span>
@@ -303,7 +302,7 @@ export default function PlatformDataTable<T extends { id: string }>({
         </span>
 
         {/* Page controls */}
-        <div style={{ display: 'flex', gap: 'var(--pa-space-2)' }}>
+        <div className={cn('pa-flex', 'pa-gap-2')}>
           <button
             className="pa-btn pa-btn--ghost pa-btn--dense"
             onClick={() => onPageChange(page - 1)}

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
+import { cn } from '../../utils/cn'
 
 export interface NavLink {
   text: string
@@ -85,7 +86,11 @@ export default function MegaMenu({ isOpen, onClose, groups, wide = false, id }: 
     <div
       ref={menuRef}
       id={id}
-      className={`gn-mega ${isOpen ? 'open' : ''} ${wide ? 'gn-mega--wide' : ''}`}
+      className={cn(
+        'gn-mega', 
+        isOpen && 'open', 
+        wide && 'gn-mega--wide'
+      )}
       role="menu"
       aria-hidden={!isOpen}
     >

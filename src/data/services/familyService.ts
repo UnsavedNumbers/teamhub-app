@@ -465,31 +465,16 @@ export async function getAthletes(
 
     // Real Data
     try {
-        // Query athletes directly - RLS policies will filter based on guardian relationships
-        // The new system uses athlete_guardians, not families
-        console.log('[getAthletes] Fetching athletes for org:', context.orgId)
+        // Query athletes with guardian status using the batch RPC function
+        // This is more efficient than checking each athlete individually
+        console.log('[getAthletes] Fetching athletes with guardian status for org:', context.orgId)
         
         const { data, error } = await supabase
-            .from('athletes')
-            .select(`
-                id,
-                first_name,
-                last_name,
-                birthdate,
-                gender,
-                preferred_name,
-                jersey_number,
-                medical_notes,
-                allergies,
-                emergency_contact_name,
-                emergency_contact_phone,
-                created_at,
-                updated_at,
-                deleted_at,
-                family_id
-            `)
-            .is('deleted_at', null)
-            .order('first_name', { ascending: true })
+            .rpc('get_athletes_with_guardian_status', {
+                p_org_id: context.orgId,
+                p_limit: 10000, // Large limit to get all athletes (pagination handled client-side)
+                p_offset: 0
+            })
 
         console.log('[getAthletes] Query result:', { data, error, count: data?.length })
 
@@ -501,11 +486,11 @@ export async function getAthletes(
         // Transform the data to match Athlete type with empty sports array
         // Sports can be fetched separately if needed
         const transformed = (data || []).map((d: any) => ({
-            id: d.id,
+            id: d.athlete_id,
             family_id: d.family_id,
             first_name: d.first_name,
             last_name: d.last_name,
-            date_of_birth: d.birthdate || '',
+            date_of_birth: d.birthdate ? new Date(d.birthdate).toISOString().split('T')[0] : '',
             gender: d.gender,
             preferred_name: d.preferred_name ?? null,
             jersey_number: d.jersey_number ?? null,
@@ -517,7 +502,8 @@ export async function getAthletes(
             created_at: d.created_at || new Date().toISOString(),
             updated_at: d.updated_at || new Date().toISOString(),
             deleted_at: d.deleted_at,
-            sports: [] // Sports will be fetched separately if needed
+            sports: [], // Sports will be fetched separately if needed
+            has_active_guardian: d.has_active_guardian ?? false // Include guardian status
         } as Child))
         
         console.log('[getAthletes] Returning athletes:', transformed.length)
@@ -868,6 +854,23 @@ export async function getAthleteById(
             return { data: null, error: null }
         }
 
+        // Check if athlete has active guardian using RPC function
+        let hasActiveGuardian = false
+        try {
+            const { data: guardianStatus, error: guardianError } = await supabase
+                .rpc('athlete_has_active_guardian', {
+                    p_athlete_id: athleteId,
+                    p_org_id: context.orgId
+                })
+            
+            if (!guardianError && guardianStatus !== null && typeof guardianStatus === 'boolean') {
+                hasActiveGuardian = guardianStatus
+            }
+        } catch (err) {
+            console.warn('[getAthleteById] Error checking guardian status:', err)
+            // Continue without guardian status if check fails
+        }
+
         // Return athlete with empty sports array (sports will be fetched separately if needed)
         const athlete: Child = {
             id: data.id,
@@ -886,7 +889,8 @@ export async function getAthleteById(
             created_at: data.created_at ?? new Date().toISOString(),
             updated_at: data.updated_at ?? new Date().toISOString(),
             deleted_at: data.deleted_at,
-            sports: []
+            sports: [],
+            has_active_guardian: hasActiveGuardian
         }
 
         return { data: athlete, error: null }

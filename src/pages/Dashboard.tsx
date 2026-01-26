@@ -283,7 +283,7 @@ export default function Dashboard() {
 
         <div className="px-6">
           {unread.length > 0 && (
-          <div className="mb-10 bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl p-6">
+          <div className="mb-10 bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white">Notifications</h2>
               <div className="flex items-center gap-4">
@@ -334,7 +334,7 @@ export default function Dashboard() {
             </div>
             <div className="space-y-6">
               {eventsLoading ? (
-                <div className="bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl p-12 text-center">
+                <div className="bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl p-12 text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white mx-auto"></div>
                 </div>
               ) : upcomingEvents.length > 0 ? (
@@ -342,7 +342,7 @@ export default function Dashboard() {
                   <Link 
                     key={event.id} 
                     to={`/portal/calendar/events/${event.id}`}
-                    className="group bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300 cursor-pointer block"
+                    className="group bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300 cursor-pointer block"
                   >
                     <div className="flex flex-col md:flex-row h-full">
                       <div className="md:w-1/3">
@@ -380,7 +380,7 @@ export default function Dashboard() {
                   </Link>
                 ))
               ) : (
-                <div className="bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl p-12 text-center">
+                <div className="bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl p-12 text-center">
                   <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full mb-4">
                     <span className="material-symbols-outlined text-slate-400 text-4xl">event</span>
                   </div>
@@ -435,7 +435,7 @@ export default function Dashboard() {
             </div>
 
             {/* Bulletin */}
-            <div className="bg-slate-50 dark:bg-slate-900/80 p-6 rounded-xl border border-slate-100 dark:border-slate-800">
+            <div className="bg-slate-50 dark:bg-slate-900/80 p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
               <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-6 flex items-center gap-2">
                 <span className="material-symbols-outlined text-sm">campaign</span> Bulletin Board
               </h2>

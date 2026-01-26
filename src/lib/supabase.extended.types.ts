@@ -287,6 +287,39 @@ type AdditionalFunctions = {
       message?: string
     }>
   }
+  // Guardian status functions
+  athlete_has_active_guardian: {
+    Args: {
+      p_athlete_id: string
+      p_org_id: string
+    }
+    Returns: boolean
+  }
+  get_athletes_with_guardian_status: {
+    Args: {
+      p_org_id: string
+      p_limit?: number
+      p_offset?: number
+    }
+    Returns: Array<{
+      athlete_id: string
+      first_name: string
+      last_name: string
+      birthdate: string | null
+      gender: string | null
+      preferred_name: string | null
+      jersey_number: string | null
+      medical_notes: string | null
+      allergies: string | null
+      emergency_contact_name: string | null
+      emergency_contact_phone: string | null
+      created_at: string
+      updated_at: string
+      deleted_at: string | null
+      family_id: string | null
+      has_active_guardian: boolean
+    }>
+  }
 }
 
 // Override status and target types for entitlement overrides

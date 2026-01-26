@@ -822,7 +822,7 @@ export default function ImportAthletes() {
 
           {/* Sticky Summary Bar */}
           <div
-            className="bg-white/90 border border-slate-200 rounded-xl p-6 mb-8 flex flex-wrap gap-8 items-center shadow-lg"
+            className="bg-white/90 border border-slate-200 rounded-2xl p-6 mb-8 flex flex-wrap gap-8 items-center shadow-lg"
             style={{
               position: 'sticky',
               top: 0,
@@ -860,7 +860,7 @@ export default function ImportAthletes() {
 
           <div className="flex gap-8 flex-col lg:flex-row">
             {/* Data Preview Table Section */}
-            <div className="flex-1 flex flex-col min-w-0 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+            <div className="flex-1 flex flex-col min-w-0 bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
               <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
                 <h2 className="text-slate-900 text-sm font-bold uppercase tracking-widest">Data Preview + Validation</h2>
                 <div className="flex gap-2">
@@ -977,7 +977,7 @@ export default function ImportAthletes() {
 
             {/* Import Options Sidebar */}
             <aside className="w-full lg:w-80 flex flex-col gap-6">
-              <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                 <h3 className="text-slate-900 text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
                   <span className="material-symbols-outlined text-[#137fec] text-sm">settings</span>
                   Import Options
@@ -1037,7 +1037,7 @@ export default function ImportAthletes() {
                 </div>
               </div>
 
-              <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm border-l-4 border-l-[#137fec]">
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm border-l-4 border-l-[#137fec]">
                 <h3 className="text-slate-900 text-xs font-bold uppercase tracking-widest mb-4">Field Mapping</h3>
                 <div className="space-y-3">
                   {TEMPLATE_COLUMNS.required.map(col => {
@@ -1061,7 +1061,7 @@ export default function ImportAthletes() {
               </div>
 
               {stats.errors > 0 && (
-                <div className="p-6 rounded-xl bg-red-50 border border-red-200 shadow-sm">
+                <div className="p-6 rounded-2xl bg-red-50 border border-red-200 shadow-sm">
                   <div className="flex gap-3">
                     <span className="material-symbols-outlined text-red-500">info</span>
                     <div>
