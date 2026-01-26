@@ -1,4 +1,4 @@
-import type { ReactNode, MouseEvent } from 'react'
+import type { ReactNode, MouseEvent, CSSProperties } from 'react'
 import { cn } from '../../utils/cn'
 
 interface StatCardProps {
@@ -19,6 +19,8 @@ interface StatCardProps {
   onClick?: () => void
   /** Loading state */
   loading?: boolean
+  /** Optional inline styles */
+  style?: CSSProperties
 }
 
 /**
@@ -38,6 +40,7 @@ export function StatCard({
   meta,
   onClick,
   loading = false,
+  style,
 }: StatCardProps) {
   const handleClick = (e: MouseEvent) => {
     if (onClick && !loading) {
@@ -50,9 +53,10 @@ export function StatCard({
     <div
       className={cn(
         'pa-kpi-card',
-        onClick ? 'pa-cursor-pointer' : 'pa-cursor-default',
-        loading && 'pa-opacity-60'
-      )}
+      onClick ? 'pa-cursor-pointer' : 'pa-cursor-default',
+      loading && 'pa-opacity-60'
+    )}
+      style={style}
       onClick={handleClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}

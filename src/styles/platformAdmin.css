@@ -228,7 +228,7 @@ html.dark .pa-root a {
 
 .pa-root a:hover {
     color: var(--pa-n900);
-    text-decoration: underline;
+    text-decoration: none;
 }
 
 html.dark .pa-root a:hover {

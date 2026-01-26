@@ -450,6 +450,11 @@ export default function LevelsManagement() {
             columns={columns}
             loading={loading || refreshing}
             onRowClick={(row) => navigate(getLink('admin.levels.detail', { id: row.id }))}
+            page={0}
+            rowsPerPage={filteredLevels.length || 10}
+            totalCount={filteredLevels.length}
+            onPageChange={() => {}}
+            onRowsPerPageChange={() => {}}
           />
         </>
       )}

@@ -922,3 +922,257 @@ body {
 .z-loader {
   z-index: var(--z-loader);
 }
+
+/* =====================================================================
+   ORGANIZATION THEME OVERRIDES
+   Applied when oa-theme-active class is present (org admin and portal views)
+   ===================================================================== */
+
+/* =====================================================================
+   ORG THEME SIDEBAR NAVIGATION
+   ===================================================================== */
+
+.oa-theme-active .pa-nav-link-top {
+    background: var(--pa-n50);
+    color: var(--pa-n700);
+}
+
+.oa-theme-active .pa-nav-link-top:hover {
+    background: var(--org-highlight-bg, var(--pa-n100));
+    color: var(--org-btn-primary-bg, var(--pa-n900));
+}
+
+.oa-theme-active .pa-nav-link-top.active,
+.oa-theme-active .pa-nav-link-top.expanded {
+    background: var(--org-btn-primary-bg, var(--pa-n200));
+    color: var(--org-btn-primary-text, var(--pa-n900));
+}
+
+.oa-theme-active .pa-nav-link-top .material-symbols-outlined {
+    color: var(--pa-n700);
+}
+
+.oa-theme-active .pa-nav-link-top:hover .material-symbols-outlined {
+    color: var(--org-btn-primary-bg, var(--pa-n900));
+}
+
+.oa-theme-active .pa-nav-link-top.active .material-symbols-outlined,
+.oa-theme-active .pa-nav-link-top.expanded .material-symbols-outlined {
+    color: var(--org-btn-primary-text, var(--pa-n900));
+}
+
+/* Dark mode sidebar navigation */
+html.dark .oa-theme-active .pa-nav-link-top {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--pa-white);
+}
+
+html.dark .oa-theme-active .pa-nav-link-top:hover {
+    background: var(--org-highlight-bg, rgba(255, 255, 255, 0.1));
+    color: var(--org-btn-primary-bg, var(--pa-white));
+}
+
+html.dark .oa-theme-active .pa-nav-link-top.active,
+html.dark .oa-theme-active .pa-nav-link-top.expanded {
+    background: var(--org-btn-primary-bg, var(--pa-white));
+    color: var(--org-btn-primary-text, var(--pa-n900));
+}
+
+html.dark .oa-theme-active .pa-nav-link-top .material-symbols-outlined {
+    color: var(--pa-white);
+}
+
+html.dark .oa-theme-active .pa-nav-link-top:hover .material-symbols-outlined {
+    color: var(--org-btn-primary-bg, var(--pa-white));
+}
+
+html.dark .oa-theme-active .pa-nav-link-top.active .material-symbols-outlined,
+html.dark .oa-theme-active .pa-nav-link-top.expanded .material-symbols-outlined {
+    color: var(--org-btn-primary-text, var(--pa-n900));
+}
+
+/* Dashboard link should use org secondary/muted colors */
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard,
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active {
+    background: var(--pa-n50) !important;
+    color: var(--org-link-color, var(--pa-n700)) !important;
+}
+
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard:hover,
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active:hover {
+    background: var(--org-highlight-bg, var(--pa-n100)) !important;
+    color: var(--org-link-hover, var(--pa-n900)) !important;
+}
+
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard .material-symbols-outlined,
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active .material-symbols-outlined {
+    color: var(--org-link-color, var(--pa-n700)) !important;
+}
+
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard:hover .material-symbols-outlined,
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active:hover .material-symbols-outlined {
+    color: var(--org-link-hover, var(--pa-n900)) !important;
+}
+
+/* Dark mode dashboard */
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard,
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: var(--org-link-color, var(--pa-white)) !important;
+}
+
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard:hover,
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active:hover {
+    background: var(--org-highlight-bg, rgba(255, 255, 255, 0.1)) !important;
+    color: var(--org-link-hover, var(--pa-white)) !important;
+}
+
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard .material-symbols-outlined,
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active .material-symbols-outlined {
+    color: var(--org-link-color, var(--pa-white)) !important;
+}
+
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard:hover .material-symbols-outlined,
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active:hover .material-symbols-outlined {
+    color: var(--org-link-hover, var(--pa-white)) !important;
+}
+
+/* =====================================================================
+   ORG THEME TABS
+   ===================================================================== */
+
+.oa-theme-active .pa-tabs-trigger {
+    color: var(--org-link-color, var(--pa-n500));
+}
+
+.oa-theme-active .pa-tabs-trigger:hover {
+    color: var(--org-link-hover, var(--pa-n700));
+}
+
+.oa-theme-active .pa-tabs-trigger.active {
+    color: var(--org-btn-primary-bg, var(--pa-n900));
+    border-bottom-color: var(--org-btn-primary-bg, var(--pa-n900));
+}
+
+/* =====================================================================
+   ORG THEME GLOBAL NAVIGATION
+   ===================================================================== */
+
+.oa-theme-active .gn-nav-trigger {
+    color: var(--org-link-color, var(--gn-text-secondary));
+}
+
+.oa-theme-active .gn-nav-trigger:hover {
+    background: var(--org-highlight-bg, var(--gn-hover-bg));
+    color: var(--org-link-hover, var(--gn-text-primary));
+}
+
+.oa-theme-active .gn-nav-trigger[aria-expanded="true"] {
+    background: var(--org-btn-primary-bg, var(--gn-active-bg));
+    color: var(--org-btn-primary-text, var(--gn-text-primary));
+}
+
+.oa-theme-active .gn-nav-trigger .material-symbols-outlined {
+    color: var(--org-link-color, var(--gn-text-secondary));
+}
+
+.oa-theme-active .gn-nav-trigger:hover .material-symbols-outlined {
+    color: var(--org-link-hover, var(--gn-text-primary));
+}
+
+.oa-theme-active .gn-nav-trigger[aria-expanded="true"] .material-symbols-outlined {
+    color: var(--org-btn-primary-text, var(--gn-text-primary));
+}
+
+/* =====================================================================
+   ORG THEME UTILITY BUTTONS
+   ===================================================================== */
+
+.oa-theme-active .gn-util-btn {
+    color: var(--org-link-color, var(--gn-text-secondary));
+}
+
+.oa-theme-active .gn-util-btn:hover {
+    background: var(--org-highlight-bg, var(--gn-hover-bg));
+    color: var(--org-link-hover, var(--gn-text-primary));
+}
+
+.oa-theme-active .gn-util-btn .material-symbols-outlined {
+    color: var(--org-link-color, var(--gn-text-secondary));
+}
+
+.oa-theme-active .gn-util-btn:hover .material-symbols-outlined {
+    color: var(--org-link-hover, var(--gn-text-primary));
+}
+
+/* =====================================================================
+   ORG THEME BADGES AND STATUS INDICATORS
+   ===================================================================== */
+
+.oa-theme-active .pa-badge--primary {
+    background: var(--org-badge-primary-bg, var(--pa-success-bg));
+    color: var(--org-badge-primary-text, var(--pa-success));
+}
+
+.oa-theme-active .pa-badge--accent {
+    background: var(--org-badge-primary-bg, var(--pa-warning-bg));
+    color: var(--org-badge-primary-text, var(--pa-warning));
+}
+
+/* =====================================================================
+   ORG THEME LINKS
+   ===================================================================== */
+
+.oa-theme-active .pa-link {
+    color: var(--org-link-color);
+}
+
+.oa-theme-active .pa-link:hover {
+    color: var(--org-link-hover);
+}
+
+.oa-theme-active .pa-link-primary {
+    color: var(--org-btn-primary-bg);
+}
+
+.oa-theme-active .pa-link-primary:hover {
+    color: var(--org-btn-primary-hover);
+}
+
+/* =====================================================================
+   ORG THEME MOBILE DRAWER
+   ===================================================================== */
+
+.oa-theme-active .mobile-drawer-link {
+    color: var(--org-link-color, var(--pa-n600));
+}
+
+.oa-theme-active .mobile-drawer-link:hover {
+    background: var(--org-highlight-bg, var(--pa-n50));
+    color: var(--org-link-hover, var(--pa-n900));
+}
+
+.oa-theme-active .mobile-drawer-link .material-symbols-outlined {
+    color: var(--org-link-color, var(--pa-n500));
+}
+
+.oa-theme-active .mobile-drawer-link:hover .material-symbols-outlined {
+    color: var(--org-link-hover, var(--pa-n600));
+}
+
+.oa-theme-active .mobile-drawer-section-link {
+    color: var(--org-link-color, var(--pa-n600));
+}
+
+.oa-theme-active .mobile-drawer-section-link:hover {
+    background: var(--org-highlight-bg, var(--pa-n50));
+    color: var(--org-link-hover, var(--pa-n900));
+}
+
+.oa-theme-active .mobile-drawer-section-label {
+    color: var(--org-link-color, var(--pa-n700));
+}
+
+.oa-theme-active .mobile-drawer-group-label {
+    color: var(--org-link-color, var(--pa-n600));
+}

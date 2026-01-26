@@ -35,12 +35,34 @@ export interface ThemeTokens {
   '--org-btn-secondary-border': string
   '--org-link-color': string
   '--org-link-hover': string
+  '--org-link-muted': string
   '--org-badge-primary-bg': string
   '--org-badge-primary-text': string
   '--org-card-accent-border': string
   '--org-card-accent-bg': string
   '--org-highlight-bg': string
   '--org-focus-ring': string
+
+  // Extended UI tokens from theme.ui
+  '--org-text-primary': string
+  '--org-text-secondary': string
+  '--org-text-muted': string
+  '--org-text-inverse': string
+  '--org-surface-page': string
+  '--org-surface-section': string
+  '--org-surface-card': string
+  '--org-surface-card-header': string
+  '--org-surface-hover': string
+  '--org-surface-active': string
+  '--org-border-default': string
+  '--org-border-subtle': string
+  '--org-border-active': string
+  '--org-btn-disabled-bg': string
+  '--org-btn-disabled-text': string
+  '--org-status-success': string
+  '--org-status-warning': string
+  '--org-status-error': string
+  '--org-status-info': string
 }
 
 export const THEME_TOKEN_NAMES = [
@@ -63,112 +85,40 @@ export const THEME_TOKEN_NAMES = [
   '--org-btn-secondary-border',
   '--org-link-color',
   '--org-link-hover',
+  '--org-link-muted',
   '--org-badge-primary-bg',
   '--org-badge-primary-text',
   '--org-card-accent-border',
   '--org-card-accent-bg',
   '--org-highlight-bg',
   '--org-focus-ring',
+  '--org-text-primary',
+  '--org-text-secondary',
+  '--org-text-muted',
+  '--org-text-inverse',
+  '--org-surface-page',
+  '--org-surface-section',
+  '--org-surface-card',
+  '--org-surface-card-header',
+  '--org-surface-hover',
+  '--org-surface-active',
+  '--org-border-default',
+  '--org-border-subtle',
+  '--org-border-active',
+  '--org-btn-disabled-bg',
+  '--org-btn-disabled-text',
+  '--org-status-success',
+  '--org-status-warning',
+  '--org-status-error',
+  '--org-status-info',
 ] as const
 
 /**
  * Validate that all required tokens are present
  */
-function validateTokens(tokens: Record<string, string>): tokens is ThemeTokens {
-  return THEME_TOKEN_NAMES.every((key) => key in tokens && tokens[key] !== undefined)
-}
-
-/**
- * Calculate relative luminance for contrast checking
- * Based on WCAG 2.1 formula
- */
-function getRelativeLuminance(color: Colord): number {
-  const rgb = color.toRgb()
-  const [r, g, b] = [rgb.r, rgb.g, rgb.b].map((val) => {
-    val = val / 255
-    return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4)
-  })
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b
-}
-
-/**
- * Calculate contrast ratio between two colors
- * Returns ratio from 1 (no contrast) to 21 (maximum contrast)
- */
-function getContrastRatio(color1: Colord, color2: Colord): number {
-  const l1 = getRelativeLuminance(color1)
-  const l2 = getRelativeLuminance(color2)
-  const lighter = Math.max(l1, l2)
-  const darker = Math.min(l1, l2)
-  return (lighter + 0.05) / (darker + 0.05)
-}
-
-/**
- * Ensure minimum contrast ratio between two colors
- * Adjusts the target color to meet the required contrast
- */
-function ensureContrast(
-  baseColor: Colord,
-  targetColor: Colord,
-  minRatio: number,
-  depth = 0
-): Colord {
-  if (depth > 5) {
-    // Prevent recursive calls from going too deep
-    console.warn('ensureContrast called recursively too deep, using fallback')
-    return baseColor.isDark() ? colord('#FFFFFF') : colord('#000000')
-  }
-
-  let currentColor = targetColor
-  let currentRatio = getContrastRatio(baseColor, currentColor)
-
-  // If already meets requirement, return as-is
-  if (currentRatio >= minRatio) {
-    return currentColor
-  }
-
-  // Warn if in development and ratio is close but insufficient
-  if (process.env.NODE_ENV === 'development' && currentRatio >= 4.0 && currentRatio < minRatio) {
-    console.warn(`Contrast ratio ${currentRatio.toFixed(2)} is close to minimum ${minRatio}, adjusting slightly.`)
-  }
-
-  // Determine if we need to lighten or darken
-  const baseLuminance = getRelativeLuminance(baseColor)
-  const targetLuminance = getRelativeLuminance(currentColor)
-  const needsLightening = targetLuminance < baseLuminance
-
-  // Adjust lightness until contrast is sufficient
-  let attempts = 0
-  const maxAttempts = 50
-  let step = 5
-
-  while (currentRatio < minRatio && attempts < maxAttempts) {
-    if (needsLightening) {
-      currentColor = currentColor.lighten(step)
-    } else {
-      currentColor = currentColor.darken(step)
-    }
-
-    currentRatio = getContrastRatio(baseColor, currentColor)
-    attempts++
-
-    // Reduce step size if we overshoot
-    if (currentRatio > minRatio * 1.1) {
-      step = step / 2
-    }
-  }
-
-  // If we still don't meet requirements, use extreme values
-  if (currentRatio < minRatio) {
-    console.warn(`Could not achieve contrast ${minRatio} after ${maxAttempts} attempts`)
-    if (needsLightening) {
-      currentColor = colord('#FFFFFF')
-    } else {
-      currentColor = colord('#000000')
-    }
-  }
-
-  return currentColor
+function validateTokens(tokens: ThemeTokens): boolean {
+  const tokenRecord = tokens as unknown as Record<string, string>
+  return THEME_TOKEN_NAMES.every((key) => key in tokenRecord && tokenRecord[key] !== undefined)
 }
 
 /**
@@ -227,81 +177,64 @@ function safeParseColor(color: string, fallback: string): Colord {
  * Generate default tokens safely (fallback)
  */
 function generateDefaultTokens(isDark: boolean): ThemeTokens {
-  const defaultPrimary = 'var(--org-btn-primary-bg, #137fec)'
-  const defaultText = '#ffffff'
-  // ... complete implementation of default tokens to ensure no recursion issues
-  // Using simple logic for defaults
-
-  // For defaults, we can just use the same structure as generated but with hardcoded safe values
-  // to avoid using the potentially failing logic.
-  // However, to keep it DRY and consistent, we'll try to re-use logic BUT with guaranteed safe inputs
-  // If that fails, we return a hardcoded object.
-
   try {
     const defaultTheme = getDefaultTheme()
-    // We manually construct to minimize risk
-    const primary = colord(defaultTheme.colors.primary)
-    const darkPrimary = primary.lighten(10) // Approx adjust
-    const activePrimary = isDark ? darkPrimary : primary
-
-    const safeTokens: ThemeTokens = {
-      '--pa-theme-action-primary': activePrimary.toHex(),
-      '--pa-theme-action-hover': activePrimary.lighten(10).toHex(),
-      '--pa-theme-action-active': activePrimary.darken(10).toHex(),
-      '--pa-theme-surface-accent': activePrimary.alpha(0.1).toRgbString(),
-      '--pa-theme-surface-highlight': activePrimary.alpha(0.15).toRgbString(),
-      '--pa-theme-text-accent': activePrimary.toHex(),
-      '--pa-theme-text-on-action': '#ffffff',
-      '--pa-theme-border-accent': activePrimary.alpha(0.3).toRgbString(),
-      '--pa-theme-focus-ring': activePrimary.alpha(0.5).toRgbString(),
-
-      '--org-btn-primary-bg': activePrimary.toHex(),
-      '--org-btn-primary-hover': activePrimary.lighten(10).toHex(),
-      '--org-btn-primary-active': activePrimary.darken(10).toHex(),
-      '--org-btn-primary-text': '#ffffff',
-      '--org-btn-secondary-bg': 'transparent',
-      '--org-btn-secondary-hover': isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-      '--org-btn-secondary-text': isDark ? '#ffffff' : '#0F172A', // slate-900
-      '--org-btn-secondary-border': isDark ? '#334155' : '#E2E8F0', // slate-700/200
-      '--org-link-color': activePrimary.toHex(),
-      '--org-link-hover': activePrimary.lighten(10).toHex(),
-      '--org-badge-primary-bg': activePrimary.alpha(0.1).toRgbString(),
-      '--org-badge-primary-text': activePrimary.toHex(),
-      '--org-card-accent-border': activePrimary.alpha(0.3).toRgbString(),
-      '--org-card-accent-bg': activePrimary.alpha(0.1).toRgbString(),
-      '--org-highlight-bg': activePrimary.alpha(0.15).toRgbString(),
-      '--org-focus-ring': activePrimary.alpha(0.5).toRgbString(),
-    }
-    return safeTokens
+    return generateTokens(defaultTheme, isDark)
   } catch {
     // Ultimate fallback if even defaults fail (unlikely)
+    const fallbackColor = isDark ? '#60A5FA' : '#137fec'
+    const fallbackTextOnAction = '#ffffff'
+    const fallbackText = isDark ? '#F8FAFC' : '#0F172A'
+    const fallbackBorder = isDark ? '#334155' : '#E2E8F0'
+    
     return {
-      '--pa-theme-action-primary': 'var(--org-btn-primary-bg, #137fec)',
+      '--pa-theme-action-primary': fallbackColor,
       '--pa-theme-action-hover': '#0d6bc2',
       '--pa-theme-action-active': '#0b5ba0',
       '--pa-theme-surface-accent': 'rgba(19, 127, 236, 0.1)',
       '--pa-theme-surface-highlight': 'rgba(19, 127, 236, 0.15)',
-      '--pa-theme-text-accent': 'var(--org-btn-primary-bg, #137fec)',
-      '--pa-theme-text-on-action': '#ffffff',
+      '--pa-theme-text-accent': fallbackColor,
+      '--pa-theme-text-on-action': fallbackTextOnAction,
       '--pa-theme-border-accent': 'rgba(19, 127, 236, 0.3)',
       '--pa-theme-focus-ring': 'rgba(19, 127, 236, 0.5)',
 
-      '--org-btn-primary-bg': 'var(--org-btn-primary-bg, #137fec)',
+      '--org-btn-primary-bg': fallbackColor,
       '--org-btn-primary-hover': '#0d6bc2',
       '--org-btn-primary-active': '#0b5ba0',
-      '--org-btn-primary-text': '#ffffff',
+      '--org-btn-primary-text': fallbackTextOnAction,
       '--org-btn-secondary-bg': 'transparent',
-      '--org-btn-secondary-hover': 'rgba(0,0,0,0.05)',
-      '--org-btn-secondary-text': '#0F172A',
-      '--org-btn-secondary-border': '#E2E8F0',
-      '--org-link-color': 'var(--org-btn-primary-bg, #137fec)',
+      '--org-btn-secondary-hover': isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+      '--org-btn-secondary-text': fallbackText,
+      '--org-btn-secondary-border': fallbackBorder,
+      '--org-btn-disabled-bg': '#E1E6ED',
+      '--org-btn-disabled-text': '#9AA4B2',
+      '--org-link-color': fallbackColor,
       '--org-link-hover': '#0d6bc2',
+      '--org-link-muted': '#6b7280',
       '--org-badge-primary-bg': 'rgba(19, 127, 236, 0.1)',
-      '--org-badge-primary-text': 'var(--org-btn-primary-bg, #137fec)',
+      '--org-badge-primary-text': fallbackColor,
       '--org-card-accent-border': 'rgba(19, 127, 236, 0.3)',
       '--org-card-accent-bg': 'rgba(19, 127, 236, 0.1)',
       '--org-highlight-bg': 'rgba(19, 127, 236, 0.15)',
       '--org-focus-ring': 'rgba(19, 127, 236, 0.5)',
+
+      '--org-text-primary': fallbackText,
+      '--org-text-secondary': isDark ? '#9CA3AF' : '#6B7280',
+      '--org-text-muted': isDark ? '#6B7280' : '#9CA3AF',
+      '--org-text-inverse': isDark ? '#0F172A' : '#FFFFFF',
+      '--org-surface-page': isDark ? '#0B0F14' : '#F7F9FC',
+      '--org-surface-section': isDark ? '#111827' : '#EEF2F7',
+      '--org-surface-card': isDark ? '#1F2937' : '#FFFFFF',
+      '--org-surface-card-header': isDark ? '#374151' : '#F3F4F6',
+      '--org-surface-hover': isDark ? '#374151' : '#F9FAFB',
+      '--org-surface-active': isDark ? '#4B5563' : '#F3F4F6',
+      '--org-border-default': fallbackBorder,
+      '--org-border-subtle': isDark ? '#1F2937' : '#F3F4F6',
+      '--org-border-active': fallbackColor,
+      '--org-status-success': '#10B981',
+      '--org-status-warning': '#F59E0B',
+      '--org-status-error': '#EF4444',
+      '--org-status-info': '#3B82F6',
     }
   }
 }
@@ -310,104 +243,120 @@ function generateDefaultTokens(isDark: boolean): ThemeTokens {
 /**
  * Generate theme tokens from theme definition
  * 
- * @param theme - Theme object with primary, secondary, accent colors
+ * @param theme - Theme object with primary, secondary, accent colors and UI tokens
  * @param isDark - Whether dark mode is active
  * @returns Complete set of theme tokens
  */
 export function generateTokens(theme: Theme, isDark: boolean): ThemeTokens {
   // Use default theme as fallback for any errors
   const defaultTheme = getDefaultTheme()
-  const fallbackPrimary = defaultTheme.colors.primary
-  const fallbackSecondary = defaultTheme.colors.secondary
 
   try {
-    // Get theme colors, applying dark mode overrides if available
-    let primaryColor = theme.colors.primary
-    let secondaryColor = theme.colors.secondary
-    let accentColor = theme.colors.accent
-
-    if (isDark && theme.darkModeOverrides) {
-      primaryColor = theme.darkModeOverrides.primary || primaryColor
-      secondaryColor = theme.darkModeOverrides.secondary || secondaryColor
-      accentColor = theme.darkModeOverrides.accent || accentColor
+    // Get the appropriate UI tokens based on dark mode
+    const ui = theme.ui
+    const colors = isDark && ui.dark ? {
+      text: ui.dark.text,
+      surface: {
+        page: ui.dark.surface.page,
+        section: ui.dark.surface.page, // Use page for section in dark mode
+        card: ui.dark.surface.card,
+        cardHeader: ui.dark.surface.cardHeader,
+        hover: ui.dark.hover,
+        active: ui.dark.hover, // Use hover for active in dark mode
+      },
+      border: {
+        default: ui.dark.border,
+        subtle: ui.dark.border,
+        active: ui.border.active, // Keep active border from light mode
+      },
+    } : {
+      text: ui.text,
+      surface: ui.surface,
+      border: ui.border,
     }
 
-    // Safely parse colors with fallbacks
-    const primary = safeParseColor(primaryColor, fallbackPrimary)
-    const secondary = safeParseColor(secondaryColor, fallbackSecondary)
+    // Use button colors from theme.ui (these are mode-independent)
+    const button = ui.button
 
-    // Adjust colors for dark mode if needed
-    // IF overrides were applied, we assume they are already tuned for dark mode
+    // Safely parse primary color for derived tokens
+    const primary = safeParseColor(theme.colors.primary, defaultTheme.colors.primary)
+    const secondary = safeParseColor(theme.colors.secondary, defaultTheme.colors.secondary)
+
+    // For dark mode, adjust primary/secondary if no dark mode overrides exist
     const shouldAdjust = isDark && !theme.darkModeOverrides
     const adjustedPrimary = shouldAdjust ? adjustForDarkMode(primary) : primary
-    const adjustedSecondary = shouldAdjust ? adjustForDarkMode(secondary) : secondary
-
-    // Define base colors for contrast calculations
-    // For light mode: use white background, for dark mode: use dark background
-    const backgroundBase = isDark ? colord('#0B0F14') : colord('#FFFFFF')
-    const textBase = isDark ? colord('#F8FAFC') : colord('#2B343D')
-
-    // Generate action colors
-    const actionPrimary = adjustedPrimary
-    const actionHover = adjustedPrimary.lighten(0.1) // 10%
-    const actionActive = adjustedPrimary.darken(0.1) // 10%
-
-    // Ensure text on action buttons has sufficient contrast
-    const textOnAction = ensureContrast(actionPrimary, colord('#FFFFFF'), 4.5)
-
-    // Generate surface colors
-    const surfaceAccent = adjustedSecondary.alpha(0.1)
+    
+    // Generate derived colors for compatibility tokens
+    const actionActive = adjustedPrimary.darken(0.1)
+    const surfaceAccent = secondary.alpha(0.1)
     const surfaceHighlight = adjustedPrimary.alpha(0.15)
-
-    // Generate text accent color with sufficient contrast
-    // In dark mode, we might want to ensure it stands out against dark bg
-    const textAccent = ensureContrast(backgroundBase, adjustedPrimary, 4.5)
-
-    // Generate border and focus ring colors
     const borderAccent = adjustedPrimary.alpha(0.3)
     const focusRing = adjustedPrimary.alpha(0.5)
 
-    // --- Secondary Button Logic ---
-    // Default Secondary styles: Transparent bg, border, text color
-    const secondaryBg = colord('transparent')
-    const secondaryHover = isDark ? colord('#ffffff').alpha(0.05) : colord('#000000').alpha(0.05)
-    const secondaryText = isDark ? colord('#ffffff') : colord('#0F172A')
-    const secondaryBorder = isDark ? colord('#334155') : colord('#E2E8F0')
-
     const tokens: ThemeTokens = {
-      // -- Platform Admin Legacy / Core Tokens --
-      '--pa-theme-action-primary': actionPrimary.toHex(),
-      '--pa-theme-action-hover': actionHover.toHex(),
+      // -- Platform Admin Legacy / Core Tokens (for backward compatibility) --
+      '--pa-theme-action-primary': button.primary.bg,
+      '--pa-theme-action-hover': button.primary.hover,
       '--pa-theme-action-active': actionActive.toHex(),
       '--pa-theme-surface-accent': surfaceAccent.toRgbString(),
       '--pa-theme-surface-highlight': surfaceHighlight.toRgbString(),
-      '--pa-theme-text-accent': textAccent.toHex(),
-      '--pa-theme-text-on-action': textOnAction.toHex(),
+      '--pa-theme-text-accent': isDark ? colors.text.primary : ui.text.primary,
+      '--pa-theme-text-on-action': button.primary.text,
       '--pa-theme-border-accent': borderAccent.toRgbString(),
       '--pa-theme-focus-ring': focusRing.toRgbString(),
 
-      // -- Org / Portal Tokens (Aliases & Semantics) --
-      '--org-btn-primary-bg': actionPrimary.toHex(),
-      '--org-btn-primary-hover': actionHover.toHex(),
+      // -- Org / Portal Button Tokens --
+      '--org-btn-primary-bg': button.primary.bg,
+      '--org-btn-primary-hover': button.primary.hover,
       '--org-btn-primary-active': actionActive.toHex(),
-      '--org-btn-primary-text': textOnAction.toHex(),
+      '--org-btn-primary-text': button.primary.text,
 
-      '--org-btn-secondary-bg': secondaryBg.toRgbString(),
-      '--org-btn-secondary-hover': secondaryHover.toRgbString(),
-      '--org-btn-secondary-text': secondaryText.toHex(),
-      '--org-btn-secondary-border': secondaryBorder.toHex(),
+      '--org-btn-secondary-bg': button.secondary.bg,
+      '--org-btn-secondary-hover': button.secondary.hover,
+      '--org-btn-secondary-text': button.secondary.text,
+      '--org-btn-secondary-border': colors.border.default,
 
-      '--org-link-color': textAccent.toHex(),
-      '--org-link-hover': actionHover.toHex(),
+      '--org-btn-disabled-bg': button.disabled.bg,
+      '--org-btn-disabled-text': button.disabled.text,
 
-      '--org-badge-primary-bg': surfaceAccent.toRgbString(), // Using secondary/accent signal for badge bg
-      '--org-badge-primary-text': textAccent.toHex(),
+      // -- Link Tokens --
+      '--org-link-color': isDark ? colors.text.primary : ui.text.primary,
+      '--org-link-hover': button.primary.hover,
+      '--org-link-muted': isDark ? colors.text.secondary : ui.text.muted,
 
+      // -- Badge Tokens --
+      '--org-badge-primary-bg': surfaceAccent.toRgbString(),
+      '--org-badge-primary-text': isDark ? colors.text.primary : ui.text.primary,
+
+      // -- Card Tokens --
       '--org-card-accent-border': borderAccent.toRgbString(),
       '--org-card-accent-bg': surfaceAccent.toRgbString(),
 
+      // -- Highlight & Focus --
       '--org-highlight-bg': surfaceHighlight.toRgbString(),
       '--org-focus-ring': focusRing.toRgbString(),
+
+      // -- Extended UI Tokens from theme.ui --
+      '--org-text-primary': isDark ? colors.text.primary : ui.text.primary,
+      '--org-text-secondary': isDark ? colors.text.secondary : ui.text.secondary,
+      '--org-text-muted': isDark ? colors.text.secondary : ui.text.muted,
+      '--org-text-inverse': ui.text.inverse,
+
+      '--org-surface-page': colors.surface.page,
+      '--org-surface-section': colors.surface.section,
+      '--org-surface-card': colors.surface.card,
+      '--org-surface-card-header': colors.surface.cardHeader,
+      '--org-surface-hover': colors.surface.hover,
+      '--org-surface-active': colors.surface.active,
+
+      '--org-border-default': colors.border.default,
+      '--org-border-subtle': colors.border.subtle,
+      '--org-border-active': colors.border.active,
+
+      '--org-status-success': ui.status.success,
+      '--org-status-warning': ui.status.warning,
+      '--org-status-error': ui.status.error,
+      '--org-status-info': ui.status.info,
     }
 
     if (!validateTokens(tokens)) {

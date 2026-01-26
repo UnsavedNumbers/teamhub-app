@@ -49,19 +49,20 @@ function normalizeSportName(sportName: string | null | undefined): string | null
 }
 
 /**
- * Convert sport name to folder-safe name
- * "Track & Field" → "track-and-field"
+ * Extract folder name from image path
+ * "/images/sports/track-field/hero-bg.webp" → "track-field"
+ * Returns null if path format is invalid (Bug #1 prevention)
  */
-// function sportNameToFolderName(sportName: string): string {
-//     return sportName
-//         .trim()
-//         .toLowerCase()
-//         .replace(/\s+/g, '-')
-//         .replace(/&/g, 'and')
-//         .replace(/[^a-z0-9-]/g, '')
-//         .replace(/-+/g, '-')
-//         .replace(/^-|-$/g, '')
-// }
+function extractFolderFromPath(path: string): string | null {
+    if (!path || typeof path !== 'string') return null
+    try {
+        const match = path.match(/\/images\/sports\/([^\/]+)\//)
+        return match ? match[1] : null
+    } catch (error) {
+        console.error('Error extracting folder from path:', error)
+        return null
+    }
+}
 
 /**
  * Sport name aliases for common variations
@@ -173,12 +174,142 @@ const SPORT_IMAGE_MAP: Record<string, { hero: string; card: string; travel?: str
 }
 
 /**
+ * Create reverse mapping: sport name (normalized) → folder name
+ * Derived from SPORT_IMAGE_MAP to ensure 100% accuracy (Issue #1 solution)
+ * Prevents normalization mismatches with filesystem
+ */
+const SPORT_NAME_TO_FOLDER_MAP: Record<string, string> = (() => {
+    const map: Record<string, string> = {}
+    try {
+        Object.entries(SPORT_IMAGE_MAP).forEach(([sportName, paths]) => {
+            const folder = extractFolderFromPath(paths.hero || paths.card)
+            if (folder) {
+                const normalized = normalizeSportName(sportName)
+                if (normalized) {
+                    map[normalized] = folder
+                }
+            }
+        })
+    } catch (error) {
+        console.error('Error creating sport name to folder map:', error)
+    }
+    return map
+})()
+
+/**
+ * Convert sport name to folder-safe name
+ * Uses SPORT_NAME_TO_FOLDER_MAP for known sports, falls back to normalization
+ * "Track & Field" → "track-field" (removes &, doesn't convert to 'and')
+ * "Flag Football" → "flag-football"
+ * "Cross Country" → "cross-country"
+ * 
+ * Bug #8 prevention: Pure function, no side effects, handles errors gracefully
+ */
+export function sportNameToFolderName(sportName: string): string {
+    if (!sportName || typeof sportName !== 'string') {
+        return 'default'
+    }
+    
+    try {
+        // Normalize and check aliases first (Issue #7 solution)
+        let normalized = normalizeSportName(sportName)
+        if (!normalized) {
+            normalized = sportName.trim().toLowerCase()
+        }
+        
+        // Check aliases
+        if (SPORT_NAME_ALIASES[normalized]) {
+            normalized = SPORT_NAME_ALIASES[normalized]
+        }
+        
+        // Use mapping if available (most reliable - Issue #1 solution)
+        if (SPORT_NAME_TO_FOLDER_MAP[normalized]) {
+            return SPORT_NAME_TO_FOLDER_MAP[normalized]
+        }
+        
+        // Fallback to normalization logic
+        return normalized
+            .replace(/\s+/g, '-')
+            .replace(/&/g, '')  // Remove &, don't convert to 'and' (matches filesystem)
+            .replace(/[^a-z0-9-]/g, '')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '') || 'default'
+    } catch (error) {
+        console.error('Error converting sport name to folder name:', error)
+        return 'default'
+    }
+}
+
+/**
  * Default sport image paths (fallback)
  */
 const DEFAULT_IMAGE_PATHS = {
     hero: '/images/sports/default/hero-bg.webp',
     card: '/images/sports/default/card-bg.webp',
     travel: '/images/sports/default/card-bg.webp', // Fallback to card bg for travel
+}
+
+/**
+ * Filename for athlete cover images
+ * Can be changed if image format changes (e.g., to .webp)
+ * Issue #6 solution: Single constant for easy updates
+ */
+export const ATHLETE_COVER_FILENAME = 'athlete-cover.png'
+
+/**
+ * Default athlete cover image path
+ */
+export const DEFAULT_ATHLETE_COVER = `/images/sports/default/covers/${ATHLETE_COVER_FILENAME}`
+
+/**
+ * Get athlete cover image path based on sport and gender
+ * Path format: /images/sports/[sport]/covers/[gender]/athlete-cover.png
+ * Falls back to default if no sport or invalid gender
+ * 
+ * Applies sport name aliases before folder conversion for consistency (Issue #7)
+ * Bug #1 prevention: Comprehensive null/undefined checks and type validation
+ * Bug #8 prevention: Try-catch wrapper to prevent crashes from normalization errors
+ * 
+ * @param sportName - Sport name (can be null/undefined)
+ * @param gender - Athlete gender ('male' | 'female' | 'other' | null)
+ * @returns Image path string, always returns valid path (never throws)
+ */
+export function getAthleteCoverImagePath(
+    sportName: string | null | undefined,
+    gender: 'male' | 'female' | 'other' | null
+): string {
+    try {
+        // Bug #1: Comprehensive type and null checks
+        if (!sportName || typeof sportName !== 'string' || sportName.trim() === '') {
+            return DEFAULT_ATHLETE_COVER
+        }
+        
+        // If gender is not 'male' or 'female', use default
+        if (gender !== 'male' && gender !== 'female') {
+            return DEFAULT_ATHLETE_COVER
+        }
+        
+        // Normalize sport name (applies aliases - Issue #7 solution)
+        let normalized = normalizeSportName(sportName)
+        if (!normalized) {
+            return DEFAULT_ATHLETE_COVER
+        }
+        
+        // Check aliases
+        if (SPORT_NAME_ALIASES[normalized]) {
+            normalized = SPORT_NAME_ALIASES[normalized]
+        }
+        
+        // Convert sport name to folder name
+        const sportFolder = sportNameToFolderName(normalized)
+        
+        // Build path: /images/sports/[sport]/covers/[gender]/athlete-cover.png
+        return `/images/sports/${sportFolder}/covers/${gender}/${ATHLETE_COVER_FILENAME}`
+    } catch (error) {
+        // Bug #8: Catch any errors and fallback to default
+        console.error('Error generating athlete cover path:', error)
+        return DEFAULT_ATHLETE_COVER
+    }
 }
 
 /**

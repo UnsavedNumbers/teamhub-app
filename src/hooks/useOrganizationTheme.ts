@@ -20,10 +20,10 @@ let globalThemeVersion = 0
  * Trigger a refetch of the organization theme
  * Call this after updating theme settings to apply changes immediately
  */
-export function refreshOrganizationTheme(): void {
+export function refreshOrganizationTheme(newThemeId?: string | null): void {
   globalThemeVersion++
   // Dispatch custom event to notify all hooks
-  window.dispatchEvent(new CustomEvent('organization-theme-changed'))
+  window.dispatchEvent(new CustomEvent('organization-theme-changed', { detail: { themeId: newThemeId } }))
 }
 
 /**
@@ -54,15 +54,28 @@ export function useOrganizationTheme(): { ready: boolean } {
   const [themeId, setThemeId] = useState<string | null>(null)
   const [_, setIsLoading] = useState(false) // Start as false - theme is ready by default
   const [themeVersion, setThemeVersion] = useState(0)
+  // Track if we've loaded the org theme
+  const [hasLoadedOrgTheme, setHasLoadedOrgTheme] = useState(false)
 
   // Listen for theme change events
   useLayoutEffect(() => {
-    const handleThemeChanged = () => {
+    const handleThemeChanged = (e: Event) => {
+      const customEvent = e as CustomEvent<{ themeId?: string | null }>
+      // If a theme ID was passed, apply it immediately without waiting for DB
+      if (customEvent.detail?.themeId !== undefined) {
+        const newThemeId = customEvent.detail.themeId
+        setThemeId(newThemeId)
+        // Apply immediately for instant feedback
+        const theme = newThemeId ? getTheme(newThemeId) : getDefaultTheme()
+        const newTokens = generateTokens(theme, resolvedTheme === 'dark')
+        applyThemeTokens(newTokens)
+        setHasLoadedOrgTheme(true)
+      }
       setThemeVersion(v => v + 1)
     }
     window.addEventListener('organization-theme-changed', handleThemeChanged)
     return () => window.removeEventListener('organization-theme-changed', handleThemeChanged)
-  }, [])
+  }, [resolvedTheme])
 
   // Memoize token generation - only recalculate when theme ID or mode changes
   const tokens = useMemo(() => {
@@ -70,27 +83,29 @@ export function useOrganizationTheme(): { ready: boolean } {
     return generateTokens(theme, resolvedTheme === 'dark')
   }, [themeId, resolvedTheme])
 
-  // Apply default theme synchronously on mount to prevent FOUC
+  // Apply default theme immediately on mount to prevent FOUC
   useLayoutEffect(() => {
     const defaultTheme = getDefaultTheme()
     const defaultTokens = generateTokens(defaultTheme, resolvedTheme === 'dark')
     applyThemeTokens(defaultTokens)
-  }, []) // Only run once on mount
+  }, [resolvedTheme])
 
-  // Apply tokens whenever they change
+  // Apply tokens whenever they change (after org theme is loaded)
   useLayoutEffect(() => {
-    applyThemeTokens(tokens)
+    if (hasLoadedOrgTheme) {
+      applyThemeTokens(tokens)
+    }
 
     // Re-apply tokens when tab becomes visible (fixes potential loss during background checks)
     const handleVisibilityChange = () => {
-      if (!document.hidden) {
+      if (!document.hidden && hasLoadedOrgTheme) {
         applyThemeTokens(tokens)
       }
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
-  }, [tokens])
+  }, [tokens, hasLoadedOrgTheme])
 
   // Load and apply organization theme
   useLayoutEffect(() => {
@@ -99,6 +114,7 @@ export function useOrganizationTheme(): { ready: boolean } {
     const loadAndApplyTheme = async () => {
       if (!context || !currentOrganization) {
         // No organization - use default theme
+        setHasLoadedOrgTheme(true)
         setIsLoading(false)
         return
       }
@@ -123,6 +139,7 @@ export function useOrganizationTheme(): { ready: boolean } {
           console.warn('Failed to load organization theme settings:', result.error)
           // Keep default theme applied
           setThemeId(null)
+          setHasLoadedOrgTheme(true)
           setIsLoading(false)
           return
         }
@@ -130,12 +147,14 @@ export function useOrganizationTheme(): { ready: boolean } {
         // Get theme ID from settings
         const orgThemeId = result.data?.theme_id || null
         setThemeId(orgThemeId)
+        setHasLoadedOrgTheme(true)
         setIsLoading(false)
       } catch (error) {
         if (abortController.signal.aborted) return
         console.warn('Failed to load organization theme settings:', error)
         // Keep default theme applied
         setThemeId(null)
+        setHasLoadedOrgTheme(true)
         setIsLoading(false)
       }
     }

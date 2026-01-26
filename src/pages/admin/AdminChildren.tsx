@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { AdminPageHeader, PlatformDataTable, Button, Card, ErrorState, Badge } from '../../components/platformAdmin'
+import { AdminPageHeader, PlatformDataTable, Button, ErrorState, Badge } from '../../components/platformAdmin'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
 import { useUserContext } from '../../hooks/useUserContext'
@@ -80,7 +80,7 @@ export default function AdminChildren() {
         .eq('status', 'active')
 
       // Group sports and teams by athlete_id
-      const sportsMap = new Map<string, Array<{ sport_id: string; sport_name: string }>>()
+      const sportsMap = new Map<string, Array<{ sport_id: string; sport_name: string; sport_type: 'plays' | 'interested' }>>()
       const teamsMap = new Map<string, Array<{ team_id: string; team_name: string }>>()
 
       if (sportsData) {
@@ -92,7 +92,8 @@ export default function AdminChildren() {
           if (row.sport) {
             sportsMap.get(athleteId)!.push({
               sport_id: row.sport.id,
-              sport_name: row.sport.name
+              sport_name: row.sport.name,
+              sport_type: 'plays' as const // We filtered by sport_type: 'plays' in the query
             })
           }
         })

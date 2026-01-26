@@ -336,13 +336,6 @@ export default function ProgramDetail() {
     }
   }, [levelRows, program?.name])
 
-  const handleTacticalMenuClick = useCallback(() => {
-    // Future: Could open a menu with options like "Edit Formation", "View Analytics", etc.
-    // For now, this is informational only per design
-    setActionError(null)
-    setSuccessMessage('Tactical board menu - coming soon')
-    setTimeout(() => setSuccessMessage(null), 3000)
-  }, [])
 
   const columns: TableColumn<LevelRow>[] = useMemo(() => {
     return [
@@ -739,132 +732,15 @@ export default function ProgramDetail() {
                   gap: 'var(--pa-space-6)',
                 }}
               >
-                {/* Tactical overview */}
+                {/* Totals */}
                 <Card
-                  title="Tactical Overview"
-                  className="oa-card"
-                  actions={
-                    <Button
-                      variant="ghost"
-                      size="dense"
-                      icon="more_horiz"
-                      onClick={handleTacticalMenuClick}
-                      aria-label="More options for tactical board"
-                      style={{ padding: 0, width: 'var(--pa-space-6)', justifyContent: 'center' }}
-                    />
-                  }
+                  className="pa-card"
+                  style={{
+                    background: 'var(--pa-theme-action-primary)',
+                    color: 'var(--pa-theme-text-on-action)',
+                    borderColor: 'var(--pa-theme-border-accent)',
+                  }}
                 >
-                  <div
-                    style={{
-                      borderRadius: 'var(--pa-radius-s)',
-                      border: '1px solid var(--pa-n200)',
-                      overflow: 'hidden',
-                      background: 'var(--pa-theme-action-primary)',
-                      position: 'relative',
-                      aspectRatio: '3 / 4',
-                    }}
-                    aria-label="Tactical board"
-                  >
-                    <div
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        opacity: 0.18,
-                        backgroundImage: 'radial-gradient(var(--pa-white) 1px, transparent 1px)',
-                        backgroundSize: 'calc(var(--pa-space-5) - var(--pa-space-1)) calc(var(--pa-space-5) - var(--pa-space-1))',
-                      }}
-                    />
-                    <div
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        boxShadow: 'inset 0 0 0 2px rgba(255,255,255,0.18)',
-                      }}
-                    />
-                    <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: '1px', background: 'rgba(255,255,255,0.25)' }} />
-                    <div style={{ position: 'absolute', left: 0, right: 0, top: 0, height: '1px', background: 'rgba(255,255,255,0.18)' }} />
-                    <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '1px', background: 'rgba(255,255,255,0.18)' }} />
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: '50%',
-                        top: '50%',
-                        width: 'calc(var(--pa-space-9) + var(--pa-space-1))',
-                        height: 'calc(var(--pa-space-9) + var(--pa-space-1))',
-                        transform: 'translate(-50%, -50%)',
-                        borderRadius: '999px',
-                        border: '2px solid rgba(255,255,255,0.22)',
-                      }}
-                    />
-
-                    {/* Dots */}
-                    <div style={{ position: 'absolute', inset: 0 }}>
-                      {[
-                        { x: '35%', y: '22%', label: '7', filled: true },
-                        { x: '65%', y: '22%', label: '10', filled: true },
-                        { x: '50%', y: '50%', label: '4', filled: false },
-                        { x: '32%', y: '72%', label: '2', filled: false },
-                        { x: '68%', y: '72%', label: '5', filled: false },
-                      ].map((p) => (
-                        <div
-                          key={p.label}
-                          style={{
-                            position: 'absolute',
-                            left: p.x,
-                            top: p.y,
-                            width: 'var(--pa-space-5)',
-                            height: 'var(--pa-space-5)',
-                            transform: 'translate(-50%, -50%)',
-                            borderRadius: '999px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '10px',
-                            fontWeight: 900,
-                            background: p.filled ? 'var(--pa-theme-action-active)' : 'var(--pa-white)',
-                            color: p.filled ? 'var(--pa-theme-text-on-action)' : 'var(--pa-theme-text-accent)',
-                            border: `2px solid ${p.filled ? 'var(--pa-white)' : 'var(--pa-theme-action-active)'}`,
-                          }}
-                          aria-hidden="true"
-                        >
-                          {p.label}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Legend */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: 'var(--pa-space-3)',
-                        bottom: 'var(--pa-space-3)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 'var(--pa-space-1)',
-                      }}
-                    >
-                      {[
-                        { label: 'Offense', dot: 'var(--pa-theme-action-active)' },
-                        { label: 'Defense', dot: 'var(--pa-white)' },
-                      ].map((l) => (
-                        <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}>
-                          <span style={{ width: 'var(--pa-space-2)', height: 'var(--pa-space-2)', borderRadius: '999px', background: l.dot }} />
-                          <span
-                            style={{
-                              fontSize: '10px',
-                              fontWeight: 800,
-                              color: 'rgba(255,255,255,0.9)',
-                              textTransform: 'uppercase',
-                              letterSpacing: '0.04em',
-                            }}
-                          >
-                            {l.label}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
                   <div
                     style={{
                       marginTop: 'var(--pa-space-4)',

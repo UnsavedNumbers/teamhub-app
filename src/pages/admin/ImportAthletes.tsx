@@ -1,8 +1,8 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
-import { AdminPageHeader, Button, Card, Badge, PlatformDataTable, Select, EmptyState } from '../../components/platformAdmin'
+import { AdminPageHeader, Button, Card, Badge, Select } from '../../components/platformAdmin'
 import { FileUpload } from '../../components/common/FileUpload'
 import { useUserContext } from '../../hooks/useUserContext'
 import { supabase } from '../../lib/supabase'
@@ -60,15 +60,6 @@ interface ParsedRow {
   matched_athlete_id?: string
 }
 
-interface ImportSummary {
-  imported_count: number
-  updated_count: number
-  skipped_count: number
-  error_count: number
-  errors: Array<{ row_number: number; message: string }>
-}
-
-
 export default function ImportAthletes() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -93,7 +84,6 @@ export default function ImportAthletes() {
     createFamilies: true,
     linkExistingFamilies: true,
   })
-  const [importResult, setImportResult] = useState<ImportSummary | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -352,17 +342,6 @@ export default function ImportAthletes() {
         throw new Error(result?.error || 'Import failed')
       }
 
-      setImportResult({
-        imported_count: result.imported_count || 0,
-        updated_count: result.updated_count || 0,
-        skipped_count: result.skipped_count || 0,
-        error_count: result.error_count || 0,
-        errors: (result.errors || []).map((error: any) => ({
-          row_number: error.row,
-          message: error.message
-        })),
-      })
-
       navigate(getLink('admin.athletes.list'), { state: { importSuccess: true } })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Import failed')
@@ -592,7 +571,7 @@ export default function ImportAthletes() {
                                     <td>{row.mapped_data.athlete_date_of_birth}</td>
                                     <td>
                                         <div className="pa-flex pa-flex-wrap pa-gap-1">
-                                            {Object.entries(row.mapped_data).filter(([k,v]) => v && !['athlete_first_name', 'athlete_last_name', 'athlete_email', 'athlete_date_of_birth'].includes(k)).slice(0, 2).map(([k,v]) => (
+                                            {Object.entries(row.mapped_data).filter(([k,v]) => v && !['athlete_first_name', 'athlete_last_name', 'athlete_email', 'athlete_date_of_birth'].includes(k)).slice(0, 2).map(([k]) => (
                                                 <Badge key={k} variant="neutral" className="pa-text-[9px] pa-font-black">{k.replace('athlete_', '').toUpperCase()}</Badge>
                                             ))}
                                             {Object.keys(row.mapped_data).length > 6 && <span className="pa-text-[10px] pa-text-muted">+more</span>}

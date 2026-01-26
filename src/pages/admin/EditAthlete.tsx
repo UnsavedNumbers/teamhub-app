@@ -120,7 +120,7 @@ export default function EditAthlete() {
 
     // Reset form state and load athlete data when athleteId changes
     useEffect(() => {
-        if (!isReady || !athleteId) return
+        if (!isReady || !athleteId || !context.orgId) return
 
         // Reset all form state
         setFormData(initialFormData)
@@ -208,7 +208,8 @@ export default function EditAthlete() {
                     setLoading(false)
                 }
             })
-    }, [context, isReady, athleteId, navigate])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [athleteId, isReady])
 
     // Load system sports on mount
     useEffect(() => {

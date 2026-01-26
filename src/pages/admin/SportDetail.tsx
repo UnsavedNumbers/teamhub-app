@@ -347,20 +347,19 @@ export default function SportDetail() {
             ) : (
               <div className="pa-stacked-list">
                 {programs.map((p) => (
-                  <div
+                  <Link
                     key={p.id}
+                    to={getLink('admin.programs.detail', { id: p.id })}
                     className="pa-stacked-list-row"
+                    style={{ textDecoration: 'none', color: 'inherit' }}
                   >
                     <div className="pa-stacked-list-row-content">
                       <div>
                         <div className="pa-stacked-list-row-title">{p.name}</div>
                         <div className="pa-stacked-list-row-meta">{p.gender_category}</div>
                       </div>
-                      <Link to={`${programsRoute}?sport_id=${sportId}`}>
-                        <Button variant="ghost" size="dense">Open</Button>
-                      </Link>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}

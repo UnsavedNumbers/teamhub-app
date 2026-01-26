@@ -13,7 +13,6 @@ import { AdminPageHeader, Card, Button, ConfirmDialog, EmptyState, Badge, Platfo
 import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
-import { cn } from '../../utils/cn'
 
 export default function SeasonsManagement() {
   const { context, isReady } = useUserContext()
@@ -250,6 +249,11 @@ export default function SeasonsManagement() {
            rows={seasons}
            columns={columns}
            onRowClick={(row) => navigate(getLink('admin.seasons.detail', { id: row.id }))}
+           page={0}
+           rowsPerPage={seasons.length || 10}
+           totalCount={seasons.length}
+           onPageChange={() => {}}
+           onRowsPerPageChange={() => {}}
         />
       )}
 

@@ -82,6 +82,7 @@ export default function AthleteDetail() {
   // Invite Action States
   const [inviteActionLoading, setInviteActionLoading] = useState<string | null>(null)
 
+
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
   const isMountedRef = useRef(true)
@@ -731,6 +732,7 @@ export default function AthleteDetail() {
     },
   ], [t, handleResendInvite, handleCancelInvite, inviteActionLoading])
 
+
   // Early returns - after all hooks
   if (loading) {
     return (
@@ -773,51 +775,12 @@ export default function AthleteDetail() {
 
   return (
     <div className="pa-root">
-      {/* Header Band */}
-      <div
-        style={{
-          width: '100%',
-          height: '128px',
-          background: 'var(--pa-n900)',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          className="court-texture"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            backgroundImage: `
-              linear-gradient(45deg, color-mix(in srgb, ${primaryColor} 10%, transparent) 25%, transparent 25%),
-              linear-gradient(-45deg, color-mix(in srgb, ${primaryColor} 10%, transparent) 25%, transparent 25%),
-              linear-gradient(45deg, transparent 75%, color-mix(in srgb, ${primaryColor} 10%, transparent) 75%),
-              linear-gradient(-45deg, transparent 75%, color-mix(in srgb, ${primaryColor} 10%, transparent) 75%)
-            `,
-            backgroundSize: '40px 40px',
-            backgroundPosition: '0 0, 0 20px, 20px -20px, -20px 0px',
-            opacity: 0.3,
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'linear-gradient(to top, var(--pa-surface-subtle), transparent)',
-          }}
-          className="dark:bg-gradient-to-t dark:from-background-dark dark:to-transparent"
-        />
-      </div>
-
       <div
         style={{
           maxWidth: '1200px',
           margin: '0 auto',
           width: '100%',
-          marginTop: '-64px',
-          position: 'relative',
-          zIndex: 10,
-          padding: '0 var(--pa-space-4)',
+          padding: 'var(--pa-space-6) var(--pa-space-4)',
           paddingBottom: 'var(--pa-space-10)',
         }}
         className="md:px-8"
@@ -829,7 +792,7 @@ export default function AthleteDetail() {
             flexWrap: 'wrap',
             alignItems: 'center',
             gap: 'var(--pa-space-2)',
-            marginBottom: 'var(--pa-space-2)',
+            marginBottom: 'var(--pa-space-6)',
           }}
         >
           <button
@@ -838,7 +801,7 @@ export default function AthleteDetail() {
             style={{
               color: primaryColor,
               fontSize: '12px',
-              fontWeight: 900,
+              fontWeight: 700,
               textTransform: 'uppercase',
               letterSpacing: '0.1em',
               textDecoration: 'none',
@@ -852,23 +815,23 @@ export default function AthleteDetail() {
           >
             {t('admin.athletes.breadcrumb').toUpperCase()}
           </button>
-          <span style={{ color: `color-mix(in srgb, ${primaryColor} 50%, transparent)`, fontSize: '12px', fontWeight: 900, lineHeight: 'normal' }}>/</span>
+          <span style={{ color: 'var(--pa-n400)', fontSize: '12px', fontWeight: 700, lineHeight: 'normal' }}>/</span>
           <span
             style={{
-              color: 'var(--pa-n900)',
+              color: 'var(--pa-n600)',
               fontSize: '12px',
-              fontWeight: 900,
+              fontWeight: 700,
               textTransform: 'uppercase',
               letterSpacing: '0.1em',
               lineHeight: 'normal',
             }}
-            className="dark:text-white"
+            className="dark:text-slate-400"
           >
             {displayName.toUpperCase()}
           </span>
         </div>
 
-        {/* Page Heading & Actions */}
+        {/* Athlete Header - ESPN/NBA Style */}
         <div
           style={{
             display: 'flex',
@@ -876,23 +839,29 @@ export default function AthleteDetail() {
             gap: 'var(--pa-space-6)',
             marginBottom: 'var(--pa-space-8)',
           }}
-          className="md:flex-row md:items-end md:justify-between"
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-6)' }}>
+          {/* Top Row: Avatar, Name, Edit Button */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 'var(--pa-space-6)',
+              flexWrap: 'wrap',
+            }}
+          >
             {/* Avatar */}
             <div
-              className="hidden md:flex dark:bg-slate-800 dark:border-slate-700"
               style={{
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '80px',
-                height: '80px',
+                width: '120px',
+                height: '120px',
                 background: 'var(--pa-white)',
                 borderRadius: 'var(--pa-radius-l)',
-                border: '1px solid var(--pa-n200)',
-                boxShadow: 'var(--pa-shadow-1)',
+                border: '2px solid var(--pa-n200)',
+                boxShadow: 'var(--pa-shadow-2)',
                 overflow: 'hidden',
+                flexShrink: 0,
               }}
+              className="dark:bg-slate-800 dark:border-slate-700"
             >
               {photoUrl ? (
                 <img
@@ -914,7 +883,7 @@ export default function AthleteDetail() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: primaryColor,
-                    fontSize: '32px',
+                    fontSize: '48px',
                     fontWeight: 900,
                   }}
                 >
@@ -922,68 +891,78 @@ export default function AthleteDetail() {
                 </div>
               )}
             </div>
-            <div>
-              <h1
-                style={{
-                  fontFamily: 'var(--pa-font-display)',
-                  fontSize: 'clamp(2.5rem, 5vw, 4.5rem)',
-                  fontWeight: 900,
-                  lineHeight: 1,
-                  letterSpacing: '-0.04em',
-                  textTransform: 'uppercase',
-                  color: 'var(--pa-n900)',
-                  margin: 0,
-                }}
-                className="dark:text-white"
-              >
-                {displayName.toUpperCase()}
-              </h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)', marginTop: 'var(--pa-space-2)' }}>
-                <span
+
+            {/* Name and Info */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-4)', flexWrap: 'wrap', marginBottom: 'var(--pa-space-3)' }}>
+                <h1
                   style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    background: primaryColor,
-                  }}
-                />
-                <p
-                  style={{
-                    fontSize: '14px',
-                    fontWeight: 700,
-                    color: 'var(--pa-n500)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
+                    fontFamily: 'var(--pa-font-display)',
+                    fontSize: 'clamp(2rem, 4vw, 3rem)',
+                    fontWeight: 900,
+                    lineHeight: 1.1,
+                    letterSpacing: '-0.02em',
+                    color: 'var(--pa-n900)',
                     margin: 0,
                   }}
-                  className="dark:text-slate-400"
+                  className="dark:text-white"
                 >
+                  {displayName}
+                </h1>
+                <Button
+                  onClick={handleEditClick}
+                  disabled={navigating}
+                  variant="blue"
+                  icon="edit"
+                  size="compact"
+                >
+                  {t('admin.athletes.edit')}
+                </Button>
+              </div>
+
+              {/* Info Badges Row */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--pa-space-2)', alignItems: 'center' }}>
+                {age !== null && (
+                  <Badge variant="neutral" size="small">
+                    Age {age}
+                  </Badge>
+                )}
+                {genderLabel !== 'Not specified' && (
+                  <Badge variant="neutral" size="small">
+                    {genderLabel}
+                  </Badge>
+                )}
+                {athlete.jersey_number && (
+                  <Badge variant="info" size="small">
+                    #{athlete.jersey_number}
+                  </Badge>
+                )}
+                {plays.length > 0 && (
+                  <Badge variant="success" size="small">
+                    {plays.length} {plays.length === 1 ? 'Sport' : 'Sports'}
+                  </Badge>
+                )}
+                {activeTeams > 0 && (
+                  <Badge variant="info" size="small">
+                    {activeTeams} {activeTeams === 1 ? 'Active Team' : 'Active Teams'}
+                  </Badge>
+                )}
+                <Badge variant="neutral" size="small">
                   {updatedLabel}
-                </p>
+                </Badge>
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--pa-space-3)' }}>
-            <Button
-              onClick={handleEditClick}
-              disabled={navigating}
-              variant="blue"
-              icon="edit"
-            >
-              {t('admin.athletes.edit')}
-            </Button>
-          </div>
-        </div>
 
-        {/* Stats Cards */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: 'var(--pa-space-4)',
-            marginBottom: 'var(--pa-space-8)',
-          }}
-        >
+          {/* Stats Cards */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: 'var(--pa-space-4)',
+              marginBottom: 'var(--pa-space-8)',
+            }}
+          >
           <StatCard
             label={t('admin.athletes.stats.activeTeams')}
             value={activeTeams.toString()}
@@ -1007,10 +986,10 @@ export default function AthleteDetail() {
             icon="family_restroom"
             onClick={(guardians.length > 0 || pendingInvites.length > 0) ? () => handleTabChange('guardians') : undefined}
           />
-        </div>
+          </div>
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={handleTabChange}>
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList>
             <TabsTrigger value="overview">{t('admin.athletes.tabs.overview')}</TabsTrigger>
             <TabsTrigger value="teams">{t('admin.athletes.tabs.teams', { count: totalTeams })}</TabsTrigger>
@@ -1306,8 +1285,8 @@ export default function AthleteDetail() {
               </Card>
             </div>
           </TabsContent>
-        </Tabs>
-      </div>
+          </Tabs>
+        </div>
 
       {/* Link Guardian Modal */}
       {showLinkGuardianModal && (
@@ -1414,5 +1393,6 @@ export default function AthleteDetail() {
         />
       )}
     </div>
-  )
+  </div>
+)
 }

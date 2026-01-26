@@ -234,6 +234,9 @@ export default function OrganizationSettings() {
     setError(null)
     setSuccess(null)
 
+    // Apply theme immediately for instant feedback
+    refreshOrganizationTheme(themeId)
+
     try {
       const result = await updateOrganizationThemeSettings(
         context,
@@ -248,12 +251,11 @@ export default function OrganizationSettings() {
       if (refreshedTheme.error) throw refreshedTheme.error
       setThemeSettings(refreshedTheme.data)
       
-      // Trigger immediate theme refresh across the app
-      refreshOrganizationTheme()
-      
       setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
       setError(getErrorMessage(err) || 'Failed to update theme')
+      // Revert theme on error by re-fetching
+      refreshOrganizationTheme(themeSettings.theme_id)
     } finally {
       setSaving(false)
     }
@@ -514,15 +516,22 @@ function GeneralConfigForm({ settings, onSave, loading }: { settings: OrgSetting
 
 function AppearanceForm({ settings, onSave, loading }: { settings: OrganizationThemeSettings, onSave: (d: { theme_id: string | null }) => void, loading: boolean }) {
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(settings.theme_id || null)
+  const [savedThemeId, setSavedThemeId] = useState<string | null>(settings.theme_id || null)
 
-  // Sync selectedThemeId when settings change (e.g., after reload)
+  // Sync selectedThemeId and savedThemeId when settings change (e.g., after reload or save)
   useEffect(() => {
     setSelectedThemeId(settings.theme_id || null)
+    setSavedThemeId(settings.theme_id || null)
   }, [settings.theme_id])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSave({ theme_id: selectedThemeId })
+  }
+
+  const handleQuickSave = (themeId: string | null) => {
+    setSelectedThemeId(themeId)
+    onSave({ theme_id: themeId })
   }
 
   return (
@@ -541,8 +550,11 @@ function AppearanceForm({ settings, onSave, loading }: { settings: OrganizationT
           </p>
           <ThemePicker
             selectedThemeId={selectedThemeId}
+            savedThemeId={savedThemeId}
             onChange={setSelectedThemeId}
+            onSave={handleQuickSave}
             disabled={loading}
+            saving={loading}
           />
         </div>
 
