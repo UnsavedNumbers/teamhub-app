@@ -216,8 +216,8 @@ export async function getTryouts(
             .from('tryouts')
             .select('*')
             .eq('org_id', orgId)
-            .order('start_at', { ascending: true, nullsFirst: false })
             .order('tryout_date', { ascending: true })
+            .order('start_at', { ascending: true })
 
         if (error) throw error
 

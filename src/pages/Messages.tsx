@@ -14,7 +14,6 @@ import {
 } from '../data/services/messagesService'
 import { getTeamsForParent, getTeams } from '../data/services/teamsService'
 import PortalLayout from '../components/portal/PortalLayout'
-import PortalHeader from '../components/portal/PortalHeader'
 import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
@@ -296,17 +295,26 @@ export default function Messages() {
     )
   }
 
+  // Show full-window empty state when no teams are available
+  if (!fetchingTeams && teams.length === 0) {
+    return (
+      <PortalLayout>
+        <div className="fixed left-0 right-0 top-[4rem] bottom-0 flex items-center justify-center">
+          <div className="text-center">
+            <Icon name="chat_bubble" size="text-6xl" className="text-slate-300 dark:text-slate-600 mb-4" />
+            <CardTitle className="mb-2">No Teams Available</CardTitle>
+            <p className="text-slate-500 dark:text-slate-400">
+              {error ? 'Failed to load teams. Please try again later.' : 'You are not currently associated with any teams.'}
+            </p>
+          </div>
+        </div>
+      </PortalLayout>
+    )
+  }
+
   return (
-    <>
-      <PortalHeader />
-      <div className="h-[calc(100vh-4rem)] bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-slate-100 antialiased relative overflow-hidden">
-        <div 
-          className="fixed inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.02] z-[-1]"
-          style={{
-            backgroundImage: 'linear-gradient(to right, #f3f4f6 1px, transparent 1px), linear-gradient(to bottom, #f3f4f6 1px, transparent 1px)',
-            backgroundSize: '100px 100px',
-          }}
-        />
+    <PortalLayout>
+      <div className="fixed left-0 right-0 top-[4rem] bottom-0 overflow-hidden">
         <div className="flex h-full">
           <div className="w-64 bg-white dark:bg-slate-900/50 border-r border-slate-100 dark:border-slate-800 flex flex-col">
             <div className="p-6 border-b border-slate-100 dark:border-slate-800">
@@ -568,6 +576,6 @@ export default function Messages() {
             selectedTeamId={selectedTeam}
         />
       </div>
-    </>
+    </PortalLayout>
   )
 }

@@ -10,6 +10,8 @@ import {
   getNotifications,
   markNotificationRead,
   markAllNotificationsRead,
+  getAnnouncements,
+  type Announcement,
 } from '../data/services/messagesService'
 import {
   getUpcomingEventsForUser,
@@ -17,12 +19,16 @@ import {
 import {
   getUnpaidFeeAssignments,
 } from '../data/services/paymentsService'
+import { getTeamsForParent } from '../data/services/teamsService'
 import { getPrimarySportForUser, getSportFromEvent, type SportInfo } from '../utils/sportContext'
 import { SportHero } from '../components/portal/SportHero'
 import { SportCardImage } from '../components/portal/SportCardImage'
 import PortalHeader from '../components/portal/PortalHeader'
 import type { CalendarEvent } from '../types/calendar'
 import { showError, showSuccess, showInfo } from '../utils/toast'
+import { supabase } from '../lib/supabase'
+import { getAthletes } from '../data/services/familyService'
+import { useT } from '../i18n/useI18n'
 
 interface UserNotification {
   id: string
@@ -42,6 +48,7 @@ export default function Dashboard() {
   const { user, profile } = useAuth()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
+  const t = useT()
   const [unread, setUnread] = useState<UserNotification[]>([])
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([])
   const [eventsLoading, setEventsLoading] = useState(true)
@@ -51,6 +58,11 @@ export default function Dashboard() {
   const [markingRead, setMarkingRead] = useState<string | null>(null)
   const [markingAllRead, setMarkingAllRead] = useState(false)
   const [paymentsLoading, setPaymentsLoading] = useState(true)
+  const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [announcementsLoading, setAnnouncementsLoading] = useState(true)
+  const [activePlayerCount, setActivePlayerCount] = useState<number | null>(null)
+  const [activeSeasonName, setActiveSeasonName] = useState<string | null>(null)
+  const [statsLoading, setStatsLoading] = useState(true)
 
   // Safety net: If user landed here with setupOrganization flag, redirect to onboarding
   useEffect(() => {
@@ -173,6 +185,153 @@ export default function Dashboard() {
     loadPayments()
   }, [context, isReady])
 
+  // Load announcements
+  useEffect(() => {
+    if (!isReady) return
+
+    const loadAnnouncements = async () => {
+      setAnnouncementsLoading(true)
+      
+      // Get user's teams first
+      const { data: teams, error: teamsError } = await getTeamsForParent(context)
+      if (teamsError || !teams || teams.length === 0) {
+        setAnnouncements([])
+        setAnnouncementsLoading(false)
+        return
+      }
+      
+      // Get announcements for all user's teams
+      const teamIds = teams.map(t => t.id)
+      const allAnnouncements: Announcement[] = []
+      
+      for (const teamId of teamIds) {
+        const { data, error } = await getAnnouncements(context, { teamId })
+        if (!error && data) {
+          allAnnouncements.push(...(data as Announcement[]))
+        }
+      }
+      
+      // Sort by created_at descending and take top 2
+      const sorted = allAnnouncements.sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+      
+      setAnnouncements(sorted.slice(0, 2))
+      setAnnouncementsLoading(false)
+    }
+
+    loadAnnouncements()
+  }, [context, isReady])
+
+  // Load active player count and season
+  useEffect(() => {
+    if (!isReady) return
+
+    const loadActiveStats = async () => {
+      setStatsLoading(true)
+      
+      try {
+        // Get user's athletes
+        const { data: athletes, error: athletesError } = await getAthletes(context)
+        if (athletesError || !athletes || athletes.length === 0) {
+          setActivePlayerCount(0)
+          setActiveSeasonName(null)
+          setStatsLoading(false)
+          return
+        }
+
+        const athleteIds = athletes.map(a => a.id)
+        if (athleteIds.length === 0) {
+          setActivePlayerCount(0)
+          setActiveSeasonName(null)
+          setStatsLoading(false)
+          return
+        }
+
+        // Get active team memberships for these athletes
+        const { data: memberships, error: membershipsError } = await supabase
+          .from('team_memberships')
+          .select(`
+            athlete_id,
+            season_id,
+            season:seasons(id, name, start_date, end_date, is_active)
+          `)
+          .in('athlete_id', athleteIds)
+          .eq('status', 'active')
+
+        if (membershipsError) {
+          console.error('Error loading memberships:', membershipsError)
+          setActivePlayerCount(0)
+          setActiveSeasonName(null)
+          setStatsLoading(false)
+          return
+        }
+
+        if (!memberships || memberships.length === 0) {
+          setActivePlayerCount(0)
+          setActiveSeasonName(null)
+          setStatsLoading(false)
+          return
+        }
+
+        // Filter to only active seasons (by date or is_active flag)
+        const now = new Date()
+        const activeMemberships = memberships.filter((m: any) => {
+          const season = m.season
+          if (!season) return false
+          
+          // Check if season is active by date range
+          const startDate = season.start_date ? new Date(season.start_date) : null
+          const endDate = season.end_date ? new Date(season.end_date) : null
+          
+          const isActiveByDate = (!startDate || startDate <= now) && (!endDate || endDate >= now)
+          const isActiveByFlag = season.is_active === true
+          
+          return isActiveByDate || isActiveByFlag
+        })
+
+        if (activeMemberships.length === 0) {
+          setActivePlayerCount(0)
+          setActiveSeasonName(null)
+          setStatsLoading(false)
+          return
+        }
+
+        // Count unique athletes with active memberships
+        const activeAthleteIds = new Set(activeMemberships.map((m: any) => m.athlete_id))
+        setActivePlayerCount(activeAthleteIds.size)
+
+        // Get most common season name
+        const seasonCounts = new Map<string, number>()
+        activeMemberships.forEach((m: any) => {
+          const seasonName = m.season?.name
+          if (seasonName) {
+            seasonCounts.set(seasonName, (seasonCounts.get(seasonName) || 0) + 1)
+          }
+        })
+
+        let mostCommonSeason = ''
+        let maxCount = 0
+        seasonCounts.forEach((count, name) => {
+          if (count > maxCount) {
+            maxCount = count
+            mostCommonSeason = name
+          }
+        })
+
+        setActiveSeasonName(mostCommonSeason || null)
+      } catch (err) {
+        console.error('Error loading active stats:', err)
+        setActivePlayerCount(0)
+        setActiveSeasonName(null)
+      } finally {
+        setStatsLoading(false)
+      }
+    }
+
+    loadActiveStats()
+  }, [context, isReady])
+
   const markAsRead = async (notificationId: string) => {
     if (markingRead === notificationId) return
     
@@ -274,16 +433,20 @@ export default function Dashboard() {
                 Elite performance starts with the right logistics.
               </p>
             </div>
-            <div className="flex gap-4">
-              <div className="px-6 py-3 border border-white/20 rounded-lg flex flex-col bg-black/20 backdrop-blur-sm">
-                <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest">Active Season</span>
-                <span className="font-bold text-white">Spring {new Date().getFullYear()}</span>
+            {!statsLoading && activePlayerCount !== null && activePlayerCount > 0 && (
+              <div className="flex gap-4">
+                {activeSeasonName && (
+                  <div className="px-6 py-3 border border-white/20 rounded-lg flex flex-col bg-black/20 backdrop-blur-sm whitespace-nowrap">
+                    <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest whitespace-nowrap">Active Season</span>
+                    <span className="font-bold text-white whitespace-nowrap">{activeSeasonName}</span>
+                  </div>
+                )}
+                <div className="px-6 py-3 border border-white/20 rounded-lg flex flex-col bg-black/20 backdrop-blur-sm whitespace-nowrap">
+                  <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest whitespace-nowrap">{t('portal.children.title')}</span>
+                  <span className="font-bold text-white whitespace-nowrap">{activePlayerCount} Active</span>
+                </div>
               </div>
-              <div className="px-6 py-3 border border-white/20 rounded-lg flex flex-col bg-black/20 backdrop-blur-sm">
-                <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest">Players</span>
-                <span className="font-bold text-white">2 Active</span>
-              </div>
-            </div>
+            )}
               </div>
             </div>
             </div>
@@ -408,82 +571,78 @@ export default function Dashboard() {
           {/* Sidebar: Status Lines & Announcements */}
           <div className="lg:col-span-4 space-y-12">
             {/* Financials */}
-            <div>
-              <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-6 border-b border-slate-100 dark:border-slate-800 pb-4">
-                Financial Overview
-              </h2>
-              <div className="space-y-4">
-                {paymentsLoading ? (
-                  <div className="py-4 text-center">
-                    <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-slate-900 dark:border-white mx-auto"></div>
-                  </div>
-                ) : paymentItems.length === 0 ? (
-                  <div className="py-4 text-center">
-                    <p className="text-sm text-slate-500 dark:text-slate-400">No payments due</p>
-                    <Link to="/portal/payments" className="text-xs font-bold text-[var(--org-link-color)] hover:underline mt-2 inline-block">
-                      View All Payments
-                    </Link>
-                  </div>
-                ) : (
-                  paymentItems.map((item, idx) => (
-                  <div key={idx}>
-                    <div className="flex items-center justify-between group py-2">
-                      <div className="flex items-center gap-3">
-                        <div className={`size-2 rounded-full ${
-                          item.status === 'paid' ? 'bg-emerald-500' :
-                          item.status === 'due' ? 'bg-[var(--org-btn-primary-bg)] animate-pulse' :
-                          'bg-slate-300'
-                        }`}></div>
-                        <div>
-                          <p className="text-sm font-bold text-slate-900 dark:text-white">{item.title}</p>
-                          <p className="text-[10px] text-slate-400 uppercase font-black">{item.subtitle}</p>
+            {!paymentsLoading && paymentItems.length > 0 && (
+              <div>
+                <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-6 border-b border-slate-100 dark:border-slate-800 pb-4">
+                  Financial Overview
+                </h2>
+                <div className="space-y-4">
+                  {paymentItems.map((item, idx) => (
+                    <div key={idx}>
+                      <div className="flex items-center justify-between group py-2">
+                        <div className="flex items-center gap-3">
+                          <div className={`size-2 rounded-full ${
+                            item.status === 'paid' ? 'bg-emerald-500' :
+                            item.status === 'due' ? 'bg-[var(--org-btn-primary-bg)] animate-pulse' :
+                            'bg-slate-300'
+                          }`}></div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-900 dark:text-white">{item.title}</p>
+                            <p className="text-[10px] text-slate-400 uppercase font-black">{item.subtitle}</p>
+                          </div>
                         </div>
+                        {item.status === 'paid' ? (
+                          <span className="text-xs font-bold text-emerald-500">PAID</span>
+                        ) : item.status === 'due' ? (
+                          <Link to="/portal/payments" className="text-xs font-bold text-[var(--org-link-color)] underline">
+                            PAY {item.amount}
+                          </Link>
+                        ) : (
+                          <span className="text-xs font-bold text-slate-400">PENDING</span>
+                        )}
                       </div>
-                      {item.status === 'paid' ? (
-                        <span className="text-xs font-bold text-emerald-500">PAID</span>
-                      ) : item.status === 'due' ? (
-                        <Link to="/portal/payments" className="text-xs font-bold text-[var(--org-link-color)] underline">
-                          PAY {item.amount}
-                        </Link>
-                      ) : (
-                        <span className="text-xs font-bold text-slate-400">PENDING</span>
+                      {idx < paymentItems.length - 1 && (
+                        <div className="h-px bg-slate-50 dark:bg-slate-800 w-full"></div>
                       )}
                     </div>
-                    {idx < paymentItems.length - 1 && (
-                      <div className="h-px bg-slate-50 dark:bg-slate-800 w-full"></div>
-                    )}
-                  </div>
-                  ))
-                )}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Bulletin */}
-            <div className="bg-slate-50 dark:bg-slate-900/80 p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
-              <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-                <span className="material-symbols-outlined text-sm">campaign</span> Bulletin Board
-              </h2>
-              <div className="space-y-6">
-                <div className="relative pl-6 border-l-2 border-[var(--org-btn-primary-bg, #137fec)]">
-                  <p className="text-xs font-bold text-slate-900 dark:text-white mb-1 uppercase tracking-wider">Weather Update</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-light">
-                    Fields are currently open. In case of lightning, we will transition to the indoor facility.
-                  </p>
+            {!announcementsLoading && announcements.length > 0 && (
+              <div className="bg-slate-50 dark:bg-slate-900/80 p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-sm">campaign</span> Bulletin Board
+                </h2>
+                <div className="space-y-6">
+                  {announcements.map((announcement) => (
+                    <div 
+                      key={announcement.id}
+                      className={`relative pl-6 border-l-2 ${
+                        announcement.priority === 'urgent' 
+                          ? 'border-[var(--org-btn-primary-bg, #137fec)]' 
+                          : 'border-slate-200 dark:border-slate-700'
+                      }`}
+                    >
+                      <p className="text-xs font-bold text-slate-900 dark:text-white mb-1 uppercase tracking-wider">
+                        {announcement.title}
+                      </p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-light">
+                        {announcement.content}
+                      </p>
+                    </div>
+                  ))}
                 </div>
-                <div className="relative pl-6 border-l-2 border-slate-200 dark:border-slate-700">
-                  <p className="text-xs font-bold text-slate-900 dark:text-white mb-1 uppercase tracking-wider">Coach&apos;s Note</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-light">
-                    Great hustle in yesterday&apos;s game. Focus for next week: defensive positioning.
-                  </p>
-                </div>
+                <Link 
+                  to="/portal/messages"
+                  className="w-full mt-8 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors block text-center"
+                >
+                  All Announcements
+                </Link>
               </div>
-              <Link 
-                to="/portal/messages"
-                className="w-full mt-8 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors block text-center"
-              >
-                All Announcements
-              </Link>
-            </div>
+            )}
 
             {/* Team Quick Links */}
             <div className="flex flex-col gap-2">
