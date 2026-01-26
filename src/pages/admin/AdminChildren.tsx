@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { AdminPageHeader, PlatformDataTable, Button } from '../../components/platformAdmin'
+import { AdminPageHeader, PlatformDataTable, Button, Card, ErrorState, Badge } from '../../components/platformAdmin'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
 import { useUserContext } from '../../hooks/useUserContext'
@@ -10,12 +10,13 @@ import type { Child } from '../../types/family'
 import { getLink } from '../../utils/routes'
 import { calculateAge } from '../../utils/athleteHelpers'
 import { supabase } from '../../lib/supabase'
+import { cn } from '../../utils/cn'
 
 type SortColumn = 'first_name' | 'date_of_birth' | 'has_active_guardian' | ''
 type SortOrder = 'asc' | 'desc'
 
 interface AthleteWithDetails extends Omit<Child, 'sports'> {
-  sports?: Array<{ sport_id: string; sport_name: string; sport_type?: 'plays' | 'interested' }>
+  sports?: Array<{ sport_id: string; sport_name: string; sport_type: 'plays' | 'interested' }>
   teams?: Array<{ team_id: string; team_name: string }>
 }
 
@@ -266,7 +267,7 @@ export default function AdminChildren() {
     }
   }, [navigate, loading])
 
-  const columns: ColumnConfig<Child>[] = useMemo(() => [
+  const columns: ColumnConfig<AthleteWithDetails>[] = useMemo(() => [
     {
       id: 'first_name',
       label: 'Name',
@@ -280,26 +281,18 @@ export default function AdminChildren() {
       render: (c) => {
         const hasActive = c?.has_active_guardian ?? false
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}>
-            <span 
-              className="material-symbols-outlined" 
-              style={{ 
-                fontSize: '18px',
-                color: hasActive ? 'var(--pa-success, #10b981)' : 'var(--pa-n400, #9aa5b1)',
-                opacity: hasActive ? 1 : 0.6
-              }}
-              title={hasActive ? 'Has active guardian' : 'No active guardian'}
-            >
-              {hasActive ? 'check_circle' : 'cancel'}
-            </span>
-            <span 
-              className="pa-body-s" 
-              style={{ 
-                color: hasActive ? 'var(--pa-n700, #2b343d)' : 'var(--pa-n500, #7a8794)'
-              }}
-            >
-              {hasActive ? 'Connected' : 'Not connected'}
-            </span>
+          <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-2')}>
+            {hasActive ? (
+                <Badge variant="success" className="pa-flex pa-items-center pa-gap-1">
+                    <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>check_circle</span>
+                    Connected
+                </Badge>
+            ) : (
+                <Badge variant="neutral" className="pa-flex pa-items-center pa-gap-1">
+                    <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>cancel</span>
+                    Not connected
+                </Badge>
+            )}
           </div>
         )
       }
@@ -322,8 +315,8 @@ export default function AdminChildren() {
           return <span className="pa-text-muted">—</span>
         }
         return (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--pa-space-1)', alignItems: 'center' }}>
-            {sports.map((sport, idx) => (
+          <div className={cn('pa-flex', 'pa-flex-wrap', 'pa-gap-1', 'pa-items-center')}>
+            {sports.map((sport: { sport_id: string; sport_name: string; sport_type: 'plays' | 'interested' }, idx: number) => (
               <span key={sport.sport_id}>
                 <Link
                   to={getLink('admin.sports.detail', { id: sport.sport_id })}
@@ -349,7 +342,7 @@ export default function AdminChildren() {
           return <span className="pa-text-muted">—</span>
         }
         return (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--pa-space-1)', alignItems: 'center' }}>
+          <div className={cn('pa-flex', 'pa-flex-wrap', 'pa-gap-1', 'pa-items-center')}>
             {teams.map((team: { team_id: string; team_name: string }, idx: number) => (
               <span key={team.team_id}>
                 <Link
@@ -376,7 +369,7 @@ export default function AdminChildren() {
       <AdminPageHeader 
         title={t('admin.children.title')}
         actions={
-          <div className="pa-flex pa-gap-2">
+          <div className={cn('pa-flex', 'pa-gap-2')}>
             <Button 
               onClick={handleImportClick} 
               icon="upload_file" 
@@ -397,30 +390,11 @@ export default function AdminChildren() {
       />
 
       {error ? (
-        <div className="pa-card">
-          <div className="pa-p-4 pa-bg-danger-subtle pa-rounded">
-            <div className="pa-flex pa-items-center pa-gap-3 pa-mb-3">
-              <span className="material-symbols-outlined pa-text-danger" style={{ fontSize: '24px' }}>
-                error
-              </span>
-              <div className="pa-flex-1">
-                <h3 className="pa-text-danger pa-font-semibold pa-mb-1">
-                  {t('admin.children.errorLoading')}
-                </h3>
-                <p className="pa-text-danger pa-text-sm">
-                  {error.message || 'An error occurred while loading athletes'}
-                </p>
-              </div>
-            </div>
-            <Button 
-              onClick={handleRetry} 
-              variant="primary"
-              icon="refresh"
-            >
-              Retry
-            </Button>
-          </div>
-        </div>
+        <ErrorState 
+            title={t('admin.children.errorLoading')}
+            message={error.message || 'An error occurred while loading athletes'}
+            onRetry={handleRetry}
+        />
       ) : (
         <PlatformDataTable
           data={sortedAndPaginatedData}

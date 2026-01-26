@@ -15,7 +15,6 @@ import {
   type ColumnConfig 
 } from '../../components/platformAdmin'
 import { getLink } from '../../utils/routes'
-import { cn } from '../../utils/cn'
 
 export default function UniformOrders() {
   const [submissions, setSubmissions] = useState<UniformSubmission[]>([])

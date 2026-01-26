@@ -14,6 +14,7 @@ import {
   Card,
   type ColumnConfig 
 } from '../../components/platformAdmin'
+import { cn } from '../../utils/cn'
 
 interface PaymentDisplay {
   id: string
@@ -136,8 +137,6 @@ export default function Payments() {
       }
       
       // Check athlete_guardians table - fees can only be assigned to athletes with guardians
-      // This matches the check in admin-create-fee edge function
-      // Note: Database column is org_id (migration renamed organization_id to org_id)
       const { count, error } = await supabase
         .from('athlete_guardians')
         .select('athlete_id', { count: 'exact', head: true })
@@ -145,22 +144,12 @@ export default function Payments() {
         .eq('status', 'active')
         .limit(1)
 
-      console.log('[Payments] Athlete guardian check:', { orgId, count, error })
-
-      // Debug: Check all athlete_guardians records (regardless of org)
-      const { data: allGuardians, error: debugError } = await supabase
-        .from('athlete_guardians')
-        .select('athlete_id, org_id, status')
-        .limit(10)
-      console.log('[Payments] DEBUG all athlete_guardians:', { allGuardians, debugError })
-
       if (error) {
         throw error
       }
 
       // Count queries return { count: number | null }
       const hasAny = (count ?? 0) > 0
-      console.log('[Payments] hasAthletes result:', hasAny)
 
       // Check mounted before state update
       if (isMountedRef.current) {
@@ -180,10 +169,7 @@ export default function Payments() {
 
   // Effect to check athletes when dependencies change
   useEffect(() => {
-    const check = async () => {
-      await checkAthletesExists()
-    }
-    check()
+    checkAthletesExists()
   }, [checkAthletesExists])
 
   // Re-check athletes when page becomes visible (user returns from adding athlete)
@@ -221,9 +207,18 @@ export default function Payments() {
   }
 
   const columns: ColumnConfig<PaymentDisplay>[] = [
-    { id: 'child_name', label: 'Athlete' },
+    { 
+        id: 'child_name', 
+        label: 'Athlete',
+        render: (row) => <span className="pa-font-bold pa-text-slate-900">{row.child_name}</span>
+    },
     { id: 'fee_title', label: 'Fee' },
-    { id: 'total_display', label: 'Total', align: 'right' },
+    { 
+        id: 'total_display', 
+        label: 'Total', 
+        align: 'right',
+        render: (row) => <span className="pa-font-semibold">{row.total_display}</span>
+    },
     { id: 'paid_display', label: 'Paid', align: 'right' },
     { 
       id: 'status', 
@@ -238,7 +233,7 @@ export default function Payments() {
     { 
       id: 'created_at', 
       label: 'Assigned',
-      render: (row) => new Date(row.created_at).toLocaleDateString()
+      render: (row) => <span className="pa-text-sm pa-text-slate-500">{new Date(row.created_at).toLocaleDateString()}</span>
     },
   ]
 
@@ -267,39 +262,49 @@ export default function Payments() {
 
       {/* Show error message if athlete check failed */}
       {athleteCheckError && (
-        <Card className="pa-mb-4" style={{ background: 'var(--pa-danger-bg)', border: '1px solid var(--pa-danger-text)' }}>
-          <div className="pa-text-danger">{athleteCheckError}</div>
+        <Card className="pa-mb-4" noPadding>
+          <div className="pa-p-4" style={{ background: 'var(--pa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--pa-danger, #ef4444)' }}>
+            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-danger-dark, #991b1b)' }}>{athleteCheckError}</div>
+          </div>
         </Card>
       )}
 
       {/* Show error message if payments fetch failed */}
       {paymentsError && (
-        <Card className="pa-mb-4" style={{ background: 'var(--pa-danger-bg)', border: '1px solid var(--pa-danger-text)' }}>
-          <div className="pa-text-danger">{paymentsError}</div>
+        <Card className="pa-mb-4" noPadding>
+          <div className="pa-p-4" style={{ background: 'var(--pa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--pa-danger, #ef4444)' }}>
+            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-danger-dark, #991b1b)' }}>{paymentsError}</div>
+          </div>
         </Card>
       )}
 
       {/* Show info message when no athletes with guardians found */}
       {hasAthletes === false && !athleteCheckError && (
-        <Card className="pa-mb-4" style={{ background: 'var(--pa-info-bg)', border: '1px solid var(--pa-info)' }}>
-          <div style={{ color: 'var(--pa-info)' }}>No athletes with guardians found. To assign fees, athletes must have a guardian linked to them (the guardian is responsible for payment).</div>
+        <Card className="pa-mb-4" noPadding>
+          <div className="pa-p-4" style={{ background: 'var(--pa-info-bg, #eff6ff)', borderLeft: '4px solid var(--pa-info, #3b82f6)' }}>
+            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-info-dark, #1e40af)' }}>
+                No athletes with guardians found. To assign fees, athletes must have a guardian linked to them (the guardian is responsible for payment).
+            </div>
+          </div>
         </Card>
       )}
 
-      <div className="pa-grid pa-grid-2 pa-mb-5">
+      <div className={cn('pa-grid', 'pa-grid-2', 'pa-gap-6', 'pa-mb-8')}>
         <StatCard 
           label="COLLECTED" 
           value={`$${stats.collected.toLocaleString()}`}
           icon="check_circle"
+          style={{ background: 'var(--pa-success-surface, #f0fdf4)' }}
         />
         <StatCard 
           label="OUTSTANDING" 
           value={`$${stats.outstanding.toLocaleString()}`}
           icon="error"
+          style={{ background: 'var(--pa-danger-surface, #fef2f2)' }}
         />
       </div>
 
-      <div className="pa-flex pa-gap-2 pa-mb-4">
+      <div className={cn('pa-flex', 'pa-gap-2', 'pa-mb-6')}>
         {(['all', 'unpaid', 'partial', 'paid'] as const).map((f) => (
           <Button
             key={f}

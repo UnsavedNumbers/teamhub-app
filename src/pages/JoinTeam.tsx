@@ -194,7 +194,7 @@ export default function JoinTeam() {
 
             {step === 'select' && team && (
               <>
-                <Card className="mb-6 border-[#137fec]/30 bg-[#137fec]/10 p-4 text-center">
+                <Card className="mb-6 border-[var(--org-btn-primary-bg, #137fec)]/30 bg-[var(--org-btn-primary-bg)]/10 p-4 text-center">
                   <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Joining team</p>
                   <CardTitle className="text-lg">{team.name}</CardTitle>
                 </Card>

@@ -76,7 +76,7 @@ export const fakeOrganizations: FakeOrganization[] = [
         org_type: 'club',
         status: 'active',
         logo_url: null,
-        primary_color: '#137fec',
+        primary_color: 'var(--org-btn-primary-bg, #137fec)',
         secondary_color: '#1e293b',
         timezone: 'America/New_York',
         address_line1: '1234 Sports Complex Dr',

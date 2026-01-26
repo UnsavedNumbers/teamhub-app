@@ -1,14 +1,14 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AdminPageHeader, PlatformDataTable, Button, Badge, ErrorState } from '../../components/platformAdmin'
+import { AdminPageHeader, PlatformDataTable, Button, Badge, ErrorState, Card } from '../../components/platformAdmin'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getFamilies } from '../../data/services/familyService'
 import type { Family } from '../../types/family'
-import { Info } from 'lucide-react'
 import { getLink } from '../../utils/routes'
 import { showError } from '../../utils/toast'
+import { cn } from '../../utils/cn'
 
 export default function AdminFamilies() {
   const navigate = useNavigate()
@@ -202,19 +202,21 @@ export default function AdminFamilies() {
       />
 
       {/* Info Banner */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex items-start gap-3">
-        <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-        <div>
-          <h3 className="text-sm font-semibold text-blue-900 mb-1">
-            Families are Created Automatically
-          </h3>
-          <p className="text-sm text-blue-800">
-            Families are automatically formed when athletes share guardians. To create a new family,
-            simply add athletes and link their guardians. Athletes with shared guardians will appear
-            together as a family.
-          </p>
+      <Card noPadding className={cn('pa-mb-6', 'pa-overflow-hidden')}>
+        <div className={cn('pa-flex', 'pa-items-start', 'pa-gap-3', 'pa-p-4')} style={{ background: 'var(--pa-info-bg, #eff6ff)' }}>
+          <span className="material-symbols-outlined" style={{ color: 'var(--pa-info-text, #1d4ed8)', fontSize: '20px', marginTop: '2px' }}>info</span>
+          <div>
+            <h3 className={cn('pa-text-sm', 'pa-font-semibold', 'pa-mb-1')} style={{ color: 'var(--pa-info-text, #1e3a8a)' }}>
+              Families are Created Automatically
+            </h3>
+            <p className={cn('pa-text-sm')} style={{ color: 'var(--pa-info-text, #1e40af)' }}>
+              Families are automatically formed when athletes share guardians. To create a new family,
+              simply add athletes and link their guardians. Athletes with shared guardians will appear
+              together as a family.
+            </p>
+          </div>
         </div>
-      </div>
+      </Card>
 
       {error && !loading ? (
         <ErrorState 

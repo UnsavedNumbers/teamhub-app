@@ -251,7 +251,7 @@ export default function Messages() {
                   onClick={() => setSelectedTeam(team.id)}
                   className={`w-full text-left px-3 py-2 rounded mb-1 transition-colors font-bold ${
                     selectedTeam === team.id
-                      ? 'bg-[#137fec]/10 text-[#137fec] dark:text-[#137fec]'
+                      ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-link-color)] dark:text-[var(--org-link-color)]'
                       : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
                   }`}
                 >
@@ -289,7 +289,7 @@ export default function Messages() {
                         onClick={() => setTab('announcements')}
                         className={`px-4 py-1.5 rounded text-sm font-bold uppercase tracking-widest transition-colors ${
                           tab === 'announcements'
-                            ? 'bg-[#137fec]/10 text-[#137fec]'
+                            ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-link-color)]'
                             : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                         }`}
                       >
@@ -299,7 +299,7 @@ export default function Messages() {
                         onClick={() => setTab('chat')}
                         className={`px-4 py-1.5 rounded text-sm font-bold uppercase tracking-widest transition-colors ${
                           tab === 'chat'
-                            ? 'bg-[#137fec]/10 text-[#137fec]'
+                            ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-link-color)]'
                             : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                         }`}
                       >
@@ -328,15 +328,15 @@ export default function Messages() {
                             className="block"
                           >
                             <Card
-                              className={`p-6 border-l-4 transition-all hover:shadow-2xl hover:shadow-[#137fec]/5 cursor-pointer ${
-                                priority === 'urgent' ? 'border-red-500' : 'border-[#137fec]'
+                              className={`p-6 border-l-4 transition-all hover:shadow-2xl hover:shadow-[var(--org-btn-primary-bg, #137fec)]/5 cursor-pointer ${
+                                priority === 'urgent' ? 'border-red-500' : 'border-[var(--org-btn-primary-bg, #137fec)]'
                               }`}
                             >
                               <div className="flex items-start justify-between mb-2">
                                 <div className="flex items-center gap-2">
                                   <span className={`px-2 py-0.5 text-xs font-bold uppercase tracking-widest rounded ${
                                     (ann.author?.role || 'admin') === 'coach'
-                                      ? 'bg-[#137fec]/10 text-[#137fec]'
+                                      ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-link-color)]'
                                       : 'bg-purple-500/10 text-purple-500 dark:text-purple-400'
                                   }`}>
                                     {ann.author?.role || 'Admin'}
@@ -369,12 +369,12 @@ export default function Messages() {
                           <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-xs md:max-w-md rounded-xl px-4 py-2 shadow-sm ${
                               isMe
-                                ? 'bg-[#137fec] text-white rounded-br-sm'
+                                ? 'bg-[var(--org-btn-primary-bg)] text-white rounded-br-sm'
                                 : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-bl-sm border border-slate-100 dark:border-slate-700'
                             }`}>
                               {!isMe && (
                                 <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${
-                                    role === 'coach' ? 'text-[#137fec]' : 'text-slate-400'
+                                    role === 'coach' ? 'text-[var(--org-link-color)]' : 'text-slate-400'
                                 }`}>
                                   {role === 'coach' ? 'Coach' : (authorEmail ? authorEmail.split('@')[0] : 'User')}
                                 </p>
@@ -416,12 +416,12 @@ export default function Messages() {
                           onChange={(e) => setNewMessage(e.target.value)}
                           onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                           placeholder="Type a message..."
-                          className="flex-1 px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-slate-800 dark:text-white placeholder:text-slate-400 font-bold focus:ring-2 focus:ring-[#137fec]/20 focus:border-[#137fec] outline-none transition-all"
+                          className="flex-1 px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-slate-800 dark:text-white placeholder:text-slate-400 font-bold focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)]/20 focus:border-[var(--org-btn-primary-bg, #137fec)] outline-none transition-all"
                         />
                         <button
                           onClick={handleSendMessage}
                           disabled={sending || !newMessage.trim()}
-                          className="w-10 h-10 bg-[#137fec] text-white rounded-full flex items-center justify-center hover:bg-[#137fec]/90 disabled:opacity-50 transition-all transform active:scale-95"
+                          className="w-10 h-10 bg-[var(--org-btn-primary-bg)] text-white rounded-full flex items-center justify-center hover:bg-[var(--org-btn-primary-bg)]/90 disabled:opacity-50 transition-all transform active:scale-95"
                         >
                           <Icon name="send" size="text-sm" />
                         </button>

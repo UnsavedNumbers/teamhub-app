@@ -763,7 +763,7 @@ export default function AthleteDetail() {
   const { plays, interested } = formatSports(athlete.sports)
   const initials = getAthleteInitials(athlete.first_name, athlete.last_name)
   const updatedLabel = formatUpdatedRelative(athlete.updated_at)
-  const primaryColor = 'var(--pa-theme-action-primary, #137fec)'
+  const primaryColor = 'var(--pa-theme-action-primary, var(--org-btn-primary-bg, #137fec))'
 
   // Stats
   const activeTeams = teams.filter(t => t.status === 'active').length

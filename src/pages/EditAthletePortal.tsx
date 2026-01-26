@@ -45,7 +45,7 @@ const SportItem = memo(({
                         type="checkbox"
                         checked={isPlaysSelected}
                         onChange={() => onToggle(sport.id, 'plays')}
-                        className="w-4 h-4 text-[#137fec] border-slate-300 rounded focus:ring-[#137fec]"
+                        className="w-4 h-4 text-[var(--org-link-color)] border-slate-300 rounded focus:ring-[var(--org-btn-primary-bg, #137fec)]"
                     />
                     <span className="text-sm text-slate-700 dark:text-slate-300">Plays</span>
                 </label>
@@ -54,7 +54,7 @@ const SportItem = memo(({
                         type="checkbox"
                         checked={isInterestedSelected}
                         onChange={() => onToggle(sport.id, 'interested')}
-                        className="w-4 h-4 text-[#137fec] border-slate-300 rounded focus:ring-[#137fec]"
+                        className="w-4 h-4 text-[var(--org-link-color)] border-slate-300 rounded focus:ring-[var(--org-btn-primary-bg, #137fec)]"
                     />
                     <span className="text-sm text-slate-700 dark:text-slate-300">Interested</span>
                 </label>

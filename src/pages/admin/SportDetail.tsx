@@ -25,7 +25,7 @@ export default function SportDetail() {
   const [sport, setSport] = useState<Sport | null>(null)
   const [programs, setPrograms] = useState<Program[]>([])
 
-  const [pendingColor, setPendingColor] = useState<string>('#137fec')
+  const [pendingColor, setPendingColor] = useState<string>('var(--org-btn-primary-bg, #137fec)')
   const [iconFile, setIconFile] = useState<File | null>(null)
   const [savingColor, setSavingColor] = useState(false)
   const [uploadingIcon, setUploadingIcon] = useState(false)
@@ -38,7 +38,7 @@ export default function SportDetail() {
   const detailRoute = getLink('admin.sports.detail', { id: sportId })
 
   const iconUrl = useMemo(() => getSportIconUrl(sport?.icon ?? null), [sport?.icon])
-  const isColorDirty = useMemo(() => (sport?.color ?? '#137fec') !== pendingColor, [sport?.color, pendingColor])
+  const isColorDirty = useMemo(() => (sport?.color ?? 'var(--org-btn-primary-bg, #137fec)') !== pendingColor, [sport?.color, pendingColor])
 
   useEffect(() => {
     if (!isReady) return
@@ -71,7 +71,7 @@ export default function SportDetail() {
         }
 
         setSport(found)
-        setPendingColor(found.color || '#137fec')
+        setPendingColor(found.color || 'var(--org-btn-primary-bg, #137fec)')
         setPrograms(Array.isArray(programsResult.data) ? (programsResult.data as Program[]) : [])
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load sport.')
@@ -89,7 +89,7 @@ export default function SportDetail() {
     const allSports = Array.isArray(sportsResult.data) ? (sportsResult.data as Sport[]) : []
     const found = allSports.find((s) => s.id === sportId) ?? null
     setSport(found)
-    if (found) setPendingColor(found.color || '#137fec')
+    if (found) setPendingColor(found.color || 'var(--org-btn-primary-bg, #137fec)')
   }
 
   if (loading) {
@@ -128,7 +128,7 @@ export default function SportDetail() {
       />
 
       {successMessage && (
-        <Card className="pa-mb-4" style={{ borderLeft: '3px solid var(--pa-success)' }}>
+        <Card className="pa-mb-6" style={{ borderLeft: '3px solid var(--pa-success)' }}>
           <div className="pa-body-m" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)', color: 'var(--pa-n900)' }}>
             {successMessage}
           </div>
@@ -136,7 +136,7 @@ export default function SportDetail() {
       )}
 
       {actionError && (
-        <Card className="pa-mb-4" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
+        <Card className="pa-mb-6" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
           <div className="pa-body-m pa-text-danger" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
             {actionError}
           </div>
@@ -144,7 +144,7 @@ export default function SportDetail() {
       )}
 
       {error && (
-        <Card className="pa-mb-4" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
+        <Card className="pa-mb-6" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
           <div className="pa-body-m pa-text-danger" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
             {error}
           </div>
@@ -152,8 +152,11 @@ export default function SportDetail() {
       )}
 
       {!sport ? null : (
-        <div className="pa-grid" style={{ gridTemplateColumns: '1fr', gap: 'var(--pa-space-4)' }}>
-          <Card title="Customization" className="pa-mb-2">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--pa-space-6)' }}>
+          <div className="oa-card">
+            <div className="oa-card-header">
+              <h3 className="oa-card-title">Customization</h3>
+            </div>
             <div className="pa-flex pa-items-start pa-gap-4" style={{ alignItems: 'flex-start' }}>
               <div style={{ width: '96px' }}>
                 <div className="pa-text-sm pa-text-muted" style={{ marginBottom: '8px' }}>Icon</div>
@@ -331,12 +334,12 @@ export default function SportDetail() {
                 </div>
               </div>
             </div>
-          </Card>
+          </div>
 
-          <Card 
-            title={`Programs (${programs.length})`}
-            noPadding
-          >
+          <div className="oa-card oa-card--no-padding">
+            <div className="oa-card-header">
+              <h3 className="oa-card-title">Programs ({programs.length})</h3>
+            </div>
             {programs.length === 0 ? (
               <div style={{ padding: 'var(--pa-space-5)' }} className="pa-text-muted">
                 No programs yet for this sport. Create one to start building out levels and teams.
@@ -361,7 +364,7 @@ export default function SportDetail() {
                 ))}
               </div>
             )}
-          </Card>
+          </div>
         </div>
       )}
     </div>

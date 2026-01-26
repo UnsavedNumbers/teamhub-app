@@ -109,7 +109,7 @@ export default function ForgotPassword() {
               <div className="space-y-4">
                 <Link
                   to="/portal/login"
-                  className="bg-[#137fec] hover:bg-[#137fec]/90 text-white px-8 py-3 rounded font-bold text-sm tracking-wide w-full flex items-center justify-center transition-colors"
+                  className="bg-[var(--org-btn-primary-bg)] hover:bg-[var(--org-btn-primary-bg)]/90 text-white px-8 py-3 rounded font-bold text-sm tracking-wide w-full flex items-center justify-center transition-colors"
                 >
                   BACK TO SIGN IN
                 </Link>
@@ -119,7 +119,7 @@ export default function ForgotPassword() {
                     setSuccess(false)
                     setEmail('')
                   }}
-                  className="text-sm text-[#137fec] hover:text-[#137fec]/80 font-bold transition-colors"
+                  className="text-sm text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 font-bold transition-colors"
                 >
                   TRY A DIFFERENT EMAIL
                 </button>
@@ -163,7 +163,7 @@ export default function ForgotPassword() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="name@email.com"
-                      className="block w-full rounded border-0 py-3 px-4 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#137fec] sm:text-sm"
+                      className="block w-full rounded border-0 py-3 px-4 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[var(--org-btn-primary-bg, #137fec)] sm:text-sm"
                     />
                   </div>
                 </div>
@@ -183,7 +183,7 @@ export default function ForgotPassword() {
               <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800">
                 <p className="text-center text-sm text-slate-500 dark:text-slate-400">
                   Remember your password?{' '}
-                  <Link to="/portal/login" className="font-bold text-[#137fec] hover:text-[#137fec]/80 transition-colors">
+                  <Link to="/portal/login" className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">
                     SIGN IN
                   </Link>
                 </p>

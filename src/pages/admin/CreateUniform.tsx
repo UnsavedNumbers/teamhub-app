@@ -14,7 +14,6 @@ import { AdminPageHeader, Card, Button, EmptyState } from '../../components/plat
 import { SportUniformForm } from '../../components/uniforms/SportUniformForm'
 import type { CreateUniformKitDTO } from '../../types/uniforms'
 import { getLink } from '../../utils/routes'
-import { cn } from '../../utils/cn'
 
 export default function CreateUniform() {
   const { context, isReady } = useUserContext()

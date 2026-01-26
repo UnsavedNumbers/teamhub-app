@@ -82,7 +82,7 @@ export default function AthleteAvatar({ athlete, className = '' }: AthleteAvatar
     if (!displayUrl || imageError) {
         return (
             <div
-                className={`w-full h-full bg-[#137fec]/20 flex items-center justify-center text-[#137fec] font-black ${className}`}
+                className={`w-full h-full bg-[var(--org-btn-primary-bg)]/20 flex items-center justify-center text-[var(--org-link-color)] font-black ${className}`}
                 aria-label={`${athlete.first_name} ${athlete.last_name}`}
             >
                 <span className="text-4xl">{initials}</span>
@@ -106,14 +106,14 @@ export default function AthleteAvatar({ athlete, className = '' }: AthleteAvatar
             />
             {!imageLoaded && !imageError && (
                 <div className="absolute inset-0 bg-slate-200 dark:bg-slate-700 animate-pulse flex items-center justify-center">
-                    <div className="w-full h-full bg-[#137fec]/20 flex items-center justify-center">
-                        <span className="text-[#137fec] font-black text-4xl">{initials}</span>
+                    <div className="w-full h-full bg-[var(--org-btn-primary-bg)]/20 flex items-center justify-center">
+                        <span className="text-[var(--org-link-color)] font-black text-4xl">{initials}</span>
                     </div>
                 </div>
             )}
             {/* Fallback avatar (hidden but ready) */}
             {imageError && (
-                <div className="absolute inset-0 bg-[#137fec]/20 flex items-center justify-center text-[#137fec] font-black">
+                <div className="absolute inset-0 bg-[var(--org-btn-primary-bg)]/20 flex items-center justify-center text-[var(--org-link-color)] font-black">
                     <span className="text-4xl">{initials}</span>
                 </div>
             )}

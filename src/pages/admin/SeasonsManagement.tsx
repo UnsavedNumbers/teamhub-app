@@ -4,14 +4,16 @@
  * Table view for organization-wide time periods.
  */
 
-import { useEffect, useState, useRef } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getSeasons, deleteSeason, isSeasonEmpty } from '../../data/services/seasonsService'
 import type { Season } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button, ConfirmDialog } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, ConfirmDialog, EmptyState, Badge, PlatformDataTable } from '../../components/platformAdmin'
+import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
+import { cn } from '../../utils/cn'
 
 export default function SeasonsManagement() {
   const { context, isReady } = useUserContext()
@@ -26,35 +28,32 @@ export default function SeasonsManagement() {
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const checkedSeasonIds = useRef<Set<string>>(new Set())
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!isReady) return
+    setLoading(true)
+    setError(null)
 
-    const load = async () => {
-      setLoading(true)
-      setError(null)
-
-      try {
-        const result = await getSeasons(context)
-        setSeasons(result.data as Season[])
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load seasons')
-      } finally {
-        setLoading(false)
-      }
+    try {
+      const result = await getSeasons(context)
+      setSeasons(result.data as Season[])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load seasons')
+    } finally {
+      setLoading(false)
     }
-
-    load()
   }, [context, isReady])
+
+  useEffect(() => {
+    load()
+  }, [load])
 
   // Check which seasons are empty
   useEffect(() => {
     if (!isReady || seasons.length === 0 || checkingEmpty) return
 
-    // Get current season IDs
     const currentSeasonIds = new Set(seasons.map(s => s.id))
     const seasonIdsString = Array.from(currentSeasonIds).sort().join(',')
 
-    // Only check if the season IDs have changed
     if (checkedSeasonIds.current.has(seasonIdsString)) return
 
     const checkEmpty = async () => {
@@ -62,23 +61,23 @@ export default function SeasonsManagement() {
       const emptySet = new Set<string>()
 
       for (const season of seasons) {
-        const { isEmpty, error } = await isSeasonEmpty(context, season.id)
-        if (!error && isEmpty) {
+        const { isEmpty, error: checkError } = await isSeasonEmpty(context, season.id)
+        if (!checkError && isEmpty) {
           emptySet.add(season.id)
         }
       }
 
       setEmptySeasons(emptySet)
-      // Clear old entries and add new one
       checkedSeasonIds.current.clear()
       checkedSeasonIds.current.add(seasonIdsString)
       setCheckingEmpty(false)
     }
 
     checkEmpty()
-  }, [context, isReady, seasons])
+  }, [context, isReady, seasons, checkingEmpty])
 
-  const handleDeleteClick = (season: Season) => {
+  const handleDeleteClick = (season: Season, e: React.MouseEvent) => {
+    e.stopPropagation()
     setSeasonToDelete(season)
     setDeleteError(null)
   }
@@ -90,14 +89,13 @@ export default function SeasonsManagement() {
     setDeleteError(null)
 
     try {
-      const { error } = await deleteSeason(context, seasonToDelete.id)
-      if (error) {
-        setDeleteError(error.message)
+      const { error: deleteErrorResult } = await deleteSeason(context, seasonToDelete.id)
+      if (deleteErrorResult) {
+        setDeleteError(deleteErrorResult.message)
         setDeleting(false)
         return
       }
 
-      // Remove the season from the list
       setSeasons(seasons.filter(s => s.id !== seasonToDelete.id))
       setEmptySeasons(prev => {
         const next = new Set(prev)
@@ -112,18 +110,94 @@ export default function SeasonsManagement() {
     }
   }
 
-  // const statusBadgeStyle = (status: string) => {
-  //   const styles = {
-  //     upcoming: { background: 'var(--pa-n300)', color: 'var(--pa-n700)' },
-  //     active: { background: 'var(--pa-success-bg)', color: 'var(--pa-success)' },
-  //     locked: { background: 'var(--pa-warning-bg)', color: 'var(--pa-warning)' },
-  //     archived: { background: 'var(--pa-n200)', color: 'var(--pa-n600)' },
-  //   }
-  //   return styles[status as keyof typeof styles] || styles.upcoming
-  // }
+  const columns: ColumnConfig<Season>[] = useMemo(() => [
+    {
+      id: 'name',
+      label: 'Season Name',
+      sortable: true,
+      render: (row) => (
+        <div className="pa-font-bold pa-text-slate-900">
+          {row.name}
+        </div>
+      )
+    },
+    {
+      id: 'term',
+      label: 'Term',
+      render: () => <span className="pa-text-xs pa-text-slate-400 pa-font-medium">SYSTEM DEFAULT</span>
+    },
+    {
+      id: 'start_date',
+      label: 'Start Date',
+      sortable: true,
+      render: (row) => (
+        <span className="pa-text-sm pa-text-slate-600">
+          {row.start_date ? new Date(row.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+        </span>
+      )
+    },
+    {
+      id: 'end_date',
+      label: 'End Date',
+      sortable: true,
+      render: (row) => (
+        <span className="pa-text-sm pa-text-slate-600">
+          {row.end_date ? new Date(row.end_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+        </span>
+      )
+    },
+    {
+      id: 'is_active',
+      label: 'Status',
+      sortable: true,
+      render: (row) => (
+        <Badge variant={row.is_active ? 'success' : 'neutral'}>
+          {row.is_active ? 'Active' : 'Upcoming'}
+        </Badge>
+      )
+    },
+    {
+      id: 'actions',
+      label: 'Actions',
+      align: 'right',
+      render: (row) => (
+        <div className="pa-flex pa-items-center pa-justify-end pa-gap-2">
+          <Button 
+            variant="ghost" 
+            size="dense" 
+            icon="edit"
+            onClick={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                navigate(`${getLink('admin.organization.forms')}?edit=season&id=${row.id}&returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`)
+            }}
+          >
+            Edit
+          </Button>
+          {emptySeasons.has(row.id) && (
+            <Button
+              variant="ghost"
+              size="dense"
+              icon="delete"
+              disabled={deleting}
+              onClick={(e: React.MouseEvent) => handleDeleteClick(row, e)}
+              className="pa-text-danger hover:pa-bg-danger-surface"
+              title="Delete empty season"
+            >
+              Delete
+            </Button>
+          )}
+        </div>
+      )
+    }
+  ], [emptySeasons, deleting, navigate])
 
   if (loading) {
-    return <div className="pa-skeleton" style={{ height: '500px' }} />
+    return (
+      <div className="pa-root">
+        <div className="pa-skeleton pa-mb-8" style={{ width: '40%', height: '40px' }} />
+        <div className="pa-skeleton" style={{ width: '100%', height: '400px' }} />
+      </div>
+    )
   }
 
   return (
@@ -136,107 +210,47 @@ export default function SeasonsManagement() {
           { label: 'Organizations', path: getLink('admin.organization.structure') },
           { label: 'Seasons' },
         ]}
+        actions={
+          seasons.length > 0 && (
+            <Button 
+                icon="add"
+                onClick={() => navigate(`${getLink('admin.organization.forms')}?type=season&returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`)}
+            >
+                Add Season
+            </Button>
+          )
+        }
       />
 
       {error && (
-        <Card className="pa-mb-4">
-          <div className="pa-text-danger">{error}</div>
+        <Card className="pa-mb-6" noPadding>
+          <div className="pa-p-4" style={{ background: 'var(--pa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--pa-danger, #ef4444)' }}>
+            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-danger-dark, #991b1b)' }}>{error}</div>
+          </div>
         </Card>
       )}
 
       {seasons.length === 0 ? (
         <Card>
-          <div className="pa-flex pa-flex-col pa-items-center pa-justify-center pa-text-center pa-p-6">
-            <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--pa-n300)', marginBottom: '16px' }}>
-              calendar_month
-            </span>
-            <h3 className="pa-h3">No seasons yet</h3>
-            <p className="pa-body-m pa-text-muted pa-mb-4">Create your first season to start organizing teams and events.</p>
-            <Link to={`${getLink('admin.organization.forms')}?type=season&returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`}>
-              <Button>Add Season</Button>
-            </Link>
-          </div>
+          <EmptyState
+            icon="calendar_month"
+            title="No seasons yet"
+            description="Create your first season to start organizing teams and events."
+          >
+             <Button 
+                icon="add"
+                onClick={() => navigate(`${getLink('admin.organization.forms')}?type=season&returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`)}
+            >
+                Add Season
+            </Button>
+          </EmptyState>
         </Card>
       ) : (
-        <>
-          <div className="pa-flex pa-justify-end" style={{ marginBottom: 'var(--pa-space-4)' }}>
-            <Link to={`${getLink('admin.organization.forms')}?type=season&returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`}>
-              <Button>Add Season</Button>
-            </Link>
-          </div>
-
-          <Card noPadding>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr style={{ background: 'var(--pa-n50)', borderBottom: '1px solid var(--pa-n200)' }} className="dark:bg-slate-800/50 dark:border-slate-700">
-                    <th className="pa-overline" style={{ padding: 'var(--pa-space-4) var(--pa-space-6)', color: 'var(--pa-n500)', textAlign: 'left' }}>Season Name</th>
-                    <th className="pa-overline" style={{ padding: 'var(--pa-space-4) var(--pa-space-6)', color: 'var(--pa-n500)', textAlign: 'left' }}>Term</th>
-                    <th className="pa-overline" style={{ padding: 'var(--pa-space-4) var(--pa-space-6)', color: 'var(--pa-n500)', textAlign: 'left' }}>Start Date</th>
-                    <th className="pa-overline" style={{ padding: 'var(--pa-space-4) var(--pa-space-6)', color: 'var(--pa-n500)', textAlign: 'left' }}>End Date</th>
-                    <th className="pa-overline" style={{ padding: 'var(--pa-space-4) var(--pa-space-6)', color: 'var(--pa-n500)', textAlign: 'left' }}>Status</th>
-                    <th className="pa-overline" style={{ padding: 'var(--pa-space-4) var(--pa-space-6)', color: 'var(--pa-n500)', textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {seasons.map((season) => (
-                    <tr 
-                      key={season.id}
-                      className="pa-stacked-list-row group"
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => navigate(getLink('admin.seasons.detail', { id: season.id }))}
-                    >
-                      <td style={{ padding: 'var(--pa-space-4) var(--pa-space-6)' }}>
-                        <div className="pa-body-m" style={{ fontWeight: 700, color: 'var(--pa-n900)' }}>{season.name}</div>
-                      </td>
-                      <td style={{ padding: 'var(--pa-space-4) var(--pa-space-6)' }} className="pa-body-s pa-text-muted">—</td>
-                      <td style={{ padding: 'var(--pa-space-4) var(--pa-space-6)' }} className="pa-body-s pa-text-muted">{season.start_date ? new Date(season.start_date).toLocaleDateString() : '—'}</td>
-                      <td style={{ padding: 'var(--pa-space-4) var(--pa-space-6)' }} className="pa-body-s pa-text-muted">{season.end_date ? new Date(season.end_date).toLocaleDateString() : '—'}</td>
-                      <td style={{ padding: 'var(--pa-space-4) var(--pa-space-6)' }}>
-                        <span
-                          className={`pa-badge ${season.is_active ? 'pa-badge--success' : ''}`}
-                          style={{
-                            background: season.is_active ? 'rgba(16, 185, 129, 0.1)' : 'var(--pa-n100)',
-                            color: season.is_active ? 'rgb(16, 185, 129)' : 'var(--pa-n600)',
-                            border: season.is_active ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid var(--pa-n200)'
-                          }}
-                        >
-                          {season.is_active ? 'Active' : 'Upcoming'}
-                        </span>
-                      </td>
-                      <td style={{ padding: 'var(--pa-space-4) var(--pa-space-6)', textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
-                        <div className="pa-flex pa-items-center pa-justify-end" style={{ gap: 'var(--pa-space-3)' }}>
-                          <Link to={`${getLink('admin.organization.forms')}?edit=season&id=${season.id}&returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`} className="pa-opacity-0 group-hover:pa-opacity-100 focus:pa-opacity-100" style={{ transition: 'opacity 200ms' }}>
-                            <Button variant="ghost" size="dense">
-                              Edit
-                            </Button>
-                          </Link>
-                          {emptySeasons.has(season.id) && (
-                            <Button
-                              variant="danger"
-                              size="dense"
-                              icon="delete"
-                              onClick={(e: React.MouseEvent) => {
-                                e.stopPropagation()
-                                handleDeleteClick(season)
-                              }}
-                              disabled={deleting}
-                              className="pa-opacity-0 group-hover:pa-opacity-100 focus:pa-opacity-100"
-                              style={{ transition: 'opacity 200ms' }}
-                              title="Delete empty season"
-                            >
-                              Delete
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </>
+        <PlatformDataTable
+           rows={seasons}
+           columns={columns}
+           onRowClick={(row) => navigate(getLink('admin.seasons.detail', { id: row.id }))}
+        />
       )}
 
       <ConfirmDialog

@@ -4,8 +4,8 @@
  * Table view with filtering and contextual creation.
  */
 
-import { useEffect, useState, useCallback, useRef } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOffline } from '../../hooks/useOffline'
 import { USE_FAKE_DATA } from '../../data/config'
@@ -13,14 +13,17 @@ import { getLevels, deleteLevel } from '../../data/services/levelsService'
 import { getPrograms } from '../../data/services/sportsService'
 import { getTeams } from '../../data/services/teamsService'
 import type { Level, Program, Team } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button, Select, ConfirmDialog } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, Select, ConfirmDialog, EmptyState, Badge, PlatformDataTable } from '../../components/platformAdmin'
+import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
+import { cn } from '../../utils/cn'
 
 export default function LevelsManagement() {
   const { context, isReady } = useUserContext()
   const { isOffline } = useOffline()
   const location = useLocation()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -110,11 +113,13 @@ export default function LevelsManagement() {
     loadData()
   }, [loadData])
 
-  const programById = new Map(programs.map((p) => [p.id, p]))
-  const filteredLevels = filterProgramId ? levels.filter((l) => l.program_id === filterProgramId) : levels
+  const programById = useMemo(() => new Map(programs.map((p) => [p.id, p])), [programs])
+  const filteredLevels = useMemo(() => filterProgramId ? levels.filter((l) => l.program_id === filterProgramId) : levels, [levels, filterProgramId])
   const canCreateLevel = programs.length > 0
 
-  const handleDeleteLevel = useCallback((levelId: string, levelName: string) => {
+  const handleDeleteLevel = useCallback((levelId: string, levelName: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    
     if (!levelId || !levelName) {
       setActionError('Invalid level information')
       return
@@ -158,6 +163,7 @@ export default function LevelsManagement() {
 
       if (result.error) {
         setDialogError(result.error.message || 'Failed to remove level. Please try again.')
+        setDeletingLevelId(null)
         return
       }
 
@@ -181,6 +187,7 @@ export default function LevelsManagement() {
       if (!isMountedRef.current) return
       console.error('[LevelsManagement] Unexpected error deleting level:', err)
       setDialogError(err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.')
+      setDeletingLevelId(null)
     }
   }, [levelToDelete, context])
 
@@ -203,11 +210,121 @@ export default function LevelsManagement() {
     }
   }
 
+  const columns: ColumnConfig<Level>[] = useMemo(() => [
+    {
+        id: 'name',
+        label: 'Level Name',
+        sortable: true,
+        render: (row) => (
+             <div className="pa-font-bold pa-text-slate-900">{row.name}</div>
+        )
+    },
+    {
+        id: 'program_id',
+        label: 'Program',
+        sortable: true,
+        render: (row) => {
+            const program = programById.get(row.program_id)
+            return program?.name || '—'
+        }
+    },
+    {
+        id: 'level_type',
+        label: 'Type',
+        sortable: true,
+        render: (row) => <span className="pa-text-sm pa-text-slate-500">{levelTypeLabel(row.level_type)}</span>
+    },
+    {
+        id: 'eligibility',
+        label: 'Eligibility',
+        render: (row) => {
+            const eligibility = row.age_min && row.age_max ? `${row.age_min}-${row.age_max} years` : row.grade_min && row.grade_max ? `Grades ${row.grade_min}-${row.grade_max}` : row.description || '—'
+            return <span className="pa-text-sm pa-text-slate-500">{eligibility}</span>
+        }
+    },
+    {
+        id: 'status',
+        label: 'Status',
+        render: (row) => (
+            <Badge variant={row.deleted_at ? 'neutral' : 'success'}>
+                {row.deleted_at ? 'Archived' : 'Active'}
+            </Badge>
+        )
+    },
+    {
+        id: 'actions',
+        label: 'Actions',
+        align: 'right',
+        render: (row) => {
+            const teamCount = teams.filter((t) => t.level_id === row.id).length
+            return (
+                <div className="pa-flex pa-items-center pa-justify-end pa-gap-2">
+                    <Button
+                        variant="ghost"
+                        size="dense"
+                        onClick={(e: React.MouseEvent) => {
+                            e.stopPropagation()
+                            navigate(getLink('admin.levels.detail', { id: row.id }))
+                        }}
+                    >
+                        View
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="dense"
+                        onClick={(e: React.MouseEvent) => {
+                            e.stopPropagation()
+                            navigate(`${getLink('admin.organization.forms')}?edit=level&id=${row.id}&returnUrl=${encodeURIComponent(getLink('admin.levels.list'))}`)
+                        }}
+                    >
+                        Edit
+                    </Button>
+                    <Button
+                        variant="danger"
+                        size="dense"
+                        icon="delete"
+                        onClick={(e: React.MouseEvent) => {
+                            handleDeleteLevel(row.id, row.name, e)
+                        }}
+                        disabled={
+                            !row.id ||
+                            deletingLevelId === row.id ||
+                            isOffline ||
+                            USE_FAKE_DATA ||
+                            teamCount > 0 ||
+                            !!row.deleted_at ||
+                            loading ||
+                            refreshing
+                        }
+                        loading={deletingLevelId === row.id}
+                        title={
+                            !row.id
+                                ? 'Invalid level ID'
+                                : row.deleted_at
+                                    ? 'Cannot remove archived level'
+                                    : USE_FAKE_DATA
+                                        ? 'Sign in to remove level'
+                                        : isOffline
+                                            ? 'Offline - cannot remove level'
+                                            : teamCount > 0
+                                                ? `Cannot remove: This level contains ${teamCount} ${teamCount === 1 ? 'team' : 'teams'} and cannot be removed.`
+                                                : loading || refreshing
+                                                    ? 'Loading...'
+                                                    : 'Remove level from organization'
+                        }
+                    >
+                        {deletingLevelId === row.id ? 'Removing...' : 'Remove'}
+                    </Button>
+                </div>
+            )
+        }
+    }
+  ], [programById, teams, deletingLevelId, isOffline, loading, refreshing, navigate, handleDeleteLevel])
+
   if (loading && !refreshing) {
     return (
       <div className="pa-root">
-        <OfflineBanner />
-        <div className="pa-skeleton" style={{ height: '500px' }} />
+        <div className="pa-skeleton pa-mb-8" style={{ width: '100%', height: '300px' }} />
       </div>
     )
   }
@@ -225,59 +342,58 @@ export default function LevelsManagement() {
       />
 
       {error && (
-        <Card className="pa-mb-4" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
-          <div className="pa-flex pa-items-center pa-justify-between" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
-            <div className="pa-body-m pa-text-danger">{error}</div>
-            <Button variant="ghost" size="dense" onClick={handleRetry} disabled={loading || refreshing}>
-              Retry
-            </Button>
-          </div>
+        <Card className="pa-mb-6" noPadding>
+             <div className="pa-p-4 pa-flex pa-items-center pa-justify-between" style={{ background: 'var(--pa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--pa-danger, #ef4444)' }}>
+                <div className="pa-body-m pa-text-danger-dark" style={{ color: 'var(--pa-danger-dark, #991b1b)' }}>{error}</div>
+                <Button variant="ghost" size="dense" onClick={handleRetry} disabled={loading || refreshing}>
+                Retry
+                </Button>
+            </div>
         </Card>
       )}
 
       {successMessage && (
-        <Card className="pa-mb-4" style={{ borderLeft: '3px solid var(--pa-success)' }}>
-          <div className="pa-body-m" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)', color: 'var(--pa-n900)' }}>
-            {successMessage}
-          </div>
+        <Card className="pa-mb-6" noPadding>
+            <div className="pa-p-4" style={{ background: 'var(--pa-success-bg, #ecfdf5)', borderLeft: '4px solid var(--pa-success, #10b981)' }}>
+                <div className="pa-body-m pa-text-success-dark" style={{ color: 'var(--pa-success-dark, #065f46)' }}>
+                    {successMessage}
+                </div>
+            </div>
         </Card>
       )}
 
       {actionError && (
-        <Card className="pa-mb-4" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
-          <div className="pa-body-m pa-text-danger" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
-            {actionError}
-          </div>
+        <Card className="pa-mb-6" noPadding>
+            <div className="pa-p-4" style={{ background: 'var(--pa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--pa-danger, #ef4444)' }}>
+                <div className="pa-body-m pa-text-danger-dark" style={{ color: 'var(--pa-danger-dark, #991b1b)' }}>
+                    {actionError}
+                </div>
+            </div>
         </Card>
       )}
 
       {levels.length === 0 ? (
         <Card>
-          <div className="pa-flex pa-flex-col pa-items-center pa-justify-center pa-text-center pa-p-6">
-            <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--pa-n300)', marginBottom: '16px' }}>
-              grade
-            </span>
-            <h3 className="pa-h3">No levels yet</h3>
-            <p className="pa-body-m pa-text-muted pa-mb-4">Create programs first, then add levels to define eligibility.</p>
+          <EmptyState
+            icon="grade"
+            title="No levels yet"
+            description="Create programs first, then add levels to define eligibility."
+          >
             <Link
               to={`${getLink('admin.organization.forms')}?type=program&returnUrl=${encodeURIComponent(getLink('admin.organization.levels'))}`}
-              onClick={(e) => {
-                if (loading || refreshing) {
-                  e.preventDefault()
-                }
-              }}
+              className={loading || refreshing ? 'pa-pointer-events-none pa-opacity-50' : ''}
             >
               <Button disabled={loading || refreshing}>
                 Add a Program
               </Button>
             </Link>
-          </div>
+          </EmptyState>
         </Card>
       ) : (
         <>
-          <Card className="pa-mb-4">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-              <div className="w-full md:w-auto md:min-w-[200px]">
+          <Card className="pa-mb-6">
+            <div className={cn('pa-flex', 'pa-flex-col', 'md:pa-flex-row', 'pa-justify-between', 'pa-items-center', 'pa-gap-4')}>
+              <div className={cn('pa-w-full', 'md:pa-w-auto', 'md:pa-min-w-[200px]')}>
                 <Select
                   label="Filter by program"
                   value={filterProgramId}
@@ -294,7 +410,7 @@ export default function LevelsManagement() {
               </div>
               <Link
                 to={`${getLink('admin.organization.forms')}?type=level&returnUrl=${encodeURIComponent(getLink('admin.levels.list'))}`}
-                className={isOffline || USE_FAKE_DATA || !canCreateLevel ? 'pa-disabled-link' : 'w-full md:w-auto'}
+                className={cn({ 'pa-pointer-events-none pa-opacity-50': isOffline || USE_FAKE_DATA || !canCreateLevel || loading || refreshing, 'pa-w-full md:pa-w-auto': true })}
                 onClick={(e) => {
                   if (isOffline || USE_FAKE_DATA || !canCreateLevel || loading || refreshing) {
                     e.preventDefault()
@@ -309,7 +425,7 @@ export default function LevelsManagement() {
                 }}
               >
                 <Button
-                  style={{ width: '100%' }}
+                  className="pa-w-full"
                   disabled={!canCreateLevel || isOffline || USE_FAKE_DATA || loading || refreshing}
                   title={
                     loading || refreshing
@@ -329,200 +445,12 @@ export default function LevelsManagement() {
             </div>
           </Card>
 
-          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Level Name</th>
-                    <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Program</th>
-                    <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Type</th>
-                    <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Eligibility</th>
-                    <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                    <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredLevels.map((level) => {
-                    const program = programById.get(level.program_id)
-                    const eligibility = level.age_min && level.age_max ? `${level.age_min}-${level.age_max} years` : level.grade_min && level.grade_max ? `Grades ${level.grade_min}-${level.grade_max}` : level.description || '—'
-                    const teamCount = teams.filter((t) => t.level_id === level.id).length
-
-                    return (
-                      <tr key={level.id} className="hover:bg-slate-50/80 transition-colors group">
-                        <td className="py-4 px-6">
-                          {level.id ? (
-                            <Link
-                              to={getLink('admin.levels.detail', { id: level.id })}
-                              className="font-bold text-slate-900 hover:text-blue-600 transition-colors"
-                              style={{ textDecoration: 'none' }}
-                              onClick={(e) => {
-                                if (!level.id) {
-                                  e.preventDefault()
-                                  setActionError('Invalid level ID')
-                                } else if (loading || refreshing) {
-                                  e.preventDefault()
-                                }
-                              }}
-                              title={loading || refreshing ? 'Loading...' : 'View level details'}
-                            >
-                              {level.name}
-                            </Link>
-                          ) : (
-                            <div className="font-bold text-slate-900">{level.name}</div>
-                          )}
-                        </td>
-                        <td className="py-4 px-6 text-sm text-slate-700">
-                          {program && program.id ? (
-                            <Link
-                              to={getLink('admin.programs.detail', { id: program.id })}
-                              className="hover:text-blue-600 transition-colors"
-                              style={{ textDecoration: 'none' }}
-                              onClick={(e) => {
-                                if (!program.id) {
-                                  e.preventDefault()
-                                  setActionError('Invalid program ID')
-                                } else if (loading || refreshing) {
-                                  e.preventDefault()
-                                }
-                              }}
-                              title={loading || refreshing ? 'Loading...' : 'View program details'}
-                            >
-                              {program.name}
-                            </Link>
-                          ) : (
-                            <span>{program?.name || '—'}</span>
-                          )}
-                        </td>
-                        <td className="py-4 px-6 text-sm text-slate-500">{levelTypeLabel(level.level_type)}</td>
-                        <td className="py-4 px-6 text-sm text-slate-500">{eligibility}</td>
-                        <td className="py-4 px-6">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                              level.deleted_at
-                                ? 'bg-slate-100 text-slate-600 border border-slate-200'
-                                : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                            }`}
-                          >
-                            {level.deleted_at ? 'Archived' : 'Active'}
-                          </span>
-                        </td>
-                        <td className="py-4 px-6 text-right">
-                          <div className="flex items-center justify-end gap-3">
-                            {level.id ? (
-                              <Link
-                                to={getLink('admin.levels.detail', { id: level.id })}
-                                className="invisible group-hover:visible focus:visible"
-                                onClick={(e) => {
-                                  if (!level.id) {
-                                    e.preventDefault()
-                                    setActionError('Invalid level ID')
-                                  }
-                                }}
-                              >
-                                <Button
-                                  variant="ghost"
-                                  size="dense"
-                                  disabled={loading || refreshing}
-                                  title={loading || refreshing ? 'Loading...' : 'View level details'}
-                                >
-                                  View
-                                </Button>
-                              </Link>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="dense"
-                                disabled
-                                className="invisible group-hover:visible focus:visible"
-                                title="Invalid level ID"
-                              >
-                                View
-                              </Button>
-                            )}
-                            {level.id ? (
-                              <Link
-                                to={`${getLink('admin.organization.forms')}?edit=level&id=${level.id}&returnUrl=${encodeURIComponent(getLink('admin.levels.list'))}`}
-                                className="invisible group-hover:visible focus:visible"
-                                onClick={(e) => {
-                                  if (!level.id) {
-                                    e.preventDefault()
-                                    setActionError('Invalid level ID')
-                                  } else if (loading || refreshing) {
-                                    e.preventDefault()
-                                  }
-                                }}
-                              >
-                                <Button
-                                  variant="ghost"
-                                  size="dense"
-                                  disabled={loading || refreshing}
-                                  title={loading || refreshing ? 'Loading...' : 'Edit level'}
-                                >
-                                  Edit
-                                </Button>
-                              </Link>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="dense"
-                                disabled
-                                className="invisible group-hover:visible focus:visible"
-                                title="Invalid level ID"
-                              >
-                                Edit
-                              </Button>
-                            )}
-                            <Button
-                              variant="danger"
-                              size="dense"
-                              icon="delete"
-                              onClick={() => {
-                                if (level.id && level.name) {
-                                  handleDeleteLevel(level.id, level.name)
-                                } else {
-                                  setActionError('Invalid level information')
-                                }
-                              }}
-                              disabled={
-                                !level.id ||
-                                deletingLevelId === level.id ||
-                                isOffline ||
-                                USE_FAKE_DATA ||
-                                teamCount > 0 ||
-                                !!level.deleted_at ||
-                                loading ||
-                                refreshing
-                              }
-                              loading={deletingLevelId === level.id}
-                              className="invisible group-hover:visible focus:visible"
-                              title={
-                                !level.id
-                                  ? 'Invalid level ID'
-                                  : level.deleted_at
-                                    ? 'Cannot remove archived level'
-                                    : USE_FAKE_DATA
-                                      ? 'Sign in to remove level'
-                                      : isOffline
-                                        ? 'Offline - cannot remove level'
-                                        : teamCount > 0
-                                          ? `Cannot remove: This level contains ${teamCount} ${teamCount === 1 ? 'team' : 'teams'} and cannot be removed.`
-                                          : loading || refreshing
-                                            ? 'Loading...'
-                                            : 'Remove level from organization'
-                              }
-                            >
-                              {deletingLevelId === level.id ? 'Removing...' : 'Remove'}
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <PlatformDataTable
+            rows={filteredLevels}
+            columns={columns}
+            loading={loading || refreshing}
+            onRowClick={(row) => navigate(getLink('admin.levels.detail', { id: row.id }))}
+          />
         </>
       )}
       <ConfirmDialog

@@ -8,6 +8,7 @@ import { useOrganization } from '../../contexts/OrganizationContext'
 import { useLicense } from '../../hooks/useLicense'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { showSuccess, showError } from '../../utils/toast'
+import { refreshOrganizationTheme } from '../../hooks/useOrganizationTheme'
 import { 
   AdminPageHeader, 
   Card, 
@@ -246,6 +247,10 @@ export default function OrganizationSettings() {
       const refreshedTheme = await getOrganizationThemeSettings(context)
       if (refreshedTheme.error) throw refreshedTheme.error
       setThemeSettings(refreshedTheme.data)
+      
+      // Trigger immediate theme refresh across the app
+      refreshOrganizationTheme()
+      
       setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
       setError(getErrorMessage(err) || 'Failed to update theme')

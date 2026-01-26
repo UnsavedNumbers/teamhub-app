@@ -89,7 +89,7 @@ export default function CalendarGrid({ events, eventSports, viewMode, currentDat
                                <div key={dIndex} className={`bg-white dark:bg-slate-900 rounded-none p-1 overflow-hidden hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer ${isCurrentDay ? 'bg-slate-100 dark:bg-slate-800' : ''}`}
                                     onClick={() => onDateChange(day)}
                                >
-                                   <div className={`text-right text-xs font-bold mb-1 ${isCurrentDay ? 'text-[#137fec]' : 'text-slate-500'}`}>
+                                   <div className={`text-right text-xs font-bold mb-1 ${isCurrentDay ? 'text-[var(--org-link-color)]' : 'text-slate-500'}`}>
                                        {day.getDate()}
                                    </div>
                                     <div className="space-y-1">
@@ -99,7 +99,7 @@ export default function CalendarGrid({ events, eventSports, viewMode, currentDat
                                                  className={`text-[10px] truncate px-1 py-0.5 rounded-none border-l-2 cursor-pointer
                                                  hover:bg-slate-100 dark:hover:bg-slate-800
                                                  ${event.is_cancelled ? 'line-through opacity-50' : ''}`}
-                                                 style={{ borderLeftColor: event.type === 'game' ? '#10b981' : '#137fec' }}
+                                                 style={{ borderLeftColor: event.type === 'game' ? '#10b981' : 'var(--org-btn-primary-bg, #137fec)' }}
                                             >
                                                 {formatEventTimeRange(event.start_time, event.end_time, event.timezone).split(' - ')[0]} {event.title}
                                             </div>

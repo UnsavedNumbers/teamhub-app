@@ -68,7 +68,7 @@ export async function getSportFromTeam(
         return {
             id: sport.id,
             name: sport.name,
-            color: sport.color || '#137fec',
+            color: sport.color || 'var(--org-btn-primary-bg, #137fec)',
             icon: sport.icon || undefined,
         }
     } catch (err) {
@@ -211,7 +211,7 @@ async function getFirstSportFromOrg(context: UserContext): Promise<SportInfo | n
         return {
             id: firstSport.id,
             name: firstSport.name,
-            color: firstSport.color || '#137fec',
+            color: firstSport.color || 'var(--org-btn-primary-bg, #137fec)',
             icon: firstSport.icon || undefined,
         }
     } catch (err) {

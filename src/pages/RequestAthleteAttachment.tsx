@@ -296,7 +296,7 @@ export default function RequestAthleteAttachment() {
                             setSearchText('')
                             setSearchResults([])
                         }}
-                        className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#137fec] focus:border-transparent"
+                        className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)] focus:border-transparent"
                     >
                         {parentOrgs.map(org => (
                             <option key={org.id} value={org.id}>
@@ -324,7 +324,7 @@ export default function RequestAthleteAttachment() {
                             }
                         }}
                         placeholder="Enter athlete's first or last name (minimum 2 characters)"
-                        className="w-full px-4 py-2 pl-10 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#137fec] focus:border-transparent"
+                        className="w-full px-4 py-2 pl-10 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)] focus:border-transparent"
                         disabled={!selectedOrgId}
                     />
                     <Icon 

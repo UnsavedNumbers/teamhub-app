@@ -1,13 +1,14 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
-import { AdminPageHeader } from '../../components/platformAdmin'
+import { AdminPageHeader, Button, Card, Badge, PlatformDataTable, Select, EmptyState } from '../../components/platformAdmin'
 import { FileUpload } from '../../components/common/FileUpload'
 import { useUserContext } from '../../hooks/useUserContext'
 import { supabase } from '../../lib/supabase'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { getLink } from '../../utils/routes'
+import { cn } from '../../utils/cn'
 
 // Type for RPC result
 interface ImportAthletesResult {
@@ -59,7 +60,7 @@ interface ParsedRow {
   matched_athlete_id?: string
 }
 
-interface ImportResult {
+interface ImportSummary {
   imported_count: number
   updated_count: number
   skipped_count: number
@@ -92,122 +93,24 @@ export default function ImportAthletes() {
     createFamilies: true,
     linkExistingFamilies: true,
   })
-  const [_, setImportResult] = useState<ImportResult | null>(null)
+  const [importResult, setImportResult] = useState<ImportSummary | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Download CSV template
-  // const downloadCSVTemplate = useCallback(() => {
-  //   const headers = [
-  //     ...TEMPLATE_COLUMNS.required.map(c => c.key),
-  //     ...TEMPLATE_COLUMNS.optional.map(c => c.key),
-  //   ]
-  //   const csv = headers.join(',') + '\n'
-  //   const blob = new Blob([csv], { type: 'text/csv' })
-  //   const url = URL.createObjectURL(blob)
-  //   const a = document.createElement('a')
-  //   a.href = url
-  //   a.download = 'athlete_import_template.csv'
-  //   a.click()
-  //   URL.revokeObjectURL(url)
-  // }, [])
-
-  // Handle file upload
-  const handleFileUpload = useCallback((uploadedFile: File | null) => {
-    if (!uploadedFile) {
-      setFile(null)
-      setRawRows([])
-      setParsedRows([])
-      setStep('upload')
-      return
-    }
-
-    const validExtensions = ['.csv', '.xls', '.xlsx']
-    const fileExtension = uploadedFile.name.substring(uploadedFile.name.lastIndexOf('.')).toLowerCase()
-
-    if (!validExtensions.includes(fileExtension)) {
-      setError('Invalid file type. Please upload a CSV or XLSX file.')
-      return
-    }
-
-    if (uploadedFile.size > 5 * 1024 * 1024) {
-      setError('File size exceeds 5MB limit.')
-      return
-    }
-
-    setError(null)
-
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      try {
-        let rows: Record<string, string>[] = []
-
-        if (fileExtension === '.csv') {
-          const text = event.target?.result as string
-          const result = Papa.parse<Record<string, string>>(text, {
-            header: true,
-            skipEmptyLines: true,
-            transformHeader: (header) => header.trim(),
-          })
-          rows = result.data
-        } else {
-          const data = new Uint8Array(event.target?.result as ArrayBuffer)
-          const workbook = XLSX.read(data, { type: 'array' })
-          const sheetName = workbook.SheetNames[0]
-          const worksheet = workbook.Sheets[sheetName]
-          rows = XLSX.utils.sheet_to_json<Record<string, string>>(worksheet, {
-            defval: '',
-            raw: false,
-          })
-        }
-
-        rows = rows.filter(row => Object.values(row).some(val => val && val.toString().trim() !== ''))
-
-        if (rows.length > 2000) {
-          setError(`File contains ${rows.length} rows. Maximum allowed is 2,000 rows.`)
-          return
-        }
-
-        // Auto-detect column mapping
-        const detectedHeaders = Object.keys(rows[0] || {})
-        const autoMapping: Record<string, string> = {}
-
-        const allColumns = [...TEMPLATE_COLUMNS.required, ...TEMPLATE_COLUMNS.optional]
-        for (const templateCol of allColumns) {
-          const match = detectedHeaders.find(
-            h => h.toLowerCase().replace(/[^a-z0-9]/g, '') === templateCol.key.toLowerCase().replace(/[^a-z0-9]/g, '')
-          )
-          if (match) {
-            autoMapping[match] = templateCol.key
-          }
-        }
-
-        setColumnMapping(autoMapping)
-        setRawRows(rows)
-        setFile(uploadedFile)
-        // Check if all required columns are mapped
-        const requiredMapped = TEMPLATE_COLUMNS.required.every(col =>
-          Object.values(autoMapping).includes(col.key)
-        )
-
-        if (requiredMapped && rows.length > 0) {
-          // Auto-mapped, go directly to validation
-          processRows(rows, autoMapping)
-          setStep('validation')
-        } else {
-          // Need manual mapping
-          setStep('mapping')
-        }
-      } catch (err) {
-        setError(`Error parsing file: ${err instanceof Error ? err.message : 'Unknown error'}`)
+  // Auto-detect column mapping
+  const autoDetectMapping = useCallback((detectedHeaders: string[]) => {
+    const autoMapping: Record<string, string> = {}
+    const allColumns = [...TEMPLATE_COLUMNS.required, ...TEMPLATE_COLUMNS.optional]
+    
+    for (const templateCol of allColumns) {
+      const match = detectedHeaders.find(
+        h => h.toLowerCase().replace(/[^a-z0-9]/g, '') === templateCol.key.toLowerCase().replace(/[^a-z0-9]/g, '')
+      )
+      if (match) {
+        autoMapping[match] = templateCol.key
       }
     }
-
-    if (fileExtension === '.csv') {
-      reader.readAsText(uploadedFile)
-    } else {
-      reader.readAsArrayBuffer(uploadedFile)
-    }
+    return autoMapping
   }, [])
 
   // Process and validate rows
@@ -221,7 +124,9 @@ export default function ImportAthletes() {
 
       const mapped: Record<string, string> = {}
       for (const [sourceCol, targetCol] of Object.entries(mapping)) {
-        mapped[targetCol] = row[sourceCol]?.trim() || ''
+        if (targetCol) {
+            mapped[targetCol] = row[sourceCol]?.trim() || ''
+        }
       }
 
       const errors: string[] = []
@@ -280,10 +185,95 @@ export default function ImportAthletes() {
     setParsedRows(processed)
   }, [])
 
+  // Handle file upload
+  const handleFileUpload = useCallback((uploadedFile: File | null) => {
+    if (!uploadedFile) {
+      setFile(null)
+      setRawRows([])
+      setParsedRows([])
+      setStep('upload')
+      return
+    }
+
+    const validExtensions = ['.csv', '.xls', '.xlsx']
+    const fileExtension = uploadedFile.name.substring(uploadedFile.name.lastIndexOf('.')).toLowerCase()
+
+    if (!validExtensions.includes(fileExtension)) {
+      setError('Invalid file type. Please upload a CSV or XLSX file.')
+      return
+    }
+
+    if (uploadedFile.size > 5 * 1024 * 1024) {
+      setError('File size exceeds 5MB limit.')
+      return
+    }
+
+    setError(null)
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      try {
+        let rows: Record<string, string>[] = []
+
+        if (fileExtension === '.csv') {
+          const text = event.target?.result as string
+          const result = Papa.parse<Record<string, string>>(text, {
+            header: true,
+            skipEmptyLines: true,
+            transformHeader: (header) => header.trim(),
+          })
+          rows = result.data
+        } else {
+          const data = new Uint8Array(event.target?.result as ArrayBuffer)
+          const workbook = XLSX.read(data, { type: 'array' })
+          const sheetName = workbook.SheetNames[0]
+          const worksheet = workbook.Sheets[sheetName]
+          rows = XLSX.utils.sheet_to_json<Record<string, string>>(worksheet, {
+            defval: '',
+            raw: false,
+          })
+        }
+
+        rows = rows.filter(row => Object.values(row).some(val => val && val.toString().trim() !== ''))
+
+        if (rows.length > 2000) {
+          setError(`File contains ${rows.length} rows. Maximum allowed is 2,000 rows.`)
+          return
+        }
+
+        const detectedHeaders = Object.keys(rows[0] || {})
+        const autoMapping = autoDetectMapping(detectedHeaders)
+
+        setColumnMapping(autoMapping)
+        setRawRows(rows)
+        setFile(uploadedFile)
+
+        const requiredMapped = TEMPLATE_COLUMNS.required.every(col =>
+          Object.values(autoMapping).includes(col.key)
+        )
+
+        if (requiredMapped && rows.length > 0) {
+          processRows(rows, autoMapping)
+          setStep('validation')
+        } else {
+          setStep('mapping')
+        }
+      } catch (err) {
+        setError(`Error parsing file: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      }
+    }
+
+    if (fileExtension === '.csv') {
+      reader.readAsText(uploadedFile)
+    } else {
+      reader.readAsArrayBuffer(uploadedFile)
+    }
+  }, [autoDetectMapping, processRows])
+
   // Execute import
   const executeImport = useCallback(async () => {
-    if (!isReady || !context.orgId) {
-      setError('Organization context not available')
+    if (!isReady || !context.orgId || !file) {
+      setError('Context or file missing')
       return
     }
 
@@ -296,13 +286,13 @@ export default function ImportAthletes() {
     setError(null)
 
     try {
-      const fileExt = file!.name.substring(file!.name.lastIndexOf('.'))
+      const fileExt = file.name.substring(file.name.lastIndexOf('.'))
       const fileName = `imports/${context.orgId}/${Date.now()}${fileExt}`
       
-      const { data: _, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('athlete-imports')
-        .upload(fileName, file!, {
-          contentType: file!.type,
+        .upload(fileName, file, {
+          contentType: file.type,
           upsert: false,
         })
 
@@ -315,9 +305,9 @@ export default function ImportAthletes() {
         .insert({
           org_id: context.orgId,
           created_by_user_id: context.userId,
-          file_name: file!.name,
+          file_name: file.name,
           file_path: fileName,
-          file_size_bytes: file!.size,
+          file_size_bytes: file.size,
           total_rows: parsedRows.length,
           status: 'pending',
         })
@@ -356,7 +346,6 @@ export default function ImportAthletes() {
         throw new Error(`Import failed: ${rpcError.message}`)
       }
 
-      // Cast the result to the expected type
       const result = rpcResult as unknown as ImportAthletesResult
 
       if (!result?.success) {
@@ -382,7 +371,14 @@ export default function ImportAthletes() {
     }
   }, [isReady, context, file, parsedRows, importOptions, preSelectedSeasonId, navigate])
 
-  // Filtered and paginated rows
+  // Process data for displays
+  const stats = useMemo(() => ({
+    total: parsedRows.length,
+    ready: parsedRows.filter(r => r.status === 'ready').length,
+    warnings: parsedRows.filter(r => r.status === 'warning').length,
+    errors: parsedRows.filter(r => r.status === 'error').length,
+  }), [parsedRows])
+
   const filteredRows = useMemo(() => {
     let filtered = parsedRows
     if (showErrorsOnly) {
@@ -396,689 +392,336 @@ export default function ImportAthletes() {
     return filteredRows.slice(start, start + rowsPerPage)
   }, [filteredRows, currentPage])
 
-  // Summary stats
-  const stats = useMemo(() => {
-    return {
-      total: parsedRows.length,
-      ready: parsedRows.filter(r => r.status === 'ready').length,
-      warnings: parsedRows.filter(r => r.status === 'warning').length,
-      errors: parsedRows.filter(r => r.status === 'error').length,
-    }
-  }, [parsedRows])
-
-  if (!isReady) return <AdminLoadingSpinner />
-
-  // Get detected headers from file
   const detectedHeaders = useMemo(() => {
     if (rawRows.length === 0) return []
     return Object.keys(rawRows[0])
   }, [rawRows])
 
-  // Get sample data for a column
   const getSampleData = useCallback((columnName: string) => {
     if (rawRows.length === 0) return ''
     const samples = rawRows.slice(0, 3).map(row => row[columnName]).filter(Boolean)
     return samples.length > 0 ? `"${samples.join('", "')}"...` : ''
   }, [rawRows])
 
-  // Check if mapping is complete
   const isMappingComplete = useMemo(() => {
     return TEMPLATE_COLUMNS.required.every(col => Object.values(columnMapping).includes(col.key))
   }, [columnMapping])
 
-  // Handle mapping change
-  const handleMappingChange = useCallback((sourceCol: string, targetCol: string) => {
-    setColumnMapping(prev => ({
-      ...prev,
-      [sourceCol]: targetCol || '',
-    }))
-  }, [])
+  if (!isReady) return <AdminLoadingSpinner />
 
-  // Apply mapping and go to validation
-  const applyMapping = useCallback(() => {
-    if (!isMappingComplete) {
-      setError('Please map all required fields before continuing')
-      return
-    }
-    processRows(rawRows, columnMapping)
-    setStep('validation')
-  }, [rawRows, columnMapping, isMappingComplete, processRows])
+  // --- Render Sections ---
 
-  // Column Mapping step using import-athletes2 light design
-  if (step === 'mapping' && file && rawRows.length > 0) {
-    return (
-      <div className="pa-root" style={{ backgroundColor: '#f5f7f8', minHeight: '100vh' }}>
-        <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden">
-          <main className="flex-1 flex flex-col items-center py-10 px-6">
-            <div className="w-full max-w-[1000px] flex flex-col gap-10">
-              <AdminPageHeader
-                title="Import Athletes"
-                subtitle="Follow the linear process to bring your roster into Youth Sports. Supported formats: CSV, XLSX."
-                breadcrumbs={[
-                  { label: 'Athletes', path: '/admin/athletes' },
-                  { label: 'Import Athletes' },
-                ]}
-              />
+  const renderUpload = () => (
+    <div className="pa-flex pa-flex-col pa-gap-8 pa-max-w-[800px] pa-mx-auto pa-w-full">
+      <Card>
+        <div className="pa-p-4">
+            <h2 className="pa-overline pa-mb-4">STEP 1: UPLOAD FILE</h2>
+            <FileUpload
+                accept=".csv,.xlsx,.xls"
+                maxSize={5 * 1024 * 1024}
+                helperText="Select a CSV or Excel file containing your athlete list (Max 5MB, 2,000 rows)."
+                value={file}
+                onFileSelect={handleFileUpload}
+                buttonText="Select File"
+                replaceText="Replace File"
+                showDropZone={true}
+                fullWidth={true}
+                error={error}
+            />
+        </div>
+      </Card>
 
-              {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <p className="text-red-700 text-sm">{error}</p>
-                </div>
-              )}
+      <Card>
+        <div className="pa-p-4 pa-flex pa-flex-col pa-gap-4">
+            <h2 className="pa-overline">DOWNLOAD TEMPLATE</h2>
+            <p className="pa-body-m pa-text-muted">Use our provided template to ensure your athlete data is formatted correctly for a smooth import.</p>
+            <div className="pa-flex pa-gap-3">
+                <Button variant="secondary" onClick={() => window.open('/templates/athlete_import_template.csv')}>
+                    CSV Template
+                </Button>
+                <Button variant="secondary" onClick={() => window.open('/templates/athlete_import_template.xlsx')}>
+                    Excel Template
+                </Button>
+            </div>
+        </div>
+      </Card>
+    </div>
+  )
 
-              {/* Step 1: File Upload (Completed) */}
-              <section className="bg-white shadow-sm border border-slate-200 rounded-lg overflow-hidden opacity-60 grayscale-[0.5]">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
-                  <h2 className="text-lg font-bold tracking-tight uppercase flex items-center gap-3">
-                    <span className="flex items-center justify-center size-7 rounded bg-emerald-500 text-white text-xs font-black">1</span>
-                    File Upload
-                  </h2>
-                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter bg-emerald-100 text-emerald-700">
-                    Complete
-                  </span>
-                </div>
-                <div className="p-8">
-                  <div className="flex items-center gap-3 text-slate-400">
-                    <span className="material-symbols-outlined">description</span>
-                    <span className="text-sm font-medium">{file.name}</span>
-                  </div>
-                </div>
-              </section>
-
-              {/* Step 2: Column Mapping (Active) */}
-              <section className="bg-white shadow-sm border border-slate-200 rounded-lg overflow-hidden">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-                  <h2 className="text-lg font-bold tracking-tight uppercase flex items-center gap-3">
-                    <span className="flex items-center justify-center size-7 rounded bg-[#137fec] text-white text-xs font-black">2</span>
-                    Column Mapping
-                  </h2>
-                  <span className="text-xs text-slate-400 font-bold tracking-widest uppercase">Required</span>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-100">
-                        <th className="px-6 py-3">Source Column (From File)</th>
-                        <th className="px-6 py-3">Youth Sports Field (Target)</th>
-                        <th className="px-6 py-3">Sample Data</th>
-                        <th className="px-6 py-3 text-right">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-sm">
-                      {detectedHeaders.map((sourceCol) => {
+  const renderMapping = () => (
+    <div className="pa-flex pa-flex-col pa-gap-8">
+      <Card noPadding>
+        <div className="pa-p-6 pa-border-b pa-border-slate-100">
+            <h2 className="pa-overline pa-mb-1">STEP 2: COLUMN MAPPING</h2>
+            <p className="pa-body-s pa-text-muted">Map your file's columns to the corresponding Youth Sports fields.</p>
+        </div>
+        <div className="pa-overflow-x-auto">
+            <table className="pa-table">
+                <thead>
+                    <tr>
+                        <th style={{ width: '30%' }}>SOURCE COLUMN</th>
+                        <th style={{ width: '30%' }}>TARGET FIELD</th>
+                        <th style={{ width: '30%' }}>SAMPLE DATA</th>
+                        <th style={{ width: '10%' }} className="pa-text-right">STATUS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {detectedHeaders.map((sourceCol) => {
                         const mappedTarget = columnMapping[sourceCol]
                         const isRequired = TEMPLATE_COLUMNS.required.some(col => col.key === mappedTarget)
-                        const status = mappedTarget
-                          ? isRequired
-                            ? 'Mapped'
-                            : 'Optional'
-                          : 'Pending'
-                        const statusColor = mappedTarget
-                          ? isRequired
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-slate-100 text-slate-600'
-                          : 'bg-amber-100 text-amber-700'
-
+                        const status = mappedTarget ? (isRequired ? 'Required' : 'Optional') : 'Pending'
+                        
                         return (
-                          <tr key={sourceCol}>
-                            <td className="px-6 py-4 font-bold text-slate-900">{sourceCol}</td>
-                            <td className="px-6 py-4">
-                              <select
-                                value={mappedTarget || ''}
-                                onChange={(e) => handleMappingChange(sourceCol, e.target.value)}
-                                className="flex items-center gap-2 border border-slate-200 rounded px-3 py-2 bg-white w-full max-w-xs text-sm text-slate-900 focus:ring-1 focus:ring-[#137fec] focus:border-[#137fec] outline-none"
-                              >
-                                <option value="">Select destination...</option>
-                                {TEMPLATE_COLUMNS.required.map(col => (
-                                  <option key={col.key} value={col.key}>
-                                    {col.label} (Required)
-                                  </option>
-                                ))}
-                                {TEMPLATE_COLUMNS.optional.map(col => (
-                                  <option key={col.key} value={col.key}>
-                                    {col.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </td>
-                            <td className="px-6 py-4 text-slate-400 italic">{getSampleData(sourceCol)}</td>
-                            <td className="px-6 py-4 text-right">
-                              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter ${statusColor}`}>
-                                {status}
-                              </span>
-                            </td>
-                          </tr>
+                            <tr key={sourceCol}>
+                                <td className="pa-font-bold pa-text-slate-900">{sourceCol}</td>
+                                <td>
+                                    <Select
+                                        value={mappedTarget || ''}
+                                        onChange={(e) => setColumnMapping(prev => ({ ...prev, [sourceCol]: e.target.value }))}
+                                        options={[
+                                            { value: '', label: 'Skip this column' },
+                                            ...TEMPLATE_COLUMNS.required.map(col => ({ value: col.key, label: `${col.label} (Required)` })),
+                                            ...TEMPLATE_COLUMNS.optional.map(col => ({ value: col.key, label: col.label }))
+                                        ]}
+                                    />
+                                </td>
+                                <td className="pa-text-sm pa-text-slate-400 pa-italic">{getSampleData(sourceCol)}</td>
+                                <td className="pa-text-right">
+                                    <Badge variant={mappedTarget ? (isRequired ? 'success' : 'neutral') : 'warning'}>
+                                        {status}
+                                    </Badge>
+                                </td>
+                            </tr>
                         )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-
-              {/* Step 3: Preview + Validation (Locked) */}
-              <section className="bg-white shadow-sm border border-slate-200 rounded-lg overflow-hidden opacity-60 grayscale-[0.5]">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
-                  <h2 className="text-lg font-bold tracking-tight uppercase flex items-center gap-3">
-                    <span className="flex items-center justify-center size-7 rounded bg-slate-400 text-white text-xs font-black">3</span>
-                    Preview + Validation
-                  </h2>
-                  <span className="material-symbols-outlined text-slate-400">lock</span>
-                </div>
-                <div className="p-8 text-center text-slate-400 italic">
-                  Complete column mapping to continue
-                </div>
-              </section>
-
-              <div className="h-24"></div>
-            </div>
-          </main>
-
-          {/* Sticky Footer */}
-          <footer className="fixed bottom-0 left-0 w-full bg-white border-t-2 border-[#137fec]/20 p-4 shadow-2xl z-[60]">
-            <div className="max-w-[1000px] mx-auto flex items-center justify-between">
-              <div className="flex flex-col">
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Selected File</p>
-                <p className="text-sm font-bold flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm text-[#137fec]">description</span>
-                  {file.name}
-                </p>
-              </div>
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={() => {
-                    setStep('upload')
-                    setFile(null)
-                    setRawRows([])
-                    setColumnMapping({})
-                  }}
-                  className="px-6 py-2.5 rounded border border-slate-200 text-sm font-bold uppercase tracking-wide hover:bg-slate-50 transition-colors"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={applyMapping}
-                  disabled={!isMappingComplete}
-                  className="px-8 py-2.5 rounded bg-[#137fec] text-white text-sm font-black uppercase tracking-widest shadow-lg shadow-[#137fec]/20 hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Continue to Preview
-                  <span className="material-symbols-outlined text-base">arrow_forward</span>
-                </button>
-              </div>
-            </div>
-          </footer>
-        </div>
-      </div>
-    )
-  }
-
-  // Initial upload page using import-athletes1 design
-  if (step === 'upload' || !file) {
-    return (
-      <div className="pa-root" style={{ backgroundColor: '#f6f7f8', minHeight: '100vh' }}>
-        <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden">
-          <main className="flex-1 flex flex-col items-center py-10 px-6">
-            <div className="w-full max-w-[1000px] flex flex-col gap-10">
-              <AdminPageHeader
-                title="Import Athletes"
-                subtitle="Follow the linear process to bring your roster into Youth Sports. Supported formats: CSV, XLSX."
-                breadcrumbs={[
-                  { label: 'Athletes', path: '/admin/athletes' },
-                  { label: 'Import Athletes' },
-                ]}
-              />
-
-              {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <p className="text-red-700 text-sm">{error}</p>
-                </div>
-              )}
-
-              {/* Step 1: File Upload */}
-              <section className="bg-white shadow-sm border border-slate-200 rounded-lg overflow-hidden">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-                  <h2 className="text-lg font-bold tracking-tight uppercase flex items-center gap-3">
-                    <span className="flex items-center justify-center size-7 rounded bg-[#137fec] text-white text-xs font-black">1</span>
-                    File Upload
-                  </h2>
-                  <span className="text-xs text-slate-400 font-bold tracking-widest uppercase">Required</span>
-                </div>
-                <div className="p-8">
-                  <FileUpload
-                    accept=".csv,.xlsx,.xls"
-                    maxSize={5 * 1024 * 1024}
-                    helperText="Max file size 5MB. CSV, XLSX only."
-                    value={file}
-                    onFileSelect={handleFileUpload}
-                    buttonText="Select File"
-                    replaceText="Replace File"
-                    showDropZone={true}
-                    fullWidth={true}
-                    error={error}
-                  />
-                </div>
-              </section>
-
-              {/* Step 2: Column Mapping (Locked until file uploaded) */}
-              <section className={`bg-white shadow-sm border border-slate-200 rounded-lg overflow-hidden ${step === 'upload' ? 'opacity-60 grayscale-[0.5]' : ''}`}>
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
-                  <h2 className="text-lg font-bold tracking-tight uppercase flex items-center gap-3">
-                    <span className={`flex items-center justify-center size-7 rounded text-white text-xs font-black ${step === 'upload' ? 'bg-slate-400' : 'bg-[#137fec]'}`}>
-                      2
-                    </span>
-                    Column Mapping
-                  </h2>
-                  {step === 'upload' && <span className="material-symbols-outlined text-slate-400">lock</span>}
-                </div>
-                {step === 'upload' ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-100">
-                          <th className="px-6 py-3">Source Column (From File)</th>
-                          <th className="px-6 py-3">Youth Sports Field (Target)</th>
-                          <th className="px-6 py-3">Sample Data</th>
-                          <th className="px-6 py-3 text-right">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 text-sm">
-                        <tr>
-                          <td className="px-6 py-4 font-bold text-slate-400">First_Name</td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2 border border-slate-200 rounded px-3 py-2 bg-slate-50 w-full max-w-xs">
-                              <span className="flex-1 text-slate-400 italic">Select destination...</span>
-                              <span className="material-symbols-outlined text-sm text-slate-400">expand_more</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-slate-400 italic">&quot;Jordan&quot;, &quot;Alex&quot;...</td>
-                          <td className="px-6 py-4 text-right">
-                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter bg-slate-100 text-slate-400">
-                              Pending
-                            </span>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                ) : null}
-              </section>
-
-              {/* Step 3: Preview + Validation (Locked until file uploaded) */}
-              <section className="bg-white shadow-sm border border-slate-200 rounded-lg overflow-hidden opacity-60 grayscale-[0.5]">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-                  <h2 className="text-lg font-bold tracking-tight uppercase flex items-center gap-3">
-                    <span className="flex items-center justify-center size-7 rounded bg-slate-400 text-white text-xs font-black">3</span>
-                    Preview + Validation
-                  </h2>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1.5">
-                      <div className="size-2 rounded-full bg-emerald-500"></div>
-                      <span className="text-xs font-bold text-slate-500 uppercase">0 Ready</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="size-2 rounded-full bg-amber-500"></div>
-                      <span className="text-xs font-bold text-slate-500 uppercase">0 Warnings</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="size-2 rounded-full bg-rose-500"></div>
-                      <span className="text-xs font-bold text-slate-500 uppercase">0 Errors</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[800px]">
-                    <thead>
-                      <tr className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-100">
-                        <th className="px-6 py-3 w-12">#</th>
-                        <th className="px-6 py-3">Full Name</th>
-                        <th className="px-6 py-3">Email Address</th>
-                        <th className="px-6 py-3">Team Assignment</th>
-                        <th className="px-6 py-3">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-sm">
-                      <tr>
-                        <td colSpan={5} className="px-6 py-8 text-center text-slate-400 italic">
-                          Upload a file to see preview
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-
-              <div className="h-24"></div>
-            </div>
-          </main>
-
-          {/* Sticky Footer */}
-          <footer className="fixed bottom-0 left-0 w-full bg-white border-t-2 border-[#137fec]/20 p-4 shadow-2xl z-[60]">
-            <div className="max-w-[1000px] mx-auto flex items-center justify-between">
-              <div className="flex flex-col">
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Selected File</p>
-                <p className="text-sm font-bold flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm text-[#137fec]">description</span>
-                  {file ? file.name : 'No file selected'}
-                </p>
-              </div>
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={() => navigate(getLink('admin.athletes.list'))}
-                  className="px-6 py-2.5 rounded border border-slate-200 text-sm font-bold uppercase tracking-wide hover:bg-slate-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  disabled={!file}
-                  className="px-8 py-2.5 rounded bg-[#137fec] text-white text-sm font-black uppercase tracking-widest shadow-lg shadow-[#137fec]/20 hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Confirm Import
-                  <span className="material-symbols-outlined text-base">arrow_forward</span>
-                </button>
-              </div>
-            </div>
-          </footer>
-        </div>
-
-      </div>
-    )
-  }
-
-  // Main validation view using import-athletes2 light design
-  return (
-    <div className="pa-root" style={{ backgroundColor: '#f5f7f8', minHeight: '100vh' }}>
-      <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden">
-        <main className="flex flex-col flex-1 px-10 py-8 max-w-[1400px] mx-auto w-full">
-          <AdminPageHeader
-            title="Import Athletes"
-            subtitle="Review and fix data before final import"
-            breadcrumbs={[
-              { label: 'Athletes', path: '/admin/athletes' },
-              { label: 'Import Athletes' },
-            ]}
-            actions={
-              <div className="flex gap-3">
-                <FileUpload
-                  accept=".csv,.xlsx,.xls"
-                  maxSize={5 * 1024 * 1024}
-                  value={file}
-                  onFileSelect={handleFileUpload}
-                  buttonText="Re-upload CSV"
-                  replaceText="Replace File"
-                  error={error}
-                  className="inline-block"
-                />
-                <button
-                  onClick={executeImport}
-                  disabled={loading || stats.errors > 0}
-                  className="sharp-btn flex items-center justify-center h-12 px-8 bg-[#137fec] text-white text-sm font-black uppercase tracking-widest hover:brightness-110 transition-all shadow-[0_4px_0_0_#0e5fb3] active:translate-y-1 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ borderRadius: '2px' }}
-                >
-                  {loading ? 'Importing...' : 'Complete Import'}
-                </button>
-              </div>
-            }
-          />
-
-
-          {/* Sticky Summary Bar */}
-          <div
-            className="bg-white/90 border border-slate-200 rounded-2xl p-6 mb-8 flex flex-wrap gap-8 items-center shadow-lg"
-            style={{
-              position: 'sticky',
-              top: 0,
-              zIndex: 50,
-              backdropFilter: 'blur(12px)',
-            }}
-          >
-            <div className="flex-1 min-w-[120px]">
-              <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Total Rows</p>
-              <p className="text-slate-900 text-3xl font-black">{stats.total}</p>
-            </div>
-            <div className="h-10 w-px bg-slate-200 hidden md:block"></div>
-            <div className="flex-1 min-w-[150px]">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="size-2 rounded-full bg-emerald-500"></span>
-                <p className="text-emerald-500 text-xs font-bold uppercase tracking-widest">Ready to Import</p>
-              </div>
-              <p className="text-slate-900 text-3xl font-black">{stats.ready}</p>
-            </div>
-            <div className="flex-1 min-w-[150px]">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="size-2 rounded-full bg-amber-500"></span>
-                <p className="text-amber-500 text-xs font-bold uppercase tracking-widest">Warnings</p>
-              </div>
-              <p className="text-slate-900 text-3xl font-black">{stats.warnings}</p>
-            </div>
-            <div className="flex-1 min-w-[150px]">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="size-2 rounded-full bg-red-500"></span>
-                <p className="text-red-500 text-xs font-bold uppercase tracking-widest">Errors</p>
-              </div>
-              <p className="text-slate-900 text-3xl font-black">{stats.errors}</p>
-            </div>
-          </div>
-
-          <div className="flex gap-8 flex-col lg:flex-row">
-            {/* Data Preview Table Section */}
-            <div className="flex-1 flex flex-col min-w-0 bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-              <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
-                <h2 className="text-slate-900 text-sm font-bold uppercase tracking-widest">Data Preview + Validation</h2>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setShowErrorsOnly(!showErrorsOnly)}
-                    className="px-3 py-1 bg-white text-xs font-bold rounded text-slate-900 flex items-center gap-1 border border-slate-200 hover:bg-slate-50 transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-sm">filter_alt</span>
-                    Filter Errors
-                  </button>
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50">
-                      <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-200">Status</th>
-                      <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-200">First Name</th>
-                      <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-200">Last Name</th>
-                      <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-200">Email</th>
-                      <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-200">DOB</th>
-                      <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-200">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {paginatedRows.map(row => {
-                      const isError = row.status === 'error'
-                      const isWarning = row.status === 'warning'
-                      return (
-                        <tr
-                          key={row.row_number}
-                          className={`hover:bg-slate-50 transition-colors ${
-                            isError ? 'bg-red-50 hover:bg-red-100' : isWarning ? 'bg-amber-50 hover:bg-amber-100' : ''
-                          }`}
-                        >
-                          <td className="px-6 py-4">
-                            {row.status === 'ready' && (
-                              <span className="material-symbols-outlined text-emerald-500" title="Ready to import">
-                                check_circle
-                              </span>
-                            )}
-                            {row.status === 'warning' && (
-                              <span className="material-symbols-outlined text-amber-500" title={row.warnings.join(', ')}>
-                                warning
-                              </span>
-                            )}
-                            {row.status === 'error' && (
-                              <span className="material-symbols-outlined text-red-500" title={row.errors.join(', ')}>
-                                error
-                              </span>
-                            )}
-                          </td>
-                          <td className={`px-6 py-4 text-sm font-medium ${isWarning ? 'text-amber-700' : 'text-slate-900'}`}>
-                            {row.mapped_data.athlete_first_name}
-                          </td>
-                          <td className={`px-6 py-4 text-sm font-medium ${isWarning ? 'text-amber-700' : 'text-slate-900'}`}>
-                            {row.mapped_data.athlete_last_name}
-                          </td>
-                          <td className="px-6 py-4 text-sm">
-                            {isError && row.errors.some(e => e.includes('email')) ? (
-                              <span className="text-red-600 border border-red-200 rounded bg-red-100/50 px-2 py-1 font-medium">
-                                {row.mapped_data.athlete_email}
-                              </span>
-                            ) : (
-                              <span className="font-normal text-slate-400">{row.mapped_data.athlete_email || '-'}</span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-sm font-normal text-slate-900">
-                            {row.mapped_data.athlete_date_of_birth
-                              ? new Date(row.mapped_data.athlete_date_of_birth).toLocaleDateString()
-                              : '-'}
-                          </td>
-                          <td className="px-6 py-4 text-sm">
-                            <button className="text-slate-400 hover:text-slate-900">
-                              <span className="material-symbols-outlined">edit</span>
-                            </button>
-                          </td>
-                        </tr>
-                      )
                     })}
-                  </tbody>
-                </table>
-              </div>
-              <div className="p-4 border-t border-slate-200 flex justify-between items-center bg-slate-50/30">
-                <p className="text-xs text-slate-400">
-                  Showing {paginatedRows.length} of {filteredRows.length} rows
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
-                    disabled={currentPage === 0}
-                    className={`p-1 rounded transition-colors ${
-                      currentPage === 0
-                        ? 'bg-slate-100 text-slate-400 opacity-50 cursor-not-allowed'
-                        : 'bg-white border border-slate-200 text-slate-900 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined">chevron_left</span>
-                  </button>
-                  <button
-                    onClick={() => setCurrentPage(p => p + 1)}
-                    disabled={currentPage * rowsPerPage + rowsPerPage >= filteredRows.length}
-                    className={`p-1 rounded transition-colors ${
-                      currentPage * rowsPerPage + rowsPerPage >= filteredRows.length
-                        ? 'bg-slate-100 text-slate-400 opacity-50 cursor-not-allowed'
-                        : 'bg-white border border-slate-200 text-slate-900 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined">chevron_right</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Import Options Sidebar */}
-            <aside className="w-full lg:w-80 flex flex-col gap-6">
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                <h3 className="text-slate-900 text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[#137fec] text-sm">settings</span>
-                  Import Options
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100">
-                    <div>
-                      <p className="text-sm font-bold text-slate-900">Skip Duplicates</p>
-                      <p className="text-[10px] text-slate-400">Avoid double entries</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setImportOptions(prev => ({ ...prev, skipDuplicates: !prev.skipDuplicates }))}
-                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${
-                        importOptions.skipDuplicates ? 'bg-[#137fec]' : 'bg-slate-200'
-                      }`}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ${
-                          importOptions.skipDuplicates ? 'translate-x-4' : 'translate-x-0'
-                        }`}
-                      />
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100">
-                    <div>
-                      <p className="text-sm font-bold text-slate-900">Auto-assign Teams</p>
-                      <p className="text-[10px] text-slate-400">Based on column 'Team'</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setImportOptions(prev => ({ ...prev, autoAssignTeams: !prev.autoAssignTeams }))}
-                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${
-                        importOptions.autoAssignTeams ? 'bg-[#137fec]' : 'bg-slate-200'
-                      }`}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ${
-                          importOptions.autoAssignTeams ? 'translate-x-4' : 'translate-x-0'
-                        }`}
-                      />
-                    </button>
-                  </div>
-                  <div className="pt-2">
-                    <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest block mb-2">
-                      Destination Team
-                    </label>
-                    <select
-                      value={importOptions.destinationTeam}
-                      onChange={(e) => setImportOptions(prev => ({ ...prev, destinationTeam: e.target.value }))}
-                      className="w-full bg-white border border-slate-200 rounded-lg text-sm px-3 py-2 text-slate-900 focus:ring-1 focus:ring-[#137fec] focus:border-[#137fec] outline-none"
-                    >
-                      <option value="">Select Team</option>
-                      {/* Teams would be loaded from API */}
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm border-l-4 border-l-[#137fec]">
-                <h3 className="text-slate-900 text-xs font-bold uppercase tracking-widest mb-4">Field Mapping</h3>
-                <div className="space-y-3">
-                  {TEMPLATE_COLUMNS.required.map(col => {
-                    const mappedCol = Object.entries(columnMapping).find(([_, target]) => target === col.key)?.[0]
-                    return (
-                      <div key={col.key} className="flex justify-between items-center text-xs">
-                        <span className="text-slate-400">{col.label}</span>
-                        <span className="text-slate-900 font-mono bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
-                          {mappedCol || 'unmapped'}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
-                <button
-                  onClick={() => setStep('mapping')}
-                  className="w-full mt-4 py-2 text-xs font-bold uppercase text-[#137fec] border border-[#137fec]/20 hover:bg-[#137fec]/5 transition-colors rounded"
+                </tbody>
+            </table>
+        </div>
+        <div className="pa-p-6 pa-border-t pa-border-slate-100 pa-flex pa-justify-between pa-items-center">
+            <Button variant="secondary" onClick={() => setStep('upload')}>Back to Upload</Button>
+            <div className="pa-flex pa-items-center pa-gap-4">
+                {!isMappingComplete && <span className="pa-text-sm pa-text-danger pa-font-medium">Map all required fields to continue</span>}
+                <Button 
+                    disabled={!isMappingComplete} 
+                    onClick={() => { processRows(rawRows, columnMapping); setStep('validation'); }}
                 >
-                  Edit Mappings
-                </button>
-              </div>
+                    Continue to Preview
+                </Button>
+            </div>
+        </div>
+      </Card>
+    </div>
+  )
 
-              {stats.errors > 0 && (
-                <div className="p-6 rounded-2xl bg-red-50 border border-red-200 shadow-sm">
-                  <div className="flex gap-3">
-                    <span className="material-symbols-outlined text-red-500">info</span>
-                    <div>
-                      <p className="text-sm font-bold text-red-900">Action Required</p>
-                      <p className="text-xs text-red-700/80 mt-1 leading-relaxed">
-                        Please fix {stats.errors} error{stats.errors !== 1 ? 's' : ''} in the table before you can proceed
-                        with the import.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </aside>
-          </div>
-        </main>
+  const renderValidation = () => (
+    <div className="pa-flex pa-flex-col pa-gap-8">
+      {/* Stats Bar */}
+      <div className="pa-grid pa-grid-4 pa-gap-4">
+        <Card noPadding>
+            <div className="pa-p-5 pa-text-center">
+                <p className="pa-overline pa-mb-1 pa-text-muted">TOTAL ROWS</p>
+                <p className="pa-h2 pa-m-0">{stats.total}</p>
+            </div>
+        </Card>
+        <Card noPadding style={{ borderLeft: '4px solid var(--pa-success)' }}>
+            <div className="pa-p-5 pa-text-center">
+                <p className="pa-overline pa-mb-1 pa-text-success">READY</p>
+                <p className="pa-h2 pa-m-0">{stats.ready}</p>
+            </div>
+        </Card>
+        <Card noPadding style={{ borderLeft: '4px solid var(--pa-warning)' }}>
+            <div className="pa-p-5 pa-text-center">
+                <p className="pa-overline pa-mb-1 pa-text-warning">WARNINGS</p>
+                <p className="pa-h2 pa-m-0">{stats.warnings}</p>
+            </div>
+        </Card>
+        <Card noPadding style={{ borderLeft: '4px solid var(--pa-danger)' }}>
+            <div className="pa-p-5 pa-text-center">
+                <p className="pa-overline pa-mb-1 pa-text-danger">ERRORS</p>
+                <p className="pa-h2 pa-m-0">{stats.errors}</p>
+            </div>
+        </Card>
       </div>
 
+      <div className="pa-flex pa-flex-col lg:pa-flex-row pa-gap-8">
+        <div className="pa-flex-1">
+            <Card noPadding>
+                <div className="pa-p-4 pa-border-b pa-border-slate-100 pa-flex pa-justify-between pa-items-center">
+                    <h2 className="pa-overline">DATA PREVIEW</h2>
+                    <Button 
+                        variant={showErrorsOnly ? 'danger' : 'secondary'} 
+                        size="dense" 
+                        onClick={() => setShowErrorsOnly(!showErrorsOnly)}
+                    >
+                        {showErrorsOnly ? 'Showing Errors Only' : 'Filter by Errors'}
+                    </Button>
+                </div>
+                <div className="pa-overflow-x-auto">
+                    <table className="pa-table pa-text-sm">
+                        <thead>
+                            <tr>
+                                <th style={{ width: '40px' }}>STATUS</th>
+                                <th>ATHLETE</th>
+                                <th>EMAIL</th>
+                                <th>DOB</th>
+                                <th>MAPPINGS</th>
+                                <th style={{ width: '60px' }}></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {paginatedRows.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="pa-p-8 pa-text-center pa-text-muted">No rows match your current filters</td>
+                                </tr>
+                            ) : paginatedRows.map((row) => (
+                                <tr key={row.row_number} className={cn({ 'pa-bg-danger-surface': row.status === 'error', 'pa-bg-warning-surface': row.status === 'warning' })}>
+                                    <td className="pa-text-center">
+                                        <span className={cn('material-symbols-outlined', { 
+                                            'pa-text-success': row.status === 'ready',
+                                            'pa-text-warning': row.status === 'warning',
+                                            'pa-text-danger': row.status === 'error'
+                                        })}>
+                                            {row.status === 'ready' ? 'check_circle' : row.status === 'warning' ? 'warning' : 'error'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div className="pa-font-bold">{row.mapped_data.athlete_first_name} {row.mapped_data.athlete_last_name}</div>
+                                        {(row.errors.length > 0) && <div className="pa-text-[10px] pa-text-danger pa-font-bold">{row.errors.join(' • ')}</div>}
+                                    </td>
+                                    <td>{row.mapped_data.athlete_email || '—'}</td>
+                                    <td>{row.mapped_data.athlete_date_of_birth}</td>
+                                    <td>
+                                        <div className="pa-flex pa-flex-wrap pa-gap-1">
+                                            {Object.entries(row.mapped_data).filter(([k,v]) => v && !['athlete_first_name', 'athlete_last_name', 'athlete_email', 'athlete_date_of_birth'].includes(k)).slice(0, 2).map(([k,v]) => (
+                                                <Badge key={k} variant="neutral" className="pa-text-[9px] pa-font-black">{k.replace('athlete_', '').toUpperCase()}</Badge>
+                                            ))}
+                                            {Object.keys(row.mapped_data).length > 6 && <span className="pa-text-[10px] pa-text-muted">+more</span>}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <Button variant="ghost" size="dense" icon="edit" />
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+                <div className="pa-p-4 pa-border-t pa-border-slate-100 pa-flex pa-justify-between pa-items-center">
+                    <span className="pa-text-xs pa-text-muted">Showing {paginatedRows.length} of {filteredRows.length} rows</span>
+                    <div className="pa-flex pa-gap-1">
+                        <Button 
+                            variant="ghost" 
+                            size="dense" 
+                            icon="chevron_left" 
+                            disabled={currentPage === 0} 
+                            onClick={() => setCurrentPage(c => Math.max(0, c - 1))}
+                        />
+                        <Button 
+                            variant="ghost" 
+                            size="dense" 
+                            icon="chevron_right" 
+                            disabled={currentPage * rowsPerPage + rowsPerPage >= filteredRows.length} 
+                            onClick={() => setCurrentPage(c => c + 1)}
+                        />
+                    </div>
+                </div>
+            </Card>
+        </div>
+
+        <div className="pa-w-full lg:pa-w-80 pa-flex pa-flex-col pa-gap-6">
+            <Card>
+                <div className="pa-p-4 pa-flex pa-flex-col pa-gap-4">
+                    <h3 className="pa-overline">IMPORT SETTINGS</h3>
+                    
+                    <div className="pa-flex pa-flex-col pa-gap-3">
+                        <label className="pa-flex pa-items-center pa-gap-2 pa-cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                checked={importOptions.skipDuplicates} 
+                                onChange={(e) => setImportOptions(prev => ({ ...prev, skipDuplicates: e.target.checked }))}
+                            />
+                            <span className="pa-text-sm pa-font-bold">Skip Duplicates</span>
+                        </label>
+                        <label className="pa-flex pa-items-center pa-gap-2 pa-cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                checked={importOptions.autoAssignTeams} 
+                                onChange={(e) => setImportOptions(prev => ({ ...prev, autoAssignTeams: e.target.checked }))}
+                            />
+                            <span className="pa-text-sm pa-font-bold">Auto-assign Teams</span>
+                        </label>
+                    </div>
+
+                    <Select
+                        label="Default Team"
+                        value={importOptions.destinationTeam}
+                        onChange={(e) => setImportOptions(prev => ({ ...prev, destinationTeam: e.target.value }))}
+                        options={[
+                            { value: '', label: 'No Default Team' },
+                            // Teams would be loaded here in a real implementation
+                        ]}
+                    />
+
+                    <Select
+                        label="Import Mode"
+                        value={importOptions.importMode}
+                        onChange={(e) => setImportOptions(prev => ({ ...prev, importMode: e.target.value as any }))}
+                        options={[
+                            { value: 'create_only', label: 'Create Only' },
+                            { value: 'update_and_create', label: 'Update + Create' },
+                            { value: 'update_only', label: 'Update Only' }
+                        ]}
+                    />
+                </div>
+            </Card>
+
+            <div className="pa-flex pa-flex-col pa-gap-3">
+                <Button 
+                    className="pa-w-full" 
+                    icon="cloud_upload"
+                    loading={loading}
+                    disabled={loading || stats.errors > 0}
+                    onClick={executeImport}
+                >
+                    Complete Import
+                </Button>
+                <Button 
+                    variant="secondary" 
+                    className="pa-w-full" 
+                    onClick={() => setStep('mapping')}
+                    disabled={loading}
+                >
+                    Edit Mappings
+                </Button>
+                {stats.errors > 0 && <p className="pa-text-[10px] pa-text-danger pa-text-center pa-font-bold">Fix errors in data preview to continue import</p>}
+            </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="pa-root pa-bg-neutral-light pa-min-h-screen">
+      <AdminPageHeader
+        title="Import Athletes"
+        subtitle="Bring your roster into Youth Sports from CSV or Excel."
+        breadcrumbs={[
+          { label: 'Athletes', path: getLink('admin.athletes.list') },
+          { label: 'Import Athletes' },
+        ]}
+      />
+
+      <div className="pa-content">
+        {step === 'upload' && renderUpload()}
+        {step === 'mapping' && renderMapping()}
+        {step === 'validation' && renderValidation()}
+      </div>
+
+      {loading && (
+        <div className="pa-fixed pa-inset-0 pa-bg-white/80 pa-flex pa-items-center pa-justify-center pa-z-50">
+            <AdminLoadingSpinner />
+        </div>
+      )}
     </div>
   )
 }

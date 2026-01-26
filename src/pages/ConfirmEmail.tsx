@@ -60,7 +60,7 @@ export default function ConfirmEmail() {
           <div className="flex-1 flex flex-col justify-center">
             {/* Verification Badge */}
             <div className="mb-6">
-              <span className="inline-flex items-center gap-2 px-3 py-1 bg-[#137fec]/10 text-[#137fec] text-[10px] font-black uppercase tracking-widest">
+              <span className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-link-color)] text-[10px] font-black uppercase tracking-widest">
                 <span className="material-symbols-outlined text-sm">mail_outline</span>
                 VERIFICATION SENT
               </span>
@@ -88,8 +88,8 @@ export default function ConfirmEmail() {
 
             {/* Organization Setup Info Box */}
             {isOrgSetupFlow && (
-              <div className="mb-8 p-4 rounded-xl flex items-center gap-3 text-sm bg-[#137fec]/10 border border-[#137fec]/20">
-                <span className="material-symbols-outlined text-[#137fec]">info</span>
+              <div className="mb-8 p-4 rounded-xl flex items-center gap-3 text-sm bg-[var(--org-btn-primary-bg)]/10 border border-[var(--org-btn-primary-bg, #137fec)]/20">
+                <span className="material-symbols-outlined text-[var(--org-link-color)]">info</span>
                 <div>
                   <h3 className="text-xs font-black uppercase tracking-[0.2em] mb-1 text-slate-900 dark:text-white font-impact">ORGANIZATION SETUP</h3>
                   <p className="text-sm text-slate-700 dark:text-slate-200">

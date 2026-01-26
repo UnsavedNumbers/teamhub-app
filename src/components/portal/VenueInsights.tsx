@@ -187,7 +187,7 @@ export default function VenueInsights({ placeId, className = '' }: VenueInsights
                   href={placeDetails.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-[#137fec] hover:underline"
+                  className="text-sm text-[var(--org-link-color)] hover:underline"
                 >
                   Visit website
                 </a>

@@ -5,7 +5,6 @@
  */
 
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
-import type { ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOffline } from '../../hooks/useOffline'
@@ -15,9 +14,11 @@ import { getSports, getPrograms } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
 import { getSeasons } from '../../data/services/seasonsService'
 import type { Team, Sport, Program, Level, Season } from '../../data/types/organization'
-import { AdminPageHeader, Button, ConfirmDialog, EmptyState } from '../../components/platformAdmin'
+import { AdminPageHeader, Button, ConfirmDialog, EmptyState, Card, Select, Badge, PlatformDataTable } from '../../components/platformAdmin'
+import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
+import { cn } from '../../utils/cn'
 
 export default function TeamsManagement() {
   const { context, isReady } = useUserContext()
@@ -241,7 +242,7 @@ export default function TeamsManagement() {
   // Filter available levels based on selected program
   const availableLevels = filterProgramId ? levels.filter((l) => l.program_id === filterProgramId) : levels
 
-  const filteredTeams = teams.filter((team) => {
+  const filteredTeams = useMemo(() => teams.filter((team) => {
     if (filterSeasonId && !team.id.includes(filterSeasonId)) return false // TODO: Check actual season association
     if (filterSportId && team.sport_id !== filterSportId) return false
     if (filterProgramId && team.program_id !== filterProgramId) return false
@@ -249,48 +250,99 @@ export default function TeamsManagement() {
     if (filterStatus === 'active' && !team.is_active) return false
     if (filterStatus === 'inactive' && team.is_active) return false
     return true
-  })
+  }), [teams, filterSeasonId, filterSportId, filterProgramId, filterLevelId, filterStatus])
 
-  // --- UI Components ---
-
-  const FilterLabel = ({ children }: { children: ReactNode }) => (
-    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">{children}</label>
-  )
-
-  const SelectInput = ({ ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) => (
-    <div className="relative">
-      <select
-        className="w-full h-12 md:h-11 pl-3 pr-10 text-sm font-medium text-slate-900 bg-white border border-slate-200 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all hover:border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed"
-        {...props}
-      />
-      <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-400">
-        <span className="material-symbols-outlined text-lg">expand_more</span>
-      </div>
-    </div>
-  )
-
-
-  const StatusBadge = ({ active }: { active: boolean }) => (
-    <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-        active
-          ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-          : 'bg-slate-100 text-slate-600 border border-slate-200'
-      }`}
-    >
-      {active ? 'Active' : 'Inactive'}
-    </span>
-  )
+  const columns: ColumnConfig<Team>[] = useMemo(() => [
+    {
+        id: 'name',
+        label: 'Team Name',
+        sortable: true,
+        render: (row) => <div className="pa-font-bold pa-text-slate-900">{row.name}</div>
+    },
+    {
+        id: 'details',
+        label: 'Details',
+        render: (row) => {
+            const sport = sportById.get(row.sport_id ?? '')
+            const program = programById.get(row.program_id || '')
+            return (
+                <div className="pa-flex pa-flex-col">
+                    <span className="pa-text-sm pa-font-medium pa-text-slate-700">{program?.name || '—'}</span>
+                    <span className="pa-text-xs pa-text-slate-400">{sport?.name || '—'}</span>
+                </div>
+            )
+        }
+    },
+    {
+        id: 'level_id',
+        label: 'Level',
+        sortable: true,
+        render: (row) => {
+            const level = levelById.get(row.level_id ?? '')
+            return (
+                <Badge variant="neutral">
+                    {level?.name || '—'}
+                </Badge>
+            )
+        }
+    },
+    {
+        id: 'max_roster_size',
+        label: 'Size',
+        sortable: true,
+        render: (row) => (
+            <span className="pa-text-sm pa-text-slate-500 pa-font-medium">
+                {row.max_roster_size ? `${row.max_roster_size} max` : '—'}
+            </span>
+        )
+    },
+    {
+        id: 'is_active',
+        label: 'Status',
+        sortable: true,
+        render: (row) => (
+            <Badge variant={row.is_active ? 'success' : 'neutral'}>
+                {row.is_active ? 'Active' : 'Inactive'}
+            </Badge>
+        )
+    },
+    {
+        id: 'actions',
+        label: 'Action',
+        align: 'right',
+        render: (row) => (
+            <Button
+                variant="danger"
+                size="dense"
+                icon="delete"
+                onClick={(e: React.MouseEvent) => handleDeleteTeam(row.id, row.name, e)}
+                disabled={deletingTeamId === row.id || isOffline || USE_FAKE_DATA || navigating}
+                loading={deletingTeamId === row.id}
+                title={
+                    USE_FAKE_DATA
+                        ? 'Sign in to remove team'
+                        : isOffline
+                        ? 'Offline - cannot remove team'
+                        : navigating
+                        ? 'Please wait...'
+                        : 'Remove team from organization'
+                }
+            >
+                {deletingTeamId === row.id ? 'Removing...' : 'Remove'}
+            </Button>
+        )
+    }
+  ], [sportById, programById, levelById, deletingTeamId, isOffline, navigating, handleDeleteTeam])
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto p-8 animate-pulse">
-        <div className="h-8 bg-slate-200 rounded w-1/4 mb-4"></div>
-        <div className="h-4 bg-slate-100 rounded w-1/3 mb-12"></div>
-        <div className="h-40 bg-slate-100 rounded-2xl mb-8"></div>
-        <div className="space-y-2">
+      <div className="pa-root">
+        <div className="pa-skeleton pa-mb-4" style={{ width: '25%', height: '32px' }} />
+        <div className="pa-skeleton pa-mb-12" style={{ width: '33%', height: '16px' }} />
+        <div className="pa-skeleton pa-mb-8" style={{ width: '100%', height: '160px' }} />
+        <div className="pa-flex pa-flex-col pa-gap-2">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-16 bg-slate-100 rounded-lg"></div>
+            <div key={i} className="pa-skeleton" style={{ width: '100%', height: '64px' }} />
           ))}
         </div>
       </div>
@@ -298,60 +350,62 @@ export default function TeamsManagement() {
   }
 
   // Show empty state if prerequisites don't exist (check full chain: programs → levels → teams)
-  if (!loading) {
-    if (programs.length === 0) {
-      return (
-        <div className="max-w-7xl mx-auto p-8">
-          <OfflineBanner />
-          <AdminPageHeader
-            title="Teams"
-            subtitle="Manage your rostered competition units and their assignments."
-            breadcrumbs={[
-              { label: 'Organizations', path: getLink('admin.organization.structure') },
-              { label: 'Teams' },
-            ]}
-          />
-          <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-sm">
-            <span className="material-symbols-outlined text-5xl text-slate-200 mb-4 block">groups</span>
-            <h3 className="text-lg font-bold text-slate-900 mb-2">No programs yet</h3>
-            <p className="text-slate-500 mb-6">
-              You need to create at least one program before you can add teams. Teams require levels, and levels require programs.
-            </p>
+  if (programs.length === 0) {
+    return (
+      <div className="pa-root">
+        <OfflineBanner />
+        <AdminPageHeader
+          title="Teams"
+          subtitle="Manage your rostered competition units and their assignments."
+          breadcrumbs={[
+            { label: 'Organizations', path: getLink('admin.organization.structure') },
+            { label: 'Teams' },
+          ]}
+        />
+        <Card>
+          <EmptyState
+            icon="groups"
+            title="No programs yet"
+            description="You need to create at least one program before you can add teams. Teams require levels, and levels require programs."
+          >
             <Link to={`${getLink('admin.organization.forms')}?type=program`}>
-              <Button variant="primary">Add a Program</Button>
+              <Button>Add a Program</Button>
             </Link>
-          </div>
-        </div>
-      )
-    }
+          </EmptyState>
+        </Card>
+      </div>
+    )
+  }
 
-    if (levels.length === 0) {
-      return (
-        <div className="max-w-7xl mx-auto p-8">
-          <OfflineBanner />
-          <AdminPageHeader
-            title="Teams"
-            subtitle="Manage your rostered competition units and their assignments."
-            breadcrumbs={[
-              { label: 'Organizations', path: getLink('admin.organization.structure') },
-              { label: 'Teams' },
-            ]}
-          />
-          <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-sm">
-            <span className="material-symbols-outlined text-5xl text-slate-200 mb-4 block">groups</span>
-            <h3 className="text-lg font-bold text-slate-900 mb-2">No levels yet</h3>
-            <p className="text-slate-500 mb-6">You need to create at least one level before you can add teams.</p>
+  if (levels.length === 0) {
+    return (
+      <div className="pa-root">
+        <OfflineBanner />
+        <AdminPageHeader
+          title="Teams"
+          subtitle="Manage your rostered competition units and their assignments."
+          breadcrumbs={[
+            { label: 'Organizations', path: getLink('admin.organization.structure') },
+            { label: 'Teams' },
+          ]}
+        />
+        <Card>
+          <EmptyState
+            icon="groups"
+            title="No levels yet"
+            description="You need to create at least one level before you can add teams."
+          >
             <Link to={`${getLink('admin.organization.forms')}?type=level&returnUrl=${encodeURIComponent(getLink('admin.teams.list'))}`}>
-              <Button variant="primary">Add a Level</Button>
+              <Button>Add a Level</Button>
             </Link>
-          </div>
-        </div>
-      )
-    }
+          </EmptyState>
+        </Card>
+      </div>
+    )
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-8">
+    <div className="pa-root">
       <OfflineBanner />
       <AdminPageHeader
         title="Teams"
@@ -363,80 +417,83 @@ export default function TeamsManagement() {
       />
 
       {error && (
-        <div className="p-4 mb-6 bg-red-50 text-red-700 rounded-2xl border border-red-100 flex items-center justify-between">
-          <div>
-            <div className="font-medium">{error}</div>
+        <Card className="pa-mb-6" noPadding>
+          <div className="pa-p-4 pa-flex pa-items-center pa-justify-between" style={{ background: 'var(--pa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--pa-danger, #ef4444)' }}>
+            <div>
+              <div className="pa-font-medium pa-text-danger-dark" style={{ color: 'var(--pa-danger-dark, #991b1b)' }}>{error}</div>
+              <button
+                onClick={fetchData}
+                className="pa-mt-2 pa-text-sm pa-underline hover:pa-no-underline"
+                style={{ color: 'var(--pa-danger-dark, #991b1b)' }}
+                disabled={loading}
+              >
+                Retry
+              </button>
+            </div>
             <button
-              onClick={fetchData}
-              className="mt-2 text-sm underline hover:no-underline"
-              disabled={loading}
+              onClick={() => setError(null)}
+              className="pa-ml-4"
+              style={{ color: 'var(--pa-danger-dark, #991b1b)' }}
+              aria-label="Dismiss error"
             >
-              Retry
+              <span className="material-symbols-outlined">close</span>
             </button>
           </div>
-          <button
-            onClick={() => setError(null)}
-            className="ml-4 text-red-700 hover:text-red-900"
-            aria-label="Dismiss error"
-          >
-            <span className="material-symbols-outlined">close</span>
-          </button>
-        </div>
+        </Card>
       )}
 
       {successMessage && (
-        <div className="p-3 bg-green-50 text-green-700 rounded-lg border-l-4 border-green-500 mb-4 flex items-center justify-between">
-          <div className="text-sm font-medium">{successMessage}</div>
-          <button
-            onClick={handleDismissSuccess}
-            className="ml-4 text-green-700 hover:text-green-900"
-            aria-label="Dismiss success message"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
-              close
-            </span>
-          </button>
-        </div>
+        <Card className="pa-mb-4" noPadding>
+          <div className="pa-p-4 pa-flex pa-items-center pa-justify-between" style={{ background: 'var(--pa-success-bg, #ecfdf5)', borderLeft: '4px solid var(--pa-success, #10b981)' }}>
+            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-success-dark, #065f46)' }}>{successMessage}</div>
+            <button
+              onClick={handleDismissSuccess}
+              className="pa-ml-4"
+              style={{ color: 'var(--pa-success-dark, #065f46)' }}
+              aria-label="Dismiss success message"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>close</span>
+            </button>
+          </div>
+        </Card>
       )}
 
       {actionError && (
-        <div className="p-3 bg-red-50 text-red-700 rounded-lg border-l-4 border-red-500 mb-4 flex items-center justify-between">
-          <div className="text-sm font-medium">{actionError}</div>
-          <button
-            onClick={handleDismissError}
-            className="ml-4 text-red-700 hover:text-red-900"
-            aria-label="Dismiss error message"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
-              close
-            </span>
-          </button>
-        </div>
+        <Card className="pa-mb-4" noPadding>
+          <div className="pa-p-4 pa-flex pa-items-center pa-justify-between" style={{ background: 'var(--pa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--pa-danger, #ef4444)' }}>
+            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-danger-dark, #991b1b)' }}>{actionError}</div>
+            <button
+              onClick={handleDismissError}
+              className="pa-ml-4"
+              style={{ color: 'var(--pa-danger-dark, #991b1b)' }}
+              aria-label="Dismiss error message"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>close</span>
+            </button>
+          </div>
+        </Card>
       )}
 
       {/* Filter Bar */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 mb-8 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
+      <Card className="pa-mb-6">
+        <div className={cn('pa-grid', 'pa-grid-1', 'md:pa-grid-2', 'lg:pa-grid-3', 'pa-gap-6')}>
           {/* Row 1 */}
           <div>
-            <FilterLabel>Season</FilterLabel>
-            <SelectInput
+            <label className="pa-overline pa-mb-2 pa-block">Season</label>
+            <Select
               value={filterSeasonId}
               onChange={(e) => setFilterSeasonId(e.target.value)}
               disabled={loading || navigating}
-            >
-              <option value="">All seasons</option>
-              {seasons.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </SelectInput>
+              options={[
+                { value: '', label: 'All seasons' },
+                ...seasons.map((s) => ({ value: s.id, label: s.name })),
+              ]}
+            />
           </div>
 
           <div>
-            <FilterLabel>Sport</FilterLabel>
-            <SelectInput
+             <label className="pa-overline pa-mb-2 pa-block">Sport</label>
+            <Select
               value={filterSportId}
               onChange={(e) => {
                 setFilterSportId(e.target.value)
@@ -444,20 +501,16 @@ export default function TeamsManagement() {
                 setFilterLevelId('')
               }}
               disabled={loading || navigating}
-            >
-              <option value="">All sports</option>
-              {sports.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </SelectInput>
+              options={[
+                { value: '', label: 'All sports' },
+                ...sports.map((s) => ({ value: s.id, label: s.name })),
+              ]}
+            />
           </div>
 
-          <div className="flex items-end justify-end md:col-span-2 lg:col-span-1">
+          <div className={cn('pa-flex', 'pa-items-end', 'pa-justify-end', 'md:pa-col-span-2', 'lg:pa-col-span-1')}>
             <Button
-              variant="primary"
-              className="w-full lg:w-auto"
+              className="pa-w-full lg:pa-w-auto"
               disabled={!canCreateTeam || navigating || loading}
               title={!canCreateTeam ? 'Add a Level first' : undefined}
               onClick={handleAddTeam}
@@ -468,156 +521,59 @@ export default function TeamsManagement() {
 
           {/* Row 2 */}
           <div>
-            <FilterLabel>Program</FilterLabel>
-            <SelectInput
+            <label className="pa-overline pa-mb-2 pa-block">Program</label>
+            <Select
               value={filterProgramId}
               onChange={(e) => {
                 setFilterProgramId(e.target.value)
                 setFilterLevelId('')
               }}
               disabled={(!filterSportId && availablePrograms.length === programs.length) || loading || navigating}
-            >
-              <option value="">All programs</option>
-              {availablePrograms.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </SelectInput>
+              options={[
+                { value: '', label: 'All programs' },
+                ...availablePrograms.map((p) => ({ value: p.id, label: p.name })),
+              ]}
+            />
           </div>
 
           <div>
-            <FilterLabel>Level</FilterLabel>
-            <SelectInput
+            <label className="pa-overline pa-mb-2 pa-block">Level</label>
+            <Select
               value={filterLevelId}
               onChange={(e) => setFilterLevelId(e.target.value)}
               disabled={loading || navigating}
-            >
-              <option value="">All levels</option>
-              {availableLevels.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
-              ))}
-            </SelectInput>
+              options={[
+                { value: '', label: 'All levels' },
+                ...availableLevels.map((l) => ({ value: l.id, label: l.name })),
+              ]}
+            />
           </div>
 
           <div>
-            <FilterLabel>Status</FilterLabel>
-            <SelectInput
+            <label className="pa-overline pa-mb-2 pa-block">Status</label>
+            <Select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
               disabled={loading || navigating}
-            >
-              <option value="all">All statuses</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </SelectInput>
-          </div>
-        </div>
-      </div>
-
-      {/* Teams List */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-        {filteredTeams.length === 0 ? (
-          <div className="p-12">
-            <EmptyState
-              icon="groups"
-              title={teams.length === 0 ? 'NO TEAMS YET' : 'NO TEAMS MATCH YOUR FILTERS'}
-              description={
-                teams.length === 0
-                  ? 'Start by adding your first team to the organization.'
-                  : 'Try adjusting your filters to see more teams.'
-              }
-              action={
-                canCreateTeam
-                  ? {
-                      label: teams.length === 0 ? 'Add Your First Team' : 'Add Team',
-                      onClick: handleAddTeam,
-                    }
-                  : undefined
-              }
+              options={[
+                { value: 'all', label: 'All statuses' },
+                { value: 'active', label: 'Active' },
+                { value: 'inactive', label: 'Inactive' },
+              ]}
             />
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Team Name</th>
-                  <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Details</th>
-                  <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Level</th>
-                  <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Size</th>
-                  <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                  <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredTeams.map((team) => {
-                  const sport = sportById.get(team.sport_id ?? '')
-                  const program = programById.get(team.program_id || '')
-                  const level = levelById.get(team.level_id ?? '')
+        </div>
+      </Card>
 
-                  return (
-                    <tr
-                      key={team.id}
-                      onClick={() => handleTeamClick(team.id)}
-                      className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
-                      style={{
-                        cursor: navigating || deletingTeamId ? 'wait' : 'pointer',
-                        opacity: navigating || deletingTeamId ? 0.6 : 1,
-                      }}
-                    >
-                      <td className="py-4 px-6">
-                        <div className="font-bold text-slate-900">{team.name}</div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium text-slate-700">{program?.name || '—'}</span>
-                          <span className="text-xs text-slate-400">{sport?.name || '—'}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-xs font-medium text-slate-600">
-                          {level?.name || '—'}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 text-sm text-slate-500 font-medium">
-                        {team.max_roster_size ? `${team.max_roster_size} max` : '—'}
-                      </td>
-                      <td className="py-4 px-6">
-                        <StatusBadge active={team.is_active ?? false} />
-                      </td>
-                      <td className="py-4 px-6 text-right">
-                        <Button
-                          variant="danger"
-                          size="dense"
-                          icon="delete"
-                          onClick={(e: React.MouseEvent) => handleDeleteTeam(team.id, team.name, e)}
-                          disabled={deletingTeamId === team.id || isOffline || USE_FAKE_DATA || navigating}
-                          loading={deletingTeamId === team.id}
-                          className="invisible group-hover:visible focus:visible"
-                          title={
-                            USE_FAKE_DATA
-                              ? 'Sign in to remove team'
-                              : isOffline
-                              ? 'Offline - cannot remove team'
-                              : navigating
-                              ? 'Please wait...'
-                              : 'Remove team from organization'
-                          }
-                        >
-                          {deletingTeamId === team.id ? 'Removing...' : 'Remove'}
-                        </Button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      {/* Teams List */}
+      <PlatformDataTable
+        rows={filteredTeams}
+        columns={columns}
+        loading={loading}
+        onRowClick={(row) => handleTeamClick(row.id)}
+        emptyMessage={teams.length === 0 ? 'Start by adding your first team to the organization.' : 'Try adjusting your filters to see more teams.'}
+      />
+
       <ConfirmDialog
         open={Boolean(teamToDelete)}
         title="Remove team?"

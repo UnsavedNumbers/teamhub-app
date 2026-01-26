@@ -377,7 +377,7 @@ export function getImagePathsWithFallback(
  * Uses the sport's color from the database
  */
 export function getSportGradientFallback(sportColor: string | null | undefined): string {
-    const color = sportColor || '#137fec' // Default to primary blue
+    const color = sportColor || 'var(--org-btn-primary-bg, #137fec)' // Default to primary blue
     return `linear-gradient(135deg, ${color} 0%, ${color}dd 50%, ${color}aa 100%)`
 }
 

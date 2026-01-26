@@ -5,7 +5,9 @@ import { useOrganization } from '../contexts/OrganizationContext'
 import { useLicense } from '../hooks/useLicense'
 import { LicenseWarningBanner } from '../components/admin/LicenseWarningBanner'
 import AdminLoadingSpinner from '../components/admin/AdminLoadingSpinner'
+import { useOrgAdminTheme } from '../hooks/useOrgAdminTheme'
 import { usePlatformAdminTheme } from '../hooks/usePlatformAdminTheme'
+import { useOrganizationTheme } from '../hooks/useOrganizationTheme'
 import { useTheme } from '../hooks/useTheme'
 import { useT } from '../i18n/useI18n'
 import { useSidebar } from '../contexts/SidebarContext'
@@ -18,7 +20,9 @@ import GlobalNav from '../components/common/GlobalNav'
 import type { NavSection } from '@/types/menu'
 
 export default function AdminLayout() {
-  const { loaded: themeLoaded } = usePlatformAdminTheme()
+  const { loaded: platformThemeLoaded } = usePlatformAdminTheme()
+  const { loaded: orgThemeLoaded } = useOrgAdminTheme()
+  const { ready: orgThemeReady } = useOrganizationTheme()
   const { resolvedTheme } = useTheme()
   const t = useT()
   const location = useLocation()
@@ -152,7 +156,7 @@ export default function AdminLayout() {
     }
   }, [location.pathname, mobileSidebarOpen])
 
-  if (!themeLoaded) {
+  if (!platformThemeLoaded || !orgThemeLoaded || !orgThemeReady) {
     return <AdminLoadingSpinner />
   }
 
