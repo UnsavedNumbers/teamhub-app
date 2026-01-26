@@ -482,7 +482,7 @@ export default function Calendar() {
                             {selectedEvent.is_cancelled && <span className="text-xs font-black text-red-600 bg-red-100 px-1.5 py-0.5 rounded">{safeT('calendar.event.cancelled', 'Cancelled').toUpperCase()}</span>}
                              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{safeT(`calendar.eventTypes.${selectedEvent.type}`, selectedEvent.type)}</span>
                         </div>
-                        <CardTitle id="event-modal-title" className="mb-1 text-2xl">{selectedEvent.title}</CardTitle>
+                        <CardTitle className="mb-1 text-2xl">{selectedEvent.title}</CardTitle>
                         <p className="text-xs font-bold uppercase tracking-widest text-[var(--org-link-color)]">{selectedEvent.team?.name}</p>
                         </div>
                         <button 

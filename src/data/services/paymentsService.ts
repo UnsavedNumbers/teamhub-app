@@ -821,7 +821,7 @@ export async function validateDiscountCode(
         if (discountRow.discount_type === 'percent' && discountRow.percent_off) {
             // We'd need assignment totals to calculate, but for validation we just confirm it's valid
             discountAmountCents = 0 // Will be calculated in checkout
-        } else if (discountRow.discount_type === 'amount' && discountRow.amount_off_cents) {
+        } else if (discountRow.discount_type === 'fixed' && discountRow.amount_off_cents) {
             discountAmountCents = discountRow.amount_off_cents
         }
 

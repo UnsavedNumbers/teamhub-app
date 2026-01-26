@@ -264,17 +264,50 @@ export async function createAnnouncement(
     teamId: string,
     authorId: string
 ): Promise<{ data: Announcement | null; error: Error | null }> {
+    // Input validation
+    if (!title || !title.trim()) {
+        return { data: null, error: new Error('Announcement title is required') }
+    }
+    if (!content || !content.trim()) {
+        return { data: null, error: new Error('Announcement content is required') }
+    }
+    if (!priority || (priority !== 'normal' && priority !== 'urgent')) {
+        return { data: null, error: new Error('Priority must be "normal" or "urgent"') }
+    }
+    if (!teamId) {
+        return { data: null, error: new Error('Team ID is required') }
+    }
+    if (!authorId) {
+        return { data: null, error: new Error('Author ID is required') }
+    }
+
     if (USE_FAKE_DATA) {
         await simulateDelay()
-        return { data: null, error: null }
+        return { 
+            data: {
+                id: Date.now().toString(),
+                team_id: teamId,
+                author_id: authorId,
+                title: title.trim(),
+                content: content.trim(),
+                priority,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                author: {
+                    email: '',
+                    role: 'coach'
+                }
+            } as Announcement, 
+            error: null 
+        }
     }
 
     try {
         // Fetch Org ID from team first to ensure we know where to book creation (if needed) but DB handles Insert.
         type AnnouncementInsert = Database['public']['Tables']['announcements']['Insert']
         const insertData = {
-            title,
-            content,
+            title: title.trim(),
+            content: content.trim(),
             priority,
             team_id: teamId,
             author_id: authorId
@@ -286,6 +319,10 @@ export async function createAnnouncement(
             .single()
 
         if (error) throw error
+
+        if (!data) {
+            return { data: null, error: new Error('Failed to create announcement') }
+        }
 
         // Manually fetch role for consistent return
         let result = data as unknown as { author?: { email?: string; role?: string } }
@@ -301,7 +338,9 @@ export async function createAnnouncement(
 
         return { data: result as unknown as Announcement, error: null }
     } catch (err) {
-        return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        const error = err instanceof Error ? err : new Error('Unknown error')
+        console.error('Error creating announcement:', error)
+        return { data: null, error }
     }
 }
 
@@ -365,11 +404,23 @@ export async function createMessage(
     teamId: string,
     authorId: string
 ): Promise<{ data: Message | null; error: Error | null }> {
+    // Input validation
+    if (!content || !content.trim()) {
+        return { data: null, error: new Error('Message content is required') }
+    }
+    if (!teamId) {
+        return { data: null, error: new Error('Team ID is required') }
+    }
+    if (!authorId) {
+        return { data: null, error: new Error('Author ID is required') }
+    }
+
     if (USE_FAKE_DATA) {
+        await simulateDelay()
         return {
             data: {
                 id: Date.now().toString(),
-                content,
+                content: content.trim(),
                 team_id: teamId,
                 author_id: authorId,
                 created_at: new Date().toISOString()
@@ -380,7 +431,7 @@ export async function createMessage(
     try {
         type MessageInsert = Database['public']['Tables']['messages']['Insert']
         const insertData = {
-            content,
+            content: content.trim(),
             team_id: teamId,
             author_id: authorId
         } satisfies MessageInsert
@@ -391,6 +442,10 @@ export async function createMessage(
             .single()
 
         if (error) throw error
+
+        if (!data) {
+            return { data: null, error: new Error('Failed to create message') }
+        }
 
         let result = data as unknown as { author?: { email?: string; role?: string } }
         if (result) {
@@ -410,7 +465,9 @@ export async function createMessage(
 
         return { data: result as unknown as Message, error: null }
     } catch (err) {
-        return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        const error = err instanceof Error ? err : new Error('Unknown error')
+        console.error('Error creating message:', error)
+        return { data: null, error }
     }
 }
 
