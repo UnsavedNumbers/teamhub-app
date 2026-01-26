@@ -107,6 +107,12 @@ export default function EditAthletePortal() {
     const isMountedRef = useRef(true)
     const isLoadingSportsRef = useRef(false)
     const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    const contextRef = useRef(context)
+
+    // Update context ref when context changes
+    useEffect(() => {
+        contextRef.current = context
+    }, [context])
 
     // Cleanup on unmount
     useEffect(() => {
@@ -120,7 +126,11 @@ export default function EditAthletePortal() {
 
     // Reset form state and load athlete data when athleteId changes
     useEffect(() => {
-        if (!isReady || !athleteId) return
+        console.log('[EditAthletePortal] Effect triggered:', { isReady, athleteId })
+        if (!isReady || !athleteId) {
+            console.log('[EditAthletePortal] Not ready or no athleteId, skipping')
+            return
+        }
 
         // Reset all form state
         setFormData(initialFormData)
@@ -131,20 +141,27 @@ export default function EditAthletePortal() {
         setLoading(true)
 
         const currentRequestId = ++requestIdRef.current
+        console.log('[EditAthletePortal] Starting athlete fetch, requestId:', currentRequestId, 'athleteId:', athleteId)
 
-        // Load athlete data
-        getAthleteById(context, athleteId)
+        // Load athlete data (use contextRef to avoid stale closure)
+        getAthleteById(contextRef.current, athleteId)
             .then(({ data, error: fetchError }) => {
+                console.log('[EditAthletePortal] Received athlete data:', { data, error: fetchError })
                 // Only update if this is the latest request and component is mounted
-                if (currentRequestId !== requestIdRef.current || !isMountedRef.current) return
+                if (currentRequestId !== requestIdRef.current || !isMountedRef.current) {
+                    console.log('[EditAthletePortal] Request stale or unmounted, skipping update')
+                    return
+                }
 
                 if (fetchError) {
+                    console.error('[EditAthletePortal] Fetch error:', fetchError)
                     setError(fetchError.message)
                     setLoading(false)
                     return
                 }
 
                 if (!data) {
+                    console.log('[EditAthletePortal] No data found, athlete not found')
                     setNotFound(true)
                     setLoading(false)
                     // Auto-redirect after 3 seconds
@@ -155,6 +172,8 @@ export default function EditAthletePortal() {
                     }, 3000)
                     return
                 }
+
+                console.log('[EditAthletePortal] Populating form with athlete data:', data)
 
                 // Pre-populate form with athlete data
                 setFormData({
@@ -171,58 +190,80 @@ export default function EditAthletePortal() {
 
                 // Load photo if exists
                 if (data.photo_url) {
+                    console.log('[EditAthletePortal] Loading photo URL:', data.photo_url)
                     setPhotoPath(data.photo_url)
                     // Generate signed URL for display
                     getAthletePhotoUrl(data.photo_url).then(({ url, error }) => {
                         if (url && !error) {
+                            console.log('[EditAthletePortal] Photo URL loaded successfully')
                             setPhotoUrl(url)
                         } else {
-                            console.error('Error loading photo URL:', error)
+                            console.error('[EditAthletePortal] Error loading photo URL:', error)
                         }
                     })
                 } else {
+                    console.log('[EditAthletePortal] No photo URL')
                     setPhotoPath(null)
                     setPhotoUrl(null)
                 }
 
                 // Pre-populate sports
                 if (data.sports && data.sports.length > 0) {
+                    console.log('[EditAthletePortal] Pre-populating sports:', data.sports)
                     setSelectedSports(data.sports.map(s => ({
                         sport_id: s.sport_id,
                         sport_type: s.sport_type
                     })))
                 }
 
+                console.log('[EditAthletePortal] Setting loading to false')
                 setLoading(false)
             })
             .catch((err) => {
+                console.error('[EditAthletePortal] Exception:', err)
                 if (currentRequestId === requestIdRef.current && isMountedRef.current) {
                     console.error('Error loading athlete:', err)
                     setError(err instanceof Error ? err.message : 'Failed to load athlete')
                     setLoading(false)
                 }
             })
-    }, [context, isReady, athleteId, navigate])
+    }, [isReady, athleteId, navigate])
+
+    // Debug: Log state changes
+    useEffect(() => {
+        console.log('[EditAthletePortal] State update:', { 
+            loading, 
+            error, 
+            notFound, 
+            hasFormData: !!formData.first_name,
+            sportsCount: selectedSports.length 
+        })
+    }, [loading, error, notFound, formData, selectedSports])
 
     // Load system sports on mount
     useEffect(() => {
+        console.log('[EditAthletePortal] Sports loading effect:', { isReady, isLoadingSportsRef: isLoadingSportsRef.current })
         if (!isReady || isLoadingSportsRef.current) return
 
         isLoadingSportsRef.current = true
         setIsLoadingSports(true)
+        console.log('[EditAthletePortal] Loading system sports...')
 
         getSystemSports()
             .then(({ data, error }) => {
+                console.log('[EditAthletePortal] Sports loaded:', { data: data?.length, error })
                 if (error) {
-                    console.error('Error loading sports:', error)
+                    console.error('[EditAthletePortal] Error loading sports:', error)
                     return
                 }
                 if (isMountedRef.current && data) {
+                    console.log('[EditAthletePortal] Setting sports:', data.length)
                     setSports(data)
                 }
             })
             .finally(() => {
                 if (isMountedRef.current) {
+                    console.log('[EditAthletePortal] Sports loading complete')
                     setIsLoadingSports(false)
                     isLoadingSportsRef.current = false
                 }

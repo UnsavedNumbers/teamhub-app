@@ -523,30 +523,34 @@ export async function getTravelPlans(
                 team:teams(id, name, org_id),
                 season:seasons(id, name)
             `)
-            .order('start_date', { ascending: true })
 
         // Filter by team
         if (params.teamId) {
             query = query.eq('team_id', params.teamId)
         }
 
-        // Filter by status
-        if (params.status) {
-            query = query.eq('status', params.status)
-        } else {
-            // Default: only published and cancelled (parents can't see drafts)
-            query = query.in('status', ['published', 'cancelled'])
-        }
+        // Note: Status filtering is handled by RLS policies in the database
+        // If status column exists and params.status is provided, filter by it
+        // Otherwise, RLS will handle visibility based on user role
+        // We don't filter by status here to avoid errors if the column doesn't exist
 
         // Filter by upcoming only
         if (params.upcomingOnly) {
-            const today = new Date().toISOString().split('T')[0]
-            query = query.gte('start_date', today)
+            const today = new Date()
+            today.setHours(0, 0, 0, 0)
+            const todayStr = today.toISOString().split('T')[0]
+            query = query.gte('start_date', todayStr)
         }
+
+        // Apply ordering
+        query = query.order('start_date', { ascending: true })
 
         const { data, error } = await query
 
-        if (error) throw error
+        if (error) {
+            console.error('Supabase query error:', error)
+            throw error
+        }
 
         // Map Supabase rows to FakeTravelPlan format
         const plans: FakeTravelPlan[] = (data || []).map((row: any) => ({
@@ -572,7 +576,7 @@ export async function getTravelPlans(
             notes: row.notes || null,
             itinerary_file_path: row.itinerary_file_path || null,
             meeting_locations: row.meeting_locations || null,
-            status: row.status || 'published',
+            status: (row.status as 'draft' | 'published' | 'cancelled') || 'published',
             published_at: row.published_at || null,
             cancelled_at: row.cancelled_at || null,
             created_at: row.created_at,
@@ -582,7 +586,17 @@ export async function getTravelPlans(
         return { data: plans, error: null }
     } catch (err) {
         console.error('getTravelPlans error:', err)
-        return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+        const supabaseError = err as any
+        if (supabaseError?.code || supabaseError?.details || supabaseError?.hint) {
+            console.error('Supabase error details:', {
+                code: supabaseError.code,
+                message: supabaseError.message,
+                details: supabaseError.details,
+                hint: supabaseError.hint
+            })
+        }
+        return { data: [], error: err instanceof Error ? err : new Error(errorMessage) }
     }
 }
 

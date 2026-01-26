@@ -545,9 +545,24 @@ export async function getNotifications(
         }
 
         const { data, error } = await query
-        if (error) throw error
+        
+        // Handle 404 (table doesn't exist) or other errors gracefully
+        if (error) {
+            // If table doesn't exist (404), return empty array instead of error
+            if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+                console.warn('[getNotifications] user_notifications table not found, returning empty array')
+                return { data: [], error: null }
+            }
+            throw error
+        }
+        
         return { data: data as Notification[], error: null }
     } catch (err) {
+        // Handle PostgrestError with code PGRST116 (relation does not exist)
+        if (err && typeof err === 'object' && 'code' in err && err.code === 'PGRST116') {
+            console.warn('[getNotifications] user_notifications table not found, returning empty array')
+            return { data: [], error: null }
+        }
         return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
     }
 }
@@ -566,9 +581,21 @@ export async function getUnreadCount(
             .eq('user_id', context.userId)
             .is('read_at', null)
 
-        if (error) throw error
+        // Handle 404 (table doesn't exist) gracefully
+        if (error) {
+            if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+                console.warn('[getUnreadCount] user_notifications table not found, returning 0')
+                return { data: 0, error: null }
+            }
+            throw error
+        }
         return { data: count || 0, error: null }
     } catch (err) {
+        // Handle PostgrestError with code PGRST116 (relation does not exist)
+        if (err && typeof err === 'object' && 'code' in err && err.code === 'PGRST116') {
+            console.warn('[getUnreadCount] user_notifications table not found, returning 0')
+            return { data: 0, error: null }
+        }
         return { data: 0, error: err instanceof Error ? err : new Error('Unknown error') }
     }
 }

@@ -34,17 +34,23 @@ export default function Athletes() {
   }, [])
 
   const fetchAthletes = useCallback(async () => {
-    if (!isReady) return
+    if (!isReady) {
+      console.log('[Athletes] Not ready, skipping fetch')
+      return
+    }
     
     const currentRequestId = ++requestIdRef.current
+    console.log('[Athletes] Starting fetch, requestId:', currentRequestId)
     setLoading(true)
     setError(null)
     
     try {
       const { data, error: fetchError } = await getAthletes(context)
+      console.log('[Athletes] Received response:', { data, error: fetchError, dataCount: data?.length })
 
       // Only update state if this is the latest request and component is still mounted
       if (currentRequestId === requestIdRef.current && isMountedRef.current) {
+        console.log('[Athletes] Request is current and mounted, updating state')
         if (fetchError) {
           const errorMessage = fetchError.message || 'Failed to load athletes. Please try again.'
           console.error('[Athletes] Error fetching athletes:', fetchError)
@@ -52,13 +58,22 @@ export default function Athletes() {
           setAthletes([])
           showError(errorMessage)
         } else if (data) {
+          console.log('[Athletes] Setting athletes:', data.length)
           setAthletes(data)
           setError(null)
         } else {
+          console.log('[Athletes] No data received, setting empty array')
           setAthletes([])
           setError(null)
         }
+        console.log('[Athletes] Setting loading to false')
         setLoading(false)
+      } else {
+        console.log('[Athletes] Request is stale or unmounted, skipping update', {
+          currentRequestId,
+          latestRequestId: requestIdRef.current,
+          isMounted: isMountedRef.current
+        })
       }
     } catch (err) {
       console.error('[Athletes] Exception fetching athletes:', err)
@@ -73,12 +88,17 @@ export default function Athletes() {
   }, [context, isReady])
 
   useEffect(() => {
+    console.log('[Athletes] isReady changed:', isReady)
     if (isReady) {
       fetchAthletes()
     } else {
       setLoading(false)
     }
   }, [isReady, fetchAthletes])
+
+  useEffect(() => {
+    console.log('[Athletes] State update:', { loading, athletesCount: athletes.length, error })
+  }, [loading, athletes, error])
 
   const handleCardClick = (athleteId: string) => {
     if (loading) return
@@ -155,20 +175,22 @@ export default function Athletes() {
             return (
               <Card
                 key={athlete.id}
-                className="aspect-[4/3] relative overflow-hidden rounded-xl hover:shadow-2xl hover:shadow-[var(--org-btn-primary-bg, #137fec)]/5 transition-all duration-300 cursor-pointer group"
+                className="relative overflow-hidden rounded-xl hover:shadow-2xl hover:shadow-[var(--org-btn-primary-bg, #137fec)]/20 transition-all duration-300 cursor-pointer group"
                 onClick={() => handleCardClick(athlete.id)}
               >
-                {/* Square Image/Avatar Section */}
-                <div className="w-full aspect-square relative bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                  <AthleteAvatar athlete={athlete} size="xl" className="w-full h-full rounded-none" />
+                {/* Image/Avatar Section */}
+                <div className="w-full aspect-square relative bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
+                  <AthleteAvatar athlete={athlete} size="xl" className="w-full h-full rounded-none object-cover" />
+                  {/* Gradient overlay for better text readability */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
                 </div>
 
                 {/* Content Overlay */}
-                <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/90 via-black/70 to-transparent">
+                <div className="absolute inset-0 flex flex-col justify-end p-4">
                   <div className="text-white">
-                    <CardTitle className="text-lg mb-1 text-white">{displayName}</CardTitle>
+                    <CardTitle className="text-xl font-bold mb-1 text-white drop-shadow-lg">{displayName}</CardTitle>
                     
-                    <div className="flex flex-wrap gap-2 text-xs font-medium text-white/90 mb-2">
+                    <div className="flex flex-wrap gap-2 text-sm font-medium text-white/95 mb-3 drop-shadow">
                       {age !== null && (
                         <span>Age {age}</span>
                       )}
@@ -187,30 +209,34 @@ export default function Athletes() {
                     </div>
 
                     {/* Sports */}
-                    {plays.length > 0 && (
-                      <div className="mb-1">
-                        <span className="text-xs font-bold text-white/80">Plays: </span>
-                        <span className="text-xs text-white/90">{plays.join(', ')}</span>
-                      </div>
-                    )}
-                    {interested.length > 0 && (
-                      <div className="mb-2">
-                        <span className="text-xs font-bold text-white/80">Interested: </span>
-                        <span className="text-xs text-white/90">{interested.join(', ')}</span>
+                    {(plays.length > 0 || interested.length > 0) && (
+                      <div className="mb-3 text-sm space-y-1">
+                        {plays.length > 0 && (
+                          <div>
+                            <span className="font-semibold text-white/90">Plays: </span>
+                            <span className="text-white/85">{plays.join(', ')}</span>
+                          </div>
+                        )}
+                        {interested.length > 0 && (
+                          <div>
+                            <span className="font-semibold text-white/90">Interested: </span>
+                            <span className="text-white/85">{interested.join(', ')}</span>
+                          </div>
+                        )}
                       </div>
                     )}
 
                     {/* Edit Button */}
                     <Button
                       variant="secondary"
-                      className="mt-2 w-full text-sm px-3 py-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="w-full text-sm px-4 py-2 bg-white/95 hover:bg-white text-slate-900 font-semibold border-0 shadow-lg opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-200"
                       onClick={(e) => {
                         e.stopPropagation()
                         handleCardClick(athlete.id)
                       }}
                       disabled={loading}
                     >
-                      Edit
+                      Edit Profile
                     </Button>
                   </div>
                 </div>
