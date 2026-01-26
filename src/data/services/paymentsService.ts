@@ -86,22 +86,17 @@ function mapSupabaseFeeAssignmentToDomain(row: any): FakeFeeAssignment & { fee?:
     }
 }
 
-async function getAthleteIdsForUser(userId: string): Promise<string[]> {
-    const { data: userRow, error: userError } = await supabase
-        .from('users')
-        .select('family_id')
-        .eq('id', userId)
-        .single()
+async function getAthleteIdsForUser(userId: string, orgId: string): Promise<string[]> {
+    // Query athlete_guardians to find athletes linked to this user as guardian
+    const { data: guardianLinks, error: guardianError } = await supabase
+        .from('athlete_guardians')
+        .select('athlete_id')
+        .eq('user_id', userId)
+        .eq('org_id', orgId)
+        .eq('status', 'active')
 
-    if (userError || !userRow?.family_id) return []
-
-    const { data: athletes, error: athleteError } = await supabase
-        .from('athletes')
-        .select('id')
-        .eq('family_id', userRow.family_id)
-
-    if (athleteError) return []
-    return (athletes ?? []).map((a) => a.id)
+    if (guardianError) return []
+    return (guardianLinks ?? []).map((g) => g.athlete_id)
 }
 
 function isOrgAdmin(context: UserContext): boolean {
@@ -243,7 +238,7 @@ export async function getFeeAssignmentsForUser(
     // Real Supabase implementation - NO FALLBACK
     try {
         const isAdmin = isOrgAdmin(context)
-        const childIds = isAdmin ? [] : await getAthleteIdsForUser(context.userId)
+        const childIds = isAdmin ? [] : await getAthleteIdsForUser(context.userId, context.orgId)
 
         let query = buildFeeAssignmentQuery(supabase)
             .eq('org_id', context.orgId)
@@ -296,7 +291,7 @@ export async function getUnpaidFeeAssignments(
     }
 
     try {
-        const childIds = await getAthleteIdsForUser(context.userId)
+        const childIds = await getAthleteIdsForUser(context.userId, context.orgId)
         if (childIds.length === 0) return { data: [], error: null }
 
         const { data, error } = await supabase
@@ -700,6 +695,150 @@ export async function getOrgPaymentSummary(
 }
 
 /**
+ * Validate a discount code for the current user's organization
+ */
+export async function validateDiscountCode(
+    context: UserContext,
+    code: string,
+    feeAssignmentIds: string[]
+): Promise<{ data: { valid: boolean; discountAmountCents?: number; errorMessage?: string } | null; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+            // In fake mode, accept any code that starts with "DISCOUNT"
+            const normalizedCode = code.trim().toUpperCase()
+            if (normalizedCode.startsWith('DISCOUNT')) {
+                return {
+                    data: {
+                        valid: true,
+                        discountAmountCents: 1000, // $10 fake discount
+                    },
+                    error: null,
+                }
+            }
+            return {
+                data: {
+                    valid: false,
+                    errorMessage: 'Invalid discount code',
+                },
+                error: null,
+            }
+        } catch (err) {
+            return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        }
+    }
+
+    try {
+        const normalizedCode = code.trim().toUpperCase()
+        if (!normalizedCode) {
+            return {
+                data: {
+                    valid: false,
+                    errorMessage: 'Discount code cannot be empty',
+                },
+                error: null,
+            }
+        }
+
+        // Fetch discount code
+        const { data: discountRow, error: discountError } = await supabase
+            .from('discount_codes')
+            .select('id, discount_type, percent_off, amount_off_cents, status, redeem_by, max_redemptions, applies_to_fee_id, org_id')
+            .eq('code', normalizedCode)
+            .eq('org_id', context.orgId)
+            .maybeSingle()
+
+        if (discountError || !discountRow) {
+            return {
+                data: {
+                    valid: false,
+                    errorMessage: 'Invalid discount code',
+                },
+                error: null,
+            }
+        }
+
+        if (discountRow.status !== 'active') {
+            return {
+                data: {
+                    valid: false,
+                    errorMessage: 'Discount code is not active',
+                },
+                error: null,
+            }
+        }
+
+        if (discountRow.redeem_by && new Date(discountRow.redeem_by) < new Date()) {
+            return {
+                data: {
+                    valid: false,
+                    errorMessage: 'Discount code has expired',
+                },
+                error: null,
+            }
+        }
+
+        // Check max redemptions
+        if (discountRow.max_redemptions) {
+            const { count } = await supabase
+                .from('discount_redemptions')
+                .select('id', { count: 'exact', head: true })
+                .eq('discount_code_id', discountRow.id)
+            if (typeof count === 'number' && count >= discountRow.max_redemptions) {
+                return {
+                    data: {
+                        valid: false,
+                        errorMessage: 'Discount code usage limit reached',
+                    },
+                    error: null,
+                }
+            }
+        }
+
+        // Check if code applies to selected fees
+        if (discountRow.applies_to_fee_id) {
+            // Get fee IDs for the assignments
+            const { data: assignments } = await supabase
+                .from('fee_assignments')
+                .select('fee_id')
+                .in('id', feeAssignmentIds)
+                .eq('org_id', context.orgId)
+
+            const assignmentFeeIds = (assignments ?? []).map((a: any) => a.fee_id)
+            if (!assignmentFeeIds.includes(discountRow.applies_to_fee_id)) {
+                return {
+                    data: {
+                        valid: false,
+                        errorMessage: 'Discount code does not apply to selected fees',
+                    },
+                    error: null,
+                }
+            }
+        }
+
+        // Calculate discount amount (simplified - actual calculation happens in checkout)
+        let discountAmountCents = 0
+        if (discountRow.discount_type === 'percent' && discountRow.percent_off) {
+            // We'd need assignment totals to calculate, but for validation we just confirm it's valid
+            discountAmountCents = 0 // Will be calculated in checkout
+        } else if (discountRow.discount_type === 'amount' && discountRow.amount_off_cents) {
+            discountAmountCents = discountRow.amount_off_cents
+        }
+
+        return {
+            data: {
+                valid: true,
+                discountAmountCents,
+            },
+            error: null,
+        }
+    } catch (err) {
+        const classifiedError = classifySupabaseError(err)
+        return { data: null, error: classifiedError }
+    }
+}
+
+/**
  * Get payment summary for a parent's children
  */
 export async function getParentPaymentSummary(
@@ -739,7 +878,7 @@ export async function getParentPaymentSummary(
     }
 
     try {
-        const childIds = await getAthleteIdsForUser(context.userId)
+        const childIds = await getAthleteIdsForUser(context.userId, context.orgId)
         if (childIds.length === 0) return { data: null, error: null }
 
         const { data, error } = await supabase

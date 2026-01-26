@@ -22,6 +22,7 @@ import { SportHero } from '../components/portal/SportHero'
 import { SportCardImage } from '../components/portal/SportCardImage'
 import PortalHeader from '../components/portal/PortalHeader'
 import type { CalendarEvent } from '../types/calendar'
+import { showError, showSuccess, showInfo } from '../utils/toast'
 
 interface UserNotification {
   id: string
@@ -47,6 +48,9 @@ export default function Dashboard() {
   const [paymentItems, setPaymentItems] = useState<PaymentOverview[]>([])
   const [primarySport, setPrimarySport] = useState<SportInfo | null>(null)
   const [eventSports, setEventSports] = useState<Record<string, SportInfo | null>>({})
+  const [markingRead, setMarkingRead] = useState<string | null>(null)
+  const [markingAllRead, setMarkingAllRead] = useState(false)
+  const [paymentsLoading, setPaymentsLoading] = useState(true)
 
   // Safety net: If user landed here with setupOrganization flag, redirect to onboarding
   useEffect(() => {
@@ -62,7 +66,11 @@ export default function Dashboard() {
 
     const loadNotifications = async () => {
       const { data, error } = await getNotifications(context, 3)
-      if (!error && data) {
+      if (error) {
+        console.error('Error loading notifications:', error)
+        return
+      }
+      if (data) {
         // Filter to only unread notifications
         const unreadData = data.filter((n: any) => !n.read_at)
         setUnread(unreadData.slice(0, 3).map((n: any) => ({
@@ -84,7 +92,12 @@ export default function Dashboard() {
     const loadEvents = async () => {
       setEventsLoading(true)
       const { data, error } = await getUpcomingEventsForUser(context, 3)
-      if (!error) {
+      if (error) {
+        console.error('Error loading events:', error)
+        setEventsLoading(false)
+        return
+      }
+      if (data) {
         setUpcomingEvents(data)
 
         // Load sports for events
@@ -124,84 +137,80 @@ export default function Dashboard() {
     if (!isReady) return
 
     const loadPayments = async () => {
-      const { data: unpaid } = await getUnpaidFeeAssignments(context)
+      setPaymentsLoading(true)
+      const { data: unpaid, error } = await getUnpaidFeeAssignments(context)
+      
+      if (error) {
+        console.error('Error loading payments:', error)
+        setPaymentsLoading(false)
+        return
+      }
       
       const items: PaymentOverview[] = []
       
       // Add unpaid items
       unpaid.slice(0, 2).forEach(assignment => {
-        items.push({
-          title: assignment.fee?.title ?? 'Fee',
-          subtitle: 'Due soon',
-          status: 'due',
-          amount: `$${((assignment.amount_due_cents - assignment.amount_paid_cents) / 100).toFixed(2)}`,
-        })
+        // Handle both fake data (amount_due_cents/amount_paid_cents) and real data (balance_cents or amount_cents/paid_cents_total)
+        const balanceCents = (assignment as any).balance_cents
+        const amountDueCents = (assignment as any).amount_due_cents ?? (assignment as any).amount_cents ?? 0
+        const amountPaidCents = (assignment as any).amount_paid_cents ?? (assignment as any).paid_cents_total ?? 0
+        const amountDue = balanceCents ?? (amountDueCents - amountPaidCents)
+        
+        if (amountDue > 0) {
+          items.push({
+            title: assignment.fee?.title ?? 'Fee',
+            subtitle: 'Due soon',
+            status: 'due',
+            amount: `$${(amountDue / 100).toFixed(2)}`,
+          })
+        }
       })
 
-      // Add a sample paid item for display
-      if (items.length < 3) {
-        items.push({
-          title: 'Spring Registration',
-          subtitle: 'Varsity Soccer',
-          status: 'paid',
-        })
-      }
-
-      // Add upcoming pending item
-      if (items.length < 3) {
-        items.push({
-          title: 'Uniform Package',
-          subtitle: 'Upcoming May 1',
-          status: 'pending',
-        })
-      }
-
       setPaymentItems(items)
+      setPaymentsLoading(false)
     }
 
     loadPayments()
   }, [context, isReady])
 
   const markAsRead = async (notificationId: string) => {
+    if (markingRead === notificationId) return
+    
+    setMarkingRead(notificationId)
+    
     // Optimistic UI: remove immediately
+    const previousUnread = [...unread]
     setUnread((prev) => prev.filter((n) => n.id !== notificationId))
 
     const { success, error } = await markNotificationRead(context, notificationId)
     
-    // If update fails, reload to ensure UI is correct
+    // If update fails, restore and show error
     if (!success || error) {
-      const { data } = await getNotifications(context, 3)
-      if (data) {
-        const unreadData = data.filter((n: any) => !n.read_at)
-        setUnread(unreadData.slice(0, 3).map((n: any) => ({
-          id: n.id,
-          title: n.title,
-          body: n.body,
-          created_at: n.created_at,
-        })))
-      }
+      setUnread(previousUnread)
+      showError('Failed to mark notification as read. Please try again.')
     }
+    
+    setMarkingRead(null)
   }
 
   const markAllAsRead = async () => {
-    if (unread.length === 0) return
+    if (unread.length === 0 || markingAllRead) return
 
+    setMarkingAllRead(true)
+    
+    const previousUnread = [...unread]
     setUnread([])
 
     const { success, error } = await markAllNotificationsRead(context)
 
     if (!success || error) {
-      const { data } = await getNotifications(context, 3)
-      if (data) {
-        const unreadData = data.filter((n: any) => !n.read_at)
-        setUnread(unreadData.slice(0, 3).map((n: any) => ({
-          id: n.id,
-          title: n.title,
-          body: n.body,
-          created_at: n.created_at,
-        })))
-      }
+      setUnread(previousUnread)
+      showError('Failed to mark all notifications as read. Please try again.')
+    } else {
+      showSuccess('All notifications marked as read')
     }
+    
+    setMarkingAllRead(false)
   }
 
   // Get greeting based on time of day
@@ -289,9 +298,10 @@ export default function Dashboard() {
               <div className="flex items-center gap-4">
                 <button
                   onClick={markAllAsRead}
-                  className="text-xs font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                  disabled={markingAllRead || unread.length === 0}
+                  className="text-xs font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Mark all read
+                  {markingAllRead ? 'Marking...' : 'Mark all read'}
                 </button>
                 <Link to="/portal/uniforms" className="text-xs font-bold text-[var(--org-link-color)] hover:underline">
                   View Uniforms
@@ -311,9 +321,10 @@ export default function Dashboard() {
                     </div>
                     <button
                       onClick={() => markAsRead(n.id)}
-                      className="text-xs font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white whitespace-nowrap"
+                      disabled={markingRead === n.id}
+                      className="text-xs font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Mark read
+                      {markingRead === n.id ? 'Marking...' : 'Mark read'}
                     </button>
                   </div>
                 </div>
@@ -402,7 +413,19 @@ export default function Dashboard() {
                 Financial Overview
               </h2>
               <div className="space-y-4">
-                {paymentItems.map((item, idx) => (
+                {paymentsLoading ? (
+                  <div className="py-4 text-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-slate-900 dark:border-white mx-auto"></div>
+                  </div>
+                ) : paymentItems.length === 0 ? (
+                  <div className="py-4 text-center">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">No payments due</p>
+                    <Link to="/portal/payments" className="text-xs font-bold text-[var(--org-link-color)] hover:underline mt-2 inline-block">
+                      View All Payments
+                    </Link>
+                  </div>
+                ) : (
+                  paymentItems.map((item, idx) => (
                   <div key={idx}>
                     <div className="flex items-center justify-between group py-2">
                       <div className="flex items-center gap-3">
@@ -430,7 +453,8 @@ export default function Dashboard() {
                       <div className="h-px bg-slate-50 dark:bg-slate-800 w-full"></div>
                     )}
                   </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
@@ -471,13 +495,13 @@ export default function Dashboard() {
                 Contact League Office
                 <span className="material-symbols-outlined text-lg opacity-0 group-hover:opacity-100 transition-opacity">arrow_forward</span>
               </Link>
-              <a 
-                href="#" 
-                className="text-sm font-bold text-slate-900 dark:text-white hover:text-[var(--org-link-color)] flex items-center justify-between group"
+              <button
+                onClick={() => showInfo('Help documentation coming soon')}
+                className="text-sm font-bold text-slate-900 dark:text-white hover:text-[var(--org-link-color)] flex items-center justify-between group text-left w-full"
               >
                 Help & Documentation
                 <span className="material-symbols-outlined text-lg opacity-0 group-hover:opacity-100 transition-opacity">arrow_forward</span>
-              </a>
+              </button>
             </div>
           </div>
         </div>

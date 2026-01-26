@@ -70,64 +70,82 @@ export default function Calendar() {
   const [loading, setLoading] = useState(true)
   const [currentDate, setCurrentDate] = useState(new Date())
   const [children, setChildren] = useState<Array<{ id: string; first_name: string; last_name: string }>>([])
-  const [eventSports, setEventSports] = useState<Record<string, SportInfo | null>>({}) 
+  const [eventSports, setEventSports] = useState<Record<string, SportInfo | null>>({})
+  const [error, setError] = useState<string | null>(null)
+  const [rsvpLoading, setRsvpLoading] = useState<Record<string, boolean>>({})
   
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const fetchData = useCallback(async () => {
-    if (!isReady) return
+    if (!isReady || !context) return
     setLoading(true)
+    setError(null)
     
-    // Determine date range based on view
-    let start = new Date(currentDate)
-    let end = new Date(currentDate)
-    
-    if (viewMode === 'month') {
-        start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
-        end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
-    } else {
-        // Agenda view gets next 30 days starting from current date
-        start = new Date(currentDate)
-        end = new Date(currentDate.getTime() + 30 * 24 * 60 * 60 * 1000)
-    }
-    
-    // Fetch user children for RSVP matching
-    const { data: childrenData } = await getAthletes(context)
-    setChildren(childrenData)
+    try {
+      // Determine date range based on view
+      let start = new Date(currentDate)
+      let end = new Date(currentDate)
+      
+      if (viewMode === 'month') {
+          start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
+          end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
+      } else {
+          // Agenda view gets next 30 days starting from current date
+          start = new Date(currentDate)
+          end = new Date(currentDate.getTime() + 30 * 24 * 60 * 60 * 1000)
+      }
+      
+      // Fetch user children for RSVP matching
+      const { data: childrenData, error: childrenError } = await getAthletes(context)
+      if (childrenError) {
+        console.error('Error fetching children:', childrenError)
+      } else {
+        setChildren(childrenData || [])
+      }
 
-    const { data, error } = await getEvents(context, {
-      startDate: start,
-      endDate: end,
-      includeCancelled: filters.showCancelled,
-      // Pass other filters to service
-    })
+      const { data, error: eventsError } = await getEvents(context, {
+        startDate: start,
+        endDate: end,
+        includeCancelled: filters.showCancelled,
+      })
 
-    if (error) {
-      console.error('Error fetching events:', error)
+      if (eventsError) {
+        console.error('Error fetching events:', eventsError)
+        setError(eventsError.message || 'Failed to load events')
+        setEvents([])
+      } else {
+          // filter in memory for event types if service doesn't support it yet
+          let filtered = data || []
+          if (filters.eventTypes.length > 0) {
+              filtered = filtered.filter(e => filters.eventTypes.includes(e.type))
+          }
+          setEvents(filtered)
+          
+          // Load sports for events
+          const sportsMap: Record<string, SportInfo | null> = {}
+          await Promise.all(
+            filtered.map(async (event) => {
+              if (event.id) {
+                try {
+                  const sport = await getSportFromEvent(context, event.id)
+                  if (sport) sportsMap[event.id] = sport
+                } catch (err) {
+                  console.warn(`Failed to load sport for event ${event.id}:`, err)
+                }
+              }
+            })
+          )
+          setEventSports(sportsMap)
+      }
+    } catch (err) {
+      console.error('Unexpected error in fetchData:', err)
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
       setEvents([])
-    } else {
-        // filter in memory for event types if service doesn't support it yet
-        let filtered = data
-        if (filters.eventTypes.length > 0) {
-            filtered = filtered.filter(e => filters.eventTypes.includes(e.type))
-        }
-        setEvents(filtered)
-        
-        // Load sports for events
-        const sportsMap: Record<string, SportInfo | null> = {}
-        await Promise.all(
-          filtered.map(async (event) => {
-            if (event.id) {
-              const sport = await getSportFromEvent(context,event.id)
-              if (sport) sportsMap[event.id] = sport
-            }
-          })
-        )
-        setEventSports(sportsMap)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [context, isReady, currentDate, viewMode, filters])
 
   // Restore state from query params on mount
@@ -163,16 +181,55 @@ export default function Calendar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Only run on mount - intentionally excluding searchParams to avoid re-running on every param change
 
+  // Sync filters and view mode to URL params
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (viewMode !== 'agenda') params.set('view', viewMode)
+    if (currentDate) {
+      const dateStr = currentDate.toISOString().split('T')[0]
+      const todayStr = new Date().toISOString().split('T')[0]
+      if (dateStr !== todayStr) params.set('date', dateStr)
+    }
+    if (filters.teamIds.length > 0) params.set('teams', filters.teamIds.join(','))
+    if (filters.childIds.length > 0) params.set('children', filters.childIds.join(','))
+    if (filters.eventTypes.length > 0) params.set('types', filters.eventTypes.join(','))
+    
+    const newSearch = params.toString()
+    const currentSearch = searchParams.toString()
+    if (newSearch !== currentSearch) {
+      setSearchParams(params, { replace: true })
+    }
+  }, [viewMode, currentDate, filters, searchParams, setSearchParams])
+
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  // Handle Escape key to close modal
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedEvent) {
+        setSelectedEvent(null)
+      }
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [selectedEvent])
 
   const handleRSVPChange = async (eventId: string, childId: string, newStatus: RSVPStatus) => {
       // Guard: Ensure context is ready and has userId
       if (!isReady || !context?.userId) {
         console.error('Cannot update RSVP: context not ready')
+        setError('Cannot update RSVP: please refresh the page')
         return
       }
+
+      const rsvpKey = `${eventId}-${childId}`
+      setRsvpLoading(prev => ({ ...prev, [rsvpKey]: true }))
+
+      // Store original state for rollback
+      const originalEvents = [...events]
+      const originalSelectedEvent = selectedEvent
 
       // Optimistic update
       setEvents(prev => prev.map(e => {
@@ -192,7 +249,7 @@ export default function Calendar() {
             }
             
             if (idx >= 0) {
-                newRSVPs[idx] = { ...newRSVPs[idx], status: newStatus }
+                newRSVPs[idx] = { ...newRSVPs[idx], status: newStatus, responded_at: new Date().toISOString() }
             } else {
                 newRSVPs.push(mockRSVP)
             }
@@ -206,9 +263,8 @@ export default function Calendar() {
               const newRSVPs = prev.rsvps ? [...prev.rsvps] : []
               const idx = newRSVPs.findIndex(r => r.child_id === childId)
               if (idx >= 0) {
-                  newRSVPs[idx] = { ...newRSVPs[idx], status: newStatus }
+                  newRSVPs[idx] = { ...newRSVPs[idx], status: newStatus, responded_at: new Date().toISOString() }
               } else {
-                  // If adding new RSVP
                   newRSVPs.push({ 
                     id: 'temp', 
                     event_id: eventId, 
@@ -225,7 +281,56 @@ export default function Calendar() {
           })
       }
 
-      await updateRSVP(context, eventId, childId, newStatus)
+      try {
+        const { data, error: rsvpError } = await updateRSVP(context, eventId, childId, newStatus)
+        
+        if (rsvpError) {
+          // Rollback optimistic update
+          setEvents(originalEvents)
+          setSelectedEvent(originalSelectedEvent)
+          setError(rsvpError.message || 'Failed to update RSVP')
+          console.error('RSVP update error:', rsvpError)
+        } else if (data) {
+          // Update with server response
+          setEvents(prev => prev.map(e => {
+            if (e.id !== eventId) return e
+            const newRSVPs = e.rsvps ? [...e.rsvps] : []
+            const idx = newRSVPs.findIndex(r => r.child_id === childId)
+            if (idx >= 0) {
+              newRSVPs[idx] = data
+            } else {
+              newRSVPs.push(data)
+            }
+            return { ...e, rsvps: newRSVPs }
+          }))
+
+          if (selectedEvent && selectedEvent.id === eventId) {
+            setSelectedEvent(prev => {
+              if (!prev) return null
+              const newRSVPs = prev.rsvps ? [...prev.rsvps] : []
+              const idx = newRSVPs.findIndex(r => r.child_id === childId)
+              if (idx >= 0) {
+                newRSVPs[idx] = data
+              } else {
+                newRSVPs.push(data)
+              }
+              return { ...prev, rsvps: newRSVPs }
+            })
+          }
+        }
+      } catch (err) {
+        // Rollback optimistic update
+        setEvents(originalEvents)
+        setSelectedEvent(originalSelectedEvent)
+        setError(err instanceof Error ? err.message : 'Failed to update RSVP')
+        console.error('RSVP update error:', err)
+      } finally {
+        setRsvpLoading(prev => {
+          const next = { ...prev }
+          delete next[rsvpKey]
+          return next
+        })
+      }
   }
 
   // Calculate sport info from events or defaulting
@@ -258,7 +363,8 @@ export default function Calendar() {
                     <button
                       key={v}
                       onClick={() => setViewMode(v)}
-                      className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded transition-colors ${
+                      disabled={loading}
+                      className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                         viewMode === v
                           ? 'bg-[var(--org-btn-primary-bg)] text-white'
                           : 'text-white/80 dark:text-slate-400 hover:text-white dark:hover:text-white'
@@ -280,17 +386,39 @@ export default function Calendar() {
                  {/* Mini Calendar Navigation could go here too */}
                  <Card className="p-4">
                      <div className="flex items-center justify-between mb-2">
-                         <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="p-1 hover:bg-slate-100 rounded">
+                         <button 
+                           onClick={() => {
+                             const newDate = new Date(currentDate)
+                             newDate.setMonth(newDate.getMonth() - 1)
+                             setCurrentDate(newDate)
+                           }} 
+                           className="p-1 hover:bg-slate-100 rounded transition-colors"
+                           disabled={loading}
+                           aria-label="Previous month"
+                         >
                              <Icon name="chevron_left" />
                          </button>
-                         <span className="font-bold text-slate-700">
+                         <span className="font-bold text-slate-700 dark:text-slate-300">
                              {currentDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric'})}
                          </span>
-                         <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="p-1 hover:bg-slate-100 rounded">
+                         <button 
+                           onClick={() => {
+                             const newDate = new Date(currentDate)
+                             newDate.setMonth(newDate.getMonth() + 1)
+                             setCurrentDate(newDate)
+                           }} 
+                           className="p-1 hover:bg-slate-100 rounded transition-colors"
+                           disabled={loading}
+                           aria-label="Next month"
+                         >
                              <Icon name="chevron_right" />
                          </button>
                      </div>
-                     <button onClick={() => setCurrentDate(new Date())} className="w-full text-xs font-bold text-[var(--org-link-color)] text-center py-1">
+                     <button 
+                       onClick={() => setCurrentDate(new Date())} 
+                       className="w-full text-xs font-bold text-[var(--org-link-color)] text-center py-1 hover:underline transition-colors"
+                       disabled={loading}
+                     >
                          Jump to Today
                      </button>
                  </Card>
@@ -298,9 +426,30 @@ export default function Calendar() {
 
             <div className="lg:col-span-3">
                 {loading ? (
-                <div className="flex justify-center py-12">
+                <div className="flex flex-col items-center justify-center py-12">
                     <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+                    <p className="mt-4 text-sm text-slate-500">Loading events...</p>
                 </div>
+                ) : error ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <Icon name="error_outline" size="text-4xl" className="text-red-500 mb-4" />
+                    <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setError(null)
+                        fetchData()
+                      }}
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                ) : events.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <Icon name="event_busy" size="text-4xl" className="text-slate-300 mb-4" />
+                    <p className="text-slate-500 mb-2">No events found for this period</p>
+                    <p className="text-sm text-slate-400">Try adjusting your filters or date range</p>
+                  </div>
                 ) : (
                     <CalendarGrid 
                         events={events}
@@ -316,7 +465,13 @@ export default function Calendar() {
 
       {/* Event Detail Modal */}
       {selectedEvent && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setSelectedEvent(null)}>
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" 
+          onClick={() => setSelectedEvent(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="event-modal-title"
+        >
             <div className="max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
               <Card className="p-0 overflow-hidden">
                 <div className={`h-2 w-full ${selectedEvent.is_cancelled ? 'bg-red-500' : 'bg-[var(--org-btn-primary-bg)]'}`} />
@@ -327,10 +482,14 @@ export default function Calendar() {
                             {selectedEvent.is_cancelled && <span className="text-xs font-black text-red-600 bg-red-100 px-1.5 py-0.5 rounded">{safeT('calendar.event.cancelled', 'Cancelled').toUpperCase()}</span>}
                              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{safeT(`calendar.eventTypes.${selectedEvent.type}`, selectedEvent.type)}</span>
                         </div>
-                        <CardTitle className="mb-1 text-2xl">{selectedEvent.title}</CardTitle>
+                        <CardTitle id="event-modal-title" className="mb-1 text-2xl">{selectedEvent.title}</CardTitle>
                         <p className="text-xs font-bold uppercase tracking-widest text-[var(--org-link-color)]">{selectedEvent.team?.name}</p>
                         </div>
-                        <button onClick={() => setSelectedEvent(null)} className="text-slate-400 hover:text-slate-900 dark:hover:text-white p-2 hover:bg-slate-100 rounded-full transition-colors">
+                        <button 
+                          onClick={() => setSelectedEvent(null)} 
+                          className="text-slate-400 hover:text-slate-900 dark:hover:text-white p-2 hover:bg-slate-100 rounded-full transition-colors"
+                          aria-label="Close event details"
+                        >
                         <Icon name="close" />
                         </button>
                     </div>
@@ -391,6 +550,32 @@ export default function Calendar() {
                                         userId={context.userId}
                                         currentRSVP={selectedEvent.general_rsvps?.find(r => r.user_id === context.userId) || null}
                                         disabled={selectedEvent.is_cancelled || false}
+                                        onRSVPUpdate={(updatedRSVP) => {
+                                          // Update selected event with new RSVP
+                                          setSelectedEvent(prev => {
+                                            if (!prev) return null
+                                            const newGeneralRSVPs = prev.general_rsvps ? [...prev.general_rsvps] : []
+                                            const idx = newGeneralRSVPs.findIndex(r => r.user_id === context.userId)
+                                            if (idx >= 0) {
+                                              newGeneralRSVPs[idx] = updatedRSVP
+                                            } else {
+                                              newGeneralRSVPs.push(updatedRSVP)
+                                            }
+                                            return { ...prev, general_rsvps: newGeneralRSVPs }
+                                          })
+                                          // Update events list
+                                          setEvents(prev => prev.map(e => {
+                                            if (e.id !== selectedEvent.id) return e
+                                            const newGeneralRSVPs = e.general_rsvps ? [...e.general_rsvps] : []
+                                            const idx = newGeneralRSVPs.findIndex(r => r.user_id === context.userId)
+                                            if (idx >= 0) {
+                                              newGeneralRSVPs[idx] = updatedRSVP
+                                            } else {
+                                              newGeneralRSVPs.push(updatedRSVP)
+                                            }
+                                            return { ...e, general_rsvps: newGeneralRSVPs }
+                                          }))
+                                        }}
                                     />
                                 ) : isAthleteRSVP(selectedEvent) ? (
                                     children.length === 0 ? (
@@ -399,6 +584,7 @@ export default function Calendar() {
                                         <div className="space-y-3">
                                             {children.map(child => {
                                                 const rsvp = selectedEvent.rsvps?.find(r => r.child_id === child.id)
+                                                const rsvpKey = `${selectedEvent.id}-${child.id}`
                                                 return (
                                                     <RSVPButton 
                                                         key={child.id}
@@ -407,7 +593,7 @@ export default function Calendar() {
                                                         childName={child.first_name}
                                                         currentStatus={rsvp?.status || 'unknown'}
                                                         onStatusChange={(s) => handleRSVPChange(selectedEvent.id, child.id, s)}
-                                                        disabled={selectedEvent.is_cancelled || false}
+                                                        disabled={selectedEvent.is_cancelled || rsvpLoading[rsvpKey] || false}
                                                     />
                                                 )
                                             })}

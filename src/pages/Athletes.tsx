@@ -11,12 +11,14 @@ import { useT } from '../i18n/useI18n'
 import AthleteAvatar from '../components/portal/AthleteAvatar'
 import type { Athlete } from '../types/family'
 import { getDisplayName, calculateAge, getGenderLabel, formatSports } from '../utils/athleteHelpers'
+import { showError } from '../utils/toast'
 
 export default function Athletes() {
   const t = useT()
   const navigate = useNavigate()
   const [athletes, setAthletes] = useState<Athlete[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const { context, isReady } = useUserContext()
 
@@ -36,27 +38,36 @@ export default function Athletes() {
     
     const currentRequestId = ++requestIdRef.current
     setLoading(true)
+    setError(null)
     
     try {
-      const { data, error } = await getAthletes(context)
+      const { data, error: fetchError } = await getAthletes(context)
 
       // Only update state if this is the latest request and component is still mounted
       if (currentRequestId === requestIdRef.current && isMountedRef.current) {
-        if (error) {
-          console.error('[Athletes] Error fetching athletes:', error)
+        if (fetchError) {
+          const errorMessage = fetchError.message || 'Failed to load athletes. Please try again.'
+          console.error('[Athletes] Error fetching athletes:', fetchError)
+          setError(errorMessage)
           setAthletes([])
+          showError(errorMessage)
         } else if (data) {
           setAthletes(data)
+          setError(null)
         } else {
           setAthletes([])
+          setError(null)
         }
         setLoading(false)
       }
     } catch (err) {
       console.error('[Athletes] Exception fetching athletes:', err)
       if (currentRequestId === requestIdRef.current && isMountedRef.current) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load athletes. Please try again.'
+        setError(errorMessage)
         setAthletes([])
         setLoading(false)
+        showError(errorMessage)
       }
     }
   }, [context, isReady])
@@ -70,7 +81,17 @@ export default function Athletes() {
   }, [isReady, fetchAthletes])
 
   const handleCardClick = (athleteId: string) => {
+    if (loading) return
     navigate(`/portal/athletes/${athleteId}/edit`)
+  }
+
+  const handleAddAthlete = () => {
+    if (loading) return
+    navigate('/portal/athletes/new')
+  }
+
+  const handleRetry = () => {
+    fetchAthletes()
   }
 
   return (
@@ -87,7 +108,7 @@ export default function Athletes() {
             Manage your children's profiles and information.
           </p>
         </div>
-        <Button variant="primary" onClick={() => navigate('/portal/athletes/new')}>
+        <Button variant="primary" onClick={handleAddAthlete} disabled={loading}>
           Add Athlete
         </Button>
       </div>
@@ -96,6 +117,22 @@ export default function Athletes() {
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
         </div>
+      ) : error ? (
+        <Card className="text-center py-12">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full mb-4">
+            <Icon name="error" size="text-4xl" className="text-red-500" />
+          </div>
+          <CardTitle className="mb-2 text-red-600 dark:text-red-400">Failed to Load Athletes</CardTitle>
+          <p className="text-slate-500 dark:text-slate-400 mb-6">{error}</p>
+          <div className="flex gap-4 justify-center">
+            <Button variant="primary" onClick={handleRetry} disabled={loading}>
+              Retry
+            </Button>
+            <Button variant="secondary" onClick={handleAddAthlete} disabled={loading}>
+              Add Athlete
+            </Button>
+          </div>
+        </Card>
       ) : athletes.length === 0 ? (
         <Card className="text-center py-12">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full mb-4">
@@ -103,7 +140,7 @@ export default function Athletes() {
           </div>
           <CardTitle className="mb-2">{t('portal.children.noChildren')}</CardTitle>
           <p className="text-slate-500 dark:text-slate-400 mb-6">{t('portal.children.addChildren')}</p>
-          <Button variant="primary" onClick={() => navigate('/portal/athletes/new')}>
+          <Button variant="primary" onClick={handleAddAthlete} disabled={loading}>
             {t('portal.children.add')}
           </Button>
         </Card>
@@ -171,6 +208,7 @@ export default function Athletes() {
                         e.stopPropagation()
                         handleCardClick(athlete.id)
                       }}
+                      disabled={loading}
                     >
                       Edit
                     </Button>

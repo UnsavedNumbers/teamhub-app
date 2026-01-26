@@ -62,6 +62,16 @@ interface AthleteData {
     family: AthleteFamily | null
 }
 
+interface AthleteGuardian {
+    user_id: string
+    status: string
+}
+
+interface AthleteWithGuardians {
+    id: string
+    guardians: AthleteGuardian[]
+}
+
 interface FeeAssignment {
     athlete_id: string
     parent_id: string
@@ -414,21 +424,18 @@ serve(async (req) => {
             }
         }
 
-        // Fetch primary parents for these athletes
+        // Fetch guardians for these athletes using athlete_guardians table
         const assignments: FeeAssignment[] = []
 
         if (targetAthleteIds.length > 0) {
-            // Batch fetch families
+            // Batch fetch guardians from athlete_guardians table
             const { data: athletesData, error: athleteError } = await supabaseClient
                 .from('athletes')
                 .select(`
                     id,
-                    family:families (
-                        id,
-                        members:family_members (
-                            user_id,
-                            is_primary
-                        )
+                    guardians:athlete_guardians (
+                        user_id,
+                        status
                     )
                 `)
                 .in('id', targetAthleteIds)
@@ -447,28 +454,24 @@ serve(async (req) => {
             }
 
             // Build assignment map
-            for (const athlete of athletesData as AthleteData[]) {
-                if (!athlete.family) {
-                    console.warn(`Athlete ${athlete.id} has no family, skipping`)
+            for (const athlete of athletesData as AthleteWithGuardians[]) {
+                const activeGuardians = (athlete.guardians || []).filter(g => g.status === 'active')
+                
+                if (activeGuardians.length === 0) {
+                    console.warn(`Athlete ${athlete.id} has no active guardians, skipping`)
                     continue
                 }
 
-                const members = athlete.family.members || []
-                if (members.length === 0) {
-                    console.warn(`Athlete ${athlete.id} family has no members, skipping`)
-                    continue
-                }
+                // Use the first active guardian (could add primary guardian logic later)
+                const guardian = activeGuardians[0]
 
-                // Find primary parent
-                const primary = members.find((m: FamilyMember) => m.is_primary) || members[0]
-
-                if (primary && primary.user_id) {
+                if (guardian && guardian.user_id) {
                     assignments.push({
                         athlete_id: athlete.id,
-                        parent_id: primary.user_id,
+                        parent_id: guardian.user_id,
                     })
                 } else {
-                    console.warn(`Athlete ${athlete.id} has no valid parent, skipping`)
+                    console.warn(`Athlete ${athlete.id} has no valid guardian, skipping`)
                 }
             }
         }

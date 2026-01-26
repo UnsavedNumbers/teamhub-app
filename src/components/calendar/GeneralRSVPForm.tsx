@@ -9,6 +9,7 @@ interface GeneralRSVPFormProps {
   userId: string
   currentRSVP?: GeneralRSVP | null
   disabled?: boolean
+  onRSVPUpdate?: (rsvp: GeneralRSVP) => void
 }
 
 const STATUS_OPTIONS: { value: GeneralRSVPStatus; label: string; color: string }[] = [
@@ -17,7 +18,7 @@ const STATUS_OPTIONS: { value: GeneralRSVPStatus; label: string; color: string }
   { value: 'maybe', label: 'Maybe', color: 'text-amber-600 bg-amber-50' },
 ]
 
-export default function GeneralRSVPForm({ eventId, userId, currentRSVP, disabled = false }: GeneralRSVPFormProps) {
+export default function GeneralRSVPForm({ eventId, userId, currentRSVP, disabled = false, onRSVPUpdate }: GeneralRSVPFormProps) {
   const { context, isReady } = useUserContext()
   const [status, setStatus] = useState<GeneralRSVPStatus | null>(currentRSVP?.status || null)
   const [note, setNote] = useState<string>(currentRSVP?.note || '')
@@ -51,7 +52,7 @@ export default function GeneralRSVPForm({ eventId, userId, currentRSVP, disabled
     setError(null)
     
     try {
-      const { error: rsvpError } = await setGeneralRSVP(
+      const { data, error: rsvpError } = await setGeneralRSVP(
         context,
         eventId,
         userId,
@@ -64,7 +65,10 @@ export default function GeneralRSVPForm({ eventId, userId, currentRSVP, disabled
         return
       }
       
-      setStatus(newStatus)
+      if (data) {
+        setStatus(newStatus)
+        onRSVPUpdate?.(data)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update RSVP')
     } finally {
@@ -72,14 +76,22 @@ export default function GeneralRSVPForm({ eventId, userId, currentRSVP, disabled
     }
   }
 
-  // Use useEffect for debounced note updates
+  // Use useEffect for debounced note updates (only when note changes, not status)
   useEffect(() => {
     if (!status || disabled || loading || !context) return
+    // Skip if note hasn't changed from current RSVP
+    if (currentRSVP?.note === note) return
     
     const timeoutId = setTimeout(async () => {
       setLoading(true)
+      setError(null)
       try {
-        await setGeneralRSVP(context, eventId, userId, status, note || null)
+        const { data, error: rsvpError } = await setGeneralRSVP(context, eventId, userId, status, note || null)
+        if (rsvpError) {
+          setError(rsvpError.message)
+        } else if (data) {
+          onRSVPUpdate?.(data)
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to update note')
       } finally {
@@ -88,7 +100,7 @@ export default function GeneralRSVPForm({ eventId, userId, currentRSVP, disabled
     }, 1000)
     
     return () => clearTimeout(timeoutId)
-  }, [note, status, eventId, userId, disabled, loading, context])
+  }, [note, status, eventId, userId, disabled, loading, context, currentRSVP, onRSVPUpdate])
 
   return (
     <div className="space-y-3">

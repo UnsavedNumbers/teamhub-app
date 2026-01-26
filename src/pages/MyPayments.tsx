@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { useUserContext } from '../hooks/useUserContext'
-import { getFeeAssignmentsForUser } from '../data/services/paymentsService'
+import { getFeeAssignmentsForUser, validateDiscountCode } from '../data/services/paymentsService'
 import { createParentCheckoutSession } from '../api/payments'
 import { supabase } from '../lib/supabase'
 import PortalLayout from '../components/portal/PortalLayout'
@@ -49,6 +49,8 @@ export default function MyPayments() {
   const [appliedDiscount, setAppliedDiscount] = useState<string | null>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [creatingCheckout, setCreatingCheckout] = useState(false)
+  const [validatingDiscount, setValidatingDiscount] = useState(false)
+  const [discountError, setDiscountError] = useState<string | null>(null)
 
 
   const { context, isReady } = useUserContext()
@@ -71,13 +73,28 @@ export default function MyPayments() {
     }
 
     // Transform service data to component format
-    const transformed: FeeAssignment[] = data.map(fa => ({
-      id: fa.id,
-      amount_cents: fa.amount_due_cents,
-      balance_cents: fa.amount_due_cents - fa.amount_paid_cents,
-      paid_cents_total: fa.amount_paid_cents,
-      due_date: fa.due_date ?? null,
-      status: fa.status as FeeAssignmentStatus,
+    const transformed: FeeAssignment[] = data.map(fa => {
+      // Handle both database field names (amount_cents, balance_cents, paid_cents_total)
+      // and fake data field names (amount_due_cents, amount_paid_cents)
+      const rawAmount = (fa as any).amount_cents ?? (fa as any).amount_due_cents ?? 0
+      const rawBalance = (fa as any).balance_cents
+      const rawPaid = (fa as any).paid_cents_total ?? (fa as any).amount_paid_cents ?? 0
+      
+      // Ensure all values are numbers
+      const amountCents = Number(rawAmount) || 0
+      const paidCentsTotal = Number(rawPaid) || 0
+      // Balance should be provided by DB, but calculate if missing
+      const balanceCents = rawBalance !== undefined && rawBalance !== null 
+        ? Number(rawBalance) 
+        : Math.max(0, amountCents - paidCentsTotal)
+      
+      return {
+        id: fa.id,
+        amount_cents: amountCents,
+        balance_cents: balanceCents,
+        paid_cents_total: paidCentsTotal,
+        due_date: fa.due_date ?? null,
+        status: fa.status as FeeAssignmentStatus,
       fee: fa.fee ? {
         id: fa.fee.id,
         title: fa.fee.title,
@@ -95,7 +112,8 @@ export default function MyPayments() {
         first_name: (fa as any).athlete.first_name,
         last_name: (fa as any).athlete.last_name,
       } : null,
-    }))
+      }
+    })
 
     // Fetch teams for seasons that have them
     const seasonIds = transformed
@@ -157,7 +175,7 @@ export default function MyPayments() {
   const unpaidAssignments = filteredAssignments.filter((a) => ['unpaid', 'partial', 'overdue'].includes(a.status))
 
   const totalDue = unpaidAssignments.reduce((sum, a) => sum + (a.balance_cents ?? 0), 0)
-  const selectedTotal = (selectedAssignments.length > 0 ? selectedAssignments : unpaidAssignments).reduce(
+  const selectedTotal = selectedAssignments.reduce(
     (sum, a) => sum + (a.balance_cents ?? 0),
     0,
   )
@@ -191,17 +209,74 @@ export default function MyPayments() {
     }
   }
 
-  const handleApplyDiscount = () => {
-    if (!discountCode) return
-    setAppliedDiscount(discountCode.trim())
+  const handleApplyDiscount = async () => {
+    const code = discountCode.trim()
+    if (!code) {
+      setDiscountError('Please enter a discount code')
+      return
+    }
+
+    setValidatingDiscount(true)
+    setDiscountError(null)
     setCheckoutError(null)
+
+    try {
+      if (selectedAssignments.length === 0) {
+        setDiscountError('Please select fees to apply discount')
+        setValidatingDiscount(false)
+        return
+      }
+      
+      const selectedIdsForValidation = selectedAssignments.map(a => a.id)
+
+      const { data, error } = await validateDiscountCode(context, code, selectedIdsForValidation)
+
+      if (error) {
+        setDiscountError(error.message || 'Failed to validate discount code')
+        setValidatingDiscount(false)
+        return
+      }
+
+      if (!data || !data.valid) {
+        setDiscountError(data?.errorMessage || 'Invalid discount code')
+        setValidatingDiscount(false)
+        return
+      }
+
+      setAppliedDiscount(code.toUpperCase())
+      setDiscountError(null)
+    } catch (err: any) {
+      setDiscountError(err?.message || 'Failed to validate discount code')
+    } finally {
+      setValidatingDiscount(false)
+    }
   }
 
   const handlePayNow = async () => {
-    const target = selectedAssignments.length > 0 ? selectedAssignments : unpaidAssignments
-    if (target.length === 0) {
+    if (selectedAssignments.length === 0) {
       setCheckoutError('Select at least one fee to pay')
       return
+    }
+    
+    const target = selectedAssignments
+
+    // Validate discount code again if one is applied
+    if (appliedDiscount) {
+      setValidatingDiscount(true)
+      try {
+        const { data, error } = await validateDiscountCode(context, appliedDiscount, target.map(t => t.id))
+        if (error || !data || !data.valid) {
+          setCheckoutError(data?.errorMessage || 'Discount code is no longer valid')
+          setValidatingDiscount(false)
+          return
+        }
+      } catch (err: any) {
+        setCheckoutError(err?.message || 'Failed to validate discount code')
+        setValidatingDiscount(false)
+        return
+      } finally {
+        setValidatingDiscount(false)
+      }
     }
 
     setCheckoutError(null)
@@ -216,6 +291,8 @@ export default function MyPayments() {
 
       if (checkout_session_url) {
         window.location.href = checkout_session_url
+      } else {
+        setCheckoutError('Failed to create checkout session')
       }
     } catch (err: any) {
       setCheckoutError(err?.message || 'Unable to start checkout')
@@ -264,9 +341,10 @@ export default function MyPayments() {
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap gap-3 items-center">
               <select
-                className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white font-medium"
+                className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as FeeAssignmentStatus | 'all')}
+                disabled={loading}
               >
                 <option value="all">All statuses</option>
                 <option value="unpaid">Unpaid</option>
@@ -276,9 +354,10 @@ export default function MyPayments() {
                 <option value="overdue">Overdue</option>
               </select>
               <select
-                className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white font-medium"
+                className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 value={childFilter}
                 onChange={(e) => setChildFilter(e.target.value)}
+                disabled={loading}
               >
                 <option value="all">All children</option>
                 {childOptions.map(([id, name]) => (
@@ -286,16 +365,22 @@ export default function MyPayments() {
                 ))}
               </select>
               <select
-                className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white font-medium"
+                className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 value={teamFilter}
                 onChange={(e) => setTeamFilter(e.target.value)}
+                disabled={loading}
               >
                 <option value="all">All teams</option>
                 {teamOptions.map((name) => (
                   <option key={name} value={name}>{name}</option>
                 ))}
               </select>
-              <Button variant="secondary" onClick={toggleSelectAll} className="text-sm px-6 py-2">
+              <Button 
+                variant="secondary" 
+                onClick={toggleSelectAll} 
+                disabled={loading || unpaidAssignments.length === 0}
+                className="text-sm px-6 py-2"
+              >
                 {selectedIds.length === unpaidAssignments.length && unpaidAssignments.length > 0 ? 'Clear Selection' : 'Select All Due'}
               </Button>
             </div>
@@ -310,13 +395,45 @@ export default function MyPayments() {
                 className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
                 placeholder="Discount code"
                 value={discountCode}
-                onChange={(e) => setDiscountCode(e.target.value)}
+                onChange={(e) => {
+                  setDiscountCode(e.target.value)
+                  setDiscountError(null)
+                  setAppliedDiscount(null)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !validatingDiscount && discountCode.trim()) {
+                    e.preventDefault()
+                    handleApplyDiscount()
+                  }
+                }}
+                disabled={validatingDiscount || creatingCheckout || loading}
               />
-              <Button variant="secondary" onClick={handleApplyDiscount} className="text-sm px-6 py-2">
-                Apply
+              <Button 
+                variant="secondary" 
+                onClick={handleApplyDiscount} 
+                disabled={validatingDiscount || creatingCheckout || loading || !discountCode.trim()}
+                className="text-sm px-6 py-2"
+              >
+                {validatingDiscount ? 'Validating...' : 'Apply'}
               </Button>
               {appliedDiscount && (
-                <span className="text-emerald-500 dark:text-emerald-400 text-sm font-bold">Applied: {appliedDiscount}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-emerald-500 dark:text-emerald-400 text-sm font-bold">Applied: {appliedDiscount}</span>
+                  <button
+                    onClick={() => {
+                      setAppliedDiscount(null)
+                      setDiscountCode('')
+                      setDiscountError(null)
+                    }}
+                    className="text-red-500 dark:text-red-400 text-sm font-bold hover:underline"
+                    type="button"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
+              {discountError && (
+                <span className="text-red-500 dark:text-red-400 text-sm font-bold">{discountError}</span>
               )}
             </div>
             <div className="flex items-center gap-3">
@@ -326,18 +443,18 @@ export default function MyPayments() {
               </div>
               <Button
                 variant="primary"
-                disabled={creatingCheckout || loading || (selectedAssignments.length === 0 && unpaidAssignments.length === 0)}
+                disabled={creatingCheckout || validatingDiscount || loading || selectedAssignments.length === 0}
                 onClick={handlePayNow}
               >
-                {creatingCheckout ? 'Starting checkout' : 'Pay'}
+                {creatingCheckout ? 'Starting checkout...' : validatingDiscount ? 'Validating...' : 'Pay'}
               </Button>
             </div>
           </div>
         </div>
 
-        {checkoutError && (
+        {(checkoutError || discountError) && (
           <Card className="mb-6 border-red-500/50 bg-red-50 dark:bg-red-950/20 p-4">
-            <p className="text-red-600 dark:text-red-400 text-sm font-bold">{checkoutError}</p>
+            <p className="text-red-600 dark:text-red-400 text-sm font-bold">{checkoutError || discountError}</p>
           </Card>
         )}
 
@@ -371,7 +488,8 @@ export default function MyPayments() {
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => toggleSelected(a.id)}
-                            className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-[var(--org-link-color)] focus:ring-[var(--org-btn-primary-bg, #137fec)]"
+                            disabled={loading || creatingCheckout}
+                            className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-[var(--org-link-color)] focus:ring-[var(--org-btn-primary-bg, #137fec)] disabled:opacity-50 disabled:cursor-not-allowed"
                           />
                           <p className="font-black text-slate-900 dark:text-white text-lg uppercase">{a.fee?.title || 'Fee'}</p>
                           {renderStatus(a.status)}
