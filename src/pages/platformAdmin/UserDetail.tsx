@@ -66,18 +66,18 @@ export default function UserDetail() {
     open: boolean
     type: 'disable' | 'enable' | 'resend' | 'logout'
   }>({ open: false, type: 'disable' })
-  const [dialogLoading, setDialogLoading] = useState(false)
-  const [dialogError, setDialogError] = useState<string | null>(null)
+  const [_dialogLoading, setDialogLoading] = useState(false)
+  const [_dialogError, setDialogError] = useState<string | null>(null)
   
   // Role management modals
-  const [addRoleModal, setAddRoleModal] = useState(false)
-  const [changeRoleModal, setChangeRoleModal] = useState<{ open: boolean; org: AdminUserOrganization | null }>({ open: false, org: null })
-  const [removeRoleDialog, setRemoveRoleDialog] = useState<{ open: boolean; org: AdminUserOrganization | null }>({ open: false, org: null })
-  const [managePlatformAdminModal, setManagePlatformAdminModal] = useState(false)
+  const [_addRoleModal, setAddRoleModal] = useState(false)
+  const [_changeRoleModal, setChangeRoleModal] = useState<{ open: boolean; org: AdminUserOrganization | null }>({ open: false, org: null })
+  const [_removeRoleDialog, setRemoveRoleDialog] = useState<{ open: boolean; org: AdminUserOrganization | null }>({ open: false, org: null })
+  const [_managePlatformAdminModal, setManagePlatformAdminModal] = useState(false)
   
   // Family info state
-  const [familyInfo, setFamilyInfo] = useState<FamilyInfo | null>(null)
-  const [loadingFamily, setLoadingFamily] = useState(false)
+  const [_familyInfo, setFamilyInfo] = useState<FamilyInfo | null>(null)
+  const [_loadingFamily, setLoadingFamily] = useState(false)
   
   // Get admin role from profile
   const adminRole: PlatformAdminRole | null = profile?.platformAdminRole ?? null

@@ -13,7 +13,7 @@ import { getSports, getPrograms, deleteProgram } from '../../data/services/sport
 import { getLevels } from '../../data/services/levelsService'
 import { getTeams } from '../../data/services/teamsService'
 import type { Sport, Program, Level, Team } from '../../data/types/organization'
-import { AdminPageHeader, Select, ConfirmDialog, Button, Card, EmptyState } from '../../components/platformAdmin'
+import { AdminPageHeader, Select, ConfirmDialog, Button, Card, EmptyState, Badge } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 import { cn } from '../../utils/cn'
@@ -123,12 +123,12 @@ export default function Programs() {
     return programs.filter((p) => p.sport_id === filterSportId)
   }, [programs, filterSportId])
 
-  const sportById = new Map(sports.map((s) => [s.id, s]))
+  const sportById = useMemo(() => new Map(sports.map((s) => [s.id, s])), [sports])
 
   const programLevels = (programId: string) => levels.filter((l) => l.program_id === programId)
   const levelTeams = (levelId: string) => teams.filter((t) => t.level_id === levelId)
 
-  // Route definitions (must be before handlers that use them)
+  // Route definitions
   const sportsRoute = getLink('admin.sports.list')
   const programsRoute = getLink('admin.programs.list')
   const formsRoute = getLink('admin.organization.forms')
@@ -136,22 +136,20 @@ export default function Programs() {
   const levelsRoute = getLink('admin.levels.list')
   const teamsRoute = getLink('admin.teams.list')
 
-  // Navigation handlers with validation
   const handleNavigateToProgramDetail = useCallback(
     (programId: string) => {
       if (!programId || !programId.trim()) {
         setActionError('Program ID is required to view program details.')
         return
       }
-      const route = getLink('admin.programs.detail', { id: programId.trim() })
-      navigate(route)
+      navigate(getLink('admin.programs.detail', { id: programId.trim() }))
     },
     [navigate]
   )
 
   const handleNavigateToSports = useCallback(() => {
     navigate(sportsRoute)
-  }, [navigate])
+  }, [navigate, sportsRoute])
 
   const handleNavigateToAddProgram = useCallback(
     (sportId: string) => {
@@ -167,8 +165,7 @@ export default function Programs() {
         setActionError('Sport ID is required to add a program.')
         return
       }
-      const route = `${formsRoute}?type=program&sport_id=${encodeURIComponent(sportId.trim())}&returnUrl=${encodeURIComponent(programsRoute)}`
-      navigate(route)
+      navigate(`${formsRoute}?type=program&sport_id=${encodeURIComponent(sportId.trim())}&returnUrl=${encodeURIComponent(programsRoute)}`)
     },
     [navigate, isOffline, formsRoute, programsRoute]
   )
@@ -179,8 +176,7 @@ export default function Programs() {
         setActionError('Program ID is required to edit program.')
         return
       }
-      const route = `${formsRoute}?edit=program&id=${encodeURIComponent(programId.trim())}&returnUrl=${encodeURIComponent(programsRoute)}`
-      navigate(route)
+      navigate(`${formsRoute}?edit=program&id=${encodeURIComponent(programId.trim())}&returnUrl=${encodeURIComponent(programsRoute)}`)
     },
     [navigate, formsRoute, programsRoute]
   )
@@ -203,8 +199,7 @@ export default function Programs() {
         setActionError('Sport ID is required to add a level.')
         return
       }
-      const route = `${formsRoute}?type=level&program_id=${encodeURIComponent(programId.trim())}&sport_id=${encodeURIComponent(sportId.trim())}&returnUrl=${encodeURIComponent(programsRoute)}`
-      navigate(route)
+      navigate(`${formsRoute}?type=level&program_id=${encodeURIComponent(programId.trim())}&sport_id=${encodeURIComponent(sportId.trim())}&returnUrl=${encodeURIComponent(programsRoute)}`)
     },
     [navigate, isOffline, formsRoute, programsRoute]
   )
@@ -215,8 +210,7 @@ export default function Programs() {
         setActionError('Program ID is required to view levels.')
         return
       }
-      const route = `${levelsRoute}?program_id=${encodeURIComponent(programId.trim())}`
-      navigate(route)
+      navigate(`${levelsRoute}?program_id=${encodeURIComponent(programId.trim())}`)
     },
     [navigate, levelsRoute]
   )
@@ -227,8 +221,7 @@ export default function Programs() {
         setActionError('Program ID is required to view teams.')
         return
       }
-      const route = `${teamsRoute}?program_id=${encodeURIComponent(programId.trim())}`
-      navigate(route)
+      navigate(`${teamsRoute}?program_id=${encodeURIComponent(programId.trim())}`)
     },
     [navigate, teamsRoute]
   )
@@ -239,28 +232,23 @@ export default function Programs() {
         setActionError('Program ID is required to remove program.')
         return
       }
-
-      // Block if offline
       if (isOffline) {
         setActionError('You appear to be offline. Please reconnect and try again.')
         return
       }
-
-      // Block if in demo mode
       if (USE_FAKE_DATA) {
-        setActionError('This action is not available in demo mode. Please sign in to remove programs from your organization.')
+        setActionError('This action is not available in demo mode. Please sign in to remove programs.')
         return
       }
-
       setProgramToDelete({ id: programId.trim(), name: programName })
     },
     [isOffline]
   )
 
   const confirmDeleteProgram = useCallback(
-    async (_reason: string) => {
+    async () => {
       if (!programToDelete || !programToDelete.id) {
-        setActionError('Program information is missing. Please try again.')
+        setActionError('Program information is missing.')
         setProgramToDelete(null)
         return
       }
@@ -271,22 +259,15 @@ export default function Programs() {
 
       try {
         const result = await deleteProgram(context, programToDelete.id)
-
         if (result.error) {
-          setActionError(result.error.message || 'Failed to remove program. Please try again.')
+          setActionError(result.error.message || 'Failed to remove program.')
         } else {
-          // Remove from local state
           setPrograms((prev) => prev.filter((p) => p.id !== programToDelete.id))
-          setSuccessMessage(`"${programToDelete.name}" has been removed from your organization.`)
-
-          // Clear success message after 5 seconds
-          setTimeout(() => {
-            setSuccessMessage(null)
-          }, 5000)
+          setSuccessMessage(`"${programToDelete.name}" has been removed.`)
+          setTimeout(() => setSuccessMessage(null), 5000)
         }
       } catch (err) {
-        console.error('[Programs] Unexpected error deleting program:', err)
-        setActionError(err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.')
+        setActionError(err instanceof Error ? err.message : 'An unexpected error occurred.')
       } finally {
         setDeletingProgramId(null)
         setProgramToDelete(null)
@@ -295,19 +276,11 @@ export default function Programs() {
     [context, programToDelete]
   )
 
-  const handleFilterChange = useCallback(
-    (value: string) => {
-      setFilterSportId(value)
-      setActionError(null)
-    },
-    []
-  )
-
   if (loading) {
     return (
       <div className="pa-root">
-        <div className="pa-skeleton" style={{ width: '300px', height: '40px', marginBottom: '24px' }} />
-        <div className="pa-skeleton" style={{ width: '100%', height: '300px' }} />
+        <div className="pa-skeleton pa-mb-8" style={{ width: '40%', height: '40px' }} />
+        <div className="pa-skeleton" style={{ width: '100%', height: '400px' }} />
       </div>
     )
   }
@@ -315,21 +288,14 @@ export default function Programs() {
   if (error) {
     return (
       <div className="pa-root">
-        <OfflineBanner />
         <AdminPageHeader
           title="Programs"
-          subtitle="Manage programs within your sports."
-          breadcrumbs={[
-            { label: 'Organizations', path: structureRoute },
-            { label: 'Programs' },
-          ]}
+          breadcrumbs={[{ label: 'Organizations', path: structureRoute }, { label: 'Programs' }]}
         />
-        <Card className="pa-mb-4">
-          <div className="pa-p-4 pa-text-danger">
-            <div className="pa-font-medium pa-mb-2">{error}</div>
-            <Button variant="ghost" size="dense" onClick={loadProgramsData} disabled={loading}>
-              Retry
-            </Button>
+        <Card className="pa-mb-4" noPadding>
+          <div className="pa-p-6 pa-text-center">
+            <div className="pa-text-danger pa-mb-4">{error}</div>
+            <Button variant="ghost" onClick={loadProgramsData}>Retry</Button>
           </div>
         </Card>
       </div>
@@ -350,50 +316,39 @@ export default function Programs() {
 
       {successMessage && (
         <Card className="pa-mb-4" noPadding>
-          <div className="pa-p-4 pa-bg-success-light pa-text-success-dark pa-rounded-lg">
-             {/* Note: using pa-bg-success-light if available or standard utility */}
-            <div className="pa-text-success pa-font-medium">{successMessage}</div>
+          <div className="pa-p-4" style={{ background: 'var(--pa-success-bg, #ecfdf5)', borderLeft: '4px solid var(--pa-success, #10b981)' }}>
+            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-success-dark, #065f46)' }}>{successMessage}</div>
           </div>
         </Card>
       )}
 
       {actionError && (
         <Card className="pa-mb-4" noPadding>
-          <div className="pa-p-4 pa-bg-danger-light pa-text-danger-dark pa-rounded-lg">
-             <div className="pa-text-danger pa-font-medium">{actionError}</div>
+          <div className="pa-p-4" style={{ background: 'var(--pa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--pa-danger, #ef4444)' }}>
+            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-danger-dark, #991b1b)' }}>{actionError}</div>
           </div>
         </Card>
       )}
 
       <Card className="pa-mb-6">
         <div className={cn('pa-flex', 'pa-flex-col', 'md:pa-flex-row', 'pa-justify-between', 'pa-items-center', 'pa-gap-4')}>
-          <div style={{ width: '100%', minWidth: '200px' }} className="md:pa-w-auto">
+          <div className={cn('pa-w-full', 'md:pa-w-64')}>
             <Select
               label="Filter by sport"
               value={filterSportId}
-              onChange={(e) => handleFilterChange(e.target.value)}
+              onChange={(e) => setFilterSportId(e.target.value)}
               options={[
                 { value: '', label: 'All sports' },
                 ...sports.map((s) => ({ value: s.id, label: s.name })),
               ]}
               disabled={loading}
-              aria-label="Filter programs by sport"
             />
           </div>
           {filterSportId && (
             <Button
               onClick={() => handleNavigateToAddProgram(filterSportId)}
               disabled={loading || isOffline || USE_FAKE_DATA || !filterSportId}
-              aria-label={USE_FAKE_DATA ? 'Sign in to add program' : `Add program for ${sportById.get(filterSportId)?.name || 'selected sport'}`}
-              title={
-                isOffline
-                  ? 'Offline - cannot add programs'
-                  : USE_FAKE_DATA
-                    ? 'Sign in to add programs'
-                    : !filterSportId
-                      ? 'Select a sport first'
-                      : undefined
-              }
+              icon="add"
             >
               {USE_FAKE_DATA ? 'Sign in to Add Program' : 'Add Program'}
             </Button>
@@ -414,30 +369,9 @@ export default function Programs() {
               }
             >
               {filterSportId ? (
-                <Button
-                  onClick={() => handleNavigateToAddProgram(filterSportId)}
-                  disabled={loading || isOffline || USE_FAKE_DATA || !filterSportId}
-                  aria-label={USE_FAKE_DATA ? 'Sign in to add program' : `Add program for ${sportById.get(filterSportId)?.name || 'selected sport'}`}
-                  title={
-                    isOffline
-                      ? 'Offline - cannot add programs'
-                      : USE_FAKE_DATA
-                        ? 'Sign in to add programs'
-                        : !filterSportId
-                          ? 'Select a sport first'
-                          : undefined
-                  }
-                >
-                  {USE_FAKE_DATA ? 'Sign in to Add Program' : 'Add Program'}
-                </Button>
+                <Button onClick={() => handleNavigateToAddProgram(filterSportId)} icon="add">Add Program</Button>
               ) : (
-                <Button
-                  onClick={handleNavigateToSports}
-                  disabled={loading}
-                  aria-label="Navigate to sports list"
-                >
-                  View Sports
-                </Button>
+                <Button onClick={handleNavigateToSports}>View Sports</Button>
               )}
             </EmptyState>
           </Card>
@@ -445,139 +379,76 @@ export default function Programs() {
           <Card className="pa-stacked-list" noPadding>
             {filteredPrograms.map((program) => {
               const sport = sportById.get(program.sport_id)
-              const programLevelsList = programLevels(program.id)
-              const totalTeams = programLevelsList.reduce((sum, level) => sum + levelTeams(level.id).length, 0)
-              const levelCount = programLevelsList.length
+              const levelsList = programLevels(program.id)
+              const totalTeams = levelsList.reduce((sum, level) => sum + levelTeams(level.id).length, 0)
+              const levelCount = levelsList.length
 
               return (
                 <div key={program.id} className="pa-stacked-list-row">
                   <div className="pa-stacked-list-row-content">
                     <div className="pa-flex-1">
-                      <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-3', 'pa-mb-2')}>
-                        <button
-                          onClick={() => handleNavigateToProgramDetail(program.id)}
-                          disabled={loading || !program.id}
-                          className="pa-stacked-list-row-title"
-                          style={{ 
-                            textAlign: 'left',
-                            background: 'none',
-                            border: 'none',
-                            padding: 0,
-                            cursor: loading || !program.id ? 'not-allowed' : 'pointer',
-                            opacity: loading || !program.id ? 0.5 : 1,
-                            textDecoration: 'none'
-                          }}
-                          aria-label={`View details for ${program.name}`}
+                      <div className={cn('pa-flex', 'pa-items-baseline', 'pa-gap-2', 'pa-mb-1')}>
+                        <span 
+                            className="pa-stacked-list-row-title pa-cursor-pointer hover:pa-underline"
+                            onClick={() => handleNavigateToProgramDetail(program.id)}
                         >
                           {program.name}
-                        </button>
-                        {sport && (
-                          <button
-                            onClick={handleNavigateToSports}
-                            disabled={loading}
-                            className="pa-stacked-list-row-meta"
-                            style={{ 
-                              background: 'none',
-                              border: 'none',
-                              padding: 0,
-                              cursor: loading ? 'not-allowed' : 'pointer',
-                              opacity: loading ? 0.5 : 1,
-                              textDecoration: 'none'
-                            }}
-                            aria-label={`View ${sport.name} sport details`}
-                          >
-                            ({sport.name})
-                          </button>
-                        )}
-                      </div>
-                      <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-4')}>
-                        <span className={cn('pa-body-s', 'pa-text-muted', 'pa-uppercase', 'pa-font-bold')} style={{ letterSpacing: '0.1em' }}>
-                          {program.gender_category}
                         </span>
-                        <span className="pa-body-s pa-text-muted">•</span>
-                        <button
-                          onClick={() => handleNavigateToLevels(program.id)}
-                          disabled={loading || !program.id}
-                          className="pa-body-s pa-text-muted"
-                          style={{ 
-                            background: 'none',
-                            border: 'none',
-                            padding: 0,
-                            cursor: loading || !program.id ? 'not-allowed' : 'pointer',
-                            opacity: loading || !program.id ? 0.5 : 1,
-                            textDecoration: 'none'
-                          }}
-                          aria-label={`View ${levelCount} ${levelCount === 1 ? 'level' : 'levels'} for ${program.name}`}
-                        >
-                          {levelCount} {levelCount === 1 ? 'level' : 'levels'}
-                        </button>
-                        <span className="pa-body-s pa-text-muted">•</span>
-                        <button
-                          onClick={() => handleNavigateToTeams(program.id)}
-                          disabled={loading || !program.id}
-                          className="pa-body-s pa-text-muted"
-                          style={{ 
-                            background: 'none',
-                            border: 'none',
-                            padding: 0,
-                            cursor: loading || !program.id ? 'not-allowed' : 'pointer',
-                            opacity: loading || !program.id ? 0.5 : 1,
-                            textDecoration: 'none'
-                          }}
-                          aria-label={`View ${totalTeams} ${totalTeams === 1 ? 'team' : 'teams'} for ${program.name}`}
-                        >
-                          {totalTeams} {totalTeams === 1 ? 'team' : 'teams'}
-                        </button>
+                        {sport && <span className="pa-text-xs pa-text-slate-400 pa-font-medium">({sport.name})</span>}
+                      </div>
+                      
+                      <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-3')}>
+                        <Badge variant="neutral" className="pa-uppercase pa-text-[10px] pa-font-bold" style={{ padding: '2px 6px' }}>
+                            {program.gender_category}
+                        </Badge>
+                        <span className="pa-text-slate-200 pa-text-lg pa-font-light">|</span>
+                        <div className="pa-flex pa-items-center pa-gap-2">
+                             <span 
+                                className="pa-text-xs pa-font-semibold pa-text-slate-500 hover:pa-text-primary pa-cursor-pointer"
+                                onClick={() => handleNavigateToLevels(program.id)}
+                            >
+                                {levelCount} {levelCount === 1 ? 'LEVEL' : 'LEVELS'}
+                            </span>
+                            <span className="pa-text-slate-300">•</span>
+                            <span 
+                                className="pa-text-xs pa-font-semibold pa-text-slate-500 hover:pa-text-primary pa-cursor-pointer"
+                                onClick={() => handleNavigateToTeams(program.id)}
+                            >
+                                {totalTeams} {totalTeams === 1 ? 'TEAM' : 'TEAMS'}
+                            </span>
+                        </div>
                       </div>
                     </div>
                     
                     <div className="pa-stacked-list-row-actions">
                       <Button
-                        variant="secondary"
+                        variant="ghost"
                         size="dense"
                         onClick={() => handleNavigateToEditProgram(program.id)}
-                        disabled={loading || !program.id || deletingProgramId === program.id}
-                        aria-label={`Edit ${program.name}`}
+                        disabled={loading || deletingProgramId === program.id}
+                        icon="edit"
                       >
                         Edit
                       </Button>
                       <Button
-                        variant="secondary"
+                        variant="ghost"
                         size="dense"
                         onClick={() => handleNavigateToAddLevel(program.id, program.sport_id)}
-                        disabled={loading || isOffline || USE_FAKE_DATA || !program.id || !program.sport_id || deletingProgramId === program.id}
-                        aria-label={`Add level to ${program.name}`}
-                        title={
-                          isOffline
-                            ? 'Offline - cannot add levels'
-                            : USE_FAKE_DATA
-                              ? 'Sign in to add levels'
-                              : !program.id || !program.sport_id
-                                ? 'Missing required information'
-                                : undefined
-                        }
+                        disabled={loading || isOffline || USE_FAKE_DATA || deletingProgramId === program.id}
+                        icon="add"
                       >
                         Add Level
                       </Button>
                       <Button
-                        variant="danger"
+                        variant="ghost"
                         size="dense"
-                        icon="delete"
                         onClick={() => handleDeleteProgram(program.id, program.name)}
-                        disabled={deletingProgramId === program.id || loading || isOffline || USE_FAKE_DATA || levelCount > 0 || !program.id}
+                        disabled={deletingProgramId === program.id || loading || isOffline || USE_FAKE_DATA || levelCount > 0}
                         loading={deletingProgramId === program.id}
-                        aria-label={`Remove ${program.name} from organization`}
-                        title={
-                          USE_FAKE_DATA 
-                            ? 'Sign in to remove program' 
-                            : isOffline 
-                            ? 'Offline - cannot remove program' 
-                            : levelCount > 0
-                            ? `Cannot remove: This program contains ${levelCount} ${levelCount === 1 ? 'level' : 'levels'} and cannot be removed.`
-                            : 'Remove program from organization'
-                        }
+                        icon="delete"
+                        className="pa-text-danger hover:pa-bg-danger-surface"
                       >
-                        {deletingProgramId === program.id ? 'Removing...' : 'Remove'}
+                         Delete
                       </Button>
                     </div>
                   </div>
@@ -590,11 +461,7 @@ export default function Programs() {
       <ConfirmDialog
         open={Boolean(programToDelete)}
         title="Remove program?"
-        description={
-          programToDelete
-            ? `Are you sure you want to remove "${programToDelete.name}" from your organization? This action cannot be undone.`
-            : ''
-        }
+        description={programToDelete ? `Are you sure you want to remove "${programToDelete.name}"? This action cannot be undone.` : ''}
         confirmLabel="Remove"
         variant="danger"
         onConfirm={confirmDeleteProgram}

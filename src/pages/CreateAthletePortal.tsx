@@ -45,7 +45,7 @@ const SportItem = memo(({
                         type="checkbox"
                         checked={isPlaysSelected}
                         onChange={() => onToggle(sport.id, 'plays')}
-                        className="w-4 h-4 text-[#137fec] border-slate-300 rounded focus:ring-[#137fec]"
+                        className="w-4 h-4 text-[var(--org-link-color)] border-slate-300 rounded focus:ring-[var(--org-btn-primary-bg, #137fec)]"
                     />
                     <span className="text-sm text-slate-700 dark:text-slate-300">Plays</span>
                 </label>
@@ -54,7 +54,7 @@ const SportItem = memo(({
                         type="checkbox"
                         checked={isInterestedSelected}
                         onChange={() => onToggle(sport.id, 'interested')}
-                        className="w-4 h-4 text-[#137fec] border-slate-300 rounded focus:ring-[#137fec]"
+                        className="w-4 h-4 text-[var(--org-link-color)] border-slate-300 rounded focus:ring-[var(--org-btn-primary-bg, #137fec)]"
                     />
                     <span className="text-sm text-slate-700 dark:text-slate-300">Interested</span>
                 </label>
@@ -595,7 +595,7 @@ export default function CreateAthletePortal() {
                             />
                             {isCheckingGuardian && (
                                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-[#137fec]"></div>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-[var(--org-btn-primary-bg, #137fec)]"></div>
                                 </div>
                             )}
                         </div>

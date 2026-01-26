@@ -360,8 +360,8 @@ export default function MyPayments() {
                 return (
                   <Card
                     key={a.id}
-                    className={`p-6 hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300 ${
-                      isSelected ? 'ring-2 ring-[#137fec]' : ''
+                    className={`p-6 hover:shadow-2xl hover:shadow-[var(--org-btn-primary-bg, #137fec)]/5 transition-all duration-300 ${
+                      isSelected ? 'ring-2 ring-[var(--org-btn-primary-bg, #137fec)]' : ''
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -371,7 +371,7 @@ export default function MyPayments() {
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => toggleSelected(a.id)}
-                            className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-[#137fec] focus:ring-[#137fec]"
+                            className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-[var(--org-link-color)] focus:ring-[var(--org-btn-primary-bg, #137fec)]"
                           />
                           <p className="font-black text-slate-900 dark:text-white text-lg uppercase">{a.fee?.title || 'Fee'}</p>
                           {renderStatus(a.status)}

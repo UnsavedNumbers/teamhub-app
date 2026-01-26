@@ -1,0 +1,230 @@
+/* =====================================================================
+   ORGANIZATION ADMIN DESIGN SYSTEM
+   Organization-branded styling for org_admin role
+   
+   This file contains ONLY org-specific overrides (oa-* classes).
+   The base layout uses platformAdmin.css (pa-* classes).
+   ===================================================================== */
+
+/* =====================================================================
+   ORG ADMIN PAGE HEADER - Uses org theme colors
+   ===================================================================== */
+
+.oa-page-header {
+    margin-bottom: var(--pa-space-6);
+}
+
+.oa-breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--pa-text-muted);
+    margin-bottom: var(--pa-space-4);
+}
+
+.oa-breadcrumb-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+}
+
+.oa-breadcrumb-chevron {
+    font-size: 12px;
+    color: var(--pa-text-muted);
+}
+
+.oa-breadcrumb-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.oa-breadcrumb-link:hover {
+    color: var(--org-link-color, var(--pa-theme-text-accent));
+}
+
+.oa-breadcrumb-current {
+    color: var(--org-btn-primary-bg, var(--pa-theme-action-primary, var(--pa-n900)));
+    background: none !important;
+    font-weight: 700;
+}
+
+.oa-page-header-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--pa-space-4);
+}
+
+.oa-page-header-content {
+    flex: 1;
+}
+
+.oa-page-title {
+    font-family: var(--pa-font-display);
+    font-weight: 900;
+    font-size: 4.5rem;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    color: var(--org-btn-primary-bg, var(--pa-theme-action-primary, var(--pa-n900)));
+    margin: 0 0 var(--pa-space-2) 0;
+}
+
+.oa-page-subtitle {
+    font-size: 1.125rem;
+    color: var(--pa-text-secondary);
+    font-weight: 500;
+    margin: 0;
+}
+
+.oa-page-description {
+    font-size: 1rem;
+    color: var(--pa-text-secondary);
+    font-weight: 400;
+    margin: var(--pa-space-2) 0 0 0;
+}
+
+.oa-page-actions {
+    display: flex;
+    gap: var(--pa-space-3);
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    .oa-page-title {
+        font-size: 2.75rem;
+    }
+
+    .oa-page-header-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+/* Dark mode overrides */
+html.dark .oa-breadcrumbs {
+    color: var(--pa-text-primary);
+    opacity: 0.85;
+}
+
+html.dark .oa-breadcrumb-chevron {
+    color: var(--pa-text-primary);
+    opacity: 0.6;
+}
+
+html.dark .oa-breadcrumb-link:hover {
+    opacity: 1;
+}
+
+html.dark .oa-breadcrumb-current {
+    color: var(--org-btn-primary-bg, var(--pa-theme-action-primary, var(--pa-text-primary))) !important;
+    background: none !important;
+    font-weight: 700;
+    opacity: 1;
+}
+
+html.dark .oa-page-title {
+    color: var(--org-btn-primary-bg, var(--pa-theme-action-primary, var(--pa-text-primary)));
+}
+
+html.dark .oa-page-subtitle {
+    color: var(--pa-text-secondary);
+}
+
+/* =====================================================================
+   ORG ADMIN CARDS - Premium Nike + Google Aesthetic
+   ===================================================================== */
+
+.oa-card {
+    background: var(--pa-surface);
+    border: 1px solid var(--pa-n100);
+    border-radius: 14px;
+    padding: var(--pa-space-6);
+    transition: all var(--pa-motion-normal) var(--pa-ease-out);
+    overflow: hidden;
+    /* Fix for children bleeding over corners */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    position: relative;
+}
+
+.oa-card:hover {
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+    border-color: var(--pa-n200);
+    transform: translateY(-1px);
+}
+
+/* Specific fix for card headers in org admin */
+.oa-card-header,
+.oa-card .pa-card-header {
+    padding: var(--pa-space-5) var(--pa-space-6);
+    border-bottom: 1px solid var(--pa-n100);
+    margin: calc(var(--pa-space-6) * -1) calc(var(--pa-space-6) * -1) var(--pa-space-6) calc(var(--pa-space-6) * -1);
+    background: var(--pa-surface);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* If card has no padding, header needs to handle its own layout */
+.oa-card--no-padding {
+    padding: 0 !important;
+}
+
+.oa-card--no-padding .oa-card-header {
+    margin: 0;
+}
+
+.oa-card-title,
+.oa-card .pa-card-title {
+    font-size: 1.125rem;
+    font-weight: 800;
+    font-family: var(--pa-font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--pa-n900);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+}
+
+.oa-card-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+}
+
+/* Empty State / Table integration in cards */
+.oa-card .pa-table-container,
+.oa-card .pa-stacked-list {
+    margin: 0;
+    border: none;
+    border-radius: 0;
+}
+
+/* Dark mode overrides */
+html.dark .oa-card {
+    background: var(--pa-surface);
+    border: 1px solid var(--pa-border-subtle);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+html.dark .oa-card-header,
+html.dark .oa-card .pa-card-header {
+    border-color: var(--pa-border-subtle);
+    background: var(--pa-surface-panel);
+}
+
+html.dark .oa-card-title,
+html.dark .oa-card .pa-card-title {
+    color: var(--pa-text-primary);
+}
+
+html.dark .oa-card:hover {
+    border-color: var(--pa-theme-border-accent);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}

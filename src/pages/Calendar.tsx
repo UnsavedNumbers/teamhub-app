@@ -260,7 +260,7 @@ export default function Calendar() {
                       onClick={() => setViewMode(v)}
                       className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded transition-colors ${
                         viewMode === v
-                          ? 'bg-[#137fec] text-white'
+                          ? 'bg-[var(--org-btn-primary-bg)] text-white'
                           : 'text-white/80 dark:text-slate-400 hover:text-white dark:hover:text-white'
                       }`}
                     >
@@ -290,7 +290,7 @@ export default function Calendar() {
                              <Icon name="chevron_right" />
                          </button>
                      </div>
-                     <button onClick={() => setCurrentDate(new Date())} className="w-full text-xs font-bold text-[#137fec] text-center py-1">
+                     <button onClick={() => setCurrentDate(new Date())} className="w-full text-xs font-bold text-[var(--org-link-color)] text-center py-1">
                          Jump to Today
                      </button>
                  </Card>
@@ -319,7 +319,7 @@ export default function Calendar() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setSelectedEvent(null)}>
             <div className="max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
               <Card className="p-0 overflow-hidden">
-                <div className={`h-2 w-full ${selectedEvent.is_cancelled ? 'bg-red-500' : 'bg-[#137fec]'}`} />
+                <div className={`h-2 w-full ${selectedEvent.is_cancelled ? 'bg-red-500' : 'bg-[var(--org-btn-primary-bg)]'}`} />
                 <div className="p-6">
                     <div className="flex items-start justify-between mb-6">
                         <div>
@@ -328,7 +328,7 @@ export default function Calendar() {
                              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{safeT(`calendar.eventTypes.${selectedEvent.type}`, selectedEvent.type)}</span>
                         </div>
                         <CardTitle className="mb-1 text-2xl">{selectedEvent.title}</CardTitle>
-                        <p className="text-xs font-bold uppercase tracking-widest text-[#137fec]">{selectedEvent.team?.name}</p>
+                        <p className="text-xs font-bold uppercase tracking-widest text-[var(--org-link-color)]">{selectedEvent.team?.name}</p>
                         </div>
                         <button onClick={() => setSelectedEvent(null)} className="text-slate-400 hover:text-slate-900 dark:hover:text-white p-2 hover:bg-slate-100 rounded-full transition-colors">
                         <Icon name="close" />
@@ -366,7 +366,7 @@ export default function Calendar() {
                                 <p className="font-bold text-slate-900 dark:text-white text-sm">{selectedEvent.event_location?.venue_name || selectedEvent.location}</p>
                                 <p className="text-xs text-slate-500">{selectedEvent.event_location ? formatEventLocation(selectedEvent.event_location) : ''}</p>
                                 {mapUrl && (
-                                    <a href={mapUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-[#137fec] hover:underline flex items-center gap-1 mt-1">
+                                    <a href={mapUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--org-link-color)] hover:underline flex items-center gap-1 mt-1">
                                         {safeT('calendar.event.getDirections', 'Get Directions')} <Icon name="open_in_new" size="text-[10px]" />
                                     </a>
                                 )}

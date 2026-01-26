@@ -85,7 +85,7 @@ export default function CreateAnnouncementModal({
             <select
               value={teamId}
               onChange={(e) => setTeamId(e.target.value)}
-              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-[#137fec]/20 focus:border-[#137fec] outline-none transition-all font-bold"
+              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)]/20 focus:border-[var(--org-btn-primary-bg, #137fec)] outline-none transition-all font-bold"
             >
               <option value="" disabled>Select a team</option>
               {teams.map(t => (
@@ -102,7 +102,7 @@ export default function CreateAnnouncementModal({
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-[#137fec]/20 focus:border-[#137fec] outline-none transition-all font-bold placeholder:font-normal"
+              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)]/20 focus:border-[var(--org-btn-primary-bg, #137fec)] outline-none transition-all font-bold placeholder:font-normal"
               placeholder="Announcement title"
             />
           </div>
@@ -115,7 +115,7 @@ export default function CreateAnnouncementModal({
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={4}
-              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-[#137fec]/20 focus:border-[#137fec] outline-none transition-all font-medium placeholder:font-normal resize-none"
+              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)]/20 focus:border-[var(--org-btn-primary-bg, #137fec)] outline-none transition-all font-medium placeholder:font-normal resize-none"
               placeholder="What do you want to announce?"
             />
           </div>
@@ -134,8 +134,8 @@ export default function CreateAnnouncementModal({
                   onChange={() => setPriority('normal')}
                   className="hidden"
                 />
-                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${priority === 'normal' ? 'border-[#137fec]' : 'border-slate-300 dark:border-slate-600'}`}>
-                  {priority === 'normal' && <div className="w-2 h-2 rounded-full bg-[#137fec]" />}
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${priority === 'normal' ? 'border-[var(--org-btn-primary-bg, #137fec)]' : 'border-slate-300 dark:border-slate-600'}`}>
+                  {priority === 'normal' && <div className="w-2 h-2 rounded-full bg-[var(--org-btn-primary-bg)]" />}
                 </div>
                 <span className={`text-sm font-bold ${priority === 'normal' ? 'text-slate-900 dark:text-white' : 'text-slate-500'}`}>Normal</span>
               </label>

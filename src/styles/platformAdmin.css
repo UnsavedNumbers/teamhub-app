@@ -1244,34 +1244,36 @@ html.dark .pa-btn:disabled {
 }
 
 /* Primary (Dark solid with subtle hover) */
+/* Primary (Theme Action with fallback to neutral) */
 .pa-btn--primary {
-    background: var(--pa-n900);
-    color: var(--pa-white);
+    background: var(--org-btn-primary-bg, var(--pa-theme-action-primary, var(--pa-n900)));
+    color: var(--org-btn-primary-text, var(--pa-theme-text-on-action, var(--pa-white)));
 }
 
 .pa-btn--primary:hover:not(:disabled) {
-    background: var(--pa-n700);
-    color: var(--pa-white);
+    background: var(--org-btn-primary-hover, var(--pa-theme-action-hover, var(--pa-n700)));
+    color: var(--org-btn-primary-text, var(--pa-theme-text-on-action, var(--pa-white)));
 }
 
 .pa-btn--primary:active:not(:disabled) {
-    background: var(--pa-n800);
+    background: var(--org-btn-primary-active, var(--pa-theme-action-active, var(--pa-n800)));
     transform: translateY(1px);
 }
 
 /* Dark Mode - Primary buttons are dark solid with subtle hover */
+/* Dark Mode - Primary buttons use theme tokens */
 html.dark .pa-btn--primary {
-    background: var(--pa-n900) !important;
-    color: var(--pa-white) !important;
+    background: var(--org-btn-primary-bg, var(--pa-theme-action-primary, var(--pa-n900))) !important;
+    color: var(--org-btn-primary-text, var(--pa-theme-text-on-action, var(--pa-white))) !important;
 }
 
 html.dark .pa-btn--primary:hover:not(:disabled) {
-    background: var(--pa-n700) !important;
-    color: var(--pa-white) !important;
+    background: var(--org-btn-primary-hover, var(--pa-theme-action-hover, var(--pa-n700))) !important;
+    color: var(--org-btn-primary-text, var(--pa-theme-text-on-action, var(--pa-white))) !important;
 }
 
 html.dark .pa-btn--primary:active:not(:disabled) {
-    background: var(--pa-n800) !important;
+    background: var(--org-btn-primary-active, var(--pa-theme-action-active, var(--pa-n800))) !important;
     transform: translateY(1px);
 }
 
@@ -1345,7 +1347,7 @@ html.dark .pa-btn--danger {
 
 /* Dark Mode - Blue buttons same as primary but visually distinct */
 html.dark .pa-btn--blue {
-    background-color: var(--pa-theme-action-primary, #137fec) !important;
+    background-color: var(--pa-theme-action-primary, var(--org-btn-primary-bg, #137fec)) !important;
     color: var(--pa-theme-text-on-action, var(--pa-white)) !important;
     border: none !important;
 }
@@ -5821,4 +5823,83 @@ html.dark .pa-text-danger {
 /* Icons */
 .pa-icon-xl {
     font-size: 32px;
+}
+
+/* =====================================================================
+   NEW: THEME BADGE STYLES
+   Appended to ensure override and availability
+   ===================================================================== */
+
+.pa-badge--primary,
+.pa-badge--accent {
+    background: var(--org-badge-primary-bg, var(--pa-theme-surface-accent, rgba(19, 127, 236, 0.1)));
+    color: var(--org-badge-primary-text, var(--pa-theme-text-accent, var(--org-btn-primary-bg, #137fec)));
+    border: 1px solid transparent;
+}
+
+html.dark .pa-badge--primary,
+html.dark .pa-badge--accent {
+    background: var(--org-badge-primary-bg, var(--pa-theme-surface-accent, rgba(19, 127, 236, 0.1)));
+    color: var(--org-badge-primary-text, var(--pa-theme-text-accent, var(--org-btn-primary-bg, #137fec)));
+}
+
+/* Ensure links use theme colors */
+.pa-link {
+    color: var(--org-link-color, var(--pa-theme-text-accent, var(--org-btn-primary-bg, #137fec)));
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.pa-link:hover {
+    color: var(--org-link-hover, var(--pa-theme-action-hover, #0d6bc2));
+    text-decoration: underline;
+}
+
+
+/* =====================================================================
+   NEW: THEME HEADER OVERRIDES
+   Appended to ensure theme application to Admin Header
+   ===================================================================== */
+
+.pa-topbar {
+    background: var(--org-btn-primary-bg, var(--pa-topbar-bg));
+    color: var(--org-btn-primary-text, var(--pa-n900));
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    transition: background-color 0.2s ease;
+}
+
+.pa-topbar-title {
+    color: inherit;
+}
+
+/* Search input adapted for colored header */
+.pa-search-input {
+    background: rgba(255, 255, 255, 0.15);
+    color: inherit;
+}
+
+.pa-search-input:focus {
+    background: var(--pa-white);
+    color: var(--pa-n900);
+}
+
+.pa-search-input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.pa-search-icon {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.pa-user-menu {
+    color: inherit;
+}
+
+.pa-user-menu:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.pa-user-avatar {
+    background: rgba(255, 255, 255, 0.2);
+    color: inherit;
 }

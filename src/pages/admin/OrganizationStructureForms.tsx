@@ -1170,7 +1170,7 @@ export default function OrganizationStructureForms() {
                     const result = await createSport({
                       org_id: currentOrganization.id,
                       name: sportForm.name.trim(),
-                      color: '#137fec',
+                      color: 'var(--org-btn-primary-bg, #137fec)',
                     })
                     
                     if (result.error) {

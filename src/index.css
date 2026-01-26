@@ -49,11 +49,77 @@
 
   /* Organization Theme Variables (applied dynamically by useOrganizationTheme hook) */
   --org-primary: #1e40af;
-  /* Default blue - overridden by theme */
   --org-secondary: #3b82f6;
-  /* Default blue-500 - overridden by theme */
   --org-accent: #d946ef;
-  /* Default fuchsia-500 - overridden by theme */
+
+  /* NEW: Theme Semantic Utilities with complete fallback chains */
+  /* Fallback chain: var(--org-token, var(--pa-legacy-token, #fallback)) */
+
+  /* Buttons */
+  --org-btn-primary-bg-fallback: var(--org-btn-primary-bg, #137fec);
+  --org-btn-primary-text-fallback: #ffffff;
+}
+
+/* Theme Utilities - Scoped to :root for high specificity */
+/* Theme Utilities - Top level */
+
+/* Portal Primary Button */
+.org-btn-primary {
+  background-color: var(--org-btn-primary-bg, var(--pa-theme-action-primary, var(--org-btn-primary-bg, #137fec)));
+  color: var(--org-btn-primary-text, var(--pa-theme-text-on-action, #ffffff));
+}
+
+.org-btn-primary:hover:not(:disabled) {
+  background-color: var(--org-btn-primary-hover, var(--pa-theme-action-hover, #0d6bc2));
+}
+
+.org-btn-primary:active:not(:disabled) {
+  background-color: var(--org-btn-primary-active, var(--pa-theme-action-active, #0b5ba0));
+}
+
+.org-btn-primary:focus-visible {
+  outline: 2px solid var(--org-focus-ring, var(--pa-theme-focus-ring, rgba(19, 127, 236, 0.5)));
+  outline-offset: 2px;
+}
+
+/* Portal Secondary Button */
+.org-btn-secondary {
+  background-color: var(--org-btn-secondary-bg, transparent);
+  color: var(--org-btn-secondary-text, inherit);
+  border: 1px solid var(--org-btn-secondary-border, currentColor);
+}
+
+.org-btn-secondary:hover:not(:disabled) {
+  background-color: var(--org-btn-secondary-hover, rgba(0, 0, 0, 0.05));
+}
+
+/* Links */
+.org-link {
+  color: var(--org-link-color, var(--pa-theme-text-accent, var(--org-btn-primary-bg, #137fec)));
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.org-link:hover {
+  color: var(--org-link-hover, var(--pa-theme-action-hover, #0d6bc2));
+  text-decoration: underline;
+}
+
+/* Badges */
+.org-badge-primary {
+  background-color: var(--org-badge-primary-bg, var(--pa-theme-surface-accent, rgba(19, 127, 236, 0.1)));
+  color: var(--org-badge-primary-text, var(--pa-theme-text-accent, var(--org-btn-primary-bg, #137fec)));
+}
+
+/* Cards with accent border */
+.org-card-accent {
+  border-left: 4px solid var(--org-card-accent-border, var(--pa-theme-border-accent, var(--org-btn-primary-bg, #137fec)));
+}
+
+/* Focus Utilities */
+.org-focus-ring:focus-visible {
+  outline: 2px solid var(--org-focus-ring, var(--pa-theme-focus-ring, rgba(19, 127, 236, 0.5)));
+  outline-offset: 2px;
 }
 
 /* Dark mode overrides */

@@ -193,7 +193,7 @@ export default function Settings() {
                   <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('portal.settings.account.password')}</p>
                   <p className="font-black text-slate-900 dark:text-white">{t('portal.settings.account.passwordPlaceholder')}</p>
                 </div>
-                <span className="text-[#137fec] text-sm font-bold">{t('common.change')}</span>
+                <span className="text-[var(--org-link-color)] text-sm font-bold">{t('common.change')}</span>
               </div>
               {profile?.phone && (
                 <div className="p-6 flex items-center justify-between">
@@ -210,7 +210,7 @@ export default function Settings() {
           <section>
             <div className="flex items-center justify-between mb-4">
               <SectionHeader>{t('portal.settings.family.title')}</SectionHeader>
-              <Link to="/portal/athletes" className="text-xs font-bold text-[#137fec] uppercase tracking-widest hover:underline">
+              <Link to="/portal/athletes" className="text-xs font-bold text-[var(--org-link-color)] uppercase tracking-widest hover:underline">
                 {t('portal.settings.family.manageChildren')}
               </Link>
             </div>
@@ -252,7 +252,7 @@ export default function Settings() {
               <Card className="overflow-hidden">
                 <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                   <CardTitle className="text-lg">{t('portal.settings.family.guardians')}</CardTitle>
-                  <button className="text-xs font-bold text-[#137fec] uppercase tracking-widest hover:underline flex items-center gap-1">
+                  <button className="text-xs font-bold text-[var(--org-link-color)] uppercase tracking-widest hover:underline flex items-center gap-1">
                     <Icon name="add" size="text-sm" />
                     {t('common.invite')}
                   </button>
@@ -296,17 +296,17 @@ export default function Settings() {
                     onClick={() => setLocale(option.value)}
                     className={`w-full p-4 rounded-lg border-2 transition-all text-left flex items-center justify-between ${
                       locale === option.value
-                        ? 'border-[#137fec] bg-[#137fec]/10 dark:bg-[#137fec]/20'
+                        ? 'border-[var(--org-btn-primary-bg, #137fec)] bg-[var(--org-btn-primary-bg)]/10 dark:bg-[var(--org-btn-primary-bg)]/20'
                         : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900/50'
                     }`}
                   >
                     <span className={`font-black ${
-                      locale === option.value ? 'text-[#137fec]' : 'text-slate-900 dark:text-white'
+                      locale === option.value ? 'text-[var(--org-link-color)]' : 'text-slate-900 dark:text-white'
                     }`}>
                       {option.label}
                     </span>
                     {locale === option.value && (
-                      <Icon name="check_circle" className="text-[#137fec]" />
+                      <Icon name="check_circle" className="text-[var(--org-link-color)]" />
                     )}
                   </button>
                 ))}
@@ -336,7 +336,7 @@ export default function Settings() {
                     </div>
                     <button 
                       onClick={() => toggleNotification(key as keyof typeof notifications)}
-                      className={`w-12 h-6 rounded-full transition-colors relative ${value ? 'bg-[#137fec]' : 'bg-slate-200 dark:bg-slate-700'}`}
+                      className={`w-12 h-6 rounded-full transition-colors relative ${value ? 'bg-[var(--org-btn-primary-bg)]' : 'bg-slate-200 dark:bg-slate-700'}`}
                     >
                       <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-all ${value ? 'left-7' : 'left-1'}`} />
                     </button>
@@ -351,9 +351,9 @@ export default function Settings() {
             <Card className="p-6">
                <SectionHeader className="mb-4">{t('portal.settings.support.title')}</SectionHeader>
                <ul className="space-y-3 text-sm">
-                 <li><a href="#" className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300 hover:text-[#137fec]"><span>{t('portal.settings.support.helpCenter')}</span> <Icon name="chevron_right" /></a></li>
-                 <li><a href="#" className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300 hover:text-[#137fec]"><span>{t('portal.settings.support.contactSupport')}</span> <Icon name="chevron_right" /></a></li>
-                 <li><a href="#" className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300 hover:text-[#137fec]"><span>{t('portal.settings.support.reportProblem')}</span> <Icon name="chevron_right" /></a></li>
+                 <li><a href="#" className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300 hover:text-[var(--org-link-color)]"><span>{t('portal.settings.support.helpCenter')}</span> <Icon name="chevron_right" /></a></li>
+                 <li><a href="#" className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300 hover:text-[var(--org-link-color)]"><span>{t('portal.settings.support.contactSupport')}</span> <Icon name="chevron_right" /></a></li>
+                 <li><a href="#" className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300 hover:text-[var(--org-link-color)]"><span>{t('portal.settings.support.reportProblem')}</span> <Icon name="chevron_right" /></a></li>
                </ul>
             </Card>
             <Card className="p-6">

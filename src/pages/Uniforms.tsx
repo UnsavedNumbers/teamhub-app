@@ -169,7 +169,7 @@ export default function Uniforms() {
               </Card>
             ))}
 
-            <Card className="mt-10 p-6 border-t-4 border-[#137fec]">
+            <Card className="mt-10 p-6 border-t-4 border-[var(--org-btn-primary-bg, #137fec)]">
               <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <Icon name="help" size="text-4xl" className="text-slate-400" />

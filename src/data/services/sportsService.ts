@@ -87,7 +87,7 @@ export async function getSystemSports(): Promise<{ data: Sport[]; error: Error |
             org_id: sport.org_id,
             name: sport.name || 'Unknown Sport',
             icon: sport.icon || null,
-            color: sport.color || '#137fec',
+            color: sport.color || 'var(--org-btn-primary-bg, #137fec)',
             created_at: sport.created_at || new Date().toISOString(),
             updated_at: sport.updated_at || new Date().toISOString(),
             deleted_at: sport.deleted_at || null,
@@ -191,7 +191,7 @@ export async function getSports(
                     org_id: sport.org_id,
                     name: sport.name || 'Unknown Sport',
                     icon: customization?.icon_path || sport.icon || null,
-                    color: customization?.color || sport.color || '#137fec',
+                    color: customization?.color || sport.color || 'var(--org-btn-primary-bg, #137fec)',
                     created_at: sport.created_at || new Date().toISOString(),
                     updated_at: sport.updated_at || new Date().toISOString(),
                     deleted_at: sport.deleted_at || null,
@@ -822,7 +822,7 @@ export async function updateSportCustomization(
 
         // Validate color format if provided
         if (updates.color && !/^#[0-9A-Fa-f]{6}$/.test(updates.color)) {
-            return { error: new Error('Invalid color format. Please use hex format (e.g., #137fec)') }
+            return { error: new Error('Invalid color format. Please use hex format (e.g., var(--org-btn-primary-bg, #137fec))') }
         }
 
         const updateData: any = {}

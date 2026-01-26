@@ -184,12 +184,12 @@ export default function Signup() {
     if (pwd.length < 6) return { label: 'Weak', color: 'bg-red-500', width: '25%' }
     if (pwd.length < 8) return { label: 'Fair', color: 'bg-yellow-500', width: '50%' }
     if (pwd.length < 12 && /[A-Z]/.test(pwd) && /[0-9]/.test(pwd)) {
-      return { label: 'Good', color: 'bg-[#137fec]', width: '75%' }
+      return { label: 'Good', color: 'bg-[var(--org-btn-primary-bg)]', width: '75%' }
     }
     if (pwd.length >= 12 && /[A-Z]/.test(pwd) && /[0-9]/.test(pwd) && /[^A-Za-z0-9]/.test(pwd)) {
       return { label: 'Strong', color: 'bg-emerald-500', width: '100%' }
     }
-    return { label: 'Good', color: 'bg-[#137fec]', width: '75%' }
+    return { label: 'Good', color: 'bg-[var(--org-btn-primary-bg)]', width: '75%' }
   }
 
   const passwordStrength = getPasswordStrength(password)
@@ -254,8 +254,8 @@ export default function Signup() {
 
           {/* Organization Setup Banner (visible when in setup flow) */}
           {isOrgSetupFlow && (
-            <div className="mb-6 p-4 rounded-xl flex items-center gap-3 text-sm bg-[#137fec]/10 border border-[#137fec]/20">
-              <span className="material-symbols-outlined text-[#137fec]">corporate_fare</span>
+            <div className="mb-6 p-4 rounded-xl flex items-center gap-3 text-sm bg-[var(--org-btn-primary-bg)]/10 border border-[var(--org-btn-primary-bg, #137fec)]/20">
+              <span className="material-symbols-outlined text-[var(--org-link-color)]">corporate_fare</span>
               <span className="text-slate-700 dark:text-slate-200">
                 You&apos;ll be redirected to organization setup after creating your account.
               </span>
@@ -299,7 +299,7 @@ export default function Signup() {
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="John Smith"
-                  className="block w-full rounded border-0 py-3 px-4 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#137fec] sm:text-sm"
+                  className="block w-full rounded border-0 py-3 px-4 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[var(--org-btn-primary-bg, #137fec)] sm:text-sm"
                 />
               </div>
             </div>
@@ -328,7 +328,7 @@ export default function Signup() {
                     }
                   }}
                   placeholder={isFromInvite ? "Loading invite email..." : "name@email.com"}
-                  className={`block w-full rounded border-0 py-3 px-4 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#137fec] sm:text-sm ${
+                  className={`block w-full rounded border-0 py-3 px-4 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[var(--org-btn-primary-bg, #137fec)] sm:text-sm ${
                     isFromInvite ? 'bg-slate-50 dark:bg-slate-800 cursor-not-allowed' : ''
                   }`}
                 />
@@ -361,7 +361,7 @@ export default function Signup() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="block w-full rounded border-0 py-3 px-4 pr-12 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#137fec] sm:text-sm"
+                  className="block w-full rounded border-0 py-3 px-4 pr-12 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[var(--org-btn-primary-bg, #137fec)] sm:text-sm"
                 />
                 <button 
                   type="button" 
@@ -407,7 +407,7 @@ export default function Signup() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="block w-full rounded border-0 py-3 px-4 pr-12 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#137fec] sm:text-sm"
+                  className="block w-full rounded border-0 py-3 px-4 pr-12 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[var(--org-btn-primary-bg, #137fec)] sm:text-sm"
                 />
                 <button 
                   type="button" 
@@ -427,9 +427,9 @@ export default function Signup() {
             {/* Terms */}
             <p className="text-xs text-slate-500 dark:text-slate-400">
               By creating an account, you agree to our{' '}
-              <a href="#" className="font-bold text-[#137fec] hover:text-[#137fec]/80 transition-colors">Terms of Service</a>
+              <a href="#" className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">Terms of Service</a>
               {' '}and{' '}
-              <a href="#" className="font-bold text-[#137fec] hover:text-[#137fec]/80 transition-colors">Privacy Policy</a>
+              <a href="#" className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">Privacy Policy</a>
             </p>
 
             {/* Submit */}
@@ -448,7 +448,7 @@ export default function Signup() {
           <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800">
             <p className="text-center text-sm text-slate-500 dark:text-slate-400">
               Already have an account?{' '}
-              <Link to="/portal/login" className="font-bold text-[#137fec] hover:text-[#137fec]/80 transition-colors">
+              <Link to="/portal/login" className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">
                 Sign in
               </Link>
             </p>

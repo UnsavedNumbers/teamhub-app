@@ -147,7 +147,7 @@ export default function AnnouncementDetail() {
             )}
             <span className={`px-3 py-1 text-xs font-bold uppercase tracking-widest rounded ${
               authorRole === 'coach'
-                ? 'bg-[#137fec]/10 text-[#137fec]'
+                ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-link-color)]'
                 : 'bg-purple-500/10 text-purple-500 dark:text-purple-400'
             }`}>
               {authorRole === 'coach' ? 'Coach' : authorRole === 'org_admin' ? 'Admin' : 'Parent'}

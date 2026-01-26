@@ -242,7 +242,7 @@ export default function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@email.com"
-                  className="block w-full rounded border-0 py-3 px-4 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#137fec] sm:text-sm"
+                  className="block w-full rounded border-0 py-3 px-4 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[var(--org-btn-primary-bg, #137fec)] sm:text-sm"
                 />
               </div>
             </div>
@@ -257,7 +257,7 @@ export default function Login() {
                 </label>
                 <Link 
                   to="/portal/forgot-password" 
-                  className="text-xs font-bold text-[#137fec] hover:text-[#137fec]/80 transition-colors"
+                  className="text-xs font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors"
                 >
                   FORGOT PASSWORD?
                 </Link>
@@ -272,7 +272,7 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="block w-full rounded border-0 py-3 px-4 pr-12 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#137fec] sm:text-sm"
+                  className="block w-full rounded border-0 py-3 px-4 pr-12 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[var(--org-btn-primary-bg, #137fec)] sm:text-sm"
                 />
                 <button 
                   type="button" 
@@ -293,7 +293,7 @@ export default function Login() {
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 dark:border-slate-700 text-[#137fec] focus:ring-[#137fec]"
+                className="h-4 w-4 rounded border-slate-300 dark:border-slate-700 text-[var(--org-link-color)] focus:ring-[var(--org-btn-primary-bg, #137fec)]"
               />
               <label 
                 htmlFor="remember-me" 
@@ -307,7 +307,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-[#137fec] hover:bg-[#137fec]/90 text-white px-8 py-3 rounded font-bold text-sm tracking-wide w-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-[var(--org-btn-primary-bg)] hover:bg-[var(--org-btn-primary-bg)]/90 text-white px-8 py-3 rounded font-bold text-sm tracking-wide w-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'SIGNING IN...' : 'CONTINUE'}
               </button>
@@ -322,7 +322,7 @@ export default function Login() {
               </p>
               <Link 
                 to="/portal/signup" 
-                className="block text-center font-bold text-[#137fec] hover:text-[#137fec]/80 transition-colors"
+                className="block text-center font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors"
               >
                 CREATE AN ACCOUNT
               </Link>
@@ -334,7 +334,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={handleSetupOrganization}
-                className="w-full text-center font-bold text-[#137fec] hover:text-[#137fec]/80 transition-colors"
+                className="w-full text-center font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors"
               >
                 CREATE AN ORGANIZATION
               </button>

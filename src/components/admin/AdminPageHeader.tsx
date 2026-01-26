@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { PageHeader } from '../platformAdmin'
+import { PageHeader } from './PageHeader'
 
 interface BreadcrumbItem {
   label: string

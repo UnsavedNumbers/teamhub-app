@@ -1,7 +1,7 @@
 import type { HTMLAttributes, ReactNode } from 'react'
 import { cn } from '../../utils/cn'
 
-type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'error'
+type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'error' | 'accent' | 'primary'
 
 interface BadgeProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'children'> {
   /** Visual variant based on semantic meaning */
@@ -23,6 +23,7 @@ interface BadgeProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'children'> {
  * - danger: Red tint
  * - info: Blue tint
  * - neutral: Gray tint
+ * - accent/primary: Theme color tint
  */
 export function Badge({
   variant = 'neutral',

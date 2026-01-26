@@ -95,7 +95,7 @@ export default function Tryouts() {
             ) : (
               <div className="grid md:grid-cols-2 gap-6">
                 {tryouts.map((tryout) => (
-                  <Card key={tryout.id} className="overflow-hidden hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300">
+                  <Card key={tryout.id} className="overflow-hidden hover:shadow-2xl hover:shadow-[var(--org-btn-primary-bg, #137fec)]/5 transition-all duration-300">
                     <div className="h-32 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center">
                       <Icon name="sports_soccer" size="text-5xl" className="text-slate-400" />
                     </div>

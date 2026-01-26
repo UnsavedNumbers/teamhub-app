@@ -260,7 +260,7 @@ export default function TravelDetail() {
         </div>
 
         {/* Quick Summary Banner */}
-        <Card className="bg-gradient-to-r from-[#137fec]/5 to-slate-50 dark:to-slate-800/50 border-l-4 border-[#137fec] p-6">
+        <Card className="bg-gradient-to-r from-[var(--org-btn-primary-bg, #137fec)]/5 to-slate-50 dark:to-slate-800/50 border-l-4 border-[var(--org-btn-primary-bg, #137fec)] p-6">
           <div className="grid md:grid-cols-3 gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Duration</p>
@@ -372,7 +372,7 @@ export default function TravelDetail() {
                   {plan.hotel_phone && (
                     <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
                       <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Phone</p>
-                      <a href={`tel:${plan.hotel_phone}`} className="text-[#137fec] font-bold hover:underline">
+                      <a href={`tel:${plan.hotel_phone}`} className="text-[var(--org-link-color)] font-bold hover:underline">
                         {plan.hotel_phone}
                       </a>
                     </div>
@@ -433,7 +433,7 @@ export default function TravelDetail() {
                     <div className="flex items-start justify-between mb-2">
                       <CardTitle className="text-lg">{meeting.name}</CardTitle>
                       {meeting.time && (
-                        <span className="text-sm font-bold text-[#137fec] bg-[#137fec]/10 px-3 py-1 rounded">
+                        <span className="text-sm font-bold text-[var(--org-link-color)] bg-[var(--org-btn-primary-bg)]/10 px-3 py-1 rounded">
                           {meeting.time}
                         </span>
                       )}
@@ -476,7 +476,7 @@ export default function TravelDetail() {
               <div className="pt-12">
               {eventsLoading ? (
                 <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-[#137fec]"></div>
+                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-[var(--org-btn-primary-bg, #137fec)]"></div>
                 </div>
               ) : tripEvents.length === 0 ? (
                 <div className="text-center py-8">

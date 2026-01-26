@@ -118,7 +118,7 @@ export default function Athletes() {
             return (
               <Card
                 key={athlete.id}
-                className="aspect-[4/3] relative overflow-hidden rounded-xl hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300 cursor-pointer group"
+                className="aspect-[4/3] relative overflow-hidden rounded-xl hover:shadow-2xl hover:shadow-[var(--org-btn-primary-bg, #137fec)]/5 transition-all duration-300 cursor-pointer group"
                 onClick={() => handleCardClick(athlete.id)}
               >
                 {/* Square Image/Avatar Section */}

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
@@ -19,6 +18,7 @@ import {
   EmptyState,
   type ColumnConfig 
 } from '../../components/platformAdmin'
+import { cn } from '../../utils/cn'
 
 interface Event {
   id: string
@@ -30,6 +30,7 @@ interface Event {
   team: { name: string }
   rsvp_config?: { enabled: boolean; type: string | null }
   rsvp_summary?: string
+  is_cancelled?: boolean
 }
 
 export default function Events() {
@@ -53,13 +54,12 @@ export default function Events() {
     setLoading(true)
     try {
       const now = new Date()
-      // Show fewer days or more? Let's keep 60 days for upcoming
       const sixtyDaysFromNow = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000)
       
       const { data, error } = await getEvents(context, {
         startDate: now,
         endDate: sixtyDaysFromNow,
-        includeCancelled: true, // Show cancelled events in admin too
+        includeCancelled: true,
       })
       
       if (error) {
@@ -86,13 +86,12 @@ export default function Events() {
             }
           } catch (err) {
             console.warn('Failed to fetch RSVP summary:', err)
-            // Continue with empty summary
           }
         }
         
         return {
           id: event.id || '',
-          title: (event.title || 'Untitled Event') + (event.is_cancelled ? ' (CANCELLED)' : ''),
+          title: event.title || 'Untitled Event',
           type: event.type || 'practice',
           start_time: event.start_time || new Date().toISOString(),
           end_time: event.end_time || new Date().toISOString(),
@@ -100,6 +99,7 @@ export default function Events() {
           team: { name: event.team?.name ?? 'Unknown Team' },
           rsvp_config: rsvpConfig,
           rsvp_summary: rsvpSummary,
+          is_cancelled: event.is_cancelled
         }
       }))
 
@@ -177,7 +177,6 @@ export default function Events() {
 
   const handleDuplicate = async (event: Event) => {
     try {
-      // Fetch full event data
       const { data: fullEvent, error: fetchError } = await supabase
         .from('events')
         .select(`
@@ -191,7 +190,6 @@ export default function Events() {
       if (fetchError) throw fetchError
       if (!fullEvent) throw new Error('Event not found')
       
-      // Create new event with same data but new ID
       const { data: newEvent, error: insertError } = await supabase
         .from('events')
         .insert({
@@ -218,7 +216,6 @@ export default function Events() {
       if (insertError) throw insertError
       if (!newEvent) throw new Error('Failed to create duplicate event')
       
-      // Duplicate location if exists
       if (fullEvent.event_location) {
         await supabase
           .from('event_locations')
@@ -236,7 +233,6 @@ export default function Events() {
           })
       }
       
-      // Duplicate recurring pattern if exists
       const recurringPattern = Array.isArray(fullEvent.recurring_pattern) 
         ? fullEvent.recurring_pattern[0] 
         : fullEvent.recurring_pattern
@@ -272,21 +268,47 @@ export default function Events() {
   }
 
   const columns: ColumnConfig<Event>[] = [
-    { id: 'date', label: 'Date', render: (row) => new Date(row.start_time).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) },
-    { id: 'time', label: 'Time', render: (row) => new Date(row.start_time).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) },
-    { id: 'title', label: 'Title' },
+    { 
+        id: 'date', 
+        label: 'Date', 
+        render: (row) => (
+            <div className="pa-flex pa-flex-col">
+                <span className="pa-font-bold pa-text-slate-900">{new Date(row.start_time).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                <span className="pa-text-xs pa-text-slate-500 pa-font-medium">{new Date(row.start_time).toLocaleDateString(undefined, { weekday: 'short' })}</span>
+            </div>
+        )
+    },
+    { 
+        id: 'time', 
+        label: 'Time', 
+        render: (row) => (
+            <span className="pa-text-sm pa-font-medium pa-text-slate-600">
+                {new Date(row.start_time).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+            </span>
+        )
+    },
+    { 
+        id: 'title', 
+        label: 'Title',
+        render: (row) => (
+            <div className="pa-flex pa-flex-col">
+                <span className={cn('pa-font-bold', row.is_cancelled ? 'pa-text-slate-400 pa-line-through' : 'pa-text-slate-900')}>{row.title}</span>
+                {row.is_cancelled && <span className="pa-text-[10px] pa-font-bold pa-text-danger" style={{ letterSpacing: '0.05em' }}>CANCELLED</span>}
+            </div>
+        )
+    },
     { id: 'type', label: 'Type', render: (row) => <Badge variant={getTypeVariant(row.type)}>{row.type.toUpperCase()}</Badge> },
-    { id: 'team_name', label: 'Team', render: (row) => row.team?.name },
-    { id: 'location', label: 'Location', render: (row) => row.location || '—' },
+    { id: 'team_name', label: 'Team', render: (row) => <span className="pa-text-sm pa-font-medium pa-text-slate-700">{row.team?.name}</span> },
+    { id: 'location', label: 'Location', render: (row) => <span className="pa-text-sm pa-text-slate-500">{row.location || '—'}</span> },
     { 
       id: 'rsvp', 
       label: 'RSVP', 
       render: (row) => {
-        if (!row.rsvp_config?.enabled) return '—'
+        if (!row.rsvp_config?.enabled) return <span className="pa-text-slate-300">—</span>
         return (
-          <div className="text-xs">
-            <div className="font-bold">{row.rsvp_config.type?.toUpperCase() || 'N/A'}</div>
-            {row.rsvp_summary && <div className="text-slate-500">{row.rsvp_summary}</div>}
+          <div className="pa-flex pa-flex-col">
+            <span className="pa-text-[11px] pa-font-bold pa-text-slate-500">{row.rsvp_config.type?.toUpperCase() || 'N/A'}</span>
+            {row.rsvp_summary && <span className="pa-text-[11px] pa-text-slate-400">{row.rsvp_summary}</span>}
           </div>
         )
       }
@@ -296,7 +318,7 @@ export default function Events() {
       label: '',
       align: 'right',
       render: (row) => (
-        <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
+        <div className="pa-flex pa-gap-1 pa-justify-end">
           <Button
             variant="ghost"
             size="dense"
@@ -306,7 +328,7 @@ export default function Events() {
             }}
             title="Edit event"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>edit</span>
+            <span className="material-symbols-outlined pa-icon-sm">edit</span>
           </Button>
           <Button
             variant="ghost"
@@ -317,9 +339,9 @@ export default function Events() {
             }}
             title="Duplicate event"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>content_copy</span>
+            <span className="material-symbols-outlined pa-icon-sm">content_copy</span>
           </Button>
-          {!row.title.includes('CANCELLED') && (
+          {!row.is_cancelled && (
             <Button
               variant="ghost"
               size="dense"
@@ -329,7 +351,7 @@ export default function Events() {
               }}
               title="Cancel event"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>cancel</span>
+              <span className="material-symbols-outlined pa-icon-sm">cancel</span>
             </Button>
           )}
           <Button
@@ -340,9 +362,9 @@ export default function Events() {
               setDeleteDialog({ open: true, event: row })
             }}
             title="Delete event"
-            style={{ color: 'var(--pa-danger)' }}
+            className="pa-text-danger hover:pa-bg-danger-surface"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>delete</span>
+            <span className="material-symbols-outlined pa-icon-sm">delete</span>
           </Button>
         </div>
       ),
@@ -353,12 +375,33 @@ export default function Events() {
     <div className="pa-root">
       <AdminPageHeader 
         title="Events" 
-        actions={<Button onClick={() => navigate('/admin/events/new')}><span className="material-symbols-outlined">add</span>{t('admin.events.create')}</Button>} 
+        actions={
+          <Button onClick={() => navigate('/admin/events/new')} icon="add">
+            {t('admin.events.create')}
+          </Button>
+        } 
       />
       {events.length === 0 && !loading ? (
-        <Card><EmptyState icon="event" title="NO UPCOMING EVENTS" description="Create your first event to get started." action={{ label: t('admin.events.create'), onClick: () => navigate('/admin/events/new') }} /></Card>
+        <Card>
+          <EmptyState 
+            icon="event" 
+            title="NO UPCOMING EVENTS" 
+            description="Create your first event to get started." 
+            action={{ label: t('admin.events.create'), onClick: () => navigate('/admin/events/new') }} 
+          />
+        </Card>
       ) : (
-        <PlatformDataTable columns={columns} rows={events} loading={loading} totalCount={totalCount} page={page} rowsPerPage={rowsPerPage} onPageChange={setPage} onRowsPerPageChange={setRowsPerPage} />
+        <PlatformDataTable 
+            columns={columns} 
+            rows={events} 
+            loading={loading} 
+            totalCount={totalCount} 
+            page={page} 
+            rowsPerPage={rowsPerPage} 
+            onPageChange={setPage} 
+            onRowsPerPageChange={setRowsPerPage} 
+            onRowClick={(row) => navigate(getLink('admin.events.edit', { id: row.id }))}
+        />
       )}
 
       {/* Delete Confirmation Dialog */}
@@ -397,4 +440,3 @@ export default function Events() {
     </div>
   )
 }
-

@@ -15,6 +15,7 @@ import {
   Card, 
   Button, 
 } from '../../components/platformAdmin'
+import { cn } from '../../utils/cn'
 
 interface DashboardStats {
   totalTeams: number
@@ -83,65 +84,141 @@ export default function AdminDashboard() {
     fetchDashboardData() 
   }, [fetchDashboardData])
 
-  if (loading) return <div className="pa-skeleton" style={{ height: '500px' }} />
+  if (loading) {
+    return (
+      <div className="pa-root">
+        <div className="pa-skeleton pa-mb-8" style={{ width: '40%', height: '40px' }} />
+        <div className="pa-grid pa-grid-3 pa-gap-4 pa-mb-8">
+            <div className="pa-skeleton" style={{ height: '140px' }} />
+            <div className="pa-skeleton" style={{ height: '140px' }} />
+            <div className="pa-skeleton" style={{ height: '140px' }} />
+        </div>
+        <div className="pa-skeleton" style={{ height: '400px' }} />
+      </div>
+    )
+  }
 
   return (
     <div className="pa-root">
       <AdminPageHeader 
         title="DASHBOARD" 
-        subtitle={currentOrganization?.name?.toUpperCase()} 
-        actions={<Button variant="blue" onClick={() => fetchDashboardData()}>Refresh</Button>} 
+        subtitle={currentOrganization?.name || 'ORGANIZATION OVERVIEW'} 
+        actions={
+          <Button variant="secondary" onClick={() => fetchDashboardData()} icon="refresh">
+            Refresh
+          </Button>
+        } 
       />
 
-      <div className="pa-grid pa-grid-3 pa-gap-4 pa-mb-8">
-        <StatCard label={t('admin.dashboard.totalTeams')} value={stats.totalTeams} icon="groups" onClick={() => navigate(getLink('admin.teams.list'))} />
-        <StatCard label={t('admin.dashboard.totalAthletes')} value={stats.totalPlayers} icon="person" onClick={() => navigate(getLink('admin.athletes.list'))} />
-        <StatCard label={t('admin.dashboard.activeSeasons')} value={stats.activeSeasons} icon="calendar_today" />
-        <StatCard label={t('admin.dashboard.unpaidFees')} value={stats.outstandingPayments} icon="payments" onClick={() => navigate('/admin/payments')} />
-        <StatCard label={t('admin.dashboard.upcomingEvents')} value={stats.upcomingEvents} icon="event" onClick={() => navigate('/admin/events')} />
-        <StatCard label={t('admin.dashboard.uniformOrders')} value={stats.pendingUniformOrders} icon="checkroom" onClick={() => navigate('/admin/uniforms')} />
+      <div className={cn('pa-grid', 'pa-grid-1', 'md:pa-grid-3', 'pa-gap-6', 'pa-mb-10')}>
+        <StatCard 
+            label={t('admin.dashboard.totalTeams')} 
+            value={stats.totalTeams} 
+            icon="groups" 
+            onClick={() => navigate(getLink('admin.teams.list'))} 
+            style={{ borderBottom: '4px solid var(--pa-primary, #0066cc)' }}
+        />
+        <StatCard 
+            label={t('admin.dashboard.totalAthletes')} 
+            value={stats.totalPlayers} 
+            icon="person" 
+            onClick={() => navigate(getLink('admin.athletes.list'))} 
+            style={{ borderBottom: '4px solid var(--pa-success, #10b981)' }}
+        />
+        <StatCard 
+            label={t('admin.dashboard.activeSeasons')} 
+            value={stats.activeSeasons} 
+            icon="calendar_today" 
+            style={{ borderBottom: '4px solid var(--pa-warning, #f59e0b)' }}
+        />
+        <StatCard 
+            label={t('admin.dashboard.unpaidFees')} 
+            value={stats.outstandingPayments} 
+            icon="payments" 
+            onClick={() => navigate('/admin/payments')} 
+            style={{ borderBottom: '4px solid var(--pa-danger, #ef4444)' }}
+        />
+        <StatCard 
+            label={t('admin.dashboard.upcomingEvents')} 
+            value={stats.upcomingEvents} 
+            icon="event" 
+            onClick={() => navigate('/admin/events')} 
+            style={{ borderBottom: '4px solid #8b5cf6' }}
+        />
+        <StatCard 
+            label={t('admin.dashboard.uniformOrders')} 
+            value={stats.pendingUniformOrders} 
+            icon="checkroom" 
+            onClick={() => navigate('/admin/uniforms')} 
+            style={{ borderBottom: '4px solid #ec4899' }}
+        />
       </div>
 
-      <div className="pa-grid pa-grid-12 pa-gap-6">
-        <div className="pa-col-8">
+      <div className={cn('pa-grid', 'pa-grid-1', 'lg:pa-grid-12', 'pa-gap-10')}>
+        <div className="lg:pa-col-8">
           <Card>
-            <h3 className="pa-h3 pa-mb-6">QUICK ACTIONS</h3>
-            <div className="pa-grid pa-grid-3 pa-gap-3">
-              <Button style={{ height: 'auto', padding: 'var(--pa-space-4)', flexDirection: 'column', gap: '8px' }} onClick={() => navigate('/admin/events/new')}>
-                <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>add_circle</span>
-                New Event
-              </Button>
-              <Button style={{ height: 'auto', padding: 'var(--pa-space-4)', flexDirection: 'column', gap: '8px' }} variant="primary" onClick={() => navigate('/admin/users/new')}>
-                <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>person_add</span>
-                Add User
-              </Button>
-              <Button style={{ height: 'auto', padding: 'var(--pa-space-4)', flexDirection: 'column', gap: '8px' }} variant="primary" onClick={() => navigate('/admin/fees/new')}>
-                <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>request_quote</span>
-                Assign Fee
-              </Button>
+            <div className="pa-p-6">
+                <h3 className="pa-overline pa-mb-8">QUICK ACTIONS</h3>
+                <div className={cn('pa-grid', 'pa-grid-1', 'sm:pa-grid-3', 'pa-gap-4')}>
+                  <Button 
+                    className={cn('pa-flex', 'pa-flex-col', 'pa-items-center', 'pa-justify-center', 'pa-gap-3', 'pa-p-8', 'pa-h-auto')}
+                    onClick={() => navigate('/admin/events/new')}
+                    variant="secondary"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '40px' }}>add_circle</span>
+                    <span className="pa-font-bold">New Event</span>
+                  </Button>
+                  <Button 
+                    variant="secondary" 
+                    className={cn('pa-flex', 'pa-flex-col', 'pa-items-center', 'pa-justify-center', 'pa-gap-3', 'pa-p-8', 'pa-h-auto')}
+                    onClick={() => navigate('/admin/users/new')}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '40px' }}>person_add</span>
+                    <span className="pa-font-bold">Add User</span>
+                  </Button>
+                  <Button 
+                    variant="secondary" 
+                    className={cn('pa-flex', 'pa-flex-col', 'pa-items-center', 'pa-justify-center', 'pa-gap-3', 'pa-p-8', 'pa-h-auto')}
+                    onClick={() => navigate('/admin/fees/new')}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '40px' }}>request_quote</span>
+                    <span className="pa-font-bold">Assign Fee</span>
+                  </Button>
+                </div>
             </div>
           </Card>
         </div>
 
-        <div className="pa-col-4">
-          <Card>
-            <h3 className="pa-h3 pa-mb-6">RECENT ACTIVITY</h3>
-            {recentActivity.length === 0 ? (
-              <div className="pa-body-m pa-text-muted">No recent activity</div>
-            ) : (
-              <div className="pa-flex pa-flex-col pa-gap-4">
-                {recentActivity.map(a => (
-                  <div key={a.id} className="pa-flex pa-gap-3 pa-items-start">
-                    <div className="pa-badge pa-badge--neutral pa-p-2" style={{ borderRadius: '50%' }}>
-                      <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>notifications</span>
-                    </div>
-                    <div>
-                      <div className="pa-body-s" style={{ fontWeight: 600 }}>{a.message}</div>
-                      <div className="pa-text-overline pa-text-muted">{new Date(a.timestamp).toLocaleDateString()}</div>
-                    </div>
+        <div className="lg:pa-col-4">
+          <Card noPadding>
+            <div className="pa-p-6 pa-border-b pa-border-slate-100">
+                <h3 className="pa-overline">RECENT ACTIVITY</h3>
+            </div>
+            <div className="pa-p-6">
+                {recentActivity.length === 0 ? (
+                  <div className="pa-body-m pa-text-muted pa-text-center pa-py-10">No recent activity</div>
+                ) : (
+                  <div className="pa-flex pa-flex-col pa-gap-6">
+                    {recentActivity.map(a => (
+                      <div key={a.id} className="pa-flex pa-gap-4 pa-items-start">
+                        <div 
+                          className="pa-bg-neutral-light pa-size-10 pa-flex pa-items-center pa-justify-center pa-rounded-full"
+                        >
+                          <span className="material-symbols-outlined pa-text-slate-400 pa-icon-sm">notifications</span>
+                        </div>
+                        <div className="pa-flex-1 pa-pt-1">
+                          <div className="pa-text-sm pa-font-bold pa-text-slate-900 pa-mb-1">{a.message}</div>
+                          <div className="pa-text-[10px] pa-font-black pa-text-slate-400 pa-uppercase pa-tracking-widest">{new Date(a.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
+            </div>
+            {recentActivity.length > 0 && (
+                <div className="pa-p-4 pa-border-t pa-border-slate-100 pa-text-center">
+                    <Button variant="ghost" size="dense">View All Activity</Button>
+                </div>
             )}
           </Card>
         </div>

@@ -133,7 +133,7 @@ export default function Travel() {
               <div
                 key={plan.id}
                 onClick={() => handlePlanClick(plan.id)}
-                className="overflow-hidden cursor-pointer hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300"
+                className="overflow-hidden cursor-pointer hover:shadow-2xl hover:shadow-[var(--org-btn-primary-bg, #137fec)]/5 transition-all duration-300"
               >
                 <Card className="p-0">
                   <SportCardImage sport={planSports[plan.id] || null} height="h-48" type="travel">
@@ -142,12 +142,12 @@ export default function Travel() {
                         {plan.status === 'cancelled' ? (
                           <span className="inline-block px-3 py-1 bg-red-500 text-white text-xs font-bold uppercase tracking-widest rounded">Cancelled</span>
                         ) : (
-                          <span className="inline-block px-3 py-1 bg-[#137fec] text-white text-xs font-bold uppercase tracking-widest rounded">Upcoming Trip</span>
+                          <span className="inline-block px-3 py-1 bg-[var(--org-btn-primary-bg)] text-white text-xs font-bold uppercase tracking-widest rounded">Upcoming Trip</span>
                         )}
                         {planSports[plan.id] && (
                           <span 
                             className="inline-block px-3 py-1 text-white text-xs font-bold uppercase tracking-widest rounded"
-                            style={{ backgroundColor: planSports[plan.id]!.color || '#137fec' }}
+                            style={{ backgroundColor: planSports[plan.id]!.color || 'var(--org-btn-primary-bg, #137fec)' }}
                           >
                             {planSports[plan.id]!.name}
                           </span>
@@ -183,7 +183,7 @@ export default function Travel() {
 
                   <div className="px-6 pb-6 flex justify-between items-center border-t border-slate-100 dark:border-slate-800 pt-6">
                     <span className="text-xs font-bold uppercase tracking-widest text-slate-400">{plan.team?.name}</span>
-                    <span className="text-[#137fec] text-sm font-bold uppercase tracking-wide flex items-center gap-2">
+                    <span className="text-[var(--org-link-color)] text-sm font-bold uppercase tracking-wide flex items-center gap-2">
                       View Details
                       <Icon name="arrow_forward" size="text-sm" />
                     </span>

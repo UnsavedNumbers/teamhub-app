@@ -41,7 +41,7 @@ export default function PortalLayout({ children, breadcrumbs, forceRole }: Porta
                   <span className="material-symbols-outlined text-[10px]">chevron_right</span>
                 )}
                 {crumb.path ? (
-                  <Link to={crumb.path} className="hover:text-[#137fec] transition-colors">
+                  <Link to={crumb.path} className="hover:text-[var(--org-link-color)] transition-colors">
                     {crumb.label}
                   </Link>
                 ) : (

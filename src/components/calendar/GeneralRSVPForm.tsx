@@ -131,7 +131,7 @@ export default function GeneralRSVPForm({ eventId, userId, currentRSVP, disabled
             onChange={(e) => setNote(e.target.value)}
             disabled={disabled || loading}
             placeholder="Add a note..."
-            className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-[#137fec] disabled:opacity-50"
+            className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)] disabled:opacity-50"
             rows={2}
           />
         </div>

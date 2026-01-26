@@ -293,7 +293,7 @@ export default function Dashboard() {
                 >
                   Mark all read
                 </button>
-                <Link to="/portal/uniforms" className="text-xs font-bold text-[#137fec] hover:underline">
+                <Link to="/portal/uniforms" className="text-xs font-bold text-[var(--org-link-color)] hover:underline">
                   View Uniforms
                 </Link>
               </div>
@@ -328,7 +328,7 @@ export default function Dashboard() {
           <div className="lg:col-span-8">
             <div className="flex items-center justify-between mb-8 border-b border-slate-100 dark:border-slate-800 pb-4">
               <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white">Priority Actions</h2>
-              <Link to="/portal/calendar" className="text-xs font-bold text-[#137fec] cursor-pointer hover:underline">
+              <Link to="/portal/calendar" className="text-xs font-bold text-[var(--org-link-color)] cursor-pointer hover:underline">
                 View Full Calendar
               </Link>
             </div>
@@ -342,7 +342,7 @@ export default function Dashboard() {
                   <Link 
                     key={event.id} 
                     to={`/portal/calendar/events/${event.id}`}
-                    className="group bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden hover:shadow-2xl hover:shadow-[#137fec]/5 transition-all duration-300 cursor-pointer block"
+                    className="group bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden hover:shadow-2xl hover:shadow-[var(--org-btn-primary-bg, #137fec)]/5 transition-all duration-300 cursor-pointer block"
                   >
                     <div className="flex flex-col md:flex-row h-full">
                       <div className="md:w-1/3">
@@ -355,7 +355,7 @@ export default function Dashboard() {
                       <div className="flex-1 p-8 flex flex-col justify-between">
                         <div>
                           <div className="flex items-center gap-2 mb-3">
-                            <div className={`w-2 h-2 rounded-full ${event.type === 'practice' ? 'bg-[#137fec]' : 'bg-orange-500'}`}></div>
+                            <div className={`w-2 h-2 rounded-full ${event.type === 'practice' ? 'bg-[var(--org-btn-primary-bg)]' : 'bg-orange-500'}`}></div>
                             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{formatEventTime(event)}</span>
                           </div>
                           <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2 leading-tight uppercase">
@@ -366,7 +366,7 @@ export default function Dashboard() {
                           </p>
                         </div>
                         <div className="flex flex-wrap gap-3">
-                          <Link to={`/portal/calendar/events/${event.id}`} className="bg-[#137fec] hover:bg-[#137fec]/90 text-white px-8 py-3 rounded font-bold text-sm tracking-wide transition-all active:scale-95 flex items-center gap-2">
+                          <Link to={`/portal/calendar/events/${event.id}`} className="bg-[var(--org-btn-primary-bg)] hover:bg-[var(--org-btn-primary-bg)]/90 text-white px-8 py-3 rounded font-bold text-sm tracking-wide transition-all active:scale-95 flex items-center gap-2">
                             VIEW <span className="material-symbols-outlined text-sm">arrow_forward</span>
                           </Link>
                           {event.event_location?.maps_url && (
@@ -386,7 +386,7 @@ export default function Dashboard() {
                   </div>
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">No upcoming events</h3>
                   <p className="text-slate-500 dark:text-slate-400 mb-6">Check back later for scheduled activities.</p>
-                  <Link to="/portal/calendar" className="inline-block bg-[#137fec] hover:bg-[#137fec]/90 text-white px-6 py-3 rounded font-bold text-sm tracking-wide transition-all">
+                  <Link to="/portal/calendar" className="inline-block bg-[var(--org-btn-primary-bg)] hover:bg-[var(--org-btn-primary-bg)]/90 text-white px-6 py-3 rounded font-bold text-sm tracking-wide transition-all">
                     View Calendar
                   </Link>
                 </div>
@@ -408,7 +408,7 @@ export default function Dashboard() {
                       <div className="flex items-center gap-3">
                         <div className={`size-2 rounded-full ${
                           item.status === 'paid' ? 'bg-emerald-500' :
-                          item.status === 'due' ? 'bg-[#137fec] animate-pulse' :
+                          item.status === 'due' ? 'bg-[var(--org-btn-primary-bg)] animate-pulse' :
                           'bg-slate-300'
                         }`}></div>
                         <div>
@@ -419,7 +419,7 @@ export default function Dashboard() {
                       {item.status === 'paid' ? (
                         <span className="text-xs font-bold text-emerald-500">PAID</span>
                       ) : item.status === 'due' ? (
-                        <Link to="/portal/payments" className="text-xs font-bold text-[#137fec] underline">
+                        <Link to="/portal/payments" className="text-xs font-bold text-[var(--org-link-color)] underline">
                           PAY {item.amount}
                         </Link>
                       ) : (
@@ -440,7 +440,7 @@ export default function Dashboard() {
                 <span className="material-symbols-outlined text-sm">campaign</span> Bulletin Board
               </h2>
               <div className="space-y-6">
-                <div className="relative pl-6 border-l-2 border-[#137fec]">
+                <div className="relative pl-6 border-l-2 border-[var(--org-btn-primary-bg, #137fec)]">
                   <p className="text-xs font-bold text-slate-900 dark:text-white mb-1 uppercase tracking-wider">Weather Update</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-light">
                     Fields are currently open. In case of lightning, we will transition to the indoor facility.
@@ -466,14 +466,14 @@ export default function Dashboard() {
               <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Support</h2>
               <Link 
                 to="/portal/settings" 
-                className="text-sm font-bold text-slate-900 dark:text-white hover:text-[#137fec] flex items-center justify-between group"
+                className="text-sm font-bold text-slate-900 dark:text-white hover:text-[var(--org-link-color)] flex items-center justify-between group"
               >
                 Contact League Office
                 <span className="material-symbols-outlined text-lg opacity-0 group-hover:opacity-100 transition-opacity">arrow_forward</span>
               </Link>
               <a 
                 href="#" 
-                className="text-sm font-bold text-slate-900 dark:text-white hover:text-[#137fec] flex items-center justify-between group"
+                className="text-sm font-bold text-slate-900 dark:text-white hover:text-[var(--org-link-color)] flex items-center justify-between group"
               >
                 Help & Documentation
                 <span className="material-symbols-outlined text-lg opacity-0 group-hover:opacity-100 transition-opacity">arrow_forward</span>

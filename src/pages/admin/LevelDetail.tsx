@@ -448,7 +448,7 @@ export default function LevelDetail() {
         />
 
         {successMessage && (
-          <Card className="pa-mb-4" style={{ borderLeft: '3px solid var(--pa-success)' }}>
+          <Card className="pa-mb-6" style={{ borderLeft: '3px solid var(--pa-success)' }}>
             <div className="pa-body-m" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)', color: 'var(--pa-n900)' }}>
               {successMessage}
             </div>
@@ -456,7 +456,7 @@ export default function LevelDetail() {
         )}
 
         {actionError && (
-          <Card className="pa-mb-4" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
+          <Card className="pa-mb-6" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
             <div className="pa-body-m pa-text-danger" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
               {actionError}
             </div>
@@ -464,7 +464,7 @@ export default function LevelDetail() {
         )}
 
         {error && (
-          <Card className="pa-mb-4" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
+          <Card className="pa-mb-6" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
             <div className="pa-body-m pa-text-danger" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
               {error}
             </div>
@@ -479,7 +479,7 @@ export default function LevelDetail() {
             overflow: 'hidden',
             position: 'relative',
             background: 'var(--pa-n900)',
-            marginBottom: 'var(--pa-space-5)',
+            marginBottom: 'var(--pa-space-6)',
             border: '1px solid var(--pa-n100)',
           }}
           aria-label="Level hero"
@@ -547,11 +547,11 @@ export default function LevelDetail() {
             className="pa-grid"
             style={{
               gridTemplateColumns: 'minmax(0, 1fr)',
-              gap: 'var(--pa-space-5)',
+              gap: 'var(--pa-space-6)',
             }}
           >
             {/* Action bar */}
-            <Card>
+            <Card className="oa-card">
               <div className="pa-flex pa-justify-between pa-items-center" style={{ gap: 'var(--pa-space-4)' }}>
                 <div className="pa-flex pa-items-center" style={{ gap: 'var(--pa-space-3)' }}>
                   <span
@@ -664,7 +664,7 @@ export default function LevelDetail() {
             </Card>
 
             {/* Level details */}
-            <Card title="Level Information">
+            <Card title="Level Information" className="oa-card">
               <div style={{ display: 'grid', gap: 'var(--pa-space-4)' }}>
                 <div>
                   <div className="pa-overline" style={{ color: 'var(--pa-n500)', marginBottom: 'var(--pa-space-1)' }}>
@@ -706,6 +706,7 @@ export default function LevelDetail() {
             {/* Teams table */}
             <Card
               title="Teams in This Level"
+              className="oa-card oa-card--no-padding"
               actions={
                 <Button
                   variant="ghost"
@@ -748,12 +749,12 @@ export default function LevelDetail() {
             className="pa-grid"
             style={{
               gridTemplateColumns: 'minmax(0, 1fr)',
-              gap: 'var(--pa-space-5)',
+              gap: 'var(--pa-space-6)',
             }}
           >
             {/* Totals */}
             <Card
-              className="pa-card"
+              className="oa-card"
               style={{
                 background: 'var(--pa-theme-action-primary)',
                 color: 'var(--pa-theme-text-on-action)',

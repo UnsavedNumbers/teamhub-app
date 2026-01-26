@@ -391,7 +391,7 @@ export default function TeamDetail() {
 
   // Get primary color for court texture and accents
   // Use CSS variable with fallback to ensure it works even if theme not loaded
-  const primaryColor = 'var(--pa-theme-action-primary, #137fec)'
+  const primaryColor = 'var(--pa-theme-action-primary, var(--org-btn-primary-bg, #137fec))'
 
   return (
     <div className="pa-root">
@@ -743,11 +743,11 @@ export default function TeamDetail() {
               </div>
 
               {rosterLoading ? (
-                <div className="pa-card">
+                <div className="oa-card">
                   <div className="pa-skeleton" style={{ height: '200px' }} />
                 </div>
               ) : roster.length === 0 ? (
-                <div className="pa-card">
+                <div className="oa-card">
                   <EmptyRosterState
                     teamId={teamId || ''}
                     seasonId={activeSeason?.id || null}
@@ -757,14 +757,7 @@ export default function TeamDetail() {
                 </div>
               ) : (
                 <div
-                  style={{
-                    overflow: 'hidden',
-                    borderRadius: 'var(--pa-radius-l)',
-                    border: '1px solid var(--pa-n200)',
-                    background: 'var(--pa-white)',
-                    boxShadow: 'var(--pa-shadow-1)',
-                  }}
-                  className="dark:border-slate-700 dark:bg-slate-900"
+                  className="oa-card oa-card--no-padding"
                 >
                   <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
                     <thead>
