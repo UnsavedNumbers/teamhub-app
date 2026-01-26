@@ -189,7 +189,12 @@ export default function Messages() {
       fetchMessagesData()
       // Subscribe to realtime messages
       const subscription = subscribeToMessages(selectedTeam, (incomingMsg) => {
-          setMessages(prev => [...prev, incomingMsg])
+          setMessages(prev => {
+            // Prevent duplicates by checking if message ID already exists
+            const exists = prev.some(m => m.id === incomingMsg.id)
+            if (exists) return prev
+            return [...prev, incomingMsg]
+          })
       })
       return () => {
           subscription.unsubscribe()
@@ -202,7 +207,11 @@ export default function Messages() {
   }, [messages])
 
   async function handleSendMessage() {
-    if (!newMessage.trim() || !selectedTeam || !user || sending) return
+    if (!user) {
+      showError('You must be logged in to send messages')
+      return
+    }
+    if (!newMessage.trim() || !selectedTeam || sending) return
     
     const messageContent = newMessage.trim()
     setSending(true)
@@ -319,9 +328,13 @@ export default function Messages() {
                 teams.map((team) => (
                   <button
                     key={team.id}
-                    onClick={() => setSelectedTeam(team.id)}
-                    disabled={fetchingTeams}
-                    className={`w-full text-left px-3 py-2 rounded mb-1 transition-colors font-bold disabled:opacity-50 ${
+                    onClick={() => {
+                      if (selectedTeam !== team.id) {
+                        setSelectedTeam(team.id)
+                      }
+                    }}
+                    disabled={fetchingTeams || fetchingAnnouncements || fetchingMessages}
+                    className={`w-full text-left px-3 py-2 rounded mb-1 transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed ${
                       selectedTeam === team.id
                         ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-link-color)] dark:text-[var(--org-link-color)]'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
@@ -335,7 +348,12 @@ export default function Messages() {
 
             {canCreateAnnouncements && (
                 <div className="p-3 border-t border-slate-100 dark:border-slate-800">
-                <Button variant="primary" className="w-full" onClick={() => setIsCreateModalOpen(true)}>
+                <Button 
+                  variant="primary" 
+                  className="w-full" 
+                  onClick={() => setIsCreateModalOpen(true)}
+                  disabled={fetchingTeams || !teams.length}
+                >
                     <Icon name="campaign" size="text-sm" className="mr-2" />
                     New Announcement
                 </Button>
@@ -359,8 +377,13 @@ export default function Messages() {
                     <CardTitle className="text-lg">{teams.find(t => t.id === selectedTeam)?.name}</CardTitle>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => setTab('announcements')}
-                        className={`px-4 py-1.5 rounded text-sm font-bold uppercase tracking-widest transition-colors ${
+                        onClick={() => {
+                          if (tab !== 'announcements') {
+                            setTab('announcements')
+                          }
+                        }}
+                        disabled={fetchingAnnouncements || fetchingMessages}
+                        className={`px-4 py-1.5 rounded text-sm font-bold uppercase tracking-widest transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                           tab === 'announcements'
                             ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-link-color)]'
                             : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -369,8 +392,13 @@ export default function Messages() {
                         Announcements
                       </button>
                       <button
-                        onClick={() => setTab('chat')}
-                        className={`px-4 py-1.5 rounded text-sm font-bold uppercase tracking-widest transition-colors ${
+                        onClick={() => {
+                          if (tab !== 'chat') {
+                            setTab('chat')
+                          }
+                        }}
+                        disabled={fetchingAnnouncements || fetchingMessages}
+                        className={`px-4 py-1.5 rounded text-sm font-bold uppercase tracking-widest transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                           tab === 'chat'
                             ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-link-color)]'
                             : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -489,7 +517,8 @@ export default function Messages() {
                           <button
                             key={reply.text}
                             onClick={() => setNewMessage(reply.text)}
-                            className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-1 transition-colors"
+                            disabled={sending || fetchingMessages}
+                            className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <Icon name={reply.icon} size="text-sm" />
                             {reply.text}
