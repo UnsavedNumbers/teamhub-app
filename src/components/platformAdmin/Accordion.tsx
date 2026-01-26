@@ -6,6 +6,7 @@
 
 import { useState, type ReactNode } from 'react'
 import { Badge } from './Badge'
+import { cn } from '../../utils/cn'
 
 interface AccordionItemProps {
   title: string
@@ -23,10 +24,10 @@ export function AccordionItem({ title, children, defaultExpanded = false, count 
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
 
   return (
-    <div className="pa-card" style={{ padding: 0, marginBottom: 'var(--pa-space-2)' }}>
+    <div className={cn('pa-card', 'pa-mb-2')} style={{ padding: 0 }}>
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="pa-flex pa-items-center pa-justify-between"
+        className={cn('pa-flex', 'pa-items-center', 'pa-justify-between')}
         style={{
           width: '100%',
           padding: 'var(--pa-space-4) var(--pa-space-5)',
@@ -37,7 +38,7 @@ export function AccordionItem({ title, children, defaultExpanded = false, count 
           borderBottom: isExpanded ? '1px solid var(--pa-n100)' : 'none',
         }}
       >
-        <div className="pa-flex pa-items-center pa-gap-3" style={{ flex: 1 }}>
+        <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-3', 'pa-flex-1')}>
           <span
             className="material-symbols-outlined"
             style={{
@@ -90,10 +91,10 @@ export function Accordion({ items, allowMultiple = true }: AccordionProps) {
       {items.map((item, index) => {
         const isExpanded = expandedItems.has(index)
         return (
-          <div key={index} className="pa-card" style={{ padding: 0, marginBottom: 'var(--pa-space-2)' }}>
+          <div key={index} className={cn('pa-card', 'pa-mb-2')} style={{ padding: 0 }}>
             <button
               onClick={() => toggleItem(index)}
-              className="pa-flex pa-items-center pa-justify-between"
+              className={cn('pa-flex', 'pa-items-center', 'pa-justify-between')}
               style={{
                 width: '100%',
                 padding: 'var(--pa-space-4) var(--pa-space-5)',
@@ -104,7 +105,7 @@ export function Accordion({ items, allowMultiple = true }: AccordionProps) {
                 borderBottom: isExpanded ? '1px solid var(--pa-n100)' : 'none',
               }}
             >
-              <div className="pa-flex pa-items-center pa-gap-3" style={{ flex: 1 }}>
+              <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-3', 'pa-flex-1')}>
                 <span
                   className="material-symbols-outlined"
                   style={{
@@ -116,9 +117,9 @@ export function Accordion({ items, allowMultiple = true }: AccordionProps) {
                 >
                   expand_more
                 </span>
-                <span className="pa-body-m" style={{ fontWeight: 600, flex: 1 }}>{item.title}</span>
+                <span className={cn('pa-body-m', 'pa-flex-1')} style={{ fontWeight: 600 }}>{item.title}</span>
                 {item.count !== undefined && (
-                  <div className="pa-flex pa-items-center pa-gap-2" style={{ marginLeft: 'var(--pa-space-3)' }}>
+                  <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-2')} style={{ marginLeft: 'var(--pa-space-3)' }}>
                     <span 
                       className="pa-body-s" 
                       style={{ 
@@ -143,7 +144,7 @@ export function Accordion({ items, allowMultiple = true }: AccordionProps) {
             )}
           </div>
         )
-      }      )}
+      })}
     </div>
   )
 }

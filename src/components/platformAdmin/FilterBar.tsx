@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { DatePicker } from './DatePicker'
+import { cn } from '../../utils/cn'
 
 interface FilterOption {
   value: string
@@ -102,7 +103,14 @@ export default function FilterBar({
 
   return (
     <div className="pa-mb-4">
-      <div className="pa-flex pa-gap-3" style={{ flexWrap: 'wrap', alignItems: 'flex-end' }}>
+      <div 
+        className={cn(
+          'pa-flex',
+          'pa-gap-3',
+          'pa-flex-wrap'
+        )} 
+        style={{ alignItems: 'flex-end' }}
+      >
         {/* Search Input */}
         <div style={{ minWidth: '250px', flex: 1, maxWidth: '400px' }}>
           <div className="pa-form-group" style={{ marginBottom: 0 }}>
@@ -224,7 +232,7 @@ export default function FilterBar({
       
       {/* Active Filter Chips */}
       {activeFilters.length > 0 && (
-        <div className="pa-flex pa-gap-2 pa-mt-3" style={{ flexWrap: 'wrap' }}>
+        <div className={cn('pa-flex', 'pa-gap-2', 'pa-mt-3', 'pa-flex-wrap')}>
           {activeFilters.map((filter) => (
             <div
               key={filter.key}

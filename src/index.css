@@ -169,6 +169,8 @@ body {
   /* IMPORTANT: portal-only card style. Admin uses Bootstrap `.card` from Material Dashboard. */
   body:not(.md-admin-root) .card {
     @apply bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6 shadow-xl;
+    border-radius: 16px;
+    /* Explicitly enforce 16px */
   }
 
   body:not(.md-admin-root) .link {

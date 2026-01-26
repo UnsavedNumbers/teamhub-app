@@ -136,9 +136,16 @@ html.dark {
 :root {
     --pa-radius-xs: 6px;
     --pa-radius-s: 10px;
-    --pa-radius-m: 14px;
+    --pa-radius-m: 16px;
     --pa-radius-l: 18px;
     --pa-radius-pill: 999px;
+}
+
+/* =====================================================================
+   3.1) SPACING UTILITIES
+   ===================================================================== */
+.pa-mb-6 {
+    margin-bottom: var(--pa-space-6);
 }
 
 /* =====================================================================
@@ -1200,7 +1207,7 @@ html.dark .pa-user-avatar {
     height: 44px;
     padding: 0 var(--pa-space-5);
     border: none;
-    border-radius: var(--pa-radius-s);
+    border-radius: var(--pa-radius-pill);
 
     @media (max-width: 768px) {
         height: 48px;
@@ -1528,6 +1535,7 @@ html.dark .pa-card-actions .pa-btn--danger {
     display: flex;
     flex-direction: column;
     gap: 0;
+    overflow: hidden;
 }
 
 /* Stacked list row - each row is part of a single container */

@@ -287,7 +287,7 @@ export default function TeamsManagement() {
       <div className="max-w-7xl mx-auto p-8 animate-pulse">
         <div className="h-8 bg-slate-200 rounded w-1/4 mb-4"></div>
         <div className="h-4 bg-slate-100 rounded w-1/3 mb-12"></div>
-        <div className="h-40 bg-slate-100 rounded-xl mb-8"></div>
+        <div className="h-40 bg-slate-100 rounded-2xl mb-8"></div>
         <div className="space-y-2">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="h-16 bg-slate-100 rounded-lg"></div>
@@ -311,7 +311,7 @@ export default function TeamsManagement() {
               { label: 'Teams' },
             ]}
           />
-          <div className="bg-white border border-slate-200 rounded-xl p-12 text-center shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-sm">
             <span className="material-symbols-outlined text-5xl text-slate-200 mb-4 block">groups</span>
             <h3 className="text-lg font-bold text-slate-900 mb-2">No programs yet</h3>
             <p className="text-slate-500 mb-6">
@@ -337,7 +337,7 @@ export default function TeamsManagement() {
               { label: 'Teams' },
             ]}
           />
-          <div className="bg-white border border-slate-200 rounded-xl p-12 text-center shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-sm">
             <span className="material-symbols-outlined text-5xl text-slate-200 mb-4 block">groups</span>
             <h3 className="text-lg font-bold text-slate-900 mb-2">No levels yet</h3>
             <p className="text-slate-500 mb-6">You need to create at least one level before you can add teams.</p>
@@ -363,7 +363,7 @@ export default function TeamsManagement() {
       />
 
       {error && (
-        <div className="p-4 mb-6 bg-red-50 text-red-700 rounded-xl border border-red-100 flex items-center justify-between">
+        <div className="p-4 mb-6 bg-red-50 text-red-700 rounded-2xl border border-red-100 flex items-center justify-between">
           <div>
             <div className="font-medium">{error}</div>
             <button
@@ -415,7 +415,7 @@ export default function TeamsManagement() {
       )}
 
       {/* Filter Bar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 shadow-sm">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 mb-8 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
           {/* Row 1 */}
           <div>
@@ -518,7 +518,7 @@ export default function TeamsManagement() {
       </div>
 
       {/* Teams List */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
         {filteredTeams.length === 0 ? (
           <div className="p-12">
             <EmptyState

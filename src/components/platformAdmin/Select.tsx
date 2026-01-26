@@ -1,4 +1,5 @@
 import type { SelectHTMLAttributes } from 'react'
+import { cn } from '../../utils/cn'
 
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   /** Select label */
@@ -33,13 +34,13 @@ export function Select({
   return (
     <div className="pa-form-group" style={style}>
       {label && (
-        <label className={`pa-label ${required ? 'pa-label--required' : ''}`}>
+        <label className={cn('pa-label', required && 'pa-label--required')}>
           {label}
         </label>
       )}
       
       <select
-        className={`pa-input pa-select ${hasError ? 'pa-input--error' : ''} ${className}`.trim()}
+        className={cn('pa-input', 'pa-select', hasError && 'pa-input--error', className)}
         {...props}
       >
         {options.map((option, index) => (
@@ -50,7 +51,7 @@ export function Select({
       </select>
       
       {(helper || error) && (
-        <div className={`pa-helper ${hasError ? 'pa-helper--error' : ''}`}>
+        <div className={cn('pa-helper', hasError && 'pa-helper--error')}>
           {error || helper}
         </div>
       )}

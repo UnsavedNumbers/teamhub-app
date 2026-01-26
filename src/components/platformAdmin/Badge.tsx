@@ -1,4 +1,5 @@
 import type { HTMLAttributes, ReactNode } from 'react'
+import { cn } from '../../utils/cn'
 
 type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'error'
 
@@ -33,7 +34,7 @@ export function Badge({
 }: BadgeProps) {
   const sizeClass = size === 'small' ? 'pa-badge--small' : size === 'large' ? 'pa-badge--large' : ''
   return (
-    <span className={`pa-badge pa-badge--${variant} ${sizeClass} ${className}`.trim()} {...attrs}>
+    <span className={cn(`pa-badge pa-badge--${variant}`, sizeClass, className)} {...attrs}>
       {icon && (
         <span className="material-symbols-outlined" style={{ fontSize: '12px' }}>
           {icon}

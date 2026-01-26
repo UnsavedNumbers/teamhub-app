@@ -27,6 +27,7 @@ export interface Athlete {
     created_at: string
     updated_at: string
     deleted_at: string | null
+    has_active_guardian?: boolean  // True if athlete has at least one active guardian with valid auth account
     sports?: Array<{
         sport_id: string
         sport_name: string

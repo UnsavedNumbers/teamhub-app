@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { AdminPageHeader, PlatformDataTable, Button } from '../../components/platformAdmin'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
@@ -8,15 +8,22 @@ import { getAthletes } from '../../data/services/familyService'
 import { useT } from '../../i18n/useI18n'
 import type { Child } from '../../types/family'
 import { getLink } from '../../utils/routes'
+import { calculateAge } from '../../utils/athleteHelpers'
+import { supabase } from '../../lib/supabase'
 
-type SortColumn = 'first_name' | 'date_of_birth' | ''
+type SortColumn = 'first_name' | 'date_of_birth' | 'has_active_guardian' | ''
 type SortOrder = 'asc' | 'desc'
+
+interface AthleteWithDetails extends Omit<Child, 'sports'> {
+  sports?: Array<{ sport_id: string; sport_name: string; sport_type?: 'plays' | 'interested' }>
+  teams?: Array<{ team_id: string; team_name: string }>
+}
 
 export default function AdminChildren() {
   const navigate = useNavigate()
   const { context, isReady } = useUserContext()
   const t = useT()
-  const [children, setChildren] = useState<Child[]>([])
+  const [children, setChildren] = useState<AthleteWithDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
   const [sortColumn, setSortColumn] = useState<SortColumn>('')
@@ -24,7 +31,7 @@ export default function AdminChildren() {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(25)
 
-  // Fetch athletes data
+  // Fetch athletes data with sports and teams
   const fetchAthletes = useCallback(async () => {
     if (!isReady) return
 
@@ -32,14 +39,89 @@ export default function AdminChildren() {
     setError(null)
 
     try {
-      const { data, error: fetchError } = await getAthletes(context)
+      const { data: athletesData, error: fetchError } = await getAthletes(context)
       if (fetchError) {
         setError(fetchError)
         setChildren([])
-      } else {
-        setChildren(data || [])
-        setError(null)
+        setLoading(false)
+        return
       }
+
+      if (!athletesData || athletesData.length === 0) {
+        setChildren([])
+        setLoading(false)
+        return
+      }
+
+      const athleteIds = athletesData.map(a => a.id)
+
+      // Fetch sports for all athletes in batch
+      const { data: sportsData } = await supabase
+        .from('athlete_sports')
+        .select(`
+          athlete_id,
+          sport_id,
+          sport:sports(id, name)
+        `)
+        .in('athlete_id', athleteIds)
+        .eq('org_id', context.orgId)
+        .eq('sport_type', 'plays') // Only show sports they play, not interested
+
+      // Fetch team memberships for all athletes in batch
+      const { data: teamsData } = await supabase
+        .from('team_memberships')
+        .select(`
+          athlete_id,
+          team_id,
+          teams!inner(id, name, org_id)
+        `)
+        .in('athlete_id', athleteIds)
+        .eq('status', 'active')
+
+      // Group sports and teams by athlete_id
+      const sportsMap = new Map<string, Array<{ sport_id: string; sport_name: string }>>()
+      const teamsMap = new Map<string, Array<{ team_id: string; team_name: string }>>()
+
+      if (sportsData) {
+        sportsData.forEach((row: any) => {
+          const athleteId = row.athlete_id
+          if (!sportsMap.has(athleteId)) {
+            sportsMap.set(athleteId, [])
+          }
+          if (row.sport) {
+            sportsMap.get(athleteId)!.push({
+              sport_id: row.sport.id,
+              sport_name: row.sport.name
+            })
+          }
+        })
+      }
+
+      if (teamsData) {
+        teamsData.forEach((row: any) => {
+          // Only include teams from the current organization
+          if (row.teams && row.teams.org_id === context.orgId) {
+            const athleteId = row.athlete_id
+            if (!teamsMap.has(athleteId)) {
+              teamsMap.set(athleteId, [])
+            }
+            teamsMap.get(athleteId)!.push({
+              team_id: row.teams.id,
+              team_name: row.teams.name
+            })
+          }
+        })
+      }
+
+      // Combine athlete data with sports and teams
+      const athletesWithDetails: AthleteWithDetails[] = athletesData.map(athlete => ({
+        ...athlete,
+        sports: sportsMap.get(athlete.id) || [],
+        teams: teamsMap.get(athlete.id) || []
+      }))
+
+      setChildren(athletesWithDetails)
+      setError(null)
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to load athletes')
       setError(error)
@@ -125,8 +207,8 @@ export default function AdminChildren() {
     setPage(0) // Reset to first page
   }, [])
 
-  // Handle row click - navigate to athlete detail if available, otherwise to family
-  const handleRowClick = useCallback((child: Child) => {
+  // Handle row click - navigate to athlete detail
+  const handleRowClick = useCallback((child: AthleteWithDetails) => {
     if (!child?.id) {
       console.warn('[AdminChildren] Cannot navigate: athlete missing ID', child)
       return
@@ -144,17 +226,23 @@ export default function AdminChildren() {
     }
   }, [navigate])
 
-  // Handle "View Family" link click
-  const handleViewFamily = useCallback((e: React.MouseEvent, familyId: string | null | undefined) => {
+  // Handle sport link click
+  const handleSportClick = useCallback((e: React.MouseEvent, sportId: string) => {
     e.stopPropagation()
-    if (!familyId) {
-      console.warn('[AdminChildren] Cannot view family: missing family_id')
-      return
-    }
     try {
-      navigate(getLink('admin.guardians.detail', { id: familyId }))
+      navigate(getLink('admin.sports.detail', { id: sportId }))
     } catch (err) {
-      console.error('[AdminChildren] Navigation error to family:', err)
+      console.error('[AdminChildren] Navigation error to sport:', err)
+    }
+  }, [navigate])
+
+  // Handle team link click
+  const handleTeamClick = useCallback((e: React.MouseEvent, teamId: string) => {
+    e.stopPropagation()
+    try {
+      navigate(getLink('admin.teams.detail', { id: teamId }))
+    } catch (err) {
+      console.error('[AdminChildren] Navigation error to team:', err)
     }
   }, [navigate])
 
@@ -186,37 +274,100 @@ export default function AdminChildren() {
       render: (c) => <span className="pa-text-primary" style={{ fontWeight: 600 }}>{c?.first_name} {c?.last_name}</span>
     },
     {
-      id: 'date_of_birth',
-      label: 'DOB',
+      id: 'has_active_guardian',
+      label: 'Guardian',
       sortable: true,
-      render: (c) => c?.date_of_birth ? new Date(c.date_of_birth).toLocaleDateString() : '-'
+      render: (c) => {
+        const hasActive = c?.has_active_guardian ?? false
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}>
+            <span 
+              className="material-symbols-outlined" 
+              style={{ 
+                fontSize: '18px',
+                color: hasActive ? 'var(--pa-success, #10b981)' : 'var(--pa-n400, #9aa5b1)',
+                opacity: hasActive ? 1 : 0.6
+              }}
+              title={hasActive ? 'Has active guardian' : 'No active guardian'}
+            >
+              {hasActive ? 'check_circle' : 'cancel'}
+            </span>
+            <span 
+              className="pa-body-s" 
+              style={{ 
+                color: hasActive ? 'var(--pa-n700, #2b343d)' : 'var(--pa-n500, #7a8794)'
+              }}
+            >
+              {hasActive ? 'Connected' : 'Not connected'}
+            </span>
+          </div>
+        )
+      }
     },
     {
-      id: 'family_id',
-      label: 'Family',
-      render: (c) => (
-        c?.family_id ? (
-          <span 
-            className="pa-link"
-            onClick={(e) => handleViewFamily(e, c.family_id)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                handleViewFamily(e as any, c.family_id)
-              }
-            }}
-            aria-label={`View family for ${c.first_name} ${c.last_name}`}
-          >
-            View Family
-          </span>
-        ) : (
-          <span className="pa-text-muted">—</span>
+      id: 'date_of_birth',
+      label: 'Age',
+      sortable: true,
+      render: (c) => {
+        const age = calculateAge(c?.date_of_birth || null)
+        return age !== null ? `${age}` : '-'
+      }
+    },
+    {
+      id: 'sports',
+      label: 'Sports',
+      render: (c) => {
+        const sports = c?.sports || []
+        if (sports.length === 0) {
+          return <span className="pa-text-muted">—</span>
+        }
+        return (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--pa-space-1)', alignItems: 'center' }}>
+            {sports.map((sport, idx) => (
+              <span key={sport.sport_id}>
+                <Link
+                  to={getLink('admin.sports.detail', { id: sport.sport_id })}
+                  className="pa-link"
+                  onClick={(e) => handleSportClick(e, sport.sport_id)}
+                  style={{ fontSize: 'var(--pa-font-size-s)' }}
+                >
+                  {sport.sport_name}
+                </Link>
+                {idx < sports.length - 1 && <span style={{ marginLeft: 'var(--pa-space-1)' }}>,</span>}
+              </span>
+            ))}
+          </div>
         )
-      )
+      }
+    },
+    {
+      id: 'teams',
+      label: 'Teams',
+      render: (c) => {
+        const teams = c?.teams || []
+        if (teams.length === 0) {
+          return <span className="pa-text-muted">—</span>
+        }
+        return (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--pa-space-1)', alignItems: 'center' }}>
+            {teams.map((team: { team_id: string; team_name: string }, idx: number) => (
+              <span key={team.team_id}>
+                <Link
+                  to={getLink('admin.teams.detail', { id: team.team_id })}
+                  className="pa-link"
+                  onClick={(e) => handleTeamClick(e, team.team_id)}
+                  style={{ fontSize: 'var(--pa-font-size-s)' }}
+                >
+                  {team.team_name}
+                </Link>
+                {idx < teams.length - 1 && <span style={{ marginLeft: 'var(--pa-space-1)' }}>,</span>}
+              </span>
+            ))}
+          </div>
+        )
+      }
     }
-  ], [handleViewFamily])
+  ], [handleSportClick, handleTeamClick])
 
   if (!isReady) return <AdminLoadingSpinner />
 

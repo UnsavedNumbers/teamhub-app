@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { Badge, Card, ConfirmDialog, AddRoleModal, ChangeRoleModal, ManagePlatformAdminModal } from '../../components/platformAdmin'
+import { Badge, Card } from '../../components/platformAdmin'
 import { canPerformAction } from '../../utils/platformAdminPermissions'
 import { getDisplayEmail } from '../../utils/platformAdminMasking'
 import { isRpcSuccessResponse } from '../../utils/typeAdapters'
 import { isValidUUID } from '../../utils/uuid'
 import { useAuth } from '../../hooks/useAuth'
 import { useT } from '../../i18n/useI18n'
-import { normalizeAdminUser, formatDate, formatDateTime, formatRelativeTime, getUserOrganizations } from '../../utils/userDataHelpers'
+import { normalizeAdminUser, getUserOrganizations } from '../../utils/userDataHelpers'
 import type { AdminUser, AdminRpcResponse, PlatformAdminRole, AdminUserOrganization } from '../../types/platformAdmin.types'
 import { showSuccess } from '../../utils/toast'
 import { cn } from '../../utils/cn'
@@ -378,7 +378,7 @@ export default function UserDetail() {
     }
   }, [user?.family_id, fetchFamilyInfo])
 
-  const handleConfirmAction = async (reason: string) => {
+  const _handleConfirmAction = async (reason: string) => {
     if (!user || !user.id) return
 
     // Validate user ID
@@ -447,7 +447,7 @@ export default function UserDetail() {
   }
 
   // Role management handlers
-  const handleAddRole = async (orgId: string, role: 'parent' | 'coach' | 'org_admin', reason: string) => {
+  const _handleAddRole = async (orgId: string, role: 'parent' | 'coach' | 'org_admin', reason: string) => {
     if (!user?.id || !isValidUUID(user.id) || !isValidUUID(orgId)) {
       setDialogError(t('errors.invalidUserId'))
       return
@@ -485,7 +485,7 @@ export default function UserDetail() {
     }
   }
 
-  const handleRemoveRole = async (org: AdminUserOrganization, reason: string) => {
+  const _handleRemoveRole = async (org: AdminUserOrganization, reason: string) => {
     if (!user?.id || !isValidUUID(user.id) || !isValidUUID(org.org_id)) {
       setDialogError(t('errors.invalidUserId'))
       return
@@ -523,7 +523,7 @@ export default function UserDetail() {
     }
   }
 
-  const handleChangeRole = async (orgId: string, oldRole: 'parent' | 'coach' | 'org_admin', newRole: 'parent' | 'coach' | 'org_admin', reason: string) => {
+  const _handleChangeRole = async (orgId: string, oldRole: 'parent' | 'coach' | 'org_admin', newRole: 'parent' | 'coach' | 'org_admin', reason: string) => {
     if (!user?.id || !isValidUUID(user.id) || !isValidUUID(orgId)) {
       setDialogError(t('errors.invalidUserId'))
       return
@@ -563,7 +563,7 @@ export default function UserDetail() {
   }
 
   // Platform admin management handlers
-  const handleAddPlatformAdmin = async (role: PlatformAdminRole, reason: string) => {
+  const _handleAddPlatformAdmin = async (role: PlatformAdminRole, reason: string) => {
     if (!user?.email) {
       setDialogError(t('errors.userNotFound'))
       return
@@ -601,7 +601,7 @@ export default function UserDetail() {
     }
   }
 
-  const handleRemovePlatformAdmin = async (reason: string) => {
+  const _handleRemovePlatformAdmin = async (reason: string) => {
     if (!user?.id || !isValidUUID(user.id)) {
       setDialogError(t('errors.invalidUserId'))
       return
@@ -715,7 +715,7 @@ export default function UserDetail() {
     )
   }
 
-  const getDialogTitle = () => {
+  const _getDialogTitle = () => {
     switch (confirmDialog.type) {
       case 'enable': 
         return t('admin.userDetail.enableUser')
@@ -730,7 +730,7 @@ export default function UserDetail() {
     }
   }
 
-  const getDialogDescription = () => {
+  const _getDialogDescription = () => {
     const email = user.email || 'this user'
     switch (confirmDialog.type) {
       case 'enable': 
@@ -746,9 +746,9 @@ export default function UserDetail() {
     }
   }
 
-  const organizations = getUserOrganizations(user)
-  const canManageRoles = adminRole && canPerformAction(adminRole, 'disable_user') // Using disable_user as proxy for role management
-  const canManagePlatformAdmins = adminRole === 'super_admin'
+  const _organizations = getUserOrganizations(user)
+  const _canManageRoles = adminRole && canPerformAction(adminRole, 'disable_user') // Using disable_user as proxy for role management
+  const _canManagePlatformAdmins = adminRole === 'super_admin'
 
   return (
     <div>

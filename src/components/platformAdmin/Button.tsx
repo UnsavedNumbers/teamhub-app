@@ -1,4 +1,5 @@
 import type { ComponentPropsWithoutRef, ElementType, ReactNode } from 'react'
+import { cn } from '../../utils/cn'
 
 type ButtonVariant = 'primary' | 'blue' | 'volt' | 'secondary' | 'ghost' | 'danger' | 'text'
 type ButtonSize = 'default' | 'compact' | 'dense' | 'small'
@@ -51,7 +52,7 @@ export function Button<E extends ElementType = 'button'>({
   const variantClass = `pa-btn--${variant}`
   const Tag = as ?? 'button'
 
-  const classNames = `pa-btn ${variantClass} ${sizeClass} ${className}`.trim()
+  const classNames = cn('pa-btn', variantClass, sizeClass, className)
   const componentProps = {
     ...rest,
     className: classNames,
@@ -77,13 +78,13 @@ export function Button<E extends ElementType = 'button'>({
           }}
         />
       ) : icon ? (
-        <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+        <span className={cn('material-symbols-outlined', 'pa-icon-sm')}>
           {icon}
         </span>
       ) : null}
       {children}
       {iconRight && !loading && (
-        <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+        <span className={cn('material-symbols-outlined', 'pa-icon-sm')}>
           {iconRight}
         </span>
       )}

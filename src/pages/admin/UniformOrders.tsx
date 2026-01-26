@@ -15,6 +15,7 @@ import {
   type ColumnConfig 
 } from '../../components/platformAdmin'
 import { getLink } from '../../utils/routes'
+import { cn } from '../../utils/cn'
 
 export default function UniformOrders() {
   const [submissions, setSubmissions] = useState<UniformSubmission[]>([])
@@ -105,8 +106,8 @@ export default function UniformOrders() {
       <div className="pa-root">
         <AdminPageHeader title="Uniforms" actions={null} />
         <Card>
-          <div className="p-6 text-center">
-            <p className="text-red-600 mb-4">{t('admin.uniforms.prerequisite.loadError', { message: sportsError.message })}</p>
+          <div className="pa-p-8 pa-text-center">
+            <p className="pa-text-danger pa-mb-4">{t('admin.uniforms.prerequisite.loadError', { message: sportsError.message })}</p>
             <Button onClick={refetchSports} variant="primary">
               {t('admin.uniforms.prerequisite.retry')}
             </Button>
@@ -122,16 +123,17 @@ export default function UniformOrders() {
     return (
       <div className="pa-root">
         <AdminPageHeader title="Uniforms" actions={null} />
-        <div className="bg-white border border-slate-200 rounded-xl p-12 text-center shadow-sm">
-          <span className="material-symbols-outlined text-5xl text-slate-200 mb-4 block">checkroom</span>
-          <h3 className="text-lg font-bold text-slate-900 mb-2">{t('admin.uniforms.prerequisite.noSportsTitle')}</h3>
-          <p className="text-slate-500 mb-6">
-            {t('admin.uniforms.prerequisite.noSportsDescription')}
-          </p>
-          <Link to={`${getLink('admin.organization.forms')}?type=sport&returnUrl=${returnUrl}`}>
-            <Button variant="primary">{t('admin.uniforms.prerequisite.addSport')}</Button>
-          </Link>
-        </div>
+        <Card>
+          <EmptyState
+            icon="checkroom"
+            title={t('admin.uniforms.prerequisite.noSportsTitle')}
+            description={t('admin.uniforms.prerequisite.noSportsDescription')}
+          >
+            <Link to={`${getLink('admin.organization.forms')}?type=sport&returnUrl=${returnUrl}`}>
+              <Button variant="primary">{t('admin.uniforms.prerequisite.addSport')}</Button>
+            </Link>
+          </EmptyState>
+        </Card>
       </div>
     )
   }

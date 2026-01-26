@@ -330,7 +330,7 @@ export default function AthleteDetail() {
     setLinkGuardianError(null)
 
     try {
-      const { data, error } = await linkGuardianToAthlete(
+      const { error } = await linkGuardianToAthlete(
         athleteId,
         guardianEmail,
         context.orgId,
@@ -1035,6 +1035,36 @@ export default function AthleteDetail() {
 
           <TabsContent value="overview">
             <div style={{ display: 'grid', gap: 'var(--pa-space-6)' }}>
+              {/* Guardian Status Banner */}
+              {athlete && (
+                <Card style={{ 
+                  background: athlete.has_active_guardian 
+                    ? 'var(--pa-n50, #f5f6f7)' 
+                    : 'var(--pa-n25, #fafafa)', 
+                  border: `1px solid ${athlete.has_active_guardian ? 'var(--pa-n200, #d8dde3)' : 'var(--pa-n200, #d8dde3)'}`,
+                  padding: 'var(--pa-space-4)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)' }}>
+                    <span 
+                      className="material-symbols-outlined" 
+                      style={{ 
+                        fontSize: '20px',
+                        color: athlete.has_active_guardian 
+                          ? 'var(--pa-success, #10b981)' 
+                          : 'var(--pa-n500, #7a8794)'
+                      }}
+                    >
+                      {athlete.has_active_guardian ? 'check_circle' : 'info'}
+                    </span>
+                    <p className="pa-body-m" style={{ margin: 0, color: 'var(--pa-n700, #2b343d)' }}>
+                      {athlete.has_active_guardian 
+                        ? 'This athlete has an active guardian account connected.'
+                        : 'This athlete does not have an active guardian account connected.'}
+                    </p>
+                  </div>
+                </Card>
+              )}
+
               {/* Pending Guardian Invites Alert */}
               {pendingInvites.length > 0 && (
                 <Card style={{ 

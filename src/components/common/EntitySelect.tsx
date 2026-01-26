@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, KeyboardEvent } from 'react'
+import { cn } from '../../utils/cn'
 
 export interface EntitySelectOption<T = unknown> {
   id: string
@@ -45,6 +46,8 @@ export interface EntitySelectProps<T = unknown> {
   id?: string
   /** Name for form submission */
   name?: string
+  /** Custom class name for the form group */
+  className?: string
 }
 
 /**
@@ -81,6 +84,7 @@ export function EntitySelect<T = unknown>({
   noResultsText = 'No results found',
   id,
   name,
+  className,
 }: EntitySelectProps<T>) {
   const [query, setQuery] = useState('')
   const [options, setOptions] = useState<EntitySelectOption<T>[]>([])
@@ -374,8 +378,9 @@ export function EntitySelect<T = unknown>({
         style={{
           padding: '12px 16px',
           cursor: 'pointer',
-          background: isHighlighted ? '#f5f5f5' : '#ffffff',
+          background: isHighlighted ? 'var(--pa-n50)' : 'var(--pa-n0)',
           borderBottom: '1px solid var(--pa-n100)',
+          color: 'var(--pa-n900)',
         }}
         className="pa-body-m"
       >
@@ -395,9 +400,9 @@ export function EntitySelect<T = unknown>({
   const hasError = !!error
 
   return (
-    <div className="pa-form-group" ref={containerRef}>
+    <div className={cn("pa-form-group", className)} ref={containerRef}>
       {label && (
-        <label className={`pa-label ${required ? 'pa-label--required' : ''}`} htmlFor={id}>
+        <label className={cn('pa-label', required && 'pa-label--required')} htmlFor={id}>
           {label}
         </label>
       )}
@@ -415,7 +420,7 @@ export function EntitySelect<T = unknown>({
           onBlur={handleInputBlur}
           placeholder={placeholder}
           disabled={disabled}
-          className={`pa-input ${hasError ? 'pa-input--error' : ''}`}
+          className={cn('pa-input', hasError && 'pa-input--error')}
           aria-autocomplete="list"
           aria-expanded={isOpen}
           aria-haspopup="listbox"
@@ -461,7 +466,7 @@ export function EntitySelect<T = unknown>({
               top: '100%',
               left: 0,
               right: 0,
-              background: '#ffffff',
+              background: 'var(--pa-n0)',
               border: '1px solid var(--pa-n100)',
               borderRadius: 'var(--pa-radius-md)',
               marginTop: '4px',
@@ -513,7 +518,7 @@ export function EntitySelect<T = unknown>({
       </div>
 
       {(helper || error) && (
-        <div className={`pa-helper ${error ? 'pa-helper--error' : ''}`}>
+        <div className={cn('pa-helper', error && 'pa-helper--error')}>
           {error || helper}
         </div>
       )}

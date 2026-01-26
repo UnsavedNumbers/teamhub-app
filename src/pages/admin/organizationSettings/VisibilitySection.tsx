@@ -11,8 +11,9 @@ import { z } from 'zod'
 import { useUserContext } from '../../../hooks/useUserContext'
 import { updateVisibilitySettings } from '../../../data/services/organizationSettingsService'
 import type { VisibilitySettings } from '../../../types/organizationSettings'
-import { Button, Checkbox } from '../../../components/platformAdmin'
+import { Button, Checkbox, Card } from '../../../components/platformAdmin'
 import { showSuccess, showError } from '../../../utils/toast'
+import { cn } from '../../../utils/cn'
 
 const ROLES = ['admin', 'coach', 'parent'] as const
 const PERMISSIONS = [
@@ -162,57 +163,59 @@ export default function VisibilitySection({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="pa-flex pa-flex-col pa-gap-6">
       <div>
-        <h3 className="text-lg font-medium text-gray-900 mb-1">Visibility Settings</h3>
-        <p className="text-sm text-gray-500">
+        <h3 className="pa-h3 pa-mb-1">Visibility Settings</h3>
+        <p className="pa-body-m pa-text-muted">
           Configure what each role can view and edit across the organization
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="pa-flex pa-flex-col pa-gap-6">
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
+          <div className="pa-alert pa-alert--danger">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800">
+          <div className="pa-alert pa-alert--success">
             Settings saved successfully!
           </div>
         )}
 
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+        <Card noPadding style={{ overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="pa-table" style={{ width: '100%' }}>
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                <tr>
+                  <th style={{ padding: 'var(--pa-space-4) var(--pa-space-6)', textAlign: 'left', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--pa-n500)' }}>
                     Permission
                   </th>
                   {ROLES.map((role) => (
                     <th
                       key={role}
-                      className="py-4 px-6 text-center text-xs font-bold text-slate-500 uppercase tracking-wider"
+                      style={{ padding: 'var(--pa-space-4) var(--pa-space-6)', textAlign: 'center', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--pa-n500)' }}
                     >
                       {role}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {PERMISSIONS.map((permission) => (
-                  <tr key={permission.key} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-4 px-6 text-sm font-medium text-slate-900">{permission.label}</td>
+                  <tr key={permission.key}>
+                    <td style={{ padding: 'var(--pa-space-4) var(--pa-space-6)', fontWeight: 500 }}>{permission.label}</td>
                     {ROLES.map((role) => (
-                      <td key={role} className="py-4 px-6 text-center">
-                        <Checkbox
-                          checked={rolePermissions?.[role]?.[permission.key] ?? false}
-                          onChange={() => togglePermission(role, permission.key)}
-                          label=""
-                          disabled={role === 'admin'} // Admins always have all permissions
-                        />
+                      <td key={role} style={{ padding: 'var(--pa-space-4) var(--pa-space-6)', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                          <Checkbox
+                            checked={rolePermissions?.[role]?.[permission.key] ?? false}
+                            onChange={() => togglePermission(role, permission.key)}
+                            label=""
+                            disabled={role === 'admin'} // Admins always have all permissions
+                          />
+                        </div>
                       </td>
                     ))}
                   </tr>
@@ -220,20 +223,20 @@ export default function VisibilitySection({
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-800">
+        <div className={cn('pa-p-4', 'pa-rounded-lg')} style={{ background: 'var(--pa-info-bg, #eff6ff)', border: '1px solid var(--pa-info-border, #bfdbfe)' }}>
+          <p className="pa-body-s" style={{ color: 'var(--pa-info-text, #1e40af)' }}>
             <strong>Note:</strong> Administrators always have full permissions and cannot be
             restricted. These settings apply organization-wide and override team-specific
             permissions.
           </p>
         </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t">
+        <div className={cn('pa-flex', 'pa-justify-end', 'pa-gap-3', 'pa-pt-4')} style={{ borderTop: '1px solid var(--pa-n100)' }}>
           <Button
             type="button"
-            variant="blue"
+            variant="secondary"
             onClick={() => reset()}
             disabled={!isDirty || isSaving}
           >
@@ -247,4 +250,3 @@ export default function VisibilitySection({
     </div>
   )
 }
-
