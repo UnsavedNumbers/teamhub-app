@@ -4,18 +4,17 @@
  * View and manage sports linked to the organization.
  */
 
-import { useEffect, useState, useMemo } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOffline } from '../../hooks/useOffline'
 import { USE_FAKE_DATA } from '../../data/config'
 import { getSports, deleteSport } from '../../data/services/sportsService'
 import { getPrograms } from '../../data/services/sportsService'
 import type { Sport } from '../../data/types/organization'
-import { AdminPageHeader, ConfirmDialog, Button, Card, EmptyState, Badge } from '../../components/platformAdmin'
+import { AdminPageHeader, ConfirmDialog, Button, Card, EmptyState } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
-import { cn } from '../../utils/cn'
 
 export default function Sports() {
   const { context, isReady } = useUserContext()
@@ -24,7 +23,6 @@ export default function Sports() {
   const navigate = useNavigate()
 
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [deletingSportId, setDeletingSportId] = useState<string | null>(null)
@@ -46,7 +44,7 @@ export default function Sports() {
 
     const load = async () => {
       setLoading(true)
-      setError(null)
+      setActionError(null)
 
       try {
         const [sportsResult, programsResult] = await Promise.all([
@@ -57,7 +55,7 @@ export default function Sports() {
         setSports(sportsResult.data as Sport[])
         setPrograms(programsResult.data as Array<{ sport_id: string }>)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load data')
+        setActionError(err instanceof Error ? err.message : 'Failed to load data')
       } finally {
         setLoading(false)
       }

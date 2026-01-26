@@ -18,7 +18,7 @@ interface PortalLayoutProps {
 
 export default function PortalLayout({ children, breadcrumbs, forceRole }: PortalLayoutProps) {
   return (
-    <div className="min-h-screen bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-slate-100 antialiased relative">
+    <div className="oa-theme-active min-h-screen bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-slate-100 antialiased relative">
       {/* Background Field Markings (Grid) */}
       <div 
         className="fixed inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.02] z-[-1]"

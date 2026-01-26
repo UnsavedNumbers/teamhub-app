@@ -572,6 +572,11 @@ export default function TeamsManagement() {
         loading={loading}
         onRowClick={(row) => handleTeamClick(row.id)}
         emptyMessage={teams.length === 0 ? 'Start by adding your first team to the organization.' : 'Try adjusting your filters to see more teams.'}
+        page={0}
+        rowsPerPage={filteredTeams.length || 10}
+        totalCount={filteredTeams.length}
+        onPageChange={() => {}}
+        onRowsPerPageChange={() => {}}
       />
 
       <ConfirmDialog

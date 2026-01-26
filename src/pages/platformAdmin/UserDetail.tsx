@@ -4,13 +4,11 @@ import { supabase } from '../../lib/supabase'
 import { Badge, Card } from '../../components/platformAdmin'
 import { canPerformAction } from '../../utils/platformAdminPermissions'
 import { getDisplayEmail } from '../../utils/platformAdminMasking'
-import { isRpcSuccessResponse } from '../../utils/typeAdapters'
 import { isValidUUID } from '../../utils/uuid'
 import { useAuth } from '../../hooks/useAuth'
 import { useT } from '../../i18n/useI18n'
-import { normalizeAdminUser, getUserOrganizations } from '../../utils/userDataHelpers'
-import type { AdminUser, AdminRpcResponse, PlatformAdminRole, AdminUserOrganization } from '../../types/platformAdmin.types'
-import { showSuccess } from '../../utils/toast'
+import { normalizeAdminUser } from '../../utils/userDataHelpers'
+import type { AdminUser, PlatformAdminRole } from '../../types/platformAdmin.types'
 import { cn } from '../../utils/cn'
 
 type ErrorType = 
@@ -60,24 +58,14 @@ export default function UserDetail() {
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<FetchError | null>(null)
   const [platformAdminRole, setPlatformAdminRole] = useState<PlatformAdminRole | null>(null)
-  
-  // Dialog state
-  const [confirmDialog, setConfirmDialog] = useState<{
+  const [, setConfirmDialog] = useState<{
     open: boolean
     type: 'disable' | 'enable' | 'resend' | 'logout'
   }>({ open: false, type: 'disable' })
-  const [_dialogLoading, setDialogLoading] = useState(false)
-  const [_dialogError, setDialogError] = useState<string | null>(null)
   
-  // Role management modals
-  const [_addRoleModal, setAddRoleModal] = useState(false)
-  const [_changeRoleModal, setChangeRoleModal] = useState<{ open: boolean; org: AdminUserOrganization | null }>({ open: false, org: null })
-  const [_removeRoleDialog, setRemoveRoleDialog] = useState<{ open: boolean; org: AdminUserOrganization | null }>({ open: false, org: null })
-  const [_managePlatformAdminModal, setManagePlatformAdminModal] = useState(false)
-  
-  // Family info state
-  const [_familyInfo, setFamilyInfo] = useState<FamilyInfo | null>(null)
-  const [_loadingFamily, setLoadingFamily] = useState(false)
+  // Dialog state
+  const [, setFamilyInfo] = useState<FamilyInfo | null>(null)
+  const [, setLoadingFamily] = useState(false)
   
   // Get admin role from profile
   const adminRole: PlatformAdminRole | null = profile?.platformAdminRole ?? null
@@ -378,266 +366,6 @@ export default function UserDetail() {
     }
   }, [user?.family_id, fetchFamilyInfo])
 
-  const _handleConfirmAction = async (reason: string) => {
-    if (!user || !user.id) return
-
-    // Validate user ID
-    if (!isValidUUID(user.id)) {
-      setDialogError(t('errors.invalidUserId'))
-      return
-    }
-
-    setDialogLoading(true)
-    setDialogError(null)
-
-    try {
-      let rpcName: 'admin_enable_user' | 'admin_disable_user' | 'admin_resend_verification' | 'admin_force_logout'
-      let targetUserId = user.id
-      let errorKey: ErrorType
-
-      switch (confirmDialog.type) {
-        case 'enable':
-          rpcName = 'admin_enable_user'
-          errorKey = 'enable_failed'
-          break
-        case 'disable':
-          rpcName = 'admin_disable_user'
-          errorKey = 'disable_failed'
-          break
-        case 'resend':
-          rpcName = 'admin_resend_verification'
-          errorKey = 'resend_failed'
-          break
-        case 'logout':
-          rpcName = 'admin_force_logout'
-          errorKey = 'logout_failed'
-          break
-        default:
-          return
-      }
-
-      const { data, error } = await supabase.rpc(rpcName as any, { 
-        target_user_id: targetUserId, 
-        reason 
-      })
-
-      if (error) {
-        const errorMessage = error.message || getErrorMessage(errorKey)
-        setDialogError(errorMessage)
-        return
-      }
-
-      if (!isRpcSuccessResponse(data) || !(data as AdminRpcResponse).success) {
-        const errorMessage = (data as AdminRpcResponse)?.error || getErrorMessage(errorKey)
-        setDialogError(errorMessage)
-        return
-      }
-
-      setConfirmDialog({ open: false, type: 'disable' })
-      showSuccess(t('admin.userDetail.actionSuccess'))
-      // Refresh user data to get updated status
-      await fetchUser()
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : getErrorMessage('unknown')
-      setDialogError(errorMessage)
-      console.error('Action error:', err)
-    } finally {
-      setDialogLoading(false)
-    }
-  }
-
-  // Role management handlers
-  const _handleAddRole = async (orgId: string, role: 'parent' | 'coach' | 'org_admin', reason: string) => {
-    if (!user?.id || !isValidUUID(user.id) || !isValidUUID(orgId)) {
-      setDialogError(t('errors.invalidUserId'))
-      return
-    }
-
-    setDialogLoading(true)
-    setDialogError(null)
-
-    try {
-      const { data, error } = await supabase.rpc('admin_add_org_role', {
-        target_user_id: user.id,
-        target_org_id: orgId,
-        target_role: role,
-        reason,
-      })
-
-      if (error) {
-        setDialogError(error.message || t('admin.userDetail.addRoleFailed'))
-        return
-      }
-
-      if (!isRpcSuccessResponse(data) || !(data as AdminRpcResponse).success) {
-        setDialogError((data as AdminRpcResponse)?.error || t('admin.userDetail.addRoleFailed'))
-        return
-      }
-
-      setAddRoleModal(false)
-      showSuccess(t('admin.userDetail.addRoleSuccess'))
-      await fetchUser()
-    } catch (err) {
-      setDialogError(err instanceof Error ? err.message : t('admin.userDetail.addRoleFailed'))
-      console.error('Add role error:', err)
-    } finally {
-      setDialogLoading(false)
-    }
-  }
-
-  const _handleRemoveRole = async (org: AdminUserOrganization, reason: string) => {
-    if (!user?.id || !isValidUUID(user.id) || !isValidUUID(org.org_id)) {
-      setDialogError(t('errors.invalidUserId'))
-      return
-    }
-
-    setDialogLoading(true)
-    setDialogError(null)
-
-    try {
-      const { data, error } = await supabase.rpc('admin_remove_org_role', {
-        target_user_id: user.id,
-        target_org_id: org.org_id,
-        target_role: org.role as 'parent' | 'coach' | 'org_admin',
-        reason,
-      })
-
-      if (error) {
-        setDialogError(error.message || t('admin.userDetail.removeRoleFailed'))
-        return
-      }
-
-      if (!isRpcSuccessResponse(data) || !(data as AdminRpcResponse).success) {
-        setDialogError((data as AdminRpcResponse)?.error || t('admin.userDetail.removeRoleFailed'))
-        return
-      }
-
-      setRemoveRoleDialog({ open: false, org: null })
-      showSuccess(t('admin.userDetail.removeRoleSuccess'))
-      await fetchUser()
-    } catch (err) {
-      setDialogError(err instanceof Error ? err.message : t('admin.userDetail.removeRoleFailed'))
-      console.error('Remove role error:', err)
-    } finally {
-      setDialogLoading(false)
-    }
-  }
-
-  const _handleChangeRole = async (orgId: string, oldRole: 'parent' | 'coach' | 'org_admin', newRole: 'parent' | 'coach' | 'org_admin', reason: string) => {
-    if (!user?.id || !isValidUUID(user.id) || !isValidUUID(orgId)) {
-      setDialogError(t('errors.invalidUserId'))
-      return
-    }
-
-    setDialogLoading(true)
-    setDialogError(null)
-
-    try {
-      const { data, error } = await supabase.rpc('admin_change_org_role', {
-        target_user_id: user.id,
-        target_org_id: orgId,
-        old_role: oldRole,
-        new_role: newRole,
-        reason,
-      })
-
-      if (error) {
-        setDialogError(error.message || t('admin.userDetail.changeRoleFailed'))
-        return
-      }
-
-      if (!isRpcSuccessResponse(data) || !(data as AdminRpcResponse).success) {
-        setDialogError((data as AdminRpcResponse)?.error || t('admin.userDetail.changeRoleFailed'))
-        return
-      }
-
-      setChangeRoleModal({ open: false, org: null })
-      showSuccess(t('admin.userDetail.changeRoleSuccess'))
-      await fetchUser()
-    } catch (err) {
-      setDialogError(err instanceof Error ? err.message : t('admin.userDetail.changeRoleFailed'))
-      console.error('Change role error:', err)
-    } finally {
-      setDialogLoading(false)
-    }
-  }
-
-  // Platform admin management handlers
-  const _handleAddPlatformAdmin = async (role: PlatformAdminRole, reason: string) => {
-    if (!user?.email) {
-      setDialogError(t('errors.userNotFound'))
-      return
-    }
-
-    setDialogLoading(true)
-    setDialogError(null)
-
-    try {
-      const { data, error } = await supabase.rpc('admin_add_platform_admin', {
-        target_email: user.email,
-        target_role: role,
-        reason,
-      })
-
-      if (error) {
-        setDialogError(error.message || t('admin.userDetail.addPlatformAdminFailed'))
-        return
-      }
-
-      if (!isRpcSuccessResponse(data) || !(data as AdminRpcResponse).success) {
-        setDialogError((data as AdminRpcResponse)?.error || t('admin.userDetail.addPlatformAdminFailed'))
-        return
-      }
-
-      setManagePlatformAdminModal(false)
-      showSuccess(t('admin.userDetail.addPlatformAdminSuccess'))
-      await fetchUser()
-      await fetchPlatformAdminRole(user.id!)
-    } catch (err) {
-      setDialogError(err instanceof Error ? err.message : t('admin.userDetail.addPlatformAdminFailed'))
-      console.error('Add platform admin error:', err)
-    } finally {
-      setDialogLoading(false)
-    }
-  }
-
-  const _handleRemovePlatformAdmin = async (reason: string) => {
-    if (!user?.id || !isValidUUID(user.id)) {
-      setDialogError(t('errors.invalidUserId'))
-      return
-    }
-
-    setDialogLoading(true)
-    setDialogError(null)
-
-    try {
-      const { data, error } = await supabase.rpc('admin_remove_platform_admin', {
-        target_user_id: user.id,
-        reason,
-      })
-
-      if (error) {
-        setDialogError(error.message || t('admin.userDetail.removePlatformAdminFailed'))
-        return
-      }
-
-      if (!isRpcSuccessResponse(data) || !(data as AdminRpcResponse).success) {
-        setDialogError((data as AdminRpcResponse)?.error || t('admin.userDetail.removePlatformAdminFailed'))
-        return
-      }
-
-      setManagePlatformAdminModal(false)
-      showSuccess(t('admin.userDetail.removePlatformAdminSuccess'))
-      await fetchUser()
-      setPlatformAdminRole(null)
-    } catch (err) {
-      setDialogError(err instanceof Error ? err.message : t('admin.userDetail.removePlatformAdminFailed'))
-      console.error('Remove platform admin error:', err)
-    } finally {
-      setDialogLoading(false)
-    }
-  }
-
   // Loading state
   if (loading) {
     return (
@@ -714,41 +442,6 @@ export default function UserDetail() {
       </div>
     )
   }
-
-  const _getDialogTitle = () => {
-    switch (confirmDialog.type) {
-      case 'enable': 
-        return t('admin.userDetail.enableUser')
-      case 'disable': 
-        return t('admin.userDetail.disableUser')
-      case 'resend': 
-        return t('admin.userDetail.resendVerification')
-      case 'logout': 
-        return t('admin.userDetail.forceLogout')
-      default: 
-        return 'Confirm Action'
-    }
-  }
-
-  const _getDialogDescription = () => {
-    const email = user.email || 'this user'
-    switch (confirmDialog.type) {
-      case 'enable': 
-        return t('admin.userDetail.confirmEnable', { email })
-      case 'disable': 
-        return t('admin.userDetail.confirmDisable', { email })
-      case 'resend': 
-        return t('admin.userDetail.confirmResend', { email })
-      case 'logout': 
-        return t('admin.userDetail.confirmLogout', { email })
-      default: 
-        return 'Are you sure?'
-    }
-  }
-
-  const _organizations = getUserOrganizations(user)
-  const _canManageRoles = adminRole && canPerformAction(adminRole, 'disable_user') // Using disable_user as proxy for role management
-  const _canManagePlatformAdmins = adminRole === 'super_admin'
 
   return (
     <div>

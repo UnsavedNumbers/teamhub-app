@@ -6,19 +6,25 @@
  */
 
 import { useState } from 'react'
-import { Card } from './index'
+import { Card, Button } from './index'
 import { getActiveThemes, getDefaultTheme } from '../../config/themes'
 
 interface ThemePickerProps {
   selectedThemeId: string | null
+  savedThemeId: string | null
   onChange: (themeId: string | null) => void
+  onSave?: (themeId: string | null) => void
   disabled?: boolean
+  saving?: boolean
 }
 
 export default function ThemePicker({
   selectedThemeId,
+  savedThemeId,
   onChange,
-  disabled = false
+  onSave,
+  disabled = false,
+  saving = false
 }: ThemePickerProps) {
   const [hoveredThemeId, setHoveredThemeId] = useState<string | null>(null)
   const themes = getActiveThemes()
@@ -29,14 +35,22 @@ export default function ThemePicker({
     onChange(themeId)
   }
 
+  const handleSaveTheme = (themeId: string | null, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (disabled || saving || !onSave) return
+    onSave(themeId)
+  }
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Platform Default Option */}
         <Card
-          className={`cursor-pointer transition-all duration-200 overflow-hidden ${
+          className={`cursor-pointer transition-all duration-200 overflow-hidden relative ${
             selectedThemeId === null
-              ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950'
+              ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/50 shadow-lg'
+              : savedThemeId === null
+              ? 'ring-2 ring-green-500 dark:ring-green-400 shadow-md'
               : hoveredThemeId === 'default'
               ? 'ring-1 ring-gray-300 bg-gray-50 dark:bg-gray-800'
               : 'hover:ring-1 hover:ring-gray-300'
@@ -79,9 +93,29 @@ export default function ThemePicker({
           </div>
 
           <div className="px-4 pb-3">
-            <p className="text-xs text-gray-600 dark:text-gray-400">
-              {defaultTheme.name}
-            </p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                {defaultTheme.name}
+              </p>
+              {onSave && selectedThemeId === null && savedThemeId !== null && (
+                <Button
+                  size="small"
+                  variant="primary"
+                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => handleSaveTheme(null, e)}
+                  loading={saving}
+                  disabled={disabled}
+                  className="text-xs py-1 px-2"
+                >
+                  Save
+                </Button>
+              )}
+            </div>
+            {savedThemeId === null && selectedThemeId !== null && (
+              <div className="mt-1 flex items-center gap-1">
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                <span className="text-xs text-green-600 dark:text-green-400 font-medium">Active</span>
+              </div>
+            )}
           </div>
         </Card>
 
@@ -89,9 +123,11 @@ export default function ThemePicker({
         {themes.map((theme) => (
           <Card
             key={theme.id}
-            className={`cursor-pointer transition-all duration-200 overflow-hidden ${
+            className={`cursor-pointer transition-all duration-200 overflow-hidden relative ${
               selectedThemeId === theme.id
-                ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950'
+                ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/50 shadow-lg'
+                : savedThemeId === theme.id
+                ? 'ring-2 ring-green-500 dark:ring-green-400 shadow-md'
                 : hoveredThemeId === theme.id
                 ? 'ring-1 ring-gray-300 bg-gray-50 dark:bg-gray-800'
                 : 'hover:ring-1 hover:ring-gray-300'
@@ -134,23 +170,43 @@ export default function ThemePicker({
             </div>
 
             <div className="px-4 pb-3">
-              <div className="flex items-center space-x-1.5">
-                <div 
-                  className="w-3 h-3 rounded-full border border-gray-300"
-                  style={{ backgroundColor: theme.colors.primary }}
-                  title="Primary"
-                />
-                <div 
-                  className="w-3 h-3 rounded-full border border-gray-300"
-                  style={{ backgroundColor: theme.colors.secondary }}
-                  title="Secondary"
-                />
-                <div 
-                  className="w-3 h-3 rounded-full border border-gray-300"
-                  style={{ backgroundColor: theme.colors.accent }}
-                  title="Accent"
-                />
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center space-x-1.5">
+                  <div 
+                    className="w-3 h-3 rounded-full border border-gray-300"
+                    style={{ backgroundColor: theme.colors.primary }}
+                    title="Primary"
+                  />
+                  <div 
+                    className="w-3 h-3 rounded-full border border-gray-300"
+                    style={{ backgroundColor: theme.colors.secondary }}
+                    title="Secondary"
+                  />
+                  <div 
+                    className="w-3 h-3 rounded-full border border-gray-300"
+                    style={{ backgroundColor: theme.colors.accent }}
+                    title="Accent"
+                  />
+                </div>
+                {onSave && selectedThemeId === theme.id && savedThemeId !== theme.id && (
+                  <Button
+                    size="small"
+                    variant="primary"
+                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => handleSaveTheme(theme.id, e)}
+                    loading={saving}
+                    disabled={disabled}
+                    className="text-xs py-1 px-2"
+                  >
+                    Save
+                  </Button>
+                )}
               </div>
+              {savedThemeId === theme.id && selectedThemeId !== theme.id && (
+                <div className="mt-1 flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                  <span className="text-xs text-green-600 dark:text-green-400 font-medium">Active</span>
+                </div>
+              )}
             </div>
           </Card>
         ))}

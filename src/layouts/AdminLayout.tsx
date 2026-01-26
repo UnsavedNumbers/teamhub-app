@@ -161,7 +161,7 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="pa-root pa-app">
+    <div className="pa-root pa-app oa-theme-active">
       {/* Mobile hamburger button */}
       {isMobile && (
         <button

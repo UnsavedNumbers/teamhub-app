@@ -43,7 +43,7 @@
 }
 
 .oa-breadcrumb-link:hover {
-    color: var(--org-link-color, var(--pa-theme-text-accent));
+    color: var(--org-text-tertiary, var(--pa-theme-text-accent));
 }
 
 .oa-breadcrumb-current {
@@ -137,11 +137,12 @@ html.dark .oa-page-subtitle {
 
 /* =====================================================================
    ORG ADMIN CARDS - Premium Nike + Google Aesthetic
+   Secondary colors for headers, Tertiary for hover states
    ===================================================================== */
 
 .oa-card {
-    background: var(--pa-surface);
-    border: 1px solid var(--pa-n100);
+    background: var(--org-surface-card, var(--pa-surface));
+    border: 1px solid var(--org-border-default, var(--pa-n100));
     border-radius: 14px;
     padding: var(--pa-space-6);
     transition: all var(--pa-motion-normal) var(--pa-ease-out);
@@ -153,17 +154,17 @@ html.dark .oa-page-subtitle {
 
 .oa-card:hover {
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
-    border-color: var(--pa-n200);
+    border-color: var(--org-border-tertiary, var(--pa-n200));
     transform: translateY(-1px);
 }
 
-/* Specific fix for card headers in org admin */
+/* Specific fix for card headers in org admin - use secondary background */
 .oa-card-header,
 .oa-card .pa-card-header {
     padding: var(--pa-space-5) var(--pa-space-6);
-    border-bottom: 1px solid var(--pa-n100);
+    border-bottom: 1px solid var(--org-border-default, var(--pa-n100));
     margin: calc(var(--pa-space-6) * -1) calc(var(--pa-space-6) * -1) var(--pa-space-6) calc(var(--pa-space-6) * -1);
-    background: var(--pa-surface);
+    background: var(--org-surface-secondary, var(--pa-surface));
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -174,8 +175,19 @@ html.dark .oa-page-subtitle {
     padding: 0 !important;
 }
 
-.oa-card--no-padding .oa-card-header {
+.oa-card--no-padding .oa-card-header,
+.oa-card--no-padding .pa-card-header {
     margin: 0;
+    /* Ensure consistent header styling - same as regular oa-card headers */
+    background: var(--org-surface-secondary, var(--pa-surface));
+    border-bottom: 1px solid var(--org-border-default, var(--pa-n100));
+    padding: var(--pa-space-5) var(--pa-space-6);
+}
+
+.oa-card--no-padding .oa-card-title,
+.oa-card--no-padding .pa-card-title {
+    /* Ensure title color matches regular oa-card titles */
+    color: var(--org-text-primary, var(--pa-n900));
 }
 
 .oa-card-title,
@@ -185,7 +197,7 @@ html.dark .oa-page-subtitle {
     font-family: var(--pa-font-display);
     text-transform: uppercase;
     letter-spacing: 0.02em;
-    color: var(--pa-n900);
+    color: var(--org-text-primary, var(--pa-n900));
     margin: 0;
     display: flex;
     align-items: center;
@@ -208,15 +220,15 @@ html.dark .oa-page-subtitle {
 
 /* Dark mode overrides */
 html.dark .oa-card {
-    background: var(--pa-surface);
-    border: 1px solid var(--pa-border-subtle);
+    background: var(--org-surface-card, var(--pa-surface));
+    border: 1px solid var(--org-border-default, var(--pa-border-subtle));
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 html.dark .oa-card-header,
 html.dark .oa-card .pa-card-header {
-    border-color: var(--pa-border-subtle);
-    background: var(--pa-surface-panel);
+    border-color: var(--org-border-default, var(--pa-border-subtle));
+    background: var(--org-surface-secondary, var(--pa-surface-panel));
 }
 
 html.dark .oa-card-title,
@@ -226,5 +238,544 @@ html.dark .oa-card .pa-card-title {
 
 html.dark .oa-card:hover {
     border-color: var(--pa-theme-border-accent);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+
+/* =====================================================================
+   ORG ADMIN FORMS - Consistent Responsive Layouts
+   Focus uses tertiary color, active states use secondary indicators
+   ===================================================================== */
+
+/* Input focus states use tertiary color for ring */
+.oa-theme-active .pa-input:focus {
+    border-color: var(--org-border-tertiary, var(--pa-n700));
+    outline: 2px solid var(--org-surface-tertiary, rgba(43, 52, 61, 0.25));
+}
+
+.oa-theme-active .pa-select:focus {
+    border-color: var(--org-border-tertiary, var(--pa-n700));
+    outline: 2px solid var(--org-surface-tertiary, rgba(43, 52, 61, 0.25));
+}
+
+.oa-theme-active textarea:focus {
+    border-color: var(--org-border-tertiary, var(--pa-n700));
+    outline: 2px solid var(--org-surface-tertiary, rgba(43, 52, 61, 0.25));
+}
+
+html.dark .oa-theme-active .pa-input:focus,
+html.dark .oa-theme-active .pa-select:focus,
+html.dark .oa-theme-active textarea:focus {
+    border-color: var(--org-border-tertiary, #6b7280);
+    outline: 2px solid var(--org-surface-tertiary, rgba(107, 114, 128, 0.25));
+}
+
+.oa-theme-active .pa-form-container {
+    width: 100%;
+    max-width: 960px;
+    margin: 0;
+    padding: var(--pa-space-6) var(--pa-space-4);
+    display: grid;
+    gap: var(--pa-space-6);
+}
+
+.oa-theme-active .pa-form-grid {
+    grid-template-columns: 1fr;
+    gap: var(--pa-space-4);
+    align-items: start;
+}
+
+.oa-theme-active .pa-form-grid > * {
+    width: 100%;
+}
+
+.oa-theme-active .pa-form-grid .pa-form-actions,
+.oa-theme-active .pa-form-grid .pa-checkbox-group,
+.oa-theme-active .pa-form-grid .pa-radio-group,
+.oa-theme-active .pa-form-grid .pa-checkbox,
+.oa-theme-active .pa-form-grid .pa-radio {
+    grid-column: 1 / -1;
+}
+
+.oa-theme-active .pa-form-actions {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-3);
+    margin-top: var(--pa-space-5);
+    align-items: stretch;
+}
+
+.oa-theme-active .pa-form-actions button,
+.oa-theme-active .pa-form-submit-btn {
+    width: 100%;
+}
+
+.oa-theme-active .pa-checkbox,
+.oa-theme-active .pa-radio {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+}
+
+@media (max-width: 639px) {
+    .oa-theme-active .pa-form-container {
+        padding: var(--pa-space-5) var(--pa-space-4);
+    }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+    .oa-theme-active .pa-form-container {
+        padding: var(--pa-space-6) var(--pa-space-6);
+    }
+
+    .oa-theme-active .pa-form-grid-2.pa-form-grid-tablet-2col {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--pa-space-4) var(--pa-space-5);
+    }
+}
+
+/* =====================================================================
+   ORG ADMIN SIDEBAR NAVIGATION - Uses org theme colors
+   Secondary colors for structure, Tertiary for hover, Primary for active
+   ===================================================================== */
+
+.oa-theme-active .pa-nav-link-top {
+    background: var(--org-surface-default, var(--pa-n50));
+    color: var(--org-text-secondary, var(--pa-n700));
+}
+
+.oa-theme-active .pa-nav-link-top:hover {
+    background: var(--org-surface-tertiary, var(--pa-n100));
+    color: var(--org-text-tertiary, var(--pa-n900));
+}
+
+.oa-theme-active .pa-nav-link-top.active,
+.oa-theme-active .pa-nav-link-top.expanded {
+    background: var(--org-btn-primary-bg, var(--pa-n200));
+    color: var(--org-btn-primary-text, var(--pa-n900));
+}
+
+.oa-theme-active .pa-nav-link-top .material-symbols-outlined {
+    color: var(--org-text-secondary, var(--pa-n700));
+}
+
+.oa-theme-active .pa-nav-link-top:hover .material-symbols-outlined {
+    color: var(--org-text-tertiary, var(--pa-n900));
+}
+
+.oa-theme-active .pa-nav-link-top.active .material-symbols-outlined,
+.oa-theme-active .pa-nav-link-top.expanded .material-symbols-outlined {
+    color: var(--org-btn-primary-text, var(--pa-n900));
+}
+
+/* Dark mode sidebar navigation */
+html.dark .oa-theme-active .pa-nav-link-top {
+    background: var(--org-surface-default, rgba(255, 255, 255, 0.06));
+    color: var(--org-text-secondary, var(--pa-white));
+}
+
+html.dark .oa-theme-active .pa-nav-link-top:hover {
+    background: var(--org-surface-tertiary, rgba(255, 255, 255, 0.1));
+    color: var(--org-text-tertiary, var(--pa-white));
+}
+
+html.dark .oa-theme-active .pa-nav-link-top.active,
+html.dark .oa-theme-active .pa-nav-link-top.expanded {
+    background: var(--org-btn-primary-bg, var(--pa-white));
+    color: var(--org-btn-primary-text, var(--pa-n900));
+}
+
+html.dark .oa-theme-active .pa-nav-link-top .material-symbols-outlined {
+    color: var(--org-text-secondary, var(--pa-white));
+}
+
+html.dark .oa-theme-active .pa-nav-link-top:hover .material-symbols-outlined {
+    color: var(--org-text-tertiary, var(--pa-white));
+}
+
+html.dark .oa-theme-active .pa-nav-link-top.active .material-symbols-outlined,
+html.dark .oa-theme-active .pa-nav-link-top.expanded .material-symbols-outlined {
+    color: var(--org-btn-primary-text, var(--pa-n900));
+}
+
+/* Dashboard link should use secondary colors to match structure */
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard,
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active {
+    background: var(--org-surface-default, var(--pa-n50)) !important;
+    color: var(--org-text-secondary, var(--pa-n700)) !important;
+}
+
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard:hover,
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active:hover {
+    background: var(--org-surface-tertiary, var(--pa-n100)) !important;
+    color: var(--org-text-tertiary, var(--pa-n900)) !important;
+}
+
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard .material-symbols-outlined,
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active .material-symbols-outlined {
+    color: var(--org-text-secondary, var(--pa-n700)) !important;
+}
+
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard:hover .material-symbols-outlined,
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active:hover .material-symbols-outlined {
+    color: var(--org-text-tertiary, var(--pa-n900)) !important;
+}
+
+/* Dark mode dashboard */
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard,
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active {
+    background: var(--org-surface-default, rgba(255, 255, 255, 0.06)) !important;
+    color: var(--org-text-secondary, var(--pa-white)) !important;
+}
+
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard:hover,
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active:hover {
+    background: var(--org-surface-tertiary, rgba(255, 255, 255, 0.1)) !important;
+    color: var(--org-text-tertiary, var(--pa-white)) !important;
+}
+
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard .material-symbols-outlined,
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active .material-symbols-outlined {
+    color: var(--org-btn-primary-text, var(--pa-n900)) !important;
+}
+
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard:hover .material-symbols-outlined,
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active:hover .material-symbols-outlined {
+    color: var(--org-link-hover, var(--pa-white)) !important;
+}
+
+/* =====================================================================
+   ORG ADMIN TABS - Uses org theme colors
+   ===================================================================== */
+
+.oa-theme-active .pa-tabs-trigger {
+    color: var(--org-link-color, var(--pa-n500));
+}
+
+.oa-theme-active .pa-tabs-trigger:hover {
+    color: var(--org-link-hover, var(--pa-n700));
+}
+
+.oa-theme-active .pa-tabs-trigger.active {
+    color: var(--org-btn-primary-bg, var(--pa-n900));
+    border-bottom-color: var(--org-btn-primary-bg, var(--pa-n900));
+}
+
+/* =====================================================================
+   ORG ADMIN BREADCRUMBS - Already themed in existing oa-breadcrumbs
+   ===================================================================== */
+
+/* =====================================================================
+   ORG ADMIN GLOBAL NAV - Uses org theme colors
+   ===================================================================== */
+
+.oa-theme-active .gn-nav-trigger {
+    color: var(--org-link-color, var(--gn-text-secondary));
+}
+
+.oa-theme-active .gn-nav-trigger:hover {
+    background: var(--org-highlight-bg, var(--gn-hover-bg));
+    color: var(--org-link-hover, var(--gn-text-primary));
+}
+
+.oa-theme-active .gn-nav-trigger[aria-expanded="true"] {
+    background: var(--org-btn-primary-bg, var(--gn-active-bg));
+    color: var(--org-btn-primary-text, var(--gn-text-primary));
+}
+
+.oa-theme-active .gn-nav-trigger .material-symbols-outlined {
+    color: var(--org-link-color, var(--gn-text-secondary));
+}
+
+.oa-theme-active .gn-nav-trigger:hover .material-symbols-outlined {
+    color: var(--org-link-hover, var(--gn-text-primary));
+}
+
+.oa-theme-active .gn-nav-trigger[aria-expanded="true"] .material-symbols-outlined {
+    color: var(--org-btn-primary-text, var(--gn-text-primary));
+}
+
+/* =====================================================================
+   ORG ADMIN BUTTONS - Uses org theme colors with hierarchy
+   Primary: org primary color for main actions
+   Secondary: org secondary color for supporting actions
+   Destructive: error color for delete/remove actions
+   ===================================================================== */
+
+/* Primary button - uses primary theme color (already configured via tokens) */
+.oa-theme-active .pa-btn--primary {
+    background: var(--org-btn-primary-bg);
+    color: var(--org-btn-primary-text);
+}
+
+.oa-theme-active .pa-btn--primary:hover:not(:disabled) {
+    background: var(--org-btn-primary-hover);
+    color: var(--org-btn-primary-text);
+}
+
+.oa-theme-active .pa-btn--primary:active:not(:disabled) {
+    background: var(--org-btn-primary-active);
+}
+
+/* Secondary button - uses secondary theme color */
+.oa-theme-active .pa-btn--secondary {
+    background: var(--org-btn-secondary-bg, var(--pa-n600));
+    color: var(--org-btn-secondary-text, var(--pa-white));
+    border: none;
+}
+
+.oa-theme-active .pa-btn--secondary:hover:not(:disabled) {
+    background: var(--org-surface-tertiary, var(--pa-n500));
+    color: var(--org-btn-secondary-text, var(--pa-white));
+}
+
+.oa-theme-active .pa-btn--secondary:active:not(:disabled) {
+    background: var(--org-btn-secondary-active, var(--pa-n700));
+}
+
+/* Danger/Destructive button - uses error color */
+.oa-theme-active .pa-btn--danger {
+    background: var(--org-status-error-bg, var(--pa-error));
+    color: var(--org-status-error-text, var(--pa-white));
+}
+
+.oa-theme-active .pa-btn--danger:hover:not(:disabled) {
+    background: var(--org-status-error-hover, #C62828);
+    color: var(--org-status-error-text, var(--pa-white));
+}
+
+/* Dark mode buttons */
+html.dark .oa-theme-active .pa-btn--primary {
+    background: var(--org-btn-primary-bg) !important;
+    color: var(--org-btn-primary-text) !important;
+}
+
+html.dark .oa-theme-active .pa-btn--primary:hover:not(:disabled) {
+    background: var(--org-btn-primary-hover) !important;
+    color: var(--org-btn-primary-text) !important;
+}
+
+html.dark .oa-theme-active .pa-btn--secondary {
+    background: var(--org-btn-secondary-bg, var(--pa-n800)) !important;
+    color: var(--org-btn-secondary-text, var(--pa-white)) !important;
+}
+
+html.dark .oa-theme-active .pa-btn--secondary:hover:not(:disabled) {
+    background: var(--org-surface-tertiary, var(--pa-n600)) !important;
+    color: var(--org-btn-secondary-text, var(--pa-white)) !important;
+}
+
+html.dark .oa-theme-active .pa-btn--danger {
+    background: var(--org-status-error-bg, var(--pa-error)) !important;
+    color: var(--org-status-error-text, var(--pa-white)) !important;
+}
+
+html.dark .oa-theme-active .pa-btn--danger:hover:not(:disabled) {
+    background: var(--org-status-error-hover, #C62828) !important;
+    color: var(--org-status-error-text, var(--pa-white)) !important;
+}
+
+/* =====================================================================
+   ORG ADMIN UTILITY BUTTONS - Uses org theme colors
+   ===================================================================== */
+
+.oa-theme-active .gn-util-btn {
+    color: var(--org-text-secondary, var(--gn-text-secondary));
+}
+
+.oa-theme-active .gn-util-btn:hover {
+    background: var(--org-surface-tertiary, var(--gn-hover-bg));
+    color: var(--org-text-tertiary, var(--gn-text-primary));
+}
+
+.oa-theme-active .gn-util-btn .material-symbols-outlined {
+    color: var(--org-text-secondary, var(--gn-text-secondary));
+}
+
+.oa-theme-active .gn-util-btn:hover .material-symbols-outlined {
+    color: var(--org-text-tertiary, var(--gn-text-primary));
+}
+
+/* =====================================================================
+   ORG ADMIN BADGES AND STATUS INDICATORS - Uses org theme colors
+   Secondary for grouping, Primary for active/selected states
+   ===================================================================== */
+
+/* Active/In-season badges use secondary color */
+.oa-theme-active .pa-badge--primary {
+    background: var(--org-badge-secondary-bg, var(--pa-success-bg));
+    color: var(--org-badge-secondary-text, var(--pa-success));
+}
+
+/* Warning badges use tertiary color */
+.oa-theme-active .pa-badge--accent {
+    background: var(--org-badge-tertiary-bg, var(--pa-warning-bg));
+    color: var(--org-badge-tertiary-text, var(--pa-warning));
+}
+
+/* Selected/featured badges use primary color */
+.oa-theme-active .pa-badge--selected {
+    background: var(--org-btn-primary-bg);
+    color: var(--org-btn-primary-text);
+}
+
+/* =====================================================================
+   ORG ADMIN TABS - Uses org theme colors with hierarchy
+   Default: secondary text, Hover: tertiary color, Active: primary text with secondary underline
+   ===================================================================== */
+
+.oa-theme-active .pa-tabs-trigger {
+    color: var(--org-text-secondary, var(--pa-n500));
+    border-bottom-color: transparent;
+}
+
+.oa-theme-active .pa-tabs-trigger:hover {
+    color: var(--org-text-tertiary, var(--pa-n700));
+    background: var(--org-surface-tertiary, var(--pa-n50));
+}
+
+.oa-theme-active .pa-tabs-trigger:focus-visible {
+    color: var(--org-text-primary, var(--pa-n900));
+    background: var(--org-surface-tertiary, var(--pa-n50));
+}
+
+.oa-theme-active .pa-tabs-trigger.active {
+    color: var(--org-btn-primary-bg);
+    font-weight: 600;
+    border-bottom-color: var(--org-border-secondary, var(--pa-n900));
+}
+
+html.dark .oa-theme-active .pa-tabs-trigger {
+    color: var(--org-text-secondary, var(--pa-white));
+}
+
+html.dark .oa-theme-active .pa-tabs-trigger:hover {
+    color: var(--org-text-tertiary, var(--pa-white));
+    background: var(--org-surface-tertiary, rgba(255, 255, 255, 0.1));
+}
+
+html.dark .oa-theme-active .pa-tabs-trigger.active {
+    color: var(--org-btn-primary-bg);
+    border-bottom-color: var(--org-border-secondary, var(--pa-white));
+}
+
+/* =====================================================================
+   ORG ADMIN TABLES - Uses org theme colors with hierarchy
+   Headers: secondary background, Row hover: tertiary tint
+   ===================================================================== */
+
+.oa-theme-active .pa-table thead {
+    background: var(--org-surface-secondary, var(--pa-n50));
+}
+
+.oa-theme-active .pa-table th {
+    color: var(--org-text-primary, var(--pa-n900));
+}
+
+.oa-theme-active .pa-table tbody tr:hover {
+    background: var(--org-surface-tertiary, var(--pa-n50));
+}
+
+html.dark .oa-theme-active .pa-table thead {
+    background: var(--org-surface-secondary, var(--pa-surface-panel));
+}
+
+html.dark .oa-theme-active .pa-table th {
+    color: var(--org-text-primary, var(--pa-white));
+}
+
+html.dark .oa-theme-active .pa-table tbody tr:hover {
+    background: var(--org-surface-tertiary, var(--pa-border-default));
+}
+
+/* =====================================================================
+   ORG ADMIN INLINE ACTION LINKS - Uses org theme colors
+   Secondary for default, Tertiary for hover, Primary for primary actions
+   ===================================================================== */
+
+.oa-theme-active .pa-link {
+    color: var(--org-text-secondary);
+}
+
+.oa-theme-active .pa-link:hover {
+    color: var(--org-text-tertiary);
+}
+
+.oa-theme-active .pa-link-primary {
+    color: var(--org-btn-primary-bg);
+}
+
+.oa-theme-active .pa-link-primary:hover {
+    color: var(--org-btn-primary-hover);
+}
+
+/* =====================================================================
+   ORG ADMIN MOBILE DRAWER - Uses org theme colors
+   Secondary for default, Tertiary for hover states
+   ===================================================================== */
+
+.oa-theme-active .mobile-drawer-link {
+    color: var(--org-text-secondary, var(--pa-n600));
+}
+
+.oa-theme-active .mobile-drawer-link:hover {
+    background: var(--org-surface-tertiary, var(--pa-n50));
+    color: var(--org-text-tertiary, var(--pa-n900));
+}
+
+.oa-theme-active .mobile-drawer-link .material-symbols-outlined {
+    color: var(--org-text-secondary, var(--pa-n500));
+}
+
+.oa-theme-active .mobile-drawer-link:hover .material-symbols-outlined {
+    color: var(--org-text-tertiary, var(--pa-n600));
+}
+
+.oa-theme-active .mobile-drawer-section-link {
+    color: var(--org-link-color, var(--pa-n600));
+}
+
+.oa-theme-active .mobile-drawer-section-link:hover {
+    background: var(--org-highlight-bg, var(--pa-n50));
+    color: var(--org-link-hover, var(--pa-n900));
+}
+
+.oa-theme-active .mobile-drawer-section-label {
+    color: var(--org-link-color, var(--pa-n700));
+}
+
+.oa-theme-active .mobile-drawer-group-label {
+    color: var(--org-link-color, var(--pa-n600));
+}
+
+@media (min-width: 1024px) {
+    .oa-theme-active .pa-form-container {
+        padding: var(--pa-space-7) var(--pa-space-7);
+    }
+
+    .oa-theme-active .pa-form-grid-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--pa-space-4) var(--pa-space-6);
+    }
+
+    .oa-theme-active .pa-form-grid-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .oa-theme-active .pa-form-grid-4 {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .oa-theme-active .pa-form-actions {
+        flex-direction: row;
+        justify-content: flex-end;
+        align-items: center;
+        gap: var(--pa-space-4);
+    }
+
+    .oa-theme-active .pa-form-actions button,
+    .oa-theme-active .pa-form-submit-btn {
+        width: auto;
+        min-width: 156px;
+    }
 }
