@@ -107,6 +107,7 @@ export default function EditAthletePortal() {
     const isMountedRef = useRef(true)
     const isLoadingSportsRef = useRef(false)
     const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    const loadedAthleteIdRef = useRef<string | null>(null)
     const contextRef = useRef(context)
 
     // Update context ref when context changes
@@ -126,11 +127,19 @@ export default function EditAthletePortal() {
 
     // Reset form state and load athlete data when athleteId changes
     useEffect(() => {
-        console.log('[EditAthletePortal] Effect triggered:', { isReady, athleteId })
+        console.log('[EditAthletePortal] Effect triggered:', { isReady, athleteId, loadedAthleteId: loadedAthleteIdRef.current })
         if (!isReady || !athleteId) {
             console.log('[EditAthletePortal] Not ready or no athleteId, skipping')
             return
         }
+
+        // Skip if already loaded this specific athlete ID
+        if (loadedAthleteIdRef.current === athleteId) {
+            console.log('[EditAthletePortal] Already loaded this athlete, skipping')
+            return
+        }
+
+        loadedAthleteIdRef.current = athleteId
 
         // Reset all form state
         setFormData(initialFormData)
@@ -140,16 +149,15 @@ export default function EditAthletePortal() {
         setNotFound(false)
         setLoading(true)
 
-        const currentRequestId = ++requestIdRef.current
-        console.log('[EditAthletePortal] Starting athlete fetch, requestId:', currentRequestId, 'athleteId:', athleteId)
+        console.log('[EditAthletePortal] Starting athlete fetch, athleteId:', athleteId)
 
-        // Load athlete data (use contextRef to avoid stale closure)
+        // Load athlete data
         getAthleteById(contextRef.current, athleteId)
             .then(({ data, error: fetchError }) => {
                 console.log('[EditAthletePortal] Received athlete data:', { data, error: fetchError })
-                // Only update if this is the latest request and component is mounted
-                if (currentRequestId !== requestIdRef.current || !isMountedRef.current) {
-                    console.log('[EditAthletePortal] Request stale or unmounted, skipping update')
+                // Only update if component is still mounted and this is still the athlete we want
+                if (!isMountedRef.current || loadedAthleteIdRef.current !== athleteId) {
+                    console.log('[EditAthletePortal] Unmounted or athlete changed, skipping update')
                     return
                 }
 
@@ -221,7 +229,7 @@ export default function EditAthletePortal() {
             })
             .catch((err) => {
                 console.error('[EditAthletePortal] Exception:', err)
-                if (currentRequestId === requestIdRef.current && isMountedRef.current) {
+                if (isMountedRef.current && loadedAthleteIdRef.current === athleteId) {
                     console.error('Error loading athlete:', err)
                     setError(err instanceof Error ? err.message : 'Failed to load athlete')
                     setLoading(false)

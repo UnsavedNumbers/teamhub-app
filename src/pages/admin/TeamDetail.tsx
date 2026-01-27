@@ -395,26 +395,13 @@ export default function TeamDetail() {
 
   return (
     <div className="pa-root">
-      {/* Header with accent strip */}
+      {/* Header */}
       <div
         style={{
           width: '100%',
-          background: 'var(--org-surface-page)',
           position: 'relative',
         }}
       >
-        {/* Vertical accent strip on the far left */}
-        <div
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: '5px',
-            background: 'var(--org-btn-primary-bg)',
-          }}
-        />
-        
         {/* Header content constrained to main content width */}
         <div
           style={{
@@ -422,7 +409,6 @@ export default function TeamDetail() {
             margin: '0 auto',
             width: '100%',
             padding: 'var(--pa-space-6) var(--pa-space-4)',
-            paddingLeft: 'calc(var(--pa-space-4) + 5px)', // Account for accent strip
           }}
           className="md:px-8"
         >
@@ -443,7 +429,6 @@ export default function TeamDetail() {
                     onClick={() => handleBreadcrumbClick('/admin/sports', sportId)}
                     disabled={navigating}
                     style={{
-                      color: 'var(--org-text-muted)',
                       fontSize: '12px',
                       fontWeight: 500,
                       textTransform: 'uppercase',
@@ -456,6 +441,7 @@ export default function TeamDetail() {
                       padding: 0,
                       lineHeight: 'normal',
                     }}
+                    className="text-[var(--org-text-muted)] dark:text-slate-400"
                   >
                     {sportName}
                   </button>
@@ -463,7 +449,6 @@ export default function TeamDetail() {
                   <Link
                     to={getLink('admin.sports.list')}
                     style={{
-                      color: 'var(--org-text-muted)',
                       fontSize: '12px',
                       fontWeight: 500,
                       textTransform: 'uppercase',
@@ -471,11 +456,12 @@ export default function TeamDetail() {
                       textDecoration: 'none',
                       lineHeight: 'normal',
                     }}
+                    className="text-[var(--org-text-muted)] dark:text-slate-400"
                   >
                     {sportName}
                   </Link>
                 )}
-                <span style={{ color: 'var(--org-text-muted)', fontSize: '12px', fontWeight: 500, lineHeight: 'normal' }}>/</span>
+                <span style={{ fontSize: '12px', fontWeight: 500, lineHeight: 'normal' }} className="text-[var(--org-text-muted)] dark:text-slate-400">/</span>
               </>
             )}
             {programName && (
@@ -485,7 +471,6 @@ export default function TeamDetail() {
                     onClick={() => handleBreadcrumbClick('/admin/programs', programId)}
                     disabled={navigating}
                     style={{
-                      color: 'var(--org-text-muted)',
                       fontSize: '12px',
                       fontWeight: 500,
                       textTransform: 'uppercase',
@@ -498,6 +483,7 @@ export default function TeamDetail() {
                       padding: 0,
                       lineHeight: 'normal',
                     }}
+                    className="text-[var(--org-text-muted)] dark:text-slate-400"
                   >
                     {programName}
                   </button>
@@ -505,7 +491,6 @@ export default function TeamDetail() {
                   <Link
                     to={getLink('admin.programs.list')}
                     style={{
-                      color: 'var(--org-text-muted)',
                       fontSize: '12px',
                       fontWeight: 500,
                       textTransform: 'uppercase',
@@ -513,25 +498,43 @@ export default function TeamDetail() {
                       textDecoration: 'none',
                       lineHeight: 'normal',
                     }}
+                    className="text-[var(--org-text-muted)] dark:text-slate-400"
                   >
                     {programName}
                   </Link>
                 )}
-                <span style={{ color: 'var(--org-text-muted)', fontSize: '12px', fontWeight: 500, lineHeight: 'normal' }}>/</span>
+                <span style={{ fontSize: '12px', fontWeight: 500, lineHeight: 'normal' }} className="text-[var(--org-text-muted)] dark:text-slate-400">/</span>
               </>
             )}
             {levelName && (
+              <>
+                <span
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    lineHeight: 'normal',
+                  }}
+                  className="text-[var(--org-text-muted)] dark:text-slate-400"
+                >
+                  {levelName}
+                </span>
+                <span style={{ fontSize: '12px', fontWeight: 500, lineHeight: 'normal' }} className="text-[var(--org-text-muted)] dark:text-slate-400">/</span>
+              </>
+            )}
+            {team && (
               <span
                 style={{
-                  color: 'var(--org-text-muted)',
                   fontSize: '12px',
                   fontWeight: 500,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                   lineHeight: 'normal',
                 }}
+                className="text-[var(--org-text-muted)] dark:text-slate-400"
               >
-                {levelName}
+                {team.name}
               </span>
             )}
           </div>
@@ -539,10 +542,9 @@ export default function TeamDetail() {
           {/* Page title with optional icon */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-4)', marginBottom: 'var(--pa-space-6)' }}>
             <span
-              className="material-symbols-outlined"
+              className="material-symbols-outlined text-[var(--org-btn-secondary-bg)] dark:text-slate-400"
               style={{
                 fontSize: '32px',
-                color: 'var(--org-btn-secondary-bg)', // Using secondary color for icon
                 fontVariationSettings: "'FILL' 1"
               }}
             >
@@ -554,9 +556,9 @@ export default function TeamDetail() {
                 fontSize: 'clamp(2rem, 4vw, 3rem)',
                 fontWeight: 700,
                 lineHeight: 1.2,
-                color: 'var(--org-text-primary)',
                 margin: 0,
               }}
+              className="text-[var(--org-text-primary)] dark:text-white"
             >
               {team.name}
             </h1>
@@ -619,7 +621,6 @@ export default function TeamDetail() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   borderBottom: activeTab === tab ? `4px solid ${primaryColor}` : '4px solid transparent',
-                  color: activeTab === tab ? 'var(--pa-n900)' : 'var(--pa-n500)',
                   paddingBottom: '14px',
                   paddingTop: 'var(--pa-space-4)',
                   fontSize: '14px',
@@ -634,17 +635,7 @@ export default function TeamDetail() {
                   transition: 'color 200ms',
                   opacity: navigating ? 0.6 : 1,
                 }}
-                className={activeTab === tab ? 'dark:text-white' : 'dark:text-slate-500'}
-                onMouseEnter={(e) => {
-                  if (!navigating && activeTab !== tab) {
-                    e.currentTarget.style.color = primaryColor
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!navigating && activeTab !== tab) {
-                    e.currentTarget.style.color = 'var(--pa-n500)'
-                  }
-                }}
+                className={activeTab === tab ? 'text-[var(--pa-n900)] dark:text-white' : 'text-[var(--pa-n500)] dark:text-slate-400 hover:text-[var(--org-btn-primary-bg)] dark:hover:text-slate-200'}
               >
                 {tab.toUpperCase()}
               </button>
@@ -884,7 +875,7 @@ export default function TeamDetail() {
                   border: `1px solid color-mix(in srgb, ${primaryColor} 20%, transparent)`,
                   background: `color-mix(in srgb, ${primaryColor} 5%, transparent)`,
                 }}
-                className="dark:bg-primary/10"
+                className="dark:bg-slate-800/50 dark:border-slate-700"
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-4)' }}>
                   <span className="material-symbols-outlined" style={{ fontSize: '20px', color: primaryColor, fontWeight: 700 }}>
@@ -990,10 +981,10 @@ export default function TeamDetail() {
                   border: '1px solid var(--pa-n200)',
                   background: 'var(--pa-white)',
                 }}
-                className="dark:border-slate-700 dark:bg-slate-900"
+                className="dark:border-slate-700 dark:bg-slate-800/50"
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-4)' }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-n400)', fontWeight: 700 }}>
+                  <span className="material-symbols-outlined dark:text-slate-400" style={{ fontSize: '20px', color: 'var(--pa-n400)', fontWeight: 700 }}>
                     notifications
                   </span>
                   <h3
