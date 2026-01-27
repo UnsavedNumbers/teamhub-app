@@ -233,7 +233,7 @@ export default function Roster() {
       // Update team membership status to inactive
       const { error } = await supabase
         .from('team_memberships')
-        .update({ status: 'inactive' })
+        .update({ status: 'removed' })
         .eq('id', playerToRemove)
 
       if (error) {
