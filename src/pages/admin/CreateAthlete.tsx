@@ -234,7 +234,7 @@ export default function CreateAthlete() {
 
             // If athlete was created and photo was selected, upload photo
             if (data?.athlete_id && photoFile) {
-                const { path: photoPath, error: uploadError } = await uploadAthletePhoto(
+                const { error: uploadError } = await uploadAthletePhoto(
                     context,
                     data.athlete_id,
                     photoFile
@@ -245,10 +245,8 @@ export default function CreateAthlete() {
                     console.error('Error uploading photo:', uploadError)
                     setPhotoError(uploadError.message)
                     // Continue - athlete was created successfully, photo can be added later
-                } else if (photoPath) {
-                    // Update athlete with photo_url path
-                    await updateAthlete(context, data.athlete_id, { photo_url: photoPath })
-                    // Clear photo error if upload succeeded
+                } else {
+                    // Photo upload succeeded (includes DB update)
                     setPhotoError(null)
                 }
             }

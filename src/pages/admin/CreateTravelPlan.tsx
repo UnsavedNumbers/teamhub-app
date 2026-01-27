@@ -49,8 +49,20 @@ export default function CreateTravelPlan() {
   const [itineraryFile, setItineraryFile] = useState<File | null>(null)
   const isMountedRef = useRef(true)
 
-  const { context, isReady } = useUserContext()
+  const { context, isReady, isLoading: contextLoading } = useUserContext()
   const navigate = useNavigate()
+
+  // Debug logging
+  useEffect(() => {
+    console.log('[CreateTravelPlan] State:', { 
+      isReady, 
+      contextLoading, 
+      loading, 
+      hasContext: !!context,
+      orgId: context?.orgId,
+      userId: context?.userId 
+    })
+  }, [isReady, contextLoading, loading, context])
 
   const { control, handleSubmit, watch, setValue } = useForm<TravelFormData>({
     defaultValues: { 
@@ -64,16 +76,28 @@ export default function CreateTravelPlan() {
   const watchTeamId = watch('team_id')
 
   useEffect(() => {
+    isMountedRef.current = true
     return () => {
       isMountedRef.current = false
     }
   }, [])
 
   const fetchTeams = useCallback(async () => {
-    if (!isReady) return
+    console.log('[CreateTravelPlan] fetchTeams called:', { isReady, hasContext: !!context, orgId: context?.orgId })
+    
+    if (!isReady || !context) {
+      console.log('[CreateTravelPlan] fetchTeams early return - not ready')
+      // Set loading to false even if we can't fetch - prevents infinite loading
+      if (isMountedRef.current) {
+        setLoading(false)
+      }
+      return
+    }
     
     try {
+      console.log('[CreateTravelPlan] Fetching teams...')
       const { data, error } = await getTeams(context, { activeOnly: true })
+      console.log('[CreateTravelPlan] Teams response:', { data, error })
       if (!isMountedRef.current) return
       
       if (!error && data) {
@@ -85,13 +109,14 @@ export default function CreateTravelPlan() {
       }
     } finally {
       if (isMountedRef.current) {
+        console.log('[CreateTravelPlan] Setting loading to false')
         setLoading(false)
       }
     }
   }, [context, isReady])
 
   const fetchSeasons = useCallback(async (teamId: string) => {
-    if (!isReady || !teamId) return
+    if (!isReady || !teamId || !context) return
     
     try {
       const { data, error } = await getTeamDetails(context, teamId)
@@ -108,15 +133,32 @@ export default function CreateTravelPlan() {
   }, [context, isReady])
 
   useEffect(() => { 
-    if (isReady) fetchTeams() 
-  }, [isReady, fetchTeams])
+    console.log('[CreateTravelPlan] useEffect triggered:', { isReady, hasContext: !!context, orgId: context?.orgId })
+    if (isReady && context) {
+      fetchTeams()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReady, context?.orgId]) // Only re-run when orgId changes, not on every context object change
+
+  // Handle case where context never becomes ready - stop loading state
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading && !isReady) {
+        console.warn('[CreateTravelPlan] Context not ready after timeout, stopping loader')
+        setLoading(false)
+      }
+    }, 5000) // 5 second timeout
+    return () => clearTimeout(timeout)
+  }, [loading, isReady])
 
   useEffect(() => { 
-    if (watchTeamId && isReady) { 
+    if (watchTeamId && isReady && context) { 
       fetchSeasons(watchTeamId)
       setValue('season_id', '')
-    } 
-  }, [watchTeamId, isReady, setValue, fetchSeasons])
+    }
+    // Only depend on watchTeamId, isReady, and context - fetchSeasons is stable when these don't change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchTeamId, isReady, context])
 
   const onSubmit = async (data: TravelFormData) => {
     if (!isMountedRef.current) return
@@ -173,6 +215,26 @@ export default function CreateTravelPlan() {
   }
 
   if (loading) return <div className="pa-skeleton" style={{ height: '500px' }} />
+
+  if (!isReady || !context?.orgId) {
+    return (
+      <div className="pa-root">
+        <AdminPageHeader 
+          title="Create Travel Plan" 
+          breadcrumbs={[
+            { label: 'Travel Plans', path: '/admin/travel' },
+            { label: 'Create Travel Plan' },
+          ]}
+        />
+        <Card>
+          <div className="pa-text-center pa-p-8">
+            <p className="pa-text-danger">Unable to load organization context. Please make sure you have an organization selected.</p>
+            <Button variant="blue" onClick={() => navigate('/admin/travel')} className="pa-mt-4">Back to Travel Plans</Button>
+          </div>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="pa-root">

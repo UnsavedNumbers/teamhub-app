@@ -193,21 +193,19 @@ export default function EditAthletePortal() {
                     email: data.email || ''   // NEW - explicit mapping
                 })
 
-                // Load photo if exists
-                if (data.photo_url) {
-                    console.log('[EditAthletePortal] Loading photo URL:', data.photo_url)
-                    setPhotoPath(data.photo_url)
-                    // Generate signed URL for display
-                    getAthletePhotoUrl(data.photo_url).then(({ url, error }) => {
-                        if (url && !error) {
-                            console.log('[EditAthletePortal] Photo URL loaded successfully')
-                            setPhotoUrl(url)
-                        } else {
-                            console.error('[EditAthletePortal] Error loading photo URL:', error)
-                        }
-                    })
+                // Load photo if exists (using new photo system)
+                if (data.has_profile_photo && data.org_id && data.id) {
+                    console.log('[EditAthletePortal] Athlete has profile photo')
+                    setPhotoPath('exists') // Flag that photo exists
+                    // Get public URL (no signed URL needed)
+                    const url = getAthletePhotoUrl(
+                        data.org_id,
+                        data.id,
+                        '512' // Use 512px for edit page
+                    )
+                    setPhotoUrl(url)
                 } else {
-                    console.log('[EditAthletePortal] No photo URL')
+                    console.log('[EditAthletePortal] No profile photo')
                     setPhotoPath(null)
                     setPhotoUrl(null)
                 }
@@ -362,18 +360,21 @@ export default function EditAthletePortal() {
             }
 
             // Handle photo changes
-            let newPhotoPath: string | null = photoPath
-
+            // Handle photo upload/removal
             // If photo was removed
             if (photoRemoved && photoPath) {
                 // Delete from storage
-                await deleteAthletePhoto(context, athleteId)
-                newPhotoPath = null
+                const { error: deleteError } = await deleteAthletePhoto(context, athleteId)
+                if (deleteError) {
+                    console.error('Error deleting photo:', deleteError)
+                    setPhotoError(deleteError.message)
+                    // Continue with update - photo deletion can be retried
+                }
             }
             // If new photo was selected
             else if (photoFile) {
-                // Upload new photo
-                const { path: uploadedPath, error: uploadError } = await uploadAthletePhoto(
+                // Upload new photo (includes resizing and DB update)
+                const { error: uploadError } = await uploadAthletePhoto(
                     context,
                     athleteId,
                     photoFile
@@ -383,21 +384,15 @@ export default function EditAthletePortal() {
                     // Log error but don't fail athlete update
                     console.error('Error uploading photo:', uploadError)
                     setPhotoError(uploadError.message)
-                    // Don't update photo_url - keep existing photo
                     // Continue with athlete update - photo can be fixed later
-                } else if (uploadedPath) {
-                    newPhotoPath = uploadedPath
+                } else {
                     setPhotoError(null)
                 }
             }
 
-            // Update athlete data (only include photo_url if it changed)
+            // Update athlete data (photo_url is no longer stored - derived from storage)
             const updateData: UpdateAthleteDTO = {
                 ...normalizedData
-            }
-            // Only include photo_url if we have a new path (upload succeeded) or explicitly removed
-            if (newPhotoPath !== undefined) {
-                updateData.photo_url = newPhotoPath
             }
 
             // Sequential updates: athlete first, then sports

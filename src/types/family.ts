@@ -25,7 +25,10 @@ export interface Athlete {
     emergency_contact_phone: string | null
     phone: string | null  // Athlete phone number
     email: string | null  // Athlete email address
-    photo_url: string | null  // URL to athlete's photo/avatar image
+    photo_url: string | null  // @deprecated - Use profile_photo_updated_at and has_profile_photo instead
+    profile_photo_updated_at: string | null  // Timestamp when profile photo was last updated
+    has_profile_photo: boolean | null  // Whether athlete has a profile photo
+    org_id?: string  // Organization ID (for photo URL generation)
     created_at: string
     updated_at: string
     deleted_at: string | null
