@@ -22,7 +22,6 @@ import {
 } from '../types/calendar'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
-import { SportHero } from '../components/portal/SportHero'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
@@ -42,6 +41,9 @@ const defaultFilters: CalendarFilters = {
     endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
     showCancelled: false
 }
+
+// Number of events to show per page in agenda view (3x3 grid)
+const EVENTS_PER_PAGE = 9
 
 export default function Calendar() {
   // I18n hook - will throw if I18nProvider is missing (correct behavior)
@@ -73,6 +75,7 @@ export default function Calendar() {
   const [eventSports, setEventSports] = useState<Record<string, SportInfo | null>>({})
   const [error, setError] = useState<string | null>(null)
   const [rsvpLoading, setRsvpLoading] = useState<Record<string, boolean>>({})
+  const [currentPage, setCurrentPage] = useState(1)
   
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
@@ -92,9 +95,9 @@ export default function Calendar() {
           start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
           end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
       } else {
-          // Agenda view gets next 30 days starting from current date
-          start = new Date(currentDate)
-          end = new Date(currentDate.getTime() + 30 * 24 * 60 * 60 * 1000)
+          // Agenda view gets all events regardless of time period
+          start = new Date(0) // Beginning of time
+          end = new Date('2099-12-31') // Far future
       }
       
       // Fetch user children for RSVP matching
@@ -333,11 +336,6 @@ export default function Calendar() {
       }
   }
 
-  // Calculate sport info from events or defaulting
-  const sportInfo: SportInfo | null = events.length > 0
-    ? { id: '', name: 'Sports', color: '#3b82f6', icon: 'sports_soccer' }
-    : { id: '', name: 'Sports', color: '#3b82f6', icon: 'sports_soccer' }
-
   const mapUrl = selectedEvent?.event_location ? getEventLocationMapsUrl(selectedEvent.event_location) : null
 
   return (
@@ -347,36 +345,35 @@ export default function Calendar() {
           { label: safeT('calendar.title', 'Calendar') },
         ]}
       >
-        {/* Sport Hero Section */}
-        <div className="-mx-6 mb-8">
-          <SportHero sport={sportInfo} height="35vh">
-            <div className="max-w-[1200px] mx-auto px-6 pb-8">
-              <div className="mb-8 flex items-end justify-between">
-                <div>
-                  <PageTitle className="text-white">{safeT('calendar.title', 'Calendar')}</PageTitle>
-                  <p className="text-white/80 text-lg font-light tracking-wide">
-                    {currentDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
-                  </p>
-                </div>
-                <div className="flex gap-1 bg-white/10 dark:bg-slate-900/50 border border-white/20 dark:border-slate-700 rounded p-1 backdrop-blur-sm">
-                  {(['agenda', 'week', 'month'] as CalendarViewMode[]).map((v) => (
-                    <button
-                      key={v}
-                      onClick={() => setViewMode(v)}
-                      disabled={loading}
-                      className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                        viewMode === v
-                          ? 'bg-[var(--org-btn-primary-bg)] text-white'
-                          : 'text-white/80 dark:text-slate-400 hover:text-white dark:hover:text-white'
-                      }`}
-                    >
-                      {safeT(`calendar.views.${v}`, v)}
-                    </button>
-                  ))}
-                </div>
-              </div>
+        {/* Header Section */}
+        <div className="mb-8">
+          <div className="mb-8 flex items-end justify-between">
+            <div>
+              <PageTitle>{safeT('calendar.title', 'Calendar')}</PageTitle>
+              <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
+                {currentDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+              </p>
             </div>
-          </SportHero>
+            <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1">
+              {(['agenda', 'week', 'month'] as CalendarViewMode[]).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => {
+                    setViewMode(v)
+                    setCurrentPage(1) // Reset page when changing view
+                  }}
+                  disabled={loading}
+                  className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                    viewMode === v
+                      ? 'bg-[var(--org-btn-primary-bg)] text-white'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  {safeT(`calendar.views.${v}`, v)}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -445,19 +442,22 @@ export default function Calendar() {
                     </Button>
                   </div>
                 ) : events.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12">
-                    <Icon name="event_busy" size="text-4xl" className="text-slate-300 mb-4" />
-                    <p className="text-slate-500 mb-2">No events found for this period</p>
-                    <p className="text-sm text-slate-400">Try adjusting your filters or date range</p>
-                  </div>
+                  <Card className="text-center py-12">
+                    <Icon name="event" size="text-6xl" className="text-slate-400 mb-4" />
+                    <CardTitle className="mb-2">{safeT('calendar.noEvents.title', 'No events')}</CardTitle>
+                    <p className="text-slate-500 dark:text-slate-400">{safeT('calendar.noEvents.description', 'No events scheduled across your organizations.')}</p>
+                  </Card>
                 ) : (
                     <CalendarGrid 
                         events={events}
                         eventSports={eventSports}
                         viewMode={viewMode}
                         currentDate={currentDate}
+                        currentPage={currentPage}
+                        eventsPerPage={EVENTS_PER_PAGE}
                         onEventClick={setSelectedEvent}
                         onDateChange={setCurrentDate}
+                        onPageChange={setCurrentPage}
                     />
                 )}
             </div>
