@@ -39,6 +39,7 @@ export default function CreateAnnouncementModal({
   const [content, setContent] = useState('')
   const [priority, setPriority] = useState<'normal' | 'urgent'>('normal')
   const [teamId, setTeamId] = useState(selectedTeamId || (teams.length > 0 ? teams[0].id : ''))
+  const [type, setType] = useState<AnnouncementType>('general')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 

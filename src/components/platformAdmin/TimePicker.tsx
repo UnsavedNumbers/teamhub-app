@@ -21,6 +21,8 @@ interface TimePickerProps {
   className?: string
   /** Name attribute for forms */
   name?: string
+  /** Callback when input is blurred */
+  onBlur?: () => void
 }
 
 /**
@@ -39,6 +41,7 @@ export function TimePicker({
   required = false,
   value,
   onChange,
+  onBlur,
   isDisabled = false,
   isReadOnly = false,
   name,
@@ -79,6 +82,7 @@ export function TimePicker({
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false)
+        if (onBlur) onBlur()
       }
     }
 
@@ -86,13 +90,22 @@ export function TimePicker({
       document.addEventListener('mousedown', handleClickOutside)
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [isOpen])
+  }, [isOpen, onBlur])
 
   const hours = Array.from({ length: 12 }, (_, i) => i + 1)
   const minutes = Array.from({ length: 60 }, (_, i) => i)
 
   return (
-    <div className="pa-form-group" ref={containerRef}>
+    <div 
+      className="pa-form-group" 
+      ref={containerRef}
+      onBlur={(e) => {
+        // Trigger onBlur when focus leaves the component
+        if (onBlur && !containerRef.current?.contains(e.relatedTarget as Node)) {
+          onBlur()
+        }
+      }}
+    >
       {label && (
         <label className={`pa-label ${isRequired ? 'pa-label--required' : ''}`}>
           {label}

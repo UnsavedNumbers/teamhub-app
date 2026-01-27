@@ -324,13 +324,13 @@ export default function Messages() {
       <PortalLayout
         breadcrumbs={[
           { label: 'Home', path: '/portal/dashboard' },
-          { label: 'Messages' },
+          { label: 'Huddles' },
         ]}
       >
         <div className="mb-12">
-          <PageTitle>Messages</PageTitle>
+          <PageTitle>Huddles</PageTitle>
           <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
-            Team messaging and announcements.
+            Team chat and announcements.
           </p>
         </div>
         
@@ -349,13 +349,13 @@ export default function Messages() {
     <PortalLayout
       breadcrumbs={[
         { label: 'Home', path: '/portal/dashboard' },
-        { label: 'Messages' },
+        { label: 'Huddles' },
       ]}
     >
       <div className="mb-8">
-        <PageTitle>Messages</PageTitle>
+        <PageTitle>Huddles</PageTitle>
         <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
-          Team messaging and announcements.
+          Team chat and announcements.
         </p>
       </div>
       
@@ -363,8 +363,8 @@ export default function Messages() {
         <div className="flex h-full">
           <div className="w-64 bg-white dark:bg-slate-900/50 border-r border-slate-100 dark:border-slate-800 flex flex-col">
             <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-              <PageTitle className="text-2xl mb-2">Messages</PageTitle>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Team messaging</p>
+              <PageTitle className="text-2xl mb-2">Huddles</PageTitle>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Team chat</p>
             </div>
 
             <div className="flex-1 overflow-y-auto p-3">

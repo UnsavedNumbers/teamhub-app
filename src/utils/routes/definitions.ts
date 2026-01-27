@@ -52,12 +52,12 @@ const portal = {
         icon: 'flight',
     },
 
-    // Messages
+    // Huddles
     messages: {
         path: '/portal/messages',
-        label: 'Messages',
-        icon: 'mail',
-        description: 'Announcements and chat',
+        label: 'Huddles',
+        icon: 'forum',
+        description: 'Team chat and announcements',
     },
     announcementDetail: {
         path: '/portal/messages/:announcementId',
@@ -72,6 +72,12 @@ const portal = {
         label: 'Payments',
         icon: 'receipt_long',
         description: 'Outstanding fees',
+    },
+    paymentDetail: {
+        path: '/portal/payments/:id',
+        params: ['id'] as const,
+        label: 'Payment Details',
+        icon: 'receipt_long',
     },
     paymentSuccess: {
         path: '/portal/payments/success',
@@ -600,6 +606,13 @@ const admin = {
             label: 'Payments',
             icon: 'credit_card',
             description: 'Fees and collections',
+            requiresOrg: true,
+        },
+        detail: {
+            path: '/admin/payments/:id',
+            params: ['id'] as const,
+            label: 'Payment Details',
+            icon: 'credit_card',
             requiresOrg: true,
         },
         create: {

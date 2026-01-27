@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { useUserContext } from '../hooks/useUserContext'
 import { getFeeAssignmentsForUser, validateDiscountCode } from '../data/services/paymentsService'
@@ -54,6 +55,7 @@ export default function MyPayments() {
 
 
   const { context, isReady } = useUserContext()
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (!isReady) return
@@ -477,7 +479,14 @@ export default function MyPayments() {
                 return (
                   <Card
                     key={a.id}
-                    className={`p-6 hover:shadow-2xl hover:shadow-[var(--org-btn-primary-bg, #137fec)]/5 transition-all duration-300 ${
+                    onClick={(e) => {
+                      // Don't navigate if clicking checkbox or its label
+                      if ((e.target as HTMLElement).closest('input[type="checkbox"]')) {
+                        return
+                      }
+                      navigate(`/portal/payments/${a.id}`)
+                    }}
+                    className={`p-6 hover:shadow-2xl hover:shadow-[var(--org-btn-primary-bg, #137fec)]/5 transition-all duration-300 cursor-pointer ${
                       isSelected ? 'ring-2 ring-[var(--org-btn-primary-bg, #137fec)]' : ''
                     }`}
                   >
@@ -487,7 +496,11 @@ export default function MyPayments() {
                           <input
                             type="checkbox"
                             checked={isSelected}
-                            onChange={() => toggleSelected(a.id)}
+                            onChange={(e) => {
+                              e.stopPropagation()
+                              toggleSelected(a.id)
+                            }}
+                            onClick={(e) => e.stopPropagation()}
                             disabled={loading || creatingCheckout}
                             className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-[var(--org-link-color)] focus:ring-[var(--org-btn-primary-bg, #137fec)] disabled:opacity-50 disabled:cursor-not-allowed"
                           />

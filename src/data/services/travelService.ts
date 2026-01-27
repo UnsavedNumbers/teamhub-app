@@ -140,7 +140,7 @@ async function validateTeamBelongsToOrg(
 
     if (USE_FAKE_DATA) {
         // In fake data, assume team belongs to context org
-        return { valid: true, orgId: context.orgId ?? null, error: null }
+        return { valid: true, orgId: _context.orgId ?? null, error: null }
     }
 
     try {
@@ -156,7 +156,7 @@ async function validateTeamBelongsToOrg(
         }
 
         const teamOrgId = data.org_id as string | null
-        if (!teamOrgId || teamOrgId !== context.orgId) {
+        if (!teamOrgId || teamOrgId !== _context.orgId) {
             return { 
                 valid: false, 
                 orgId: teamOrgId, 
@@ -896,7 +896,7 @@ export async function createTravelPlan(
                 if (!moveError) {
                     await supabase
                         .from('travel_plans')
-                        .update({ itinerary_file_path: finalPath })
+                        .update({ itinerary_file_path: finalPath } as any)
                         .eq('id', inserted.id)
                 }
             }
@@ -1017,7 +1017,7 @@ export async function updateTravelPlan(
         }
 
         // Build update data
-        const updateData: Database['public']['Tables']['travel_plans']['Update'] = {}
+        const updateData: Record<string, any> = {}
         if (data.title !== undefined) updateData.title = data.title
         if (data.location !== undefined) updateData.location = data.location
         if (data.destination_city !== undefined) updateData.destination_city = data.destination_city
@@ -1167,7 +1167,7 @@ export async function uploadTravelItinerary(
  * Get signed URL for travel itinerary download
  */
 export async function getTravelItinerarySignedUrl(
-    context: UserContext,
+    _context: UserContext,
     planId: string
 ): Promise<{ data: string | null; error: Error | null }> {
     try {
@@ -1192,7 +1192,7 @@ export async function getTravelItinerarySignedUrl(
             return { data: null, error: new Error('Travel plan not found') }
         }
 
-        const filePath = (plan as { itinerary_file_path: string | null }).itinerary_file_path
+        const filePath = (plan as unknown as { itinerary_file_path: string | null }).itinerary_file_path
         if (!filePath) {
             return { data: null, error: new Error('No itinerary file found for this travel plan') }
         }
@@ -1648,7 +1648,7 @@ export async function cancelTravelPlan(
         }
 
         // Update to cancelled
-        const updateData: Database['public']['Tables']['travel_plans']['Update'] = {
+        const updateData: Record<string, any> = {
             status: 'cancelled',
             cancelled_at: new Date().toISOString(),
         }
