@@ -17,6 +17,7 @@ import { createAthleteWithGuardians, updateAthlete } from '../data/services/fami
 import { AthletePhotoUpload } from '../components/admin/AthletePhotoUpload'
 import { uploadAthletePhoto } from '../data/services/athletePhotoService'
 import { checkGuardianMatch, normalizeEmail, validateGuardianEmail } from '../utils/guardianMatching'
+import { validatePhoneFormat } from '../utils/phoneValidation'
 import { getSystemSports } from '../data/services/sportsService'
 import type { Gender, CreateAthleteDTO, GuardianMatch, RelationshipType } from '../types/family'
 import type { Sport } from '../data/types/organization'
@@ -83,6 +84,8 @@ export default function CreateAthletePortal() {
         allergies: '',
         emergency_contact_name: '',
         emergency_contact_phone: '',
+        phone: '',  // Athlete phone number
+        email: '',  // Athlete email address
         additionalGuardianEmail: '',
         additionalGuardianRelationship: 'parent' as RelationshipType
     })
@@ -241,6 +244,21 @@ export default function CreateAthletePortal() {
             }
         }
 
+        // Phone validation - only if provided
+        if (formData.phone.trim()) {
+            const phoneValidation = validatePhoneFormat(formData.phone.trim())
+            if (!phoneValidation.valid) {
+                errors.push(phoneValidation.error || 'Invalid phone number')
+            }
+        }
+
+        // Email validation - only if provided
+        if (formData.email.trim()) {
+            if (!validateGuardianEmail(formData.email.trim())) {
+                errors.push('Invalid athlete email address')
+            }
+        }
+
         if (errors.length > 0) {
             setValidationErrors(errors)
             return
@@ -278,13 +296,30 @@ export default function CreateAthletePortal() {
                 allergies: formData.allergies.trim() || null,
                 emergency_contact_name: formData.emergency_contact_name.trim() || null,
                 emergency_contact_phone: formData.emergency_contact_phone.trim() || null,
+                phone: formData.phone.trim() || null,  // Athlete phone number
+                email: formData.email.trim() || null,   // Athlete email address
                 guardians,
                 sports: selectedSports.length > 0 ? selectedSports : undefined
             }
 
             const { data, error: createError } = await createAthleteWithGuardians(context, dto)
 
-            if (createError) throw createError
+            if (createError) {
+                // Check for constraint violation (database-level validation)
+                if ((createError as any).code === '23514') { // CHECK constraint violation
+                    const errorMessage = (createError as any).message || ''
+                    if (errorMessage.includes('email')) {
+                        setValidationErrors(['Invalid email format'])
+                    } else if (errorMessage.includes('phone')) {
+                        setValidationErrors(['Invalid phone number format'])
+                    } else {
+                        throw createError
+                    }
+                    setIsSubmitting(false)
+                    return
+                }
+                throw createError
+            }
 
             // If athlete was created and photo was selected, upload photo
             if (data?.athlete_id && photoFile) {
@@ -485,7 +520,7 @@ export default function CreateAthletePortal() {
                         </div>
                     </div>
 
-                    <div>
+                    <div className="mb-4">
                         <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
                             Preferred Name / Goes By
                         </label>
@@ -496,6 +531,33 @@ export default function CreateAthletePortal() {
                             className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
                             placeholder="e.g. Mike, Johnny, etc."
                         />
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                                Phone Number
+                            </label>
+                            <input
+                                type="tel"
+                                value={formData.phone}
+                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                                placeholder="(555) 123-4567"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                                Email Address
+                            </label>
+                            <input
+                                type="email"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                                placeholder="athlete@example.com"
+                            />
+                        </div>
                     </div>
                 </Card>
 

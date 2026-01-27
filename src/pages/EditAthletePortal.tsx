@@ -18,6 +18,8 @@ import { updateAthleteSports } from '../data/services/athleteSportsService'
 import { getSystemSports } from '../data/services/sportsService'
 import { AthletePhotoUpload } from '../components/admin/AthletePhotoUpload'
 import { uploadAthletePhoto, deleteAthletePhoto, getAthletePhotoUrl } from '../data/services/athletePhotoService'
+import { validatePhoneFormat } from '../utils/phoneValidation'
+import { validateGuardianEmail } from '../data/services/guardianService'
 import type { Gender, UpdateAthleteDTO } from '../types/family'
 import type { Sport } from '../data/types/organization'
 
@@ -75,6 +77,8 @@ const initialFormData = {
     allergies: '',
     emergency_contact_name: '',
     emergency_contact_phone: '',
+    phone: '',  // Athlete phone number
+    email: ''   // Athlete email address
 }
 
 export default function EditAthletePortal() {
@@ -103,29 +107,34 @@ export default function EditAthletePortal() {
     const [selectedSports, setSelectedSports] = useState<Array<{ sport_id: string; sport_type: SportType }>>([])
 
     // Refs for race condition and memory leak prevention
+    const requestIdRef = useRef(0)
     const isMountedRef = useRef(true)
     const isLoadingSportsRef = useRef(false)
     const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-    const loadedAthleteIdRef = useRef<string | null>(null)
     // Note: contextRef was removed - using context directly
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            isMountedRef.current = false
+            if (redirectTimeoutRef.current) {
+                clearTimeout(redirectTimeoutRef.current)
+            }
+        }
+    }, [])
 
     // Reset form state and load athlete data when athleteId changes
     useEffect(() => {
-        console.log('[EditAthletePortal] Effect triggered:', { isReady, athleteId, loadedAthleteId: loadedAthleteIdRef.current, mounted: isMountedRef.current })
+        console.log('[EditAthletePortal] Effect triggered:', { isReady, athleteId })
         if (!isReady || !athleteId) {
             console.log('[EditAthletePortal] Not ready or no athleteId, skipping')
-            return
-        }
-
-        // Skip if already loaded this specific athlete ID
-        if (loadedAthleteIdRef.current === athleteId) {
-            console.log('[EditAthletePortal] Already loaded this athlete, skipping')
+            setLoading(false)
             return
         }
 
         // Set mounted to true at the start of effect
         isMountedRef.current = true
-        loadedAthleteIdRef.current = athleteId
+        const currentRequestId = ++requestIdRef.current
 
         // Reset all form state
         setFormData(initialFormData)
@@ -135,15 +144,15 @@ export default function EditAthletePortal() {
         setNotFound(false)
         setLoading(true)
 
-        console.log('[EditAthletePortal] Starting athlete fetch, athleteId:', athleteId)
+        console.log('[EditAthletePortal] Starting athlete fetch, requestId:', currentRequestId, 'athleteId:', athleteId)
 
         // Load athlete data
         getAthleteById(context, athleteId)
             .then(({ data, error: fetchError }) => {
-                console.log('[EditAthletePortal] Received athlete data:', { data, error: fetchError })
-                // Only update if component is still mounted and this is still the athlete we want
-                if (!isMountedRef.current || loadedAthleteIdRef.current !== athleteId) {
-                    console.log('[EditAthletePortal] Unmounted or athlete changed, skipping update')
+                console.log('[EditAthletePortal] Received athlete data:', { data, error: fetchError, requestId: currentRequestId, current: requestIdRef.current, mounted: isMountedRef.current })
+                // Only update if this is the latest request and component is still mounted
+                if (currentRequestId !== requestIdRef.current || !isMountedRef.current) {
+                    console.log('[EditAthletePortal] Request stale or unmounted, skipping update')
                     return
                 }
 
@@ -169,7 +178,7 @@ export default function EditAthletePortal() {
 
                 console.log('[EditAthletePortal] Populating form with athlete data:', data)
 
-                // Pre-populate form with athlete data
+                // Pre-populate form with athlete data - include all form fields including phone/email
                 setFormData({
                     first_name: data.first_name || '',
                     last_name: data.last_name || '',
@@ -180,6 +189,8 @@ export default function EditAthletePortal() {
                     allergies: data.allergies || '',
                     emergency_contact_name: data.emergency_contact_name || '',
                     emergency_contact_phone: data.emergency_contact_phone || '',
+                    phone: data.phone || '',  // NEW - explicit mapping
+                    email: data.email || ''   // NEW - explicit mapping
                 })
 
                 // Load photo if exists
@@ -215,21 +226,12 @@ export default function EditAthletePortal() {
             })
             .catch((err) => {
                 console.error('[EditAthletePortal] Exception:', err)
-                if (isMountedRef.current && loadedAthleteIdRef.current === athleteId) {
+                if (currentRequestId === requestIdRef.current && isMountedRef.current) {
                     console.error('Error loading athlete:', err)
                     setError(err instanceof Error ? err.message : 'Failed to load athlete')
                     setLoading(false)
                 }
             })
-        
-        // Cleanup function to mark as unmounted when effect re-runs or component unmounts
-        return () => {
-            console.log('[EditAthletePortal] Effect cleanup, setting mounted to false')
-            isMountedRef.current = false
-            if (redirectTimeoutRef.current) {
-                clearTimeout(redirectTimeoutRef.current)
-            }
-        }
     }, [context.userId, context.orgId, isReady, athleteId, navigate])
 
     // Debug: Log state changes
@@ -309,8 +311,23 @@ export default function EditAthletePortal() {
 
             if (dob > today) {
                 errors.push('Date of birth must be in the past.')
-            } else if (age > 120) {
+            } else             if (age > 120) {
                 errors.push('Date of birth must be reasonable (not more than 120 years ago).')
+            }
+        }
+
+        // Phone validation - only if provided
+        if (formData.phone.trim()) {
+            const phoneValidation = validatePhoneFormat(formData.phone.trim())
+            if (!phoneValidation.valid) {
+                errors.push(phoneValidation.error || 'Invalid phone number')
+            }
+        }
+
+        // Email validation - only if provided
+        if (formData.email.trim()) {
+            if (!validateGuardianEmail(formData.email.trim())) {
+                errors.push('Invalid email address')
             }
         }
 
@@ -329,7 +346,7 @@ export default function EditAthletePortal() {
         setValidationErrors([])
 
         try {
-            // Normalize form data before submission
+            // Normalize form data before submission - include all updatable fields including phone/email
             const normalizedData: UpdateAthleteDTO = {
                 first_name: formData.first_name.trim(),
                 last_name: formData.last_name.trim(),
@@ -340,6 +357,8 @@ export default function EditAthletePortal() {
                 allergies: formData.allergies.trim() || null,
                 emergency_contact_name: formData.emergency_contact_name.trim() || null,
                 emergency_contact_phone: formData.emergency_contact_phone.trim() || null,
+                phone: formData.phone.trim() || null,  // NEW - explicit
+                email: formData.email.trim() || null,   // NEW - explicit
             }
 
             // Handle photo changes
@@ -364,6 +383,7 @@ export default function EditAthletePortal() {
                     // Log error but don't fail athlete update
                     console.error('Error uploading photo:', uploadError)
                     setPhotoError(uploadError.message)
+                    // Don't update photo_url - keep existing photo
                     // Continue with athlete update - photo can be fixed later
                 } else if (uploadedPath) {
                     newPhotoPath = uploadedPath
@@ -371,15 +391,33 @@ export default function EditAthletePortal() {
                 }
             }
 
-            // Update athlete data (including photo_url if changed)
+            // Update athlete data (only include photo_url if it changed)
             const updateData: UpdateAthleteDTO = {
-                ...normalizedData,
-                photo_url: newPhotoPath
+                ...normalizedData
+            }
+            // Only include photo_url if we have a new path (upload succeeded) or explicitly removed
+            if (newPhotoPath !== undefined) {
+                updateData.photo_url = newPhotoPath
             }
 
             // Sequential updates: athlete first, then sports
             const { error: athleteError } = await updateAthlete(context, athleteId, updateData)
-            if (athleteError) throw athleteError
+            if (athleteError) {
+                // Check for constraint violation (database-level validation)
+                if ((athleteError as any).code === '23514') { // CHECK constraint violation
+                    const errorMessage = (athleteError as any).message || ''
+                    if (errorMessage.includes('email')) {
+                        setValidationErrors(['Invalid email format'])
+                    } else if (errorMessage.includes('phone')) {
+                        setValidationErrors(['Invalid phone number format'])
+                    } else {
+                        throw athleteError
+                    }
+                    setIsSubmitting(false)
+                    return
+                }
+                throw athleteError
+            }
 
             // Then update sports
             const { error: sportsError } = await updateAthleteSports(athleteId, context.orgId, selectedSports)
@@ -561,7 +599,7 @@ export default function EditAthletePortal() {
                         </div>
                     </div>
 
-                    <div>
+                    <div className="mb-4">
                         <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
                             Preferred Name / Goes By
                         </label>
@@ -572,6 +610,33 @@ export default function EditAthletePortal() {
                             className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
                             placeholder="e.g. Mike, Johnny, etc."
                         />
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                                Phone Number
+                            </label>
+                            <input
+                                type="tel"
+                                value={formData.phone}
+                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                                placeholder="(555) 123-4567"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                                Email Address
+                            </label>
+                            <input
+                                type="email"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                                placeholder="athlete@example.com"
+                            />
+                        </div>
                     </div>
                 </Card>
 

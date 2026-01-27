@@ -165,6 +165,16 @@ export async function uploadAthletePhoto(
             .upload(photoPath, file, { upsert: true })
 
         if (uploadError) {
+            // Check for bucket not found errors
+            if (uploadError.message?.includes('Bucket not found') || 
+                uploadError.message?.includes('bucket') && uploadError.message?.includes('not found')) {
+                console.error('[athletePhotoService] Bucket "athlete-photos" not found. Please create the bucket in Supabase Storage.')
+                return { 
+                    path: null, 
+                    error: new Error('Photo storage is not configured. Please contact your administrator.') 
+                }
+            }
+
             // Check for network errors
             if (uploadError.message?.includes('network') || 
                 uploadError.message?.includes('fetch') || 

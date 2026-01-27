@@ -167,8 +167,23 @@ export default function TravelPlans() {
     { id: 'team_name', label: 'Team', render: (row) => row.team?.name },
     { id: 'actions', label: 'Actions', align: 'right', render: (row) => (
       <div className="pa-flex pa-gap-2 pa-justify-end">
-        <Button variant="blue" onClick={(e: React.MouseEvent<HTMLElement>) => { e.stopPropagation(); navigate(`/admin/travel/${row.id}`) }}>Edit</Button>
-        {row.status !== 'published' && <Button variant="primary" onClick={(e: React.MouseEvent<HTMLElement>) => { e.stopPropagation(); handlePublish(row.id) }}>Publish</Button>}
+        <Button 
+          variant="blue" 
+          onClick={(e: React.MouseEvent<HTMLElement>) => { e.stopPropagation(); navigate(`/admin/travel/${row.id}`) }}
+          disabled={publishLoading === row.id || cancelLoading === row.id}
+        >
+          Edit
+        </Button>
+        {row.status !== 'published' && row.status !== 'cancelled' && (
+          <Button 
+            variant="primary" 
+            onClick={(e: React.MouseEvent<HTMLElement>) => { e.stopPropagation(); handlePublish(row.id) }}
+            loading={publishLoading === row.id}
+            disabled={publishLoading === row.id || cancelLoading === row.id}
+          >
+            Publish
+          </Button>
+        )}
         {row.status !== 'cancelled' && (
           <Button 
             variant="danger" 
