@@ -20,6 +20,7 @@ import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import CreateAnnouncementModal from '../components/portal/CreateAnnouncementModal'
 import { showError, showSuccess } from '../utils/toast'
+import { getAnnouncementEmoji } from '../utils/announcementTypes'
 
 interface Team {
   id: string
@@ -128,6 +129,7 @@ export default function Messages() {
         const safeAnnouncements = (data as Announcement[]).map(ann => ({
           ...ann,
           priority: ann.priority || 'normal' as const,
+          type: ann.type || 'general' as const,
           title: ann.title || '',
           content: ann.content || '',
           created_at: ann.created_at || new Date().toISOString(),
@@ -239,14 +241,35 @@ export default function Messages() {
     }
   }
 
-  async function handleCreateAnnouncement(title: string, content: string, priority: 'normal' | 'urgent', teamId: string) {
+  async function handleCreateAnnouncement(
+    title: string, 
+    content: string, 
+    priority: 'normal' | 'urgent', 
+    teamId: string,
+    type: 'general' | 'reminder' | 'schedule_change' | 'urgent' | 'payment' | 'travel' = 'general',
+    isOrgWide: boolean = false
+  ) {
       if (!user) {
         showError('You must be logged in to create announcements')
         return
       }
 
+      if (!context.orgId) {
+        showError('Organization context is required')
+        return
+      }
+
       try {
-        const { data, error } = await createAnnouncement(title, content, priority, teamId, user.id)
+        const { data, error } = await createAnnouncement(
+          title, 
+          content, 
+          priority, 
+          isOrgWide ? null : teamId, 
+          user.id,
+          context.orgId,
+          type,
+          isOrgWide
+        )
         
         if (error) {
           showError(error.message || 'Failed to create announcement')
@@ -255,7 +278,7 @@ export default function Messages() {
           showSuccess('Announcement created successfully')
           setIsCreateModalOpen(false)
           // Refresh announcements if valid
-          if (teamId === selectedTeam) {
+          if (teamId === selectedTeam || isOrgWide) {
             await fetchAnnouncementsData()
           }
         } else {
@@ -460,6 +483,9 @@ export default function Messages() {
                         announcements.map((ann) => {
                           // Safe access: ensure priority exists and is a string
                           const priority = (ann.priority || 'normal').toLowerCase()
+                          const announcementType = ann.type || 'general'
+                          const emoji = getAnnouncementEmoji(announcementType)
+                          const isOrgWide = ann.team_id === null
                           const detailUrl = `/portal/messages/${ann.id}${selectedTeam ? `?team=${selectedTeam}` : ''}`
                           return (
                           <Link
@@ -474,6 +500,12 @@ export default function Messages() {
                             >
                               <div className="flex items-start justify-between mb-2">
                                 <div className="flex items-center gap-2">
+                                  <span className="text-xl">{emoji}</span>
+                                  {isOrgWide && (
+                                    <span className="px-2 py-0.5 text-xs font-bold uppercase tracking-widest rounded bg-purple-500/10 text-purple-500 dark:text-purple-400">
+                                      Org-Wide
+                                    </span>
+                                  )}
                                   <span className={`px-2 py-0.5 text-xs font-bold uppercase tracking-widest rounded ${
                                     (ann.author?.role || 'admin') === 'coach'
                                       ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-link-color)]'

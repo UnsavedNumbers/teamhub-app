@@ -796,6 +796,27 @@ export default function AthleteDetail() {
           }}
         >
           <button
+            onClick={() => handleBreadcrumbClick(getLink('admin.organization.structure'))}
+            disabled={navigating}
+            style={{
+              color: primaryColor,
+              fontSize: '12px',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              textDecoration: 'none',
+              background: 'none',
+              border: 'none',
+              cursor: navigating ? 'not-allowed' : 'pointer',
+              opacity: navigating ? 0.6 : 1,
+              padding: 0,
+              lineHeight: 'normal',
+            }}
+          >
+            ORGANIZATIONS
+          </button>
+          <span style={{ color: 'var(--pa-n400)', fontSize: '12px', fontWeight: 700, lineHeight: 'normal' }}>/</span>
+          <button
             onClick={() => handleBreadcrumbClick(getLink('admin.athletes.list'))}
             disabled={navigating}
             style={{

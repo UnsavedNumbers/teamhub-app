@@ -215,6 +215,52 @@ html.dark .oa-page-subtitle {
     border-radius: 0;
 }
 
+/* Tables inside oa-cards should not have rounded corners */
+.oa-card .pa-table-card,
+.oa-card .pa-table-wrapper {
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+}
+
+/* Remove top rounded corners from tables under section headers */
+.oa-card-header + .pa-table-wrapper .pa-table,
+.oa-card-title + .pa-table-wrapper .pa-table {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+/* Remove shadows from nested components in oa-cards */
+.oa-card .pa-table-card:hover {
+    box-shadow: none;
+}
+
+html.dark .oa-card .pa-table-card {
+    box-shadow: none;
+}
+
+html.dark .oa-card .pa-table-card:hover {
+    box-shadow: none;
+}
+
+/* Empty states inside oa-cards should not have card styling */
+.oa-card .pa-card,
+.oa-card .pa-empty,
+.oa-card .pa-table-empty {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
+html.dark .oa-card .pa-card,
+html.dark .oa-card .pa-empty,
+html.dark .oa-card .pa-table-empty {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+}
+
 /* Dark mode overrides */
 html.dark .oa-card {
     background: var(--org-surface-card, var(--pa-surface));

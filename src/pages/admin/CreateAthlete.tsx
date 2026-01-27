@@ -237,6 +237,7 @@ export default function CreateAthlete() {
                 title="Add Athlete"
                 subtitle="Create a new athlete profile and link guardians"
                 breadcrumbs={[
+                    { label: 'Organizations', path: getLink('admin.organization.structure') },
                     { label: 'Athletes', path: getLink('admin.athletes.list') },
                     { label: 'Add Athlete', path: '#' }
                 ]}

@@ -7,6 +7,7 @@ import {
   cancelTravelPlan,
   type FakeTravelPlan 
 } from '../../data/services/travelService'
+import { showSuccess, showError } from '../../utils/toast'
 import { 
   AdminPageHeader, 
   Card, 
@@ -14,6 +15,7 @@ import {
   PlatformDataTable, 
   Button, 
   EmptyState,
+  ConfirmDialog,
   type ColumnConfig 
 } from '../../components/platformAdmin'
 
@@ -25,6 +27,11 @@ export default function TravelPlans() {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(50)
   const [totalCount, setTotalCount] = useState(0)
+  const [error, setError] = useState<string | null>(null)
+  const [publishLoading, setPublishLoading] = useState<string | null>(null)
+  const [cancelLoading, setCancelLoading] = useState<string | null>(null)
+  const [cancelDialog, setCancelDialog] = useState<{ open: boolean; plan: TravelPlan | null }>({ open: false, plan: null })
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const navigate = useNavigate()
   const { context, isReady } = useUserContext()
@@ -38,12 +45,18 @@ export default function TravelPlans() {
       
       if (error) {
         console.error('Error fetching travel plans:', error)
+        setError(error.message || 'Failed to load travel plans')
         setPlans([])
         setTotalCount(0)
         return
       }
 
-      // Transform data to include team name (from fake data, team info is embedded)
+      setError(null)
+
+      // Transform data to include team name
+      // Service returns FakeTravelPlan which doesn't include team info directly
+      // In real data mode, the service query includes team join, but it's mapped to FakeTravelPlan
+      // For now, use the helper function (will be improved when service returns team info)
       const plansWithTeam = data.map(plan => ({
         ...plan,
         team: { name: getTeamName(plan.team_id) }
@@ -86,21 +99,64 @@ export default function TravelPlans() {
   }
 
   const handlePublish = async (id: string) => {
-    const { error } = await publishTravelPlan(context, id)
-    if (error) {
-      console.error('Error publishing plan:', error)
-      return
+    setPublishLoading(id)
+    setActionError(null)
+    
+    try {
+      const { data, error } = await publishTravelPlan(context, id)
+      
+      if (error) {
+        setActionError(error.message || 'Failed to publish travel plan')
+        showError(error.message || 'Failed to publish travel plan')
+        return
+      }
+
+      if (data) {
+        showSuccess('Travel plan published successfully!')
+        await fetchPlans()
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to publish travel plan'
+      setActionError(errorMessage)
+      showError(errorMessage)
+    } finally {
+      setPublishLoading(null)
     }
-    fetchPlans()
   }
 
-  const handleCancel = async (id: string) => {
-    const { error } = await cancelTravelPlan(context, id)
-    if (error) {
-      console.error('Error cancelling plan:', error)
-      return
+  const handleCancelClick = (plan: TravelPlan) => {
+    setCancelDialog({ open: true, plan })
+    setActionError(null)
+  }
+
+  const handleCancelConfirm = async (_reason: string) => {
+    if (!cancelDialog.plan) return
+
+    const planId = cancelDialog.plan.id
+    setCancelLoading(planId)
+    setActionError(null)
+
+    try {
+      const { data, error } = await cancelTravelPlan(context, planId)
+      
+      if (error) {
+        setActionError(error.message || 'Failed to cancel travel plan')
+        showError(error.message || 'Failed to cancel travel plan')
+        return
+      }
+
+      if (data) {
+        showSuccess('Travel plan cancelled successfully!')
+        setCancelDialog({ open: false, plan: null })
+        await fetchPlans()
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to cancel travel plan'
+      setActionError(errorMessage)
+      showError(errorMessage)
+    } finally {
+      setCancelLoading(null)
     }
-    fetchPlans()
   }
 
   const columns: ColumnConfig<TravelPlan>[] = [
@@ -113,7 +169,16 @@ export default function TravelPlans() {
       <div className="pa-flex pa-gap-2 pa-justify-end">
         <Button variant="blue" onClick={(e: React.MouseEvent<HTMLElement>) => { e.stopPropagation(); navigate(`/admin/travel/${row.id}`) }}>Edit</Button>
         {row.status !== 'published' && <Button variant="primary" onClick={(e: React.MouseEvent<HTMLElement>) => { e.stopPropagation(); handlePublish(row.id) }}>Publish</Button>}
-        {row.status !== 'cancelled' && <Button variant="danger" onClick={(e: React.MouseEvent<HTMLElement>) => { e.stopPropagation(); handleCancel(row.id) }}>Cancel</Button>}
+        {row.status !== 'cancelled' && (
+          <Button 
+            variant="danger" 
+            onClick={(e: React.MouseEvent<HTMLElement>) => { e.stopPropagation(); handleCancelClick(row) }}
+            loading={cancelLoading === row.id}
+            disabled={publishLoading === row.id || cancelLoading === row.id}
+          >
+            Cancel
+          </Button>
+        )}
       </div>
     )}
   ]
@@ -124,11 +189,34 @@ export default function TravelPlans() {
         title="Travel Plans" 
         actions={<Button onClick={() => navigate('/admin/travel/new')}><span className="material-symbols-outlined">add</span>New Plan</Button>} 
       />
-      {plans.length === 0 && !loading ? (
-        <Card><EmptyState icon="flight_takeoff" title="NO TRAVEL PLANS" description="Create a travel plan to help your teams prepare for events." action={{ label: 'Create Plan', onClick: () => navigate('/admin/travel/new') }} /></Card>
+      {error && !loading && (
+        <Card>
+          <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>
+            {error}
+            <Button variant="primary" onClick={() => fetchPlans()} style={{ marginTop: '8px' }}>Retry</Button>
+          </div>
+        </Card>
+      )}
+      {plans.length === 0 && !loading && !error ? (
+        <Card><EmptyState icon="flight_takeoff" title="NO TRAVEL PLANS" description="Create a travel plan to help your teams prepare for events." action={{ label: 'Create Plan', onClick: () => navigate('/admin/travel/new') }} noCard /></Card>
       ) : (
         <PlatformDataTable columns={columns} rows={plans} loading={loading} totalCount={totalCount} page={page} rowsPerPage={rowsPerPage} onPageChange={setPage} onRowsPerPageChange={setRowsPerPage} onRowClick={r => navigate(`/admin/travel/${r.id}`)} />
       )}
+
+      <ConfirmDialog
+        open={cancelDialog.open}
+        title="Cancel Travel Plan"
+        description={cancelDialog.plan ? `Are you sure you want to cancel "${cancelDialog.plan.title}"? This will mark the plan as cancelled and notify participants.` : ''}
+        confirmLabel="Cancel Plan"
+        variant="warning"
+        loading={cancelLoading !== null}
+        error={actionError}
+        onConfirm={handleCancelConfirm}
+        onCancel={() => {
+          setCancelDialog({ open: false, plan: null })
+          setActionError(null)
+        }}
+      />
     </div>
   )
 }

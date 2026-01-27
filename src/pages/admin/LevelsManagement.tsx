@@ -378,6 +378,7 @@ export default function LevelsManagement() {
             icon="grade"
             title="No levels yet"
             description="Create programs first, then add levels to define eligibility."
+            noCard
           >
             <Link
               to={`${getLink('admin.organization.forms')}?type=program&returnUrl=${encodeURIComponent(getLink('admin.organization.levels'))}`}

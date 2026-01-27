@@ -17,6 +17,7 @@ import {
     getOrgWideAnnouncements,
     getNotificationsForUser,
     getUnreadNotificationCount,
+    deleteAnnouncementById as deleteFakeAnnouncementById,
     type FakeAnnouncement,
     type FakeNotification,
 } from '../fake/fakeMessages'
@@ -24,10 +25,12 @@ import {
 export interface Announcement {
     id: string
     team_id: string | null
+    org_id: string | null
     author_id: string
     title: string
     content: string
     priority: 'normal' | 'urgent'
+    type: 'general' | 'reminder' | 'schedule_change' | 'urgent' | 'payment' | 'travel'
     created_at: string
     updated_at: string
     author?: {
@@ -105,10 +108,12 @@ export async function getAnnouncements(
         const mappedAnnouncements: Announcement[] = announcements.map(fake => ({
             id: fake.id,
             team_id: fake.team_id,
+            org_id: context.orgId || null,
             author_id: fake.created_by_user_id,
             title: fake.title,
             content: fake.body,
             priority: fake.type === 'emergency' ? 'urgent' : 'normal',
+            type: 'general' as const,
             created_at: fake.created_at,
             updated_at: fake.updated_at,
             author: {
@@ -138,8 +143,16 @@ export async function getAnnouncements(
             `)
             .order('created_at', { ascending: false })
 
-        if (params.teamId) {
-            query = query.eq('team_id', params.teamId)
+        if (params.teamId && orgId) {
+            // Get team-specific announcements OR org-wide announcements for this org
+            // Use separate queries and combine, or use a filter function
+            // For now, filter by org and then filter in JS, or use PostgREST or syntax
+            query = query
+                .eq('org_id', orgId)
+                .or(`team_id.eq.${params.teamId},team_id.is.null`)
+        } else if (orgId) {
+            // Get all announcements for the org (team-specific + org-wide)
+            query = query.eq('org_id', orgId)
         }
 
         const { data, error } = await query
@@ -185,10 +198,12 @@ export async function getAnnouncementById(
         const announcement: Announcement = {
             id: fakeAnn.id,
             team_id: fakeAnn.team_id,
+            org_id: null,
             author_id: fakeAnn.created_by_user_id,
             title: fakeAnn.title,
             content: fakeAnn.body,
             priority: fakeAnn.type === 'emergency' ? 'urgent' : 'normal',
+            type: 'general' as const,
             created_at: fakeAnn.created_at,
             updated_at: fakeAnn.updated_at,
             author: {
@@ -261,8 +276,11 @@ export async function createAnnouncement(
     title: string,
     content: string,
     priority: 'normal' | 'urgent',
-    teamId: string,
-    authorId: string
+    teamId: string | null,
+    authorId: string,
+    orgId: string,
+    type: 'general' | 'reminder' | 'schedule_change' | 'urgent' | 'payment' | 'travel' = 'general',
+    isOrgWide: boolean = false
 ): Promise<{ data: Announcement | null; error: Error | null }> {
     // Input validation
     if (!title || !title.trim()) {
@@ -274,8 +292,11 @@ export async function createAnnouncement(
     if (!priority || (priority !== 'normal' && priority !== 'urgent')) {
         return { data: null, error: new Error('Priority must be "normal" or "urgent"') }
     }
-    if (!teamId) {
-        return { data: null, error: new Error('Team ID is required') }
+    if (!isOrgWide && !teamId) {
+        return { data: null, error: new Error('Team ID is required for team-specific announcements') }
+    }
+    if (isOrgWide && !orgId) {
+        return { data: null, error: new Error('Organization ID is required for org-wide announcements') }
     }
     if (!authorId) {
         return { data: null, error: new Error('Author ID is required') }
@@ -286,11 +307,13 @@ export async function createAnnouncement(
         return { 
             data: {
                 id: Date.now().toString(),
-                team_id: teamId,
+                team_id: isOrgWide ? null : teamId,
+                org_id: orgId,
                 author_id: authorId,
                 title: title.trim(),
                 content: content.trim(),
                 priority,
+                type,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
                 author: {
@@ -303,19 +326,22 @@ export async function createAnnouncement(
     }
 
     try {
-        // Fetch Org ID from team first to ensure we know where to book creation (if needed) but DB handles Insert.
-        type AnnouncementInsert = Database['public']['Tables']['announcements']['Insert']
+        // Build insert data - team_id can be null for org-wide announcements
+        // Type assertion needed because Database types may not reflect nullable team_id
         const insertData = {
             title: title.trim(),
             content: content.trim(),
             priority,
-            team_id: teamId,
-            author_id: authorId
-        } satisfies AnnouncementInsert
+            type,
+            org_id: orgId,
+            author_id: authorId,
+            team_id: isOrgWide ? null : (teamId as string | null)
+        } as Database['public']['Tables']['announcements']['Insert']
+        
         const { data, error } = await supabase
             .from('announcements')
             .insert(insertData)
-            .select(`*, author:users(email)`)
+            .select(`*, author:users(email), team:teams(name, org_id)`)
             .single()
 
         if (error) throw error
@@ -325,12 +351,12 @@ export async function createAnnouncement(
         }
 
         // Manually fetch role for consistent return
-        let result = data as unknown as { author?: { email?: string; role?: string } }
+        let result = data as unknown as { author?: { email?: string; role?: string }; org_id?: string }
         if (result) {
-            const teamData = await getTeamWithOrg(teamId)
+            const targetOrgId = result.org_id || orgId
             let role = 'parent'
-            if (teamData) {
-                const memberData = await getOrgMember(teamData.org_id, authorId)
+            if (targetOrgId) {
+                const memberData = await getOrgMember(targetOrgId, authorId)
                 if (memberData) role = memberData.role
             }
             result.author = { ...result.author, role }
@@ -341,6 +367,110 @@ export async function createAnnouncement(
         const error = err instanceof Error ? err : new Error('Unknown error')
         console.error('Error creating announcement:', error)
         return { data: null, error }
+    }
+}
+
+export async function deleteAnnouncement(
+    context: UserContext,
+    announcementId: string
+): Promise<{ success: boolean; error: Error | null }> {
+    // Input validation
+    const trimmedId = (announcementId ?? '').trim()
+    if (!trimmedId) {
+        return { success: false, error: new Error('Announcement ID is required') }
+    }
+    if (!context.orgId) {
+        return { success: false, error: new Error('Organization context is required') }
+    }
+    if (!context.userId) {
+        return { success: false, error: new Error('User ID is required') }
+    }
+
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+        
+        // First, check if announcement exists and get it for permission check
+        const announcement = getFakeAnnouncementById(announcementId)
+        if (!announcement) {
+            return { success: false, error: new Error('Announcement not found') }
+        }
+        
+        // Check permission: must be org_admin or author
+        const isAuthor = announcement.created_by_user_id === context.userId
+        const isOrgAdmin = context.roles?.includes('org_admin') ?? false
+        
+        if (!isAuthor && !isOrgAdmin) {
+            return { success: false, error: new Error('You do not have permission to delete this announcement') }
+        }
+        
+        // Check org ownership
+        if (announcement.org_id !== context.orgId) {
+            return { success: false, error: new Error('Announcement does not belong to your organization') }
+        }
+        
+        // Delete using helper function
+        const deleted = deleteFakeAnnouncementById(announcementId)
+        if (!deleted) {
+            return { success: false, error: new Error('Failed to delete announcement') }
+        }
+        
+        return { success: true, error: null }
+    }
+
+    try {
+        // First, fetch the announcement to check permissions and ownership
+        const { data: announcement, error: fetchError } = await supabase
+            .from('announcements')
+            .select('id, author_id, org_id')
+            .eq('id', trimmedId)
+            .single()
+
+        if (fetchError) {
+            if (fetchError.code === 'PGRST116') {
+                return { success: false, error: new Error('Announcement not found') }
+            }
+            throw fetchError
+        }
+
+        if (!announcement || typeof announcement !== 'object' || !('id' in announcement)) {
+            return { success: false, error: new Error('Announcement not found') }
+        }
+
+        // Type guard for announcement data
+        const announcementData = announcement as { id: string; author_id: string; org_id: string | null }
+
+        // Check org ownership
+        if (announcementData.org_id !== context.orgId) {
+            return { success: false, error: new Error('Announcement does not belong to your organization') }
+        }
+
+        // Check permission: must be org_admin or author
+        const isAuthor = announcementData.author_id === context.userId
+        const isOrgAdmin = context.roles?.includes('org_admin') ?? false
+
+        if (!isAuthor && !isOrgAdmin) {
+            // Double-check by querying organization_members
+            const memberData = await getOrgMember(context.orgId, context.userId)
+            const hasOrgAdminRole = memberData?.role === 'org_admin'
+            
+            if (!hasOrgAdminRole && !isAuthor) {
+                return { success: false, error: new Error('You do not have permission to delete this announcement') }
+            }
+        }
+
+        // Delete the announcement
+        const { error: deleteError } = await supabase
+            .from('announcements')
+            .delete()
+            .eq('id', trimmedId)
+
+        if (deleteError) throw deleteError
+
+        return { success: true, error: null }
+    } catch (err) {
+        const error = err instanceof Error ? err : new Error('Unknown error')
+        console.error('Error deleting announcement:', error)
+        return { success: false, error }
     }
 }
 

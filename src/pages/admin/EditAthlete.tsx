@@ -366,6 +366,7 @@ export default function EditAthlete() {
                     title="Athlete Not Found"
                     subtitle="The athlete you're looking for doesn't exist or you don't have access."
                     breadcrumbs={[
+                        { label: 'Organizations', path: getLink('admin.organization.structure') },
                         { label: 'Athletes', path: getLink('admin.athletes.list') },
                         { label: 'Edit Athlete', path: '#' }
                     ]}
@@ -395,6 +396,7 @@ export default function EditAthlete() {
                 title="Edit Athlete"
                 subtitle="Update athlete information, sports preferences, and profile photo"
                 breadcrumbs={[
+                    { label: 'Organizations', path: getLink('admin.organization.structure') },
                     { label: 'Athletes', path: getLink('admin.athletes.list') },
                     { label: 'Edit Athlete', path: '#' }
                 ]}

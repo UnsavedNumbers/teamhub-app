@@ -932,6 +932,14 @@ export const en = {
         navigation: {
             children: 'Athletes',
         },
+        announcements: {
+            audience: 'Audience',
+            audienceTeamOnly: 'This team only',
+            audienceEveryone: 'Everyone in {{orgName}}',
+            priority: 'Priority',
+            priorityNormal: 'Normal',
+            priorityUrgent: 'Urgent',
+        },
         events: {
             create: 'Create Event',
             edit: 'Edit Event',
@@ -1904,6 +1912,14 @@ export const es: typeof en = {
         },
         navigation: {
             children: 'Atletas',
+        },
+        announcements: {
+            audience: 'Audiencia',
+            audienceTeamOnly: 'Solo este equipo',
+            audienceEveryone: 'Todos en {{orgName}}',
+            priority: 'Prioridad',
+            priorityNormal: 'Normal',
+            priorityUrgent: 'Urgente',
         },
         events: {
             create: 'Crear Evento',

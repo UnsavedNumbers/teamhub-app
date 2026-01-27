@@ -78,6 +78,7 @@ export default function CreateUniform() {
             icon="checkroom"
             title={t('admin.uniforms.prerequisite.noSportsTitle')}
             description={t('admin.uniforms.prerequisite.noSportsDescription')}
+            noCard
           >
             <Link to={`${getLink('admin.organization.forms')}?type=sport&returnUrl=${returnUrl}`}>
               <Button variant="primary">{t('admin.uniforms.prerequisite.addSport')}</Button>
