@@ -44,6 +44,7 @@ export function TeamScheduleTab({ teamId, seasonId, teamName }: TeamScheduleTabP
           icon="event"
           title="No active season"
           description="Please select an active season to view the team schedule."
+          noCard
         />
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--pa-space-4)' }}>
           <Button variant="secondary" onClick={() => navigate(`/admin/events?teamId=${teamId}`)}>
@@ -134,6 +135,7 @@ export function TeamScheduleTab({ teamId, seasonId, teamName }: TeamScheduleTabP
             icon="event"
             title="No events scheduled"
             description={`No events are currently scheduled for ${teamName}.`}
+            noCard
           />
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--pa-space-4)' }}>

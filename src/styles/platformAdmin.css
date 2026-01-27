@@ -5665,6 +5665,171 @@ html.dark .pa-text-danger {
     padding: 0;
 }
 
+/* =====================================================================
+   REDUCE VISUAL DECORATION - Nested Components Rules
+   ===================================================================== */
+
+/* Tables inside cards should not have rounded corners or shadows */
+.pa-card .pa-table-card,
+.oa-card .pa-table-card,
+.pa-card .pa-table-wrapper,
+.oa-card .pa-table-wrapper {
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+}
+
+/* Remove top rounded corners from tables under section headers */
+.pa-card-header + .pa-table-wrapper .pa-table,
+.oa-card-header + .pa-table-wrapper .pa-table,
+.pa-card-title + .pa-table-wrapper .pa-table,
+.oa-card-title + .pa-table-wrapper .pa-table {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+/* Tables inside cards with no-padding should be flush */
+.pa-card--no-padding .pa-table-card,
+.oa-card--no-padding .pa-table-card {
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+}
+
+/* Stacked cards - only apply when explicitly needed
+   Most detail pages use grids with gaps, so cards keep rounded corners
+   This rule is for special cases where cards are truly stacked */
+.pa-card-stacked + .pa-card-stacked,
+.oa-card-stacked + .oa-card-stacked {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    margin-top: calc(-1 * var(--pa-space-6));
+    border-top: none;
+}
+
+/* First card in stack keeps top corners */
+.pa-card:first-child,
+.oa-card:first-child {
+    border-top-left-radius: var(--pa-radius-m);
+    border-top-right-radius: var(--pa-radius-m);
+}
+
+/* Last card in stack keeps bottom corners */
+.pa-card:last-child,
+.oa-card:last-child {
+    border-bottom-left-radius: var(--pa-radius-m);
+    border-bottom-right-radius: var(--pa-radius-m);
+}
+
+/* Remove shadows, borders, and rounded corners from nested cards (e.g., EmptyState inside Card) */
+.pa-card .pa-card,
+.oa-card .oa-card,
+.pa-card .pa-card:hover,
+.oa-card .oa-card:hover {
+    box-shadow: none;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+}
+
+/* Remove shadows from components inside cards */
+.pa-card .pa-table-card:hover,
+.oa-card .pa-table-card:hover {
+    box-shadow: none;
+}
+
+html.dark .pa-card .pa-table-card,
+html.dark .oa-card .pa-table-card {
+    box-shadow: none;
+}
+
+html.dark .pa-card .pa-table-card:hover,
+html.dark .oa-card .pa-table-card:hover {
+    box-shadow: none;
+}
+
+/* Dark mode - nested cards should not have card styling */
+html.dark .pa-card .pa-card,
+html.dark .oa-card .oa-card,
+html.dark .pa-card .pa-card:hover,
+html.dark .oa-card .oa-card:hover {
+    box-shadow: none;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+}
+
+/* Empty state divs inside cards should not have card styling */
+.pa-card .pa-empty,
+.oa-card .pa-empty,
+.pa-card .pa-table-empty,
+.oa-card .pa-table-empty {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
+/* ErrorState inside cards - preserve border-left accent but remove other card styling */
+.pa-card .pa-card[style*="border"],
+.oa-card .pa-card[style*="border"] {
+    border-top: none;
+    border-right: none;
+    border-bottom: none;
+    border-radius: 0;
+    box-shadow: none;
+    /* border-left is preserved from inline style via !important or specific selector */
+}
+
+/* More specific: preserve border-left when it exists in inline style */
+.pa-card .pa-card[style*="border-left"],
+.pa-card .pa-card[style*="borderLeft"],
+.oa-card .pa-card[style*="border-left"],
+.oa-card .pa-card[style*="borderLeft"] {
+    border-top: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+html.dark .pa-card .pa-empty,
+html.dark .oa-card .pa-empty,
+html.dark .pa-card .pa-table-empty,
+html.dark .oa-card .pa-table-empty {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+}
+
+/* Ensure empty states inside cards align flush with card edges */
+.pa-card--no-padding .pa-empty,
+.oa-card--no-padding .pa-empty,
+.pa-card--no-padding .pa-table-empty,
+.oa-card--no-padding .pa-table-empty {
+    padding-left: var(--pa-space-5);
+    padding-right: var(--pa-space-5);
+}
+
+/* Remove redundant borders between tightly stacked elements */
+.pa-card-header + .pa-card-content,
+.oa-card-header + .pa-card-content {
+    border-top: none;
+}
+
+/* Tables should align flush with card edges when inside cards */
+.pa-card--no-padding .pa-table thead tr:first-child th:first-child,
+.oa-card--no-padding .pa-table thead tr:first-child th:first-child {
+    border-top-left-radius: 0;
+}
+
+.pa-card--no-padding .pa-table thead tr:first-child th:last-child,
+.oa-card--no-padding .pa-table thead tr:first-child th:last-child {
+    border-top-right-radius: 0;
+}
+
 /* Z-index */
 
 /* Backgrounds */

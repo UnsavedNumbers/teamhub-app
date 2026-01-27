@@ -1,12 +1,13 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { startTransition } from 'react'
 
 import { useUserContext } from '../../hooks/useUserContext'
-import { getTravelPlanById } from '../../data/services/travelService'
+import { getTravelPlanById, updateTravelPlan, type UpdateTravelPlanDTO } from '../../data/services/travelService'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { showSuccess, showError } from '../../utils/toast'
+import { isValidUUID } from '../../utils/uuid'
 import { 
   AdminPageHeader, 
   Card, 
@@ -15,6 +16,7 @@ import {
   DatePicker 
 } from '../../components/platformAdmin'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
+import { FileUpload } from '../../components/common/FileUpload'
 
 interface TravelFormData { 
   title: string
@@ -34,94 +36,140 @@ interface TravelFormData {
 }
 
 export default function EditTravelPlan() {
-  const { planId } = useParams<{ planId: string }>()
+  const { id } = useParams<{ id: string }>()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
+  const [itineraryFile, setItineraryFile] = useState<File | null>(null)
+  const isMountedRef = useRef(true)
 
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
-  const { control, handleSubmit, reset, setValue } = useForm<TravelFormData>()
+  const { control, handleSubmit, reset, setValue, watch } = useForm<TravelFormData>()
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
 
   const fetchPlan = useCallback(async () => {
-    if (!isReady || !planId) return
+    if (!isReady || !id) return
     
+    // Validate UUID format
+    if (!isValidUUID(id)) {
+      if (isMountedRef.current) {
+        navigate('/admin/travel')
+      }
+      return
+    }
+    
+    if (!isMountedRef.current) return
     setLoading(true)
-    const { data, error } = await getTravelPlanById(context, planId)
     
-    if (error || !data) {
-      navigate('/admin/travel')
+    try {
+      const { data, error } = await getTravelPlanById(context, id)
+      
+      if (!isMountedRef.current) return
+
+      if (error || !data) {
+        navigate('/admin/travel')
+        return
+      }
+
+      // Populate form with existing data
+      reset({
+        title: data.title,
+        location: data.location,
+        destination_city: data.destination_city ?? '',
+        destination_state: data.destination_state ?? '',
+        start_date: data.start_date,
+        end_date: data.end_date,
+        venue_name: data.venue_name ?? '',
+        venue_address: data.venue_address ?? '',
+        hotel_name: data.hotel_name ?? '',
+        hotel_address: data.hotel_address ?? '',
+        hotel_phone: data.hotel_phone ?? '',
+        hotel_confirmation: data.hotel_confirmation ?? '',
+        maps_url: data.maps_url ?? '',
+        notes: data.notes ?? '',
+      })
+    } catch (err) {
+      if (isMountedRef.current) {
+        setError(getErrorMessage(err) || 'Failed to load travel plan')
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setLoading(false)
+      }
+    }
+  }, [context, isReady, id, navigate, reset])
+
+  useEffect(() => { 
+    if (isReady && id) fetchPlan() 
+  }, [isReady, id, fetchPlan])
+
+  const onSubmit = async (data: TravelFormData) => {
+    if (!id || !isValidUUID(id)) {
+      setError('Invalid plan ID')
       return
     }
 
-    // Populate form with existing data
-    reset({
-      title: data.title,
-      location: data.location,
-      destination_city: data.destination_city || '',
-      destination_state: data.destination_state || '',
-      start_date: data.start_date,
-      end_date: data.end_date,
-      venue_name: data.venue_name || '',
-      venue_address: data.venue_address || '',
-      hotel_name: data.hotel_name || '',
-      hotel_address: data.hotel_address || '',
-      hotel_phone: data.hotel_phone || '',
-      hotel_confirmation: data.hotel_confirmation || '',
-      maps_url: data.maps_url || '',
-      notes: data.notes || '',
-    })
-
-    setLoading(false)
-  }, [context, isReady, planId, navigate, reset])
-
-  useEffect(() => { 
-    if (isReady && planId) fetchPlan() 
-  }, [isReady, planId, fetchPlan])
-
-  const onSubmit = async (_data: TravelFormData) => {
+    if (!isMountedRef.current) return
     setSaving(true)
     setError(null)
     
     try {
-      // In fake data mode, just navigate back with success
-      // TODO: Replace with real Supabase update when migrating
-      /*
-      const { error: updateError } = await supabase
-        .from('travel_plans')
-        .update({
-          title: data.title,
-          location: data.location,
-          destination_city: data.destination_city || null,
-          destination_state: data.destination_state || null,
-          start_date: data.start_date,
-          end_date: data.end_date,
-          venue_name: data.venue_name || null,
-          venue_address: data.venue_address || null,
-          hotel_name: data.hotel_name || null,
-          hotel_address: data.hotel_address || null,
-          hotel_phone: data.hotel_phone || null,
-          hotel_confirmation: data.hotel_confirmation || null,
-          maps_url: data.maps_url || null,
-          notes: data.notes || null,
-        })
-        .eq('id', planId)
-      
-      if (updateError) throw updateError
-      */
-      
-      // Simulate delay
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Map form data to DTO
+      const updateData: UpdateTravelPlanDTO = {
+        title: data.title,
+        location: data.location,
+        destination_city: data.destination_city || null,
+        destination_state: data.destination_state || null,
+        start_date: data.start_date,
+        end_date: data.end_date,
+        venue_name: data.venue_name || null,
+        venue_address: data.venue_address || null,
+        hotel_name: data.hotel_name || null,
+        hotel_address: data.hotel_address || null,
+        hotel_phone: data.hotel_phone || null,
+        hotel_confirmation: data.hotel_confirmation || null,
+        maps_url: data.maps_url || null,
+        notes: data.notes || null,
+        itinerary_file: itineraryFile,
+      }
+
+      const { data: updatedPlan, error: updateError } = await updateTravelPlan(context, id, updateData)
+
+      if (!isMountedRef.current) return
+
+      if (updateError || !updatedPlan) {
+        const errorMessage = updateError?.message || 'Failed to update travel plan'
+        setError(errorMessage)
+        showError(errorMessage)
+        
+        // Handle optimistic locking error
+        if (errorMessage.includes('modified by another user')) {
+          // Refresh plan data
+          await fetchPlan()
+        }
+        return
+      }
+
       showSuccess('Travel plan updated successfully!')
-      navigate('/admin/travel')
+      if (isMountedRef.current) {
+        navigate('/admin/travel')
+      }
     } catch (err: unknown) { 
+      if (!isMountedRef.current) return
       const errorMessage = getErrorMessage(err) || 'Failed to update travel plan'
       setError(errorMessage)
       showError(errorMessage)
     } finally { 
-      setSaving(false) 
+      if (isMountedRef.current) {
+        setSaving(false)
+      }
     }
   }
 
@@ -152,8 +200,34 @@ export default function EditTravelPlan() {
             <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
               <Controller name="destination_city" control={control} render={({ field }) => <Input {...field} label="Destination City" />} />
               <Controller name="destination_state" control={control} render={({ field }) => <Input {...field} label="Destination State" />} />
-              <Controller name="start_date" control={control} rules={{ required: 'Start date is required' }} render={({ field }) => <DatePicker {...field} label="Start Date" required />} />
-              <Controller name="end_date" control={control} rules={{ required: 'End date is required' }} render={({ field }) => <DatePicker {...field} label="End Date" required />} />
+              <Controller 
+                name="start_date" 
+                control={control} 
+                rules={{ required: 'Start date is required' }} 
+                render={({ field }) => <DatePicker {...field} label="Start Date" required />} 
+              />
+              <Controller 
+                name="end_date" 
+                control={control} 
+                rules={{ 
+                  required: 'End date is required',
+                  validate: (value) => {
+                    const startDate = watch('start_date')
+                    if (startDate && value && value < startDate) {
+                      return 'End date must be on or after start date'
+                    }
+                    return true
+                  }
+                }} 
+                render={({ field, fieldState }) => (
+                  <DatePicker 
+                    {...field} 
+                    label="End Date" 
+                    required 
+                    error={fieldState.error?.message}
+                  />
+                )} 
+              />
             </div>
 
             <h3 className="pa-h3 pa-mb-4 pa-mt-6">VENUE & HOTEL</h3>
@@ -202,9 +276,23 @@ export default function EditTravelPlan() {
               <Controller name="maps_url" control={control} render={({ field }) => <Input {...field} label="Map Link URL" />} />
             </div>
 
+            <h3 className="pa-h3 pa-mb-4">ITINERARY FILE</h3>
+            <div className="pa-mb-6">
+              <FileUpload
+                label="Itinerary File"
+                value={itineraryFile}
+                onFileSelect={setItineraryFile}
+                buttonText="Choose file"
+                replaceText="Replace file"
+                accept=".pdf,application/pdf"
+                maxSize={10 * 1024 * 1024}
+                fullWidth
+              />
+            </div>
+
             <div className="pa-flex pa-justify-end pa-gap-3">
-              <Button variant="blue" onClick={() => navigate('/admin/travel')}>Cancel</Button>
-              <Button type="submit" loading={saving}>Save Changes</Button>
+              <Button variant="blue" onClick={() => navigate('/admin/travel')} disabled={saving}>Cancel</Button>
+              <Button type="submit" loading={saving} disabled={saving}>Save Changes</Button>
             </div>
           </form>
         </Card>

@@ -34,6 +34,7 @@ interface Season { id: string; name: string; team_id: string; is_active?: boolea
 export default function CreateEvent() {
   const [teams, setTeams] = useState<Team[]>([])
   const [seasons, setSeasons] = useState<Season[]>([])
+  const [showSeasonDropdown, setShowSeasonDropdown] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -226,43 +227,64 @@ export default function CreateEvent() {
   }, [context, isReady, watch, setValue, trigger])
 
   const fetchSeasons = useCallback(async (teamId: string, restoreSeasonId?: string) => {
-    if (!isReady || !teamId) return
+    if (!isReady || !teamId) {
+      setSeasons([])
+      setShowSeasonDropdown(false)
+      setValue('season_id', '', { shouldValidate: false })
+      return
+    }
     
+    // Fetch all seasons for the selected team
     const { data, error } = await supabase
         .from('team_seasons_view')
-        .select('season_id, name, is_active')
+        .select('season_id, name, is_active, start_date, end_date')
         .eq('team_id', teamId)
-        .order('is_active', { ascending: false }) // Active seasons first
+        .order('start_date', { ascending: false }) // Most recent/future first
 
     if (!error && data) {
+      // Filter to only include active seasons or seasons starting today or in the future
+      const today = new Date()
+      today.setHours(0, 0, 0, 0) // Reset to start of day for comparison
+      
       const mappedSeasons = data
-        .filter(s => s.season_id !== null && s.name !== null)
+        .filter(s => {
+          if (!s.season_id || !s.name) return false
+          // Include if active OR if start_date is today or in the future
+          if (s.is_active === true) return true
+          if (s.start_date) {
+            const startDate = new Date(s.start_date)
+            startDate.setHours(0, 0, 0, 0)
+            return startDate >= today
+          }
+          return false
+        })
         .map(s => ({
           id: s.season_id as string,
           name: s.name as string,
           team_id: teamId,
           is_active: s.is_active ?? false
         }))
+      
       setSeasons(mappedSeasons)
+      
+      // Only show dropdown if there are multiple seasons
+      setShowSeasonDropdown(mappedSeasons.length > 1)
       
       // If we have a restored season_id, try to use it if it's valid
       if (restoreSeasonId) {
         const restoredSeason = mappedSeasons.find(s => s.id === restoreSeasonId)
         if (restoredSeason) {
           setValue('season_id', restoredSeason.id, { shouldValidate: false })
-          // Trigger validation after a small delay to clear any false errors
           setTimeout(() => trigger('season_id'), 100)
           return
         }
       }
       
-      // Otherwise, auto-select the active season if it exists, otherwise select the first one
-      const activeSeason = mappedSeasons.find(s => s.is_active)
-      if (activeSeason) {
-        setValue('season_id', activeSeason.id, { shouldValidate: false })
-        setTimeout(() => trigger('season_id'), 100)
-      } else if (mappedSeasons.length > 0) {
-        setValue('season_id', mappedSeasons[0].id, { shouldValidate: false })
+      // Auto-select the active season if it exists, otherwise select the first one
+      if (mappedSeasons.length > 0) {
+        const activeSeason = mappedSeasons.find(s => s.is_active)
+        const seasonToSelect = activeSeason || mappedSeasons[0]
+        setValue('season_id', seasonToSelect.id, { shouldValidate: false })
         setTimeout(() => trigger('season_id'), 100)
       } else {
         // No seasons available, clear the selection
@@ -270,10 +292,12 @@ export default function CreateEvent() {
       }
     } else {
       // No seasons found or error, clear the selection
+      console.error('Error fetching seasons:', error)
       setSeasons([])
+      setShowSeasonDropdown(false)
       setValue('season_id', '', { shouldValidate: false })
     }
-  }, [context, isReady, setValue])
+  }, [context, isReady, setValue, trigger])
 
   useEffect(() => { 
     if (isReady) fetchTeams() 
@@ -287,6 +311,7 @@ export default function CreateEvent() {
     } else if (!watchTeamId) {
       // Team cleared, clear seasons
       setSeasons([])
+      setShowSeasonDropdown(false)
       setValue('season_id', '', { shouldValidate: false })
     }
   }, [watchTeamId, isReady, fetchSeasons, watch, setValue])
@@ -387,7 +412,7 @@ export default function CreateEvent() {
           { label: 'Create Event' },
         ]}
       />
-      <div className="pa-form-container">
+      <div className="pa-form-container" style={{ marginLeft: 0, marginRight: 'auto' }}>
         <Card>
           <form onSubmit={handleSubmit(onSubmit)}>
             {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
@@ -426,24 +451,80 @@ export default function CreateEvent() {
                   )} 
                 />
               </div>
-              <div className="pa-select-wrapper">
-                <Controller 
-                  name="season_id" 
-                  control={control} 
-                  rules={{ required: 'Season is required' }} 
-                  render={({ field }) => (
-                    <Select 
-                      {...field} 
-                      value={field.value || ''} 
-                      label="Season" 
-                      options={seasons.map(s => ({value:s.id, label:s.name}))} 
-                      required 
-                      disabled={!watchTeamId || loading}
-                      error={errors.season_id?.message || undefined}
+              {watchTeamId ? (
+                showSeasonDropdown ? (
+                  <div className="pa-select-wrapper">
+                    <Controller 
+                      name="season_id" 
+                      control={control} 
+                      rules={{ required: 'Season is required' }} 
+                      render={({ field }) => (
+                        <Select 
+                          {...field} 
+                          value={field.value || ''} 
+                          label="Season" 
+                          options={seasons.map(s => ({value:s.id, label:s.name}))} 
+                          required 
+                          disabled={loading}
+                          error={errors.season_id?.message || undefined}
+                        />
+                      )} 
                     />
-                  )} 
-                />
-              </div>
+                  </div>
+                ) : seasons.length === 1 ? (
+                  // Show season name as read-only when there's only one season
+                  <div>
+                    <label className="pa-label">Season</label>
+                    <div className="pa-input" style={{ backgroundColor: 'var(--pa-bg-secondary)', cursor: 'not-allowed' }}>
+                      {seasons[0]?.name || 'No season available'}
+                    </div>
+                    <Controller 
+                      name="season_id" 
+                      control={control} 
+                      rules={{ required: 'Season is required' }} 
+                      render={({ field }) => (
+                        <input type="hidden" {...field} value={seasons[0]?.id || ''} />
+                      )} 
+                    />
+                  </div>
+                ) : (
+                  // No seasons available
+                  <div>
+                    <label className="pa-label">Season</label>
+                    <div className="pa-input" style={{ backgroundColor: 'var(--pa-bg-secondary)', cursor: 'not-allowed', color: 'var(--pa-text-muted)' }}>
+                      No active or future seasons available
+                    </div>
+                    <Controller 
+                      name="season_id" 
+                      control={control} 
+                      rules={{ required: 'Season is required' }} 
+                      render={({ field }) => (
+                        <input type="hidden" {...field} value="" />
+                      )} 
+                    />
+                  </div>
+                )
+              ) : (
+                // No team selected
+                <div className="pa-select-wrapper">
+                  <Controller 
+                    name="season_id" 
+                    control={control} 
+                    rules={{ required: 'Season is required' }} 
+                    render={({ field }) => (
+                      <Select 
+                        {...field} 
+                        value={field.value || ''} 
+                        label="Season" 
+                        options={[]} 
+                        required 
+                        disabled={true}
+                        error={errors.season_id?.message || undefined}
+                      />
+                    )} 
+                  />
+                </div>
+              )}
             </div>
 
             {/* SECTION 2: DATE + TIME */}

@@ -56,6 +56,7 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
           icon="payments"
           title="No active season"
           description="Please select an active season to view team payments, or view all organization payments."
+          noCard
         />
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--pa-space-4)' }}>
           <Button variant="secondary" onClick={() => navigate('/admin/payments')}>
@@ -184,6 +185,7 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
             icon="payments"
             title="No payments"
             description={`No fee assignments or payments found for ${teamName}.`}
+            noCard
           />
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--pa-space-4)' }}>

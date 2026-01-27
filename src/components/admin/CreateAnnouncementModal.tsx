@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react'
-import { Card, Button, Input, Select } from '../platformAdmin'
+import { Card, CardHeader, CardTitle, CardContent, Button, Input, Select } from '../platformAdmin'
 import { cn } from '../../utils/cn'
+import { 
+  getAnnouncementTypeOptions, 
+  type AnnouncementType 
+} from '../../utils/announcementTypes'
+import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
+import { useT } from '../../i18n/useI18n'
 
 interface Team {
   id: string
@@ -10,7 +17,14 @@ interface Team {
 interface CreateAnnouncementModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (title: string, content: string, priority: 'normal' | 'urgent', teamId: string) => Promise<void>
+  onSubmit: (
+    title: string, 
+    content: string, 
+    priority: 'normal' | 'urgent', 
+    teamId: string | null,
+    type: AnnouncementType,
+    isOrgWide: boolean
+  ) => Promise<void>
   teams: Team[]
   selectedTeamId: string | null
 }
@@ -22,15 +36,26 @@ export default function CreateAnnouncementModal({
   teams,
   selectedTeamId
 }: CreateAnnouncementModalProps) {
+  const { context } = useUserContext()
+  const { currentOrganization } = useOrganization()
+  const t = useT()
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [priority, setPriority] = useState<'normal' | 'urgent'>('normal')
+  const [type, setType] = useState<AnnouncementType>('general')
+  const [isOrgWide, setIsOrgWide] = useState(false)
   const [teamId, setTeamId] = useState(selectedTeamId || (teams.length > 0 ? teams[0].id : ''))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Sort teams alphabetically
   const sortedTeams = [...teams].sort((a, b) => a.name.localeCompare(b.name))
+  
+  // Check if user can create org-wide announcements (org_admin only)
+  const canCreateOrgWide = context.roles?.includes('org_admin') || false
+  
+  // Get organization name for "Everyone in [Org Name]" text
+  const orgName = currentOrganization?.name || 'this organization'
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -39,6 +64,8 @@ export default function CreateAnnouncementModal({
       setTitle('')
       setContent('')
       setPriority('normal')
+      setType('general')
+      setIsOrgWide(false)
       setError(null)
     }
   }, [isOpen, selectedTeamId, sortedTeams])
@@ -47,17 +74,32 @@ export default function CreateAnnouncementModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim() || !content.trim() || !teamId || loading) return
+    // Technical Issue 9: Use nullish coalescing for string operations
+    const trimmedTitle = (title ?? '').trim()
+    const trimmedContent = (content ?? '').trim()
+    
+    if (!trimmedTitle || !trimmedContent || loading) return
+    if (!isOrgWide && !teamId) return
 
     setLoading(true)
     setError(null)
 
     try {
-      await onSubmit(title.trim(), content.trim(), priority, teamId)
+      // Technical Issue 7: Wrap async operations in try/catch
+      await onSubmit(
+        trimmedTitle, 
+        trimmedContent, 
+        priority, 
+        isOrgWide ? null : teamId,
+        type,
+        isOrgWide
+      )
       // Reset form only on success (onClose will be called by parent)
       setTitle('')
       setContent('')
       setPriority('normal')
+      setType('general')
+      setIsOrgWide(false)
       setTeamId(selectedTeamId || (sortedTeams.length > 0 ? sortedTeams[0].id : ''))
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create announcement. Please try again.'
@@ -72,6 +114,8 @@ export default function CreateAnnouncementModal({
     setTitle('')
     setContent('')
     setPriority('normal')
+    setType('general')
+    setIsOrgWide(false)
     setTeamId(selectedTeamId || (sortedTeams.length > 0 ? sortedTeams[0].id : ''))
     setError(null)
     onClose()
@@ -93,26 +137,24 @@ export default function CreateAnnouncementModal({
         className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
         onClick={handleBackdropClick}
       />
-      <div className="relative w-full max-w-lg">
+      <div className="relative w-full max-w-2xl">
         <Card>
-          <div className="pa-p-6">
-            <div className="pa-flex pa-items-center pa-justify-between pa-mb-6">
-              <h2 className="pa-text-xl pa-font-bold pa-text-slate-900 dark:pa-text-white">
-                New Announcement
-              </h2>
-              <button 
-                onClick={handleClose}
-                disabled={loading}
-                className="pa-text-slate-400 hover:pa-text-slate-600 dark:hover:pa-text-slate-200 pa-transition-colors disabled:pa-opacity-50 disabled:pa-cursor-not-allowed"
-                type="button"
-              >
-                <span className="material-symbols-outlined pa-icon-md">close</span>
-              </button>
-            </div>
+          <CardHeader>
+            <CardTitle>New Announcement</CardTitle>
+            <button 
+              onClick={handleClose}
+              disabled={loading}
+              className="pa-text-slate-400 hover:pa-text-slate-600 dark:hover:pa-text-slate-200 pa-transition-colors disabled:pa-opacity-50 disabled:pa-cursor-not-allowed"
+              type="button"
+            >
+              <span className="material-symbols-outlined pa-icon-md">close</span>
+            </button>
+          </CardHeader>
+          <CardContent>
 
             {error && (
               <div 
-                className="pa-mb-4 pa-p-4"
+                className="pa-mb-6 pa-p-4"
                 style={{ 
                   background: 'var(--pa-danger-bg, #fef2f2)', 
                   borderLeft: '4px solid var(--pa-danger, #ef4444)' 
@@ -124,19 +166,64 @@ export default function CreateAnnouncementModal({
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="pa-space-y-4">
-              <Select
-                label="Team"
-                required
-                value={teamId}
-                onChange={(e) => setTeamId(e.target.value)}
-                disabled={loading || sortedTeams.length === 0}
-                options={[
-                  { value: '', label: sortedTeams.length === 0 ? 'No teams available' : 'Select a team' },
-                  ...sortedTeams.map(t => ({ value: t.id, label: t.name }))
-                ]}
-                error={!teamId && sortedTeams.length > 0 ? 'Team is required' : undefined}
-              />
+            <form onSubmit={handleSubmit} className="pa-space-y-6">
+              {/* Audience Selector */}
+              {canCreateOrgWide && (
+                <div className="pa-form-group">
+                  <label className="pa-label pa-label--required">{t('admin.announcements.audience')}</label>
+                  <div className="pa-flex pa-gap-3 pa-mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsOrgWide(false)}
+                      disabled={loading}
+                      className={cn(
+                        'pa-flex-1 pa-px-4 pa-py-3 pa-rounded-lg pa-border-2 pa-transition-all pa-font-bold pa-text-sm',
+                        !isOrgWide
+                          ? 'pa-border-[var(--org-btn-primary-bg, #137fec)] pa-bg-[var(--org-btn-primary-bg, #137fec)]/10 dark:pa-bg-[var(--org-btn-primary-bg, #137fec)]/20 pa-text-[var(--org-btn-primary-bg, #137fec)]'
+                          : 'pa-border-slate-300 dark:pa-border-slate-600 pa-bg-white dark:pa-bg-slate-800 pa-text-slate-600 dark:pa-text-slate-400',
+                        !loading && !isOrgWide && 'hover:pa-bg-[var(--org-btn-primary-bg, #137fec)]/20 dark:hover:pa-bg-[var(--org-btn-primary-bg, #137fec)]/30',
+                        !loading && isOrgWide && 'hover:pa-border-slate-400 dark:hover:pa-border-slate-500 hover:pa-bg-slate-50 dark:hover:pa-bg-slate-700',
+                        loading && 'pa-opacity-50 pa-cursor-not-allowed'
+                      )}
+                    >
+                      {t('admin.announcements.audienceTeamOnly')}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsOrgWide(true)}
+                      disabled={loading}
+                      className={cn(
+                        'pa-flex-1 pa-px-4 pa-py-3 pa-rounded-lg pa-border-2 pa-transition-all pa-font-bold pa-text-sm',
+                        isOrgWide
+                          ? 'pa-border-[var(--org-btn-primary-bg, #137fec)] pa-bg-[var(--org-btn-primary-bg, #137fec)]/10 dark:pa-bg-[var(--org-btn-primary-bg, #137fec)]/20 pa-text-[var(--org-btn-primary-bg, #137fec)]'
+                          : 'pa-border-slate-300 dark:pa-border-slate-600 pa-bg-white dark:pa-bg-slate-800 pa-text-slate-600 dark:pa-text-slate-400',
+                        !loading && isOrgWide && 'hover:pa-bg-[var(--org-btn-primary-bg, #137fec)]/20 dark:hover:pa-bg-[var(--org-btn-primary-bg, #137fec)]/30',
+                        !loading && !isOrgWide && 'hover:pa-border-slate-400 dark:hover:pa-border-slate-500 hover:pa-bg-slate-50 dark:hover:pa-bg-slate-700',
+                        loading && 'pa-opacity-50 pa-cursor-not-allowed'
+                      )}
+                    >
+                      {t('admin.announcements.audienceEveryone', { orgName })}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Team Selector (only if not org-wide) */}
+              {!isOrgWide && (
+                <Select
+                  label="Team"
+                  required
+                  value={teamId}
+                  onChange={(e) => setTeamId(e.target.value)}
+                  disabled={loading || sortedTeams.length === 0}
+                  options={[
+                    { value: '', label: sortedTeams.length === 0 ? 'No teams available' : 'Select a team' },
+                    ...sortedTeams.map(t => ({ value: t.id, label: t.name }))
+                  ]}
+                  error={!teamId && sortedTeams.length > 0 ? 'Team is required' : undefined}
+                />
+              )}
 
               <Input
                 label="Title"
@@ -149,6 +236,19 @@ export default function CreateAnnouncementModal({
                 error={!title.trim() ? 'Title is required' : undefined}
               />
 
+              {/* Type Selector */}
+              <Select
+                label="Type"
+                required
+                value={type}
+                onChange={(e) => setType(e.target.value as AnnouncementType)}
+                disabled={loading}
+                options={getAnnouncementTypeOptions().map(opt => ({
+                  value: opt.value,
+                  label: `${opt.emoji} ${opt.label}`
+                }))}
+              />
+
               <div className="pa-form-group">
                 <label className="pa-label pa-label--required">
                   Content
@@ -156,13 +256,14 @@ export default function CreateAnnouncementModal({
                 <textarea
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  rows={4}
+                  rows={8}
                   disabled={loading}
                   className={cn(
                     'pa-input',
                     !content.trim() && 'pa-input--error'
                   )}
                   placeholder="What do you want to announce?"
+                  style={{ minHeight: '120px', resize: 'vertical' }}
                 />
                 {!content.trim() && (
                   <div className="pa-helper pa-helper--error">
@@ -171,70 +272,49 @@ export default function CreateAnnouncementModal({
                 )}
               </div>
 
+              {/* Priority */}
               <div className="pa-form-group">
                 <label className="pa-label">
-                  Priority
+                  {t('admin.announcements.priority')}
                 </label>
-                <div className="pa-flex pa-gap-4 pa-mt-2">
-                  <label className="pa-flex pa-items-center pa-gap-2 pa-cursor-pointer pa-group">
-                    <input
-                      type="radio"
-                      name="priority"
-                      value="normal"
-                      checked={priority === 'normal'}
-                      onChange={() => setPriority('normal')}
-                      disabled={loading}
-                      className="hidden"
-                    />
-                    <div className={cn(
-                      'pa-w-4 pa-h-4 pa-rounded-full pa-border-2 pa-flex pa-items-center pa-justify-center',
-                      priority === 'normal' 
-                        ? 'pa-border-[var(--org-btn-primary-bg, #137fec)]' 
-                        : 'pa-border-slate-300 dark:pa-border-slate-600'
-                    )}>
-                      {priority === 'normal' && (
-                        <div className="pa-w-2 pa-h-2 pa-rounded-full" style={{ background: 'var(--org-btn-primary-bg, #137fec)' }} />
-                      )}
-                    </div>
-                    <span className={cn(
-                      'pa-text-sm pa-font-bold',
-                      priority === 'normal' ? 'pa-text-slate-900 dark:pa-text-white' : 'pa-text-slate-500'
-                    )}>
-                      Normal
-                    </span>
-                  </label>
+                <div className="pa-flex pa-gap-3 pa-mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setPriority('normal')}
+                    disabled={loading}
+                    className={cn(
+                      'pa-flex-1 pa-px-4 pa-py-3 pa-rounded-lg pa-border-2 pa-transition-all pa-font-bold pa-text-sm',
+                      priority === 'normal'
+                        ? 'pa-border-[var(--org-btn-primary-bg, #137fec)] pa-bg-[var(--org-btn-primary-bg, #137fec)]/10 dark:pa-bg-[var(--org-btn-primary-bg, #137fec)]/20 pa-text-[var(--org-btn-primary-bg, #137fec)]'
+                        : 'pa-border-slate-300 dark:pa-border-slate-600 pa-bg-white dark:pa-bg-slate-800 pa-text-slate-600 dark:pa-text-slate-400',
+                      !loading && priority === 'normal' && 'hover:pa-bg-[var(--org-btn-primary-bg, #137fec)]/20 dark:hover:pa-bg-[var(--org-btn-primary-bg, #137fec)]/30',
+                      !loading && priority !== 'normal' && 'hover:pa-border-slate-400 dark:hover:pa-border-slate-500 hover:pa-bg-slate-50 dark:hover:pa-bg-slate-700',
+                      loading && 'pa-opacity-50 pa-cursor-not-allowed'
+                    )}
+                  >
+                    {t('admin.announcements.priorityNormal')}
+                  </button>
 
-                  <label className="pa-flex pa-items-center pa-gap-2 pa-cursor-pointer pa-group">
-                    <input
-                      type="radio"
-                      name="priority"
-                      value="urgent"
-                      checked={priority === 'urgent'}
-                      onChange={() => setPriority('urgent')}
-                      disabled={loading}
-                      className="hidden"
-                    />
-                    <div className={cn(
-                      'pa-w-4 pa-h-4 pa-rounded-full pa-border-2 pa-flex pa-items-center pa-justify-center',
-                      priority === 'urgent' 
-                        ? 'pa-border-red-500' 
-                        : 'pa-border-slate-300 dark:pa-border-slate-600'
-                    )}>
-                      {priority === 'urgent' && (
-                        <div className="pa-w-2 pa-h-2 pa-rounded-full pa-bg-red-500" />
-                      )}
-                    </div>
-                    <span className={cn(
-                      'pa-text-sm pa-font-bold',
-                      priority === 'urgent' ? 'pa-text-red-500' : 'pa-text-slate-500'
-                    )}>
-                      Urgent
-                    </span>
-                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setPriority('urgent')}
+                    disabled={loading}
+                    className={cn(
+                      'pa-flex-1 pa-px-4 pa-py-3 pa-rounded-lg pa-border-2 pa-transition-all pa-font-bold pa-text-sm',
+                      priority === 'urgent'
+                        ? 'pa-border-red-500 pa-bg-red-500/10 dark:pa-bg-red-500/20 pa-text-red-600 dark:pa-text-red-400'
+                        : 'pa-border-slate-300 dark:pa-border-slate-600 pa-bg-white dark:pa-bg-slate-800 pa-text-slate-600 dark:pa-text-slate-400',
+                      !loading && priority === 'urgent' && 'hover:pa-bg-red-500/20 dark:hover:pa-bg-red-500/30',
+                      !loading && priority !== 'urgent' && 'hover:pa-border-slate-400 dark:hover:pa-border-slate-500 hover:pa-bg-slate-50 dark:hover:pa-bg-slate-700',
+                      loading && 'pa-opacity-50 pa-cursor-not-allowed'
+                    )}
+                  >
+                    {t('admin.announcements.priorityUrgent')}
+                  </button>
                 </div>
               </div>
 
-              <div className="pa-flex pa-justify-end pa-gap-2 pa-pt-2">
+              <div className="pa-form-actions">
                 <Button 
                   variant="secondary" 
                   onClick={handleClose} 
@@ -246,14 +326,14 @@ export default function CreateAnnouncementModal({
                 <Button 
                   variant="primary" 
                   type="submit" 
-                  disabled={loading || !title.trim() || !content.trim() || !teamId}
+                  disabled={loading || !title.trim() || !content.trim() || (!isOrgWide && !teamId)}
                   loading={loading}
                 >
                   Post Announcement
                 </Button>
               </div>
             </form>
-          </div>
+          </CardContent>
         </Card>
       </div>
     </div>

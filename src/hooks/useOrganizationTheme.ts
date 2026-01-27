@@ -90,22 +90,25 @@ export function useOrganizationTheme(): { ready: boolean } {
     applyThemeTokens(defaultTokens)
   }, [resolvedTheme])
 
-  // Apply tokens whenever they change (after org theme is loaded)
+  // Apply tokens whenever they change - this ensures theme toggles work immediately
+  // The tokens memo already handles both default and org themes correctly
   useLayoutEffect(() => {
-    if (hasLoadedOrgTheme) {
-      applyThemeTokens(tokens)
-    }
+    // Always apply tokens when they change, regardless of hasLoadedOrgTheme
+    // This ensures theme toggles work even before org theme is fully loaded
+    applyThemeTokens(tokens)
+  }, [tokens])
 
-    // Re-apply tokens when tab becomes visible (fixes potential loss during background checks)
+  // Re-apply tokens when tab becomes visible (fixes potential loss during background checks)
+  useLayoutEffect(() => {
     const handleVisibilityChange = () => {
-      if (!document.hidden && hasLoadedOrgTheme) {
+      if (!document.hidden) {
         applyThemeTokens(tokens)
       }
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
-  }, [tokens, hasLoadedOrgTheme])
+  }, [tokens])
 
   // Load and apply organization theme
   useLayoutEffect(() => {

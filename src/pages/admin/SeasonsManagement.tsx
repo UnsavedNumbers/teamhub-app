@@ -235,6 +235,7 @@ export default function SeasonsManagement() {
             icon="calendar_month"
             title="No seasons yet"
             description="Create your first season to start organizing teams and events."
+            noCard
           >
              <Button 
                 icon="add"

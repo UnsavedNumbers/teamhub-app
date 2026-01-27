@@ -127,6 +127,7 @@ export default function UniformOrders() {
             icon="checkroom"
             title={t('admin.uniforms.prerequisite.noSportsTitle')}
             description={t('admin.uniforms.prerequisite.noSportsDescription')}
+            noCard
           >
             <Link to={`${getLink('admin.organization.forms')}?type=sport&returnUrl=${returnUrl}`}>
               <Button variant="primary">{t('admin.uniforms.prerequisite.addSport')}</Button>
@@ -155,7 +156,8 @@ export default function UniformOrders() {
         <Card>
           <EmptyState 
             icon="checkroom" 
-            title="NO UNIFORM ORDERS" 
+            title="NO UNIFORM ORDERS"
+            noCard 
             description="Uniform orders will appear here when families submit their sizes." 
           />
         </Card>
