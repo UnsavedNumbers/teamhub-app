@@ -169,6 +169,7 @@ export const RouteKeys = {
     ADMIN_PAYMENTS: 'admin.payments.list',
     ADMIN_CREATE_FEE: 'admin.payments.create',
     ADMIN_UNIFORMS: 'admin.uniforms.list',
+    ADMIN_ANNOUNCEMENTS: 'admin.announcements.list',
     ADMIN_TRAVEL: 'admin.travel.list',
     ADMIN_TRYOUTS: 'admin.tryouts.list',
     ADMIN_SETTINGS: 'admin.settings',

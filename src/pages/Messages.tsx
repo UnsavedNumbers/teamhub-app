@@ -298,23 +298,45 @@ export default function Messages() {
   // Show full-window empty state when no teams are available
   if (!fetchingTeams && teams.length === 0) {
     return (
-      <PortalLayout>
-        <div className="fixed left-0 right-0 top-[4rem] bottom-0 flex items-center justify-center">
-          <div className="text-center">
-            <Icon name="chat_bubble" size="text-6xl" className="text-slate-300 dark:text-slate-600 mb-4" />
-            <CardTitle className="mb-2">No Teams Available</CardTitle>
-            <p className="text-slate-500 dark:text-slate-400">
-              {error ? 'Failed to load teams. Please try again later.' : 'You are not currently associated with any teams.'}
-            </p>
-          </div>
+      <PortalLayout
+        breadcrumbs={[
+          { label: 'Home', path: '/portal/dashboard' },
+          { label: 'Messages' },
+        ]}
+      >
+        <div className="mb-12">
+          <PageTitle>Messages</PageTitle>
+          <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
+            Team messaging and announcements.
+          </p>
         </div>
+        
+        <Card className="text-center py-12">
+          <Icon name="chat_bubble" size="text-6xl" className="text-slate-400 mb-4" />
+          <CardTitle className="mb-2">No Teams Available</CardTitle>
+          <p className="text-slate-500 dark:text-slate-400">
+            {error ? 'Failed to load teams. Please try again later.' : 'You are not currently associated with any teams.'}
+          </p>
+        </Card>
       </PortalLayout>
     )
   }
 
   return (
-    <PortalLayout>
-      <div className="fixed left-0 right-0 top-[4rem] bottom-0 overflow-hidden">
+    <PortalLayout
+      breadcrumbs={[
+        { label: 'Home', path: '/portal/dashboard' },
+        { label: 'Messages' },
+      ]}
+    >
+      <div className="mb-8">
+        <PageTitle>Messages</PageTitle>
+        <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
+          Team messaging and announcements.
+        </p>
+      </div>
+      
+      <div className="fixed left-0 right-0 top-[4rem] bottom-0 overflow-hidden" style={{ top: '14rem' }}>
         <div className="flex h-full">
           <div className="w-64 bg-white dark:bg-slate-900/50 border-r border-slate-100 dark:border-slate-800 flex flex-col">
             <div className="p-6 border-b border-slate-100 dark:border-slate-800">
@@ -371,12 +393,12 @@ export default function Messages() {
 
           <div className="flex-1 flex flex-col relative h-full overflow-hidden">
             {!selectedTeam ? (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center">
-                  <Icon name="chat_bubble" size="text-6xl" className="text-slate-300 mb-4" />
+              <div className="flex-1 flex items-center justify-center p-6">
+                <Card className="text-center py-12 max-w-md w-full">
+                  <Icon name="chat_bubble" size="text-6xl" className="text-slate-400 mb-4" />
                   <CardTitle className="mb-2">Select a Team</CardTitle>
-                  <p className="text-slate-500 dark:text-slate-400">Choose a team to view messages</p>
-                </div>
+                  <p className="text-slate-500 dark:text-slate-400">Choose a team to view messages.</p>
+                </Card>
               </div>
             ) : (
               <>
@@ -430,7 +452,9 @@ export default function Messages() {
                         </Card>
                       ) : announcements.length === 0 ? (
                         <Card className="text-center py-12">
-                          <p className="text-slate-500 dark:text-slate-400">No announcements yet.</p>
+                          <Icon name="campaign" size="text-6xl" className="text-slate-400 mb-4" />
+                          <CardTitle className="mb-2">No announcements</CardTitle>
+                          <p className="text-slate-500 dark:text-slate-400">Team announcements will appear here.</p>
                         </Card>
                       ) : (
                         announcements.map((ann) => {
@@ -478,9 +502,10 @@ export default function Messages() {
                           <p className="text-slate-500 dark:text-slate-400 text-sm">Loading messages...</p>
                         </Card>
                       ) : messages.length === 0 ? (
-                        <Card className="text-center py-8 mb-4">
-                          <Icon name="chat" size="text-4xl" className="text-slate-300 mb-2" />
-                          <p className="text-slate-500 dark:text-slate-400 text-sm">Start a conversation with your team</p>
+                        <Card className="text-center py-12 mb-4">
+                          <Icon name="chat" size="text-6xl" className="text-slate-400 mb-4" />
+                          <CardTitle className="mb-2">No messages yet</CardTitle>
+                          <p className="text-slate-500 dark:text-slate-400">Start a conversation with your team.</p>
                         </Card>
                       ) : null}
                       {messages.map((msg) => {
