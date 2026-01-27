@@ -6065,3 +6065,27 @@ html.dark .pa-badge--accent {
     background: rgba(255, 255, 255, 0.2);
     color: inherit;
 }
+
+/* =====================================================================
+   SEASON DETAIL STAT BOXES
+   ===================================================================== */
+
+.pa-stat-box {
+    background: var(--pa-n50);
+}
+
+html.dark .pa-stat-box {
+    background: var(--pa-surface-panel);
+}
+
+html.dark .pa-stat-box p {
+    color: var(--pa-text-primary);
+}
+
+html.dark .pa-stat-box p[style*="color: var(--pa-n500)"] {
+    color: var(--pa-text-muted) !important;
+}
+
+html.dark .pa-stat-box p[style*="color: var(--pa-n900)"] {
+    color: var(--pa-text-primary) !important;
+}

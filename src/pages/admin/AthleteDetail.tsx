@@ -123,9 +123,9 @@ export default function AthleteDetail() {
 
       setAthlete(athleteData)
 
-      // Load photo
-      if (athleteData.photo_url) {
-        const { url } = await getAthletePhotoUrl(athleteData.photo_url)
+      // Load photo (using new photo system)
+      if (athleteData.has_profile_photo && athleteData.org_id && athleteData.id) {
+        const url = getAthletePhotoUrl(athleteData.org_id, athleteData.id, '512')
         if (isMountedRef.current && url) {
           setPhotoUrl(url)
         }

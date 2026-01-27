@@ -181,17 +181,12 @@ export default function EditAthlete() {
                     email: data.email || ''   // NEW - explicit mapping
                 })
 
-                // Load photo if exists
-                if (data.photo_url) {
-                    setPhotoPath(data.photo_url)
-                    // Generate signed URL for display
-                    getAthletePhotoUrl(data.photo_url).then(({ url, error }) => {
-                        if (url && !error) {
-                            setPhotoUrl(url)
-                        } else {
-                            console.error('Error loading photo URL:', error)
-                        }
-                    })
+                // Load photo if exists (using new photo system)
+                if (data.has_profile_photo && data.org_id && data.id) {
+                    setPhotoPath('exists') // Flag that photo exists
+                    // Get public URL (no signed URL needed)
+                    const url = getAthletePhotoUrl(data.org_id, data.id, '512')
+                    setPhotoUrl(url)
                 } else {
                     setPhotoPath(null)
                     setPhotoUrl(null)
@@ -313,19 +308,21 @@ export default function EditAthlete() {
         setValidationErrors([])
 
         try {
-            // Handle photo changes
-            let newPhotoPath: string | null = photoPath
-
+            // Handle photo upload/removal
             // If photo was removed
             if (photoRemoved && photoPath) {
                 // Delete from storage
-                await deleteAthletePhoto(context, athleteId)
-                newPhotoPath = null
+                const { error: deleteError } = await deleteAthletePhoto(context, athleteId)
+                if (deleteError) {
+                    console.error('Error deleting photo:', deleteError)
+                    setPhotoError(deleteError.message)
+                    // Continue with update - photo deletion can be retried
+                }
             }
             // If new photo was selected
             else if (photoFile) {
-                // Upload new photo
-                const { path: uploadedPath, error: uploadError } = await uploadAthletePhoto(
+                // Upload new photo (includes resizing and DB update)
+                const { error: uploadError } = await uploadAthletePhoto(
                     context,
                     athleteId,
                     photoFile
@@ -336,13 +333,13 @@ export default function EditAthlete() {
                     console.error('Error uploading photo:', uploadError)
                     setPhotoError(uploadError.message)
                     // Continue with athlete update - photo can be fixed later
-                } else if (uploadedPath) {
-                    newPhotoPath = uploadedPath
+                } else {
                     setPhotoError(null)
                 }
             }
 
             // Normalize form data before submission - include all updatable fields including phone/email
+            // Note: photo_url is no longer stored - derived from storage
             const normalizedData: UpdateAthleteDTO = {
                 first_name: formData.first_name.trim(),
                 last_name: formData.last_name.trim(),
@@ -355,8 +352,7 @@ export default function EditAthlete() {
                 emergency_contact_name: formData.emergency_contact_name.trim() || null,
                 emergency_contact_phone: formData.emergency_contact_phone.trim() || null,
                 phone: formData.phone.trim() || null,  // NEW - explicit
-                email: formData.email.trim() || null,   // NEW - explicit
-                photo_url: newPhotoPath
+                email: formData.email.trim() || null   // NEW - explicit
             }
 
             // Sequential updates: athlete first, then sports

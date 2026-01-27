@@ -521,7 +521,10 @@ export async function getAthletes(
             emergency_contact_phone: d.emergency_contact_phone ?? null,
             phone: d.phone ?? null,
             email: d.email ?? null,
-            photo_url: null, // photo_url column doesn't exist in database yet
+            photo_url: null, // @deprecated - Use profile_photo_updated_at instead
+            profile_photo_updated_at: d.profile_photo_updated_at ?? null,
+            has_profile_photo: d.has_profile_photo ?? false,
+            org_id: context.orgId, // Include org_id for photo URL generation
             created_at: d.created_at || new Date().toISOString(),
             updated_at: d.updated_at || new Date().toISOString(),
             deleted_at: d.deleted_at,
@@ -905,14 +908,17 @@ export async function getAthleteById(
             date_of_birth: data.birthdate || '',
             gender: data.gender as Gender | null,
             preferred_name: data.preferred_name ?? null,
-            jersey_number: null,
-            medical_notes: null,
-            allergies: null,
+            jersey_number: data.jersey_number ?? null,
+            medical_notes: data.medical_notes ?? null,
+            allergies: data.allergies ?? null,
             phone: (data as any).phone ?? null,
             email: (data as any).email ?? null,
-            emergency_contact_name: null,
-            emergency_contact_phone: null,
-            photo_url: null,
+            emergency_contact_name: data.emergency_contact_name ?? null,
+            emergency_contact_phone: data.emergency_contact_phone ?? null,
+            photo_url: null, // @deprecated - Use profile_photo_updated_at instead
+            profile_photo_updated_at: (data as any).profile_photo_updated_at ?? null,
+            has_profile_photo: (data as any).has_profile_photo ?? false,
+            org_id: context.orgId, // Include org_id for photo URL generation
             created_at: data.created_at ?? new Date().toISOString(),
             updated_at: data.updated_at ?? new Date().toISOString(),
             deleted_at: data.deleted_at,
