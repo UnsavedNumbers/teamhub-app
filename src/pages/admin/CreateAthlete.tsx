@@ -23,6 +23,8 @@ import { updateAthlete } from '../../data/services/familyService'
 import type { Gender, GuardianFormData, CreateAthleteDTO } from '../../types/family'
 import type { Sport } from '../../data/types/organization'
 import { createDefaultGuardians, validateGuardians, findDuplicateEmails } from '../../utils/guardianMatching'
+import { validatePhoneFormat } from '../../utils/phoneValidation'
+import { validateGuardianEmail } from '../../data/services/guardianService'
 import { AlertCircle } from 'lucide-react'
 import { getLink } from '../../utils/routes'
 
@@ -87,7 +89,9 @@ export default function CreateAthlete() {
         medical_notes: '',
         allergies: '',
         emergency_contact_name: '',
-        emergency_contact_phone: ''
+        emergency_contact_phone: '',
+        phone: '',  // Athlete phone number
+        email: ''   // Athlete email address
     })
 
     const [guardians, setGuardians] = useState<GuardianFormData[]>(createDefaultGuardians())
@@ -167,6 +171,21 @@ export default function CreateAthlete() {
             })
         }
 
+        // Phone validation - only if provided
+        if (formData.phone.trim()) {
+            const phoneValidation = validatePhoneFormat(formData.phone.trim())
+            if (!phoneValidation.valid) {
+                errors.push(phoneValidation.error || 'Invalid phone number')
+            }
+        }
+
+        // Email validation - only if provided
+        if (formData.email.trim()) {
+            if (!validateGuardianEmail(formData.email.trim())) {
+                errors.push('Invalid email address')
+            }
+        }
+
         if (errors.length > 0) {
             setValidationErrors(errors)
             return
@@ -188,13 +207,30 @@ export default function CreateAthlete() {
                 allergies: formData.allergies || null,
                 emergency_contact_name: formData.emergency_contact_name || null,
                 emergency_contact_phone: formData.emergency_contact_phone || null,
+                phone: formData.phone.trim() || null,  // Athlete phone number
+                email: formData.email.trim() || null,   // Athlete email address
                 guardians: guardians.filter(g => g.email.trim() !== ''), // Only include guardians with emails
                 sports: selectedSports.length > 0 ? selectedSports : undefined
             }
 
             const { data, error: createError } = await createAthleteWithGuardians(context, dto)
 
-            if (createError) throw createError
+            if (createError) {
+                // Check for constraint violation (database-level validation)
+                if ((createError as any).code === '23514') { // CHECK constraint violation
+                    const errorMessage = (createError as any).message || ''
+                    if (errorMessage.includes('email')) {
+                        setValidationErrors(['Invalid email format'])
+                    } else if (errorMessage.includes('phone')) {
+                        setValidationErrors(['Invalid phone number format'])
+                    } else {
+                        throw createError
+                    }
+                    setLoading(false)
+                    return
+                }
+                throw createError
+            }
 
             // If athlete was created and photo was selected, upload photo
             if (data?.athlete_id && photoFile) {
@@ -343,6 +379,23 @@ export default function CreateAthlete() {
                                     value={formData.jersey_number}
                                     onChange={(e) => setFormData({ ...formData, jersey_number: e.target.value })}
                                     placeholder="e.g. 23"
+                                />
+                            </div>
+
+                            <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-6">
+                                <Input
+                                    label="Phone Number (Optional)"
+                                    type="tel"
+                                    value={formData.phone}
+                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                    placeholder="(555) 123-4567"
+                                />
+                                <Input
+                                    label="Email Address (Optional)"
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                    placeholder="athlete@example.com"
                                 />
                             </div>
 

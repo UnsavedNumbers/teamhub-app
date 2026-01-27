@@ -870,7 +870,6 @@ export async function createTravelPlan(
                 team:teams(id, name, org_id),
                 season:seasons(id, name)
             `)
-            .returns<TravelPlanRow[]>()
             .single()
 
         if (insertError) {
@@ -902,7 +901,7 @@ export async function createTravelPlan(
             }
         }
 
-        const plan = mapSupabaseTravelPlan(inserted)
+        const plan = mapSupabaseTravelPlan(inserted as TravelPlanRow)
         return { data: plan, error: null }
     } catch (err) {
         console.error('createTravelPlan error:', err)
@@ -985,7 +984,6 @@ export async function updateTravelPlan(
                 season:seasons(id, name)
             `)
             .eq('id', planId)
-            .returns<TravelPlanRow[]>()
             .single()
 
         if (fetchError || !existingPlan) {
@@ -993,16 +991,17 @@ export async function updateTravelPlan(
         }
 
         // Validate plan belongs to org
-        if (existingPlan.team?.org_id !== context.orgId) {
+        const existingPlanTyped = existingPlan as TravelPlanRow
+        if (existingPlanTyped.team?.org_id !== context.orgId) {
             return { data: null, error: new Error('Travel plan does not belong to your organization') }
         }
 
         let newFilePath: string | null = null
-        let oldFilePath: string | null = existingPlan.itinerary_file_path ?? null
+        let oldFilePath: string | null = existingPlanTyped.itinerary_file_path ?? null
 
         // Handle file upload/replace
         if (data.itinerary_file && isValidFile(data.itinerary_file)) {
-            newFilePath = `${existingPlan.team?.org_id ?? context.orgId}/${existingPlan.team_id}/${planId}/${Date.now()}-${sanitizeFilename(data.itinerary_file.name)}`
+            newFilePath = `${existingPlanTyped.team?.org_id ?? context.orgId}/${existingPlanTyped.team_id}/${planId}/${Date.now()}-${sanitizeFilename(data.itinerary_file.name)}`
 
             const { error: uploadError } = await supabase.storage
                 .from('travel-itineraries')
@@ -1035,17 +1034,18 @@ export async function updateTravelPlan(
         if (newFilePath !== null) updateData.itinerary_file_path = newFilePath
 
         // Update with optimistic locking
+        // Ensure updated_at is a string for optimistic locking
+        const updatedAtValue = existingPlanTyped.updated_at ?? new Date().toISOString()
         const { data: updated, error: updateError } = await supabase
             .from('travel_plans')
             .update(updateData)
             .eq('id', planId)
-            .eq('updated_at', existingPlan.updated_at) // Optimistic locking
+            .eq('updated_at', updatedAtValue) // Optimistic locking
             .select(`
                 *,
                 team:teams(id, name, org_id),
                 season:seasons(id, name)
             `)
-            .returns<TravelPlanRow[]>()
             .single()
 
         if (updateError) {
@@ -1071,7 +1071,7 @@ export async function updateTravelPlan(
                 .catch(err => console.error('Failed to delete old file:', err))
         }
 
-        const plan = mapSupabaseTravelPlan(updated)
+        const plan = mapSupabaseTravelPlan(updated as TravelPlanRow)
         return { data: plan, error: null }
     } catch (err) {
         console.error('updateTravelPlan error:', err)
@@ -1525,7 +1525,6 @@ export async function publishTravelPlan(
                 season:seasons(id, name)
             `)
             .eq('id', planId)
-            .returns<TravelPlanRow[]>()
             .single()
 
         if (fetchError || !existingPlan) {
@@ -1533,25 +1532,26 @@ export async function publishTravelPlan(
         }
 
         // Validate plan belongs to org
-        if (existingPlan.team?.org_id !== context.orgId) {
+        const existingPlanTyped = existingPlan as TravelPlanRow
+        if (existingPlanTyped.team?.org_id !== context.orgId) {
             return { data: null, error: new Error('Travel plan does not belong to your organization') }
         }
 
         // Validate status transition
-        if (existingPlan.status === 'cancelled') {
+        if (existingPlanTyped.status === 'cancelled') {
             return { data: null, error: new Error('Cannot publish a cancelled plan. Please create a new plan.') }
         }
 
-        if (existingPlan.status === 'published') {
+        if (existingPlanTyped.status === 'published') {
             // Already published, return as-is
-            return { data: mapSupabaseTravelPlan(existingPlan), error: null }
+            return { data: mapSupabaseTravelPlan(existingPlanTyped), error: null }
         }
 
         // Update to published
         // Note: Database types may not include status column from migration 033
         const updateData = {
             status: 'published',
-            published_at: existingPlan.published_at ?? new Date().toISOString(),
+            published_at: existingPlanTyped.published_at ?? new Date().toISOString(),
         } as Database['public']['Tables']['travel_plans']['Update'] & {
             status?: string
             published_at?: string
@@ -1566,14 +1566,13 @@ export async function publishTravelPlan(
                 team:teams(id, name, org_id),
                 season:seasons(id, name)
             `)
-            .returns<TravelPlanRow[]>()
             .single()
 
         if (updateError) {
             return { data: null, error: new Error(`Failed to publish travel plan: ${updateError.message}`) }
         }
 
-        return { data: mapSupabaseTravelPlan(updated), error: null }
+        return { data: mapSupabaseTravelPlan(updated as TravelPlanRow), error: null }
     } catch (err) {
         console.error('publishTravelPlan error:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error publishing travel plan') }
@@ -1630,7 +1629,6 @@ export async function cancelTravelPlan(
                 season:seasons(id, name)
             `)
             .eq('id', planId)
-            .returns<TravelPlanRow[]>()
             .single()
 
         if (fetchError || !existingPlan) {
@@ -1638,12 +1636,13 @@ export async function cancelTravelPlan(
         }
 
         // Validate plan belongs to org
-        if (existingPlan.team?.org_id !== context.orgId) {
+        const existingPlanTyped = existingPlan as TravelPlanRow
+        if (existingPlanTyped.team?.org_id !== context.orgId) {
             return { data: null, error: new Error('Travel plan does not belong to your organization') }
         }
 
         // Validate status transition
-        if (existingPlan.status === 'cancelled') {
+        if (existingPlanTyped.status === 'cancelled') {
             return { data: null, error: new Error('Plan is already cancelled') }
         }
 
@@ -1662,14 +1661,13 @@ export async function cancelTravelPlan(
                 team:teams(id, name, org_id),
                 season:seasons(id, name)
             `)
-            .returns<TravelPlanRow[]>()
             .single()
 
         if (updateError) {
             return { data: null, error: new Error(`Failed to cancel travel plan: ${updateError.message}`) }
         }
 
-        return { data: mapSupabaseTravelPlan(updated), error: null }
+        return { data: mapSupabaseTravelPlan(updated as TravelPlanRow), error: null }
     } catch (err) {
         console.error('cancelTravelPlan error:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error cancelling travel plan') }

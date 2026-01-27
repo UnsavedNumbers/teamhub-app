@@ -10,6 +10,7 @@ import { getLink } from '../../utils/routes'
 import { useT } from '../../i18n/useI18n'
 import { Button, Card, Table, type TableColumn, Tabs, TabsList, TabsTrigger, TabsContent, StatCard, Badge, ConfirmDialog } from '../../components/platformAdmin'
 import { getDisplayName, calculateAge, getGenderLabel, formatSports, getAthleteInitials } from '../../utils/athleteHelpers'
+import { formatPhoneDisplay } from '../../utils/phoneFormatting'
 import { GuardianMatchIndicator } from '../../components/admin/GuardianMatchIndicator'
 import { checkGuardianMatch, debounce } from '../../utils/guardianMatching'
 import type { Athlete, Guardian, GuardianMatch, PendingGuardianInvite } from '../../types/family'
@@ -1137,6 +1138,30 @@ export default function AthleteDetail() {
                       </div>
                     )}
                   </div>
+                  {(athlete.phone || athlete.email) && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--pa-space-4)', marginTop: 'var(--pa-space-4)' }}>
+                      {athlete.phone && (
+                        <div>
+                          <label className="pa-label">Phone</label>
+                          <p className="pa-body-m">
+                            <a href={`tel:${athlete.phone}`} className="pa-link">
+                              {formatPhoneDisplay(athlete.phone)}
+                            </a>
+                          </p>
+                        </div>
+                      )}
+                      {athlete.email && (
+                        <div>
+                          <label className="pa-label">Email</label>
+                          <p className="pa-body-m">
+                            <a href={`mailto:${athlete.email}`} className="pa-link">
+                              {athlete.email}
+                            </a>
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </Card>
 

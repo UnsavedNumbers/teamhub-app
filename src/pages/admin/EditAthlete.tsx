@@ -15,6 +15,8 @@ import { updateAthleteSports } from '../../data/services/athleteSportsService'
 import { getSystemSports } from '../../data/services/sportsService'
 import { AthletePhotoUpload } from '../../components/admin/AthletePhotoUpload'
 import { uploadAthletePhoto, deleteAthletePhoto, getAthletePhotoUrl } from '../../data/services/athletePhotoService'
+import { validatePhoneFormat } from '../../utils/phoneValidation'
+import { validateGuardianEmail } from '../../data/services/guardianService'
 import type { Gender, UpdateAthleteDTO } from '../../types/family'
 import type { Sport } from '../../data/types/organization'
 import { AlertCircle } from 'lucide-react'
@@ -75,6 +77,8 @@ const initialFormData = {
     allergies: '',
     emergency_contact_name: '',
     emergency_contact_phone: '',
+    phone: '',  // Athlete phone number
+    email: ''   // Athlete email address
 }
 
 export default function EditAthlete() {
@@ -161,7 +165,7 @@ export default function EditAthlete() {
                     return
                 }
 
-                // Pre-populate form with athlete data
+                // Pre-populate form with athlete data - include all form fields including phone/email
                 setFormData({
                     first_name: data.first_name || '',
                     last_name: data.last_name || '',
@@ -173,6 +177,8 @@ export default function EditAthlete() {
                     allergies: data.allergies || '',
                     emergency_contact_name: data.emergency_contact_name || '',
                     emergency_contact_phone: data.emergency_contact_phone || '',
+                    phone: data.phone || '',  // NEW - explicit mapping
+                    email: data.email || ''   // NEW - explicit mapping
                 })
 
                 // Load photo if exists
@@ -277,6 +283,21 @@ export default function EditAthlete() {
             }
         }
 
+        // Phone validation - only if provided
+        if (formData.phone.trim()) {
+            const phoneValidation = validatePhoneFormat(formData.phone.trim())
+            if (!phoneValidation.valid) {
+                errors.push(phoneValidation.error || 'Invalid phone number')
+            }
+        }
+
+        // Email validation - only if provided
+        if (formData.email.trim()) {
+            if (!validateGuardianEmail(formData.email.trim())) {
+                errors.push('Invalid email address')
+            }
+        }
+
         if (errors.length > 0) {
             setValidationErrors(errors)
             return
@@ -321,7 +342,7 @@ export default function EditAthlete() {
                 }
             }
 
-            // Normalize form data before submission
+            // Normalize form data before submission - include all updatable fields including phone/email
             const normalizedData: UpdateAthleteDTO = {
                 first_name: formData.first_name.trim(),
                 last_name: formData.last_name.trim(),
@@ -333,12 +354,29 @@ export default function EditAthlete() {
                 allergies: formData.allergies.trim() || null,
                 emergency_contact_name: formData.emergency_contact_name.trim() || null,
                 emergency_contact_phone: formData.emergency_contact_phone.trim() || null,
+                phone: formData.phone.trim() || null,  // NEW - explicit
+                email: formData.email.trim() || null,   // NEW - explicit
                 photo_url: newPhotoPath
             }
 
             // Sequential updates: athlete first, then sports
             const { error: athleteError } = await updateAthlete(context, athleteId, normalizedData)
-            if (athleteError) throw athleteError
+            if (athleteError) {
+                // Check for constraint violation (database-level validation)
+                if ((athleteError as any).code === '23514') { // CHECK constraint violation
+                    const errorMessage = (athleteError as any).message || ''
+                    if (errorMessage.includes('email')) {
+                        setValidationErrors(['Invalid email format'])
+                    } else if (errorMessage.includes('phone')) {
+                        setValidationErrors(['Invalid phone number format'])
+                    } else {
+                        throw athleteError
+                    }
+                    setIsSubmitting(false)
+                    return
+                }
+                throw athleteError
+            }
 
             // Then update sports
             const { error: sportsError } = await updateAthleteSports(athleteId, context.orgId, selectedSports)
@@ -510,6 +548,23 @@ export default function EditAthlete() {
                                 value={formData.jersey_number}
                                 onChange={(e) => setFormData({ ...formData, jersey_number: e.target.value })}
                                 placeholder="e.g. 23"
+                            />
+                        </div>
+
+                        <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-6">
+                            <Input
+                                label="Phone Number (Optional)"
+                                type="tel"
+                                value={formData.phone}
+                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                placeholder="(555) 123-4567"
+                            />
+                            <Input
+                                label="Email Address (Optional)"
+                                type="email"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                placeholder="athlete@example.com"
                             />
                         </div>
 
