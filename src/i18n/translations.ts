@@ -436,6 +436,7 @@ export const en = {
                 viewOnly: 'View Only',
                 rsvp: 'RSVP',
                 noGuardians: 'No other guardians added.',
+                invitingFor: 'Inviting guardian for',
             },
             notifications: {
                 title: 'Notifications',
@@ -568,6 +569,10 @@ export const en = {
             noEvents: 'No upcoming events',
             noEventsFiltered: 'No events match your filters',
             tryAdjustingFilters: 'Try adjusting your filters',
+        },
+        noEvents: {
+            title: 'No events',
+            description: 'No events scheduled across your organizations.',
         },
         errors: {
             loadFailed: 'Failed to load calendar events',
@@ -1404,6 +1409,7 @@ export const es: typeof en = {
                 viewOnly: 'Solo Ver',
                 rsvp: 'RSVP',
                 noGuardians: 'No se agregaron otros tutores.',
+                invitingFor: 'Invitando tutor para',
             },
             notifications: {
                 title: 'Notificaciones',
@@ -1536,6 +1542,10 @@ export const es: typeof en = {
             noEvents: 'No hay eventos próximos',
             noEventsFiltered: 'Ningún evento coincide con sus filtros',
             tryAdjustingFilters: 'Intente ajustar sus filtros',
+        },
+        noEvents: {
+            title: 'Sin eventos',
+            description: 'No hay eventos programados en sus organizaciones.',
         },
         errors: {
             loadFailed: 'Error al cargar eventos del calendario',

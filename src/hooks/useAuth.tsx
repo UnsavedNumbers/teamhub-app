@@ -42,7 +42,7 @@ interface AuthContextType {
   loading: boolean
   signInWithEmail: (email: string, password: string) => Promise<{ error: AuthError | null }>
   signInWithGoogle: () => Promise<{ error: AuthError | null }>
-  signUp: (email: string, password: string, displayName?: string, requiresOrgSetup?: boolean) => Promise<{ error: AuthError | null }>
+  signUp: (email: string, password: string, firstName: string, lastName: string, phone: string, displayName?: string, requiresOrgSetup?: boolean) => Promise<{ error: AuthError | null }>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>
   updatePassword: (password: string) => Promise<{ error: AuthError | null }>
@@ -343,7 +343,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error }
   }
 
-  async function signUp(email: string, password: string, displayName?: string, requiresOrgSetup?: boolean) {
+  async function signUp(email: string, password: string, firstName: string, lastName: string, phone: string, displayName?: string, requiresOrgSetup?: boolean) {
     // Import getBaseUrl to get current origin (supports localhost and production)
     const { getBaseUrl } = await import('../utils/host')
     const baseUrl = getBaseUrl()
@@ -356,6 +356,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // This works for localhost development and production
         emailRedirectTo: `${baseUrl}/portal/auth/callback`,
         data: {
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          phone: phone.trim(),
           display_name: displayName,
           // Pass requires_org_setup to metadata - the database trigger will read this
           requires_org_setup: requiresOrgSetup ?? false,

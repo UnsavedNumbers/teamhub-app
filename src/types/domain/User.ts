@@ -8,7 +8,9 @@
 export interface User {
   id: string
   email: string
-  phone: string | null
+  phone: string
+  firstName: string
+  lastName: string
   displayName: string | null
   createdAt: string
   updatedAt: string

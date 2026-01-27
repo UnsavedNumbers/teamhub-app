@@ -172,11 +172,30 @@ export function mapUser(row: UserRow): User {
     }
   }
 
+  // Bug 1 & 2 Prevention: Use existence checks and type guards before access
+  // Bug 3 Prevention: Always trim() values to prevent whitespace-only strings
+  const firstName = 'first_name' in row && row.first_name && typeof row.first_name === 'string' 
+    ? row.first_name.trim() 
+    : ''
+  const lastName = 'last_name' in row && row.last_name && typeof row.last_name === 'string' 
+    ? row.last_name.trim() 
+    : ''
+  const phone = 'phone' in row && row.phone && typeof row.phone === 'string' 
+    ? row.phone.trim() 
+    : ''
+  
+  // Derive displayName from first+last if display_name is null/empty (Issue 4 solution)
+  const displayName = 'display_name' in row && row.display_name 
+    ? row.display_name 
+    : (firstName && lastName ? `${firstName} ${lastName}` : null)
+
   return {
     id: row.id ?? '',
     email: row.email ?? '',
-    phone: 'phone' in row ? row.phone : null,
-    displayName: 'display_name' in row ? row.display_name : null,
+    phone,
+    firstName,
+    lastName,
+    displayName,
     createdAt: row.created_at ?? new Date().toISOString(),
     updatedAt: row.updated_at ?? new Date().toISOString(),
     lastSignInAt: 'last_sign_in_at' in row ? row.last_sign_in_at : null,

@@ -34,23 +34,17 @@ export default function Athletes() {
   }, [])
 
   const fetchAthletes = useCallback(async () => {
-    if (!isReady) {
-      console.log('[Athletes] Not ready, skipping fetch')
-      return
-    }
+    if (!isReady) return
     
     const currentRequestId = ++requestIdRef.current
-    console.log('[Athletes] Starting fetch, requestId:', currentRequestId)
     setLoading(true)
     setError(null)
     
     try {
       const { data, error: fetchError } = await getAthletes(context)
-      console.log('[Athletes] Received response:', { data, error: fetchError, dataCount: data?.length })
 
       // Only update state if this is the latest request and component is still mounted
       if (currentRequestId === requestIdRef.current && isMountedRef.current) {
-        console.log('[Athletes] Request is current and mounted, updating state')
         if (fetchError) {
           const errorMessage = fetchError.message || 'Failed to load athletes. Please try again.'
           console.error('[Athletes] Error fetching athletes:', fetchError)
@@ -58,22 +52,13 @@ export default function Athletes() {
           setAthletes([])
           showError(errorMessage)
         } else if (data) {
-          console.log('[Athletes] Setting athletes:', data.length)
           setAthletes(data)
           setError(null)
         } else {
-          console.log('[Athletes] No data received, setting empty array')
           setAthletes([])
           setError(null)
         }
-        console.log('[Athletes] Setting loading to false')
         setLoading(false)
-      } else {
-        console.log('[Athletes] Request is stale or unmounted, skipping update', {
-          currentRequestId,
-          latestRequestId: requestIdRef.current,
-          isMounted: isMountedRef.current
-        })
       }
     } catch (err) {
       console.error('[Athletes] Exception fetching athletes:', err)
@@ -88,17 +73,12 @@ export default function Athletes() {
   }, [context, isReady])
 
   useEffect(() => {
-    console.log('[Athletes] isReady changed:', isReady)
     if (isReady) {
       fetchAthletes()
     } else {
       setLoading(false)
     }
   }, [isReady, fetchAthletes])
-
-  useEffect(() => {
-    console.log('[Athletes] State update:', { loading, athletesCount: athletes.length, error })
-  }, [loading, athletes, error])
 
   const handleCardClick = (athleteId: string) => {
     if (loading) return

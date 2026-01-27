@@ -98,6 +98,7 @@ const Teams = lazy(() => import('./pages/admin/Teams'))
 const TeamDetail = lazy(() => import('./pages/admin/TeamDetail'))
 const Roster = lazy(() => import('./pages/admin/Roster'))
 const Events = lazy(() => import('./pages/admin/Events'))
+const AdminAnnouncements = lazy(() => import('./pages/admin/AdminAnnouncements'))
 const CreateEvent = lazy(() => import('./pages/admin/CreateEvent'))
 const EditEvent = lazy(() => import('./pages/admin/EditEvent'))
 const AttendanceRoster = lazy(() => import('./pages/admin/AttendanceRoster'))
@@ -364,6 +365,9 @@ function AppWithTheme() {
               <Route path="events/new" element={<CreateEvent />} />
               <Route path="events/:id/edit" element={<EditEvent />} />
               <Route path="events/:id/attendance" element={<AttendanceRoster />} />
+
+              {/* Announcements */}
+              <Route path="announcements" element={<AdminAnnouncements />} />
 
               {/* Attendance */}
               <Route path="attendance" element={<AdminAttendance />} />

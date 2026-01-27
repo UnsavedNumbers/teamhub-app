@@ -573,6 +573,17 @@ const admin = {
         },
     },
 
+    // Announcements
+    announcements: {
+        list: {
+            path: '/admin/announcements',
+            label: 'Announcements',
+            icon: 'campaign',
+            description: 'Team announcements',
+            requiresOrg: true,
+        },
+    },
+
     // Attendance
     attendance: {
         path: '/admin/attendance',

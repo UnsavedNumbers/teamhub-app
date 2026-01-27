@@ -1127,13 +1127,23 @@ export async function getTeamsForParent(
     }
 
     // Real Supabase implementation - NO FALLBACK
+    // Use guardian-based approach instead of family-based
     try {
-        const familyId = await getFamilyIdForUser(context.userId)
-        const childIds = await getAthleteIdsForFamily(familyId)
+        // Get all athletes this guardian is linked to
+        const { data: athletes, error: athletesErr } = await supabase
+            .rpc('get_guardian_athletes', {
+                p_user_id: context.userId,
+                p_org_id: context.orgId
+            })
+
+        if (athletesErr) throw athletesErr
+        
+        const childIds = (athletes ?? []).map((a: any) => a.athlete_id)
         if (childIds.length === 0) {
             return { data: [], error: null }
         }
 
+        // Get team memberships for those athletes
         const { data: memberships, error: memErr } = await supabase
             .from('team_memberships')
             .select('team_id')
@@ -1141,11 +1151,13 @@ export async function getTeamsForParent(
             .eq('status', 'active')
 
         if (memErr) throw memErr
+        
         const teamIds = Array.from(new Set((memberships ?? []).map((m) => m.team_id)))
         if (teamIds.length === 0) {
             return { data: [], error: null }
         }
 
+        // Get team details
         const teamQuery: any = buildTeamQuery(supabase)
         const { data: teams, error: teamErr } = await teamQuery.in('id', teamIds).eq('org_id', context.orgId)
 

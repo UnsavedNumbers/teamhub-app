@@ -1,10 +1,20 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useUserContext } from '../hooks/useUserContext'
 import { getAthletes } from '../data/services/familyService'
 import { getTeamsForParent } from '../data/services/teamsService'
 import { getUserPreferences, updateUserPreferences } from '../data/services/preferencesService'
+import { 
+  linkGuardianToAthlete, 
+  validateGuardianEmail, 
+  getAthleteGuardians, 
+  getAthleteInvites, 
+  cancelInvite, 
+  resendInvite 
+} from '../data/services/guardianService'
+import { checkGuardianMatch, debounce } from '../utils/guardianMatching'
+import type { GuardianMatch, Guardian, PendingGuardianInvite } from '../types/family'
 import { useT, useLocale } from '../i18n/useI18n'
 import type { Locale } from '../i18n'
 import PortalLayout from '../components/portal/PortalLayout'
@@ -14,6 +24,7 @@ import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import { ThemeSelector } from '../components/portal/ThemeToggle'
+import { CheckCircle, Mail, Loader2, AlertCircle } from 'lucide-react'
 
 interface Child {
   id: string
@@ -27,14 +38,21 @@ interface Team {
   name: string
 }
 
+interface ChildWithGuardians extends Child {
+  guardians: Guardian[]
+  pendingInvites: PendingGuardianInvite[]
+}
+
 export default function Settings() {
   const { profile, signOut, updatePassword, user } = useAuth()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
   const t = useT()
   const { locale, setLocale } = useLocale()
+  const isMountedRef = useRef(true)
+  const emailInputRef = useRef<HTMLInputElement>(null)
   
-  const [children, setChildren] = useState<Child[]>([])
+  const [children, setChildren] = useState<ChildWithGuardians[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -54,6 +72,23 @@ export default function Settings() {
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [changingPassword, setChangingPassword] = useState(false)
 
+  // Invite Guardian Modal State
+  const [showInviteGuardianModal, setShowInviteGuardianModal] = useState(false)
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null)
+  const [guardianEmail, setGuardianEmail] = useState('')
+  const [guardianMatch, setGuardianMatch] = useState<GuardianMatch | null>(null)
+  const [isCheckingGuardian, setIsCheckingGuardian] = useState(false)
+  const [isInvitingGuardian, setIsInvitingGuardian] = useState(false)
+  const [inviteGuardianError, setInviteGuardianError] = useState<string | null>(null)
+  const [emailTouched, setEmailTouched] = useState(false)
+  const [inviteActionLoading, setInviteActionLoading] = useState<string | null>(null)
+
+  // Cleanup ref on unmount
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => { isMountedRef.current = false }
+  }, [])
+
   const fetchData = useCallback(async () => {
     if (!isReady || !user?.id) return
     
@@ -61,12 +96,34 @@ export default function Settings() {
     
     // Fetch children
     const { data: childrenData } = await getAthletes(context)
-    setChildren(childrenData.map(c => ({
-      id: c.id,
-      first_name: c.first_name,
-      last_name: c.last_name,
-      date_of_birth: c.date_of_birth,
-    })))
+    
+    // For each child, fetch their guardians and pending invites
+    const childrenWithGuardians: ChildWithGuardians[] = await Promise.all(
+      childrenData.map(async (c) => {
+        const [guardiansResult, invitesResult] = await Promise.all([
+          getAthleteGuardians(c.id, context.orgId),
+          getAthleteInvites(c.id, context.orgId)
+        ])
+        
+        return {
+          id: c.id,
+          first_name: c.first_name,
+          last_name: c.last_name,
+          date_of_birth: c.date_of_birth,
+          guardians: guardiansResult.data || [],
+          pendingInvites: (invitesResult.data || []).map(invite => ({
+            id: invite.id,
+            email: invite.email,
+            status: invite.status,
+            expires_at: invite.expires_at,
+            created_at: invite.created_at,
+            token: invite.token
+          }))
+        }
+      })
+    )
+    
+    setChildren(childrenWithGuardians)
 
     // Fetch teams
     const { data: teamsData } = await getTeamsForParent(context)
@@ -90,6 +147,185 @@ export default function Settings() {
   useEffect(() => {
     if (isReady) fetchData()
   }, [isReady, fetchData])
+
+  // Debounced guardian email check
+  const debouncedCheckGuardian = useMemo(
+    () => debounce(async (email: string, orgId: string) => {
+      if (!email || !validateGuardianEmail(email)) {
+        setGuardianMatch(null)
+        setIsCheckingGuardian(false)
+        return
+      }
+
+      setIsCheckingGuardian(true)
+      setInviteGuardianError(null)
+
+      try {
+        const match = await checkGuardianMatch(email, orgId)
+        if (isMountedRef.current) {
+          setGuardianMatch(match)
+          // Check if already linked to selected child
+          if (match && match.exists && selectedChildId) {
+            const isAlreadyLinked = match.linkedAthletes.some(a => a.id === selectedChildId)
+            if (isAlreadyLinked) {
+              setInviteGuardianError(t('admin.athletes.guardians.alreadyLinked'))
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error checking guardian:', err)
+        if (isMountedRef.current) {
+          setInviteGuardianError(t('admin.athletes.guardians.checkError'))
+        }
+      } finally {
+        if (isMountedRef.current) {
+          setIsCheckingGuardian(false)
+        }
+      }
+    }, 300),
+    [selectedChildId, t]
+  )
+
+  // Check guardian when email changes
+  useEffect(() => {
+    if (emailTouched && guardianEmail && showInviteGuardianModal) {
+      debouncedCheckGuardian(guardianEmail, context.orgId)
+    }
+  }, [guardianEmail, context.orgId, emailTouched, showInviteGuardianModal, debouncedCheckGuardian])
+
+  // Autofocus email input when modal opens
+  useEffect(() => {
+    if (showInviteGuardianModal && emailInputRef.current) {
+      setTimeout(() => {
+        emailInputRef.current?.focus()
+      }, 100)
+    }
+  }, [showInviteGuardianModal])
+
+  // Reset modal state when closed
+  useEffect(() => {
+    if (!showInviteGuardianModal) {
+      setGuardianEmail('')
+      setGuardianMatch(null)
+      setInviteGuardianError(null)
+      setEmailTouched(false)
+      setIsCheckingGuardian(false)
+      setIsInvitingGuardian(false)
+      setSelectedChildId(null)
+    }
+  }, [showInviteGuardianModal])
+
+  const handleOpenInviteModal = useCallback((childId: string) => {
+    setSelectedChildId(childId)
+    setShowInviteGuardianModal(true)
+  }, [])
+
+  const handleCloseInviteModal = useCallback(() => {
+    if (isInvitingGuardian) return // Prevent closing while inviting
+    setShowInviteGuardianModal(false)
+  }, [isInvitingGuardian])
+
+  const handleInviteGuardian = useCallback(async () => {
+    if (!selectedChildId || !guardianEmail || !validateGuardianEmail(guardianEmail)) {
+      setInviteGuardianError(t('admin.athletes.guardians.invalidEmail'))
+      return
+    }
+
+    // Check if already linked
+    if (guardianMatch && guardianMatch.exists && selectedChildId) {
+      const isAlreadyLinked = guardianMatch.linkedAthletes.some(a => a.id === selectedChildId)
+      if (isAlreadyLinked) {
+        setInviteGuardianError(t('admin.athletes.guardians.alreadyLinked'))
+        return
+      }
+    }
+
+    setIsInvitingGuardian(true)
+    setInviteGuardianError(null)
+
+    try {
+      const { error } = await linkGuardianToAthlete(
+        selectedChildId,
+        guardianEmail,
+        context.orgId,
+        'parent'
+      )
+
+      if (error) {
+        if (isMountedRef.current) {
+          setInviteGuardianError(error.message || t('admin.athletes.guardians.linkError'))
+        }
+        return
+      }
+
+      // Refresh children data to get updated guardians/invites
+      await fetchData()
+
+      // Reset form state and close modal
+      if (isMountedRef.current) {
+        setShowInviteGuardianModal(false)
+      }
+    } catch (err) {
+      console.error('Error inviting guardian:', err)
+      if (isMountedRef.current) {
+        setInviteGuardianError(err instanceof Error ? err.message : t('admin.athletes.guardians.linkError'))
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsInvitingGuardian(false)
+      }
+    }
+  }, [selectedChildId, guardianEmail, guardianMatch, context.orgId, t, fetchData])
+
+  const handleCancelInvite = useCallback(async (inviteId: string) => {
+    if (inviteActionLoading) return
+    
+    setInviteActionLoading(inviteId)
+    
+    try {
+      const { success, error } = await cancelInvite(inviteId)
+      
+      if (error || !success) {
+        console.error('Error canceling invite:', error)
+        setInviteActionLoading(null)
+        return
+      }
+      
+      // Refresh data
+      await fetchData()
+    } catch (err) {
+      console.error('Error canceling invite:', err)
+    } finally {
+      if (isMountedRef.current) {
+        setInviteActionLoading(null)
+      }
+    }
+  }, [inviteActionLoading, fetchData])
+
+  const handleResendInvite = useCallback(async (inviteId: string) => {
+    if (inviteActionLoading) return
+    
+    setInviteActionLoading(inviteId)
+    
+    try {
+      const { success, error } = await resendInvite(inviteId)
+      
+      if (error || !success) {
+        console.error('Error resending invite:', error)
+        setInviteActionLoading(null)
+        return
+      }
+      
+      // Refresh data
+      await fetchData()
+    } catch (err) {
+      console.error('Error resending invite:', err)
+    } finally {
+      if (isMountedRef.current) {
+        setInviteActionLoading(null)
+      }
+    }
+  }, [inviteActionLoading, fetchData])
 
   async function handleLogout() {
     await signOut()
@@ -232,7 +468,10 @@ export default function Settings() {
                     </div>
                     <button className="text-sm font-bold text-slate-400 hover:text-slate-900 dark:hover:text-white">{t('common.edit')}</button>
                   </div>
-                  <div className="p-6 bg-white dark:bg-slate-900/50">
+                  
+                  {/* Teams Section */}
+                  <div className="p-6 bg-white dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Teams</p>
                     {teams.length > 0 ? (
                       <ul className="space-y-2">
                          {teams.map((team) => (
@@ -246,30 +485,107 @@ export default function Settings() {
                       <p className="text-sm text-slate-400">{t('portal.settings.family.noTeams')}</p>
                     )}
                   </div>
+
+                  {/* Guardians Section */}
+                  <div className="p-6 bg-white dark:bg-slate-900/50">
+                    <div className="flex items-center justify-between mb-4">
+                      <p className="text-xs font-bold uppercase tracking-widest text-slate-400">{t('portal.settings.family.guardians')}</p>
+                      <button 
+                        onClick={() => handleOpenInviteModal(child.id)}
+                        className="text-xs font-bold text-[var(--org-link-color)] uppercase tracking-widest hover:underline flex items-center gap-1"
+                      >
+                        <Icon name="add" size="text-sm" />
+                        {t('common.invite')}
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {/* Current User as Guardian */}
+                      <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center">
+                            <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm text-slate-900 dark:text-white">{t('portal.settings.family.you')}</p>
+                            <p className="text-xs text-slate-500">{profile?.email}</p>
+                          </div>
+                        </div>
+                        <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-widest rounded">{t('portal.settings.family.owner')}</span>
+                      </div>
+
+                      {/* Other Guardians */}
+                      {child.guardians
+                        .filter(g => g.email !== profile?.email)
+                        .map(guardian => (
+                          <div key={guardian.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                                <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                                  {guardian.display_name?.[0]?.toUpperCase() || guardian.email[0].toUpperCase()}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="font-bold text-sm text-slate-900 dark:text-white">
+                                  {guardian.display_name || guardian.email}
+                                </p>
+                                {guardian.display_name && (
+                                  <p className="text-xs text-slate-500">{guardian.email}</p>
+                                )}
+                              </div>
+                            </div>
+                            <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-[10px] font-bold uppercase tracking-widest rounded capitalize">
+                              {guardian.relationship_type || 'Guardian'}
+                            </span>
+                          </div>
+                        ))}
+
+                      {/* Pending Invites */}
+                      {child.pendingInvites.map(invite => (
+                        <div key={invite.id} className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-200 dark:border-amber-800/30">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center">
+                              <Mail className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                            </div>
+                            <div>
+                              <p className="font-bold text-sm text-slate-900 dark:text-white italic">{t('admin.athletes.guardians.invitePending')}</p>
+                              <p className="text-xs text-slate-500">{invite.email}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleResendInvite(invite.id)}
+                              disabled={inviteActionLoading === invite.id}
+                              className="text-xs font-bold text-[var(--org-link-color)] hover:underline disabled:opacity-50"
+                            >
+                              {inviteActionLoading === invite.id ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                t('admin.athletes.guardians.resend')
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleCancelInvite(invite.id)}
+                              disabled={inviteActionLoading === invite.id}
+                              className="text-xs font-bold text-red-500 hover:underline disabled:opacity-50"
+                            >
+                              {t('admin.athletes.guardians.cancelInvite')}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Empty State */}
+                      {child.guardians.filter(g => g.email !== profile?.email).length === 0 && 
+                       child.pendingInvites.length === 0 && (
+                        <p className="text-sm text-slate-400 text-center py-2">
+                          {t('portal.settings.family.noGuardians')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </Card>
               ))}
-
-              <Card className="overflow-hidden">
-                <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                  <CardTitle className="text-lg">{t('portal.settings.family.guardians')}</CardTitle>
-                  <button className="text-xs font-bold text-[var(--org-link-color)] uppercase tracking-widest hover:underline flex items-center gap-1">
-                    <Icon name="add" size="text-sm" />
-                    {t('common.invite')}
-                  </button>
-                </div>
-                <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                  <div className="p-6 flex items-start justify-between">
-                     <div>
-                       <p className="font-black text-slate-900 dark:text-white">{t('portal.settings.family.you')} ({profile?.email})</p>
-                       <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mt-1">{t('portal.settings.family.familyAdmin')}</p>
-                     </div>
-                     <span className="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold uppercase tracking-widest rounded">{t('portal.settings.family.owner')}</span>
-                  </div>
-                  <div className="p-6 text-center text-sm text-slate-400">
-                    {t('portal.settings.family.noGuardians')}
-                  </div>
-                </div>
-              </Card>
             </div>
           </section>
 
@@ -433,6 +749,131 @@ export default function Settings() {
                   disabled={changingPassword || !newPassword || newPassword !== confirmPassword}
                 >
                   {changingPassword ? 'Changing...' : 'Change Password'}
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Invite Guardian Modal */}
+        {showInviteGuardianModal && (
+          <div 
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            onClick={handleCloseInviteModal}
+          >
+            <Card 
+              className="w-full max-w-md m-4"
+              onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                  {t('admin.athletes.guardians.linkTitle')}
+                </h3>
+                <button
+                  onClick={handleCloseInviteModal}
+                  disabled={isInvitingGuardian}
+                  className="text-slate-400 hover:text-slate-900 dark:hover:text-white disabled:opacity-50"
+                >
+                  <Icon name="close" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6">
+                <div className="space-y-4">
+                  {/* Selected Child Info */}
+                  {selectedChildId && (
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                      <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
+                        {t('portal.settings.family.invitingFor')}
+                      </p>
+                      <p className="font-bold text-slate-900 dark:text-white">
+                        {children.find(c => c.id === selectedChildId)?.first_name}{' '}
+                        {children.find(c => c.id === selectedChildId)?.last_name}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Email Input */}
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                      {t('admin.athletes.guardians.emailLabel')}
+                    </label>
+                    <input
+                      ref={emailInputRef}
+                      type="email"
+                      value={guardianEmail}
+                      onChange={(e) => {
+                        setGuardianEmail(e.target.value)
+                        if (!emailTouched) setEmailTouched(true)
+                        setInviteGuardianError(null)
+                      }}
+                      placeholder={t('admin.athletes.guardians.emailPlaceholder')}
+                      disabled={isInvitingGuardian}
+                      className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white ${
+                        inviteGuardianError && emailTouched 
+                          ? 'border-red-500 focus:ring-red-500' 
+                          : 'border-slate-200 dark:border-slate-700 focus:ring-[var(--org-btn-primary-bg)]'
+                      } focus:outline-none focus:ring-2`}
+                      autoFocus
+                    />
+                    {inviteGuardianError && emailTouched && (
+                      <p className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+                        <AlertCircle className="w-4 h-4" />
+                        {inviteGuardianError}
+                      </p>
+                    )}
+
+                    {/* Match Indicator */}
+                    {emailTouched && guardianEmail && !inviteGuardianError && (
+                      <div className="mt-3">
+                        {isCheckingGuardian ? (
+                          <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Checking...</span>
+                          </div>
+                        ) : guardianMatch ? (
+                          guardianMatch.exists ? (
+                            <div className="flex items-center gap-2 text-sm text-green-600">
+                              <CheckCircle className="w-4 h-4" />
+                              <span className="font-medium">{t('admin.athletes.guardians.existingGuardian')}</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 text-sm text-amber-600">
+                              <Mail className="w-4 h-4" />
+                              <span>{t('admin.athletes.guardians.willInvite')}</span>
+                            </div>
+                          )
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="p-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={handleCloseInviteModal}
+                  disabled={isInvitingGuardian}
+                >
+                  {t('admin.athletes.guardians.cancel')}
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleInviteGuardian}
+                  disabled={isInvitingGuardian || !guardianEmail || !validateGuardianEmail(guardianEmail) || !!inviteGuardianError}
+                >
+                  {isInvitingGuardian ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Inviting...
+                    </span>
+                  ) : (
+                    t('admin.athletes.guardians.linkButton')
+                  )}
                 </Button>
               </div>
             </Card>
