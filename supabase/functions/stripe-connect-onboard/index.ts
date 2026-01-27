@@ -6,15 +6,9 @@ import Stripe from "https://esm.sh/stripe@12.18.0?dts"
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY")
-const stripeConnectReturnUrl = Deno.env.get("STRIPE_CONNECT_RETURN_URL")
-const stripeConnectRefreshUrl = Deno.env.get("STRIPE_CONNECT_REFRESH_URL")
 
 if (!supabaseUrl || !supabaseServiceRoleKey || !stripeSecretKey) {
   throw new Error("Missing required environment configuration")
-}
-
-if (!stripeConnectReturnUrl || !stripeConnectRefreshUrl) {
-  throw new Error("Missing STRIPE_CONNECT_RETURN_URL or STRIPE_CONNECT_REFRESH_URL")
 }
 
 const stripe = new Stripe(stripeSecretKey, { apiVersion: "2024-06-20" })
@@ -36,6 +30,16 @@ function json(req: Request, body: unknown, status = 200) {
 }
 
 serve(async (req) => {
+  const appOrigin = req.headers.get("origin");
+  if (!appOrigin) return json(req, { error: "Origin not allowed" }, 403);
+
+  const stripeConnectReturnUrl = new URL("/admin/organization", appOrigin).toString();
+  const stripeConnectRefreshUrl = new URL("/admin/organization", appOrigin).toString();
+
+  if (!stripeConnectReturnUrl || !stripeConnectRefreshUrl) {
+    throw new Error("Missing STRIPE_CONNECT_RETURN_URL or STRIPE_CONNECT_REFRESH_URL")
+  }
+
   // Preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: buildCorsHeaders(req) })

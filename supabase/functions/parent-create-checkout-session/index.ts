@@ -5,7 +5,7 @@ import Stripe from "https://esm.sh/stripe@12.18.0?dts"
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY")
+const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY")!
 
 if (!supabaseUrl || !supabaseServiceRoleKey || !stripeSecretKey) {
   throw new Error("Missing required environment configuration")
@@ -24,25 +24,68 @@ interface FeeAssignmentRow {
   fee?: { title: string | null; description: string | null } | null
 }
 
-async function logError(supabase: any, organizationId: string | null, message: string, payload: any) {
-  await supabase.from("billing_events").insert({
-    org_id: organizationId,
-    event_type: "parent_checkout_error",
-    error_message: message,
-    payload,
+function buildCorsHeaders(_req: Request) {
+  // Allow-all CORS (works only if frontend does NOT use cookies / credentials: "include")
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers":
+      "authorization, apikey, content-type, x-client-info, x-requested-with, accept, prefer, range",
+    "Access-Control-Max-Age": "86400",
+  }
+}
+
+function json(req: Request, body: unknown, status = 200) {
+  const cors = buildCorsHeaders(req)
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...cors, "Content-Type": "application/json" },
   })
 }
 
+async function logError(supabase: any, organizationId: string | null, message: string, payload: any) {
+  // Best-effort logging; never throw from logger
+  try {
+    await supabase.from("billing_events").insert({
+      org_id: organizationId,
+      event_type: "parent_checkout_error",
+      error_message: message,
+      payload,
+    })
+  } catch (_e) {
+    // ignore
+  }
+}
+
 serve(async (req) => {
+  // Preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: buildCorsHeaders(req) })
+  }
+
+  if (req.method !== "POST") {
+    return json(req, { error: "Method not allowed" }, 405)
+  }
+
+  // IMPORTANT:
+  // - Use service role key to read/write server-side.
+  // - Also forward the end-user Authorization header to supabase.auth.getUser().
   const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
-    global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
+    global: {
+      headers: {
+        // Pass through end-user JWT so auth.getUser() works
+        Authorization: req.headers.get("Authorization") ?? "",
+        // Some clients send apikey; pass through if present (harmless)
+        apikey: req.headers.get("apikey") ?? "",
+      },
+    },
   })
 
   let body: any
   try {
     body = await req.json()
   } catch (_err) {
-    return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400 })
+    return json(req, { error: "Invalid JSON" }, 400)
   }
 
   const feeAssignmentIds = Array.isArray(body?.fee_assignment_ids) ? body.fee_assignment_ids : []
@@ -51,23 +94,30 @@ serve(async (req) => {
   const cancelUrl = body?.cancel_url as string | undefined
 
   if (!feeAssignmentIds || feeAssignmentIds.length === 0 || !successUrl || !cancelUrl) {
-    return new Response(JSON.stringify({ error: "Missing required parameters" }), { status: 400 })
+    return json(req, { error: "Missing required parameters" }, 400)
   }
 
-  const { data: authData } = await supabase.auth.getUser()
+  const { data: authData, error: authErr } = await supabase.auth.getUser()
+  if (authErr) {
+    return json(req, { error: "Unauthorized" }, 401)
+  }
   const user = authData?.user
   if (!user) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 })
+    return json(req, { error: "Unauthorized" }, 401)
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileErr } = await supabase
     .from("users")
     .select("role")
     .eq("id", user.id)
     .maybeSingle()
 
+  if (profileErr) {
+    return json(req, { error: "Failed to load profile" }, 500)
+  }
+
   if (profile?.role !== "parent") {
-    return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 })
+    return json(req, { error: "Forbidden" }, 403)
   }
 
   let organizationId: string | null = null
@@ -81,28 +131,27 @@ serve(async (req) => {
       .in("id", feeAssignmentIds)
       .eq("parent_id", user.id)
 
-    if (assignmentError) {
-      throw assignmentError
-    }
+    if (assignmentError) throw assignmentError
 
     if (!assignments || assignments.length !== feeAssignmentIds.length) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 })
+      return json(req, { error: "Forbidden" }, 403)
     }
 
     organizationId = assignments[0].org_id
     const allSameOrg = assignments.every((a) => a.org_id === organizationId)
     if (!allSameOrg) {
-      return new Response(JSON.stringify({ error: "Mixed organization fees not allowed" }), { status: 400 })
+      return json(req, { error: "Mixed organization fees not allowed" }, 400)
     }
 
     const subtotal = assignments.reduce((sum, a) => sum + (a.balance_cents ?? a.amount_cents ?? 0), 0)
     if (subtotal <= 0) {
-      return new Response(JSON.stringify({ error: "Nothing to pay" }), { status: 400 })
+      return json(req, { error: "Nothing to pay" }, 400)
     }
 
     // Discount validation
     let discountAmount = 0
-    let discount
+    let discount: any = null
+
     if (discountCodeRaw) {
       const discountCode = discountCodeRaw.trim().toUpperCase()
       const { data: discountRow, error: discountError } = await supabase
@@ -115,31 +164,35 @@ serve(async (req) => {
         .maybeSingle()
 
       if (discountError || !discountRow) {
-        return new Response(JSON.stringify({ error: "Invalid discount code" }), { status: 400 })
+        return json(req, { error: "Invalid discount code" }, 400)
       }
 
       if (discountRow.status !== "active") {
-        return new Response(JSON.stringify({ error: "Discount code inactive" }), { status: 400 })
+        return json(req, { error: "Discount code inactive" }, 400)
       }
 
       if (discountRow.redeem_by && new Date(discountRow.redeem_by) < new Date()) {
-        return new Response(JSON.stringify({ error: "Discount code expired" }), { status: 400 })
+        return json(req, { error: "Discount code expired" }, 400)
       }
 
       if (discountRow.max_redemptions) {
-        const { count } = await supabase
+        const { count, error: countErr } = await supabase
           .from("discount_redemptions")
           .select("id", { count: "exact", head: true })
           .eq("discount_code_id", discountRow.id)
+
+        if (countErr) throw countErr
         if (typeof count === "number" && count >= discountRow.max_redemptions) {
-          return new Response(JSON.stringify({ error: "Discount code usage limit reached" }), { status: 400 })
+          return json(req, { error: "Discount code usage limit reached" }, 400)
         }
       }
 
-      const eligibleAssignments = assignments.filter((a) => !discountRow.applies_to_fee_id || a.fee_id === discountRow.applies_to_fee_id)
+      const eligibleAssignments = assignments.filter((a) =>
+        !discountRow.applies_to_fee_id || a.fee_id === discountRow.applies_to_fee_id
+      )
       const eligibleSubtotal = eligibleAssignments.reduce((sum, a) => sum + (a.balance_cents ?? a.amount_cents ?? 0), 0)
       if (eligibleSubtotal <= 0) {
-        return new Response(JSON.stringify({ error: "Discount not applicable" }), { status: 400 })
+        return json(req, { error: "Discount not applicable" }, 400)
       }
 
       if (discountRow.discount_type === "percent" && discountRow.percent_off) {
@@ -175,10 +228,10 @@ serve(async (req) => {
     const payableCharges = adjustedCharges.filter((c) => c.amount_cents > 0)
     const totalCents = payableCharges.reduce((sum, c) => sum + c.amount_cents, 0)
     if (totalCents <= 0) {
-      return new Response(JSON.stringify({ error: "Discount covers entire balance" }), { status: 400 })
+      return json(req, { error: "Discount covers entire balance" }, 400)
     }
 
-    // Create checkout session record
+    // Create checkout session record (internal)
     const { data: checkout, error: checkoutError } = await supabase
       .from("checkout_sessions")
       .insert({
@@ -193,9 +246,7 @@ serve(async (req) => {
       .select("id")
       .single()
 
-    if (checkoutError || !checkout) {
-      throw checkoutError
-    }
+    if (checkoutError || !checkout) throw checkoutError
 
     const { data: createdCharges, error: chargeError } = await supabase
       .from("charges")
@@ -214,9 +265,7 @@ serve(async (req) => {
       )
       .select("id, fee_assignment_id, amount_cents")
 
-    if (chargeError || !createdCharges) {
-      throw chargeError
-    }
+    if (chargeError || !createdCharges) throw chargeError
 
     const { error: itemError } = await supabase
       .from("checkout_session_items")
@@ -228,10 +277,7 @@ serve(async (req) => {
           amount_cents: c.amount_cents,
         })),
       )
-
-    if (itemError) {
-      throw itemError
-    }
+    if (itemError) throw itemError
 
     if (discount && discountAmount > 0) {
       const { error: redemptionError } = await supabase
@@ -246,10 +292,7 @@ serve(async (req) => {
               amount_cents_applied: c.discount_applied,
             })),
         )
-
-      if (redemptionError) {
-        throw redemptionError
-      }
+      if (redemptionError) throw redemptionError
     }
 
     const lineItems = createdCharges.map((c) => {
@@ -272,7 +315,7 @@ serve(async (req) => {
       .single()
 
     if (orgError || !org) {
-      return new Response(JSON.stringify({ error: "Organization not found" }), { status: 404 })
+      return json(req, { error: "Organization not found" }, 404)
     }
 
     // Build Stripe checkout session parameters
@@ -282,26 +325,41 @@ serve(async (req) => {
       line_items: lineItems,
       client_reference_id: checkout.id,
       metadata: {
+        // This is Stripe session metadata (NOT PaymentIntent metadata unless you also set payment_intent_data.metadata)
         checkout_session_id: checkout.id,
         parent_id: user.id,
         organization_id: organizationId,
+        fee_assignment_ids: payableCharges.map((c) => c.fee_assignment_id).join(","),
       },
       success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${cancelUrl}?session_id={CHECKOUT_SESSION_ID}`,
     }
 
+    // OPTIONAL but recommended: ensure PaymentIntent ALSO gets your internal ids
+    // so payment_intent.* webhooks can resolve your checkout reliably.
+    sessionParams.payment_intent_data = {
+      metadata: {
+        checkout_session_id: checkout.id,
+        parent_id: user.id,
+        organization_id: organizationId,
+      },
+    }
+
     // Route to organization's connected account if available
-    // Re-validate status immediately before Stripe call (handles concurrent changes)
     if (org.payout_account_id && org.payouts_enabled && org.billing_mode === "platform_facilitated") {
-      const platformFeeCents = Math.floor(totalCents * 0.029) // Example: 2.9% platform fee
+      const platformFeeCents = Math.floor(totalCents * 0.029) // example fee
       sessionParams.payment_intent_data = {
-        transfer_data: {
-          destination: org.payout_account_id,
+        ...(sessionParams.payment_intent_data ?? {}),
+        transfer_data: { destination: org.payout_account_id },
+        application_fee_amount: platformFeeCents,
+        metadata: {
+          ...(sessionParams.payment_intent_data?.metadata ?? {}),
+          checkout_session_id: checkout.id,
+          parent_id: user.id,
+          organization_id: organizationId,
         },
-        application_fee_amount: platformFeeCents, // Platform fee
       }
 
-      // Update checkout_sessions with platform fee
       await supabase
         .from("checkout_sessions")
         .update({ platform_fee_cents: platformFeeCents })
@@ -311,7 +369,6 @@ serve(async (req) => {
     try {
       const stripeSession = await stripe.checkout.sessions.create(sessionParams)
 
-      // Update checkout session with Stripe session ID
       await supabase
         .from("checkout_sessions")
         .update({
@@ -320,36 +377,29 @@ serve(async (req) => {
         })
         .eq("id", checkout.id)
 
-      return new Response(
-        JSON.stringify({ checkout_session_url: stripeSession.url, session_id: stripeSession.id }),
-        { status: 200 },
-      )
+      return json(req, { checkout_session_url: stripeSession.url, session_id: stripeSession.id }, 200)
     } catch (stripeError: any) {
-      // If Connect account routing fails, mark as failed and log
       await supabase
         .from("checkout_sessions")
         .update({ status: "failed" })
         .eq("id", checkout.id)
 
-      await logError(supabase, organizationId, `Stripe session creation failed: ${stripeError.message}`, {
-        error: stripeError.toString(),
-        checkout_id: checkout.id,
-      })
-
-      // For Connect account errors, could retry with platform account routing
-      // For now, return error to user
-      return new Response(
-        JSON.stringify({ error: "Payment processing failed. Please try again or contact support." }),
-        { status: 500 },
+      await logError(
+        supabase,
+        organizationId,
+        `Stripe session creation failed: ${stripeError?.message ?? "unknown Stripe error"}`,
+        { error: stripeError?.toString?.() ?? String(stripeError), checkout_id: checkout.id },
       )
-    }
 
-    return new Response(
-      JSON.stringify({ checkout_session_url: stripeSession.url, session_id: stripeSession.id }),
-      { status: 200 },
-    )
+      return json(req, { error: "Payment processing failed. Please try again or contact support." }, 500)
+    }
   } catch (err: any) {
-    await logError(supabase, organizationId, err?.message || "parent checkout error", { error: err?.toString(), body })
-    return new Response(JSON.stringify({ error: err?.message || "Internal error" }), { status: 500 })
+    await logError(
+      supabase,
+      organizationId,
+      err?.message || "parent checkout error",
+      { error: err?.toString?.() ?? String(err), body },
+    )
+    return json(req, { error: err?.message || "Internal error" }, 500)
   }
 })
