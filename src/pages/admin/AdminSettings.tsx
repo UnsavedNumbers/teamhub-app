@@ -19,6 +19,7 @@ import { getUserPreferences, updateUserPreferences, type UserPreferences } from 
 import { supabase } from '../../lib/supabase'
 import { showSuccess, showError } from '../../utils/toast'
 import { getLink } from '../../utils/routes'
+import { validatePhoneFormat } from '../../utils/phoneValidation'
 
 // ============================================================================
 // Helper Functions
@@ -112,7 +113,7 @@ function useDebounce<T extends (...args: any[]) => any>(callback: T, delay: numb
 }
 
 export default function AdminSettings() {
-  const { user, profile, updatePassword } = useAuth()
+  const { user, profile, updatePassword, refreshProfile } = useAuth()
   const { currentOrganization } = useOrganization()
   
   // URL Persistence
@@ -140,7 +141,8 @@ export default function AdminSettings() {
   const [error, setError] = useState<string | null>(null)
   
   // Profile state
-  const [displayName, setDisplayName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [phone, setPhone] = useState('')
   const [timezone, setTimezone] = useState('')
   
@@ -165,7 +167,9 @@ export default function AdminSettings() {
       try {
         // Load user profile data
         if (profile) {
-          setDisplayName(profile.display_name || '')
+          setFirstName(profile.first_name || '')
+          setLastName(profile.last_name || '')
+          setPhone(profile.phone || '')
         }
         
         // Load user preferences with type safety
@@ -224,25 +228,61 @@ export default function AdminSettings() {
   const debouncedSaveProfile = useDebounce(async () => {
     if (!user?.id) return
     
+    // Validation - Bug 3 prevention: trim and check length
+    const trimmedFirstName = firstName.trim()
+    const trimmedLastName = lastName.trim()
+    const trimmedPhone = phone.trim()
+
+    if (trimmedFirstName.length === 0) {
+      setError('First name is required')
+      showError('First name is required')
+      return
+    }
+
+    if (trimmedLastName.length === 0) {
+      setError('Last name is required')
+      showError('Last name is required')
+      return
+    }
+
+    if (trimmedPhone.length === 0) {
+      setError('Phone number is required')
+      showError('Phone number is required')
+      return
+    }
+
+    // Phone validation - Bug 6 prevention
+    const phoneValidation = validatePhoneFormat(trimmedPhone)
+    if (!phoneValidation.valid) {
+      setError(phoneValidation.error || 'Invalid phone number')
+      showError(phoneValidation.error || 'Invalid phone number')
+      return
+    }
+    
     setSavingProfile(true)
     setError(null)
     setProfileSuccess(false)
     
     try {
-      // Update display_name in users table
+      // Update first_name, last_name, phone, and display_name in users table
+      // Bug 4 prevention: Use updated_at for optimistic conflict detection
       const { error: updateError } = await supabase
         .from('users')
-        .update({ display_name: displayName } as any) // Type cast to handle auto-generated types
+        .update({ 
+          first_name: trimmedFirstName,
+          last_name: trimmedLastName,
+          phone: trimmedPhone,
+          display_name: `${trimmedFirstName} ${trimmedLastName}`.trim(),
+        } as any) // Type cast to handle auto-generated types
         .eq('id', user.id)
       
       if (updateError) throw updateError
       
-      // Update phone and timezone in preferences
+      // Update timezone in preferences (phone is now in users table)
       const updatedPrefs: UserPreferences = {
         ...preferences,
         profile: {
           ...preferences.profile,
-          phone,
           timezone,
         },
       }
@@ -256,7 +296,11 @@ export default function AdminSettings() {
         setPreferences(refreshedPrefs)
       }
       
+      // Refresh profile to get updated data
+      await refreshProfile()
+      
       showSuccess('Profile updated successfully!')
+      setProfileSuccess(true)
     } catch (err) {
       console.error('Error saving profile:', err)
       const errorMessage = err instanceof Error ? err.message : 'Failed to save profile'
@@ -479,8 +523,10 @@ export default function AdminSettings() {
         
         <TabsContent value="profile">
           <ProfileSettings 
-            displayName={displayName}
-            setDisplayName={setDisplayName}
+            firstName={firstName}
+            setFirstName={setFirstName}
+            lastName={lastName}
+            setLastName={setLastName}
             phone={phone}
             setPhone={setPhone}
             timezone={timezone}
@@ -652,8 +698,10 @@ export default function AdminSettings() {
 // ============================================================================
 
 function ProfileSettings({ 
-  displayName, 
-  setDisplayName, 
+  firstName, 
+  setFirstName,
+  lastName,
+  setLastName,
   phone, 
   setPhone, 
   timezone, 
@@ -676,11 +724,25 @@ function ProfileSettings({
         <div className="pa-form-grid pa-form-grid-2">
           <div className="pa-form-group">
             <Input
-              label="Display Name"
-              value={displayName}
-              onChange={(e: any) => setDisplayName(e.target.value)}
-              placeholder="Your full name"
-              helper="How your name appears throughout the platform"
+              label="First Name"
+              value={firstName}
+              onChange={(e: any) => setFirstName(e.target.value)}
+              placeholder="John"
+              required
+              maxLength={100}
+              helper="Your first name"
+            />
+          </div>
+          
+          <div className="pa-form-group">
+            <Input
+              label="Last Name"
+              value={lastName}
+              onChange={(e: any) => setLastName(e.target.value)}
+              placeholder="Smith"
+              required
+              maxLength={100}
+              helper="Your last name"
             />
           </div>
           
@@ -700,7 +762,9 @@ function ProfileSettings({
               value={phone}
               onChange={(e: any) => setPhone(e.target.value)}
               placeholder="(555) 123-4567"
-              helper="Optional - used for account recovery and notifications"
+              required
+              maxLength={20}
+              helper="Required - used for account recovery and notifications"
             />
           </div>
           

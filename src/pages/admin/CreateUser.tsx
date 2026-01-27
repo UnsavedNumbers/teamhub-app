@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 
 import { getErrorMessage } from '../../utils/errorUtils'
+import { validatePhoneFormat } from '../../utils/phoneValidation'
 import { 
   AdminPageHeader, 
   Card, 
@@ -13,7 +14,8 @@ import {
 
 interface UserFormData {
   email: string
-  display_name: string
+  first_name: string
+  last_name: string
   phone: string
   role: 'admin' | 'coach' | 'parent'
 }
@@ -30,17 +32,49 @@ export default function CreateUser() {
   const { control, handleSubmit, formState: { errors } } = useForm<UserFormData>({
     defaultValues: { 
       email: '', 
-      display_name: '', 
+      first_name: '', 
+      last_name: '', 
       phone: '', 
       role: 'parent' 
     },
   })
 
-  const onSubmit = async (_data: UserFormData) => {
+  const onSubmit = async (data: UserFormData) => {
     setSaving(true)
     setError(null)
     
     try {
+      // Validation - Bug 3 prevention: trim and check length
+      const trimmedFirstName = data.first_name.trim()
+      const trimmedLastName = data.last_name.trim()
+      const trimmedPhone = data.phone.trim()
+
+      if (trimmedFirstName.length === 0) {
+        setError('First name is required')
+        setSaving(false)
+        return
+      }
+
+      if (trimmedLastName.length === 0) {
+        setError('Last name is required')
+        setSaving(false)
+        return
+      }
+
+      if (trimmedPhone.length === 0) {
+        setError('Phone number is required')
+        setSaving(false)
+        return
+      }
+
+      // Phone validation - Bug 6 prevention
+      const phoneValidation = validatePhoneFormat(trimmedPhone)
+      if (!phoneValidation.valid) {
+        setError(phoneValidation.error || 'Invalid phone number')
+        setSaving(false)
+        return
+      }
+
       // In fake data mode, just navigate back with success
       // TODO: Replace with real user creation when migrating
       /*
@@ -49,7 +83,10 @@ export default function CreateUser() {
         email: data.email,
         email_confirm: true,
         user_metadata: {
-          display_name: data.display_name,
+          first_name: trimmedFirstName,
+          last_name: trimmedLastName,
+          phone: trimmedPhone,
+          display_name: `${trimmedFirstName} ${trimmedLastName}`,
         }
       })
       
@@ -61,8 +98,10 @@ export default function CreateUser() {
         .insert({
           id: authUser.user.id,
           email: data.email,
-          display_name: data.display_name,
-          phone: data.phone || null,
+          first_name: trimmedFirstName,
+          last_name: trimmedLastName,
+          phone: trimmedPhone,
+          display_name: `${trimmedFirstName} ${trimmedLastName}`,
           org_id: currentOrganization?.id,
         })
       
@@ -126,33 +165,71 @@ export default function CreateUser() {
                 )} 
               />
               <Controller 
-                name="display_name" 
+                name="first_name" 
                 control={control} 
-                rules={{ required: 'Display name is required' }} 
+                rules={{ 
+                  required: 'First name is required',
+                  validate: (v) => v.trim().length > 0 || 'First name cannot be only spaces'
+                }} 
                 render={({ field }) => (
                   <Input 
                     {...field} 
-                    label="Display Name" 
+                    label="First Name" 
                     required 
-                    error={errors.display_name?.message || undefined} 
+                    maxLength={100}
+                    error={errors.first_name?.message || undefined} 
+                  />
+                )} 
+              />
+            </div>
+
+            <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+              <Controller 
+                name="last_name" 
+                control={control} 
+                rules={{ 
+                  required: 'Last name is required',
+                  validate: (v) => v.trim().length > 0 || 'Last name cannot be only spaces'
+                }} 
+                render={({ field }) => (
+                  <Input 
+                    {...field} 
+                    label="Last Name" 
+                    required 
+                    maxLength={100}
+                    error={errors.last_name?.message || undefined} 
+                  />
+                )} 
+              />
+              <Controller 
+                name="phone" 
+                control={control} 
+                rules={{ 
+                  required: 'Phone number is required',
+                  validate: (v) => {
+                    const trimmed = v.trim()
+                    if (trimmed.length === 0) {
+                      return 'Phone number is required'
+                    }
+                    const phoneValidation = validatePhoneFormat(trimmed)
+                    return phoneValidation.valid || phoneValidation.error || 'Invalid phone number'
+                  }
+                }} 
+                render={({ field }) => (
+                  <Input 
+                    {...field} 
+                    label="Phone Number" 
+                    type="tel" 
+                    required
+                    maxLength={20}
+                    placeholder="(555) 123-4567"
+                    error={errors.phone?.message || undefined}
                   />
                 )} 
               />
             </div>
 
             <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-6">
-              <Controller 
-                name="phone" 
-                control={control} 
-                render={({ field }) => (
-                  <Input 
-                    {...field} 
-                    label="Phone Number" 
-                    type="tel" 
-                    placeholder="(555) 123-4567" 
-                  />
-                )} 
-              />
               <Controller 
                 name="role" 
                 control={control} 

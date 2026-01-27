@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useUserContext } from '../../hooks/useUserContext'
-import { getAnnouncements, createAnnouncement, type Announcement } from '../../data/services/messagesService'
+import { getAnnouncements, createAnnouncement } from '../../data/services/messagesService'
 import { getTeams } from '../../data/services/teamsService'
 import { supabase } from '../../lib/supabase'
 import { getErrorMessage } from '../../utils/errorUtils'
@@ -135,16 +135,20 @@ export default function AdminAnnouncements() {
       const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
 
       // Transform with safe defaults and apply date filter
-      let displayAnnouncements: AnnouncementDisplay[] = (data || []).map(ann => ({
-        id: ann.id || '',
-        title: ann.title || 'Untitled',
-        team_name: ann.team?.name ?? 'Unknown Team',
-        team_id: ann.team_id || '',
-        author_email: ann.author?.email ?? '',
-        author_role: ann.author?.role ?? 'parent',
-        priority: ann.priority || 'normal',
-        created_at: ann.created_at || new Date().toISOString(),
-      }))
+      let displayAnnouncements: AnnouncementDisplay[] = (data || []).map(ann => {
+        // Handle both Announcement and FakeAnnouncement types
+        const isRealAnnouncement = 'priority' in ann && 'content' in ann
+        return {
+          id: ann.id || '',
+          title: ann.title || 'Untitled',
+          team_name: (isRealAnnouncement && 'team' in ann && ann.team?.name) ? ann.team.name : 'Unknown Team',
+          team_id: ann.team_id || '',
+          author_email: (isRealAnnouncement && 'author' in ann && ann.author?.email) ? ann.author.email : '',
+          author_role: (isRealAnnouncement && 'author' in ann && ann.author?.role) ? ann.author.role : 'parent',
+          priority: (isRealAnnouncement && 'priority' in ann) ? ann.priority : 'normal',
+          created_at: ann.created_at || new Date().toISOString(),
+        }
+      })
 
       // Apply date range filter
       if (dateRangeFilter === 'recent') {

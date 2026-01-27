@@ -17,11 +17,27 @@ ALTER TABLE users
   ADD COLUMN IF NOT EXISTS last_name TEXT NOT NULL DEFAULT '';
 
 -- Add length constraints (Bug 9 prevention - max 100 chars)
-ALTER TABLE users 
-  ADD CONSTRAINT IF NOT EXISTS users_first_name_length 
-    CHECK (length(first_name) <= 100),
-  ADD CONSTRAINT IF NOT EXISTS users_last_name_length 
-    CHECK (length(last_name) <= 100);
+-- Use DO block to conditionally add constraints
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'users_first_name_length'
+  ) THEN
+    ALTER TABLE users 
+      ADD CONSTRAINT users_first_name_length 
+        CHECK (length(first_name) <= 100);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'users_last_name_length'
+  ) THEN
+    ALTER TABLE users 
+      ADD CONSTRAINT users_last_name_length 
+        CHECK (length(last_name) <= 100);
+  END IF;
+END $$;
 
 -- Add indexes for search performance
 CREATE INDEX IF NOT EXISTS idx_users_first_name ON users(first_name);

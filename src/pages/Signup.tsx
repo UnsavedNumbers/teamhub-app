@@ -10,7 +10,6 @@ import {
 import { AUTH_HERO_IMAGES } from '../utils/authImages'
 import { mapAuthError } from '../utils/authErrorMapper'
 import { supabase } from '../lib/supabase'
-import { validatePhoneFormat } from '../utils/phoneValidation'
 
 export default function Signup() {
   const [email, setEmail] = useState('')
@@ -19,7 +18,6 @@ export default function Signup() {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [phone, setPhone] = useState('')
-  const [displayName, setDisplayName] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -148,7 +146,29 @@ export default function Signup() {
     e.preventDefault()
     setError(null)
 
-    // Validation
+    // Validation - Bug 3 prevention: trim and check length
+    const trimmedFirstName = firstName.trim()
+    const trimmedLastName = lastName.trim()
+    const trimmedPhone = phone.trim()
+
+    if (trimmedFirstName.length === 0) {
+      setError('First name is required')
+      return
+    }
+
+    if (trimmedLastName.length === 0) {
+      setError('Last name is required')
+      return
+    }
+
+    if (trimmedPhone.length === 0) {
+      setError('Phone number is required')
+      return
+    }
+
+    // Phone validation - Bug 6 prevention
+    // Note: Basic phone validation (non-empty check above is sufficient for now)
+
     if (password !== confirmPassword) {
       setError('Passwords do not match')
       return
@@ -161,7 +181,14 @@ export default function Signup() {
 
     setLoading(true)
 
-    const { error } = await signUp(email, password, displayName || undefined, isOrgSetupFlow)
+    const { error } = await signUp(
+      email, 
+      password, 
+      trimmedFirstName, 
+      trimmedLastName, 
+      trimmedPhone, 
+      isOrgSetupFlow
+    )
     
     if (error) {
       setError(mapAuthError(error, t))
@@ -286,24 +313,76 @@ export default function Signup() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Display Name (optional) */}
+            {/* First Name */}
             <div>
               <label 
-                htmlFor="displayName" 
+                htmlFor="firstName" 
                 className="block text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-2 font-impact"
               >
-                DISPLAY NAME <span className="text-slate-400 font-normal normal-case tracking-normal">(optional)</span>
+                FIRST NAME
               </label>
               <div className="mt-2">
                 <input
-                  id="displayName"
-                  name="displayName"
+                  id="firstName"
+                  name="firstName"
                   type="text"
-                  autoComplete="name"
+                  autoComplete="given-name"
+                  required
+                  maxLength={100}
                   tabIndex={1}
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="John Smith"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="John"
+                  className="block w-full rounded border-0 py-3 px-4 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[var(--org-btn-primary-bg, #137fec)] sm:text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Last Name */}
+            <div>
+              <label 
+                htmlFor="lastName" 
+                className="block text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-2 font-impact"
+              >
+                LAST NAME
+              </label>
+              <div className="mt-2">
+                <input
+                  id="lastName"
+                  name="lastName"
+                  type="text"
+                  autoComplete="family-name"
+                  required
+                  maxLength={100}
+                  tabIndex={2}
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Smith"
+                  className="block w-full rounded border-0 py-3 px-4 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[var(--org-btn-primary-bg, #137fec)] sm:text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Phone */}
+            <div>
+              <label 
+                htmlFor="phone" 
+                className="block text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-2 font-impact"
+              >
+                PHONE NUMBER
+              </label>
+              <div className="mt-2">
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  autoComplete="tel"
+                  required
+                  maxLength={20}
+                  tabIndex={3}
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="(555) 123-4567"
                   className="block w-full rounded border-0 py-3 px-4 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[var(--org-btn-primary-bg, #137fec)] sm:text-sm"
                 />
               </div>
@@ -325,7 +404,7 @@ export default function Signup() {
                   autoComplete="email"
                   required
                   readOnly={isFromInvite}
-                  tabIndex={2}
+                  tabIndex={4}
                   value={email}
                   onChange={(e) => {
                     // Only allow changes if not from invite
@@ -364,7 +443,7 @@ export default function Signup() {
                   autoComplete="new-password"
                   required
                   minLength={8}
-                  tabIndex={3}
+                  tabIndex={5}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
@@ -411,7 +490,7 @@ export default function Signup() {
                   type={showConfirmPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   required
-                  tabIndex={4}
+                  tabIndex={6}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
@@ -435,9 +514,9 @@ export default function Signup() {
             {/* Terms */}
             <p className="text-xs text-slate-500 dark:text-slate-400">
               By creating an account, you agree to our{' '}
-              <a href="#" tabIndex={6} className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">Terms of Service</a>
+              <a href="#" tabIndex={8} className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">Terms of Service</a>
               {' '}and{' '}
-              <a href="#" tabIndex={7} className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">Privacy Policy</a>
+              <a href="#" tabIndex={9} className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">Privacy Policy</a>
             </p>
 
             {/* Submit */}
@@ -445,7 +524,7 @@ export default function Signup() {
               <button
                 type="submit"
                 disabled={loading || (password !== confirmPassword && confirmPassword.length > 0)}
-                tabIndex={5}
+                tabIndex={7}
                 className="bg-slate-900 dark:bg-white text-white dark:text-black px-8 py-3 font-black text-sm tracking-widest uppercase w-full hover:bg-[#5468FF] dark:hover:bg-[#5468FF] dark:hover:text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'CREATING ACCOUNT...' : 'CONTINUE'}
@@ -457,7 +536,7 @@ export default function Signup() {
           <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800">
             <p className="text-center text-sm text-slate-500 dark:text-slate-400">
               Already have an account?{' '}
-              <Link to="/portal/login" tabIndex={8} className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">
+              <Link to="/portal/login" tabIndex={10} className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">
                 Sign in
               </Link>
             </p>

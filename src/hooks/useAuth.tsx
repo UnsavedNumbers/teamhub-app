@@ -21,7 +21,9 @@ type LegacyUserRole = 'parent' | 'coach' | 'admin'
 interface UserProfile {
   id: string
   email: string | null
-  phone: string | null
+  phone: string
+  first_name: string
+  last_name: string
   display_name: string | null
   // Legacy fields (deprecated, use organizations instead)
   role?: LegacyUserRole
@@ -42,7 +44,7 @@ interface AuthContextType {
   loading: boolean
   signInWithEmail: (email: string, password: string) => Promise<{ error: AuthError | null }>
   signInWithGoogle: () => Promise<{ error: AuthError | null }>
-  signUp: (email: string, password: string, firstName: string, lastName: string, phone: string, displayName?: string, requiresOrgSetup?: boolean) => Promise<{ error: AuthError | null }>
+  signUp: (email: string, password: string, firstName: string, lastName: string, phone: string, requiresOrgSetup?: boolean) => Promise<{ error: AuthError | null }>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>
   updatePassword: (password: string) => Promise<{ error: AuthError | null }>
@@ -93,11 +95,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .single()
 
         // Simplified error handling (Bug Prevention #4 & #9)
-        if (userError || !userData || !userData.id) {
+        if (userError || !userData) {
           console.error('Profile fetch error:', userError)
           await supabase.auth.signOut()
           setProfile(null)
           return
+        }
+
+        // Type guard: ensure userData is not an error type
+        if (!('id' in userData) || !userData.id) {
+          console.error('Invalid user data structure')
+          await supabase.auth.signOut()
+          setProfile(null)
+          return
+        }
+
+        // Type assertion: userData is now confirmed to be the correct type
+        const validUserData = userData as {
+          id: string
+          email: string | null
+          phone: string | null
+          display_name: string | null
+          role: string | null
+          family_id: string | null
+          org_id: string | null
+          requires_org_setup: boolean | null
         }
 
         /* ---- organizations ---- */
@@ -182,17 +204,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!mountedRef.current) return
 
         const profileData: UserProfile = {
-          id: userData.id,
-          email: userData.email,
-          phone: userData.phone,
-          display_name: userData.display_name,
-          role: userData.role ?? undefined,
-          family_id: userData.family_id,
-          org_id: userData.org_id,
+          id: validUserData.id,
+          email: validUserData.email,
+          phone: validUserData.phone ?? '',
+          first_name: '', // first_name and last_name not in users table, derived from display_name if needed
+          last_name: '',
+          display_name: validUserData.display_name,
+          role: (validUserData.role === 'parent' || validUserData.role === 'coach' || validUserData.role === 'admin') 
+            ? (validUserData.role as LegacyUserRole) 
+            : undefined,
+          family_id: validUserData.family_id,
+          org_id: validUserData.org_id,
           organizations: orgs,
           isPlatformAdmin: !!admin,
           platformAdminRole,
-          requiresOrgSetup: userData.requires_org_setup ?? false,
+          requiresOrgSetup: validUserData.requires_org_setup ?? false,
         }
 
         // Guard against state updates after unmount (Bug Prevention #2)
@@ -343,7 +369,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error }
   }
 
-  async function signUp(email: string, password: string, firstName: string, lastName: string, phone: string, displayName?: string, requiresOrgSetup?: boolean) {
+  async function signUp(email: string, password: string, firstName: string, lastName: string, phone: string, requiresOrgSetup?: boolean) {
     // Import getBaseUrl to get current origin (supports localhost and production)
     const { getBaseUrl } = await import('../utils/host')
     const baseUrl = getBaseUrl()
@@ -359,7 +385,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           first_name: firstName.trim(),
           last_name: lastName.trim(),
           phone: phone.trim(),
-          display_name: displayName,
+          // Derive display_name from first+last for backward compatibility
+          display_name: `${firstName.trim()} ${lastName.trim()}`.trim(),
           // Pass requires_org_setup to metadata - the database trigger will read this
           requires_org_setup: requiresOrgSetup ?? false,
         },

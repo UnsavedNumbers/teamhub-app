@@ -103,7 +103,6 @@ export default function EditAthletePortal() {
     const [selectedSports, setSelectedSports] = useState<Array<{ sport_id: string; sport_type: SportType }>>([])
 
     // Refs for race condition and memory leak prevention
-    const requestIdRef = useRef(0)
     const isMountedRef = useRef(true)
     const isLoadingSportsRef = useRef(false)
     const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
