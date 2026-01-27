@@ -55,7 +55,7 @@ export function useOrganizationTheme(): { ready: boolean } {
   const [_, setIsLoading] = useState(false) // Start as false - theme is ready by default
   const [themeVersion, setThemeVersion] = useState(0)
   // Track if we've loaded the org theme
-  const [hasLoadedOrgTheme, setHasLoadedOrgTheme] = useState(false)
+  const [, setHasLoadedOrgTheme] = useState(false)
 
   // Listen for theme change events
   useLayoutEffect(() => {

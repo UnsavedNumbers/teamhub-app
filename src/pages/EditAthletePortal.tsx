@@ -107,26 +107,11 @@ export default function EditAthletePortal() {
     const isLoadingSportsRef = useRef(false)
     const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const loadedAthleteIdRef = useRef<string | null>(null)
-    const contextRef = useRef(context)
-
-    // Update context ref when context changes
-    useEffect(() => {
-        contextRef.current = context
-    }, [context])
-
-    // Cleanup on unmount
-    useEffect(() => {
-        return () => {
-            isMountedRef.current = false
-            if (redirectTimeoutRef.current) {
-                clearTimeout(redirectTimeoutRef.current)
-            }
-        }
-    }, [])
+    // Note: contextRef was removed - using context directly
 
     // Reset form state and load athlete data when athleteId changes
     useEffect(() => {
-        console.log('[EditAthletePortal] Effect triggered:', { isReady, athleteId, loadedAthleteId: loadedAthleteIdRef.current })
+        console.log('[EditAthletePortal] Effect triggered:', { isReady, athleteId, loadedAthleteId: loadedAthleteIdRef.current, mounted: isMountedRef.current })
         if (!isReady || !athleteId) {
             console.log('[EditAthletePortal] Not ready or no athleteId, skipping')
             return
@@ -138,6 +123,8 @@ export default function EditAthletePortal() {
             return
         }
 
+        // Set mounted to true at the start of effect
+        isMountedRef.current = true
         loadedAthleteIdRef.current = athleteId
 
         // Reset all form state
@@ -151,7 +138,7 @@ export default function EditAthletePortal() {
         console.log('[EditAthletePortal] Starting athlete fetch, athleteId:', athleteId)
 
         // Load athlete data
-        getAthleteById(contextRef.current, athleteId)
+        getAthleteById(context, athleteId)
             .then(({ data, error: fetchError }) => {
                 console.log('[EditAthletePortal] Received athlete data:', { data, error: fetchError })
                 // Only update if component is still mounted and this is still the athlete we want
@@ -234,7 +221,16 @@ export default function EditAthletePortal() {
                     setLoading(false)
                 }
             })
-    }, [isReady, athleteId, navigate])
+        
+        // Cleanup function to mark as unmounted when effect re-runs or component unmounts
+        return () => {
+            console.log('[EditAthletePortal] Effect cleanup, setting mounted to false')
+            isMountedRef.current = false
+            if (redirectTimeoutRef.current) {
+                clearTimeout(redirectTimeoutRef.current)
+            }
+        }
+    }, [context.userId, context.orgId, isReady, athleteId, navigate])
 
     // Debug: Log state changes
     useEffect(() => {
@@ -405,7 +401,7 @@ export default function EditAthletePortal() {
                 breadcrumbs={[
                     { label: 'Home', path: '/portal/dashboard' },
                     { label: 'My Athletes', path: '/portal/athletes' },
-                    { label: 'Edit Athlete' }
+                    { label: 'Loading...' }
                 ]}
             >
                 <div className="flex justify-center py-12">
@@ -444,16 +440,18 @@ export default function EditAthletePortal() {
 
     const isFormValid = formData.first_name.trim() && formData.last_name.trim() && formData.date_of_birth
 
+    const athleteName = formData.first_name.trim() || 'Athlete'
+
     return (
         <PortalLayout
             breadcrumbs={[
                 { label: 'Home', path: '/portal/dashboard' },
                 { label: 'My Athletes', path: '/portal/athletes' },
-                { label: 'Edit Athlete' }
+                { label: `Edit ${athleteName}` }
             ]}
         >
             <div className="mb-12">
-                <PageTitle>Edit Athlete</PageTitle>
+                <PageTitle>Edit {athleteName}</PageTitle>
                 <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
                     Update athlete information and preferences.
                 </p>
