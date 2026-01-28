@@ -40,6 +40,9 @@ export interface FakeTravelPlan {
     destination_state: string | null
     venue_name: string | null
     venue_address: string | null
+    venue_place_id: string | null
+    venue_lat: number | null
+    venue_lng: number | null
     start_date: string
     end_date: string
     hotel_name: string | null
@@ -106,6 +109,9 @@ export const fakeTravelPlans: FakeTravelPlan[] = [
         destination_state: 'CA',
         venue_name: 'San Diego Sports Complex',
         venue_address: '4545 Sports Arena Blvd, San Diego, CA 92110',
+        venue_place_id: null,
+        venue_lat: null,
+        venue_lng: null,
         start_date: addDays(today, 10),
         end_date: addDays(today, 12),
         hotel_name: 'Courtyard by Marriott San Diego',
@@ -165,6 +171,9 @@ GAME SCHEDULE (tentative):
         destination_state: 'CA',
         venue_name: 'Cal Expo Sports Complex',
         venue_address: '1600 Exposition Blvd, Sacramento, CA 95815',
+        venue_place_id: null,
+        venue_lat: null,
+        venue_lng: null,
         start_date: addDays(today, 14),
         end_date: addDays(today, 16),
         hotel_name: 'Hilton Sacramento Arden West',
@@ -220,6 +229,9 @@ Players must travel with the team. No exceptions.`,
         destination_state: 'NV',
         venue_name: 'Las Vegas Sports Park',
         venue_address: '7065 Arroyo Crossing Pkwy, Las Vegas, NV 89113',
+        venue_place_id: null,
+        venue_lat: null,
+        venue_lng: null,
         start_date: addDays(today, 30),
         end_date: addDays(today, 32),
         hotel_name: null, // Not finalized yet
@@ -251,6 +263,9 @@ Players must travel with the team. No exceptions.`,
         destination_state: 'AZ',
         venue_name: 'Reach 11 Sports Complex',
         venue_address: '2425 E Deer Valley Rd, Phoenix, AZ 85024',
+        venue_place_id: null,
+        venue_lat: null,
+        venue_lng: null,
         start_date: addDays(today, -20),
         end_date: addDays(today, -18),
         hotel_name: 'Hampton Inn Phoenix',

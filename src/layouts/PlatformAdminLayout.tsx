@@ -11,7 +11,7 @@ import { useTheme } from '../hooks/useTheme'
 import { useMobile } from '@/hooks/useMobile'
 import { useScrollLock } from '@/hooks/useScrollLock'
 import GlobalNav from '../components/common/GlobalNav'
-import MobileNavDrawer from '../components/common/MobileNavDrawer'
+import MobileMenu from '../components/common/MobileMenu'
 import type { NavSection as MobileNavSection } from '@/types/menu'
 import { getLink, getPath, RouteKeys } from '@/utils/routes'
 
@@ -324,10 +324,12 @@ export default function PlatformAdminLayout() {
 
       {/* Mobile sidebar drawer */}
       {isMobile && (
-        <MobileNavDrawer
+        <MobileMenu
           isOpen={mobileSidebarOpen}
           onClose={handleMobileSidebarClose}
           sections={mobileNavSections}
+          brandName="Platform Admin"
+          brandSubtitle="Youth Sports"
         />
       )}
     </div>

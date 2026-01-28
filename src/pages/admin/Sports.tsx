@@ -14,7 +14,9 @@ import { getPrograms } from '../../data/services/sportsService'
 import type { Sport } from '../../data/types/organization'
 import { AdminPageHeader, ConfirmDialog, Button, Card, EmptyState } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
+import { Tooltip } from '../../components/admin/Tooltip'
 import { getLink } from '../../utils/routes'
+import './Sports.css'
 
 export default function Sports() {
   const { context, isReady } = useUserContext()
@@ -111,15 +113,15 @@ export default function Sports() {
 
   if (loading) {
     return (
-      <div className="pa-root">
-        <div className="pa-skeleton pa-mb-8" style={{ width: '40%', height: '40px' }} />
-        <div className="pa-skeleton" style={{ width: '100%', height: '300px' }} />
+      <div className="pa-root sports-page">
+        <div className="sports-skeleton pa-skeleton pa-mb-8" style={{ width: '40%', height: '40px' }} />
+        <div className="sports-skeleton pa-skeleton" style={{ width: '100%', height: '300px' }} />
       </div>
     )
   }
 
   return (
-    <div className="pa-root">
+    <div className="pa-root sports-page">
       <OfflineBanner />
       <AdminPageHeader
         title="Sports"
@@ -141,16 +143,16 @@ export default function Sports() {
 
       {successMessage && (
         <Card className="pa-mb-4" noPadding>
-          <div className="pa-p-4" style={{ background: 'var(--pa-success-bg, #ecfdf5)', borderLeft: '4px solid var(--pa-success, #10b981)' }}>
-            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-success-dark, #065f46)' }}>{successMessage}</div>
+          <div className="sports-alert sports-alert--success pa-p-4">
+            <div className="pa-text-sm pa-font-medium sports-alert-text sports-alert-text--success">{successMessage}</div>
           </div>
         </Card>
       )}
 
       {actionError && (
         <Card className="pa-mb-4" noPadding>
-          <div className="pa-p-4" style={{ background: 'var(--pa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--pa-danger, #ef4444)' }}>
-            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-danger-dark, #991b1b)' }}>{actionError}</div>
+          <div className="sports-alert sports-alert--error pa-p-4">
+            <div className="pa-text-sm pa-font-medium sports-alert-text sports-alert-text--error">{actionError}</div>
           </div>
         </Card>
       )}
@@ -179,54 +181,77 @@ export default function Sports() {
               const programCount = programCountBySport(sport.id)
 
               return (
-                <div key={sport.id} className="pa-stacked-list-row">
+                <div key={sport.id} className="pa-stacked-list-row sports-list-row">
                   <div className="pa-stacked-list-row-content">
                     <div className="pa-flex-1">
-                      <span 
-                        className="pa-stacked-list-row-title pa-cursor-pointer hover:pa-underline pa-block pa-mb-1"
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        className="pa-stacked-list-row-title sports-sport-name pa-cursor-pointer hover:pa-underline pa-block pa-mb-1"
                         onClick={() => navigate(getLink('admin.sports.detail', { sport_slug: sport.slug || sport.id }))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            navigate(getLink('admin.sports.detail', { sport_slug: sport.slug || sport.id }))
+                          }
+                        }}
                       >
                         {sport.name}
                       </span>
                       <div className="pa-flex pa-items-center pa-gap-2">
-                          <span 
-                            className="pa-text-xs pa-font-semibold pa-text-slate-500 hover:pa-text-primary pa-cursor-pointer"
-                            onClick={() => navigate(sport.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : `${programsRoute}?sport_id=${sport.id}`)}
-                          >
-                            {programCount} {programCount === 1 ? 'PROGRAM' : 'PROGRAMS'}
-                          </span>
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          className="sports-program-count pa-text-xs pa-font-semibold sports-program-count-badge pa-cursor-pointer"
+                          onClick={() => navigate(sport.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : `${programsRoute}?sport_id=${sport.id}`)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              navigate(sport.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : `${programsRoute}?sport_id=${sport.id}`)
+                            }
+                          }}
+                        >
+                          {programCount} {programCount === 1 ? 'PROGRAM' : 'PROGRAMS'}
+                        </span>
                       </div>
                     </div>
-                    
+
                     <div className="pa-stacked-list-row-actions">
-                      <Button 
-                        variant="ghost" 
-                        size="dense" 
+                      <Button
+                        variant="secondary"
+                        size="dense"
                         onClick={() => navigate(sport.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : `${programsRoute}?sport_id=${sport.id}`)}
                       >
                         View {sport.name} Programs
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="dense" 
+                      <Button
+                        variant="secondary"
+                        size="dense"
                         icon="add"
                         onClick={() => navigate(`${formsRoute}?type=program&sport_id=${sport.id}&returnUrl=${encodeURIComponent(sport.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : programsRoute)}`)}
                         disabled={isOffline || USE_FAKE_DATA}
                       >
                         Add Program
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="dense"
-                        icon="delete"
-                        onClick={() => handleDeleteSport(sport.id, sport.name)}
-                        disabled={deletingSportId === sport.id || isOffline || USE_FAKE_DATA || programCount > 0}
-                        loading={deletingSportId === sport.id}
-                        className="pa-text-danger hover:pa-bg-danger-surface"
-                        title={programCount > 0 ? 'Cannot remove sport with active programs' : 'Remove sport'}
-                      >
-                         Delete
-                      </Button>
+                      <div className="sports-delete-tooltip-wrapper">
+                        <Tooltip
+                          content={programCount > 0 ? 'Cannot remove sport with active programs' : 'Remove sport'}
+                          side="top"
+                        >
+                          <span>
+                            <Button
+                              variant="danger"
+                              size="dense"
+                              icon="delete"
+                              onClick={() => handleDeleteSport(sport.id, sport.name)}
+                              disabled={deletingSportId === sport.id || isOffline || USE_FAKE_DATA || programCount > 0}
+                              loading={deletingSportId === sport.id}
+                            >
+                              Delete
+                            </Button>
+                          </span>
+                        </Tooltip>
+                      </div>
                     </div>
                   </div>
                 </div>

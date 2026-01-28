@@ -15,7 +15,7 @@ import { useMobile } from '@/hooks/useMobile'
 import { useScrollLock } from '@/hooks/useScrollLock'
 import { getLink, getPath, RouteKeys } from '@/utils/routes'
 import SidebarOrganizationSwitcher from '../components/admin/SidebarOrganizationSwitcher'
-import MobileNavDrawer from '../components/common/MobileNavDrawer'
+import MobileMenu from '../components/common/MobileMenu'
 import GlobalNav from '../components/common/GlobalNav'
 import type { NavSection } from '@/types/menu'
 
@@ -336,10 +336,12 @@ export default function AdminLayout() {
 
       {/* Mobile sidebar drawer */}
       {isMobile && (
-        <MobileNavDrawer
+        <MobileMenu
           isOpen={mobileSidebarOpen}
           onClose={handleMobileSidebarClose}
           sections={mobileNavSections}
+          brandName={currentOrganization?.name || 'Organization'}
+          brandSubtitle="Admin Portal"
         />
       )}
     </div>

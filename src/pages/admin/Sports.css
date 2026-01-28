@@ -1,0 +1,116 @@
+/* =====================================================================
+   Sports — theme-consistent color palette
+   Uses org/pa theme variables for hierarchy, status, and interaction.
+   ===================================================================== */
+
+/* Status alerts: semantic colors, no left borders */
+.sports-page .sports-alert--success {
+  background: var(--pa-success-bg, rgba(46, 125, 50, 0.08));
+}
+
+.sports-page .sports-alert-text--success {
+  color: var(--org-status-success, var(--pa-success, #2e7d32));
+}
+
+.sports-page .sports-alert--error {
+  background: var(--pa-danger-bg, rgba(198, 40, 40, 0.08));
+}
+
+.sports-page .sports-alert-text--error {
+  color: var(--org-status-error, var(--pa-danger, #c62828));
+}
+
+/* List rows: theme hover and link accent */
+.sports-page .sports-list-row {
+  transition: background-color var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.sports-page .sports-list-row:hover {
+  background: var(--org-surface-hover, var(--pa-theme-surface-accent, var(--pa-n50)));
+}
+
+.sports-page .sports-sport-name {
+  color: var(--org-text-primary, var(--pa-text-primary));
+  transition: color var(--pa-motion-fast) ease;
+}
+
+.sports-page .sports-list-row:hover .sports-sport-name {
+  color: var(--org-link-color, var(--pa-theme-text-accent, var(--org-btn-primary-bg)));
+}
+
+/* Program count badge: darker gray like SportDetail (muted hierarchy) */
+.sports-page .sports-program-count-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--pa-space-2);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.05em;
+  border-radius: 4px;
+  background: var(--org-badge-primary-bg, var(--pa-theme-surface-accent));
+  color: var(--org-text-muted, var(--pa-text-muted));
+  transition: color var(--pa-motion-fast) ease;
+}
+
+.sports-page .sports-program-count-badge:hover {
+  color: var(--org-link-color, var(--pa-theme-text-accent, var(--org-btn-primary-bg)));
+}
+
+html.dark .sports-page .sports-program-count-badge {
+  color: var(--org-text-muted, var(--pa-text-muted));
+}
+
+html.dark .sports-page .sports-program-count-badge:hover {
+  color: var(--org-link-color, var(--pa-theme-text-accent));
+}
+
+/* Loading skeleton: theme surface */
+.sports-page .sports-skeleton {
+  background: var(--org-surface-section, var(--pa-n100));
+  border-radius: var(--pa-radius-lg);
+}
+
+/* Row actions (including Delete) always visible — no hover-only reveal */
+.sports-page .pa-stacked-list-row-actions {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Delete button: keep label visible (white on red), don’t override to red text */
+.sports-page .pa-stacked-list-row-actions .pa-btn--danger,
+.sports-page .pa-stacked-list-row-actions .pa-btn--danger:hover:not(:disabled) {
+  color: var(--org-status-error-text, var(--pa-white)) !important;
+}
+
+.sports-page .pa-stacked-list-row-actions .pa-btn--danger .material-symbols-outlined {
+  color: inherit;
+}
+
+html.dark .sports-page .pa-stacked-list-row-actions .pa-btn--danger,
+html.dark .sports-page .pa-stacked-list-row-actions .pa-btn--danger:hover:not(:disabled) {
+  color: var(--org-status-error-text, #fff) !important;
+}
+
+html.dark .sports-page .pa-stacked-list-row-actions .pa-btn--danger .material-symbols-outlined {
+  color: inherit;
+}
+
+/* Delete button tooltip: black text on light bg (light mode), white on dark (dark mode) */
+.sports-page .sports-delete-tooltip-wrapper .tooltip {
+  background: #f3f4f6;
+  color: #000;
+  border: 1px solid var(--org-border-default, #e5e7eb);
+}
+
+html.dark .sports-page .sports-delete-tooltip-wrapper .tooltip {
+  background: rgba(17, 24, 39, 0.95);
+  color: #fff;
+  border-color: var(--pa-border-subtle);
+}
+
+/* Focus visibility */
+.sports-page .sports-list-row:focus-within {
+  outline: 2px solid var(--org-focus-ring, var(--pa-theme-focus-ring));
+  outline-offset: -2px;
+}

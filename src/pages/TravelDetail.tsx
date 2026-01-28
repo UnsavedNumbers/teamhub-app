@@ -11,7 +11,8 @@ import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
-import VenueInsights from '../components/portal/VenueInsights'
+import VenueInsights from '../components/portal/VenueInsights' // eslint-disable-line @typescript-eslint/no-unused-vars
+import NearbyAmenities from '../components/portal/NearbyAmenities'
 
 interface MeetingLocation {
   name: string
@@ -713,6 +714,17 @@ export default function TravelDetail() {
                 </div>
                 </div>
               </Card>
+
+              {/* Venue Nearby Amenities */}
+              <NearbyAmenities
+                latitude={plan.venue_lat}
+                longitude={plan.venue_lng}
+                placeId={plan.venue_place_id}
+                eventType="tournament"
+                eventStartTime={plan.start_date}
+                variant="travel"
+                className="mt-4"
+              />
             </div>
           )}
 
