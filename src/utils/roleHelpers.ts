@@ -99,3 +99,55 @@ export function formatRoleName(role: OrgMemberRole): string {
       return String(role).charAt(0).toUpperCase() + String(role).slice(1)
   }
 }
+
+/**
+ * Frontend role type (used in forms and UI)
+ */
+export type FrontendRole = 'admin' | 'coach' | 'parent'
+
+/**
+ * Database role type (org_member_role enum)
+ */
+export type DbRole = OrgMemberRole
+
+/**
+ * Map frontend role ('admin') to database role ('org_admin')
+ * @param role - Frontend role
+ * @returns Database role
+ */
+export function mapFrontendRoleToDbRole(role: FrontendRole): DbRole {
+  switch (role) {
+    case 'admin':
+      return 'org_admin'
+    case 'coach':
+      return 'coach'
+    case 'parent':
+      return 'parent'
+    default:
+      // TypeScript exhaustiveness check
+      const _exhaustive: never = role
+      void _exhaustive
+      return 'parent' // Safe default
+  }
+}
+
+/**
+ * Map database role ('org_admin') to frontend role ('admin')
+ * @param role - Database role
+ * @returns Frontend role
+ */
+export function mapDbRoleToFrontendRole(role: DbRole): FrontendRole {
+  switch (role) {
+    case 'org_admin':
+      return 'admin'
+    case 'coach':
+      return 'coach'
+    case 'parent':
+      return 'parent'
+    default:
+      // TypeScript exhaustiveness check
+      const _exhaustive: never = role
+      void _exhaustive
+      return 'parent' // Safe default
+  }
+}

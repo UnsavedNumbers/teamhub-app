@@ -772,6 +772,11 @@ export default function FeatureCatalog() {
                 lock
               </span>
             )}
+            {row.is_system_feature && (
+              <Badge variant="info" size="small" title="Always available for all license tiers, including new tiers">
+                System
+              </Badge>
+            )}
             {row.discovered?.confidenceScore && row.discovered.confidenceScore < 70 && (
                 <Badge variant="warning" size="small">Review</Badge>
             )}

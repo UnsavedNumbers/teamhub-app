@@ -10,7 +10,7 @@ export interface NotificationJob {
   org_id: string;
   user_id?: string;
   email: string;
-  type: 'new_event' | 'new_message' | 'payment_receipt' | 'event_reminder' | 'registration_confirmation' | 'team_invite' | 'password_reset' | 'welcome_email';
+  type: 'new_event' | 'new_message' | 'payment_receipt' | 'payment_reminder' | 'event_reminder' | 'registration_confirmation' | 'team_invite' | 'password_reset' | 'welcome_email';
   payload: Record<string, any>;
   status: 'queued' | 'sent' | 'failed';
   error?: string;
@@ -37,6 +37,10 @@ const EMAIL_CONFIG = {
   payment_receipt: {
     subject: 'Payment Receipt - ${{amount}}',
     preview: 'Your payment has been processed successfully'
+  },
+  payment_reminder: {
+    subject: 'Payment Reminder - ${{amount}} due {{due_date}}',
+    preview: 'You have an upcoming payment due'
   },
   event_reminder: {
     subject: 'Reminder: {{event_title}}',

@@ -9,6 +9,7 @@ import { getTeams } from '../../data/services/teamsService'
 import { getAthletes } from '../../data/services/familyService'
 import { getUnpaidFeeAssignments } from '../../data/services/paymentsService'
 import { getUpcomingEventsForUser } from '../../data/services/eventsService'
+import { getSeasons } from '../../data/services/seasonsService'
 import { 
   AdminPageHeader, 
   StatCard, 
@@ -50,17 +51,18 @@ export default function AdminDashboard() {
     
     try {
       // Fetch all stats in parallel
-      const [teamsResult, childrenResult, unpaidResult, eventsResult] = await Promise.all([
+      const [teamsResult, childrenResult, unpaidResult, eventsResult, seasonsResult] = await Promise.all([
         getTeams(context, { activeOnly: false }),
         getAthletes(context),
         getUnpaidFeeAssignments(context),
         getUpcomingEventsForUser(context, 100),
+        getSeasons(context, { activeOnly: true }),
       ])
 
       setStats({
         totalTeams: teamsResult.data.length,
         totalPlayers: childrenResult.data.length,
-        activeSeasons: 2, // TODO: Implement seasons service
+        activeSeasons: seasonsResult.data.length,
         outstandingPayments: unpaidResult.data.length,
         upcomingEvents: eventsResult.data.length,
         pendingUniformOrders: 0, // TODO: Implement uniforms service

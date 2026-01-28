@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 
@@ -12,6 +12,10 @@ import {
   Select 
 } from '../../components/platformAdmin'
 import { useT } from '../../i18n/useI18n'
+import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
+import { createOrganizationUser } from '../../api/users'
+import { showSuccess } from '../../utils/toast'
 
 interface UserFormData {
   email: string
@@ -24,11 +28,22 @@ interface UserFormData {
 export default function CreateUser() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const requestIdRef = useRef(0)
+  const isMountedRef = useRef(true)
   
   const t = useT()
   const navigate = useNavigate()
+  const { isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
 
-  const { control, handleSubmit, formState: { errors } } = useForm<UserFormData>({
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  const { control, handleSubmit, formState: { errors }, watch } = useForm<UserFormData>({
     defaultValues: { 
       email: '', 
       first_name: '', 
@@ -39,14 +54,21 @@ export default function CreateUser() {
   })
 
   const onSubmit = async (data: UserFormData) => {
+    if (!isReady || !currentOrganization) {
+      setError('Organization context not available')
+      return
+    }
+
+    const currentRequestId = ++requestIdRef.current
     setSaving(true)
     setError(null)
     
     try {
-      // Validation - Bug 3 prevention: trim and check length
+      // Validation - trim and check length
       const trimmedFirstName = data.first_name.trim()
       const trimmedLastName = data.last_name.trim()
       const trimmedPhone = data.phone.trim()
+      const trimmedEmail = data.email.trim().toLowerCase()
 
       if (trimmedFirstName.length === 0) {
         setError('First name is required')
@@ -66,7 +88,13 @@ export default function CreateUser() {
         return
       }
 
-      // Phone validation - Bug 6 prevention
+      if (trimmedEmail.length === 0) {
+        setError('Email is required')
+        setSaving(false)
+        return
+      }
+
+      // Phone validation
       const phoneValidation = validatePhoneFormat(trimmedPhone)
       if (!phoneValidation.valid) {
         setError(phoneValidation.error || 'Invalid phone number')
@@ -74,57 +102,47 @@ export default function CreateUser() {
         return
       }
 
-      // In fake data mode, just navigate back with success
-      // TODO: Replace with real user creation when migrating
-      /*
-      // 1. Create auth user via Supabase Auth Admin API
-      const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-        email: data.email,
-        email_confirm: true,
-        user_metadata: {
-          first_name: trimmedFirstName,
-          last_name: trimmedLastName,
-          phone: trimmedPhone,
-          display_name: `${trimmedFirstName} ${trimmedLastName}`,
-        }
+      // Email validation
+      const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i
+      if (!emailRegex.test(trimmedEmail)) {
+        setError('Invalid email format')
+        setSaving(false)
+        return
+      }
+
+      // Call API to create user
+      const result = await createOrganizationUser({
+        org_id: currentOrganization.id,
+        email: trimmedEmail,
+        first_name: trimmedFirstName,
+        last_name: trimmedLastName,
+        phone: trimmedPhone,
+        role: data.role,
       })
-      
-      if (authError) throw authError
 
-      // 2. Create user profile
-      const { error: profileError } = await supabase
-        .from('users')
-        .insert({
-          id: authUser.user.id,
-          email: data.email,
-          first_name: trimmedFirstName,
-          last_name: trimmedLastName,
-          phone: trimmedPhone,
-          display_name: `${trimmedFirstName} ${trimmedLastName}`,
-          org_id: currentOrganization?.id,
-        })
-      
-      if (profileError) throw profileError
+      // Check if component is still mounted and request is still current
+      if (!isMountedRef.current || currentRequestId !== requestIdRef.current) {
+        return
+      }
 
-      // 3. Assign role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: authUser.user.id,
-          role: data.role,
-          org_id: currentOrganization?.id,
-        })
-      
-      if (roleError) throw roleError
-      */
-      
-      // Simulate delay
-      await new Promise(resolve => setTimeout(resolve, 500))
-      navigate('/admin/users')
-    } catch (err: unknown) { 
-      setError(getErrorMessage(err) || 'Failed to create user') 
-    } finally { 
-      setSaving(false) 
+      if (!result.success) {
+        setError(result.error || 'Failed to create user')
+        setSaving(false)
+        return
+      }
+
+      // Success
+      showSuccess(result.message || 'User created successfully')
+      navigate('/admin/organization/users')
+    } catch (err: unknown) {
+      if (!isMountedRef.current || currentRequestId !== requestIdRef.current) {
+        return
+      }
+      setError(getErrorMessage(err) || 'Failed to create user')
+    } finally {
+      if (isMountedRef.current && currentRequestId === requestIdRef.current) {
+        setSaving(false)
+      }
     }
   }
 
@@ -249,7 +267,9 @@ export default function CreateUser() {
 
             <div className="pa-card pa-mb-6" style={{ background: 'var(--pa-info-bg)', border: 'none' }}>
               <p className="pa-body-s">
-                <strong>Note:</strong> The user will receive an email invitation to set their password and activate their account.
+                <strong>Note:</strong> {watch('role') === 'admin' 
+                  ? 'Only platform admins can create organization admin users. If you are not a platform admin, this will fail.'
+                  : 'The user will be created and added to your organization. If the email already exists, they will be added to your organization.'}
               </p>
             </div>
 

@@ -515,17 +515,37 @@ export function getSportGradientFallback(sportColor: string | null | undefined):
 /**
  * Get responsive image srcset for hero images
  * Returns srcset string for multiple image sizes
+ * 
+ * Format: "/path/to/image-800w.webp 800w, /path/to/image-1200w.webp 1200w, /path/to/image-2400w.webp 2400w"
+ * 
+ * Note: This assumes responsive image variants exist. If they don't, browsers will fall back to the base image.
+ * For now, we return the base path as a single srcset entry since responsive variants may not exist yet.
  */
 export function getHeroImageSrcSet(
     sportName: string | null | undefined,
     darkMode: boolean = false
 ): string {
     const basePath = getSportImagePath(sportName, 'hero', darkMode)
+    
+    if (!basePath || basePath === DEFAULT_IMAGE_PATHS.hero) {
+        // For default images, return single path
+        return basePath
+    }
 
-    // TODO: Generate srcset for different sizes when responsive images are added
-    // Mobile: 800x533, Tablet: 1200x800, Desktop: 2400x1600
-    // For now, return single image path (responsive images can be added later)
-    return basePath
+    // Generate srcset with multiple sizes
+    // Assumes variants exist: hero-bg-800w.webp, hero-bg-1200w.webp, hero-bg-2400w.webp
+    // If variants don't exist, browser will use the base image
+    const baseWithoutExt = basePath.replace(/\.(webp|png|jpg|jpeg)$/i, '')
+    const ext = basePath.match(/\.(webp|png|jpg|jpeg)$/i)?.[1] || 'webp'
+    
+    // Build srcset with width descriptors
+    const srcset = [
+        `${baseWithoutExt}-800w.${ext} 800w`,
+        `${baseWithoutExt}-1200w.${ext} 1200w`,
+        `${baseWithoutExt}-2400w.${ext} 2400w`,
+    ].join(', ')
+    
+    return srcset
 }
 
 /**

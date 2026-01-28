@@ -6,13 +6,7 @@ alwaysApply: true
 
 # TypeScript: Compile-Clean and Structural Correctness
 
-When writing or modifying code, follow these rules so structural and type errors never enter the codebase.
-
-## Correctness validation
-
-- **Continuously validate** correctness as you go (mentally or by running `tsc --noEmit` locally).
-- Treat **TypeScript errors as blockers**, not warnings. Do not proceed if the type system shows errors.
-- Keep the project in a **compile-clean state** at all times: `tsc --noEmit` must pass at the end of every change.
+When writing or modifying code, you must continuously do a **mock validation of correctness** as you go. Treat TypeScript errors as **blockers**, not warnings, and keep the project in a **compile-clean state** at all times by mentally (or locally) validating that `tsc --noEmit` would pass at the end of every change. Do not proceed if the type system shows errors.
 
 ## Imports
 
@@ -22,7 +16,7 @@ When writing or modifying code, follow these rules so structural and type errors
 ## Declaration order and references
 
 - **Never reference** a variable, hook, or function before it is explicitly declared and initialized.
-- Define and **import TypeScript types at the same time** they are introduced (do not use types before they exist).
+- **Define and import TypeScript types at the same time** they are introduced; do not use types before they exist.
 
 ## Hooks, utilities, and helpers
 
@@ -34,4 +28,4 @@ When adding hooks, utilities, or helpers:
 
 ## Goal
 
-**Prevent** structural and type errors from ever entering the codebase—do not rely on cleaning them up later.
+**Prevent** structural and type errors from ever entering the codebase—not to clean them up later.

@@ -10,6 +10,8 @@ import {
   Badge,
   type ColumnConfig 
 } from '../../components/platformAdmin'
+import { mapDbRoleToFrontendRole } from '../../utils/roleHelpers'
+import { formatDate } from '../../utils/dateFormatters'
 
 interface OrgUser {
   id: string
@@ -70,33 +72,38 @@ export default function OrganizationUsers() {
       label: 'Roles',
       render: (row) => (
         <div className="pa-flex pa-gap-2">
-          {row.roles.map((role: string) => (
-            <Badge 
-              key={role} 
-              variant={role === 'admin' ? 'info' : role === 'coach' ? 'info' : 'neutral'}
-            >
-              {role.toUpperCase()}
-            </Badge>
-          ))}
+          {row.roles.map((role: string) => {
+            // Map database role to frontend role for display
+            const dbRole = role as 'org_admin' | 'coach' | 'parent'
+            const frontendRole = mapDbRoleToFrontendRole(dbRole)
+            return (
+              <Badge 
+                key={role} 
+                variant={frontendRole === 'admin' ? 'info' : frontendRole === 'coach' ? 'info' : 'neutral'}
+              >
+                {frontendRole.toUpperCase()}
+              </Badge>
+            )
+          })}
         </div>
       )
     },
     { 
       id: 'created_at', 
       label: 'Joined',
-      render: (row) => new Date(row.created_at).toLocaleDateString()
+      render: (row) => formatDate(row.created_at, 'short')
     },
     { 
       id: 'actions', 
       label: 'Actions', 
       align: 'right',
-      render: (_row) => (
+      render: (row) => (
         <Button 
           variant="ghost" 
           size="compact"
           onClick={(e: React.MouseEvent<HTMLElement>) => { 
             e.stopPropagation()
-            // TODO: Implement edit user
+            navigate(`/admin/organization/users/${row.id}/edit`)
           }}
         >
           <span className="material-symbols-outlined">edit</span>

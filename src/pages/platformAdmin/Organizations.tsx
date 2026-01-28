@@ -102,7 +102,7 @@ export default function Organizations() {
   }
 
   const handleActivate = (org: AdminOrganization) => {
-    if (!canPerformAction(adminRole, 'activate_organization')) {
+    if (!adminRole || !canPerformAction(adminRole, 'activate_organization')) {
       showError(getDeniedMessage('activate_organization'))
       return
     }
@@ -111,7 +111,7 @@ export default function Organizations() {
   }
 
   const handleSuspend = (org: AdminOrganization) => {
-    if (!canPerformAction(adminRole, 'suspend_organization')) {
+    if (!adminRole || !canPerformAction(adminRole, 'suspend_organization')) {
       showError(getDeniedMessage('suspend_organization'))
       return
     }

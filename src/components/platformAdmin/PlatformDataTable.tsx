@@ -252,6 +252,9 @@ export default function PlatformDataTable<T extends { id: string }>({
                     }}
                     onClick={(e) => {
                       e.stopPropagation()
+                      // Skip if click came from checkbox so we don't double-toggle (onChange already fires)
+                      const target = e.target as HTMLElement
+                      if (target.closest?.('input[type=checkbox]') || target.closest?.('.pa-checkbox')) return
                       handleRowToggle(row.id, e)
                     }}
                   >
@@ -325,9 +328,9 @@ export default function PlatformDataTable<T extends { id: string }>({
                 ))}
               </div>
 
-              {/* Selection checkbox on mobile */}
+              {/* Selection checkbox on mobile - wrapper only stops row click; checkbox onChange handles toggle */}
               {selectable && (
-                <div 
+                <div
                   style={{ marginTop: 'var(--pa-space-3)', paddingTop: 'var(--pa-space-3)', borderTop: '1px solid var(--pa-n100)' }}
                   onClick={(e: React.MouseEvent) => e.stopPropagation()}
                 >

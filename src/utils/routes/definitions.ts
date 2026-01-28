@@ -733,10 +733,24 @@ const admin = {
 
     // Users
     users: {
+        list: {
+            path: '/admin/organization/users',
+            label: 'Users',
+            icon: 'admin_panel_settings',
+            description: 'Access and roles',
+            requiresOrg: true,
+        },
         create: {
             path: '/admin/users/new',
             label: 'Create User',
             icon: 'person_add',
+            requiresOrg: true,
+        },
+        edit: {
+            path: '/admin/organization/users/:userId/edit',
+            params: ['userId'] as const,
+            label: 'Edit User',
+            icon: 'edit',
             requiresOrg: true,
         },
     },
