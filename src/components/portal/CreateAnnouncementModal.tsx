@@ -3,6 +3,10 @@ import { useState, useEffect } from 'react'
 import { CardTitle } from './Typography'
 import Button from './Button'
 import Icon from './Icon'
+import { 
+  getAnnouncementTypeOptions, 
+  type AnnouncementType 
+} from '../../utils/announcementTypes'
 
 interface Team {
   id: string
@@ -12,7 +16,14 @@ interface Team {
 interface CreateAnnouncementModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (title: string, content: string, priority: 'normal' | 'urgent', teamId: string) => Promise<void>
+  onSubmit: (
+    title: string, 
+    content: string, 
+    priority: 'normal' | 'urgent', 
+    teamId: string,
+    type: AnnouncementType,
+    isOrgWide: boolean
+  ) => Promise<void>
   teams: Team[]
   selectedTeamId: string | null
 }
@@ -28,6 +39,7 @@ export default function CreateAnnouncementModal({
   const [content, setContent] = useState('')
   const [priority, setPriority] = useState<'normal' | 'urgent'>('normal')
   const [teamId, setTeamId] = useState(selectedTeamId || (teams.length > 0 ? teams[0].id : ''))
+  const [type, setType] = useState<AnnouncementType>('general')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -38,6 +50,7 @@ export default function CreateAnnouncementModal({
       setTitle('')
       setContent('')
       setPriority('normal')
+      setType('general')
       setError(null)
     }
   }, [isOpen, selectedTeamId, teams])
@@ -52,11 +65,12 @@ export default function CreateAnnouncementModal({
     setError(null)
 
     try {
-      await onSubmit(title.trim(), content.trim(), priority, teamId)
+      await onSubmit(title.trim(), content.trim(), priority, teamId, type, false)
       // Reset form only on success (onClose will be called by parent)
       setTitle('')
       setContent('')
       setPriority('normal')
+      setType('general')
       setTeamId(selectedTeamId || (teams.length > 0 ? teams[0].id : ''))
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create announcement. Please try again.'
@@ -71,6 +85,7 @@ export default function CreateAnnouncementModal({
     setTitle('')
     setContent('')
     setPriority('normal')
+    setType('general')
     setTeamId(selectedTeamId || (teams.length > 0 ? teams[0].id : ''))
     setError(null)
     onClose()
@@ -134,15 +149,34 @@ export default function CreateAnnouncementModal({
 
           <div>
             <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5">
+              Type
+            </label>
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value as AnnouncementType)}
+              disabled={loading}
+              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)]/20 focus:border-[var(--org-btn-primary-bg, #137fec)] outline-none transition-all font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {getAnnouncementTypeOptions().map(opt => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.emoji} {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5">
               Content
             </label>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              rows={4}
+              rows={8}
               disabled={loading}
-              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)]/20 focus:border-[var(--org-btn-primary-bg, #137fec)] outline-none transition-all font-medium placeholder:font-normal resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)]/20 focus:border-[var(--org-btn-primary-bg, #137fec)] outline-none transition-all font-medium placeholder:font-normal resize-y disabled:opacity-50 disabled:cursor-not-allowed"
               placeholder="What do you want to announce?"
+              style={{ minHeight: '120px' }}
             />
           </div>
 

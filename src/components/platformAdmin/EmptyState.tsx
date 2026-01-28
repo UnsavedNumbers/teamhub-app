@@ -17,12 +17,20 @@ interface EmptyStateProps {
     onClick: () => void
   }
   children?: ReactNode
+  /** If true, renders without card styling (for use inside cards) */
+  noCard?: boolean
 }
 
-function EmptyState({ icon = 'inbox', title, description, action, children }: EmptyStateProps) {
+function EmptyState({ icon = 'inbox', title, description, action, children, noCard = false }: EmptyStateProps) {
   return (
     <div
-      className={cn('pa-card', 'pa-flex', 'pa-flex-col', 'pa-items-center', 'pa-justify-center')}
+      className={cn(
+        !noCard && 'pa-card',
+        'pa-flex',
+        'pa-flex-col',
+        'pa-items-center',
+        'pa-justify-center'
+      )}
       style={{
         padding: 'var(--pa-space-8) var(--pa-space-5)',
         textAlign: 'center',

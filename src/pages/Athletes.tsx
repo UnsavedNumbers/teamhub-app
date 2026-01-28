@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { getAthletes } from '../data/services/familyService'
@@ -26,59 +26,104 @@ export default function Athletes() {
   const requestIdRef = useRef(0)
   const isMountedRef = useRef(true)
 
-  // Cleanup on unmount
+  // Fetch athletes when ready - using useEffect directly to avoid callback re-creation issues
   useEffect(() => {
+    console.log('[Athletes] Effect running, isReady:', isReady, 'mounted:', isMountedRef.current)
+    if (!isReady) {
+      setLoading(false)
+      return
+    }
+    
+    // Set mounted to true at the start of the effect
+    isMountedRef.current = true
+    
+    const currentRequestId = ++requestIdRef.current
+    console.log('[Athletes] Starting fetch, requestId:', currentRequestId)
+    setLoading(true)
+    setError(null)
+    
+    getAthletes(context)
+      .then(({ data, error: fetchError }) => {
+        console.log('[Athletes] Promise resolved, requestId:', currentRequestId, 'current:', requestIdRef.current, 'mounted:', isMountedRef.current)
+        // Only update state if this is the latest request and component is still mounted
+        if (currentRequestId === requestIdRef.current && isMountedRef.current) {
+          console.log('[Athletes] Updating state with data:', data?.length)
+          if (fetchError) {
+            const errorMessage = fetchError.message || 'Failed to load athletes. Please try again.'
+            console.error('[Athletes] Error fetching athletes:', fetchError)
+            setError(errorMessage)
+            setAthletes([])
+            showError(errorMessage)
+          } else if (data) {
+            console.log('[Athletes] Setting athletes:', data.length)
+            setAthletes(data)
+            setError(null)
+          } else {
+            console.log('[Athletes] No data, setting empty')
+            setAthletes([])
+            setError(null)
+          }
+          console.log('[Athletes] Setting loading to false')
+          setLoading(false)
+        } else {
+          console.log('[Athletes] Skipping update - stale or unmounted')
+        }
+      })
+      .catch((err) => {
+        console.error('[Athletes] Exception fetching athletes:', err)
+        if (currentRequestId === requestIdRef.current && isMountedRef.current) {
+          const errorMessage = err instanceof Error ? err.message : 'Failed to load athletes. Please try again.'
+          setError(errorMessage)
+          setAthletes([])
+          setLoading(false)
+          showError(errorMessage)
+        }
+      })
+    
+    // Cleanup function to mark as unmounted when effect re-runs or component unmounts
     return () => {
+      console.log('[Athletes] Effect cleanup, setting mounted to false')
       isMountedRef.current = false
     }
-  }, [])
+  }, [context.userId, context.orgId, isReady])
 
-  const fetchAthletes = useCallback(async () => {
+  const fetchAthletes = () => {
     if (!isReady) return
     
     const currentRequestId = ++requestIdRef.current
     setLoading(true)
     setError(null)
     
-    try {
-      const { data, error: fetchError } = await getAthletes(context)
-
-      // Only update state if this is the latest request and component is still mounted
-      if (currentRequestId === requestIdRef.current && isMountedRef.current) {
-        if (fetchError) {
-          const errorMessage = fetchError.message || 'Failed to load athletes. Please try again.'
-          console.error('[Athletes] Error fetching athletes:', fetchError)
+    getAthletes(context)
+      .then(({ data, error: fetchError }) => {
+        if (currentRequestId === requestIdRef.current && isMountedRef.current) {
+          if (fetchError) {
+            const errorMessage = fetchError.message || 'Failed to load athletes. Please try again.'
+            console.error('[Athletes] Error fetching athletes:', fetchError)
+            setError(errorMessage)
+            setAthletes([])
+            showError(errorMessage)
+          } else if (data) {
+            setAthletes(data)
+            setError(null)
+          } else {
+            setAthletes([])
+            setError(null)
+          }
+          setLoading(false)
+        }
+      })
+      .catch((err) => {
+        console.error('[Athletes] Exception fetching athletes:', err)
+        if (currentRequestId === requestIdRef.current && isMountedRef.current) {
+          const errorMessage = err instanceof Error ? err.message : 'Failed to load athletes. Please try again.'
           setError(errorMessage)
           setAthletes([])
+          setLoading(false)
           showError(errorMessage)
-        } else if (data) {
-          setAthletes(data)
-          setError(null)
-        } else {
-          setAthletes([])
-          setError(null)
         }
-        setLoading(false)
-      }
-    } catch (err) {
-      console.error('[Athletes] Exception fetching athletes:', err)
-      if (currentRequestId === requestIdRef.current && isMountedRef.current) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load athletes. Please try again.'
-        setError(errorMessage)
-        setAthletes([])
-        setLoading(false)
-        showError(errorMessage)
-      }
-    }
-  }, [context, isReady])
-
-  useEffect(() => {
-    if (isReady) {
-      fetchAthletes()
-    } else {
-      setLoading(false)
-    }
-  }, [isReady, fetchAthletes])
+      })
+  }
 
   const handleCardClick = (athleteId: string) => {
     if (loading) return

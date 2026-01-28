@@ -15,6 +15,8 @@ import { updateAthleteSports } from '../../data/services/athleteSportsService'
 import { getSystemSports } from '../../data/services/sportsService'
 import { AthletePhotoUpload } from '../../components/admin/AthletePhotoUpload'
 import { uploadAthletePhoto, deleteAthletePhoto, getAthletePhotoUrl } from '../../data/services/athletePhotoService'
+import { validatePhoneFormat } from '../../utils/phoneValidation'
+import { validateGuardianEmail } from '../../data/services/guardianService'
 import type { Gender, UpdateAthleteDTO } from '../../types/family'
 import type { Sport } from '../../data/types/organization'
 import { AlertCircle } from 'lucide-react'
@@ -75,6 +77,8 @@ const initialFormData = {
     allergies: '',
     emergency_contact_name: '',
     emergency_contact_phone: '',
+    phone: '',  // Athlete phone number
+    email: ''   // Athlete email address
 }
 
 export default function EditAthlete() {
@@ -161,7 +165,7 @@ export default function EditAthlete() {
                     return
                 }
 
-                // Pre-populate form with athlete data
+                // Pre-populate form with athlete data - include all form fields including phone/email
                 setFormData({
                     first_name: data.first_name || '',
                     last_name: data.last_name || '',
@@ -173,19 +177,16 @@ export default function EditAthlete() {
                     allergies: data.allergies || '',
                     emergency_contact_name: data.emergency_contact_name || '',
                     emergency_contact_phone: data.emergency_contact_phone || '',
+                    phone: data.phone || '',  // NEW - explicit mapping
+                    email: data.email || ''   // NEW - explicit mapping
                 })
 
-                // Load photo if exists
-                if (data.photo_url) {
-                    setPhotoPath(data.photo_url)
-                    // Generate signed URL for display
-                    getAthletePhotoUrl(data.photo_url).then(({ url, error }) => {
-                        if (url && !error) {
-                            setPhotoUrl(url)
-                        } else {
-                            console.error('Error loading photo URL:', error)
-                        }
-                    })
+                // Load photo if exists (using new photo system)
+                if (data.has_profile_photo && data.org_id && data.id) {
+                    setPhotoPath('exists') // Flag that photo exists
+                    // Get public URL (no signed URL needed)
+                    const url = getAthletePhotoUrl(data.org_id, data.id, '512')
+                    setPhotoUrl(url)
                 } else {
                     setPhotoPath(null)
                     setPhotoUrl(null)
@@ -277,6 +278,21 @@ export default function EditAthlete() {
             }
         }
 
+        // Phone validation - only if provided
+        if (formData.phone.trim()) {
+            const phoneValidation = validatePhoneFormat(formData.phone.trim())
+            if (!phoneValidation.valid) {
+                errors.push(phoneValidation.error || 'Invalid phone number')
+            }
+        }
+
+        // Email validation - only if provided
+        if (formData.email.trim()) {
+            if (!validateGuardianEmail(formData.email.trim())) {
+                errors.push('Invalid email address')
+            }
+        }
+
         if (errors.length > 0) {
             setValidationErrors(errors)
             return
@@ -292,19 +308,21 @@ export default function EditAthlete() {
         setValidationErrors([])
 
         try {
-            // Handle photo changes
-            let newPhotoPath: string | null = photoPath
-
+            // Handle photo upload/removal
             // If photo was removed
             if (photoRemoved && photoPath) {
                 // Delete from storage
-                await deleteAthletePhoto(context, athleteId)
-                newPhotoPath = null
+                const { error: deleteError } = await deleteAthletePhoto(context, athleteId)
+                if (deleteError) {
+                    console.error('Error deleting photo:', deleteError)
+                    setPhotoError(deleteError.message)
+                    // Continue with update - photo deletion can be retried
+                }
             }
             // If new photo was selected
             else if (photoFile) {
-                // Upload new photo
-                const { path: uploadedPath, error: uploadError } = await uploadAthletePhoto(
+                // Upload new photo (includes resizing and DB update)
+                const { error: uploadError } = await uploadAthletePhoto(
                     context,
                     athleteId,
                     photoFile
@@ -315,13 +333,13 @@ export default function EditAthlete() {
                     console.error('Error uploading photo:', uploadError)
                     setPhotoError(uploadError.message)
                     // Continue with athlete update - photo can be fixed later
-                } else if (uploadedPath) {
-                    newPhotoPath = uploadedPath
+                } else {
                     setPhotoError(null)
                 }
             }
 
-            // Normalize form data before submission
+            // Normalize form data before submission - include all updatable fields including phone/email
+            // Note: photo_url is no longer stored - derived from storage
             const normalizedData: UpdateAthleteDTO = {
                 first_name: formData.first_name.trim(),
                 last_name: formData.last_name.trim(),
@@ -333,12 +351,28 @@ export default function EditAthlete() {
                 allergies: formData.allergies.trim() || null,
                 emergency_contact_name: formData.emergency_contact_name.trim() || null,
                 emergency_contact_phone: formData.emergency_contact_phone.trim() || null,
-                photo_url: newPhotoPath
+                phone: formData.phone.trim() || null,  // NEW - explicit
+                email: formData.email.trim() || null   // NEW - explicit
             }
 
             // Sequential updates: athlete first, then sports
             const { error: athleteError } = await updateAthlete(context, athleteId, normalizedData)
-            if (athleteError) throw athleteError
+            if (athleteError) {
+                // Check for constraint violation (database-level validation)
+                if ((athleteError as any).code === '23514') { // CHECK constraint violation
+                    const errorMessage = (athleteError as any).message || ''
+                    if (errorMessage.includes('email')) {
+                        setValidationErrors(['Invalid email format'])
+                    } else if (errorMessage.includes('phone')) {
+                        setValidationErrors(['Invalid phone number format'])
+                    } else {
+                        throw athleteError
+                    }
+                    setIsSubmitting(false)
+                    return
+                }
+                throw athleteError
+            }
 
             // Then update sports
             const { error: sportsError } = await updateAthleteSports(athleteId, context.orgId, selectedSports)
@@ -366,6 +400,7 @@ export default function EditAthlete() {
                     title="Athlete Not Found"
                     subtitle="The athlete you're looking for doesn't exist or you don't have access."
                     breadcrumbs={[
+                        { label: 'Organizations', path: getLink('admin.organization.structure') },
                         { label: 'Athletes', path: getLink('admin.athletes.list') },
                         { label: 'Edit Athlete', path: '#' }
                     ]}
@@ -395,6 +430,7 @@ export default function EditAthlete() {
                 title="Edit Athlete"
                 subtitle="Update athlete information, sports preferences, and profile photo"
                 breadcrumbs={[
+                    { label: 'Organizations', path: getLink('admin.organization.structure') },
                     { label: 'Athletes', path: getLink('admin.athletes.list') },
                     { label: 'Edit Athlete', path: '#' }
                 ]}
@@ -508,6 +544,23 @@ export default function EditAthlete() {
                                 value={formData.jersey_number}
                                 onChange={(e) => setFormData({ ...formData, jersey_number: e.target.value })}
                                 placeholder="e.g. 23"
+                            />
+                        </div>
+
+                        <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-6">
+                            <Input
+                                label="Phone Number (Optional)"
+                                type="tel"
+                                value={formData.phone}
+                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                placeholder="(555) 123-4567"
+                            />
+                            <Input
+                                label="Email Address (Optional)"
+                                type="email"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                placeholder="athlete@example.com"
                             />
                         </div>
 

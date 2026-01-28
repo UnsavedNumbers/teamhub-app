@@ -32,6 +32,8 @@ import JoinTeam from './pages/JoinTeam'
 import Calendar from './pages/Calendar'
 import EventDetail from './pages/EventDetail'
 import MyPayments from './pages/MyPayments'
+import PaymentDetail from './pages/PaymentDetail'
+import AdminPaymentDetail from './pages/admin/PaymentDetail'
 import PaymentSuccess from './pages/PaymentSuccess'
 import PaymentCancel from './pages/PaymentCancel'
 import Settings from './pages/Settings'
@@ -41,7 +43,7 @@ import Travel from './pages/Travel'
 import TravelDetail from './pages/TravelDetail'
 import Tryouts from './pages/Tryouts'
 import TryoutDetail from './pages/TryoutDetail'
-import Messages from './pages/Messages'
+import Huddles from './pages/Huddles'
 import AnnouncementDetail from './pages/AnnouncementDetail'
 import { RoleSelection } from './pages/RoleSelection'
 
@@ -252,6 +254,7 @@ function AppWithTheme() {
             <Route path="calendar/events/:eventId" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />
             <Route path="calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
             <Route path="payments" element={<ProtectedRoute><MyPayments /></ProtectedRoute>} />
+            <Route path="payments/:id" element={<ProtectedRoute><PaymentDetail /></ProtectedRoute>} />
             <Route path="payments/success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
             <Route path="payments/cancel" element={<ProtectedRoute><PaymentCancel /></ProtectedRoute>} />
             <Route path="uniforms" element={<ProtectedRoute><Uniforms /></ProtectedRoute>} />
@@ -260,8 +263,11 @@ function AppWithTheme() {
             <Route path="travel/:id" element={<ProtectedRoute><TravelDetail /></ProtectedRoute>} />
             <Route path="tryouts" element={<ProtectedRoute><Tryouts /></ProtectedRoute>} />
             <Route path="tryouts/:tryoutId" element={<ProtectedRoute><TryoutDetail /></ProtectedRoute>} />
-            <Route path="messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+            <Route path="messages" element={<Navigate to="/portal/huddles/announcements" replace />} />
             <Route path="messages/:announcementId" element={<ProtectedRoute><AnnouncementDetail /></ProtectedRoute>} />
+            <Route path="huddles" element={<Navigate to="/portal/huddles/announcements" replace />} />
+            <Route path="huddles/announcements" element={<ProtectedRoute><Huddles /></ProtectedRoute>} />
+            <Route path="huddles/chat" element={<ProtectedRoute><Huddles /></ProtectedRoute>} />
             
             {/* Redirect root portal to dashboard */}
             <Route index element={<Navigate to={getLink(RouteKeys.PORTAL_DASHBOARD)} replace />} />
@@ -374,6 +380,7 @@ function AppWithTheme() {
             
               {/* Payments */}
               <Route path="payments" element={<Payments />} />
+              <Route path="payments/:id" element={<AdminPaymentDetail />} />
               <Route path="payments/new" element={<CreateFee />} />
             
               {/* Uniforms */}

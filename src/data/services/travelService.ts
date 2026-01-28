@@ -36,7 +36,9 @@ import {
     getTeamsForUserChildren,
 } from '../fake/relationships'
 import { fakeEvents } from '../fake/fakeEvents'
-import { fakeTravelPlans, type FakeTravelPlan } from '../fake/fakeTravel'
+import { fakeTravelPlans, type FakeTravelPlan, type MeetingLocation } from '../fake/fakeTravel'
+import { isValidUUID } from '../../utils/uuid'
+import { safeParseJSONB } from '../../utils/featureDiscovery/jsonbUtils'
 
 // ============================================================================
 // Re-exports for convenience
@@ -61,6 +63,176 @@ async function simulateDelay(): Promise<void> {
     if (FAKE_DATA_DELAY_MS > 0) {
         await new Promise((resolve) => setTimeout(resolve, FAKE_DATA_DELAY_MS))
     }
+}
+
+/**
+ * Normalize date to ISO date string format (YYYY-MM-DD)
+ * Handles Date objects, ISO strings, and date strings
+ */
+function normalizeToISODate(date: string | Date): string {
+    if (date instanceof Date) {
+        return date.toISOString().split('T')[0]
+    }
+    // If it's already a date string, extract just the date part
+    const dateStr = date.trim()
+    if (dateStr.includes('T')) {
+        return dateStr.split('T')[0]
+    }
+    return dateStr
+}
+
+/**
+ * Validate if a value is a valid File object
+ */
+function isValidFile(file: unknown): file is File {
+    return file instanceof File && 
+           typeof file.name === 'string' && 
+           typeof file.size === 'number' &&
+           file.size > 0
+}
+
+
+/**
+ * Map Supabase travel plan row to FakeTravelPlan domain model
+ */
+function mapSupabaseTravelPlan(row: TravelPlanRow): FakeTravelPlan {
+    return {
+        id: row.id,
+        org_id: row.team?.org_id ?? '',
+        team_id: row.team_id,
+        season_id: row.season_id,
+        title: row.title,
+        location: row.location,
+        destination_city: row.destination_city ?? null,
+        destination_state: row.destination_state ?? null,
+        venue_name: row.venue_name ?? null,
+        venue_address: row.venue_address ?? null,
+        start_date: row.start_date,
+        end_date: row.end_date,
+        hotel_name: row.hotel_name ?? null,
+        hotel_address: row.hotel_address ?? null,
+        hotel_phone: row.hotel_phone ?? null,
+        hotel_confirmation: row.hotel_confirmation ?? null,
+        check_in_time: null,
+        check_out_time: null,
+        maps_url: row.maps_url ?? null,
+        notes: row.notes ?? null,
+        itinerary_file_path: row.itinerary_file_path ?? null,
+        meeting_locations: safeParseJSONB(row.meeting_locations, null) as MeetingLocation[] | null,
+        status: row.status,
+        published_at: row.published_at ?? null,
+        cancelled_at: row.cancelled_at ?? null,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+    }
+}
+
+/**
+ * Validate team belongs to user's organization
+ */
+async function validateTeamBelongsToOrg(
+    _context: UserContext,
+    teamId: string
+): Promise<{ valid: boolean; orgId: string | null; error: Error | null }> {
+    if (!isValidUUID(teamId)) {
+        return { valid: false, orgId: null, error: new Error('Invalid team ID format') }
+    }
+
+    if (USE_FAKE_DATA) {
+        // In fake data, assume team belongs to context org
+        return { valid: true, orgId: _context.orgId ?? null, error: null }
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('teams')
+            .select('org_id')
+            .eq('id', teamId)
+            .single()
+
+        if (error) throw error
+        if (!data) {
+            return { valid: false, orgId: null, error: new Error('Team not found') }
+        }
+
+        const teamOrgId = data.org_id as string | null
+        if (!teamOrgId || teamOrgId !== _context.orgId) {
+            return { 
+                valid: false, 
+                orgId: teamOrgId, 
+                error: new Error('Team does not belong to your organization') 
+            }
+        }
+
+        return { valid: true, orgId: teamOrgId, error: null }
+    } catch (err) {
+        return { 
+            valid: false, 
+            orgId: null, 
+            error: err instanceof Error ? err : new Error('Failed to validate team') 
+        }
+    }
+}
+
+/**
+ * Validate team-season relationship exists
+ */
+async function validateTeamSeasonRelationship(
+    _context: UserContext,
+    teamId: string,
+    seasonId: string
+): Promise<{ valid: boolean; error: Error | null }> {
+    if (!isValidUUID(teamId) || !isValidUUID(seasonId)) {
+        return { valid: false, error: new Error('Invalid team or season ID format') }
+    }
+
+    if (USE_FAKE_DATA) {
+        // In fake data, assume relationship exists
+        return { valid: true, error: null }
+    }
+
+    try {
+        // Check team_seasons table first
+        const { data: teamSeasonData, error: teamSeasonError } = await supabase
+            .from('team_seasons')
+            .select('team_id')
+            .eq('team_id', teamId)
+            .eq('season_id', seasonId)
+            .single()
+
+        if (!teamSeasonError && teamSeasonData) {
+            return { valid: true, error: null }
+        }
+
+        // Fallback: check if season has direct team_id (legacy)
+        const { data: seasonData, error: seasonError } = await supabase
+            .from('seasons')
+            .select('team_id')
+            .eq('id', seasonId)
+            .single()
+
+        if (seasonError) throw seasonError
+        if (!seasonData || (seasonData.team_id as string | null) !== teamId) {
+            return { valid: false, error: new Error('Selected season is not available for this team') }
+        }
+
+        return { valid: true, error: null }
+    } catch (err) {
+        return { 
+            valid: false, 
+            error: err instanceof Error ? err : new Error('Failed to validate team-season relationship') 
+        }
+    }
+}
+
+/**
+ * Sanitize filename for storage path
+ */
+function sanitizeFilename(filename: string): string {
+    // Remove special chars, keep alphanumeric, dots, dashes, underscores
+    const sanitized = filename.replace(/[^a-zA-Z0-9._-]/g, '_')
+    // Limit length to 255 chars
+    return sanitized.length > 255 ? sanitized.substring(0, 255) : sanitized
 }
 
 function buildPermissions(context: UserContext): PermissionSet {
@@ -146,6 +318,91 @@ function getTeamName(teamId: string): string {
         'team-u16-soccer-elite-006': 'U16 Elite Hurricanes',
     }
     return teamNames[teamId] ?? 'Unknown Team'
+}
+
+// ============================================================================
+// Type Definitions
+// ============================================================================
+
+/**
+ * ISO Date String type (YYYY-MM-DD format)
+ */
+export type ISODateString = string & { readonly __brand: 'ISODateString' }
+
+/**
+ * DTO for creating a new travel plan
+ */
+export interface CreateTravelPlanDTO {
+    team_id: string
+    season_id: string
+    title: string
+    location: string
+    destination_city?: string | null
+    destination_state?: string | null
+    start_date: string
+    end_date: string
+    venue_name?: string | null
+    venue_address?: string | null
+    hotel_name?: string | null
+    hotel_address?: string | null
+    hotel_phone?: string | null
+    hotel_confirmation?: string | null
+    maps_url?: string | null
+    notes?: string | null
+    itinerary_file?: File | null
+}
+
+/**
+ * DTO for updating an existing travel plan
+ */
+export interface UpdateTravelPlanDTO {
+    title?: string
+    location?: string
+    destination_city?: string | null
+    destination_state?: string | null
+    start_date?: string
+    end_date?: string
+    venue_name?: string | null
+    venue_address?: string | null
+    hotel_name?: string | null
+    hotel_address?: string | null
+    hotel_phone?: string | null
+    hotel_confirmation?: string | null
+    maps_url?: string | null
+    notes?: string | null
+    itinerary_file?: File | null
+}
+
+/**
+ * Supabase row type for travel_plans with joins
+ */
+export interface TravelPlanRow {
+    id: string
+    team_id: string
+    season_id: string
+    title: string
+    location: string
+    destination_city: string | null
+    destination_state: string | null
+    venue_name: string | null
+    venue_address: string | null
+    start_date: string
+    end_date: string
+    hotel_name: string | null
+    hotel_address: string | null
+    hotel_phone: string | null
+    hotel_confirmation: string | null
+    maps_url: string | null
+    notes: string | null
+    itinerary_file_path: string | null
+    meeting_locations: unknown
+    status: 'draft' | 'published' | 'cancelled'
+    published_at: string | null
+    cancelled_at: string | null
+    created_at: string
+    updated_at: string
+    team: { id: string; name: string; org_id: string } | null
+    season: { id: string; name: string } | null
 }
 
 // ============================================================================
@@ -472,6 +729,491 @@ export async function clearTravelOverride(
 }
 
 // ============================================================================
+// Travel Plan CRUD Operations
+// ============================================================================
+
+/**
+ * Create a new travel plan
+ */
+export async function createTravelPlan(
+    context: UserContext,
+    data: CreateTravelPlanDTO
+): Promise<{ data: FakeTravelPlan | null; error: Error | null }> {
+    try {
+        // Validate required fields
+        if (!data.team_id || !data.season_id || !data.title || !data.location || !data.start_date || !data.end_date) {
+            return { data: null, error: new Error('Missing required fields') }
+        }
+
+        // Validate UUIDs
+        if (!isValidUUID(data.team_id) || !isValidUUID(data.season_id)) {
+            return { data: null, error: new Error('Invalid team or season ID format') }
+        }
+
+        // Validate dates
+        const normalizedStart = normalizeToISODate(data.start_date)
+        const normalizedEnd = normalizeToISODate(data.end_date)
+        if (normalizedEnd < normalizedStart) {
+            return { data: null, error: new Error('End date must be on or after start date') }
+        }
+
+        // Validate team belongs to org
+        const teamValidation = await validateTeamBelongsToOrg(context, data.team_id)
+        if (!teamValidation.valid || !teamValidation.orgId) {
+            return { data: null, error: teamValidation.error ?? new Error('Team validation failed') }
+        }
+
+        // Validate team-season relationship
+        const seasonValidation = await validateTeamSeasonRelationship(context, data.team_id, data.season_id)
+        if (!seasonValidation.valid) {
+            return { data: null, error: seasonValidation.error ?? new Error('Season validation failed') }
+        }
+
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+
+            const newPlan: FakeTravelPlan = {
+                id: `travel-${Date.now()}`,
+                org_id: teamValidation.orgId,
+                team_id: data.team_id,
+                season_id: data.season_id,
+                title: data.title,
+                location: data.location,
+                destination_city: data.destination_city ?? null,
+                destination_state: data.destination_state ?? null,
+                venue_name: data.venue_name ?? null,
+                venue_address: data.venue_address ?? null,
+                start_date: normalizedStart,
+                end_date: normalizedEnd,
+                hotel_name: data.hotel_name ?? null,
+                hotel_address: data.hotel_address ?? null,
+                hotel_phone: data.hotel_phone ?? null,
+                hotel_confirmation: data.hotel_confirmation ?? null,
+                check_in_time: null,
+                check_out_time: null,
+                maps_url: data.maps_url ?? null,
+                notes: data.notes ?? null,
+                itinerary_file_path: null,
+                meeting_locations: null,
+                status: 'draft',
+                published_at: null,
+                cancelled_at: null,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            }
+
+            // Handle file upload in fake mode
+            if (data.itinerary_file && isValidFile(data.itinerary_file)) {
+                newPlan.itinerary_file_path = `${teamValidation.orgId}/${data.team_id}/${newPlan.id}/${data.itinerary_file.name}`
+            }
+
+            fakeTravelPlans.push(newPlan)
+            return { data: newPlan, error: null }
+        }
+
+        // Real Supabase implementation
+        let filePath: string | null = null
+
+        // Upload file first if provided
+        if (data.itinerary_file && isValidFile(data.itinerary_file)) {
+            const objectPath = `${teamValidation.orgId}/${data.team_id}/temp/${Date.now()}-${sanitizeFilename(data.itinerary_file.name)}`
+            
+            const { error: uploadError } = await supabase.storage
+                .from('travel-itineraries')
+                .upload(objectPath, data.itinerary_file, {
+                    upsert: false,
+                    contentType: data.itinerary_file.type || 'application/pdf',
+                })
+
+            if (uploadError) {
+                return { data: null, error: new Error(`File upload failed: ${uploadError.message}`) }
+            }
+
+            filePath = objectPath
+        }
+
+        // Insert travel plan
+        // Note: Database types may not include all columns from migration 033
+        // Use type assertion for extended columns
+        const insertData = {
+            team_id: data.team_id,
+            season_id: data.season_id,
+            title: data.title,
+            location: data.location,
+            destination_city: data.destination_city ?? null,
+            destination_state: data.destination_state ?? null,
+            venue_name: data.venue_name ?? null,
+            venue_address: data.venue_address ?? null,
+            start_date: normalizedStart,
+            end_date: normalizedEnd,
+            hotel_name: data.hotel_name ?? null,
+            hotel_address: data.hotel_address ?? null,
+            hotel_phone: data.hotel_phone ?? null,
+            hotel_confirmation: data.hotel_confirmation ?? null,
+            maps_url: data.maps_url ?? null,
+            notes: data.notes ?? null,
+            itinerary_file_path: filePath,
+            status: 'draft',
+        } as Database['public']['Tables']['travel_plans']['Insert'] & {
+            destination_city?: string | null
+            destination_state?: string | null
+            maps_url?: string | null
+            itinerary_file_path?: string | null
+            status?: string
+        }
+
+        const { data: inserted, error: insertError } = await supabase
+            .from('travel_plans')
+            .insert(insertData)
+            .select(`
+                *,
+                team:teams(id, name, org_id),
+                season:seasons(id, name)
+            `)
+            .single()
+
+        if (insertError) {
+            // Cleanup uploaded file if insert failed
+            if (filePath) {
+                await supabase.storage
+                    .from('travel-itineraries')
+                    .remove([filePath])
+                    .catch(err => console.error('Failed to cleanup uploaded file:', err))
+            }
+            return { data: null, error: new Error(`Failed to create travel plan: ${insertError.message}`) }
+        }
+
+        // Update file path with actual plan ID if needed
+        if (filePath && inserted.id) {
+            const finalPath = `${teamValidation.orgId}/${data.team_id}/${inserted.id}/${sanitizeFilename(data.itinerary_file!.name)}`
+            if (filePath !== finalPath) {
+                // Move file to final location
+                const { error: moveError } = await supabase.storage
+                    .from('travel-itineraries')
+                    .move(filePath, finalPath)
+
+                if (!moveError) {
+                    await supabase
+                        .from('travel_plans')
+                        .update({ itinerary_file_path: finalPath } as any)
+                        .eq('id', inserted.id)
+                }
+            }
+        }
+
+        const plan = mapSupabaseTravelPlan(inserted as TravelPlanRow)
+        return { data: plan, error: null }
+    } catch (err) {
+        console.error('createTravelPlan error:', err)
+        return { data: null, error: err instanceof Error ? err : new Error('Unknown error creating travel plan') }
+    }
+}
+
+/**
+ * Update an existing travel plan
+ */
+export async function updateTravelPlan(
+    context: UserContext,
+    planId: string,
+    data: UpdateTravelPlanDTO
+): Promise<{ data: FakeTravelPlan | null; error: Error | null }> {
+    try {
+        // Validate UUID
+        if (!isValidUUID(planId)) {
+            return { data: null, error: new Error('Invalid plan ID format') }
+        }
+
+        // Validate dates if provided
+        if (data.start_date && data.end_date) {
+            const normalizedStart = normalizeToISODate(data.start_date)
+            const normalizedEnd = normalizeToISODate(data.end_date)
+            if (normalizedEnd < normalizedStart) {
+                return { data: null, error: new Error('End date must be on or after start date') }
+            }
+        }
+
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+
+            const planIndex = fakeTravelPlans.findIndex(p => p.id === planId)
+            if (planIndex === -1) {
+                return { data: null, error: new Error('Travel plan not found') }
+            }
+
+            const existingPlan = fakeTravelPlans[planIndex]
+            if (existingPlan.org_id !== (context.orgId ?? '')) {
+                return { data: null, error: new Error('Travel plan does not belong to your organization') }
+            }
+
+            // Update plan
+            const updatedPlan: FakeTravelPlan = {
+                ...existingPlan,
+                title: data.title ?? existingPlan.title,
+                location: data.location ?? existingPlan.location,
+                destination_city: data.destination_city ?? existingPlan.destination_city,
+                destination_state: data.destination_state ?? existingPlan.destination_state,
+                start_date: data.start_date ? normalizeToISODate(data.start_date) : existingPlan.start_date,
+                end_date: data.end_date ? normalizeToISODate(data.end_date) : existingPlan.end_date,
+                venue_name: data.venue_name ?? existingPlan.venue_name,
+                venue_address: data.venue_address ?? existingPlan.venue_address,
+                hotel_name: data.hotel_name ?? existingPlan.hotel_name,
+                hotel_address: data.hotel_address ?? existingPlan.hotel_address,
+                hotel_phone: data.hotel_phone ?? existingPlan.hotel_phone,
+                hotel_confirmation: data.hotel_confirmation ?? existingPlan.hotel_confirmation,
+                maps_url: data.maps_url ?? existingPlan.maps_url,
+                notes: data.notes ?? existingPlan.notes,
+                updated_at: new Date().toISOString(),
+            }
+
+            // Handle file upload/replace
+            if (data.itinerary_file && isValidFile(data.itinerary_file)) {
+                updatedPlan.itinerary_file_path = `${existingPlan.org_id}/${existingPlan.team_id}/${planId}/${data.itinerary_file.name}`
+            }
+
+            fakeTravelPlans[planIndex] = updatedPlan
+            return { data: updatedPlan, error: null }
+        }
+
+        // Real Supabase implementation
+        // Fetch existing plan for validation and optimistic locking
+        const { data: existingPlan, error: fetchError } = await supabase
+            .from('travel_plans')
+            .select(`
+                *,
+                team:teams(id, name, org_id),
+                season:seasons(id, name)
+            `)
+            .eq('id', planId)
+            .single()
+
+        if (fetchError || !existingPlan) {
+            return { data: null, error: new Error('Travel plan not found') }
+        }
+
+        // Validate plan belongs to org
+        const existingPlanTyped = existingPlan as TravelPlanRow
+        if (existingPlanTyped.team?.org_id !== context.orgId) {
+            return { data: null, error: new Error('Travel plan does not belong to your organization') }
+        }
+
+        let newFilePath: string | null = null
+        let oldFilePath: string | null = existingPlanTyped.itinerary_file_path ?? null
+
+        // Handle file upload/replace
+        if (data.itinerary_file && isValidFile(data.itinerary_file)) {
+            newFilePath = `${existingPlanTyped.team?.org_id ?? context.orgId}/${existingPlanTyped.team_id}/${planId}/${Date.now()}-${sanitizeFilename(data.itinerary_file.name)}`
+
+            const { error: uploadError } = await supabase.storage
+                .from('travel-itineraries')
+                .upload(newFilePath, data.itinerary_file, {
+                    upsert: false,
+                    contentType: data.itinerary_file.type || 'application/pdf',
+                })
+
+            if (uploadError) {
+                return { data: null, error: new Error(`File upload failed: ${uploadError.message}`) }
+            }
+        }
+
+        // Build update data
+        const updateData: Record<string, any> = {}
+        if (data.title !== undefined) updateData.title = data.title
+        if (data.location !== undefined) updateData.location = data.location
+        if (data.destination_city !== undefined) updateData.destination_city = data.destination_city
+        if (data.destination_state !== undefined) updateData.destination_state = data.destination_state
+        if (data.start_date !== undefined) updateData.start_date = normalizeToISODate(data.start_date)
+        if (data.end_date !== undefined) updateData.end_date = normalizeToISODate(data.end_date)
+        if (data.venue_name !== undefined) updateData.venue_name = data.venue_name
+        if (data.venue_address !== undefined) updateData.venue_address = data.venue_address
+        if (data.hotel_name !== undefined) updateData.hotel_name = data.hotel_name
+        if (data.hotel_address !== undefined) updateData.hotel_address = data.hotel_address
+        if (data.hotel_phone !== undefined) updateData.hotel_phone = data.hotel_phone
+        if (data.hotel_confirmation !== undefined) updateData.hotel_confirmation = data.hotel_confirmation
+        if (data.maps_url !== undefined) updateData.maps_url = data.maps_url
+        if (data.notes !== undefined) updateData.notes = data.notes
+        if (newFilePath !== null) updateData.itinerary_file_path = newFilePath
+
+        // Update with optimistic locking
+        // Ensure updated_at is a string for optimistic locking
+        const updatedAtValue = existingPlanTyped.updated_at ?? new Date().toISOString()
+        const { data: updated, error: updateError } = await supabase
+            .from('travel_plans')
+            .update(updateData)
+            .eq('id', planId)
+            .eq('updated_at', updatedAtValue) // Optimistic locking
+            .select(`
+                *,
+                team:teams(id, name, org_id),
+                season:seasons(id, name)
+            `)
+            .single()
+
+        if (updateError) {
+            // Cleanup new file if update failed
+            if (newFilePath) {
+                await supabase.storage
+                    .from('travel-itineraries')
+                    .remove([newFilePath])
+                    .catch(err => console.error('Failed to cleanup uploaded file:', err))
+            }
+            return { data: null, error: new Error(`Failed to update travel plan: ${updateError.message}`) }
+        }
+
+        if (!updated) {
+            return { data: null, error: new Error('Travel plan was modified by another user. Please refresh and try again.') }
+        }
+
+        // Delete old file if replaced
+        if (oldFilePath && newFilePath && oldFilePath !== newFilePath) {
+            await supabase.storage
+                .from('travel-itineraries')
+                .remove([oldFilePath])
+                .catch(err => console.error('Failed to delete old file:', err))
+        }
+
+        const plan = mapSupabaseTravelPlan(updated as TravelPlanRow)
+        return { data: plan, error: null }
+    } catch (err) {
+        console.error('updateTravelPlan error:', err)
+        return { data: null, error: err instanceof Error ? err : new Error('Unknown error updating travel plan') }
+    }
+}
+
+/**
+ * Upload travel itinerary file
+ */
+export async function uploadTravelItinerary(
+    context: UserContext,
+    planId: string,
+    file: File
+): Promise<{ data: string | null; error: Error | null }> {
+    try {
+        // Validate UUID
+        if (!isValidUUID(planId)) {
+            return { data: null, error: new Error('Invalid plan ID format') }
+        }
+
+        // Validate file
+        if (!isValidFile(file)) {
+            return { data: null, error: new Error('Invalid file object') }
+        }
+
+        // Validate file type and size
+        const isValidType = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+        if (!isValidType) {
+            return { data: null, error: new Error('File must be a PDF') }
+        }
+
+        const maxSize = 10 * 1024 * 1024 // 10MB
+        if (file.size > maxSize) {
+            return { data: null, error: new Error('File size exceeds 10MB limit') }
+        }
+
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            const filePath = `${context.orgId ?? 'org'}/${planId}/${Date.now()}-${sanitizeFilename(file.name)}`
+            return { data: filePath, error: null }
+        }
+
+        // Get plan to determine org_id and team_id
+        const { data: plan, error: planError } = await supabase
+            .from('travel_plans')
+            .select('team_id, team:teams(org_id)')
+            .eq('id', planId)
+            .single()
+
+        if (planError || !plan) {
+            return { data: null, error: new Error('Travel plan not found') }
+        }
+
+        const orgId = (plan.team as { org_id: string } | null)?.org_id ?? context.orgId ?? ''
+        const objectPath = `${orgId}/${(plan as { team_id: string }).team_id}/${planId}/${Date.now()}-${sanitizeFilename(file.name)}`
+
+        const { error: uploadError } = await supabase.storage
+            .from('travel-itineraries')
+            .upload(objectPath, file, {
+                upsert: false,
+                contentType: file.type || 'application/pdf',
+            })
+
+        if (uploadError) {
+            return { data: null, error: new Error(`File upload failed: ${uploadError.message}`) }
+        }
+
+        // Update plan with file path
+        // Note: Database types may not include itinerary_file_path column
+        const { error: updateError } = await supabase
+            .from('travel_plans')
+            .update({ itinerary_file_path: objectPath } as any)
+            .eq('id', planId)
+
+        if (updateError) {
+            // Cleanup uploaded file if update failed
+            await supabase.storage
+                .from('travel-itineraries')
+                .remove([objectPath])
+                .catch(err => console.error('Failed to cleanup uploaded file:', err))
+            return { data: null, error: new Error(`Failed to update travel plan: ${updateError.message}`) }
+        }
+
+        return { data: objectPath, error: null }
+    } catch (err) {
+        console.error('uploadTravelItinerary error:', err)
+        return { data: null, error: err instanceof Error ? err : new Error('Unknown error uploading file') }
+    }
+}
+
+/**
+ * Get signed URL for travel itinerary download
+ */
+export async function getTravelItinerarySignedUrl(
+    _context: UserContext,
+    planId: string
+): Promise<{ data: string | null; error: Error | null }> {
+    try {
+        // Validate UUID
+        if (!isValidUUID(planId)) {
+            return { data: null, error: new Error('Invalid plan ID format') }
+        }
+
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            return { data: 'https://example.com/fake-itinerary.pdf', error: null }
+        }
+
+        // Get plan with file path
+        const { data: plan, error: planError } = await supabase
+            .from('travel_plans')
+            .select('itinerary_file_path')
+            .eq('id', planId)
+            .single()
+
+        if (planError || !plan) {
+            return { data: null, error: new Error('Travel plan not found') }
+        }
+
+        const filePath = (plan as unknown as { itinerary_file_path: string | null }).itinerary_file_path
+        if (!filePath) {
+            return { data: null, error: new Error('No itinerary file found for this travel plan') }
+        }
+
+        // Generate signed URL (10 minute expiry)
+        const { data: signedUrlData, error: urlError } = await supabase.storage
+            .from('travel-itineraries')
+            .createSignedUrl(filePath, 60 * 10)
+
+        if (urlError || !signedUrlData) {
+            return { data: null, error: new Error(`Failed to generate download URL: ${urlError?.message ?? 'Unknown error'}`) }
+        }
+
+        return { data: signedUrlData.signedUrl, error: null }
+    } catch (err) {
+        console.error('getTravelItinerarySignedUrl error:', err)
+        return { data: null, error: err instanceof Error ? err : new Error('Unknown error generating download URL') }
+    }
+}
+
+// ============================================================================
 // Backward Compatibility - Legacy Travel Plan Functions
 // ============================================================================
 
@@ -552,36 +1294,14 @@ export async function getTravelPlans(
             throw error
         }
 
-        // Map Supabase rows to FakeTravelPlan format
-        const plans: FakeTravelPlan[] = (data || []).map((row: any) => ({
-            id: row.id,
-            org_id: row.team?.org_id || '',
-            team_id: row.team_id,
-            season_id: row.season_id,
-            title: row.title,
-            location: row.location,
-            destination_city: row.destination_city || null,
-            destination_state: row.destination_state || null,
-            venue_name: row.venue_name || null,
-            venue_address: row.venue_address || null,
-            start_date: row.start_date,
-            end_date: row.end_date,
-            hotel_name: row.hotel_name || null,
-            hotel_address: row.hotel_address || null,
-            hotel_phone: row.hotel_phone || null,
-            hotel_confirmation: row.hotel_confirmation || null,
-            check_in_time: null,
-            check_out_time: null,
-            maps_url: row.maps_url || null,
-            notes: row.notes || null,
-            itinerary_file_path: row.itinerary_file_path || null,
-            meeting_locations: row.meeting_locations || null,
-            status: (row.status as 'draft' | 'published' | 'cancelled') || 'published',
-            published_at: row.published_at || null,
-            cancelled_at: row.cancelled_at || null,
-            created_at: row.created_at,
-            updated_at: row.updated_at,
-        }))
+        // Map Supabase rows to FakeTravelPlan format using type-safe function
+        const plans: FakeTravelPlan[] = (data || []).map((row: unknown) => {
+            // Type guard and map - row should match TravelPlanRow structure from query
+            if (typeof row === 'object' && row !== null) {
+                return mapSupabaseTravelPlan(row as TravelPlanRow)
+            }
+            throw new Error('Invalid travel plan data format')
+        })
 
         return { data: plans, error: null }
     } catch (err) {
@@ -751,48 +1471,205 @@ export async function getAllTravelPlansAdmin(
 }
 
 /**
- * @deprecated Use event status management instead
+ * Publish a travel plan (change status from draft to published)
  */
 export async function publishTravelPlan(
     context: UserContext,
-    eventId: string
+    planId: string
 ): Promise<{ data: FakeTravelPlan | null; error: Error | null }> {
-    // In the new model, events are published, not travel plans
-    // This is a no-op for backward compatibility
-    return getTravelPlanDetails(context, eventId)
+    try {
+        // Validate UUID
+        if (!isValidUUID(planId)) {
+            return { data: null, error: new Error('Invalid plan ID format') }
+        }
+
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+
+            const planIndex = fakeTravelPlans.findIndex(p => p.id === planId)
+            if (planIndex === -1) {
+                return { data: null, error: new Error('Travel plan not found') }
+            }
+
+            const plan = fakeTravelPlans[planIndex]
+            
+            // Validate status transition
+            if (plan.status === 'cancelled') {
+                return { data: null, error: new Error('Cannot publish a cancelled plan. Please create a new plan.') }
+            }
+
+            if (plan.status === 'published') {
+                // Already published, return as-is
+                return { data: plan, error: null }
+            }
+
+            // Update to published
+            const updatedPlan: FakeTravelPlan = {
+                ...plan,
+                status: 'published',
+                published_at: plan.published_at ?? new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            }
+
+            fakeTravelPlans[planIndex] = updatedPlan
+            return { data: updatedPlan, error: null }
+        }
+
+        // Real Supabase implementation
+        // Fetch current plan
+        const { data: existingPlan, error: fetchError } = await supabase
+            .from('travel_plans')
+            .select(`
+                *,
+                team:teams(id, name, org_id),
+                season:seasons(id, name)
+            `)
+            .eq('id', planId)
+            .single()
+
+        if (fetchError || !existingPlan) {
+            return { data: null, error: new Error('Travel plan not found') }
+        }
+
+        // Validate plan belongs to org
+        const existingPlanTyped = existingPlan as TravelPlanRow
+        if (existingPlanTyped.team?.org_id !== context.orgId) {
+            return { data: null, error: new Error('Travel plan does not belong to your organization') }
+        }
+
+        // Validate status transition
+        if (existingPlanTyped.status === 'cancelled') {
+            return { data: null, error: new Error('Cannot publish a cancelled plan. Please create a new plan.') }
+        }
+
+        if (existingPlanTyped.status === 'published') {
+            // Already published, return as-is
+            return { data: mapSupabaseTravelPlan(existingPlanTyped), error: null }
+        }
+
+        // Update to published
+        // Note: Database types may not include status column from migration 033
+        const updateData = {
+            status: 'published',
+            published_at: existingPlanTyped.published_at ?? new Date().toISOString(),
+        } as Database['public']['Tables']['travel_plans']['Update'] & {
+            status?: string
+            published_at?: string
+        }
+
+        const { data: updated, error: updateError } = await supabase
+            .from('travel_plans')
+            .update(updateData)
+            .eq('id', planId)
+            .select(`
+                *,
+                team:teams(id, name, org_id),
+                season:seasons(id, name)
+            `)
+            .single()
+
+        if (updateError) {
+            return { data: null, error: new Error(`Failed to publish travel plan: ${updateError.message}`) }
+        }
+
+        return { data: mapSupabaseTravelPlan(updated as TravelPlanRow), error: null }
+    } catch (err) {
+        console.error('publishTravelPlan error:', err)
+        return { data: null, error: err instanceof Error ? err : new Error('Unknown error publishing travel plan') }
+    }
 }
 
 /**
- * @deprecated Use event cancellation instead
+ * Cancel a travel plan (change status to cancelled)
  */
 export async function cancelTravelPlan(
     context: UserContext,
-    eventId: string
+    planId: string
 ): Promise<{ data: FakeTravelPlan | null; error: Error | null }> {
-    if (USE_FAKE_DATA) {
-        // Fake data mode - just return the plan details
-        return getTravelPlanDetails(context, eventId)
-    }
-
-    // Real Supabase implementation - NO FALLBACK
-    // In the new model, cancel the event
     try {
-        type EventUpdate = Database['public']['Tables']['events']['Update']
-        const updateData = {
-            is_cancelled: true,
-            cancellation_reason: 'Cancelled via admin panel',
+        // Validate UUID
+        if (!isValidUUID(planId)) {
+            return { data: null, error: new Error('Invalid plan ID format') }
+        }
+
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+
+            const planIndex = fakeTravelPlans.findIndex(p => p.id === planId)
+            if (planIndex === -1) {
+                return { data: null, error: new Error('Travel plan not found') }
+            }
+
+            const plan = fakeTravelPlans[planIndex]
+            
+            // Validate status transition
+            if (plan.status === 'cancelled') {
+                return { data: null, error: new Error('Plan is already cancelled') }
+            }
+
+            // Update to cancelled
+            const updatedPlan: FakeTravelPlan = {
+                ...plan,
+                status: 'cancelled',
+                cancelled_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            }
+
+            fakeTravelPlans[planIndex] = updatedPlan
+            return { data: updatedPlan, error: null }
+        }
+
+        // Real Supabase implementation
+        // Fetch current plan
+        const { data: existingPlan, error: fetchError } = await supabase
+            .from('travel_plans')
+            .select(`
+                *,
+                team:teams(id, name, org_id),
+                season:seasons(id, name)
+            `)
+            .eq('id', planId)
+            .single()
+
+        if (fetchError || !existingPlan) {
+            return { data: null, error: new Error('Travel plan not found') }
+        }
+
+        // Validate plan belongs to org
+        const existingPlanTyped = existingPlan as TravelPlanRow
+        if (existingPlanTyped.team?.org_id !== context.orgId) {
+            return { data: null, error: new Error('Travel plan does not belong to your organization') }
+        }
+
+        // Validate status transition
+        if (existingPlanTyped.status === 'cancelled') {
+            return { data: null, error: new Error('Plan is already cancelled') }
+        }
+
+        // Update to cancelled
+        const updateData: Record<string, any> = {
+            status: 'cancelled',
             cancelled_at: new Date().toISOString(),
-        } satisfies EventUpdate
-        const { error } = await supabase
-            .from('events')
+        }
+
+        const { data: updated, error: updateError } = await supabase
+            .from('travel_plans')
             .update(updateData)
-            .eq('id', eventId)
+            .eq('id', planId)
+            .select(`
+                *,
+                team:teams(id, name, org_id),
+                season:seasons(id, name)
+            `)
+            .single()
 
-        if (error) throw error
+        if (updateError) {
+            return { data: null, error: new Error(`Failed to cancel travel plan: ${updateError.message}`) }
+        }
 
-        return getTravelPlanDetails(context, eventId)
+        return { data: mapSupabaseTravelPlan(updated as TravelPlanRow), error: null }
     } catch (err) {
         console.error('cancelTravelPlan error:', err)
-        return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        return { data: null, error: err instanceof Error ? err : new Error('Unknown error cancelling travel plan') }
     }
 }

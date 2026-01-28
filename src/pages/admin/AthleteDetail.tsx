@@ -10,6 +10,7 @@ import { getLink } from '../../utils/routes'
 import { useT } from '../../i18n/useI18n'
 import { Button, Card, Table, type TableColumn, Tabs, TabsList, TabsTrigger, TabsContent, StatCard, Badge, ConfirmDialog } from '../../components/platformAdmin'
 import { getDisplayName, calculateAge, getGenderLabel, formatSports, getAthleteInitials } from '../../utils/athleteHelpers'
+import { formatPhoneDisplay } from '../../utils/phoneFormatting'
 import { GuardianMatchIndicator } from '../../components/admin/GuardianMatchIndicator'
 import { checkGuardianMatch, debounce } from '../../utils/guardianMatching'
 import type { Athlete, Guardian, GuardianMatch, PendingGuardianInvite } from '../../types/family'
@@ -122,9 +123,9 @@ export default function AthleteDetail() {
 
       setAthlete(athleteData)
 
-      // Load photo
-      if (athleteData.photo_url) {
-        const { url } = await getAthletePhotoUrl(athleteData.photo_url)
+      // Load photo (using new photo system)
+      if (athleteData.has_profile_photo && athleteData.org_id && athleteData.id) {
+        const url = getAthletePhotoUrl(athleteData.org_id, athleteData.id, '512')
         if (isMountedRef.current && url) {
           setPhotoUrl(url)
         }
@@ -796,6 +797,27 @@ export default function AthleteDetail() {
           }}
         >
           <button
+            onClick={() => handleBreadcrumbClick(getLink('admin.organization.structure'))}
+            disabled={navigating}
+            style={{
+              color: primaryColor,
+              fontSize: '12px',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              textDecoration: 'none',
+              background: 'none',
+              border: 'none',
+              cursor: navigating ? 'not-allowed' : 'pointer',
+              opacity: navigating ? 0.6 : 1,
+              padding: 0,
+              lineHeight: 'normal',
+            }}
+          >
+            ORGANIZATIONS
+          </button>
+          <span style={{ color: 'var(--pa-n400)', fontSize: '12px', fontWeight: 700, lineHeight: 'normal' }}>/</span>
+          <button
             onClick={() => handleBreadcrumbClick(getLink('admin.athletes.list'))}
             disabled={navigating}
             style={{
@@ -1116,6 +1138,30 @@ export default function AthleteDetail() {
                       </div>
                     )}
                   </div>
+                  {(athlete.phone || athlete.email) && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--pa-space-4)', marginTop: 'var(--pa-space-4)' }}>
+                      {athlete.phone && (
+                        <div>
+                          <label className="pa-label">Phone</label>
+                          <p className="pa-body-m">
+                            <a href={`tel:${athlete.phone}`} className="pa-link">
+                              {formatPhoneDisplay(athlete.phone)}
+                            </a>
+                          </p>
+                        </div>
+                      )}
+                      {athlete.email && (
+                        <div>
+                          <label className="pa-label">Email</label>
+                          <p className="pa-body-m">
+                            <a href={`mailto:${athlete.email}`} className="pa-link">
+                              {athlete.email}
+                            </a>
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </Card>
 

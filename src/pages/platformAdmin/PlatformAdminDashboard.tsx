@@ -256,6 +256,7 @@ export default function PlatformAdminDashboard() {
               icon="history"
               title="No Activity Yet"
               description="Admin actions will appear here once the audit system is active."
+              noCard
             />
           ) : (
             <div className={cn('pa-flex', 'pa-flex-col', 'pa-gap-3')}>

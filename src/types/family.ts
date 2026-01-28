@@ -23,7 +23,12 @@ export interface Athlete {
     allergies: string | null
     emergency_contact_name: string | null
     emergency_contact_phone: string | null
-    photo_url: string | null  // URL to athlete's photo/avatar image
+    phone: string | null  // Athlete phone number
+    email: string | null  // Athlete email address
+    photo_url: string | null  // @deprecated - Use profile_photo_updated_at and has_profile_photo instead
+    profile_photo_updated_at: string | null  // Timestamp when profile photo was last updated
+    has_profile_photo: boolean | null  // Whether athlete has a profile photo
+    org_id?: string  // Organization ID (for photo URL generation)
     created_at: string
     updated_at: string
     deleted_at: string | null
@@ -90,6 +95,8 @@ export interface CreateAthleteDTO {
     allergies?: string | null
     emergency_contact_name?: string | null
     emergency_contact_phone?: string | null
+    phone?: string | null  // Athlete phone number
+    email?: string | null  // Athlete email address
     family_id?: string | null  // Optional - for backward compatibility
     team_id?: string | null  // Optional - can assign to team during creation
     season_id?: string | null  // Optional - required if team_id provided
@@ -114,6 +121,8 @@ export interface UpdateAthleteDTO {
     allergies?: string | null
     emergency_contact_name?: string | null
     emergency_contact_phone?: string | null
+    phone?: string | null  // Athlete phone number
+    email?: string | null  // Athlete email address
     photo_url?: string | null
 }
 
@@ -207,4 +216,27 @@ export interface OrphanedAthlete {
     last_name: string
     birthdate: string | null
     created_at: string
+}
+
+// ============================================================================
+// Form Data Types
+// ============================================================================
+
+/**
+ * Type-safe form data interface for athlete forms
+ * Ensures all fields including phone and email are included
+ */
+export interface AthleteFormData {
+    first_name: string
+    last_name: string
+    date_of_birth: string
+    gender: Gender | ''
+    preferred_name: string
+    jersey_number: string
+    medical_notes: string
+    allergies: string
+    emergency_contact_name: string
+    emergency_contact_phone: string
+    phone: string  // Athlete phone number
+    email: string  // Athlete email address
 }

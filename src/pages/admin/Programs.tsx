@@ -367,6 +367,7 @@ export default function Programs() {
                   ? `Create a program for ${sportById.get(filterSportId)?.name || 'this sport'}.`
                   : 'Start by selecting a sport or create a program from the Sports page.'
               }
+              noCard
             >
               {filterSportId ? (
                 <Button onClick={() => handleNavigateToAddProgram(filterSportId)} icon="add">Add Program</Button>

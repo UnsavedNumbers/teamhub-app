@@ -1,11 +1,13 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { startTransition } from 'react'
 
 import { useUserContext } from '../../hooks/useUserContext'
 import { getTeams, getTeamDetails } from '../../data/services/teamsService'
+import { createTravelPlan, type CreateTravelPlanDTO } from '../../data/services/travelService'
 import { getErrorMessage } from '../../utils/errorUtils'
+import { showSuccess, showError } from '../../utils/toast'
 import { 
   AdminPageHeader, 
   Card, 
@@ -45,10 +47,22 @@ export default function CreateTravelPlan() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [itineraryFile, setItineraryFile] = useState<File | null>(null)
+  const isMountedRef = useRef(true)
 
-
-  const { context, isReady } = useUserContext()
+  const { context, isReady, isLoading: contextLoading } = useUserContext()
   const navigate = useNavigate()
+
+  // Debug logging
+  useEffect(() => {
+    console.log('[CreateTravelPlan] State:', { 
+      isReady, 
+      contextLoading, 
+      loading, 
+      hasContext: !!context,
+      orgId: context?.orgId,
+      userId: context?.userId 
+    })
+  }, [isReady, contextLoading, loading, context])
 
   const { control, handleSubmit, watch, setValue } = useForm<TravelFormData>({
     defaultValues: { 
@@ -61,95 +75,166 @@ export default function CreateTravelPlan() {
 
   const watchTeamId = watch('team_id')
 
-  const fetchTeams = useCallback(async () => {
-    if (!isReady) return
-    
-    const { data, error } = await getTeams(context, { activeOnly: true })
-    if (!error) {
-      setTeams(data.map(t => ({ id: t.id, name: t.name })))
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
     }
-    setLoading(false)
+  }, [])
+
+  const fetchTeams = useCallback(async () => {
+    console.log('[CreateTravelPlan] fetchTeams called:', { isReady, hasContext: !!context, orgId: context?.orgId })
+    
+    if (!isReady || !context) {
+      console.log('[CreateTravelPlan] fetchTeams early return - not ready')
+      // Set loading to false even if we can't fetch - prevents infinite loading
+      if (isMountedRef.current) {
+        setLoading(false)
+      }
+      return
+    }
+    
+    try {
+      console.log('[CreateTravelPlan] Fetching teams...')
+      const { data, error } = await getTeams(context, { activeOnly: true })
+      console.log('[CreateTravelPlan] Teams response:', { data, error })
+      if (!isMountedRef.current) return
+      
+      if (!error && data) {
+        setTeams(data.map(t => ({ id: t.id, name: t.name })))
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
+        console.error('Error fetching teams:', err)
+      }
+    } finally {
+      if (isMountedRef.current) {
+        console.log('[CreateTravelPlan] Setting loading to false')
+        setLoading(false)
+      }
+    }
   }, [context, isReady])
 
   const fetchSeasons = useCallback(async (teamId: string) => {
-    if (!isReady) return
+    if (!isReady || !teamId || !context) return
     
-    const { data, error } = await getTeamDetails(context, teamId)
-    if (!error && data?.seasons) {
-      setSeasons(data.seasons.map(s => ({ id: s.id, name: s.name })))
+    try {
+      const { data, error } = await getTeamDetails(context, teamId)
+      if (!isMountedRef.current) return
+      
+      if (!error && data?.seasons) {
+        setSeasons(data.seasons.map(s => ({ id: s.id, name: s.name })))
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
+        console.error('Error fetching seasons:', err)
+      }
     }
   }, [context, isReady])
 
   useEffect(() => { 
-    if (isReady) fetchTeams() 
-  }, [isReady, fetchTeams])
+    console.log('[CreateTravelPlan] useEffect triggered:', { isReady, hasContext: !!context, orgId: context?.orgId })
+    if (isReady && context) {
+      fetchTeams()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReady, context?.orgId]) // Only re-run when orgId changes, not on every context object change
+
+  // Handle case where context never becomes ready - stop loading state
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading && !isReady) {
+        console.warn('[CreateTravelPlan] Context not ready after timeout, stopping loader')
+        setLoading(false)
+      }
+    }, 5000) // 5 second timeout
+    return () => clearTimeout(timeout)
+  }, [loading, isReady])
 
   useEffect(() => { 
-    if (watchTeamId && isReady) { 
+    if (watchTeamId && isReady && context) { 
       fetchSeasons(watchTeamId)
       setValue('season_id', '')
-    } 
-  }, [watchTeamId, isReady, setValue, fetchSeasons])
+    }
+    // Only depend on watchTeamId, isReady, and context - fetchSeasons is stable when these don't change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchTeamId, isReady, context])
 
-  const onSubmit = async (_data: TravelFormData) => {
+  const onSubmit = async (data: TravelFormData) => {
+    if (!isMountedRef.current) return
     setSaving(true)
     setError(null)
     
     try {
-      // In fake data mode, just navigate back with success
-      // TODO: Replace with real Supabase insert when migrating
-      /*
-      const { data: inserted, error: insertError } = await supabase
-        .from('travel_plans')
-        .insert({
-          team_id: data.team_id,
-          season_id: data.season_id,
-          title: data.title,
-          location: data.location,
-          destination_city: data.destination_city || null,
-          destination_state: data.destination_state || null,
-          start_date: data.start_date,
-          end_date: data.end_date,
-          venue_name: data.venue_name || null,
-          venue_address: data.venue_address || null,
-          hotel_name: data.hotel_name || null,
-          hotel_address: data.hotel_address || null,
-          hotel_phone: data.hotel_phone || null,
-          hotel_confirmation: data.hotel_confirmation || null,
-          maps_url: data.maps_url || null,
-          notes: data.notes || null,
-          status: 'draft'
-        })
-        .select('id')
-        .single()
-      
-      if (insertError) throw insertError
-
-      if (itineraryFile && inserted?.id && currentOrganization?.id) {
-        const objectPath = `${currentOrganization.id}/${data.team_id}/${inserted.id}/${itineraryFile.name}`
-        const { error: uploadError } = await supabase.storage
-          .from('travel-itineraries')
-          .upload(objectPath, itineraryFile, { upsert: true, contentType: itineraryFile.type || undefined })
-        
-        if (uploadError) throw uploadError
-        
-        await supabase.from('travel_plans')
-          .update({ itinerary_file_path: objectPath })
-          .eq('id', inserted.id)
+      // Map form data to DTO
+      const createData: CreateTravelPlanDTO = {
+        team_id: data.team_id,
+        season_id: data.season_id,
+        title: data.title,
+        location: data.location,
+        destination_city: data.destination_city || null,
+        destination_state: data.destination_state || null,
+        start_date: data.start_date,
+        end_date: data.end_date,
+        venue_name: data.venue_name || null,
+        venue_address: data.venue_address || null,
+        hotel_name: data.hotel_name || null,
+        hotel_address: data.hotel_address || null,
+        hotel_phone: data.hotel_phone || null,
+        hotel_confirmation: data.hotel_confirmation || null,
+        maps_url: data.maps_url || null,
+        notes: data.notes || null,
+        itinerary_file: itineraryFile,
       }
-      */
-      
-      // Simulate delay
-      await new Promise(resolve => setTimeout(resolve, 500))
-      navigate('/admin/travel')
+
+      const { data: createdPlan, error: createError } = await createTravelPlan(context, createData)
+
+      if (!isMountedRef.current) return
+
+      if (createError || !createdPlan) {
+        const errorMessage = createError?.message || 'Failed to create travel plan'
+        setError(errorMessage)
+        showError(errorMessage)
+        return
+      }
+
+      showSuccess('Travel plan created successfully!')
+      if (isMountedRef.current) {
+        navigate('/admin/travel')
+      }
     } catch (err: unknown) { 
-      setError(getErrorMessage(err) || 'Failed to create travel plan') 
+      if (!isMountedRef.current) return
+      const errorMessage = getErrorMessage(err) || 'Failed to create travel plan'
+      setError(errorMessage)
+      showError(errorMessage)
     } finally { 
-      setSaving(false) 
+      if (isMountedRef.current) {
+        setSaving(false)
+      }
     }
   }
 
   if (loading) return <div className="pa-skeleton" style={{ height: '500px' }} />
+
+  if (!isReady || !context?.orgId) {
+    return (
+      <div className="pa-root">
+        <AdminPageHeader 
+          title="Create Travel Plan" 
+          breadcrumbs={[
+            { label: 'Travel Plans', path: '/admin/travel' },
+            { label: 'Create Travel Plan' },
+          ]}
+        />
+        <Card>
+          <div className="pa-text-center pa-p-8">
+            <p className="pa-text-danger">Unable to load organization context. Please make sure you have an organization selected.</p>
+            <Button variant="blue" onClick={() => navigate('/admin/travel')} className="pa-mt-4">Back to Travel Plans</Button>
+          </div>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="pa-root">
@@ -181,8 +266,34 @@ export default function CreateTravelPlan() {
             <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
               <Controller name="destination_city" control={control} render={({ field }) => <Input {...field} label="Destination City" />} />
               <Controller name="destination_state" control={control} render={({ field }) => <Input {...field} label="Destination State" />} />
-              <Controller name="start_date" control={control} rules={{ required: 'Start date is required' }} render={({ field }) => <DatePicker {...field} label="Start Date" required />} />
-              <Controller name="end_date" control={control} rules={{ required: 'End date is required' }} render={({ field }) => <DatePicker {...field} label="End Date" required />} />
+              <Controller 
+                name="start_date" 
+                control={control} 
+                rules={{ required: 'Start date is required' }} 
+                render={({ field }) => <DatePicker {...field} label="Start Date" required />} 
+              />
+              <Controller 
+                name="end_date" 
+                control={control} 
+                rules={{ 
+                  required: 'End date is required',
+                  validate: (value) => {
+                    const startDate = watch('start_date')
+                    if (startDate && value && value < startDate) {
+                      return 'End date must be on or after start date'
+                    }
+                    return true
+                  }
+                }} 
+                render={({ field, fieldState }) => (
+                  <DatePicker 
+                    {...field} 
+                    label="End Date" 
+                    required 
+                    error={fieldState.error?.message}
+                  />
+                )} 
+              />
             </div>
 
             <h3 className="pa-h3 pa-mb-4 pa-mt-6">VENUE & HOTEL</h3>
@@ -239,6 +350,8 @@ export default function CreateTravelPlan() {
                 onFileSelect={setItineraryFile}
                 buttonText="Choose file"
                 replaceText="Replace file"
+                accept=".pdf,application/pdf"
+                maxSize={10 * 1024 * 1024}
                 fullWidth
               />
             </div>
@@ -249,8 +362,8 @@ export default function CreateTravelPlan() {
             </div>
 
             <div className="pa-flex pa-justify-end pa-gap-3">
-              <Button variant="blue" onClick={() => navigate('/admin/travel')}>Cancel</Button>
-              <Button type="submit" loading={saving}>Create Draft Plan</Button>
+              <Button variant="blue" onClick={() => navigate('/admin/travel')} disabled={saving}>Cancel</Button>
+              <Button type="submit" loading={saving} disabled={saving}>Create Draft Plan</Button>
             </div>
           </form>
         </Card>

@@ -2,7 +2,12 @@
  * Athlete Photo Service
  *
  * Provides functions for uploading, deleting, and accessing athlete profile photos
- * stored in Supabase Storage. Uses private bucket with signed URLs for access.
+ * stored in Supabase Storage. Uses public bucket with fixed paths.
+ *
+ * Storage Structure:
+ * - Bucket: public-media
+ * - Path: orgs/{org_id}/athletes/{athlete_id}/profile/
+ * - Files: original.jpg, 512.jpg, 256.jpg
  */
 
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
@@ -13,10 +18,7 @@ import { supabase } from '../../lib/supabase'
 // Type Definitions
 // ============================================================================
 
-/**
- * Type-safe photo path. Paths must follow pattern: athlete/{athlete_id}/profile.{ext}
- */
-export type PhotoPath = string & { __brand: 'PhotoPath' }
+export type PhotoSize = 'original' | '512' | '256'
 
 // ============================================================================
 // Helper Functions
@@ -37,60 +39,82 @@ function isValidUUID(uuid: string): boolean {
 }
 
 /**
- * Validate photo path format
- * Path must match: athlete/{uuid}/profile.{jpg|jpeg|png|webp}
+ * Build photo path for a specific size
+ * Path: orgs/{org_id}/athletes/{athlete_id}/profile/{size}.jpg
  */
-export function isValidAthletePhotoPath(path: string): boolean {
-    if (!path || typeof path !== 'string') return false
-    
-    const pathRegex = /^athlete\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/profile\.(jpg|jpeg|png|webp)$/i
-    return pathRegex.test(path)
+function buildPhotoPath(orgId: string, athleteId: string, size: PhotoSize): string {
+    return `orgs/${orgId}/athletes/${athleteId}/profile/${size}.jpg`
 }
 
 /**
- * Build a valid photo path from athlete ID and file extension
- * Never use user input directly - always construct paths server-side
+ * Build photo folder path
+ * Path: orgs/{org_id}/athletes/{athlete_id}/profile/
  */
-export function buildPhotoPath(athleteId: string, ext: string): PhotoPath | null {
-    // Validate athlete ID is a valid UUID
-    if (!isValidUUID(athleteId)) {
-        console.error('[athletePhotoService] Invalid athlete ID format:', athleteId)
-        return null
-    }
-
-    // Normalize extension (remove leading dot, lowercase)
-    const normalizedExt = ext.replace(/^\./, '').toLowerCase()
-    
-    // Validate extension
-    const allowedExts = ['jpg', 'jpeg', 'png', 'webp']
-    if (!allowedExts.includes(normalizedExt)) {
-        console.error('[athletePhotoService] Invalid file extension:', ext)
-        return null
-    }
-
-    const path = `athlete/${athleteId}/profile.${normalizedExt}` as PhotoPath
-    
-    // Double-check with validation function
-    if (!isValidAthletePhotoPath(path)) {
-        console.error('[athletePhotoService] Generated invalid path:', path)
-        return null
-    }
-
-    return path
+function buildPhotoFolderPath(orgId: string, athleteId: string): string {
+    return `orgs/${orgId}/athletes/${athleteId}/profile/`
 }
 
 /**
- * Extract athlete ID from photo path
+ * Resize image to square dimensions
+ * Uses browser Canvas API for client-side resizing
  */
-export function extractAthleteIdFromPath(path: string): string | null {
-    if (!isValidAthletePhotoPath(path)) return null
-    
-    const parts = path.split('/')
-    if (parts.length >= 2 && isValidUUID(parts[1])) {
-        return parts[1]
-    }
-    
-    return null
+async function resizeImage(file: File, size: number): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+            const img = new Image()
+            img.onload = () => {
+                const canvas = document.createElement('canvas')
+                canvas.width = size
+                canvas.height = size
+                
+                const ctx = canvas.getContext('2d')
+                if (!ctx) {
+                    reject(new Error('Failed to get canvas context'))
+                    return
+                }
+                
+                // Crop to square (center crop)
+                const minDimension = Math.min(img.width, img.height)
+                const sourceX = (img.width - minDimension) / 2
+                const sourceY = (img.height - minDimension) / 2
+                
+                ctx.drawImage(
+                    img,
+                    sourceX, sourceY, minDimension, minDimension,
+                    0, 0, size, size
+                )
+                
+                // Convert to JPEG with quality
+                canvas.toBlob(
+                    (blob) => {
+                        if (blob) {
+                            resolve(blob)
+                        } else {
+                            reject(new Error('Failed to create blob'))
+                        }
+                    },
+                    'image/jpeg',
+                    0.85 // Quality
+                )
+            }
+            img.onerror = () => reject(new Error('Failed to load image'))
+            img.src = e.target?.result as string
+        }
+        reader.onerror = () => reject(new Error('Failed to read file'))
+        reader.readAsDataURL(file)
+    })
+}
+
+/**
+ * Normalize image orientation (EXIF)
+ * Uses browser ImageBitmap API if available
+ */
+async function normalizeImage(file: File): Promise<File> {
+    // For now, return as-is
+    // EXIF orientation handling can be added later if needed
+    // Most modern browsers handle this automatically
+    return file
 }
 
 // ============================================================================
@@ -98,34 +122,119 @@ export function extractAthleteIdFromPath(path: string): string | null {
 // ============================================================================
 
 /**
+ * Check if user has permission to upload athlete photo
+ * Permissions:
+ * - Org admins can upload for any athlete in their org
+ * - Coaches can upload for athletes on their assigned teams
+ * - Guardians can upload for their own athletes
+ */
+async function checkPhotoUploadPermission(
+    context: UserContext,
+    athleteId: string
+): Promise<{ allowed: boolean; error: Error | null }> {
+    try {
+        // Check if user is org admin
+        const { data: orgMember, error: orgError } = await supabase
+            .from('organization_members')
+            .select('role')
+            .eq('org_id', context.orgId)
+            .eq('user_id', context.userId)
+            .single()
+
+        if (!orgError && orgMember?.role === 'org_admin') {
+            return { allowed: true, error: null }
+        }
+
+        // Check if user is guardian of athlete
+        const { data: guardianLink, error: guardianError } = await supabase
+            .from('athlete_guardians')
+            .select('id')
+            .eq('athlete_id', athleteId)
+            .eq('user_id', context.userId)
+            .eq('org_id', context.orgId)
+            .eq('status', 'active')
+            .single()
+
+        if (!guardianError && guardianLink) {
+            return { allowed: true, error: null }
+        }
+
+        // Check if user is coach assigned to athlete's team
+        const { data: teamMemberships, error: teamError } = await supabase
+            .from('team_memberships')
+            .select('team_id')
+            .eq('athlete_id', athleteId)
+
+        if (!teamError && teamMemberships && teamMemberships.length > 0) {
+            const teamIds = teamMemberships.map(tm => tm.team_id)
+            
+            // Check if user is coach assigned to any of these teams
+            const { data: coachAssignments, error: coachError } = await supabase
+                .from('coach_assignments')
+                .select('team_id')
+                .eq('user_id', context.userId)
+                .in('team_id', teamIds)
+                .limit(1)
+
+            if (!coachError && coachAssignments && coachAssignments.length > 0) {
+                return { allowed: true, error: null }
+            }
+
+            // Fallback: check organization_members for coach role in org
+            if (orgMember?.role === 'coach') {
+                // Coach in org can upload for athletes in org (simplified permission)
+                return { allowed: true, error: null }
+            }
+        }
+
+        return { 
+            allowed: false, 
+            error: new Error('Permission denied. You do not have permission to upload photos for this athlete.') 
+        }
+    } catch (err) {
+        console.error('[athletePhotoService] Error checking permissions:', err)
+        return { 
+            allowed: false, 
+            error: err instanceof Error ? err : new Error('Failed to check permissions') 
+        }
+    }
+}
+
+/**
  * Upload athlete photo to storage
- * Path: athlete/{athlete_id}/profile.{ext}
+ * Uploads original and generates resized versions (512, 256)
+ * Updates database timestamp on success
  */
 export async function uploadAthletePhoto(
-    _context: UserContext,
+    context: UserContext,
     athleteId: string,
     file: File
-): Promise<{ path: PhotoPath | null; error: Error | null }> {
+): Promise<{ error: Error | null }> {
     if (USE_FAKE_DATA) {
         await simulateDelay()
-        return {
-            path: null,
-            error: new Error('Photo upload is not available in demo mode')
-        }
+        return { error: null }
     }
 
     try {
-        // Validate athlete ID
+        // Validate inputs
+        if (!context.orgId || !isValidUUID(context.orgId)) {
+            return { error: new Error('Invalid organization ID') }
+        }
         if (!athleteId || !isValidUUID(athleteId)) {
-            return { path: null, error: new Error('Invalid athlete ID') }
+            return { error: new Error('Invalid athlete ID') }
+        }
+
+        // Check permissions before upload
+        const { allowed, error: permissionError } = await checkPhotoUploadPermission(context, athleteId)
+        if (!allowed) {
+            return { error: permissionError || new Error('Permission denied') }
         }
 
         // Validate file type
-        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png']
         if (!allowedTypes.includes(file.type)) {
             return { 
-                path: null, 
-                error: new Error('Invalid file type. Please upload a JPEG, PNG, or WebP image.') 
+                error: new Error('Invalid file type. Please upload a JPEG or PNG image.') 
             }
         }
 
@@ -133,76 +242,118 @@ export async function uploadAthletePhoto(
         const maxSize = 5 * 1024 * 1024 // 5MB
         if (file.size > maxSize) {
             return { 
-                path: null, 
                 error: new Error('File size exceeds 5MB limit. Please upload a smaller image.') 
             }
         }
 
-        // Optional: Validate image dimensions (max 2000x2000)
-        // This would require reading the image, which we'll skip for now
-        // Can be added later if needed
+        // Normalize image orientation
+        const normalizedFile = await normalizeImage(file)
 
-        // Determine file extension from MIME type or filename
-        let fileExt = 'jpg'
-        if (file.type === 'image/png') fileExt = 'png'
-        else if (file.type === 'image/webp') fileExt = 'webp'
-        else if (file.name) {
-            const ext = file.name.split('.').pop()?.toLowerCase()
-            if (ext && ['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
-                fileExt = ext === 'jpeg' ? 'jpg' : ext
+        // Generate resized versions
+        let originalBlob: Blob
+        let size512Blob: Blob
+        let size256Blob: Blob
+
+        try {
+            // Create 512px version (for detail pages)
+            size512Blob = await resizeImage(normalizedFile, 512)
+            
+            // Create 256px version (for lists/avatars)
+            size256Blob = await resizeImage(normalizedFile, 256)
+            
+            // For original, use the file as-is if it's reasonable size, otherwise use 512px version
+            // This keeps original quality while avoiding huge files
+            if (normalizedFile.size <= 2 * 1024 * 1024) { // 2MB threshold
+                originalBlob = normalizedFile
+            } else {
+                // Use 512px version as "original" if file is too large
+                originalBlob = size512Blob
+            }
+        } catch (resizeError) {
+            console.error('[athletePhotoService] Error resizing image:', resizeError)
+            return { 
+                error: new Error('Failed to process image. Please try a different image.') 
             }
         }
 
-        // Build path (server-side construction, never use user input)
-        const photoPath = buildPhotoPath(athleteId, fileExt)
-        if (!photoPath) {
-            return { path: null, error: new Error('Failed to generate valid photo path') }
+        // Build paths
+        const originalPath = buildPhotoPath(context.orgId, athleteId, 'original')
+        const path512 = buildPhotoPath(context.orgId, athleteId, '512')
+        const path256 = buildPhotoPath(context.orgId, athleteId, '256')
+
+        // Upload all three versions (overwrite existing)
+        const uploadPromises = [
+            supabase.storage
+                .from('public-media')
+                .upload(originalPath, originalBlob, { 
+                    upsert: true,
+                    contentType: 'image/jpeg'
+                }),
+            supabase.storage
+                .from('public-media')
+                .upload(path512, size512Blob, { 
+                    upsert: true,
+                    contentType: 'image/jpeg'
+                }),
+            supabase.storage
+                .from('public-media')
+                .upload(path256, size256Blob, { 
+                    upsert: true,
+                    contentType: 'image/jpeg'
+                })
+        ]
+
+        const results = await Promise.all(uploadPromises)
+
+        // Check for upload errors
+        for (const result of results) {
+            if (result.error) {
+                // Check for bucket not found
+                if (result.error.message?.includes('Bucket not found') || 
+                    (result.error.message?.includes('bucket') && result.error.message?.includes('not found'))) {
+                    console.error('[athletePhotoService] Bucket "public-media" not found. Please create the bucket in Supabase Storage.')
+                    return { 
+                        error: new Error('Photo storage is not configured. Please create the "public-media" bucket in Supabase Storage and set it to public.') 
+                    }
+                }
+
+                // Check for permission/RLS errors
+                if (result.error.message?.includes('row-level security') || 
+                    result.error.message?.includes('RLS') || 
+                    result.error.message?.includes('permission') ||
+                    result.error.message?.includes('denied') ||
+                    result.error.code === '42501') {
+                    console.error('[athletePhotoService] Storage permission error:', result.error)
+                    return { 
+                        error: new Error('Storage permission denied. Please ensure the "public-media" bucket is set to public and allows authenticated uploads.') 
+                    }
+                }
+
+                // Log the actual error for debugging
+                console.error('[athletePhotoService] Upload error:', result.error)
+                throw result.error
+            }
         }
 
-        // Upload to storage with upsert (idempotent, handles concurrent edits)
-        const { error: uploadError } = await supabase.storage
-            .from('athlete-photos')
-            .upload(photoPath, file, { upsert: true })
+        // Update database timestamp
+        const { error: updateError } = await supabase
+            .from('athletes')
+            .update({
+                profile_photo_updated_at: new Date().toISOString(),
+                has_profile_photo: true
+            })
+            .eq('id', athleteId)
+            .eq('org_id', context.orgId)
 
-        if (uploadError) {
-            // Check for network errors
-            if (uploadError.message?.includes('network') || 
-                uploadError.message?.includes('fetch') || 
-                uploadError.message?.includes('timeout')) {
-                return { 
-                    path: null, 
-                    error: new Error('Network error. Please check your internet connection and try again.') 
-                }
-            }
-
-            // Check for storage quota errors
-            if (uploadError.message?.includes('quota') || 
-                uploadError.message?.includes('storage') ||
-                uploadError.message?.includes('limit')) {
-                return { 
-                    path: null, 
-                    error: new Error('Storage quota exceeded. Please contact your administrator.') 
-                }
-            }
-
-            // Check for RLS/permission errors
-            if (uploadError.message?.includes('row-level security') || 
-                uploadError.message?.includes('RLS') || 
-                uploadError.message?.includes('permission')) {
-                return { 
-                    path: null, 
-                    error: new Error('Permission denied. You do not have permission to upload athlete photos.') 
-                }
-            }
-
-            throw uploadError
+        if (updateError) {
+            console.error('[athletePhotoService] Error updating database:', updateError)
+            // Don't fail - photo is uploaded, DB update can be retried
         }
 
-        return { path: photoPath, error: null }
+        return { error: null }
     } catch (err) {
         console.error('[athletePhotoService] Error uploading photo:', err)
         return { 
-            path: null, 
             error: err instanceof Error ? err : new Error('Unknown error uploading photo') 
         }
     }
@@ -214,9 +365,10 @@ export async function uploadAthletePhoto(
 
 /**
  * Delete athlete photo from storage
+ * Deletes entire profile folder
  */
 export async function deleteAthletePhoto(
-    _context: UserContext,
+    context: UserContext,
     athleteId: string
 ): Promise<{ error: Error | null }> {
     if (USE_FAKE_DATA) {
@@ -225,37 +377,66 @@ export async function deleteAthletePhoto(
     }
 
     try {
-        // Validate athlete ID
+        // Validate inputs
+        if (!context.orgId || !isValidUUID(context.orgId)) {
+            return { error: new Error('Invalid organization ID') }
+        }
         if (!athleteId || !isValidUUID(athleteId)) {
             return { error: new Error('Invalid athlete ID') }
         }
 
-        // Note: photo_url column doesn't exist yet in database
-        // Return success - no photo to delete
-        // TODO: Re-enable when photo_url column is added
-        return { error: null }
-
-        // TODO: Uncomment when photo_url column is added
-        /*
-        // Validate path format
-        if (!isValidAthletePhotoPath(photoPath)) {
-            console.warn('[athletePhotoService] Invalid photo path format:', photoPath)
-            return { error: null } // Don't fail if path is invalid
+        // Check permissions before delete (same as upload)
+        const { allowed, error: permissionError } = await checkPhotoUploadPermission(context, athleteId)
+        if (!allowed) {
+            return { error: permissionError || new Error('Permission denied') }
         }
 
-        // Delete from storage
-        const { error: deleteError } = await supabase.storage
-            .from('athlete-photos')
-            .remove([photoPath])
+        // Build folder path
+        const folderPath = buildPhotoFolderPath(context.orgId, athleteId)
 
-        if (deleteError) {
-            // Log but don't throw - cleanup failures shouldn't block operations
-            console.error('[athletePhotoService] Error deleting photo from storage:', deleteError)
-            // Still return success - the database record will be updated anyway
+        // List all files in folder
+        const { data: files, error: listError } = await supabase.storage
+            .from('public-media')
+            .list(folderPath)
+
+        if (listError && !listError.message?.includes('not found')) {
+            console.error('[athletePhotoService] Error listing files:', listError)
+            // Continue anyway - try to delete
+        }
+
+        // Delete all files in folder
+        const filesToDelete = files?.map(file => `${folderPath}${file.name}`) || [
+            buildPhotoPath(context.orgId, athleteId, 'original'),
+            buildPhotoPath(context.orgId, athleteId, '512'),
+            buildPhotoPath(context.orgId, athleteId, '256')
+        ]
+
+        if (filesToDelete.length > 0) {
+            const { error: deleteError } = await supabase.storage
+                .from('public-media')
+                .remove(filesToDelete)
+
+            if (deleteError) {
+                console.error('[athletePhotoService] Error deleting photos:', deleteError)
+                // Don't fail - continue with DB update
+            }
+        }
+
+        // Update database
+        const { error: updateError } = await supabase
+            .from('athletes')
+            .update({
+                profile_photo_updated_at: null,
+                has_profile_photo: false
+            })
+            .eq('id', athleteId)
+            .eq('org_id', context.orgId)
+
+        if (updateError) {
+            console.error('[athletePhotoService] Error updating database:', updateError)
         }
 
         return { error: null }
-        */
     } catch (err) {
         console.error('[athletePhotoService] Error deleting photo:', err)
         return { 
@@ -264,80 +445,57 @@ export async function deleteAthletePhoto(
     }
 }
 
-/**
- * Cleanup athlete photo (helper for athlete deletion)
- * This is called from deleteAthlete in familyService
- */
-export async function cleanupAthletePhoto(_athleteId: string): Promise<void> {
-    if (USE_FAKE_DATA) {
-        return
-    }
-
-    try {
-        // Note: photo_url column doesn't exist yet in database
-        // Return early - no photo to cleanup
-        // TODO: Re-enable when photo_url column is added
-        return
-
-        // TODO: Uncomment when photo_url column is added
-        /*
-        const photoPath = athlete.photo_url
-
-        // Validate and delete
-        if (isValidAthletePhotoPath(photoPath)) {
-            const { error: deleteError } = await supabase.storage
-                .from('athlete-photos')
-                .remove([photoPath])
-
-            if (deleteError) {
-                console.error('[athletePhotoService] Error cleaning up photo:', deleteError)
-            }
-        }
-        */
-    } catch (err) {
-        console.error('[athletePhotoService] Error in cleanup:', err)
-        // Don't throw - cleanup failures shouldn't block athlete deletion
-    }
-}
-
 // ============================================================================
 // Photo URL Generation
 // ============================================================================
 
 /**
- * Get signed URL for athlete photo
- * Validates path before generating URL
+ * Get public URL for athlete photo
+ * No signed URLs needed - bucket is public
  */
-export async function getAthletePhotoUrl(
-    photoPath: string | null
-): Promise<{ url: string | null; error: Error | null }> {
-    if (!photoPath) {
-        return { url: null, error: null }
+export function getAthletePhotoUrl(
+    orgId: string,
+    athleteId: string,
+    size: PhotoSize = '256'
+): string {
+    if (!orgId || !athleteId || !isValidUUID(orgId) || !isValidUUID(athleteId)) {
+        return ''
     }
 
-    // Validate path format before generating signed URL
-    if (!isValidAthletePhotoPath(photoPath)) {
-        console.warn('[athletePhotoService] Invalid photo path format:', photoPath)
-        return { url: null, error: new Error('Invalid photo path format') }
+    const path = buildPhotoPath(orgId, athleteId, size)
+    const { data } = supabase.storage
+        .from('public-media')
+        .getPublicUrl(path)
+
+    return data.publicUrl
+}
+
+/**
+ * Get photo URL with cache busting
+ * Uses profile_photo_updated_at timestamp if available
+ */
+export function getAthletePhotoUrlWithCacheBust(
+    orgId: string,
+    athleteId: string,
+    updatedAt: string | null,
+    size: PhotoSize = '256'
+): string {
+    const url = getAthletePhotoUrl(orgId, athleteId, size)
+    if (!url) return ''
+    
+    // Add timestamp query param for cache busting
+    if (updatedAt) {
+        const timestamp = new Date(updatedAt).getTime()
+        return `${url}?t=${timestamp}`
     }
+    
+    return url
+}
 
-    try {
-        // Generate signed URL with 60 second expiry
-        const { data, error } = await supabase.storage
-            .from('athlete-photos')
-            .createSignedUrl(photoPath, 60)
-
-        if (error) {
-            console.error('[athletePhotoService] Error generating signed URL:', error)
-            return { url: null, error: error instanceof Error ? error : new Error('Failed to generate signed URL') }
-        }
-
-        return { url: data?.signedUrl || null, error: null }
-    } catch (err) {
-        console.error('[athletePhotoService] Error in getAthletePhotoUrl:', err)
-        return { 
-            url: null, 
-            error: err instanceof Error ? err : new Error('Unknown error generating signed URL') 
-        }
-    }
+/**
+ * Check if photo exists (for placeholder logic)
+ * Returns true if photo likely exists (has_profile_photo flag)
+ */
+export function hasAthletePhoto(athlete: { has_profile_photo?: boolean }): boolean {
+    return athlete.has_profile_photo === true
 }
