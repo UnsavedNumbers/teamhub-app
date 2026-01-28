@@ -54,7 +54,7 @@ export default function MyPayments() {
   const [creatingCheckout, setCreatingCheckout] = useState(false)
   const [validatingDiscount, setValidatingDiscount] = useState(false)
   const [discountError, setDiscountError] = useState<string | null>(null)
-  const [orgAllowsPartialPayments] = useState<boolean>(false)
+  const [orgAllowsPartialPayments, setOrgAllowsPartialPayments] = useState<boolean>(false)
   const [partialPaymentModalOpen, setPartialPaymentModalOpen] = useState<string | null>(null)
   const [partialAmountCents, setPartialAmountCents] = useState<string>('')
   const [partialPaymentError, setPartialPaymentError] = useState<string | null>(null)
@@ -67,7 +67,28 @@ export default function MyPayments() {
   useEffect(() => {
     if (!isReady) return
     fetchAssignments()
+    fetchOrgPaymentPolicy()
   }, [context, isReady])
+
+  async function fetchOrgPaymentPolicy() {
+    try {
+      const { data, error } = await supabase
+        .from('org_payment_policies')
+        .select('allow_partial_payments')
+        .eq('org_id', context.orgId)
+        .maybeSingle()
+
+      if (!error && data) {
+        setOrgAllowsPartialPayments(data.allow_partial_payments ?? false)
+      } else {
+        // No row = table empty or org has no policy; default to true so fee-level allow_partial_payment controls visibility
+        setOrgAllowsPartialPayments(true)
+      }
+    } catch (err) {
+      console.error('Failed to fetch org payment policy:', err)
+      setOrgAllowsPartialPayments(true)
+    }
+  }
 
   async function fetchAssignments() {
     setLoading(true)
