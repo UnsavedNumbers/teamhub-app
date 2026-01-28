@@ -164,21 +164,29 @@ export default function AdminLayout() {
 
   return (
     <div className="pa-root pa-app oa-theme-active">
-      {/* Mobile hamburger button */}
+      {/* Mobile header - shown only on mobile */}
       {isMobile && (
-        <button
-          className="pa-mobile-sidebar-toggle"
-          onClick={() => {
-            setMobileSidebarOpen(prev => !prev)
-          }}
-          aria-expanded={mobileSidebarOpen}
-          aria-label="Toggle sidebar"
-          type="button"
-        >
-          <span className="material-symbols-outlined">
-            {mobileSidebarOpen ? 'close' : 'menu'}
-          </span>
-        </button>
+        <header className="pa-mobile-header">
+          <Link to={getLink(RouteKeys.ADMIN_DASHBOARD)} className="pa-mobile-brand">
+            <img 
+              src={resolvedTheme === 'dark' ? '/images/logo-light.png' : '/images/logo-dark.png'} 
+              alt={currentOrganization?.name || 'Organization'}
+              className="pa-mobile-logo"
+              style={{ height: '28px', width: 'auto' }}
+            />
+          </Link>
+          <button
+            className="pa-mobile-menu-toggle"
+            onClick={() => setMobileSidebarOpen(prev => !prev)}
+            aria-expanded={mobileSidebarOpen}
+            aria-label="Toggle navigation menu"
+            type="button"
+          >
+            <span className="material-symbols-outlined">
+              {mobileSidebarOpen ? 'close' : 'menu'}
+            </span>
+          </button>
+        </header>
       )}
 
       {/* Sidebar - hidden on mobile */}

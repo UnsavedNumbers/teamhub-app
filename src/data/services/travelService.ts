@@ -1069,6 +1069,9 @@ export async function updateTravelPlan(
         if (data.end_date !== undefined) updateData.end_date = normalizeToISODate(data.end_date)
         if (data.venue_name !== undefined) updateData.venue_name = data.venue_name
         if (data.venue_address !== undefined) updateData.venue_address = data.venue_address
+        if (data.venue_place_id !== undefined) updateData.venue_place_id = data.venue_place_id
+        if (data.venue_lat !== undefined) updateData.venue_lat = data.venue_lat
+        if (data.venue_lng !== undefined) updateData.venue_lng = data.venue_lng
         if (data.hotel_name !== undefined) updateData.hotel_name = data.hotel_name
         if (data.hotel_address !== undefined) updateData.hotel_address = data.hotel_address
         if (data.hotel_phone !== undefined) updateData.hotel_phone = data.hotel_phone

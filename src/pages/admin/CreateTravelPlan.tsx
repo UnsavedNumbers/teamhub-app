@@ -593,6 +593,11 @@ export default function CreateTravelPlan() {
                                 setValue('venue_place_id', address.place_id || null)
                                 setValue('venue_lat', validateCoordinate(address.latitude))
                                 setValue('venue_lng', validateCoordinate(address.longitude))
+                                
+                                // Update the input display to show the place name (not address)
+                                if (placeName) {
+                                    field.onChange(placeName)
+                                }
                             })
                         }}
                         label="Venue Name"
@@ -628,6 +633,11 @@ export default function CreateTravelPlan() {
                                 setValue('hotel_place_id', address.place_id || null)
                                 setValue('hotel_lat', validateCoordinate(address.latitude))
                                 setValue('hotel_lng', validateCoordinate(address.longitude))
+                                
+                                // Update the input display to show the place name (not address)
+                                if (placeName) {
+                                    field.onChange(placeName)
+                                }
                                 
                                 // Extract phone if available (PlaceResult might have it if requested)
                                 if (placeResult?.formatted_phone_number) {

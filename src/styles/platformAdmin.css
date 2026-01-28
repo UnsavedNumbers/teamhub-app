@@ -380,16 +380,40 @@ html.dark .pa-overline {
 }
 
 /* =====================================================================
-   10) SIDEBAR
+   10) SIDEBAR & MOBILE NAVIGATION
    ===================================================================== */
 
-/* Mobile sidebar toggle button */
-.pa-mobile-sidebar-toggle {
+/* Mobile header bar - shown only on mobile/tablet */
+.pa-mobile-header {
     display: none;
     position: fixed;
-    top: var(--pa-space-4);
-    left: var(--pa-space-4);
-    z-index: calc(var(--z-drawer) + 1);
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: var(--pa-n0);
+    border-bottom: 1px solid var(--pa-n100);
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--pa-space-4);
+    z-index: calc(var(--z-drawer) - 1);
+}
+
+.pa-mobile-brand {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.pa-mobile-logo {
+    display: block;
+    object-fit: contain;
+}
+
+.pa-mobile-menu-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 44px;
     height: 44px;
     background: var(--pa-n0);
@@ -397,33 +421,30 @@ html.dark .pa-overline {
     border-radius: 8px;
     color: var(--pa-n900);
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: all 200ms cubic-bezier(0.33, 1, 0.68, 1);
+    transition: all 0.2s ease;
     touch-action: manipulation;
-    align-items: center;
-    justify-content: center;
 }
 
-.pa-mobile-sidebar-toggle:hover {
+.pa-mobile-menu-toggle:hover {
     background: var(--pa-n50);
 }
 
-.pa-mobile-sidebar-toggle:active {
+.pa-mobile-menu-toggle:active {
     transform: scale(0.95);
 }
 
-.pa-mobile-sidebar-toggle .material-symbols-outlined {
+.pa-mobile-menu-toggle .material-symbols-outlined {
     font-size: 24px;
 }
 
 @media (min-width: 1024px) {
-    .pa-mobile-sidebar-toggle {
+    .pa-mobile-header {
         display: none !important;
     }
 }
 
 @media (max-width: 1023px) {
-    .pa-mobile-sidebar-toggle {
+    .pa-mobile-header {
         display: flex;
     }
 
@@ -433,6 +454,17 @@ html.dark .pa-overline {
 
     .pa-main {
         margin-left: 0;
+        padding-top: 60px; /* Account for fixed mobile header */
+    }
+
+    .pa-topbar {
+        left: 0;
+        width: 100%;
+        top: 60px; /* Position below mobile header */
+    }
+
+    .pa-content {
+        padding-top: 0; /* Adjust since pa-main has padding-top */
     }
 }
 

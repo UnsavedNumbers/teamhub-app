@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { getTravelPlanById, formatDateRange } from '../data/services/travelService'
 import { getEvents } from '../data/services/eventsService'
@@ -155,6 +155,7 @@ async function copyToClipboard(text: string): Promise<{ success: boolean; error?
 export default function TravelDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const { context, isReady } = useUserContext()
   const componentIdRef = useRef(`TravelDetail-${Date.now()}-${Math.random()}`)
   const renderCountRef = useRef(0)
@@ -364,7 +365,7 @@ export default function TravelDetail() {
     }
 
     fetchPlan()
-  }, [id, context.orgId, isReady])
+  }, [id, context.orgId, isReady, location.key]) // location.key changes when navigating back
 
   useEffect(() => {
     effectRunCountRef.current++
@@ -717,91 +718,6 @@ export default function TravelDetail() {
             </div>
           )}
 
-          {/* Hotel Information */}
-          {plan.hotel_name && (
-            <div>
-              <Card className="p-6 relative">
-                <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
-                  <Icon name="hotel" size="text-2xl" />
-                  Lodging
-                </div>
-                <div className="pt-12">
-                  {(() => {
-                    const hotelHeader = plan.hotel_name && plan.hotel_name !== plan.hotel_address
-                      ? plan.hotel_name
-                      : (plan.hotel_address ? plan.hotel_address.split(',')[0].trim() : 'Hotel')
-                    const showAddress = plan.hotel_address && plan.hotel_address !== hotelHeader
-                    
-                    return (
-                      <>
-                        <CardTitle className="text-xl mb-2">{hotelHeader}</CardTitle>
-                        {showAddress && (
-                          <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-4">{plan.hotel_address}</p>
-                        )}
-                      </>
-                    )
-                  })()}
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                  {plan.hotel_phone && (
-                    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-                      <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Phone</p>
-                      <a href={`tel:${plan.hotel_phone}`} className="text-[var(--org-link-color)] font-bold hover:underline">
-                        {plan.hotel_phone}
-                      </a>
-                    </div>
-                  )}
-                  {plan.hotel_confirmation && (
-                    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-                      <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Confirmation</p>
-                      <p className="font-mono text-slate-900 dark:text-white font-bold">{plan.hotel_confirmation}</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {plan.hotel_phone && (
-                    <a href={`tel:${plan.hotel_phone}`}>
-                      <Button variant="primary" className="text-sm px-4 py-2">
-                        <Icon name="phone" size="text-sm" className="mr-2" />
-                        Call Front Desk
-                      </Button>
-                    </a>
-                  )}
-                  {plan.hotel_address && googleMapsLink(plan.hotel_address) ? (
-                    <a href={googleMapsLink(plan.hotel_address)!} target="_blank" rel="noreferrer">
-                      <Button variant="secondary" className="text-sm px-4 py-2">
-                        <Icon name="map" size="text-sm" className="mr-2" />
-                        View on Maps
-                      </Button>
-                    </a>
-                  ) : plan.hotel_address ? (
-                    <Button variant="secondary" className="text-sm px-4 py-2" disabled>
-                      <Icon name="map" size="text-sm" className="mr-2" />
-                      View on Maps
-                    </Button>
-                  ) : null}
-                  {plan.hotel_confirmation && (
-                    <>
-                      <Button 
-                        variant="secondary" 
-                        className="text-sm px-4 py-2"
-                        onClick={() => handleCopy(plan.hotel_confirmation!, 'Confirmation')}
-                      >
-                        <Icon name={copiedText === 'Confirmation' ? 'check' : 'content_copy'} size="text-sm" className="mr-2" />
-                        {copiedText === 'Confirmation' ? 'Copied!' : 'Copy Confirmation'}
-                      </Button>
-                      {copyError && copiedText === 'Confirmation' && (
-                        <span className="text-xs text-red-500">{copyError}</span>
-                      )}
-                    </>
-                  )}
-                </div>
-                </div>
-              </Card>
-            </div>
-          )}
-
           {/* Meeting Locations */}
           {meetingLocations.length > 0 && (
             <div>
@@ -1060,23 +976,83 @@ export default function TravelDetail() {
             </div>
           </Card>
 
-          {/* Offline Access */}
-          <Card className="p-6">
-            <CardTitle className="mb-4 flex items-center gap-2">
-              <Icon name="download" size="text-xl" />
-              Offline Access
-            </CardTitle>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-              Download itinerary for offline access during your trip.
-            </p>
-            <Button variant="primary" className="w-full text-sm" disabled>
-              <Icon name="picture_as_pdf" size="text-sm" className="mr-2" />
-              Download PDF (Coming Soon)
-            </Button>
-          </Card>
+          {/* Lodging */}
+          {plan.hotel_name && (
+            <Card className="p-6">
+              <CardTitle className="mb-4 flex items-center gap-2">
+                <Icon name="hotel" size="text-xl" />
+                Lodging
+              </CardTitle>
+              {(() => {
+                const hotelHeader = plan.hotel_name && plan.hotel_name !== plan.hotel_address
+                  ? plan.hotel_name
+                  : (plan.hotel_address ? plan.hotel_address.split(',')[0].trim() : 'Hotel')
+                const showAddress = plan.hotel_address && plan.hotel_address !== hotelHeader
+                
+                return (
+                  <>
+                    <p className="font-black text-slate-900 dark:text-white mb-1">{hotelHeader}</p>
+                    {showAddress && (
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{plan.hotel_address}</p>
+                    )}
+                  </>
+                )
+              })()}
+              
+              <div className="space-y-3 mb-4">
+                {plan.hotel_phone && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Phone</p>
+                    <a href={`tel:${plan.hotel_phone}`} className="text-[var(--org-link-color)] font-bold hover:underline">
+                      {plan.hotel_phone}
+                    </a>
+                  </div>
+                )}
+                {plan.hotel_confirmation && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Confirmation</p>
+                    <p className="font-mono text-slate-900 dark:text-white font-bold">{plan.hotel_confirmation}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                {plan.hotel_phone && (
+                  <a href={`tel:${plan.hotel_phone}`} className="block">
+                    <Button variant="primary" className="w-full text-sm">
+                      <Icon name="phone" size="text-sm" className="mr-2" />
+                      Call Front Desk
+                    </Button>
+                  </a>
+                )}
+                {plan.hotel_address && googleMapsLink(plan.hotel_address) && (
+                  <a href={googleMapsLink(plan.hotel_address)!} target="_blank" rel="noreferrer" className="block">
+                    <Button variant="secondary" className="w-full text-sm">
+                      <Icon name="map" size="text-sm" className="mr-2" />
+                      View on Maps
+                    </Button>
+                  </a>
+                )}
+                {plan.hotel_confirmation && (
+                  <Button 
+                    variant="secondary" 
+                    className="w-full text-sm"
+                    onClick={() => handleCopy(plan.hotel_confirmation!, 'Confirmation')}
+                  >
+                    <Icon name={copiedText === 'Confirmation' ? 'check' : 'content_copy'} size="text-sm" className="mr-2" />
+                    {copiedText === 'Confirmation' ? 'Copied!' : 'Copy Confirmation'}
+                  </Button>
+                )}
+                {copyError && copiedText === 'Confirmation' && (
+                  <p className="text-xs text-red-500 mt-1">{copyError}</p>
+                )}
+              </div>
+            </Card>
+          )}
 
           {/* Nearby Amenities */}
           <NearbyAmenities
+            key={`${plan.venue_place_id || ''}-${plan.venue_lat || ''}-${plan.venue_lng || ''}`}
             latitude={plan.venue_lat}
             longitude={plan.venue_lng}
             placeId={plan.venue_place_id}
