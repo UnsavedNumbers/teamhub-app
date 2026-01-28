@@ -1373,7 +1373,8 @@ export async function generateReceiptPDF(
             return { data: null, error: new Error('Access denied') }
         }
 
-        // Try Stripe hosted receipt first (Edge Function returns receipt_url from Stripe Charge)
+        // Stripe hosted receipt only (Edge Function returns receipt_url from Stripe Charge).
+        // No PDF is generated or stored in our storage.
         const { data: stripeData, error: stripeError } = await supabase.functions.invoke(
             'stripe-receipt-url',
             { body: { assignment_id: assignmentId } }
@@ -1387,22 +1388,20 @@ export async function generateReceiptPDF(
             return { data: null, error: new Error('Access denied') }
         }
         if (status === 404) {
-            // No Stripe receipt for this assignment; fall through to Storage / placeholder
-        } else if (stripeError) {
+            return {
+                data: null,
+                error: new Error(
+                    'No receipt available for this payment. Receipts are only available for payments made online (Stripe).'
+                ),
+            }
+        }
+        if (stripeError) {
             return { data: null, error: new Error('Receipt unavailable. Please try again later.') }
         }
-
-        // Fallback: pre-uploaded PDF in Storage or placeholder (offline/legacy payments)
-        const receiptPath = `receipts/${context.orgId}/${assignmentId}.pdf`
-        const { data: urlData, error: urlError } = await supabase.storage
-            .from('receipts')
-            .createSignedUrl(receiptPath, 3600) // 1 hour expiry
-
-        if (urlError || !urlData) {
-            return { data: { url: `#receipt-${assignmentId}` }, error: null }
+        return {
+            data: null,
+            error: new Error('No receipt available for this payment.'),
         }
-
-        return { data: { url: urlData.signedUrl }, error: null }
     } catch (err) {
         const classified = classifySupabaseError(err)
         return { data: null, error: classified }
