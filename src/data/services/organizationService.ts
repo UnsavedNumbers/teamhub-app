@@ -25,13 +25,14 @@ export interface OrganizationUpdateDTO {
 interface OrganizationRow {
     id: string
     name: string
-    org_type?: string | null // optional as it might be missing or added later
-    status?: string | null // optional status field
+    org_type?: string | null
+    status?: string | null
     created_at: string
     updated_at: string
     website?: string | null
     phone?: string | null
     email?: string | null
+    contact_email?: string | null // DB column name
     address?: string | null
     city?: string | null
     state?: string | null
@@ -85,7 +86,7 @@ export async function getOrganizationDetails(orgId: string): Promise<{ data: Org
             // Profile
             website: data.website || null,
             phone: data.phone || null,
-            email: data.email || null,
+            email: (data.contact_email ?? data.email) || null,
             address: data.address || null,
             city: data.city || null,
             state: data.state || null,

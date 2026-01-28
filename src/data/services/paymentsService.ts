@@ -1333,17 +1333,15 @@ export async function generateReceiptPDF(
     if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
-            const permissions = buildPermissions(context)
-            if (!permissions.canViewAllOrgData) {
-                return { data: null, error: new Error('Access denied: Admin only') }
-            }
-
             const assignment = fakeFeeAssignments.find(fa => fa.id === assignmentId)
             if (!assignment || assignment.status !== 'paid') {
                 return { data: null, error: new Error('Fee assignment not found or not paid') }
             }
-
-            // Return fake PDF URL
+            const permissions = buildPermissions(context)
+            const canView = permissions.canViewAllOrgData || permissions.ownedChildIds.includes((assignment as { child_id?: string }).child_id ?? '')
+            if (!canView) {
+                return { data: null, error: new Error('Access denied') }
+            }
             return { data: { url: `https://example.com/receipts/${assignmentId}.pdf` }, error: null }
         } catch (err) {
             return { data: null, error: err instanceof Error ? err : new Error('Failed to generate receipt') }
@@ -1351,14 +1349,9 @@ export async function generateReceiptPDF(
     }
 
     try {
-        if (!isOrgAdmin(context)) {
-            return { data: null, error: new Error('Access denied: Admin only') }
-        }
-
-        // Verify assignment exists, is paid, and belongs to org
         const { data: existing, error: checkError } = await supabase
             .from('fee_assignments')
-            .select('id, org_id, status')
+            .select('id, org_id, status, parent_id, athlete_id')
             .eq('id', assignmentId)
             .eq('org_id', context.orgId)
             .single()
@@ -1367,8 +1360,17 @@ export async function generateReceiptPDF(
             return { data: null, error: new Error('Fee assignment not found') }
         }
 
-        if (existing.status !== 'paid') {
+        const existingRow = existing as { status: string; parent_id: string; athlete_id: string }
+        if (existingRow.status !== 'paid') {
             return { data: null, error: new Error('Receipts can only be generated for paid assignments') }
+        }
+
+        const isAdmin = isOrgAdmin(context)
+        const isParent = existingRow.parent_id === context.userId
+        const childIds = isAdmin || isParent ? [] : await getAthleteIdsForUser(context.userId, context.orgId)
+        const isGuardian = childIds.includes(existingRow.athlete_id)
+        if (!isAdmin && !isParent && !isGuardian) {
+            return { data: null, error: new Error('Access denied') }
         }
 
         // TODO: Generate PDF and store in storage, then return signed URL
