@@ -25,6 +25,7 @@ interface UserProfile {
   first_name: string
   last_name: string
   display_name: string | null
+  home_zipcode?: string
   // Legacy fields (deprecated, use organizations instead)
   role?: LegacyUserRole
   family_id?: string | null
@@ -44,7 +45,7 @@ interface AuthContextType {
   loading: boolean
   signInWithEmail: (email: string, password: string) => Promise<{ error: AuthError | null }>
   signInWithGoogle: () => Promise<{ error: AuthError | null }>
-  signUp: (email: string, password: string, firstName: string, lastName: string, phone: string, requiresOrgSetup?: boolean) => Promise<{ error: AuthError | null }>
+  signUp: (email: string, password: string, firstName: string, lastName: string, phone: string, zipcode: string, requiresOrgSetup?: boolean) => Promise<{ error: AuthError | null }>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>
   updatePassword: (password: string) => Promise<{ error: AuthError | null }>
@@ -86,13 +87,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       try {
         /* ---- user table ---- */
-        const { data: userData, error: userError } = await supabase
+        // Try to select with home_zipcode first (if migration has been applied)
+        let { data: userData, error: userError } = await supabase
           .from('users')
           .select(
-            'id, email, phone, display_name, role, family_id, org_id, requires_org_setup'
+            'id, email, phone, display_name, home_zipcode, role, family_id, org_id, requires_org_setup'
           )
           .eq('id', userId)
           .single()
+
+        // If column doesn't exist yet (migration not applied), retry without it
+        if (userError?.code === '42703' && userError?.message?.includes('home_zipcode')) {
+          const retryResult = await supabase
+            .from('users')
+            .select(
+              'id, email, phone, display_name, role, family_id, org_id, requires_org_setup'
+            )
+            .eq('id', userId)
+            .single()
+          userData = retryResult.data as any
+          userError = retryResult.error
+        }
 
         // Simplified error handling (Bug Prevention #4 & #9)
         if (userError || !userData) {
@@ -111,11 +126,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         // Type assertion: userData is now confirmed to be the correct type
-        const validUserData = userData as {
+        // home_zipcode may not exist if migration hasn't been applied yet
+        const validUserData = userData as unknown as {
           id: string
           email: string | null
           phone: string | null
           display_name: string | null
+          home_zipcode?: string | null
           role: string | null
           family_id: string | null
           org_id: string | null
@@ -210,6 +227,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           first_name: '', // first_name and last_name not in users table, derived from display_name if needed
           last_name: '',
           display_name: validUserData.display_name,
+          home_zipcode: validUserData.home_zipcode ?? undefined,
           role: (validUserData.role === 'parent' || validUserData.role === 'coach' || validUserData.role === 'admin') 
             ? (validUserData.role as LegacyUserRole) 
             : undefined,
@@ -369,7 +387,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error }
   }
 
-  async function signUp(email: string, password: string, firstName: string, lastName: string, phone: string, requiresOrgSetup?: boolean) {
+  async function signUp(email: string, password: string, firstName: string, lastName: string, phone: string, zipcode: string, requiresOrgSetup?: boolean) {
     // Import getBaseUrl to get current origin (supports localhost and production)
     const { getBaseUrl } = await import('../utils/host')
     const baseUrl = getBaseUrl()
@@ -385,6 +403,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           first_name: firstName.trim(),
           last_name: lastName.trim(),
           phone: phone.trim(),
+          home_zipcode: zipcode.trim() || undefined, // Only include if not empty
           // Derive display_name from first+last for backward compatibility
           display_name: `${firstName.trim()} ${lastName.trim()}`.trim(),
           // Pass requires_org_setup to metadata - the database trigger will read this

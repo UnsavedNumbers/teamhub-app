@@ -7,7 +7,7 @@
 
 import { useState, useEffect } from 'react'
 import { getAthleteInitials } from '../../utils/athleteHelpers'
-import { getAthletePhotoUrl, getAthletePhotoUrlWithCacheBust, hasAthletePhoto, type PhotoSize } from '../../data/services/athletePhotoService'
+import { getAthletePhotoUrlWithCacheBust, hasAthletePhoto, type PhotoSize } from '../../data/services/athletePhotoService'
 import type { Athlete } from '../../types/family'
 import { useUserContext } from '../../hooks/useUserContext'
 
@@ -36,7 +36,7 @@ export default function AthleteAvatar({ athlete, photoSize = '256', className = 
     const orgId = athlete.org_id || context.orgId
 
     // Get photo URL (public, no signed URL needed)
-    const photoUrl = orgId && athlete.id && hasAthletePhoto(athlete)
+    const photoUrl = orgId && athlete.id && hasAthletePhoto({ has_profile_photo: athlete.has_profile_photo ?? undefined })
         ? getAthletePhotoUrlWithCacheBust(
             orgId,
             athlete.id,

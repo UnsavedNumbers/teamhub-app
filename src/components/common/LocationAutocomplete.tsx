@@ -7,10 +7,15 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import type { LocationAutocompleteProps, StructuredAddress } from '../../types/location'
+import type { LocationAutocompleteProps as BaseProps, StructuredAddress } from '../../types/location'
 import { parsePlace, validateStructuredAddress, isPlaceResult, hasAddressComponents } from '../../types/location'
 import { loadGoogleMapsScript, isGoogleMapsLoaded } from '../../utils/googleMapsLoader'
 import { Input } from '../platformAdmin/Input'
+
+// Extend the props to include the callback with place result
+interface LocationAutocompleteProps extends Omit<BaseProps, 'onChange'> {
+  onChange: (address: StructuredAddress, placeResult?: google.maps.places.PlaceResult) => void
+}
 
 /**
  * Debounce function with cancel capability
@@ -454,7 +459,7 @@ export function LocationAutocomplete({
         setApiError(null)
 
         // Call onChange
-        onChange(address)
+        onChange(address, placeResult)
         onInputChange?.(address.formatted_address)
       } catch (err) {
         if (mountedRef.current) {

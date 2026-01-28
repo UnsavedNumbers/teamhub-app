@@ -1,4 +1,4 @@
-import type { SelectHTMLAttributes } from 'react'
+import { forwardRef, type SelectHTMLAttributes } from 'react'
 import { cn } from '../../utils/cn'
 
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
@@ -19,7 +19,7 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
  * 
  * Dropdown select with custom styling
  */
-export function Select({
+export const Select = forwardRef<HTMLSelectElement, SelectProps>(({
   label,
   helper,
   error,
@@ -28,7 +28,7 @@ export function Select({
   className = '',
   style,
   ...props
-}: SelectProps) {
+}, ref) => {
   const hasError = !!error
 
   return (
@@ -40,6 +40,7 @@ export function Select({
       )}
       
       <select
+        ref={ref}
         className={cn('pa-input', 'pa-select', hasError && 'pa-input--error', className)}
         {...props}
       >
@@ -57,6 +58,8 @@ export function Select({
       )}
     </div>
   )
-}
+})
+
+Select.displayName = 'Select'
 
 export default Select
