@@ -1,7 +1,6 @@
-    <mj-section padding="20px">
-      <mj-column>
-        <mj-text align="center" font-size="24px" font-weight="bold" color="#1e293b">
-          YouthSports Team Hub
-        </mj-text>
-      </mj-column>
-    </mj-section>
+<!-- Standard header: logo only. logo_url must point to logo-light.png. -->
+<mj-section padding="24px 20px">
+  <mj-column>
+    <mj-image src="{{logo_url}}" width="180px" alt="YouthSports Team Hub" align="center" />
+  </mj-column>
+</mj-section>

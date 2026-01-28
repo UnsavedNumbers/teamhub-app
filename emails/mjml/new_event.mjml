@@ -18,92 +18,69 @@
         font-weight: 600 !important;
       }
       .footer-text {
-        color: #666666 !important;
+        color: #64748b !important;
         font-size: 12px !important;
       }
     </mj-style>
   </mj-head>
   <mj-body background-color="#f8fafc">
-    <mj-section padding="20px">
-      <mj-column>
-        <mj-text align="center" font-size="24px" font-weight="bold" color="#1e293b">
-          YouthSports Team Hub
-        </mj-text>
-      </mj-column>
-    </mj-section>
+    <mj-include path="partials/header.mjml" />
 
-    <mj-section padding="30px 20px">
+    <mj-section padding="40px 20px">
       <mj-column>
-        <mj-text font-size="18px" font-weight="bold" color="#1e293b">
+        <mj-text font-size="18px" font-weight="bold" color="#1e293b" padding-bottom="16px">
           New Event: {{event_title}}
         </mj-text>
-
-        <mj-text padding-top="20px">
+        <mj-text padding-bottom="16px">
           Hi {{recipient_name}},
         </mj-text>
-
-        <mj-text padding-top="10px">
+        <mj-text padding-bottom="24px">
           A new event has been scheduled for your team:
         </mj-text>
       </mj-column>
     </mj-section>
 
-    <mj-section background-color="#ffffff" border-radius="8px" padding="20px" border="1px solid #e2e8f0">
+    <mj-section padding="24px 20px" background-color="#ffffff" border-radius="8px" border="1px solid #e2e8f0">
       <mj-column>
-        <mj-text font-weight="bold" font-size="16px">
+        <mj-text font-size="16px" font-weight="bold" color="#1e293b" padding-bottom="12px">
           {{event_title}}
         </mj-text>
-        <mj-text padding-top="10px">
+        <mj-text padding-bottom="8px">
           📅 {{event_date}}<br>
           🕐 {{event_time}}<br>
           📍 {{event_location}}
         </mj-text>
         {{#if event_description}}
-        <mj-text padding-top="15px">
+        <mj-text padding-top="12px">
           {{event_description}}
         </mj-text>
         {{/if}}
       </mj-column>
     </mj-section>
 
-    <mj-section padding="20px">
+    <mj-section padding="24px 20px">
       <mj-column>
-        <mj-text padding-top="20px">
+        <mj-text padding-bottom="24px">
           {{#if is_required}}
           This is a required event. Please make sure to attend.
           {{else}}
           This is an optional event.
           {{/if}}
         </mj-text>
-      </mj-column>
-    </mj-section>
-
-    <mj-section padding="30px 20px">
-      <mj-column>
-        <mj-button css-class="button" href="{{url}}">
+        <mj-button css-class="button" href="{{url}}" padding="16px 24px">
           View Event
         </mj-button>
       </mj-column>
     </mj-section>
 
-    <mj-section padding="20px">
+    <mj-section padding="24px 20px">
       <mj-column>
-        <mj-text padding-top="20px">
+        <mj-text>
           Questions? Contact your coach or team administrator.
         </mj-text>
       </mj-column>
     </mj-section>
 
-    <mj-section padding="20px" background-color="#f1f5f9">
-      <mj-column>
-        <mj-text align="center" color="#666666" font-size="12px">
-          You're receiving this email because you're part of {{organization_name}} on YouthSports Team Hub.<br>
-          <a href="{{unsubscribe_url}}">Unsubscribe</a> | <a href="{{preferences_url}}">Email Preferences</a>
-        </mj-text>
-        <mj-text align="center" color="#666666" font-size="12px" padding-top="10px">
-          © 2026 YouthSports Team Hub. All rights reserved.
-        </mj-text>
-      </mj-column>
-    </mj-section>
+    <mj-include path="partials/footer.mjml" />
   </mj-body>
 </mjml>

@@ -10,6 +10,7 @@ import { useTheme } from '../../hooks/useTheme'
 import { useT } from '../../i18n/useI18n'
 import { useMobile } from '@/hooks/useMobile'
 import { getLink } from '../../utils/routes'
+import { useFilteredNavigation } from '@/hooks/useFilteredNavigation'
 
 // ============================================================================
 // ORGANIZATION ADMIN MENU STRUCTURE
@@ -69,7 +70,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: '',
           items: [
-            { text: 'Admin Dashboard', icon: 'dashboard', path: '/admin', description: 'Organization overview' },
+            { routeKey: 'admin.dashboard', text: 'Admin Dashboard', icon: 'dashboard', path: '/admin', description: 'Organization overview' },
           ],
         },
       ],
@@ -81,9 +82,9 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Configuration',
           items: [
-            { text: 'Organization Settings', icon: 'settings', path: '/admin/organization', description: 'Organization info' },
-            { text: 'Users', icon: 'admin_panel_settings', path: '/admin/organization/users', description: 'Access and roles' },
-            { text: 'Billing', icon: 'credit_card', path: '/admin/organization/billing', description: 'Plan and billing' },
+            { routeKey: 'admin.organization.settings', text: 'Organization Settings', icon: 'settings', path: '/admin/organization', description: 'Organization info' },
+            { routeKey: 'admin.organization.users', text: 'Users', icon: 'admin_panel_settings', path: '/admin/organization/users', description: 'Access and roles' },
+            { routeKey: 'admin.organization.billing', text: 'Billing', icon: 'credit_card', path: '/admin/organization/billing', description: 'Plan and billing' },
           ],
         },
       ],
@@ -95,17 +96,17 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Core',
           items: [
-            { text: 'Teams', icon: 'groups', path: getLink('admin.teams.list'), description: 'Teams and rosters' },
-            { text: 'Events', icon: 'event', path: '/admin/events', description: 'Schedule and calendar' },
-            { text: 'Payments', icon: 'receipt_long', path: '/admin/payments', description: 'Fees and collections' },
-            { text: 'Travel', icon: 'flight', path: '/admin/travel', description: 'Trip planning' },
+            { routeKey: 'admin.teams.list', text: 'Teams', icon: 'groups', path: getLink('admin.teams.list'), description: 'Teams and rosters' },
+            { routeKey: 'admin.events.list', text: 'Events', icon: 'event', path: '/admin/events', description: 'Schedule and calendar' },
+            { routeKey: 'admin.payments.list', text: 'Payments', icon: 'receipt_long', path: '/admin/payments', description: 'Fees and collections' },
+            { routeKey: 'admin.travel.list', text: 'Travel', icon: 'flight', path: '/admin/travel', description: 'Trip planning' },
           ],
         },
         {
           label: 'Programs',
           items: [
-            { text: 'Tryouts', icon: 'emoji_events', path: '/admin/tryouts', description: 'Registration and evaluation' },
-            { text: 'Uniforms', icon: 'checkroom', path: '/admin/uniforms', description: 'Kits and gear' },
+            { routeKey: 'admin.tryouts.list', text: 'Tryouts', icon: 'emoji_events', path: '/admin/tryouts', description: 'Registration and evaluation' },
+            { routeKey: 'admin.uniforms.list', text: 'Uniforms', icon: 'checkroom', path: '/admin/uniforms', description: 'Kits and gear' },
           ],
         },
       ],
@@ -120,7 +121,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: '',
           items: [
-            { text: 'Dashboard', icon: 'dashboard', path: '/portal/dashboard', description: 'Today\'s overview' },
+            { routeKey: 'portal.dashboard', text: 'Dashboard', icon: 'dashboard', path: '/portal/dashboard', description: 'Today\'s overview' },
           ],
         },
       ],
@@ -132,8 +133,8 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
             {
               label: 'My Athletes',
               items: [
-                { text: 'My Athletes', icon: 'groups', path: '/portal/athletes', description: 'Athlete profiles and information' },
-                { text: 'Request Athlete Attachment', icon: 'person_add', path: '/portal/athletes/request-attachment', description: 'Request to attach to an existing athlete' },
+                { routeKey: 'portal.athletes', text: 'My Athletes', icon: 'groups', path: '/portal/athletes', description: 'Athlete profiles and information' },
+                { routeKey: 'portal.athletes.requestAttachment', text: 'Request Athlete Attachment', icon: 'person_add', path: '/portal/athletes/request-attachment', description: 'Request to attach to an existing athlete' },
               ],
             },
       ],
@@ -145,7 +146,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Schedule',
           items: [
-            { text: 'Calendar', icon: 'calendar_month', path: '/portal/calendar', description: 'View schedule' },
+            { routeKey: 'portal.calendar', text: 'Calendar', icon: 'calendar_month', path: '/portal/calendar', description: 'View schedule' },
           ],
         },
       ],
@@ -157,8 +158,8 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Tracking',
           items: [
-            { text: 'Take Attendance', icon: 'how_to_reg', path: '/portal/calendar', description: 'Use events to manage attendance', disabled: true },
-            { text: 'Attendance History', icon: 'history', path: '/portal/calendar', description: 'Use events to review attendance', disabled: true },
+            { routeKey: 'portal.calendar', text: 'Take Attendance', icon: 'how_to_reg', path: '/portal/calendar', description: 'Use events to manage attendance', disabled: true },
+            { routeKey: 'portal.calendar', text: 'Attendance History', icon: 'history', path: '/portal/calendar', description: 'Use events to review attendance', disabled: true },
           ],
         },
       ],
@@ -169,10 +170,10 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Additional',
           items: [
-            { text: 'Tryouts', icon: 'emoji_events', path: '/portal/tryouts', description: 'Tryout sessions' },
-            { text: 'Travel', icon: 'flight', path: '/portal/travel', description: 'Trip details' },
-            { text: 'Messages', icon: 'mail', path: '/portal/messages', description: 'Communications' },
-            { text: 'Settings', icon: 'settings', path: '/portal/settings', description: 'Preferences' },
+            { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', path: '/portal/tryouts', description: 'Tryout sessions' },
+            { routeKey: 'portal.travel', text: 'Travel', icon: 'flight', path: '/portal/travel', description: 'Trip details' },
+            { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', path: '/portal/messages', description: 'Communications' },
+            { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', path: '/portal/settings', description: 'Preferences' },
           ],
         },
       ],
@@ -187,7 +188,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: '',
           items: [
-            { text: 'Dashboard', icon: 'dashboard', path: '/portal/dashboard', description: 'Daily overview' },
+            { routeKey: 'portal.dashboard', text: 'Dashboard', icon: 'dashboard', path: '/portal/dashboard', description: 'Daily overview' },
           ],
         },
       ],
@@ -199,7 +200,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Schedule',
           items: [
-            { text: 'Schedule', icon: 'calendar_month', path: '/portal/calendar', description: 'View all events' },
+            { routeKey: 'portal.calendar', text: 'Schedule', icon: 'calendar_month', path: '/portal/calendar', description: 'View all events' },
           ],
         },
       ],
@@ -211,7 +212,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Travel',
           items: [
-            { text: 'Travel', icon: 'flight', path: '/portal/travel', description: 'Trip information' },
+            { routeKey: 'portal.travel', text: 'Travel', icon: 'flight', path: '/portal/travel', description: 'Trip information' },
           ],
         },
       ],
@@ -223,7 +224,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Messages',
           items: [
-            { text: 'Messages', icon: 'mail', path: '/portal/messages', description: 'Announcements and chat' },
+            { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', path: '/portal/messages', description: 'Announcements and chat' },
           ],
         },
       ],
@@ -235,7 +236,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Payments',
           items: [
-            { text: 'Fees Due', icon: 'receipt_long', path: '/portal/payments', description: 'Outstanding fees' },
+            { routeKey: 'portal.payments', text: 'Fees Due', icon: 'receipt_long', path: '/portal/payments', description: 'Outstanding fees' },
           ],
         },
       ],
@@ -246,17 +247,17 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Programs',
           items: [
-            { text: 'My Athletes', icon: 'groups', path: '/portal/athletes', description: t('portal.navigation.yourChildrenTeams') },
-            { text: 'Request Athlete Attachment', icon: 'person_add', path: '/portal/athletes/request-attachment', description: 'Request to attach to an existing athlete' },
-            { text: 'Join a Team', icon: 'group_add', path: '/portal/join', description: 'Enter an invite code' },
-            { text: 'Tryouts', icon: 'emoji_events', path: '/portal/tryouts', description: 'Tryout sessions' },
+            { routeKey: 'portal.athletes', text: 'My Athletes', icon: 'groups', path: '/portal/athletes', description: t('portal.navigation.yourChildrenTeams') },
+            { routeKey: 'portal.athletes.requestAttachment', text: 'Request Athlete Attachment', icon: 'person_add', path: '/portal/athletes/request-attachment', description: 'Request to attach to an existing athlete' },
+            { routeKey: 'portal.join', text: 'Join a Team', icon: 'group_add', path: '/portal/join', description: 'Enter an invite code' },
+            { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', path: '/portal/tryouts', description: 'Tryout sessions' },
           ],
         },
         {
           label: 'Additional',
           items: [
-            { text: 'Uniforms', icon: 'checkroom', path: '/portal/uniforms', description: 'Uniform orders' },
-            { text: 'Settings', icon: 'settings', path: '/portal/settings', description: 'Preferences' },
+            { routeKey: 'portal.uniforms', text: 'Uniforms', icon: 'checkroom', path: '/portal/uniforms', description: 'Uniform orders' },
+            { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', path: '/portal/settings', description: 'Preferences' },
           ],
         },
       ],
@@ -284,11 +285,14 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
   const currentRole = determineRole()
 
   // Select navigation based on role
-  const navSections = currentRole === 'org_admin' 
+  const rawNavSections = currentRole === 'org_admin' 
     ? orgAdminNavSections 
     : currentRole === 'coach' 
       ? coachNavSections 
       : parentNavSections
+
+  // Apply feature gate filtering
+  const { filteredSections: navSections, loading: navLoading } = useFilteredNavigation(rawNavSections)
 
   // Logo based on theme
   // Light mode needs dark text logo, dark mode needs light text logo

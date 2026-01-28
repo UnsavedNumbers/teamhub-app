@@ -66,12 +66,19 @@ export interface NavigationItem {
     text?: string
     /** Material icon name */
     icon: string
+    /** Direct path - alternative to routeKey for explicit URLs */
+    path?: string
     /** Description for megamenu */
     description?: string
     /** Whether item is disabled */
     disabled?: boolean
     /** Required permission action (for platform admin) */
     requiredAction?: string
+    /** 
+     * Explicit feature gate key - if not provided, derived from routeKey 
+     * via the ROUTE_TO_FEATURE registry 
+     */
+    featureKey?: string
 }
 
 /**

@@ -5,6 +5,7 @@ import { OrganizationProvider } from './contexts/OrganizationContext'
 import { LoadingStateProvider } from './contexts/LoadingStateContext'
 import { SidebarProvider } from './contexts/SidebarContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import { FeatureGateRoute } from './components/FeatureGateRoute'
 import AdminLoadingSpinner from './components/admin/AdminLoadingSpinner'
 import FullScreenLoader from './components/common/FullScreenLoader'
 import { getHostAppContext } from './utils/host'
@@ -259,21 +260,21 @@ function AppWithTheme() {
             <Route path="join" element={<ProtectedRoute><JoinTeam /></ProtectedRoute>} />
             <Route path="calendar/events/:eventId" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />
             <Route path="calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
-            <Route path="payments" element={<ProtectedRoute><MyPayments /></ProtectedRoute>} />
-            <Route path="payments/:id" element={<ProtectedRoute><PaymentDetail /></ProtectedRoute>} />
+            <Route path="payments" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.payments"><MyPayments /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="payments/:id" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.payments.detail"><PaymentDetail /></FeatureGateRoute></ProtectedRoute>} />
             <Route path="payments/success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
             <Route path="payments/cancel" element={<ProtectedRoute><PaymentCancel /></ProtectedRoute>} />
-            <Route path="uniforms" element={<ProtectedRoute><Uniforms /></ProtectedRoute>} />
-            <Route path="uniforms/:kitId" element={<ProtectedRoute><UniformKitOrder /></ProtectedRoute>} />
-            <Route path="travel" element={<ProtectedRoute><Travel /></ProtectedRoute>} />
-            <Route path="travel/:id" element={<ProtectedRoute><TravelDetail /></ProtectedRoute>} />
-            <Route path="tryouts" element={<ProtectedRoute><Tryouts /></ProtectedRoute>} />
-            <Route path="tryouts/:tryoutId" element={<ProtectedRoute><TryoutDetail /></ProtectedRoute>} />
+            <Route path="uniforms" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.uniforms"><Uniforms /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="uniforms/:kitId" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.uniforms.detail"><UniformKitOrder /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="travel" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.travel"><Travel /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="travel/:id" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.travel.detail"><TravelDetail /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="tryouts" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.tryouts"><Tryouts /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="tryouts/:tryoutId" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.tryouts.detail"><TryoutDetail /></FeatureGateRoute></ProtectedRoute>} />
             <Route path="messages" element={<Navigate to="/portal/huddles/announcements" replace />} />
-            <Route path="messages/:announcementId" element={<ProtectedRoute><AnnouncementDetail /></ProtectedRoute>} />
+            <Route path="messages/:announcementId" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.messages"><AnnouncementDetail /></FeatureGateRoute></ProtectedRoute>} />
             <Route path="huddles" element={<Navigate to="/portal/huddles/announcements" replace />} />
-            <Route path="huddles/announcements" element={<ProtectedRoute><Huddles /></ProtectedRoute>} />
-            <Route path="huddles/chat" element={<ProtectedRoute><Huddles /></ProtectedRoute>} />
+            <Route path="huddles/announcements" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.messages"><Huddles /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="huddles/chat" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.messages"><Huddles /></FeatureGateRoute></ProtectedRoute>} />
             
             {/* Redirect root portal to dashboard */}
             <Route index element={<Navigate to={getLink(RouteKeys.PORTAL_DASHBOARD)} replace />} />
@@ -348,7 +349,7 @@ function AppWithTheme() {
               <Route path="athletes/:id/edit" element={<EditAthlete />} />
               <Route path="athletes/:id" element={<AthleteDetail />} />
               <Route path="athletes/new" element={<CreateAthlete />} />
-              <Route path="athletes/import" element={<ImportAthletes />} />
+              <Route path="athletes/import" element={<FeatureGateRoute routeKey="admin.athletes.import"><ImportAthletes /></FeatureGateRoute>} />
               <Route path="athletes" element={<AdminChildren />} />
               <Route path="guardians/:familyId/athletes/new" element={<CreateChild />} />
               <Route path="guardians/new" element={<CreateFamily />} />
@@ -379,37 +380,37 @@ function AppWithTheme() {
               {/* Events */}
             
               {/* Events */}
-              <Route path="events" element={<Events />} />
-              <Route path="events/new" element={<CreateEvent />} />
-              <Route path="events/:id/edit" element={<EditEvent />} />
-              <Route path="events/:id/attendance" element={<AttendanceRoster />} />
+              <Route path="events" element={<FeatureGateRoute routeKey="admin.events.list"><Events /></FeatureGateRoute>} />
+              <Route path="events/new" element={<FeatureGateRoute routeKey="admin.events.create"><CreateEvent /></FeatureGateRoute>} />
+              <Route path="events/:id/edit" element={<FeatureGateRoute routeKey="admin.events.edit"><EditEvent /></FeatureGateRoute>} />
+              <Route path="events/:id/attendance" element={<FeatureGateRoute routeKey="admin.attendance"><AttendanceRoster /></FeatureGateRoute>} />
 
               {/* Announcements */}
-              <Route path="announcements" element={<AdminAnnouncements />} />
+              <Route path="announcements" element={<FeatureGateRoute routeKey="admin.announcements.list"><AdminAnnouncements /></FeatureGateRoute>} />
 
               {/* Attendance */}
-              <Route path="attendance" element={<AdminAttendance />} />
+              <Route path="attendance" element={<FeatureGateRoute routeKey="admin.attendance"><AdminAttendance /></FeatureGateRoute>} />
             
               {/* Payments */}
-              <Route path="payments" element={<Payments />} />
-              <Route path="payments/:id" element={<AdminPaymentDetail />} />
-              <Route path="payments/new" element={<CreateFee />} />
+              <Route path="payments" element={<FeatureGateRoute routeKey="admin.payments.list"><Payments /></FeatureGateRoute>} />
+              <Route path="payments/:id" element={<FeatureGateRoute routeKey="admin.payments.detail"><AdminPaymentDetail /></FeatureGateRoute>} />
+              <Route path="payments/new" element={<FeatureGateRoute routeKey="admin.payments.fees.create"><CreateFee /></FeatureGateRoute>} />
             
               {/* Uniforms */}
-              <Route path="uniforms" element={<UniformOrders />} />
-              <Route path="uniforms/new" element={<CreateUniform />} />
-              <Route path="uniforms/:id/edit" element={<EditUniform />} />
-              <Route path="uniforms/:kitId" element={<UniformOrders />} />
+              <Route path="uniforms" element={<FeatureGateRoute routeKey="admin.uniforms.list"><UniformOrders /></FeatureGateRoute>} />
+              <Route path="uniforms/new" element={<FeatureGateRoute routeKey="admin.uniforms.create"><CreateUniform /></FeatureGateRoute>} />
+              <Route path="uniforms/:id/edit" element={<FeatureGateRoute routeKey="admin.uniforms.edit"><EditUniform /></FeatureGateRoute>} />
+              <Route path="uniforms/:kitId" element={<FeatureGateRoute routeKey="admin.uniforms.detail"><UniformOrders /></FeatureGateRoute>} />
             
               {/* Travel */}
-              <Route path="travel" element={<TravelPlans />} />
-              <Route path="travel/new" element={<CreateTravelPlan />} />
-              <Route path="travel/:id" element={<EditTravelPlan />} />
+              <Route path="travel" element={<FeatureGateRoute routeKey="admin.travel.list"><TravelPlans /></FeatureGateRoute>} />
+              <Route path="travel/new" element={<FeatureGateRoute routeKey="admin.travel.create"><CreateTravelPlan /></FeatureGateRoute>} />
+              <Route path="travel/:id" element={<FeatureGateRoute routeKey="admin.travel.edit"><EditTravelPlan /></FeatureGateRoute>} />
             
               {/* Tryouts */}
-              <Route path="tryouts" element={<AdminTryouts />} />
-              <Route path="tryouts/new" element={<CreateTryout />} />
-              <Route path="tryouts/:tryoutId" element={<AdminTryoutDetail />} />
+              <Route path="tryouts" element={<FeatureGateRoute routeKey="admin.tryouts.list"><AdminTryouts /></FeatureGateRoute>} />
+              <Route path="tryouts/new" element={<FeatureGateRoute routeKey="admin.tryouts.create"><CreateTryout /></FeatureGateRoute>} />
+              <Route path="tryouts/:tryoutId" element={<FeatureGateRoute routeKey="admin.tryouts.detail"><AdminTryoutDetail /></FeatureGateRoute>} />
             
               {/* Users */}
               <Route path="users/new" element={<CreateUser />} />

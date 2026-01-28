@@ -6,55 +6,45 @@
       <mj-text font-size="14px" color="#333333" line-height="1.5" />
       <mj-section background-color="#ffffff" />
     </mj-attributes>
+    <mj-style>
+      .button {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        padding: 12px 24px !important;
+        text-decoration: none !important;
+        border-radius: 6px !important;
+        display: inline-block !important;
+        font-weight: 600 !important;
+      }
+      .footer-text {
+        color: #64748b !important;
+        font-size: 12px !important;
+      }
+    </mj-style>
   </mj-head>
   <mj-body background-color="#f8fafc">
-    <!-- Header Image -->
-    <mj-section padding="20px">
-        <mj-column>
-            <mj-image src="{{logo_url}}" width="600px" alt="Logo" />
-        </mj-column>
+    <mj-include path="partials/header.mjml" />
+
+    <mj-section padding="40px 20px">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold" color="#1e293b" padding-bottom="16px">
+          Hi {{recipient_firstname}},
+        </mj-text>
+        <mj-text padding-bottom="16px">
+          We're launching a new partner program at {{organization_name}} and we'd love for you to join us!
+        </mj-text>
+        <mj-text padding-bottom="16px">
+          {{custom_message_paragraph_1}}
+        </mj-text>
+        <mj-text padding-bottom="24px">
+          {{custom_message_paragraph_2}}
+        </mj-text>
+        {{#if video_thumbnail_url}}
+        <mj-image src="{{video_thumbnail_url}}" href="{{video_url}}" width="500px" alt="Watch Video" padding-bottom="24px" />
+        {{/if}}
+      </mj-column>
     </mj-section>
 
-    <!-- Split Content -->
-    <mj-section padding="20px">
-        <mj-column width="35%">
-            <mj-image src="{{profile_image_url}}" width="200px" border-radius="50%" alt="Welcome" />
-        </mj-column>
-        <mj-column width="65%">
-            <mj-text font-size="16px" padding-bottom="15px">
-               Hi {{recipient_firstname}},
-            </mj-text>
-            <mj-text padding-bottom="15px">
-               We're launching a new partner program at {{organization_name}} and we'd love for you to join us!
-            </mj-text>
-            <mj-text padding-bottom="15px">
-               {{custom_message_paragraph_1}}
-            </mj-text>
-            <mj-text padding-bottom="15px">
-               {{custom_message_paragraph_2}}
-            </mj-text>
-        </mj-column>
-    </mj-section>
-
-    <!-- Video Hero -->
-    <mj-section padding="20px">
-        <mj-column>
-            <mj-image src="{{video_thumbnail_url}}" href="{{video_url}}" width="500px" alt="Watch Video" />
-        </mj-column>
-    </mj-section>
-
-    <!-- Footer -->
-    <mj-section padding="40px 20px" background-color="#000000">
-        <mj-column>
-            <mj-text align="center" color="#ffffff" font-size="18px" font-weight="bold">
-                Join the Team.
-            </mj-text>
-             <mj-social font-size="15px" icon-size="30px" mode="horizontal" padding-top="20px">
-                <mj-social-element name="facebook" href="{{facebook_url}}"></mj-social-element>
-                <mj-social-element name="twitter" href="{{twitter_url}}"></mj-social-element>
-                <mj-social-element name="instagram" href="{{instagram_url}}"></mj-social-element>
-             </mj-social>
-        </mj-column>
-    </mj-section>
+    <mj-include path="partials/footer.mjml" />
   </mj-body>
 </mjml>
