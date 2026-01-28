@@ -37,22 +37,22 @@ function extractOrgIdFromEvent(event: Stripe.Event): string | null {
 
   // Checkout Session has client_reference_id and metadata
   if (event.type.startsWith("checkout.session.")) {
-    return (obj?.client_reference_id ?? obj?.metadata?.org_id ?? obj?.metadata?.organization_id ?? null) as string | null
+    return (obj?.metadata?.organization_id ?? null) as string | null
   }
 
   // Subscription might have metadata if you set it (recommended)
   if (event.type.startsWith("customer.subscription.")) {
-    return (obj?.metadata?.org_id ?? obj?.metadata?.organization_id ?? null) as string | null
+    return (obj?.metadata?.organization_id ?? null) as string | null
   }
 
   // Invoices sometimes contain subscription details; org_id usually not present unless you add metadata upstream
   if (event.type.startsWith("invoice.")) {
-    return (obj?.metadata?.org_id ?? obj?.metadata?.organization_id ?? null) as string | null
+    return (obj?.metadata?.organization_id ?? null) as string | null
   }
 
   // PaymentIntent typically won’t carry org_id unless you attach metadata yourself
   if (event.type.startsWith("payment_intent.")) {
-    return (obj?.metadata?.org_id ?? obj?.metadata?.organization_id ?? null) as string | null
+    return (obj?.metadata?.organization_id ?? null) as string | null
   }
 
   return null

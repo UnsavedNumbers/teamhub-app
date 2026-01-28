@@ -385,3 +385,40 @@ s3_region = "env(S3_REGION)"
 s3_access_key = "env(S3_ACCESS_KEY)"
 # Configures AWS_SECRET_ACCESS_KEY for S3 bucket
 s3_secret_key = "env(S3_SECRET_KEY)"
+
+
+[functions.realtime-chat]
+verify_jwt = false
+
+[functions.admin-create-fee]
+verify_jwt = false
+
+[functions.billing-create-checkout-session]
+verify_jwt = false
+
+[functions.billing-customer-portal]
+verify_jwt = false
+
+[functions.nearby-amenities-fetch]
+verify_jwt = false
+
+[functions.notification-worker]
+verify_jwt = false
+
+[functions.parent-create-checkout-session]
+verify_jwt = false
+
+[functions.stream-token]
+verify_jwt = false
+
+[functions.stripe-connect-onboard]
+verify_jwt = false
+
+[functions.stripe-receipt-url]
+verify_jwt = false
+
+[functions.stripe-verify-price]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
