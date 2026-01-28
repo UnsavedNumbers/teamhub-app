@@ -6229,6 +6229,7 @@ export type Database = {
           is_system: boolean | null
           name: string
           org_id: string | null
+          slug: string | null
           updated_at: string | null
         }
         Insert: {
@@ -6240,6 +6241,7 @@ export type Database = {
           is_system?: boolean | null
           name: string
           org_id?: string | null
+          slug?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -6251,6 +6253,7 @@ export type Database = {
           is_system?: boolean | null
           name?: string
           org_id?: string | null
+          slug?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -7749,6 +7752,86 @@ export type Database = {
         }
         Relationships: []
       }
+      venue_nearby_amenities_summaries: {
+        Row: {
+          created_at: string | null
+          event_type: string
+          gemini_called_at: string | null
+          id: string
+          summaries_json: Json | null
+          time_window: string
+          updated_at: string | null
+          venue_nearby_places_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_type: string
+          gemini_called_at?: string | null
+          id?: string
+          summaries_json?: Json | null
+          time_window: string
+          updated_at?: string | null
+          venue_nearby_places_id: string
+        }
+        Update: {
+          created_at?: string | null
+          event_type?: string
+          gemini_called_at?: string | null
+          id?: string
+          summaries_json?: Json | null
+          time_window?: string
+          updated_at?: string | null
+          venue_nearby_places_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_nearby_amenities_summaries_venue_nearby_places_id_fkey"
+            columns: ["venue_nearby_places_id"]
+            isOneToOne: false
+            referencedRelation: "venue_nearby_places"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venue_nearby_places: {
+        Row: {
+          created_at: string | null
+          fetch_in_progress: boolean | null
+          fetched_at: string | null
+          id: string
+          last_api_call_at: string | null
+          latitude: number | null
+          longitude: number | null
+          raw_places_json: Json | null
+          updated_at: string | null
+          venue_key: string
+        }
+        Insert: {
+          created_at?: string | null
+          fetch_in_progress?: boolean | null
+          fetched_at?: string | null
+          id?: string
+          last_api_call_at?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          raw_places_json?: Json | null
+          updated_at?: string | null
+          venue_key: string
+        }
+        Update: {
+          created_at?: string | null
+          fetch_in_progress?: boolean | null
+          fetched_at?: string | null
+          id?: string
+          last_api_call_at?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          raw_places_json?: Json | null
+          updated_at?: string | null
+          venue_key?: string
+        }
+        Relationships: []
+      }
       waivers: {
         Row: {
           amount_cents: number
@@ -8730,6 +8813,18 @@ export type Database = {
         Returns: Json
       }
       can_fetch_gemini: { Args: { p_place_id: string }; Returns: boolean }
+      can_fetch_nearby_gemini: {
+        Args: {
+          p_event_type: string
+          p_time_window: string
+          p_venue_key: string
+        }
+        Returns: boolean
+      }
+      can_fetch_nearby_places: {
+        Args: { p_venue_key: string }
+        Returns: boolean
+      }
       can_fetch_place_details: {
         Args: { p_place_id: string }
         Returns: boolean
@@ -8852,6 +8947,7 @@ export type Database = {
         }
         Returns: number
       }
+      generate_sport_slug: { Args: { sport_name: string }; Returns: string }
       get_athlete_family_details: {
         Args: { p_athlete_id: string; p_org_id: string }
         Returns: Json

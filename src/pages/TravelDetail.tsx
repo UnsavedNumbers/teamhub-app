@@ -714,17 +714,6 @@ export default function TravelDetail() {
                 </div>
                 </div>
               </Card>
-
-              {/* Venue Nearby Amenities */}
-              <NearbyAmenities
-                latitude={plan.venue_lat}
-                longitude={plan.venue_lng}
-                placeId={plan.venue_place_id}
-                eventType="tournament"
-                eventStartTime={plan.start_date}
-                variant="travel"
-                className="mt-4"
-              />
             </div>
           )}
 
@@ -1086,59 +1075,15 @@ export default function TravelDetail() {
             </Button>
           </Card>
 
-          {/* Nearby Services */}
-          <Card className="p-6">
-            <CardTitle className="mb-4 flex items-center gap-2">
-              <Icon name="store" size="text-xl" />
-              Nearby Services
-            </CardTitle>
-            <div>
-              <a
-                href={`https://www.google.com/maps/search/restaurants+near+${encodeURIComponent(plan.location)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="block mb-3"
-              >
-                <Button variant="secondary" className="w-full text-sm justify-start">
-                  <Icon name="restaurant" size="text-sm" className="mr-2" />
-                  Find Restaurants
-                </Button>
-              </a>
-              <a
-                href={`https://www.google.com/maps/search/grocery+near+${encodeURIComponent(plan.location)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="block mb-3"
-              >
-                <Button variant="secondary" className="w-full text-sm justify-start">
-                  <Icon name="local_grocery_store" size="text-sm" className="mr-2" />
-                  Grocery Stores
-                </Button>
-              </a>
-              <a
-                href={`https://www.google.com/maps/search/pharmacy+near+${encodeURIComponent(plan.location)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="block mb-3"
-              >
-                <Button variant="secondary" className="w-full text-sm justify-start">
-                  <Icon name="local_pharmacy" size="text-sm" className="mr-2" />
-                  Pharmacies
-                </Button>
-              </a>
-              <a
-                href={`https://www.google.com/maps/search/hospital+near+${encodeURIComponent(plan.location)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="block"
-              >
-                <Button variant="secondary" className="w-full text-sm justify-start">
-                  <Icon name="local_hospital" size="text-sm" className="mr-2" />
-                  Urgent Care
-                </Button>
-              </a>
-            </div>
-          </Card>
+          {/* Nearby Amenities */}
+          <NearbyAmenities
+            latitude={plan.venue_lat}
+            longitude={plan.venue_lng}
+            placeId={plan.venue_place_id}
+            eventType="tournament"
+            eventStartTime={plan.start_date}
+            variant="travel"
+          />
 
           {/* Weather Info */}
           <Card className="p-6">
