@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../hooks/useAuth'
 import { useUserContext } from '../hooks/useUserContext'
 import {
@@ -224,15 +225,22 @@ export default function Dashboard() {
   }, [context, isReady])
 
   // Load active player count and season
+  const { data: athletesData } = useQuery({
+    queryKey: ['athletes', context.orgId],
+    queryFn: () => getAthletes(context),
+    enabled: isReady,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  })
+
   useEffect(() => {
-    if (!isReady) return
+    if (!isReady || !athletesData) return
 
     const loadActiveStats = async () => {
       setStatsLoading(true)
       
       try {
-        // Get user's athletes
-        const { data: athletes, error: athletesError } = await getAthletes(context)
+        // Use athletes from React Query
+        const { data: athletes, error: athletesError } = athletesData
         if (athletesError || !athletes || athletes.length === 0) {
           setActivePlayerCount(0)
           setActiveSeasonName(null)
@@ -330,7 +338,7 @@ export default function Dashboard() {
     }
 
     loadActiveStats()
-  }, [context, isReady])
+  }, [context, isReady, athletesData])
 
   const markAsRead = async (notificationId: string) => {
     if (markingRead === notificationId) return

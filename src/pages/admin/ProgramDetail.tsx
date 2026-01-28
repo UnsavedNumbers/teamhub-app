@@ -297,7 +297,7 @@ export default function ProgramDetail() {
         setActionError('Sport ID is required to view sport details.')
         return
       }
-      const sportDetailRoute = getLink('admin.sports.detail', { id: sportId.trim() })
+      const sportDetailRoute = getLink('admin.sports.detail', { sport_slug: sportId.trim() })
       navigate(sportDetailRoute)
     },
     [navigate]
@@ -457,7 +457,7 @@ export default function ProgramDetail() {
               </Link>
               {sport?.id ? (
                 <Link
-                  to={getLink('admin.sports.detail', { id: sport.id })}
+                  to={getLink('admin.sports.detail', { sport_slug: sport.slug ?? sport.id })}
                   onClick={(e: React.MouseEvent) => {
                     if (!sport.id) {
                       e.preventDefault()

@@ -7,6 +7,7 @@ export interface Sport {
     id: string
     org_id: string | null // NULL for system sports, set for organization-specific sports (legacy)
     name: string
+    slug: string | null // URL-friendly identifier (e.g., "track-and-field", "field-hockey")
     icon: string | null
     color: string
     created_at: string

@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { t } from '../../i18n'
 import { 
   getAllTravelPlansAdmin, 
   publishTravelPlan, 
@@ -227,6 +228,7 @@ export default function TravelPlans() {
         loading={cancelLoading !== null}
         error={actionError}
         onConfirm={handleCancelConfirm}
+        cancelLabel={t('common.dontCancel')}
         onCancel={() => {
           setCancelDialog({ open: false, plan: null })
           setActionError(null)

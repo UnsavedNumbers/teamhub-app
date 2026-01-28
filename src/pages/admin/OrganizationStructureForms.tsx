@@ -1229,19 +1229,13 @@ export default function OrganizationStructureForms() {
                         
                         // Stay on page to show prompt - navigation will happen via "Not Now" or "Add Next"
                       } else {
-                        // No next level - navigate to list page with success message in state
-                        // Clear any existing prompt
+                        // No next level - redirect to the new sport's detail page (by slug, or id fallback)
                         clearPromptState()
                         setPromptState(null)
                         setSuccessMessage(null)
-                        
-                        const listPageRoute = getListPageRoute('sport')
-                        navigate(listPageRoute, {
-                          replace: true,
-                          state: {
-                            successMessage: t('admin.structureForms.messages.created', { item: formLabels.sport })
-                          }
-                        })
+                        const sportSlug = (result.data as Sport).slug ?? (result.data as Sport).id
+                        const detailRoute = getLink('admin.sports.detail', { sport_slug: sportSlug })
+                        navigate(detailRoute, { replace: true })
                       }
                     }
                   } catch (err) {

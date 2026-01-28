@@ -5,11 +5,11 @@
  */
 
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
+import { useSearchParams, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOffline } from '../../hooks/useOffline'
 import { USE_FAKE_DATA } from '../../data/config'
-import { getSports, getPrograms, deleteProgram } from '../../data/services/sportsService'
+import { getSports, getPrograms, deleteProgram, getSportBySlug } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
 import { getTeams } from '../../data/services/teamsService'
 import type { Sport, Program, Level, Team } from '../../data/types/organization'
@@ -24,6 +24,7 @@ export default function Programs() {
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
   const navigate = useNavigate()
+  const params = useParams<{ sport_slug?: string }>()
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -45,7 +46,13 @@ export default function Programs() {
   const [programs, setPrograms] = useState<Program[]>([])
   const [levels, setLevels] = useState<Level[]>([])
   const [teams, setTeams] = useState<Team[]>([])
-  const [filterSportId, setFilterSportId] = useState<string>(searchParams.get('sport_id') || '')
+  
+  // Get sport slug from route param (new way) or fallback to query param (backward compatibility)
+  const sportSlugFromRoute = params.sport_slug
+  const sportIdFromQuery = searchParams.get('sport_id') || ''
+  
+  // State for the filtered sport ID (derived from slug or query param)
+  const [filterSportId, setFilterSportId] = useState<string>('')
 
   const loadProgramsData = useCallback(async () => {
     if (!isReady) return
@@ -55,6 +62,18 @@ export default function Programs() {
     setActionError(null)
 
     try {
+      // If we have a sport slug from route, load that sport first
+      let sportFromSlug: Sport | null = null
+      if (sportSlugFromRoute) {
+        const sportResult = await getSportBySlug(context, sportSlugFromRoute)
+        if (sportResult.error) {
+          setError(`Failed to load sport: ${sportResult.error.message}`)
+          setLoading(false)
+          return
+        }
+        sportFromSlug = sportResult.data
+      }
+
       const [sportsResult, programsResult, levelsResult, teamsResult] = await Promise.all([
         getSports(context), 
         getPrograms(context),
@@ -88,13 +107,24 @@ export default function Programs() {
       setPrograms(programsResult.data as Program[])
       setLevels(levelsResult.data as Level[])
       setTeams(teamsResult.data as Team[])
+
+      // Set filter based on route slug or query param
+      if (sportFromSlug) {
+        setFilterSportId(sportFromSlug.id)
+      } else if (sportIdFromQuery) {
+        // Backward compatibility: check if sport exists
+        const sportExists = (sportsResult.data as Sport[]).some((s) => s.id === sportIdFromQuery)
+        if (sportExists) {
+          setFilterSportId(sportIdFromQuery)
+        }
+      }
     } catch (err) {
       console.error('[Programs] Error loading data:', err)
       setError(err instanceof Error ? err.message : 'Failed to load data')
     } finally {
       setLoading(false)
     }
-  }, [context, isReady])
+  }, [context, isReady, sportSlugFromRoute, sportIdFromQuery])
 
   useEffect(() => {
     loadProgramsData()
@@ -103,19 +133,27 @@ export default function Programs() {
   // Update URL when filter changes
   useEffect(() => {
     if (filterSportId && filterSportId.trim()) {
-      // Validate that the sport exists
-      const sportExists = !filterSportId || sports.some((s) => s.id === filterSportId)
-      if (sportExists) {
+      const sport = sports.find((s) => s.id === filterSportId)
+      if (sport && sport.slug) {
+        // Prefer slug-based route
+        if (!sportSlugFromRoute || sportSlugFromRoute !== sport.slug) {
+          navigate(getLink('admin.programs.bySport', { sport_slug: sport.slug }), { replace: true })
+        }
+      } else if (sport && !sportSlugFromRoute) {
         setSearchParams({ sport_id: filterSportId }, { replace: true })
-      } else {
-        // Invalid sport ID, reset filter
+      } else if (!sport) {
         setFilterSportId('')
-        setSearchParams({}, { replace: true })
+        if (!sportSlugFromRoute) setSearchParams({}, { replace: true })
       }
     } else {
-      setSearchParams({}, { replace: true })
+      // "All sports" selected
+      if (sportSlugFromRoute) {
+        navigate(getLink('admin.programs.list'), { replace: true })
+      } else {
+        setSearchParams({}, { replace: true })
+      }
     }
-  }, [filterSportId, setSearchParams, sports])
+  }, [filterSportId, setSearchParams, sports, sportSlugFromRoute, navigate])
 
   // Filter programs by selected sport
   const filteredPrograms = useMemo(() => {

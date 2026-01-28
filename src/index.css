@@ -7,6 +7,30 @@
    GLOBAL STYLES (apply to all routes)
    ============================================================ */
 
+/* Override third-party library fonts to prevent Helvetica privacy warnings */
+.str-chat,
+.str-chat *,
+.emoji-mart,
+.emoji-mart *,
+[class*=" rfu-"],
+[class^="rfu-"] {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif !important;
+}
+
+/* Override browser autofill/autocomplete dropdown fonts */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif !important;
+}
+
 :root {
   font-family: Inter, system-ui, Avenir, Arial, sans-serif;
   line-height: 1.5;

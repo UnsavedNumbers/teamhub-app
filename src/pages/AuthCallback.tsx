@@ -100,7 +100,7 @@ export default function AuthCallback() {
             .from('platform_admins')
             .select('user_id')
             .eq('user_id', userId)
-            .single()
+            .maybeSingle()
 
           if (adminData) {
             isPlatformAdmin = true

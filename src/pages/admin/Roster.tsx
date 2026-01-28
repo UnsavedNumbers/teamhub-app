@@ -40,7 +40,7 @@ export default function Roster() {
   const [playerToRemove, setPlayerToRemove] = useState<string | null>(null)
   const [teamInfo, setTeamInfo] = useState<{
     name: string
-    sport?: { name: string; id?: string }
+    sport?: { name: string; id?: string; slug?: string }
     program?: { name: string; id?: string }
     level?: { name: string; id?: string }
   } | null>(null)
@@ -279,7 +279,7 @@ export default function Roster() {
     breadcrumbs.push({
       label: teamInfo.sport.name,
       path: teamInfo.sport.id 
-        ? getLinkHelper('admin.sports.detail', { id: teamInfo.sport.id })
+        ? getLinkHelper('admin.sports.detail', { sport_slug: teamInfo.sport.slug ?? teamInfo.sport.id })
         : getLink('admin.sports.list'),
     })
   }

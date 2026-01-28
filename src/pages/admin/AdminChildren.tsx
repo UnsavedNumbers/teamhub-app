@@ -232,7 +232,7 @@ export default function AdminChildren() {
   const handleSportClick = useCallback((e: React.MouseEvent, sportId: string) => {
     e.stopPropagation()
     try {
-      navigate(getLink('admin.sports.detail', { id: sportId }))
+      navigate(getLink('admin.sports.detail', { sport_slug: sportId }))
     } catch (err) {
       console.error('[AdminChildren] Navigation error to sport:', err)
     }
@@ -320,7 +320,7 @@ export default function AdminChildren() {
             {sports.map((sport: { sport_id: string; sport_name: string; sport_type: 'plays' | 'interested' }, idx: number) => (
               <span key={sport.sport_id}>
                 <Link
-                  to={getLink('admin.sports.detail', { id: sport.sport_id })}
+                  to={getLink('admin.sports.detail', { sport_slug: sport.sport_id })}
                   className="pa-link"
                   onClick={(e) => handleSportClick(e, sport.sport_id)}
                   style={{ fontSize: 'var(--pa-font-size-s)' }}

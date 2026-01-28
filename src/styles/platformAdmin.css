@@ -13,7 +13,7 @@
     --pa-font-display: 'Oswald', 'Impact', sans-serif;
 
     /* Body / UI (Google-like) */
-    --pa-font-body: 'Inter', 'Roboto', 'Helvetica Neue', Arial, system-ui, sans-serif;
+    --pa-font-body: 'Inter', 'Roboto', Arial, system-ui, sans-serif;
 
     /* Monospace (data, code, IDs) */
     --pa-font-mono: 'Roboto Mono', 'SF Mono', 'Menlo', 'Consolas', monospace;
