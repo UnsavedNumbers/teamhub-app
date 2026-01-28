@@ -1,13 +1,22 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
-import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { PageHeader, Card, Button, Input, Select, Badge, Checkbox, ConfirmDialog, ErrorState, Accordion } from '../../components/platformAdmin'
-import { mapTierFeatureAssignment } from '../../utils/domainMappers'
 import type { LicenseTier, FeatureEntitlement, TierFeatureAssignment, StripePriceVerification } from '../../types/licenseTiers.types'
-// Unused - keep for future use
-// import { FEATURE_CATEGORIES, FEATURE_TYPES } from '../../utils/licenseTierConstants'
-import { logAuditEvent, isStripeVerificationValid, getArchivedFeaturesCount } from '../../utils/licenseEntitlementsHelpers'
+import { isStripeVerificationValid } from '../../utils/licenseEntitlementsHelpers'
+import {
+  getTierById,
+  getFeatures,
+  getAssignments,
+  getOrganizationsUsingTier,
+  getArchivedFeaturesCount,
+  createTier,
+  updateTier,
+  archiveOrActivateTier,
+  duplicateTier,
+  saveAssignments as saveAssignmentsService,
+  verifyStripePrice as verifyStripePriceService,
+} from '../../data/services/licenseTiersService'
+import { logAuditEvent } from '../../utils/licenseEntitlementsHelpers'
 import { isValidRouteId, getInvalidRouteIdError } from '../../utils/routeValidation'
 import { useOffline } from '../../hooks/useOffline'
 import { showSuccess, showError } from '../../utils/toast'
@@ -50,6 +59,7 @@ export default function LicenseTierDetail() {
   const [archiveDialog, setArchiveDialog] = useState(false)
   const [duplicating, setDuplicating] = useState(false)
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null)
+  const [refreshingConflict, setRefreshingConflict] = useState(false)
 
   // Validate route parameter
   useEffect(() => {
@@ -60,49 +70,49 @@ export default function LicenseTierDetail() {
 
   const fetchTier = useCallback(async () => {
     if (isNew) return
+    if (!id) return
 
     setLoading(true)
+    setError(null)
     try {
-      const { data, error: tierError } = await supabase
-        .from('license_tiers')
-        .select('*')
-        .eq('id', id!)
-        .single()
-
-      if (tierError) {
-        if (tierError.code === 'PGRST116' || tierError.message?.includes('not found')) {
-          setNotFound(true)
-          return
-        }
-        throw tierError
+      const data = await getTierById(id)
+      if (!data) {
+        setNotFound(true)
+        return
       }
-      setTier(data as Partial<LicenseTier>)
+      setTier(data)
 
-      // Check for archived features
-      if ((data as LicenseTier)?.id) {
-        const count = await getArchivedFeaturesCount((data as LicenseTier).id)
-        setArchivedFeaturesCount(count)
-      }
+      const count = await getArchivedFeaturesCount(data.id)
+      setArchivedFeaturesCount(count)
 
-      // Use cached Stripe verification if valid, otherwise verify
-      if ((data as LicenseTier)?.stripe_price_id) {
-        if ((data as LicenseTier)?.stripe_verified_at && isStripeVerificationValid((data as LicenseTier)?.stripe_verified_at)) {
-          // Use cached data
+      if (data.stripe_price_id) {
+        if (data.stripe_verified_at && isStripeVerificationValid(data.stripe_verified_at)) {
           setStripeVerification({
             valid: true,
-            product_name: (data as LicenseTier)?.stripe_product_name || undefined,
-            amount_cents: (data as LicenseTier)?.stripe_amount_cents || undefined,
-            interval: (data as LicenseTier)?.stripe_interval || undefined,
-            currency: (data as LicenseTier)?.stripe_currency || undefined,
-            active: (data as LicenseTier)?.stripe_active || undefined,
+            product_name: data.stripe_product_name ?? undefined,
+            amount_cents: data.stripe_amount_cents ?? undefined,
+            interval: data.stripe_interval ?? undefined,
+            currency: data.stripe_currency ?? undefined,
+            active: data.stripe_active ?? undefined,
           })
         } else {
-          // Verify fresh
-          verifyStripePrice((data as LicenseTier)?.stripe_price_id, true)
-        } 
+          const result = await verifyStripePriceService(data.stripe_price_id, true)
+          setStripeVerification(result)
+          if (result.valid && result.product_name) {
+            setTier((prev) => ({
+              ...prev,
+              stripe_product_name: result.product_name ?? null,
+              stripe_amount_cents: result.amount_cents ?? null,
+              stripe_interval: result.interval ?? null,
+              stripe_currency: result.currency ?? null,
+              stripe_active: result.active ?? null,
+              stripe_verified_at: new Date().toISOString(),
+            }))
+          }
+        }
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to load tier')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load tier')
     } finally {
       setLoading(false)
     }
@@ -110,39 +120,20 @@ export default function LicenseTierDetail() {
 
   const fetchFeatures = useCallback(async () => {
     try {
-      const { data, error: featuresError } = await supabase
-        .from('feature_entitlements')
-        .select('*')
-        .is('archived_at', null)
-        .eq('platform_admin_only', false)
-        .order('category', { ascending: true })
-        .order('display_name', { ascending: true })
-
-      if (featuresError) throw featuresError
-      setFeatures(data as FeatureEntitlement[])
-    } catch (err: any) {
+      const data = await getFeatures()
+      setFeatures(data)
+    } catch (err) {
       console.error('Error fetching features:', err)
     }
   }, [])
 
   const fetchAssignments = useCallback(async () => {
-    if (isNew) return
+    if (isNew || !id) return
 
     try {
-      const { data, error: assignmentsError } = await supabase
-        .from('tier_feature_assignments')
-        .select('*')
-        .eq('license_tier_id', id!)
-
-      if (assignmentsError) throw assignmentsError
-
-      const assignmentsMap: Record<string, TierFeatureAssignment> = {}
-      ;(data || []).forEach((assignment) => {
-        const mapped = mapTierFeatureAssignment(assignment)
-        assignmentsMap[mapped.featureEntitlementId] = mapped as any
-      })
+      const assignmentsMap = await getAssignments(id)
       setAssignments(assignmentsMap)
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching assignments:', err)
     }
   }, [id, isNew])
@@ -151,25 +142,11 @@ export default function LicenseTierDetail() {
     if (isNew || !tier.tier_key) return
 
     setLoadingOrgs(true)
+    setError(null)
     try {
-      // Map tier_key to license_plan values
-      type LicensePlan = 'basic' | 'starter' | 'power' | 'standard' | 'pro'
-      const licensePlans: LicensePlan[] = []
-      if (tier.tier_key === 'basic') {
-        licensePlans.push('basic', 'starter')
-      } else if (tier.tier_key === 'power') {
-        licensePlans.push('power', 'standard', 'pro')
-      }
-
-      const { data, error } = await supabase
-        .from('organizations')
-        .select('id, name, license_plan')
-        .in('license_plan', licensePlans as any)
-        .order('name', { ascending: true })
-
-      if (error) throw error
-      setOrganizationsUsingTier((data || []) as Array<{ id: string; name: string; license_plan: string }>)
-    } catch (err: any) {
+      const data = await getOrganizationsUsingTier(tier.tier_key)
+      setOrganizationsUsingTier(data)
+    } catch (err) {
       console.error('Error fetching organizations:', err)
       setOrganizationsUsingTier([])
     } finally {
@@ -202,51 +179,43 @@ export default function LicenseTierDetail() {
       return
     }
 
-    // Check cache first unless forcing refresh
     if (!forceRefresh && tier.stripe_verified_at && isStripeVerificationValid(tier.stripe_verified_at)) {
       setStripeVerification({
         valid: true,
-        product_name: tier.stripe_product_name || undefined,
-        amount_cents: tier.stripe_amount_cents || undefined,
-        interval: tier.stripe_interval || undefined,
-        currency: tier.stripe_currency || undefined,
-        active: tier.stripe_active || undefined,
+        product_name: tier.stripe_product_name ?? undefined,
+        amount_cents: tier.stripe_amount_cents ?? undefined,
+        interval: tier.stripe_interval ?? undefined,
+        currency: tier.stripe_currency ?? undefined,
+        active: tier.stripe_active ?? undefined,
       })
       return
     }
 
     setVerifying(true)
+    setError(null)
     try {
-      const { data, error } = await supabase.functions.invoke('stripe-verify-price', {
-        body: { price_id: priceId },
-      })
-
-      if (error) throw error
-      
-      const result: StripePriceVerification = data
+      const result = await verifyStripePriceService(priceId, forceRefresh)
       setStripeVerification(result)
 
-      // Update tier with verification data if valid
       if (result.valid && result.product_name) {
         setTier((prev) => ({
           ...prev,
-          stripe_product_name: result.product_name || null,
-          stripe_amount_cents: result.amount_cents || null,
-          stripe_interval: result.interval || null,
-          stripe_currency: result.currency || null,
-          stripe_active: result.active || null,
+          stripe_product_name: result.product_name ?? null,
+          stripe_amount_cents: result.amount_cents ?? null,
+          stripe_interval: result.interval ?? null,
+          stripe_currency: result.currency ?? null,
+          stripe_active: result.active ?? null,
           stripe_verified_at: new Date().toISOString(),
         }))
       }
-    } catch (err: any) {
-      setStripeVerification({ valid: false, error: err.message || 'Verification failed' })
+    } catch (err) {
+      setStripeVerification({ valid: false, error: err instanceof Error ? err.message : 'Verification failed' })
     } finally {
       setVerifying(false)
     }
   }
 
   const handleSave = async (reason?: string) => {
-    // Check offline
     if (isOffline) {
       setError('Cannot save while offline. Please check your internet connection.')
       return
@@ -257,7 +226,6 @@ export default function LicenseTierDetail() {
       return
     }
 
-    // Validate limit values
     for (const assignment of Object.values(assignments)) {
       if (assignment.limit_value !== null && assignment.limit_value <= 0) {
         setError('Limit values must be positive integers')
@@ -272,148 +240,102 @@ export default function LicenseTierDetail() {
       const beforeState = isNew ? null : { ...tier }
 
       if (isNew) {
-        type LicenseTierInsert = Database['public']['Tables']['license_tiers']['Insert']
-        const insertData: LicenseTierInsert = {
+        const created = await createTier({
           tier_key: tier.tier_key!,
           tier_name: tier.tier_name!,
-          description: tier.description || null,
+          description: tier.description ?? null,
           stripe_price_id: tier.stripe_price_id!,
-          stripe_product_name: tier.stripe_product_name || null,
-          stripe_amount_cents: tier.stripe_amount_cents || null,
-          stripe_interval: tier.stripe_interval || null,
-          stripe_currency: tier.stripe_currency || null,
-          stripe_active: tier.stripe_active || null,
-          stripe_verified_at: tier.stripe_verified_at || null,
-          status: tier.status || 'active',
-        }
-        const { data, error: createError } = await supabase
-          .from('license_tiers')
-          .insert(insertData)
-          .select()
-          .single()
+          stripe_product_name: tier.stripe_product_name ?? null,
+          stripe_amount_cents: tier.stripe_amount_cents ?? null,
+          stripe_interval: tier.stripe_interval ?? null,
+          stripe_currency: tier.stripe_currency ?? null,
+          stripe_active: tier.stripe_active ?? null,
+          stripe_verified_at: tier.stripe_verified_at ?? null,
+          status: tier.status ?? 'active',
+        })
 
-        if (createError) throw createError
-
-        // Save feature assignments
-        if (data) {
-          // Save feature assignments with error handling
         try {
-          await saveAssignments(data.id)
-        } catch (assignmentError: any) {
+          await saveAssignmentsService(created.id, features.map((f) => f.id), assignments)
+        } catch (assignmentError) {
           console.error('Error saving assignments:', assignmentError)
-          // Tier was created but assignments failed - show warning but continue
           showError(t('toast.error.tierCreatedButAssignmentsFailed'))
-          // Still navigate to the tier so user can fix assignments
         }
-          
-        // Log audit event (best effort - don't block on audit failure)
+
         try {
           await logAuditEvent({
             action: 'tier_created',
             targetType: 'tier',
-            targetId: (data as any).id,
-            afterState: data,
-            reason: reason || 'Tier created',
+            targetId: created.id,
+            afterState: created as unknown as Record<string, unknown>,
+            reason: reason ?? 'Tier created',
           })
         } catch (auditError) {
           console.error('Error logging audit event:', auditError)
-          // Continue - audit failure shouldn't block the operation
         }
-          
+
         showSuccess(t('toast.success.licenseTierCreated'))
-        navigate(`/platform-admin/licenses/tiers/${(data as any).id}`)
-        }
+        navigate(`/platform-admin/licenses/tiers/${created.id}`)
       } else {
-        // Optimistic locking: check version
-        const expectedVersion = tier.version || 1
-        
-        const { data: currentTier, error: fetchError } = await supabase
-          .from('license_tiers')
-          .select('version')
-          .eq('id', id!)
-          .single()
+        const expectedVersion = tier.version ?? 1
+        const result = await updateTier(
+          id!,
+          {
+            tier_name: tier.tier_name,
+            description: tier.description ?? null,
+            stripe_price_id: tier.stripe_price_id,
+            stripe_product_name: tier.stripe_product_name ?? null,
+            stripe_amount_cents: tier.stripe_amount_cents ?? null,
+            stripe_interval: tier.stripe_interval ?? null,
+            stripe_currency: tier.stripe_currency ?? null,
+            stripe_active: tier.stripe_active ?? null,
+            stripe_verified_at: tier.stripe_verified_at ?? null,
+            status: tier.status,
+          },
+          expectedVersion
+        )
 
-        if (fetchError) throw fetchError
-
-        if ((currentTier as any).version !== expectedVersion) {
+        if (result.conflict) {
           setConflictDialog(true)
           setSaving(false)
           return
         }
 
-        type LicenseTierUpdate = Database['public']['Tables']['license_tiers']['Update']
-        const updateData = {
-          tier_name: tier.tier_name,
-          description: tier.description || null,
-          stripe_price_id: tier.stripe_price_id,
-          stripe_product_name: tier.stripe_product_name || null,
-          stripe_amount_cents: tier.stripe_amount_cents || null,
-          stripe_interval: tier.stripe_interval || null,
-          stripe_currency: tier.stripe_currency || null,
-          stripe_active: tier.stripe_active || null,
-          stripe_verified_at: tier.stripe_verified_at || null,
-          status: tier.status,
-        } satisfies LicenseTierUpdate
-        const { data: updatedTier, error: updateError } = await supabase
-          .from('license_tiers')
-          .update(updateData)
-          .eq('id', id!)
-          .eq('version', expectedVersion) // Ensure version hasn't changed
-          .select()
-          .single()
-
-        if (updateError) {
-          // Check if it's a version conflict
-          if (updateError.code === 'PGRST116' || updateError.message?.includes('0 rows')) {
-            setConflictDialog(true)
-            setSaving(false)
-            return
-          }
-          throw updateError
-        }
-
-        // Save feature assignments with error handling
         try {
-          await saveAssignments(id!)
-        } catch (assignmentError: any) {
+          await saveAssignmentsService(id!, features.map((f) => f.id), assignments)
+        } catch (assignmentError) {
           console.error('Error saving assignments:', assignmentError)
-          // Tier was updated but assignments failed - show warning
           showError(t('toast.error.tierUpdatedButAssignmentsFailed'))
-          // Reload assignments to show current state
           await fetchAssignments()
         }
 
-        // Log audit event (best effort - don't block on audit failure)
         try {
           await logAuditEvent({
             action: 'tier_updated',
             targetType: 'tier',
             targetId: id!,
-            beforeState,
-            afterState: updatedTier,
-            reason: reason || 'Tier updated',
+            beforeState: beforeState as unknown as Record<string, unknown>,
+            afterState: result.tier as unknown as Record<string, unknown>,
+            reason: reason ?? 'Tier updated',
           })
         } catch (auditError) {
           console.error('Error logging audit event:', auditError)
-          // Continue - audit failure shouldn't block the operation
         }
-        
-        // Refresh tier data to get latest version
-        await fetchTier()
+
+        setTier(result.tier)
         setLastRefreshed(new Date())
         showSuccess(t('toast.success.licenseTierUpdated'))
       }
-    } catch (err: any) {
-      // Provide user-friendly error messages
+    } catch (err: unknown) {
+      const e = err as { code?: string; message?: string }
       let errorMessage = t('toast.error.saveFailed')
-      if (err.code === '23505') {
+      if (e?.code === '23505') {
         errorMessage = t('toast.error.tierStripePriceIdExists')
-      } else if (err.code === '23503') {
+      } else if (e?.code === '23503') {
         errorMessage = t('toast.error.tierInvalidReference')
-      } else if (err.code === '42501') {
+      } else if (e?.code === '42501') {
         errorMessage = t('toast.error.tierPermissionDenied')
-      } else if (err.message) {
-        errorMessage = err.message
+      } else if (e?.message) {
+        errorMessage = e.message
       }
       showError(errorMessage)
       setError(errorMessage)
@@ -423,10 +345,18 @@ export default function LicenseTierDetail() {
   }
 
   const handleReloadAfterConflict = async () => {
+    setRefreshingConflict(true)
     setConflictDialog(false)
-    await fetchTier()
-    await fetchAssignments()
-    setLastRefreshed(new Date())
+    setError(null)
+    try {
+      await fetchTier()
+      await fetchAssignments()
+      setLastRefreshed(new Date())
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reload')
+    } finally {
+      setRefreshingConflict(false)
+    }
   }
 
   const handleArchive = async () => {
@@ -434,73 +364,47 @@ export default function LicenseTierDetail() {
       showError('Cannot archive while offline. Please check your internet connection.')
       return
     }
+    if (!id) return
 
     setSaving(true)
     setError(null)
 
     try {
-      const beforeState = { ...tier }
-      const expectedVersion = tier.version || 1
+      const expectedVersion = tier.version ?? 1
+      const currentStatus = (tier.status ?? 'active') as 'active' | 'archived'
+      const result = await archiveOrActivateTier(id, expectedVersion, currentStatus)
 
-      const { data: currentTier, error: fetchError } = await supabase
-        .from('license_tiers')
-        .select('version')
-        .eq('id', id!)
-        .single()
-
-      if (fetchError) throw fetchError
-
-      if ((currentTier as any).version !== expectedVersion) {
+      if (result.conflict) {
         setArchiveDialog(false)
         setConflictDialog(true)
         setSaving(false)
         return
       }
 
-      type LicenseTierUpdate = Database['public']['Tables']['license_tiers']['Update']
-      const updateData = {
-        status: tier.status === 'active' ? 'archived' : 'active',
-      } satisfies LicenseTierUpdate
-
-      const { data: updatedTier, error: updateError } = await supabase
-        .from('license_tiers')
-        .update(updateData)
-        .eq('id', id!)
-        .eq('version', expectedVersion)
-        .select()
-        .single()
-
-      if (updateError) {
-        if (updateError.code === 'PGRST116' || updateError.message?.includes('0 rows')) {
-          setArchiveDialog(false)
-          setConflictDialog(true)
-          setSaving(false)
-          return
-        }
-        throw updateError
-      }
-
       await logAuditEvent({
-        action: tier.status === 'active' ? 'tier_archived' : 'tier_activated',
+        action: currentStatus === 'active' ? 'tier_archived' : 'tier_activated',
         targetType: 'tier',
-        targetId: id!,
-        beforeState,
-        afterState: updatedTier,
-        reason: tier.status === 'active' ? 'Tier archived' : 'Tier activated',
+        targetId: id,
+        beforeState: tier as unknown as Record<string, unknown>,
+        afterState: result.tier as unknown as Record<string, unknown>,
+        reason: currentStatus === 'active' ? 'Tier archived' : 'Tier activated',
       })
 
-      showSuccess(tier.status === 'active' 
-        ? t('toast.success.licenseTierArchived')
-        : t('toast.success.licenseTierActivated'))
+      showSuccess(
+        currentStatus === 'active'
+          ? t('toast.success.licenseTierArchived')
+          : t('toast.success.licenseTierActivated')
+      )
       setArchiveDialog(false)
-      await fetchTier()
+      setTier(result.tier)
       await fetchOrganizationsUsingTier()
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const e = err as { code?: string; message?: string }
       let errorMessage = 'Failed to update tier status'
-      if (err.code === '42501') {
+      if (e?.code === '42501') {
         errorMessage = 'Permission denied. You do not have access to modify license tiers.'
-      } else if (err.message) {
-        errorMessage = err.message
+      } else if (e?.message) {
+        errorMessage = e.message
       }
       showError(errorMessage)
       setError(errorMessage)
@@ -514,77 +418,35 @@ export default function LicenseTierDetail() {
       showError('Cannot duplicate while offline. Please check your internet connection.')
       return
     }
+    if (!id || !tier.tier_key) return
 
     setDuplicating(true)
     setError(null)
 
     try {
-      // Create new tier with same data but new ID and modified name
-      type LicenseTierInsert = Database['public']['Tables']['license_tiers']['Insert']
-      const insertData: LicenseTierInsert = {
-        tier_key: tier.tier_key!,
-        tier_name: `${tier.tier_name} (Copy)`,
-        description: tier.description || null,
-        stripe_price_id: '', // Must be set separately - cannot duplicate Stripe Price ID
-        stripe_product_name: tier.stripe_product_name || null,
-        stripe_amount_cents: tier.stripe_amount_cents || null,
-        stripe_interval: tier.stripe_interval || null,
-        stripe_currency: tier.stripe_currency || null,
-        stripe_active: tier.stripe_active || null,
-        status: 'active',
+      const fullTier: LicenseTier = {
+        ...tier,
+        id: tier.id!,
+        tier_key: tier.tier_key,
+        tier_name: tier.tier_name ?? '',
+        stripe_price_id: tier.stripe_price_id ?? '',
+        status: (tier.status ?? 'active') as 'active' | 'archived',
+        version: tier.version ?? 1,
+        created_at: tier.created_at ?? new Date().toISOString(),
+        updated_at: tier.updated_at ?? new Date().toISOString(),
       }
-
-      const { data: newTier, error: createError } = await supabase
-        .from('license_tiers')
-        .insert(insertData)
-        .select()
-        .single()
-
-      if (createError) throw createError
-
-      // Copy feature assignments
-      if (newTier) {
-        const assignmentEntries = Object.entries(assignments).filter(([_, assignment]) => assignment.included)
-
-        for (const [featureId, assignment] of assignmentEntries) {
-          type AssignmentUpsert = Database['public']['Tables']['tier_feature_assignments']['Insert']
-          const upsertData = {
-            license_tier_id: (newTier as any).id,
-            feature_entitlement_id: featureId,
-            included: assignment.included,
-            limit_value: assignment.limit_value || null,
-            role_admin: assignment.role_admin ?? true,
-            role_coach: assignment.role_coach ?? true,
-            role_parent: assignment.role_parent ?? false,
-          } satisfies AssignmentUpsert
-
-          await supabase
-            .from('tier_feature_assignments')
-            .upsert(upsertData, {
-              onConflict: 'license_tier_id,feature_entitlement_id',
-            })
-        }
-
-        await logAuditEvent({
-          action: 'tier_duplicated',
-          targetType: 'tier',
-          targetId: (newTier as any).id,
-          beforeState: null,
-          afterState: newTier,
-          reason: `Duplicated from tier ${tier.id}`,
-        })
-
-        showSuccess(t('toast.success.licenseTierDuplicated'))
-        navigate(`/platform-admin/licenses/tiers/${(newTier as any).id}`)
-      }
-    } catch (err: any) {
+      const newTier = await duplicateTier(id, fullTier, assignments)
+      showSuccess(t('toast.success.licenseTierDuplicated'))
+      navigate(`/platform-admin/licenses/tiers/${newTier.id}`)
+    } catch (err: unknown) {
+      const e = err as { code?: string; message?: string }
       let errorMessage = 'Failed to duplicate tier'
-      if (err.code === '23505') {
+      if (e?.code === '23505') {
         errorMessage = 'A tier with this Stripe Price ID already exists'
-      } else if (err.code === '42501') {
+      } else if (e?.code === '42501') {
         errorMessage = 'Permission denied. You do not have access to create license tiers.'
-      } else if (err.message) {
-        errorMessage = err.message
+      } else if (e?.message) {
+        errorMessage = e.message
       }
       showError(errorMessage)
       setError(errorMessage)
@@ -595,36 +457,16 @@ export default function LicenseTierDetail() {
 
   const handleRefresh = async () => {
     setLoading(true)
-    await fetchTier()
-    await fetchAssignments()
-    await fetchOrganizationsUsingTier()
-    setLastRefreshed(new Date())
-    setLoading(false)
-  }
-
-  const saveAssignments = async (tierId: string) => {
-    const assignmentEntries = Object.entries(assignments).filter(([_, assignment]) => assignment.included)
-
-    for (const [featureId, assignment] of assignmentEntries) {
-      type AssignmentUpsert = Database['public']['Tables']['tier_feature_assignments']['Insert']
-      const upsertData = {
-        license_tier_id: tierId,
-        feature_entitlement_id: featureId,
-        included: assignment.included,
-        limit_value: assignment.limit_value || null,
-        role_admin: assignment.role_admin ?? true,
-        role_coach: assignment.role_coach ?? true,
-        role_parent: assignment.role_parent ?? false,
-      } satisfies AssignmentUpsert
-      const { error } = await supabase
-        .from('tier_feature_assignments')
-        .upsert(upsertData, {
-          onConflict: 'license_tier_id,feature_entitlement_id',
-        })
-
-      if (error) {
-        console.error('Error saving assignment:', error)
-      }
+    setError(null)
+    try {
+      await fetchTier()
+      await fetchAssignments()
+      await fetchOrganizationsUsingTier()
+      setLastRefreshed(new Date())
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to refresh')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -733,7 +575,7 @@ export default function LicenseTierDetail() {
                 <Button
                   variant="ghost"
                   onClick={handleRefresh}
-                  disabled={loading}
+                  disabled={loading || refreshingConflict}
                   className="w-full sm:w-auto min-h-[44px]"
                   style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
                 >
@@ -1272,6 +1114,7 @@ export default function LicenseTierDetail() {
         description="Another admin has modified this tier since you loaded it. Please reload to see the latest changes, then make your edits again."
         confirmLabel="Reload"
         variant="warning"
+        loading={refreshingConflict}
         onConfirm={handleReloadAfterConflict}
         onCancel={() => setConflictDialog(false)}
       />
@@ -1286,6 +1129,7 @@ export default function LicenseTierDetail() {
         }
         confirmLabel={tier.status === 'active' ? 'Archive' : 'Activate'}
         variant={tier.status === 'active' ? 'warning' : 'info'}
+        loading={saving}
         onConfirm={handleArchive}
         onCancel={() => setArchiveDialog(false)}
       />
