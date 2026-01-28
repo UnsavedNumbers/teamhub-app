@@ -149,7 +149,8 @@ serve(async (req) => {
     }
   }
 
-  // Resolve payments for this assignment via payment_allocations
+  // Resolve payments for this assignment: (1) payment_allocations, or (2) checkout_session_items
+  let paymentIds: string[] = []
   const { data: allocations, error: allocErr } = await supabase
     .from("payment_allocations")
     .select("payment_id")
@@ -158,9 +159,37 @@ serve(async (req) => {
   if (allocErr) {
     return json(req, { error: "Failed to load allocations" }, 500)
   }
-  const paymentIds = [...new Set((allocations ?? []).map((a: any) => a.payment_id).filter(Boolean))]
+  paymentIds = [...new Set((allocations ?? []).map((a: any) => a.payment_id).filter(Boolean))]
+
+  // Fallback: payments may exist without allocations (e.g. webhook skipped allocations)
   if (paymentIds.length === 0) {
-    return json(req, { error: "No payment found for this assignment" }, 404)
+    const { data: items, error: itemsErr } = await supabase
+      .from("checkout_session_items")
+      .select("checkout_session_id")
+      .eq("fee_assignment_id", assignmentId)
+
+    if (itemsErr) {
+      return json(req, { error: "Failed to load checkout items" }, 500)
+    }
+    const sessionIds = [...new Set((items ?? []).map((i: any) => i.checkout_session_id).filter(Boolean))]
+    if (sessionIds.length === 0) {
+      return json(req, { error: "No Stripe receipt available for this assignment" }, 404)
+    }
+    const { data: paymentsBySession, error: payErr } = await supabase
+      .from("payments")
+      .select("id")
+      .in("checkout_session_id", sessionIds)
+      .eq("status", "succeeded")
+      .not("stripe_payment_intent_id", "is", null)
+      .order("created_at", { ascending: false })
+    if (payErr) {
+      return json(req, { error: "Failed to load payments" }, 500)
+    }
+    paymentIds = (paymentsBySession ?? []).map((p: any) => p.id)
+  }
+
+  if (paymentIds.length === 0) {
+    return json(req, { error: "No Stripe receipt available for this assignment" }, 404)
   }
 
   const { data: payments, error: paymentsErr } = await supabase

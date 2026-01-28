@@ -89,6 +89,7 @@ export default function PaymentDetail() {
   })
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const isMountedRef = useRef(true)
+  const receiptInProgressRef = useRef(false)
   
   // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -359,20 +360,19 @@ export default function PaymentDetail() {
     }
   }
 
-  const handleDownloadReceipt = async () => {
-    if (!assignment || actionLoading !== null) return
-    
+  const handleDownloadReceipt = async (e?: React.MouseEvent) => {
+    if (e && !e.isTrusted) return
+    if (!assignment || actionLoading !== null || receiptInProgressRef.current) return
+    receiptInProgressRef.current = true
     setActionLoading('download')
     try {
       const { data, error } = await generateReceiptPDF(context, assignment.id)
-      
+      if (!isMountedRef.current) return
       if (error) {
         showError(error.message || 'Failed to generate receipt')
         return
       }
-      
       if (data?.url) {
-        // Open receipt in new tab or download
         if (data.url.startsWith('http') || data.url.startsWith('https')) {
           window.open(data.url, '_blank')
           showSuccess('Receipt opened in new tab')
@@ -381,10 +381,13 @@ export default function PaymentDetail() {
         }
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to download receipt'
-      showError(errorMessage)
+      if (isMountedRef.current) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to download receipt'
+        showError(errorMessage)
+      }
     } finally {
-      setActionLoading(null)
+      receiptInProgressRef.current = false
+      if (isMountedRef.current) setActionLoading(null)
     }
   }
 
