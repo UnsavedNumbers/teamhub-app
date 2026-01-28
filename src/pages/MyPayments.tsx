@@ -325,9 +325,9 @@ export default function MyPayments() {
           { label: 'Payments' },
         ]}
       >
-        <div className="mb-12">
+        <div className="mb-8 sm:mb-12">
           <PageTitle>Payments</PageTitle>
-          <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
+          <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide">
             Select fees to pay or filter to find a specific fee.
           </p>
         </div>
@@ -338,12 +338,12 @@ export default function MyPayments() {
           </Card>
         )}
 
-        <div className="mb-8">
-          <SectionHeader className="mb-4">Filters</SectionHeader>
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-wrap gap-3 items-center">
+        <div className="mb-6 sm:mb-8">
+          <SectionHeader className="mb-3 sm:mb-4">Filters</SectionHeader>
+          <div className="flex flex-col gap-3 sm:gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 items-stretch sm:items-center">
               <select
-                className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2.5 text-sm text-slate-900 dark:text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as FeeAssignmentStatus | 'all')}
                 disabled={loading}
@@ -356,7 +356,7 @@ export default function MyPayments() {
                 <option value="overdue">Overdue</option>
               </select>
               <select
-                className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2.5 text-sm text-slate-900 dark:text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 value={childFilter}
                 onChange={(e) => setChildFilter(e.target.value)}
                 disabled={loading}
@@ -367,7 +367,7 @@ export default function MyPayments() {
                 ))}
               </select>
               <select
-                className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2.5 text-sm text-slate-900 dark:text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 value={teamFilter}
                 onChange={(e) => setTeamFilter(e.target.value)}
                 disabled={loading}
@@ -381,7 +381,7 @@ export default function MyPayments() {
                 variant="secondary" 
                 onClick={toggleSelectAll} 
                 disabled={loading || unpaidAssignments.length === 0}
-                className="text-sm px-6 py-2"
+                className="w-full sm:w-auto text-sm px-6 py-2.5"
               >
                 {selectedIds.length === unpaidAssignments.length && unpaidAssignments.length > 0 ? 'Clear Selection' : 'Select All Due'}
               </Button>
@@ -389,12 +389,12 @@ export default function MyPayments() {
           </div>
         </div>
 
-        <div className="mb-8">
-          <SectionHeader className="mb-4">Checkout</SectionHeader>
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-3">
+        <div className="mb-6 sm:mb-8">
+          <SectionHeader className="mb-3 sm:mb-4">Checkout</SectionHeader>
+          <div className="flex flex-col gap-3 sm:gap-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
               <input
-                className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                className="flex-1 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
                 placeholder="Discount code"
                 value={discountCode}
                 onChange={(e) => {
@@ -414,32 +414,32 @@ export default function MyPayments() {
                 variant="secondary" 
                 onClick={handleApplyDiscount} 
                 disabled={validatingDiscount || creatingCheckout || loading || !discountCode.trim()}
-                className="text-sm px-6 py-2"
+                className="w-full sm:w-auto text-sm px-6 py-2.5"
               >
                 {validatingDiscount ? 'Validating...' : 'Apply'}
               </Button>
-              {appliedDiscount && (
-                <div className="flex items-center gap-2">
-                  <span className="text-emerald-500 dark:text-emerald-400 text-sm font-bold">Applied: {appliedDiscount}</span>
-                  <button
-                    onClick={() => {
-                      setAppliedDiscount(null)
-                      setDiscountCode('')
-                      setDiscountError(null)
-                    }}
-                    className="text-red-500 dark:text-red-400 text-sm font-bold hover:underline"
-                    type="button"
-                  >
-                    Remove
-                  </button>
-                </div>
-              )}
-              {discountError && (
-                <span className="text-red-500 dark:text-red-400 text-sm font-bold">{discountError}</span>
-              )}
             </div>
-            <div className="flex items-center gap-3">
-              <div className="text-right">
+            {appliedDiscount && (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                <span className="text-emerald-500 dark:text-emerald-400 text-sm font-bold">Applied: {appliedDiscount}</span>
+                <button
+                  onClick={() => {
+                    setAppliedDiscount(null)
+                    setDiscountCode('')
+                    setDiscountError(null)
+                  }}
+                  className="text-red-500 dark:text-red-400 text-sm font-bold hover:underline"
+                  type="button"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+            {discountError && (
+              <span className="text-red-500 dark:text-red-400 text-sm font-bold">{discountError}</span>
+            )}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+              <div className="text-left sm:text-right">
                 <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">Selected total</p>
                 <p className="text-lg font-black text-slate-900 dark:text-white">${(selectedTotal / 100).toFixed(2)}</p>
               </div>
@@ -447,6 +447,7 @@ export default function MyPayments() {
                 variant="primary"
                 disabled={creatingCheckout || validatingDiscount || loading || selectedAssignments.length === 0}
                 onClick={handlePayNow}
+                className="w-full sm:w-auto"
               >
                 {creatingCheckout ? 'Starting checkout...' : validatingDiscount ? 'Validating...' : 'Pay'}
               </Button>
@@ -470,7 +471,7 @@ export default function MyPayments() {
           </Card>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
               {filteredAssignments.map((a) => {
                 const isSelected = selectedIds.includes(a.id)
                 const dueDate = a.due_date || a.fee?.due_date
@@ -486,12 +487,12 @@ export default function MyPayments() {
                       }
                       navigate(`/portal/payments/${a.id}`)
                     }}
-                    className={`p-6 hover:shadow-2xl hover:shadow-[var(--org-btn-primary-bg, #137fec)]/5 transition-all duration-300 cursor-pointer ${
+                    className={`p-4 sm:p-6 hover:shadow-2xl hover:shadow-[var(--org-btn-primary-bg, #137fec)]/5 transition-all duration-300 cursor-pointer ${
                       isSelected ? 'ring-2 ring-[var(--org-btn-primary-bg, #137fec)]' : ''
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-2 flex-1">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3 sm:gap-4">
+                      <div className="space-y-2 flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <input
                             type="checkbox"
@@ -502,9 +503,9 @@ export default function MyPayments() {
                             }}
                             onClick={(e) => e.stopPropagation()}
                             disabled={loading || creatingCheckout}
-                            className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-[var(--org-link-color)] focus:ring-[var(--org-btn-primary-bg, #137fec)] disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-[var(--org-link-color)] focus:ring-[var(--org-btn-primary-bg, #137fec)] disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                           />
-                          <p className="font-black text-slate-900 dark:text-white text-lg uppercase">{a.fee?.title || 'Fee'}</p>
+                          <p className="font-black text-slate-900 dark:text-white text-base sm:text-lg uppercase break-words">{a.fee?.title || 'Fee'}</p>
                           {renderStatus(a.status)}
                         </div>
                         <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
@@ -522,8 +523,8 @@ export default function MyPayments() {
                           </p>
                         )}
                       </div>
-                      <div className="text-right space-y-1">
-                        <p className="text-2xl font-black text-slate-900 dark:text-white">${((a.balance_cents ?? 0) / 100).toFixed(2)}</p>
+                      <div className="text-left sm:text-right space-y-1 flex-shrink-0">
+                        <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">${((a.balance_cents ?? 0) / 100).toFixed(2)}</p>
                         {a.paid_cents_total > 0 && (
                           <p className="text-xs font-bold text-emerald-500 dark:text-emerald-400">Paid ${(a.paid_cents_total / 100).toFixed(2)}</p>
                         )}
@@ -534,11 +535,11 @@ export default function MyPayments() {
               })}
             </div>
 
-            <Card className="p-6">
-              <div className="flex items-center justify-between">
+            <Card className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Total due</p>
-                  <p className="text-xl font-black text-slate-900 dark:text-white">${(totalDue / 100).toFixed(2)}</p>
+                  <p className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">${(totalDue / 100).toFixed(2)}</p>
                 </div>
                 <div className="text-sm font-bold text-slate-500 dark:text-slate-400">
                   {unpaidAssignments.length} open {unpaidAssignments.length === 1 ? 'fee' : 'fees'}

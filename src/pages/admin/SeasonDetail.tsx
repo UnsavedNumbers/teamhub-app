@@ -326,10 +326,10 @@ export default function SeasonDetail() {
               display: 'flex',
               flexDirection: 'column',
               gap: 'var(--pa-space-2)',
-              padding: 'var(--pa-space-8)',
-              minHeight: '320px',
+              padding: 'var(--pa-space-6) sm:var(--pa-space-8)',
+              minHeight: '280px',
             }}
-            className="md:flex-row md:justify-between md:items-end"
+            className="sm:flex-row sm:justify-between sm:items-end"
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-2)' }}>
               <Badge
@@ -384,11 +384,11 @@ export default function SeasonDetail() {
             </div>
             {/* Progress Indicator */}
             <div
-              className="hidden lg:flex"
+              className="hidden sm:flex"
               style={{
                 alignItems: 'center',
                 justifyContent: 'center',
-                padding: 'var(--pa-space-6)',
+                padding: 'var(--pa-space-4) sm:var(--pa-space-6)',
                 background: 'rgba(255, 255, 255, 0.1)',
                 backdropFilter: 'blur(12px)',
                 borderRadius: 'var(--pa-radius-m)',
@@ -444,7 +444,7 @@ export default function SeasonDetail() {
 
         {/* Athletic Grid Cards */}
         <div
-          className="pa-grid pa-grid-cols-1 md:pa-grid-cols-3"
+          className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-3"
           style={{ gap: 'var(--pa-space-6)', marginBottom: 'var(--pa-space-6)' }}
         >
           {/* Sports & Programs Card */}
@@ -636,9 +636,8 @@ export default function SeasonDetail() {
               </span>
             </div>
             <div
+              className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2"
               style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(2, 1fr)',
                 gap: 'var(--pa-space-4)',
               }}
             >
@@ -663,7 +662,7 @@ export default function SeasonDetail() {
                 </p>
                 <p
                   style={{
-                    fontSize: '24px',
+                    fontSize: 'clamp(20px, 4vw, 24px)',
                     fontWeight: 900,
                     color: 'var(--pa-n900)',
                     margin: 0,
@@ -694,7 +693,7 @@ export default function SeasonDetail() {
                 </p>
                 <p
                   style={{
-                    fontSize: '24px',
+                    fontSize: 'clamp(20px, 4vw, 24px)',
                     fontWeight: 900,
                     color: 'var(--pa-n900)',
                     margin: 0,
@@ -725,7 +724,7 @@ export default function SeasonDetail() {
                 </p>
                 <p
                   style={{
-                    fontSize: '24px',
+                    fontSize: 'clamp(20px, 4vw, 24px)',
                     fontWeight: 900,
                     color: 'var(--pa-n900)',
                     margin: 0,
@@ -756,7 +755,7 @@ export default function SeasonDetail() {
                 </p>
                 <p
                   style={{
-                    fontSize: '24px',
+                    fontSize: 'clamp(20px, 4vw, 24px)',
                     fontWeight: 900,
                     color: 'var(--pa-n900)',
                     margin: 0,

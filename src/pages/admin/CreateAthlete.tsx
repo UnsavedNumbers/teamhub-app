@@ -381,7 +381,7 @@ export default function CreateAthlete() {
                                 />
                             </div>
 
-                            <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-6">
+                            <div className="pa-form-grid pa-form-grid-2 pa-gap-4 pa-mb-6">
                                 <Input
                                     label="Phone Number (Optional)"
                                     type="tel"
@@ -500,16 +500,17 @@ export default function CreateAthlete() {
                         </Card>
 
                         {/* Submit Buttons */}
-                        <div className="mt-6 flex justify-end gap-3">
+                        <div className="pa-form-actions mt-6">
                             <Button
                                 type="button"
                                 variant="ghost"
                                 onClick={() => navigate(getLink('admin.athletes.list'))}
                                 disabled={loading}
+                                className="w-full sm:w-auto"
                             >
                                 Cancel
                             </Button>
-                            <Button type="submit" disabled={loading}>
+                            <Button type="submit" disabled={loading} className="pa-form-submit-btn w-full sm:w-auto">
                                 {loading ? 'Creating...' : 'Create Athlete'}
                             </Button>
                         </div>

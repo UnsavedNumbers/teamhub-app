@@ -763,10 +763,11 @@ export default function CreateEvent() {
                 }
                 navigate(-1)
               }}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
-            <Button type="submit" loading={saving} className="pa-form-submit-btn">Create Event</Button>
+            <Button type="submit" loading={saving} className="pa-form-submit-btn w-full sm:w-auto">Create Event</Button>
           </div>
         </form>
       </Card>

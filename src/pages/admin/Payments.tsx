@@ -388,7 +388,7 @@ export default function Payments() {
 
                 {/* Title */}
                 <h1 style={{ 
-                  fontSize: '48px', 
+                  fontSize: '64px', 
                   fontWeight: 900, 
                   color: '#fff',
                   marginBottom: '16px',
@@ -493,13 +493,15 @@ export default function Payments() {
           </div>
         </Card>
 
-        {/* Real-world Example */}
-        <Card style={{ marginTop: '24px' }}>
+        {/* Example and CTA Row */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '24px', marginTop: '24px' }}>
+          {/* Real-world Example */}
           <div style={{
             background: 'rgba(251, 191, 36, 0.15)',
             border: '1px solid rgba(251, 191, 36, 0.3)',
             borderRadius: '12px',
             padding: '18px 22px',
+            alignSelf: 'start',
           }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
               <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#fbbf24', marginTop: '2px' }}>lightbulb</span>
@@ -521,66 +523,52 @@ export default function Payments() {
               </div>
             </div>
           </div>
-        </Card>
 
-        {/* Complete Payment Setup CTA */}
-        <Card style={{ marginTop: '24px' }}>
-          <div style={{
-            background: 'rgba(255,255,255,0.95)',
-            borderRadius: '16px',
-            padding: '36px',
-            textAlign: 'center',
-          }}>
+          {/* Complete Payment Setup CTA */}
+          <Card>
             <div style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '14px',
-              background: 'linear-gradient(135deg, #137fec 0%, #0066cc 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 18px',
-              boxShadow: '0 8px 24px -4px rgba(19, 127, 236, 0.4)',
+              background: '#fff',
+              borderRadius: '16px',
+              padding: '36px',
+              textAlign: 'center',
             }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '32px', color: 'white' }}>lock_open</span>
-            </div>
-            <h3 style={{ 
-              fontSize: '24px', 
-              fontWeight: 900, 
-              color: '#0B0F14', 
-              marginBottom: '10px',
-              fontFamily: 'var(--pa-font-display, Oswald, sans-serif)',
-              textTransform: 'uppercase',
-              letterSpacing: '-0.01em',
-            }}>
-              {t('admin.payments.onboarding.cta.title')}
-            </h3>
-            <p style={{ 
-              fontSize: '15px', 
-              color: '#4A5568', 
-              lineHeight: 1.6,
-              maxWidth: '440px',
-              margin: '0 auto 24px'
-            }}>
-              {t('admin.payments.onboarding.cta.description')}
-            </p>
-            <Button 
-              variant="primary"
-              icon="arrow_forward"
-              onClick={() => navigate('/admin/organization?tab=payments')}
-              style={{
-                padding: '16px 36px',
-                fontSize: '14px',
-                fontWeight: 700,
-                boxShadow: '0 8px 24px -4px rgba(19, 127, 236, 0.4)',
+              <h3 style={{ 
+                fontSize: '24px', 
+                fontWeight: 900, 
+                color: '#0B0F14', 
+                marginBottom: '10px',
+                fontFamily: 'var(--pa-font-display, Oswald, sans-serif)',
                 textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-              }}
-            >
-              {t('admin.payments.onboarding.cta.button')}
-            </Button>
-          </div>
-        </Card>
+                letterSpacing: '-0.01em',
+              }}>
+                {t('admin.payments.onboarding.cta.title')}
+              </h3>
+              <p style={{ 
+                fontSize: '15px', 
+                color: '#4A5568', 
+                lineHeight: 1.6,
+                maxWidth: '440px',
+                margin: '0 auto 24px'
+              }}>
+                {t('admin.payments.onboarding.cta.description')}
+              </p>
+              <Button 
+                variant="primary"
+                icon="arrow_forward"
+                onClick={() => navigate('/admin/organization?tab=payments')}
+                style={{
+                  padding: '16px 36px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                {t('admin.payments.onboarding.cta.button')}
+              </Button>
+            </div>
+          </Card>
+        </div>
       </div>
     )
   }

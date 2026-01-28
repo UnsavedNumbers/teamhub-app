@@ -13,6 +13,7 @@ import OfflineBanner from '../../components/admin/OfflineBanner'
 import { AdminPageHeader, Button, Card, Table, type TableColumn } from '../../components/platformAdmin'
 import { getLink } from '../../utils/routes'
 import { getRandomSportImagePath } from '../../utils/sportImages'
+import { cn } from '../../utils/cn'
 
 type LevelRow = {
   id: string
@@ -437,9 +438,9 @@ export default function ProgramDetail() {
             { label: program?.name || 'Program' },
           ]}
           actions={
-            <div className="pa-flex pa-gap-2">
-              <Link to={programsRoute}>
-                <Button variant="ghost" disabled={loading} aria-label="Navigate back to programs list">
+            <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2">
+              <Link to={programsRoute} className="w-full sm:w-auto">
+                <Button variant="ghost" disabled={loading} aria-label="Navigate back to programs list" className="w-full sm:w-auto min-h-[44px]">
                   Back to Programs
                 </Button>
               </Link>
@@ -452,14 +453,15 @@ export default function ProgramDetail() {
                       setActionError('Sport ID is required to view sport details.')
                     }
                   }}
+                  className="w-full sm:w-auto"
                 >
-                  <Button variant="secondary" disabled={loading || !sport.id} aria-label={`View ${sport.name} sport details`}>
+                  <Button variant="secondary" disabled={loading || !sport.id} aria-label={`View ${sport.name} sport details`} className="w-full sm:w-auto min-h-[44px]">
                     View {sport.name}
                   </Button>
                 </Link>
               ) : (
-                <Link to={sportsRoute}>
-                  <Button variant="secondary" disabled={loading} aria-label="Navigate to sports list">
+                <Link to={sportsRoute} className="w-full sm:w-auto">
+                  <Button variant="secondary" disabled={loading} aria-label="Navigate to sports list" className="w-full sm:w-auto min-h-[44px]">
                     View Sports
                   </Button>
                 </Link>
@@ -596,7 +598,7 @@ export default function ProgramDetail() {
                       </span>
                     </div>
 
-                    <div className="pa-flex pa-items-center pa-gap-2" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <div className="pa-flex pa-flex-col sm:pa-flex-row pa-items-stretch sm:pa-items-center pa-gap-2" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                       <Link
                         to={`${getLink('admin.programs.update', { id: programId })}?returnUrl=${encodeURIComponent(detailRoute)}`}
                         onClick={(e) => {
@@ -605,26 +607,28 @@ export default function ProgramDetail() {
                             setActionError('Program ID is required to edit program.')
                           }
                         }}
+                        className="w-full sm:w-auto"
                       >
                         <Button
                           variant="ghost"
                           icon="edit"
                           disabled={loading || !programId}
                           aria-label={`Edit ${program?.name || 'program'}`}
+                          className="w-full sm:w-auto min-h-[44px]"
                         >
                           Edit Program
                         </Button>
                       </Link>
 
-                      <Link to={levelsRoute}>
-                        <Button variant="ghost" disabled={loading} aria-label="Navigate to all levels">
+                      <Link to={levelsRoute} className="w-full sm:w-auto">
+                        <Button variant="ghost" disabled={loading} aria-label="Navigate to all levels" className="w-full sm:w-auto min-h-[44px]">
                           View Levels
                         </Button>
                       </Link>
 
                       <Link
                         to={`${formsRoute}?type=level&program_id=${programId}&sport_id=${program.sport_id}&returnUrl=${encodeURIComponent(detailRoute)}`}
-                        className={isOffline || USE_FAKE_DATA ? 'pa-disabled-link' : ''}
+                        className={cn(isOffline || USE_FAKE_DATA ? 'pa-disabled-link' : '', 'w-full sm:w-auto')}
                         onClick={(e) => {
                           if (isOffline || USE_FAKE_DATA) {
                             e.preventDefault()
@@ -653,6 +657,7 @@ export default function ProgramDetail() {
                                   : undefined
                           }
                           aria-label="Add a new level to this program"
+                          className="w-full sm:w-auto min-h-[44px]"
                         >
                           Add Level
                         </Button>
@@ -660,6 +665,7 @@ export default function ProgramDetail() {
 
                       <Link
                         to={`${formsRoute}?type=team&program_id=${programId}&sport_id=${program.sport_id}&returnUrl=${encodeURIComponent(detailRoute)}`}
+                        className="w-full sm:w-auto"
                         onClick={(e) => {
                           if (isOffline || USE_FAKE_DATA) {
                             e.preventDefault()
@@ -687,6 +693,7 @@ export default function ProgramDetail() {
                                   : undefined
                           }
                           aria-label="Add a new team to this program"
+                          className="w-full sm:w-auto min-h-[44px]"
                         >
                           Add Team
                         </Button>

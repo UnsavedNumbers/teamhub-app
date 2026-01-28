@@ -397,43 +397,43 @@ export default function Settings() {
           { label: t('portal.settings.title') },
         ]}
       >
-        <div className="mb-12 flex items-end justify-between">
-          <div>
+        <div className="mb-8 sm:mb-12 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 sm:gap-6">
+          <div className="flex-1">
             <PageTitle>{t('portal.settings.title')}</PageTitle>
-            <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
+            <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide">
               Manage your account and preferences.
             </p>
           </div>
-          <Button variant="secondary" onClick={handleLogout} className="text-red-600 hover:text-red-700 border-red-200 dark:border-red-800">
+          <Button variant="secondary" onClick={handleLogout} className="w-full sm:w-auto text-red-600 hover:text-red-700 border-red-200 dark:border-red-800">
             {t('portal.settings.logOut')}
           </Button>
         </div>
 
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
           {/* Account */}
           <section>
             <SectionHeader className="mb-4">{t('portal.settings.account.title')}</SectionHeader>
             <Card className="overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
-              <div className="p-6 flex items-center justify-between">
-                <div>
+              <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('portal.settings.account.email')}</p>
-                  <p className="font-black text-slate-900 dark:text-white">{profile?.email}</p>
+                  <p className="font-black text-slate-900 dark:text-white break-words">{profile?.email}</p>
                 </div>
-                <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-3 py-1 rounded-full font-bold uppercase tracking-widest">{t('portal.settings.account.emailLogin')}</span>
+                <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-3 py-1 rounded-full font-bold uppercase tracking-widest self-start sm:self-auto">{t('portal.settings.account.emailLogin')}</span>
               </div>
               <div 
-                className="p-6 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
+                className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
                 onClick={() => setShowPasswordModal(true)}
               >
-                <div>
+                <div className="flex-1">
                   <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('portal.settings.account.password')}</p>
                   <p className="font-black text-slate-900 dark:text-white">{t('portal.settings.account.passwordPlaceholder')}</p>
                 </div>
-                <span className="text-[var(--org-link-color)] text-sm font-bold">{t('common.change')}</span>
+                <span className="text-[var(--org-link-color)] text-sm font-bold self-start sm:self-auto">{t('common.change')}</span>
               </div>
               {profile?.phone && (
-                <div className="p-6 flex items-center justify-between">
-                  <div>
+                <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                  <div className="flex-1">
                     <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('portal.settings.account.phone')}</p>
                     <p className="font-black text-slate-900 dark:text-white">{profile.phone}</p>
                   </div>
@@ -499,42 +499,42 @@ export default function Settings() {
                       </button>
                     </div>
                     
-                    <div className="space-y-3">
+                    <div className="space-y-2 sm:space-y-3">
                       {/* Current User as Guardian */}
-                      <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center flex-shrink-0">
                             <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                           </div>
-                          <div>
+                          <div className="min-w-0">
                             <p className="font-bold text-sm text-slate-900 dark:text-white">{t('portal.settings.family.you')}</p>
-                            <p className="text-xs text-slate-500">{profile?.email}</p>
+                            <p className="text-xs text-slate-500 break-words">{profile?.email}</p>
                           </div>
                         </div>
-                        <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-widest rounded">{t('portal.settings.family.owner')}</span>
+                        <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-widest rounded self-start sm:self-auto">{t('portal.settings.family.owner')}</span>
                       </div>
 
                       {/* Other Guardians */}
                       {child.guardians
                         .filter(g => g.email !== profile?.email)
                         .map(guardian => (
-                          <div key={guardian.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                          <div key={guardian.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0">
                                 <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
                                   {guardian.display_name?.[0]?.toUpperCase() || guardian.email[0].toUpperCase()}
                                 </span>
                               </div>
-                              <div>
-                                <p className="font-bold text-sm text-slate-900 dark:text-white">
+                              <div className="min-w-0">
+                                <p className="font-bold text-sm text-slate-900 dark:text-white break-words">
                                   {guardian.display_name || guardian.email}
                                 </p>
                                 {guardian.display_name && (
-                                  <p className="text-xs text-slate-500">{guardian.email}</p>
+                                  <p className="text-xs text-slate-500 break-words">{guardian.email}</p>
                                 )}
                               </div>
                             </div>
-                            <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-[10px] font-bold uppercase tracking-widest rounded capitalize">
+                            <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-[10px] font-bold uppercase tracking-widest rounded capitalize self-start sm:self-auto">
                               {guardian.relationship_type || 'Guardian'}
                             </span>
                           </div>
@@ -542,21 +542,21 @@ export default function Settings() {
 
                       {/* Pending Invites */}
                       {child.pendingInvites.map(invite => (
-                        <div key={invite.id} className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-200 dark:border-amber-800/30">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center">
+                        <div key={invite.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 p-3 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-200 dark:border-amber-800/30">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="w-8 h-8 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center flex-shrink-0">
                               <Mail className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                             </div>
-                            <div>
+                            <div className="min-w-0">
                               <p className="font-bold text-sm text-slate-900 dark:text-white italic">{t('admin.athletes.guardians.invitePending')}</p>
-                              <p className="text-xs text-slate-500">{invite.email}</p>
+                              <p className="text-xs text-slate-500 break-words">{invite.email}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 self-start sm:self-auto">
                             <button
                               onClick={() => handleResendInvite(invite.id)}
                               disabled={inviteActionLoading === invite.id}
-                              className="text-xs font-bold text-[var(--org-link-color)] hover:underline disabled:opacity-50"
+                              className="text-xs font-bold text-[var(--org-link-color)] hover:underline disabled:opacity-50 min-h-[44px] px-2"
                             >
                               {inviteActionLoading === invite.id ? (
                                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -567,7 +567,7 @@ export default function Settings() {
                             <button
                               onClick={() => handleCancelInvite(invite.id)}
                               disabled={inviteActionLoading === invite.id}
-                              className="text-xs font-bold text-red-500 hover:underline disabled:opacity-50"
+                              className="text-xs font-bold text-red-500 hover:underline disabled:opacity-50 min-h-[44px] px-2"
                             >
                               {t('admin.athletes.guardians.cancelInvite')}
                             </button>
@@ -610,19 +610,19 @@ export default function Settings() {
                   <button
                     key={option.value}
                     onClick={() => setLocale(option.value)}
-                    className={`w-full p-4 rounded-lg border-2 transition-all text-left flex items-center justify-between ${
+                    className={`w-full p-3 sm:p-4 rounded-lg border-2 transition-all text-left flex items-center justify-between min-h-[44px] ${
                       locale === option.value
                         ? 'border-[var(--org-btn-primary-bg, #137fec)] bg-[var(--org-btn-primary-bg)]/10 dark:bg-[var(--org-btn-primary-bg)]/20'
                         : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900/50'
                     }`}
                   >
-                    <span className={`font-black ${
+                    <span className={`font-black text-sm sm:text-base ${
                       locale === option.value ? 'text-[var(--org-link-color)]' : 'text-slate-900 dark:text-white'
                     }`}>
                       {option.label}
                     </span>
                     {locale === option.value && (
-                      <Icon name="check_circle" className="text-[var(--org-link-color)]" />
+                      <Icon name="check_circle" className="text-[var(--org-link-color)] flex-shrink-0" />
                     )}
                   </button>
                 ))}
@@ -632,7 +632,7 @@ export default function Settings() {
 
           {/* Notifications */}
           <section>
-            <SectionHeader className="mb-4">{t('portal.settings.notifications.title')}</SectionHeader>
+            <SectionHeader className="mb-3 sm:mb-4">{t('portal.settings.notifications.title')}</SectionHeader>
             <Card className="overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
               {Object.entries(notifications).map(([key, value]) => {
                 const notificationLabels: Record<string, string> = {
@@ -646,7 +646,7 @@ export default function Settings() {
                 }
                 
                 return (
-                  <div key={key} className="p-6 flex items-center justify-between">
+                  <div key={key} className="p-4 sm:p-6 flex items-center justify-between gap-4">
                     <div>
                       <p className="font-black text-slate-900 dark:text-white">{notificationLabels[key] || key}</p>
                     </div>
@@ -663,23 +663,23 @@ export default function Settings() {
           </section>
 
           {/* Support & Legal */}
-          <section className="grid md:grid-cols-2 gap-6">
-            <Card className="p-6">
-               <SectionHeader className="mb-4">{t('portal.settings.support.title')}</SectionHeader>
-               <ul className="space-y-3 text-sm">
-                 <li><a href="#" className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300 hover:text-[var(--org-link-color)]"><span>{t('portal.settings.support.helpCenter')}</span> <Icon name="chevron_right" /></a></li>
-                 <li><a href="#" className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300 hover:text-[var(--org-link-color)]"><span>{t('portal.settings.support.contactSupport')}</span> <Icon name="chevron_right" /></a></li>
-                 <li><a href="#" className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300 hover:text-[var(--org-link-color)]"><span>{t('portal.settings.support.reportProblem')}</span> <Icon name="chevron_right" /></a></li>
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <Card className="p-4 sm:p-6">
+               <SectionHeader className="mb-3 sm:mb-4">{t('portal.settings.support.title')}</SectionHeader>
+               <ul className="space-y-2 sm:space-y-3 text-sm">
+                 <li><a href="#" className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300 hover:text-[var(--org-link-color)] min-h-[44px] py-1"><span>{t('portal.settings.support.helpCenter')}</span> <Icon name="chevron_right" className="flex-shrink-0" /></a></li>
+                 <li><a href="#" className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300 hover:text-[var(--org-link-color)] min-h-[44px] py-1"><span>{t('portal.settings.support.contactSupport')}</span> <Icon name="chevron_right" className="flex-shrink-0" /></a></li>
+                 <li><a href="#" className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300 hover:text-[var(--org-link-color)] min-h-[44px] py-1"><span>{t('portal.settings.support.reportProblem')}</span> <Icon name="chevron_right" className="flex-shrink-0" /></a></li>
                </ul>
             </Card>
-            <Card className="p-6">
-               <SectionHeader className="mb-4">{t('portal.settings.legal.title')}</SectionHeader>
-               <ul className="space-y-3 text-sm">
-                 <li><a href="#" className="font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">{t('portal.settings.legal.termsOfService')}</a></li>
-                 <li><a href="#" className="font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">{t('portal.settings.legal.privacyPolicy')}</a></li>
-                 <li><a href="#" className="font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">{t('portal.settings.legal.refundPolicy')}</a></li>
+            <Card className="p-4 sm:p-6">
+               <SectionHeader className="mb-3 sm:mb-4">{t('portal.settings.legal.title')}</SectionHeader>
+               <ul className="space-y-2 sm:space-y-3 text-sm">
+                 <li><a href="#" className="font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white min-h-[44px] flex items-center py-1">{t('portal.settings.legal.termsOfService')}</a></li>
+                 <li><a href="#" className="font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white min-h-[44px] flex items-center py-1">{t('portal.settings.legal.privacyPolicy')}</a></li>
+                 <li><a href="#" className="font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white min-h-[44px] flex items-center py-1">{t('portal.settings.legal.refundPolicy')}</a></li>
                </ul>
-               <p className="mt-4 text-xs text-slate-400">{t('portal.settings.legal.version', { version: '2.4.0', build: '592' })}</p>
+               <p className="mt-3 sm:mt-4 text-xs text-slate-400">{t('portal.settings.legal.version', { version: '2.4.0', build: '592' })}</p>
             </Card>
           </section>
         </div>
@@ -762,26 +762,27 @@ export default function Settings() {
             onClick={handleCloseInviteModal}
           >
             <Card 
-              className="w-full max-w-md m-4"
+              className="w-full max-w-md m-4 max-h-[90vh] overflow-y-auto"
               onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                <h3 className="text-lg font-black text-slate-900 dark:text-white">
+              <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
                   {t('admin.athletes.guardians.linkTitle')}
                 </h3>
                 <button
                   onClick={handleCloseInviteModal}
                   disabled={isInvitingGuardian}
-                  className="text-slate-400 hover:text-slate-900 dark:hover:text-white disabled:opacity-50"
+                  className="text-slate-400 hover:text-slate-900 dark:hover:text-white disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  aria-label="Close"
                 >
                   <Icon name="close" />
                 </button>
               </div>
 
               {/* Content */}
-              <div className="p-6">
-                <div className="space-y-4">
+              <div className="p-4 sm:p-6">
+                <div className="space-y-3 sm:space-y-4">
                   {/* Selected Child Info */}
                   {selectedChildId && (
                     <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
@@ -811,7 +812,7 @@ export default function Settings() {
                       }}
                       placeholder={t('admin.athletes.guardians.emailPlaceholder')}
                       disabled={isInvitingGuardian}
-                      className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white ${
+                      className={`w-full px-4 py-2.5 border rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-base ${
                         inviteGuardianError && emailTouched 
                           ? 'border-red-500 focus:ring-red-500' 
                           : 'border-slate-200 dark:border-slate-700 focus:ring-[var(--org-btn-primary-bg)]'
@@ -853,11 +854,12 @@ export default function Settings() {
               </div>
 
               {/* Actions */}
-              <div className="p-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">
+              <div className="p-4 sm:p-6 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3">
                 <Button
                   variant="secondary"
                   onClick={handleCloseInviteModal}
                   disabled={isInvitingGuardian}
+                  className="w-full sm:w-auto order-2 sm:order-1"
                 >
                   {t('admin.athletes.guardians.cancel')}
                 </Button>
@@ -865,6 +867,7 @@ export default function Settings() {
                   variant="primary"
                   onClick={handleInviteGuardian}
                   disabled={isInvitingGuardian || !guardianEmail || !validateGuardianEmail(guardianEmail) || !!inviteGuardianError}
+                  className="w-full sm:w-auto order-1 sm:order-2"
                 >
                   {isInvitingGuardian ? (
                     <span className="flex items-center gap-2">

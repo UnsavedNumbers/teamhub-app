@@ -416,9 +416,9 @@ export default function LevelDetail() {
             { label: level.name },
           ]}
           actions={
-            <div className="pa-flex pa-gap-2">
-              <Link to={levelsRoute}>
-                <Button variant="ghost" disabled={loading}>
+            <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2">
+              <Link to={levelsRoute} className="w-full sm:w-auto">
+                <Button variant="ghost" disabled={loading} className="w-full sm:w-auto min-h-[44px]">
                   Back to Levels
                 </Button>
               </Link>
@@ -431,14 +431,15 @@ export default function LevelDetail() {
                       setActionError('Program ID is required')
                     }
                   }}
+                  className="w-full sm:w-auto"
                 >
-                  <Button variant="secondary" disabled={!program.id || loading}>
+                  <Button variant="secondary" disabled={!program.id || loading} className="w-full sm:w-auto min-h-[44px]">
                     View Program
                   </Button>
                 </Link>
               ) : (
-                <Link to={programsRoute}>
-                  <Button variant="secondary" disabled={loading}>
+                <Link to={programsRoute} className="w-full sm:w-auto">
+                  <Button variant="secondary" disabled={loading} className="w-full sm:w-auto min-h-[44px]">
                     View Programs
                   </Button>
                 </Link>

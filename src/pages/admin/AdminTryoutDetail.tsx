@@ -60,7 +60,7 @@ export default function AdminTryoutDetail() {
         ]}
       />
       
-      <div className="pa-grid pa-grid-3 pa-gap-4 pa-mb-6">
+      <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-3 pa-gap-4 pa-mb-6">
         <Card>
           <div className="pa-stat-label">Date</div>
           <div className="pa-stat-value">{new Date(tryout?.tryout_date || '').toLocaleDateString()}</div>

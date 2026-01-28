@@ -264,18 +264,19 @@ export default function OverrideDetail() {
               title="Override Details"
               subtitle={`Override for ${overrideData.target_name || 'Unknown'}`}
               actions={
-                <div style={{ display: 'flex', gap: 'var(--pa-space-3)' }}>
+                <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2">
                   {overrideData.status === 'active' && (
                     <Button 
                       variant="danger" 
                       onClick={() => setRevokeDialog(true)}
                       disabled={isOffline || !canRevoke}
                       title={!canRevoke ? 'You do not have permission to revoke overrides' : undefined}
+                      className="w-full sm:w-auto min-h-[44px]"
                     >
                       Revoke Override
                     </Button>
                   )}
-                  <Button variant="blue" onClick={() => navigate('/platform-admin/licenses/overrides')}>
+                  <Button variant="blue" onClick={() => navigate('/platform-admin/licenses/overrides')} className="w-full sm:w-auto min-h-[44px]">
                     Back
                   </Button>
                 </div>
@@ -309,7 +310,7 @@ export default function OverrideDetail() {
               </div>
             )}
 
-            <div className="pa-grid pa-grid-2" style={{ gap: 'var(--pa-space-5)' }}>
+            <div className="pa-grid pa-grid-cols-1 lg:pa-grid-cols-2" style={{ gap: 'var(--pa-space-5)' }}>
               <Card title="Override Information">
                 <div className="pa-grid pa-grid-2" style={{ gap: 'var(--pa-space-4)' }}>
                   <div>
@@ -355,7 +356,7 @@ export default function OverrideDetail() {
               </Card>
 
               <Card title="Audit Information">
-                <div className="pa-grid pa-grid-2" style={{ gap: 'var(--pa-space-4)' }}>
+                <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2" style={{ gap: 'var(--pa-space-4)' }}>
                   <div>
                     <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginBottom: 'var(--pa-space-1)' }}>Created By</div>
                     <div className="pa-body-m">{overrideData.created_by_email || 'Unknown'}</div>

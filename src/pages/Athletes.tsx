@@ -146,14 +146,14 @@ export default function Athletes() {
         { label: 'My Athletes' },
       ]}
     >
-      <div className="mb-12 flex items-end justify-between">
-        <div>
+      <div className="mb-8 sm:mb-12 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 sm:gap-6">
+        <div className="flex-1">
           <PageTitle>My Athletes</PageTitle>
-          <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
+          <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide">
             Manage your children's profiles and information.
           </p>
         </div>
-        <Button variant="primary" onClick={handleAddAthlete} disabled={loading}>
+        <Button variant="primary" onClick={handleAddAthlete} disabled={loading} className="w-full sm:w-auto">
           Add Athlete
         </Button>
       </div>
@@ -169,11 +169,11 @@ export default function Athletes() {
           </div>
           <CardTitle className="mb-2 text-red-600 dark:text-red-400">Failed to Load Athletes</CardTitle>
           <p className="text-slate-500 dark:text-slate-400 mb-6">{error}</p>
-          <div className="flex gap-4 justify-center">
-            <Button variant="primary" onClick={handleRetry} disabled={loading}>
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+            <Button variant="primary" onClick={handleRetry} disabled={loading} className="w-full sm:w-auto">
               Retry
             </Button>
-            <Button variant="secondary" onClick={handleAddAthlete} disabled={loading}>
+            <Button variant="secondary" onClick={handleAddAthlete} disabled={loading} className="w-full sm:w-auto">
               Add Athlete
             </Button>
           </div>

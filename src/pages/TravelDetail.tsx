@@ -569,7 +569,7 @@ export default function TravelDetail() {
 
         {/* Quick Summary Banner */}
         <Card className="bg-gradient-to-r from-[var(--org-btn-primary-bg, #137fec)]/5 to-slate-50 dark:to-slate-800/50 border-l-4 border-[var(--org-btn-primary-bg, #137fec)] p-6">
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Duration</p>
               <p className="text-lg font-black text-slate-900 dark:text-white">
@@ -741,7 +741,7 @@ export default function TravelDetail() {
                     )
                   })()}
                 
-                <div className="grid sm:grid-cols-2 gap-3 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                   {plan.hotel_phone && (
                     <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
                       <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Phone</p>

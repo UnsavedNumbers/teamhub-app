@@ -148,21 +148,21 @@ export default function FamilyDetail() {
                     { label: family.name || 'Detail' }
                 ]}
                 actions={
-                    <Button variant="danger" onClick={() => setDeleteFamilyOpen(true)}>
+                    <Button variant="danger" onClick={() => setDeleteFamilyOpen(true)} className="w-full sm:w-auto min-h-[44px]">
                         Delete Family
                     </Button>
                 }
             />
 
             <div className="pa-form-container">
-                <div className="pa-grid pa-grid-12 pa-gap-6">
+                <div className="pa-grid pa-grid-cols-1 lg:pa-grid-cols-12 pa-gap-6">
                     
                     {/* Children Section */}
-                    <div className="pa-col-8">
+                    <div className="lg:pa-col-span-8">
                         <Card>
-                            <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
+                            <div className="pa-flex pa-flex-col sm:pa-flex-row pa-justify-between pa-items-stretch sm:pa-items-center pa-gap-3 pa-mb-4">
                                 <h3 className="pa-h3">{t('admin.families.children')}</h3>
-                                <Button size="compact" variant="primary" onClick={() => navigate(getLink('admin.guardians.createAthlete', { familyId: family.id }))}>
+                                <Button size="compact" variant="primary" onClick={() => navigate(getLink('admin.guardians.createAthlete', { familyId: family.id }))} className="w-full sm:w-auto min-h-[44px]">
                                     <span className="material-symbols-outlined">add</span>
                                     {t('admin.families.addChild')}
                                 </Button>
@@ -181,7 +181,7 @@ export default function FamilyDetail() {
                     </div>
 
                     {/* Members Section */}
-                    <div className="pa-col-4">
+                    <div className="lg:pa-col-span-4">
                         <Card>
                             <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
                                 <h3 className="pa-h3">Guardians</h3>

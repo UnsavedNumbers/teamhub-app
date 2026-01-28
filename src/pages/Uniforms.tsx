@@ -78,9 +78,9 @@ export default function Uniforms() {
           { label: 'Uniforms' },
         ]}
       >
-        <div className="mb-12">
+        <div className="mb-8 sm:mb-12">
           <PageTitle>Uniforms</PageTitle>
-          <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
+          <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide">
             Submit uniform sizes for your athletes.
           </p>
         </div>
@@ -109,13 +109,13 @@ export default function Uniforms() {
             </p>
           </Card>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {kits.map((kit) => (
               <Card key={kit.id} className="p-0 overflow-hidden">
-                <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="flex items-center gap-3 mb-2">
+                <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-3 sm:gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
                         <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider ${
                           kit.status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
                           kit.status === 'ordering' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
@@ -127,11 +127,11 @@ export default function Uniforms() {
                           <span className="text-xs font-medium text-slate-500">{kit.vendor_name}</span>
                         )}
                       </div>
-                      <CardTitle className="mb-2">{kit.name}</CardTitle>
-                      {kit.description && <p className="text-slate-500 dark:text-slate-400">{kit.description}</p>}
+                      <CardTitle className="mb-2 break-words">{kit.name}</CardTitle>
+                      {kit.description && <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 break-words">{kit.description}</p>}
                     </div>
                     {kit.deadline && (
-                      <div className="text-right">
+                      <div className="text-left sm:text-right flex-shrink-0">
                         <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Deadline</p>
                         <p className="font-bold text-slate-900 dark:text-white">
                           {new Date(kit.deadline).toLocaleDateString()}
@@ -141,8 +141,8 @@ export default function Uniforms() {
                   </div>
                 </div>
                 
-                <div className="bg-slate-50 dark:bg-slate-800/50 p-6">
-                   <p className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-4">Required Items</p>
+                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 sm:p-6">
+                   <p className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-3 sm:mb-4">Required Items</p>
                    {kitItems[kit.id] && kitItems[kit.id].length > 0 ? (
                      <div className="flex flex-wrap gap-2">
                        {kitItems[kit.id]
@@ -157,10 +157,11 @@ export default function Uniforms() {
                      <p className="text-sm text-slate-500 dark:text-slate-400">No items configured for this kit.</p>
                    )}
                    
-                   <div className="mt-6 flex justify-end">
+                   <div className="mt-4 sm:mt-6 flex justify-end">
                       <Button 
                         variant="primary"
                         onClick={() => navigate(getLink('portal.uniformKitDetail', { kitId: kit.id }))}
+                        className="w-full sm:w-auto"
                       >
                         View & Order
                       </Button>
@@ -169,16 +170,16 @@ export default function Uniforms() {
               </Card>
             ))}
 
-            <Card className="mt-10 p-6 border-t-4 border-[var(--org-btn-primary-bg, #137fec)]">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <Icon name="help" size="text-4xl" className="text-slate-400" />
+            <Card className="mt-8 sm:mt-10 p-4 sm:p-6 border-t-4 border-[var(--org-btn-primary-bg, #137fec)]">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <Icon name="help" size="text-3xl sm:text-4xl" className="text-slate-400 flex-shrink-0" />
                   <div>
-                    <CardTitle className="text-lg mb-1">Need sizing help</CardTitle>
+                    <CardTitle className="text-base sm:text-lg mb-1">Need sizing help</CardTitle>
                     <p className="text-sm text-slate-500 dark:text-slate-400">View our youth fit guide for accurate measurements.</p>
                   </div>
                 </div>
-                <Button variant="secondary" className="border-2">
+                <Button variant="secondary" className="border-2 w-full md:w-auto">
                   Open Fit Guide
                 </Button>
               </div>

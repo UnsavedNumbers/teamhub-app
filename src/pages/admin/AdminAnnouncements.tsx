@@ -561,47 +561,55 @@ export default function AdminAnnouncements() {
       )}
 
       {/* Filters */}
-      <div className={cn('pa-flex', 'pa-flex-wrap', 'pa-gap-4', 'pa-mb-6', 'pa-items-center')}>
-        <div className={cn('pa-flex', 'pa-gap-2')}>
-          {(['all', 'urgent', 'normal'] as PriorityFilter[]).map((f) => (
-            <Button
-              key={f}
-              variant={priorityFilter === f ? 'primary' : 'secondary'}
-              size="compact"
-              onClick={() => handleFilterChange(f)}
-            >
-              {f === 'all' ? 'ALL' : f.toUpperCase()}
-            </Button>
-          ))}
-        </div>
+      <Card className="pa-mb-6 pa-filter-section">
+        <div className="pa-filter-row">
+          <div className={cn('pa-flex', 'pa-flex-col', 'sm:pa-flex-row', 'pa-gap-3', 'pa-flex-1', 'pa-flex-wrap')}>
+            <div className={cn('pa-flex', 'pa-gap-2', 'pa-flex-wrap')}>
+              {(['all', 'urgent', 'normal'] as PriorityFilter[]).map((f) => (
+                <Button
+                  key={f}
+                  variant={priorityFilter === f ? 'primary' : 'secondary'}
+                  size="compact"
+                  onClick={() => handleFilterChange(f)}
+                  className="pa-flex-1 sm:pa-flex-none"
+                >
+                  {f === 'all' ? 'ALL' : f.toUpperCase()}
+                </Button>
+              ))}
+            </div>
 
-        <Select
-          value={selectedTeamFilter || ''}
-          onChange={(e) => handleTeamFilterChange(e.target.value)}
-          options={[
-            { value: '', label: 'All Teams' },
-            ...teams.map(t => ({ value: t.id, label: t.name }))
-          ]}
-          style={{ minWidth: '200px' }}
-        />
+            <Select
+              value={selectedTeamFilter || ''}
+              onChange={(e) => handleTeamFilterChange(e.target.value)}
+              options={[
+                { value: '', label: 'All Teams' },
+                ...teams.map(t => ({ value: t.id, label: t.name }))
+              ]}
+              className="pa-w-full sm:pa-w-auto"
+              style={{ minWidth: '200px' }}
+            />
 
-        <div className={cn('pa-flex', 'pa-gap-2')}>
-          <Button
-            variant={dateRangeFilter === 'recent' ? 'primary' : 'secondary'}
-            size="compact"
-            onClick={() => setDateRangeFilter('recent')}
-          >
-            Recent (90 days)
-          </Button>
-          <Button
-            variant={dateRangeFilter === 'all' ? 'primary' : 'secondary'}
-            size="compact"
-            onClick={() => setDateRangeFilter('all')}
-          >
-            All Time
-          </Button>
+            <div className={cn('pa-flex', 'pa-gap-2', 'pa-flex-wrap')}>
+              <Button
+                variant={dateRangeFilter === 'recent' ? 'primary' : 'secondary'}
+                size="compact"
+                onClick={() => setDateRangeFilter('recent')}
+                className="pa-flex-1 sm:pa-flex-none"
+              >
+                Recent (90 days)
+              </Button>
+              <Button
+                variant={dateRangeFilter === 'all' ? 'primary' : 'secondary'}
+                size="compact"
+                onClick={() => setDateRangeFilter('all')}
+                className="pa-flex-1 sm:pa-flex-none"
+              >
+                All Time
+              </Button>
+            </div>
+          </div>
         </div>
-      </div>
+      </Card>
 
       {/* Table or Empty State */}
       {displayAnnouncements.length === 0 && !loading ? (

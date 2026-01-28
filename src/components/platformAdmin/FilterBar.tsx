@@ -106,13 +106,16 @@ export default function FilterBar({
       <div 
         className={cn(
           'pa-flex',
+          'pa-flex-col',
+          'sm:pa-flex-row',
+          'sm:pa-items-end',
+          'pa-items-stretch',
           'pa-gap-3',
-          'pa-flex-wrap'
-        )} 
-        style={{ alignItems: 'flex-end' }}
+          'pa-filter-bar'
+        )}
       >
         {/* Search Input */}
-        <div style={{ minWidth: '250px', flex: 1, maxWidth: '400px' }}>
+        <div className="pa-filter-search" style={{ minWidth: '250px', flex: 1, maxWidth: '400px' }}>
           <div className="pa-form-group" style={{ marginBottom: 0 }}>
             <div style={{ position: 'relative' }}>
               <span
@@ -139,6 +142,8 @@ export default function FilterBar({
                 style={{
                   paddingLeft: '40px',
                   paddingRight: localSearch ? '40px' : undefined,
+                  width: '100%',
+                  height: '44px',
                 }}
               />
               
@@ -154,12 +159,14 @@ export default function FilterBar({
                     border: 'none',
                     color: 'var(--pa-n500)',
                     cursor: 'pointer',
-                    padding: '4px',
+                    padding: '8px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRadius: 'var(--pa-radius-xs)',
                     transition: 'background var(--pa-motion-fast) var(--pa-ease-out)',
+                    minWidth: '44px',
+                    minHeight: '44px',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'var(--pa-n100)'
@@ -180,13 +187,14 @@ export default function FilterBar({
         
         {/* Status Filter */}
         {statusOptions && statusOptions.length > 0 && onStatusChange && (
-          <div style={{ minWidth: '150px' }}>
+          <div className="pa-filter-status" style={{ minWidth: '150px' }}>
             <div className="pa-form-group" style={{ marginBottom: 0 }}>
               <select
                 className="pa-input pa-select"
                 value={statusValue}
                 onChange={(e) => onStatusChange(e.target.value)}
                 aria-label={statusLabel}
+                style={{ width: '100%', height: '44px' }}
               >
                 <option value="">All {statusLabel}</option>
                 {statusOptions.map((option) => (
@@ -202,7 +210,7 @@ export default function FilterBar({
         {/* Date Range */}
         {showDateRange && onDateFromChange && onDateToChange && (
           <>
-            <div style={{ width: '150px' }}>
+            <div className="pa-filter-date" style={{ width: '150px' }}>
               <div className="pa-form-group" style={{ marginBottom: 0 }}>
                 <DatePicker
                   value={dateFrom}
@@ -210,7 +218,7 @@ export default function FilterBar({
                 />
               </div>
             </div>
-            <div style={{ width: '150px' }}>
+            <div className="pa-filter-date" style={{ width: '150px' }}>
               <div className="pa-form-group" style={{ marginBottom: 0 }}>
                 <DatePicker
                   value={dateTo}
@@ -224,7 +232,11 @@ export default function FilterBar({
         
         {/* Clear All Button */}
         {hasActiveFilters && onClearAll && (
-          <button className="pa-btn pa-btn--ghost pa-btn--compact" onClick={onClearAll}>
+          <button 
+            className="pa-btn pa-btn--ghost pa-btn--compact pa-filter-clear" 
+            onClick={onClearAll}
+            style={{ minHeight: '44px' }}
+          >
             Clear All
           </button>
         )}

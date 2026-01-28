@@ -154,34 +154,34 @@ export default function AdminDashboard() {
         />
       </div>
 
-      <div className={cn('pa-grid', 'pa-grid-1', 'lg:pa-grid-12', 'pa-gap-10')}>
-        <div className="lg:pa-col-8">
+      <div className={cn('pa-grid', 'pa-grid-1', 'pa-gap-6', 'pa-dashboard-grid')}>
+        <div className="pa-dashboard-main">
           <Card>
-            <div className="pa-p-6">
-                <h3 className="pa-overline pa-mb-8">QUICK ACTIONS</h3>
-                <div className={cn('pa-grid', 'pa-grid-1', 'sm:pa-grid-3', 'pa-gap-4')}>
+            <div className="pa-p-4 sm:pa-p-6">
+                <h3 className="pa-overline pa-mb-6 sm:pa-mb-8">QUICK ACTIONS</h3>
+                <div className={cn('pa-grid', 'pa-grid-1', 'pa-gap-3', 'pa-actions-grid')}>
                   <Button 
-                    className={cn('pa-flex', 'pa-flex-col', 'pa-items-center', 'pa-justify-center', 'pa-gap-3', 'pa-p-8', 'pa-h-auto')}
+                    className={cn('pa-flex', 'pa-flex-col', 'pa-items-center', 'pa-justify-center', 'pa-gap-3', 'pa-p-6', 'sm:pa-p-8', 'pa-h-auto')}
                     onClick={() => navigate('/admin/events/new')}
                     variant="secondary"
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: '40px' }}>add_circle</span>
+                    <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>add_circle</span>
                     <span className="pa-font-bold">New Event</span>
                   </Button>
                   <Button 
                     variant="secondary" 
-                    className={cn('pa-flex', 'pa-flex-col', 'pa-items-center', 'pa-justify-center', 'pa-gap-3', 'pa-p-8', 'pa-h-auto')}
+                    className={cn('pa-flex', 'pa-flex-col', 'pa-items-center', 'pa-justify-center', 'pa-gap-3', 'pa-p-6', 'sm:pa-p-8', 'pa-h-auto')}
                     onClick={() => navigate('/admin/users/new')}
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: '40px' }}>person_add</span>
+                    <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>person_add</span>
                     <span className="pa-font-bold">Add User</span>
                   </Button>
                   <Button 
                     variant="secondary" 
-                    className={cn('pa-flex', 'pa-flex-col', 'pa-items-center', 'pa-justify-center', 'pa-gap-3', 'pa-p-8', 'pa-h-auto')}
+                    className={cn('pa-flex', 'pa-flex-col', 'pa-items-center', 'pa-justify-center', 'pa-gap-3', 'pa-p-6', 'sm:pa-p-8', 'pa-h-auto')}
                     onClick={() => navigate('/admin/fees/new')}
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: '40px' }}>request_quote</span>
+                    <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>request_quote</span>
                     <span className="pa-font-bold">Assign Fee</span>
                   </Button>
                 </div>
@@ -189,7 +189,7 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
-        <div className="lg:pa-col-4">
+        <div className="pa-dashboard-sidebar">
           <Card noPadding>
             <div className="pa-p-6 pa-border-b pa-border-slate-100">
                 <h3 className="pa-overline">RECENT ACTIVITY</h3>
