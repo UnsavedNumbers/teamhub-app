@@ -7,100 +7,79 @@
       <mj-text font-size="14px" color="#333333" line-height="1.5" />
       <mj-section background-color="#ffffff" />
     </mj-attributes>
+    <mj-style>
+      .button {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        padding: 12px 24px !important;
+        text-decoration: none !important;
+        border-radius: 6px !important;
+        display: inline-block !important;
+        font-weight: 600 !important;
+      }
+      .footer-text {
+        color: #64748b !important;
+        font-size: 12px !important;
+      }
+    </mj-style>
   </mj-head>
   <mj-body background-color="#f8fafc">
-    <!-- Header -->
-    <mj-section padding="20px" background-color="#ffffff">
-      <mj-column>
-         <mj-image src="{{logo_url}}" alt="{{organization_name}}" width="200px" align="left" />
-      </mj-column>
-    </mj-section>
+    <mj-include path="partials/header.mjml" />
 
-    <!-- Featured Article -->
-    <mj-section padding="0 20px 40px 20px">
+    {{#if featured_image_url}}
+    <mj-section padding="24px 20px">
       <mj-column>
         <mj-image src="{{featured_image_url}}" alt="Featured" width="600px" border-radius="8px" />
-        <mj-text font-size="28px" font-weight="bold" color="#1e293b" padding-top="20px">
+      </mj-column>
+    </mj-section>
+    {{/if}}
+
+    <mj-section padding="40px 20px">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold" color="#1e293b" padding-bottom="16px">
           {{featured_title}}
         </mj-text>
-        <mj-text font-size="16px" color="#475569" padding-top="10px">
+        <mj-text padding-bottom="24px">
           {{featured_excerpt}}
         </mj-text>
-        <mj-button align="left" href="{{featured_url}}" background-color="#2563eb" color="#ffffff" font-weight="bold" border-radius="6px" padding-top="20px">
+        <mj-button css-class="button" href="{{featured_url}}" padding="16px 24px">
           Read More
         </mj-button>
       </mj-column>
     </mj-section>
 
-    <!-- Secondary Content / How it Works -->
-    <mj-section padding="40px 20px" background-color="#f1f5f9">
-      <mj-column width="100%">
-        <mj-text font-size="22px" font-weight="bold" color="#1e293b" padding-bottom="20px">
+    <mj-section padding="24px 20px" background-color="#f1f5f9">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold" color="#1e293b" padding-bottom="16px">
           Latest Updates
         </mj-text>
-      </mj-column>
-      
-      <!-- Item 1 -->
-      <mj-column width="100%">
-        <mj-text font-size="18px" font-weight="bold" color="#1e293b">
+        <mj-text font-size="16px" font-weight="bold" color="#1e293b" padding-bottom="8px">
           1. {{update_1_title}}
         </mj-text>
-        <mj-text color="#475569" padding-bottom="20px">
+        <mj-text padding-bottom="16px">
           {{update_1_description}}
         </mj-text>
-      </mj-column>
-      
-      <!-- Item 2 -->
-      <mj-column width="100%">
-        <mj-text font-size="18px" font-weight="bold" color="#1e293b">
+        <mj-text font-size="16px" font-weight="bold" color="#1e293b" padding-bottom="8px">
           2. {{update_2_title}}
         </mj-text>
-        <mj-text color="#475569" padding-bottom="20px">
+        <mj-text padding-bottom="16px">
           {{update_2_description}}
         </mj-text>
-      </mj-column>
-
-      <!-- Item 3 -->
-      <mj-column width="100%">
-        <mj-text font-size="18px" font-weight="bold" color="#1e293b">
+        <mj-text font-size="16px" font-weight="bold" color="#1e293b" padding-bottom="8px">
           3. {{update_3_title}}
         </mj-text>
-        <mj-text color="#475569" padding-bottom="20px">
+        <mj-text padding-bottom="24px">
           {{update_3_description}}
         </mj-text>
-      </mj-column>
-    </mj-section>
-
-    <!-- Promo Section -->
-    <mj-section padding="40px 20px" background-color="#e2e8f0">
-      <mj-column>
-        <mj-text font-size="20px" font-weight="bold" color="#1e293b" align="center">
+        <mj-text font-size="18px" font-weight="bold" color="#1e293b" padding-bottom="16px">
           {{promo_title}}
         </mj-text>
-        <mj-button href="{{promo_url}}" background-color="#dc2626" color="#ffffff" font-weight="bold" border-radius="6px">
+        <mj-button css-class="button" href="{{promo_url}}" padding="16px 24px">
           {{promo_button_text}}
         </mj-button>
       </mj-column>
     </mj-section>
 
-    <!-- Footer -->
-    <mj-section padding="20px" background-color="#1e293b">
-      <mj-column>
-        <mj-text align="center" color="#ffffff" font-size="14px" font-weight="bold" padding-bottom="20px">
-          {{organization_name}}
-        </mj-text>
-        <mj-social font-size="15px" icon-size="30px" mode="horizontal" padding-bottom="20px">
-          <mj-social-element name="facebook" href="{{facebook_url}}"></mj-social-element>
-          <mj-social-element name="twitter" href="{{twitter_url}}"></mj-social-element>
-          <mj-social-element name="instagram" href="{{instagram_url}}"></mj-social-element>
-        </mj-social>
-        <mj-text align="center" color="#94a3b8" font-size="12px">
-          <a href="{{unsubscribe_url}}" style="color: #94a3b8; text-decoration: none;">Unsubscribe</a> | <a href="{{privacy_url}}" style="color: #94a3b8; text-decoration: none;">Privacy Policy</a>
-        </mj-text>
-         <mj-text align="center" color="#94a3b8" font-size="12px" padding-top="10px">
-          © 2026 YouthSports Team Hub. All rights reserved.
-        </mj-text>
-      </mj-column>
-    </mj-section>
+    <mj-include path="partials/footer.mjml" />
   </mj-body>
 </mjml>

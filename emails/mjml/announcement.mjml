@@ -18,72 +18,53 @@
         font-weight: 600 !important;
       }
       .footer-text {
-        color: #666666 !important;
+        color: #64748b !important;
         font-size: 12px !important;
       }
     </mj-style>
   </mj-head>
   <mj-body background-color="#f8fafc">
-    <!-- Header -->
-    <mj-section padding="20px">
+    <mj-include path="partials/header.mjml" />
+
+    <mj-section padding="40px 20px">
       <mj-column>
-        <mj-text align="center" font-size="24px" font-weight="bold" color="#1e293b">
-          {{organization_name}}
-        </mj-text>
-      </mj-column>
-    </mj-section>
-    
-    <!-- Hero Section -->
-    <mj-section padding="0" background-color="#1e293b">
-      <mj-column>
-         <mj-image src="{{hero_image_url}}" alt="Announcement" padding="0" width="600px" height="300px" />
-         <mj-text align="center" font-size="28px" font-weight="bold" color="#ffffff" padding="40px 20px 10px 20px">
+        <mj-text font-size="18px" font-weight="bold" color="#1e293b" padding-bottom="16px">
           {{title}}
         </mj-text>
-        <mj-text align="center" font-size="16px" color="#e2e8f0" padding="10px 20px 40px 20px">
+        <mj-text padding-bottom="16px">
           {{subtitle}}
         </mj-text>
-        <mj-button href="{{action_url}}" background-color="#2563eb" color="#ffffff" font-weight="bold" border-radius="6px" padding-bottom="40px">
+        <mj-button css-class="button" href="{{action_url}}" padding="16px 24px">
           {{display_action_button_text}}
         </mj-button>
       </mj-column>
     </mj-section>
 
-    <!-- Content Block -->
-    <mj-section padding="40px 20px">
+    <mj-section padding="24px 20px">
       <mj-column>
-        <mj-text font-size="16px" line-height="1.6" color="#333333">
+        <mj-text padding-bottom="16px">
           {{body_paragraph_1}}
         </mj-text>
-        <mj-text font-size="16px" line-height="1.6" color="#333333" padding-top="15px">
+        <mj-text padding-bottom="16px">
           {{body_paragraph_2}}
         </mj-text>
-        <mj-text font-size="16px" line-height="1.6" color="#333333" padding-top="15px">
+        <mj-text padding-bottom="24px">
           {{body_paragraph_3}}
         </mj-text>
-        
-        <mj-button align="center" href="{{action_url}}" background-color="#2563eb" color="#ffffff" font-weight="bold" border-radius="6px" padding-top="30px">
+        <mj-button css-class="button" href="{{action_url}}" padding="16px 24px">
           {{action_button_text}}
         </mj-button>
       </mj-column>
     </mj-section>
 
-    <!-- Footer -->
-    <mj-section padding="20px" background-color="#f1f5f9">
+    {{#if hero_image_url}}
+    <mj-section padding="24px 20px">
       <mj-column>
-        <mj-text align="center" color="#666666" font-size="12px">
-          You received this email because you are a member of {{organization_name}} on YouthSports Team Hub.<br>
-          <a href="{{support_url}}" style="color: #666666; text-decoration: underline;">Get Help</a> | 
-          <a href="{{view_online_url}}" style="color: #666666; text-decoration: underline;">View Online</a> | 
-          <a href="{{unsubscribe_url}}" style="color: #666666; text-decoration: underline;">Unsubscribe</a>
-        </mj-text>
-        <mj-text align="center" color="#666666" font-size="12px" padding-top="10px">
-          {{organization_address}}
-        </mj-text>
-        <mj-text align="center" color="#666666" font-size="12px" padding-top="10px">
-          © 2026 YouthSports Team Hub. All rights reserved.
-        </mj-text>
+        <mj-image src="{{hero_image_url}}" alt="Announcement" width="600px" />
       </mj-column>
     </mj-section>
+    {{/if}}
+
+    <mj-include path="partials/footer.mjml" />
   </mj-body>
 </mjml>

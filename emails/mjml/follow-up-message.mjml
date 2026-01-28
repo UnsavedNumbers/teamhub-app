@@ -3,40 +3,51 @@
     <mj-title>{{subject}}</mj-title>
     <mj-attributes>
       <mj-all font-family="Arial, sans-serif" />
-      <mj-text font-size="16px" color="#333333" line-height="1.6" />
+      <mj-text font-size="14px" color="#333333" line-height="1.5" />
       <mj-section background-color="#ffffff" />
     </mj-attributes>
+    <mj-style>
+      .footer-text {
+        color: #64748b !important;
+        font-size: 12px !important;
+      }
+    </mj-style>
   </mj-head>
   <mj-body background-color="#f8fafc">
-    <mj-section padding="20px">
+    <mj-include path="partials/header.mjml" />
+
+    <mj-section padding="40px 20px">
       <mj-column>
-        <mj-text>
+        <mj-text font-size="18px" font-weight="bold" color="#1e293b" padding-bottom="16px">
           Hi {{recipient_name}},
         </mj-text>
-        <mj-text>
+        <mj-text padding-bottom="16px">
           I know you're busy running things at {{target_organization}}, but I wanted to follow up on my previous email.
         </mj-text>
-        <mj-text>
+        <mj-text padding-bottom="16px">
           We've helped many similar leagues improve their scheduling and registration process, and I think we could do the same for you.
         </mj-text>
-        <mj-text>
-          Check out this <a href="{{video_url}}" style="color: #2563eb;">short video</a> explaining how it works.
+        <mj-text padding-bottom="16px">
+          Check out this <a href="{{video_url}}">short video</a> explaining how it works.
         </mj-text>
-        <mj-text>
+        <mj-text padding-bottom="24px">
           Let me know if you have any questions!
         </mj-text>
-        <mj-text padding-top="20px">
+        <mj-text>
           Thanks,<br>
           {{sender_name}}
         </mj-text>
       </mj-column>
     </mj-section>
-        <mj-section padding="20px" background-color="#f8fafc">
+
+    <mj-section padding="24px 20px">
       <mj-column>
-        <mj-text font-size="12px" color="#94a3b8">
+        <mj-text css-class="footer-text">
           {{organization_address}}
         </mj-text>
       </mj-column>
     </mj-section>
+
+    <mj-include path="partials/footer.mjml" />
   </mj-body>
 </mjml>

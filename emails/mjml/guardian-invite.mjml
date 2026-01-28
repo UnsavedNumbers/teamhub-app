@@ -6,57 +6,54 @@
       <mj-text font-size="14px" color="#333333" line-height="1.5" />
       <mj-section background-color="#ffffff" />
     </mj-attributes>
+    <mj-style>
+      .button {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        padding: 12px 24px !important;
+        text-decoration: none !important;
+        border-radius: 6px !important;
+        display: inline-block !important;
+        font-weight: 600 !important;
+      }
+      .footer-text {
+        color: #64748b !important;
+        font-size: 12px !important;
+      }
+    </mj-style>
   </mj-head>
   <mj-body background-color="#f8fafc">
-     <!-- Header Image -->
-    <mj-section padding="20px">
-        <mj-column>
-            <mj-image src="{{header_image_url}}" width="600px" alt="Guardian Invite" />
-        </mj-column>
+    <mj-include path="partials/header.mjml" />
+
+    <mj-section padding="40px 20px">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold" color="#1e293b" padding-bottom="16px">
+          Hello {{recipient_firstname}},
+        </mj-text>
+        <mj-text padding-bottom="16px">
+          You've been invited to connect as a guardian for <strong>{{athlete_name}}</strong> at <strong>{{organization_name}}</strong>.
+        </mj-text>
+        <mj-text padding-bottom="16px">
+          As a guardian, you'll be able to view {{athlete_first_name}}'s schedule and events, receive important team communications, RSVP to events, and manage payments.
+        </mj-text>
+        <mj-button css-class="button" href="{{invite_url}}" padding="16px 24px">
+          Accept invitation
+        </mj-button>
+        <mj-text padding-top="24px">
+          Best,<br>
+          The {{organization_name}} Team
+        </mj-text>
+      </mj-column>
     </mj-section>
 
-     <!-- Split Content -->
-    <mj-section padding="20px">
-        <mj-column width="30%">
-            <mj-image src="{{sender_image_url}}" width="150px" border-radius="50%" alt="Sender" />
-        </mj-column>
-        <mj-column width="70%">
-             <mj-text font-size="16px" font-weight="bold" padding-bottom="15px">
-               Hello {{recipient_firstname}},
-            </mj-text>
-            <mj-text padding-bottom="15px">
-               You've been invited to connect as a guardian for <strong>{{athlete_name}}</strong> at <strong>{{organization_name}}</strong>.
-            </mj-text>
-            <mj-text padding-bottom="15px">
-               As a guardian, you'll be able to view {{athlete_first_name}}'s schedule and events, receive important team communications, RSVP to events, and manage payments.
-            </mj-text>
-            <mj-text padding-bottom="15px">
-               <a href="{{invite_url}}" style="color: #2563eb; font-weight: bold;">Click here to accept the invitation</a>.
-            </mj-text>
-             <mj-text>
-                Best,<br>
-                The {{organization_name}} Team
-            </mj-text>
-        </mj-column>
+    {{#if info_image_url}}
+    <mj-section padding="24px 20px">
+      <mj-column>
+        <mj-image src="{{info_image_url}}" width="500px" alt="Parent Portal Preview" />
+      </mj-column>
     </mj-section>
-    
-    <!-- Video/Info -->
-    <mj-section padding="20px">
-        <mj-column>
-            <mj-image src="{{info_image_url}}" width="500px" alt="Parent Portal Preview" />
-        </mj-column>
-    </mj-section>
+    {{/if}}
 
-    <!-- Footer -->
-    <mj-section padding="20px" background-color="#1e293b">
-        <mj-column>
-            <mj-text align="center" color="#ffffff" font-size="14px">
-                YouthSports Team Hub
-            </mj-text>
-            <mj-text align="center" color="#94a3b8" font-size="12px">
-                This invitation will expire in 7 days.
-            </mj-text>
-        </mj-column>
-    </mj-section>
+    <mj-include path="partials/footer.mjml" />
   </mj-body>
 </mjml>

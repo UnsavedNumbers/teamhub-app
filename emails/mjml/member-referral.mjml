@@ -6,57 +6,57 @@
       <mj-text font-size="14px" color="#333333" line-height="1.5" />
       <mj-section background-color="#ffffff" />
     </mj-attributes>
+    <mj-style>
+      .button {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        padding: 12px 24px !important;
+        text-decoration: none !important;
+        border-radius: 6px !important;
+        display: inline-block !important;
+        font-weight: 600 !important;
+      }
+      .footer-text {
+        color: #64748b !important;
+        font-size: 12px !important;
+      }
+    </mj-style>
   </mj-head>
   <mj-body background-color="#f8fafc">
-     <!-- Header Image -->
-    <mj-section padding="20px">
-        <mj-column>
-            <mj-image src="{{header_image_url}}" width="600px" alt="Referral" />
-        </mj-column>
+    <mj-include path="partials/header.mjml" />
+
+    <mj-section padding="40px 20px">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold" color="#1e293b" padding-bottom="16px">
+          Hey {{recipient_firstname}}!
+        </mj-text>
+        <mj-text padding-bottom="16px">
+          {{sender_name}} thinks you should check out {{organization_name}}!
+        </mj-text>
+        <mj-text padding-bottom="16px">
+          We connect local athletes with the best coaching and facilities in the area. {{sender_name}} is already a member and wants you to join the team.
+        </mj-text>
+        <mj-text padding-bottom="24px">
+          <a href="{{referral_url}}">Check it out here</a> to see available programs and get a special welcome offer.
+        </mj-text>
+        <mj-button css-class="button" href="{{referral_url}}" padding="16px 24px">
+          Check it out
+        </mj-button>
+        <mj-text padding-top="24px">
+          Cheers,<br>
+          {{sender_firstname}}
+        </mj-text>
+      </mj-column>
     </mj-section>
 
-     <!-- Split Content -->
-    <mj-section padding="20px">
-        <mj-column width="30%">
-            <mj-image src="{{sender_image_url}}" width="150px" border-radius="50%" alt="Sender" />
-        </mj-column>
-        <mj-column width="70%">
-            <mj-text font-size="16px" font-weight="bold" padding-bottom="15px">
-               Hey {{recipient_firstname}}!
-            </mj-text>
-            <mj-text padding-bottom="15px">
-               {{sender_name}} thinks you should check out {{organization_name}}!
-            </mj-text>
-            <mj-text padding-bottom="15px">
-               We connect local athletes with the best coaching and facilities in the area. {{sender_name}} is already a member and wants you to join the team.
-            </mj-text>
-             <mj-text padding-bottom="15px">
-               <a href="{{referral_url}}" style="color: #2563eb; font-weight: bold;">Check it out here</a> to see available programs and get a special welcome offer.
-            </mj-text>
-            <mj-text>
-                Cheers,<br>
-                {{sender_firstname}}
-            </mj-text>
-        </mj-column>
+    {{#if promo_image_url}}
+    <mj-section padding="24px 20px">
+      <mj-column>
+        <mj-image src="{{promo_image_url}}" width="500px" alt="Promo" />
+      </mj-column>
     </mj-section>
+    {{/if}}
 
-    <mj-section padding="20px">
-        <mj-column>
-             <mj-image src="{{promo_image_url}}" width="500px" alt="Promo" />
-        </mj-column>
-    </mj-section>
-
-    <!-- Footer -->
-    <mj-section padding="20px" background-color="#1e293b">
-        <mj-column>
-            <mj-text align="center" color="#ffffff" font-size="14px">
-                YouthSports Team Hub
-            </mj-text>
-             <mj-social font-size="15px" icon-size="20px" mode="horizontal" padding-top="10px">
-                <mj-social-element name="facebook" href="#"></mj-social-element>
-                <mj-social-element name="instagram" href="#"></mj-social-element>
-             </mj-social>
-        </mj-column>
-    </mj-section>
+    <mj-include path="partials/footer.mjml" />
   </mj-body>
 </mjml>

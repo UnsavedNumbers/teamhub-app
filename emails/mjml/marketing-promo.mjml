@@ -6,57 +6,48 @@
       <mj-text font-size="14px" color="#333333" line-height="1.5" />
       <mj-section background-color="#ffffff" />
     </mj-attributes>
+    <mj-style>
+      .button {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        padding: 12px 24px !important;
+        text-decoration: none !important;
+        border-radius: 6px !important;
+        display: inline-block !important;
+        font-weight: 600 !important;
+      }
+      .footer-text {
+        color: #64748b !important;
+        font-size: 12px !important;
+      }
+    </mj-style>
   </mj-head>
   <mj-body background-color="#f8fafc">
-    <!-- Header -->
-    <mj-section padding="20px" background-color="#000000">
-        <mj-column>
-            <mj-image src="{{logo_url}}" width="200px" alt="Logo" />
-        </mj-column>
+    <mj-include path="partials/header.mjml" />
+
+    <mj-section padding="40px 20px">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold" color="#1e293b" padding-bottom="16px">
+          {{promo_title}}
+        </mj-text>
+        {{#if video_thumbnail_url}}
+        <mj-image src="{{video_thumbnail_url}}" href="{{video_url}}" width="500px" alt="Watch Video" border-radius="8px" padding-bottom="24px" />
+        {{/if}}
+        <mj-text padding-bottom="16px">
+          {{body_paragraph_1}}
+        </mj-text>
+        <mj-text padding-bottom="16px">
+          {{body_paragraph_2}}
+        </mj-text>
+        <mj-text padding-bottom="24px">
+          {{body_paragraph_3}}
+        </mj-text>
+        <mj-button css-class="button" href="{{action_url}}" padding="16px 24px">
+          {{action_button_text}}
+        </mj-button>
+      </mj-column>
     </mj-section>
 
-    <!-- Hero / Promo Section -->
-    <mj-section padding="40px 20px" background-color="#3b82f6" background-url="{{hero_bg_url}}" background-size="cover">
-        <mj-column>
-            <mj-text align="center" font-size="28px" font-weight="bold" color="#ffffff" padding-bottom="20px">
-                {{promo_title}}
-            </mj-text>
-            <mj-image src="{{video_thumbnail_url}}" href="{{video_url}}" width="500px" alt="Watch Video" border-radius="8px" />
-            
-            <mj-text font-size="16px" color="#ffffff" padding-top="20px">
-                {{body_paragraph_1}}
-            </mj-text>
-             <mj-text font-size="16px" color="#ffffff" padding-top="15px">
-                {{body_paragraph_2}}
-            </mj-text>
-             <mj-text font-size="16px" color="#ffffff" padding-top="15px">
-                {{body_paragraph_3}}
-            </mj-text>
-
-            <mj-button href="{{action_url}}" background-color="#000000" color="#ffffff" font-weight="bold" border-radius="6px" padding-top="30px">
-                {{action_button_text}}
-            </mj-button>
-        </mj-column>
-    </mj-section>
-
-    <!-- Footer -->
-    <mj-section padding="20px" background-color="#000000">
-        <mj-column width="50%">
-             <mj-text color="#ffffff" font-size="12px">
-                <a href="{{bartender_info_url}}" style="color: #ffffff; text-decoration: none;">Staff Info</a>
-            </mj-text>
-        </mj-column>
-        <mj-column width="50%">
-             <mj-text align="right" color="#94a3b8" font-size="12px">
-                {{organization_name}}<br>
-                <a href="{{website_url}}" style="color: #ffffff;">{{website_url_text}}</a>
-            </mj-text>
-             <mj-social font-size="15px" icon-size="20px" mode="horizontal" align="right" padding-top="10px">
-                <mj-social-element name="facebook" href="{{facebook_url}}"></mj-social-element>
-                <mj-social-element name="twitter" href="{{twitter_url}}"></mj-social-element>
-                <mj-social-element name="instagram" href="{{instagram_url}}"></mj-social-element>
-             </mj-social>
-        </mj-column>
-    </mj-section>
+    <mj-include path="partials/footer.mjml" />
   </mj-body>
 </mjml>

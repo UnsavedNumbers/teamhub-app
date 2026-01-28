@@ -17,6 +17,7 @@ import {
   Card,
   type ColumnConfig 
 } from '../../components/platformAdmin'
+import { FeatureGatedButton } from '../../components/FeatureGatedButton'
 import { cn } from '../../utils/cn'
 
 interface PaymentDisplay {
@@ -595,14 +596,15 @@ export default function Payments() {
         title={t('admin.payments.title')}
         subtitle={t('admin.payments.subtitle')} 
         actions={
-          <Button 
+          <FeatureGatedButton 
+            actionKey="create_fee"
             icon="add" 
             onClick={() => navigate(getLink(RouteKeys.ADMIN_CREATE_FEE))}
             disabled={isButtonDisabled}
             title={buttonTooltip}
           >
             Assign Fee
-          </Button>
+          </FeatureGatedButton>
         }
       />
 

@@ -73,75 +73,123 @@
     }
 
   </style>
+  <style type="text/css">
+    @media only screen and (max-width:479px) {
+      table.mj-full-width-mobile {
+        width: 100% !important;
+      }
+
+      td.mj-full-width-mobile {
+        width: auto !important;
+      }
+    }
+
+  </style>
+  <style type="text/css">
+    .button {
+      background-color: #2563eb !important;
+      color: #ffffff !important;
+      padding: 12px 24px !important;
+      text-decoration: none !important;
+      border-radius: 6px !important;
+      display: inline-block !important;
+      font-weight: 600 !important;
+    }
+
+    .footer-text {
+      color: #64748b !important;
+      font-size: 12px !important;
+    }
+
+  </style>
 </head>
 
 <body style="word-spacing:normal;background-color:#f8fafc;">
   <div style="display:none;font-size:1px;color:#ffffff;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">{{preheader}}</div>
   <div aria-label="{{subject}}" aria-roledescription="email" style="background-color:#f8fafc;" role="article" lang="und" dir="auto">
-    <!-- Hero Header with Image Background -->
-    <!--[if mso | IE]><table align="center" border="0" cellpadding="0" cellspacing="0" class="" role="presentation" style="width:600px;" width="600" bgcolor="#000000" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><v:rect style="width:600px;" xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false"><v:fill origin="0, -0.5" position="0, -0.5" src="{{hero_background_url}}" color="#000000" type="frame" size="1,1" aspect="atleast" /><v:textbox style="mso-fit-shape-to-text:true" inset="0,0,0,0"><![endif]-->
-    <div style="background:#000000 url('{{hero_background_url}}') center top / cover no-repeat;background-position:center top;background-repeat:no-repeat;background-size:cover;margin:0px auto;max-width:600px;">
-      <div style="line-height:0;font-size:0;">
-        <table align="center" background="{{hero_background_url}}" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background:#000000 url('{{hero_background_url}}') center top / cover no-repeat;background-position:center top;background-repeat:no-repeat;background-size:cover;width:100%;">
-          <tbody>
-            <tr>
-              <td style="direction:ltr;font-size:0px;padding:60px 20px;text-align:center;">
-                <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" style="vertical-align:top;width:560px;" ><![endif]-->
-                <div class="mj-column-per-100 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
-                  <table border="0" cellpadding="0" cellspacing="0" role="presentation" width="100%" style="border-collapse:separate;">
-                    <tbody>
-                      <tr>
-                        <td style="background-color:#ffffff;border-radius:8px;vertical-align:top;border-collapse:separate;padding:20px;">
-                          <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="" width="100%">
-                            <tbody>
-                              <tr>
-                                <td align="left" style="font-size:0px;padding:10px 25px;padding-bottom:10px;word-break:break-word;">
-                                  <div style="font-family:Arial, sans-serif;font-size:24px;font-weight:bold;line-height:1.5;text-align:left;color:#1e293b;">{{notification_title}}</div>
-                                </td>
-                              </tr>
-                              <tr>
-                                <td align="left" style="font-size:0px;padding:10px 25px;padding-bottom:20px;word-break:break-word;">
-                                  <div style="font-family:Arial, sans-serif;font-size:14px;line-height:1.5;text-align:left;color:#333333;">{{notification_summary}}</div>
-                                </td>
-                              </tr>
-                              <tr>
-                                <td align="left" style="font-size:0px;padding:0;word-break:break-word;">
-                                  <table cellpadding="0" cellspacing="0" width="100%" border="0" style="color:#000000;font-family:Arial, sans-serif;font-size:13px;line-height:22px;table-layout:auto;width:100%;border:none;">
-                                    <tr>
-                                      <td width="60%" valign="middle">
-                                        <mj-button align="left" href="{{action_url}}" background-color="#000000" color="#ffffff" font-weight="bold" border-radius="6px" padding="0">
-                                          {{action_button_text}}
-                                        </mj-button>
-                                      </td>
-                                      <td width="40%" align="right" valign="middle">
-                                        <img src="{{secondary_image_url}}" width="100px" style="display:block;" />
-                                      </td>
-                                    </tr>
-                                  </table>
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <!--[if mso | IE]></td></tr></table><![endif]-->
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-    <!--[if mso | IE]></v:textbox></v:rect></td></tr></table><![endif]-->
-    <!-- Content Block -->
+    <!-- Standard header: logo only. logo_url must point to logo-light.png. -->
     <!--[if mso | IE]><table align="center" border="0" cellpadding="0" cellspacing="0" class="" role="presentation" style="width:600px;" width="600" bgcolor="#ffffff" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
     <div style="background:#ffffff;background-color:#ffffff;margin:0px auto;max-width:600px;">
       <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background:#ffffff;background-color:#ffffff;width:100%;">
         <tbody>
           <tr>
+            <td style="direction:ltr;font-size:0px;padding:24px 20px;text-align:center;">
+              <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" style="vertical-align:top;width:560px;" ><![endif]-->
+              <div class="mj-column-per-100 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
+                <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:top;" width="100%">
+                  <tbody>
+                    <tr>
+                      <td align="center" style="font-size:0px;padding:10px 25px;word-break:break-word;">
+                        <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;border-spacing:0px;">
+                          <tbody>
+                            <tr>
+                              <td style="width:180px;">
+                                <img alt="YouthSports Team Hub" src="{{logo_url}}" style="border:0;display:block;outline:none;text-decoration:none;height:auto;width:100%;font-size:13px;" width="180" height="auto" />
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <!--[if mso | IE]></td></tr></table><![endif]-->
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <!--[if mso | IE]></td></tr></table><table align="center" border="0" cellpadding="0" cellspacing="0" class="" role="presentation" style="width:600px;" width="600" bgcolor="#ffffff" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
+    <div style="background:#ffffff;background-color:#ffffff;margin:0px auto;max-width:600px;">
+      <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background:#ffffff;background-color:#ffffff;width:100%;">
+        <tbody>
+          <tr>
             <td style="direction:ltr;font-size:0px;padding:40px 20px;text-align:center;">
+              <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" style="vertical-align:top;width:560px;" ><![endif]-->
+              <div class="mj-column-per-100 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
+                <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:top;" width="100%">
+                  <tbody>
+                    <tr>
+                      <td align="left" style="font-size:0px;padding:10px 25px;padding-bottom:16px;word-break:break-word;">
+                        <div style="font-family:Arial, sans-serif;font-size:18px;font-weight:bold;line-height:1.5;text-align:left;color:#1e293b;">{{notification_title}}</div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="left" style="font-size:0px;padding:10px 25px;padding-bottom:24px;word-break:break-word;">
+                        <div style="font-family:Arial, sans-serif;font-size:14px;line-height:1.5;text-align:left;color:#333333;">{{notification_summary}}</div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="center" class="button" style="font-size:0px;padding:16px 24px;word-break:break-word;">
+                        <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:separate;line-height:100%;">
+                          <tbody>
+                            <tr>
+                              <td align="center" bgcolor="#414141" role="presentation" style="border:none;border-radius:3px;cursor:auto;mso-padding-alt:10px 25px;background:#414141;" valign="middle">
+                                <a href="{{action_url}}" style="display:inline-block;background:#414141;color:#ffffff;font-family:Arial, sans-serif;font-size:13px;font-weight:normal;line-height:120%;margin:0;text-decoration:none;text-transform:none;padding:10px 25px;mso-padding-alt:0px;border-radius:3px;" target="_blank">
+                                  {{action_button_text}}
+                                </a>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <!--[if mso | IE]></td></tr></table><![endif]-->
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <!--[if mso | IE]></td></tr></table><table align="center" border="0" cellpadding="0" cellspacing="0" class="" role="presentation" style="width:600px;" width="600" bgcolor="#ffffff" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
+    <div style="background:#ffffff;background-color:#ffffff;margin:0px auto;max-width:600px;">
+      <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background:#ffffff;background-color:#ffffff;width:100%;">
+        <tbody>
+          <tr>
+            <td style="direction:ltr;font-size:0px;padding:24px 20px;text-align:center;">
               <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" style="vertical-align:top;width:560px;" ><![endif]-->
               <div class="mj-column-per-100 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
                 <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:top;" width="100%">
@@ -161,25 +209,32 @@
       </table>
     </div>
     <!--[if mso | IE]></td></tr></table><![endif]-->
-    <!-- Footer -->
-    <!--[if mso | IE]><table align="center" border="0" cellpadding="0" cellspacing="0" class="" role="presentation" style="width:600px;" width="600" bgcolor="#000000" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
-    <div style="background:#000000;background-color:#000000;margin:0px auto;max-width:600px;">
-      <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background:#000000;background-color:#000000;width:100%;">
+    <!-- Standard footer: identical across all emails. -->
+    <!--[if mso | IE]><table align="center" border="0" cellpadding="0" cellspacing="0" class="" role="presentation" style="width:600px;" width="600" bgcolor="#f1f5f9" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
+    <div style="background:#f1f5f9;background-color:#f1f5f9;margin:0px auto;max-width:600px;">
+      <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background:#f1f5f9;background-color:#f1f5f9;width:100%;">
         <tbody>
           <tr>
-            <td style="direction:ltr;font-size:0px;padding:20px;text-align:center;">
+            <td style="direction:ltr;font-size:0px;padding:24px 20px;text-align:center;">
               <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" style="vertical-align:top;width:560px;" ><![endif]-->
               <div class="mj-column-per-100 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
                 <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:top;" width="100%">
                   <tbody>
                     <tr>
-                      <td align="center" style="font-size:0px;padding:10px 25px;padding-bottom:10px;word-break:break-word;">
-                        <div style="font-family:Arial, sans-serif;font-size:20px;line-height:1.5;text-align:center;color:#ffffff;">{{organization_name}}</div>
+                      <td align="center" class="footer-text" style="font-size:0px;padding:10px 25px;word-break:break-word;">
+                        <div style="font-family:Arial, sans-serif;font-size:14px;line-height:1.5;text-align:center;color:#333333;">You're receiving this email because you're part of {{organization_name}} on YouthSports Team Hub.<br>
+                          <a href="{{unsubscribe_url}}">Unsubscribe</a> | <a href="{{preferences_url}}">Email Preferences</a>
+                        </div>
                       </td>
                     </tr>
                     <tr>
-                      <td align="center" style="font-size:0px;padding:10px 25px;word-break:break-word;">
-                        <div style="font-family:Arial, sans-serif;font-size:12px;line-height:1.5;text-align:center;color:#94a3b8;"><a href="{{help_url}}" style="color: #ffffff;">Help</a> | <a href="{{unsubscribe_url}}" style="color: #ffffff;">Unsubscribe</a></div>
+                      <td align="center" class="footer-text" style="font-size:0px;padding:10px 25px;padding-top:12px;word-break:break-word;">
+                        <div style="font-family:Arial, sans-serif;font-size:14px;line-height:1.5;text-align:center;color:#333333;">Need help? <a href="{{support_url}}">Contact Support</a></div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="center" class="footer-text" style="font-size:0px;padding:10px 25px;padding-top:8px;word-break:break-word;">
+                        <div style="font-family:Arial, sans-serif;font-size:14px;line-height:1.5;text-align:center;color:#333333;">© 2026 YouthSports Team Hub. All rights reserved.</div>
                       </td>
                     </tr>
                   </tbody>

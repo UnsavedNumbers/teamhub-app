@@ -18,6 +18,7 @@ import SidebarOrganizationSwitcher from '../components/admin/SidebarOrganization
 import MobileMenu from '../components/common/MobileMenu'
 import GlobalNav from '../components/common/GlobalNav'
 import type { NavSection } from '@/types/menu'
+import { useFilteredNavigation } from '@/hooks/useFilteredNavigation'
 
 export default function AdminLayout() {
   const { loaded: platformThemeLoaded } = usePlatformAdminTheme()
@@ -45,7 +46,7 @@ export default function AdminLayout() {
   useScrollLock(mobileSidebarOpen && isMobile)
 
   // Navigation menu items - four top-level items
-  const menuItems = useMemo(() => [
+  const rawMenuItems = useMemo(() => [
     {
       label: 'Dashboard',
       icon: 'dashboard',
@@ -59,13 +60,13 @@ export default function AdminLayout() {
       path: getPath(RouteKeys.ADMIN_ORGANIZATION),
       requiresOrg: false,
       children: [
-        { text: 'Overview', icon: 'info', path: getPath(RouteKeys.ADMIN_ORGANIZATION_STRUCTURE), requiresOrg: true },
-        { text: 'Sports', icon: 'sports', path: getLink('admin.sports.list'), requiresOrg: true },
-        { text: 'Programs', icon: 'category', path: getLink('admin.programs.list'), requiresOrg: true },
-        { text: 'Levels', icon: 'grade', path: getLink('admin.levels.list'), requiresOrg: true },
-        { text: 'Teams', icon: 'groups', path: getLink('admin.teams.list'), requiresOrg: true },
-        { text: 'Seasons', icon: 'calendar_month', path: getLink('admin.seasons.list'), requiresOrg: true },
-        { text: 'Staff', icon: 'person', path: getPath(RouteKeys.ADMIN_ORGANIZATION_USERS), requiresOrg: true },
+        { routeKey: 'admin.organization.overview', text: 'Overview', icon: 'info', path: getPath(RouteKeys.ADMIN_ORGANIZATION_STRUCTURE), requiresOrg: true },
+        { routeKey: 'admin.sports.list', text: 'Sports', icon: 'sports', path: getLink('admin.sports.list'), requiresOrg: true },
+        { routeKey: 'admin.programs.list', text: 'Programs', icon: 'category', path: getLink('admin.programs.list'), requiresOrg: true },
+        { routeKey: 'admin.levels.list', text: 'Levels', icon: 'grade', path: getLink('admin.levels.list'), requiresOrg: true },
+        { routeKey: 'admin.teams.list', text: 'Teams', icon: 'groups', path: getLink('admin.teams.list'), requiresOrg: true },
+        { routeKey: 'admin.seasons.list', text: 'Seasons', icon: 'calendar_month', path: getLink('admin.seasons.list'), requiresOrg: true },
+        { routeKey: 'admin.organization.users', text: 'Staff', icon: 'person', path: getPath(RouteKeys.ADMIN_ORGANIZATION_USERS), requiresOrg: true },
       ],
     },
     {
@@ -74,9 +75,9 @@ export default function AdminLayout() {
         path: getPath(RouteKeys.ADMIN_ATHLETES),
         requiresOrg: true,
         children: [
-            { text: 'Athletes', icon: 'child_care', path: getPath(RouteKeys.ADMIN_ATHLETES), requiresOrg: true },
-            { text: 'Guardians', icon: 'home', path: getLink('admin.guardians.list'), requiresOrg: true },
-            { text: 'Guardian Requests', icon: 'person_add', path: getLink('admin.guardianRequests'), requiresOrg: true },
+            { routeKey: 'admin.athletes.list', text: 'Athletes', icon: 'child_care', path: getPath(RouteKeys.ADMIN_ATHLETES), requiresOrg: true },
+            { routeKey: 'admin.guardians.list', text: 'Guardians', icon: 'home', path: getLink('admin.guardians.list'), requiresOrg: true },
+            { routeKey: 'admin.guardianRequests', text: 'Guardian Requests', icon: 'person_add', path: getLink('admin.guardianRequests'), requiresOrg: true },
         ],
     },
     {
@@ -85,12 +86,12 @@ export default function AdminLayout() {
       path: getPath(RouteKeys.ADMIN_PAYMENTS),
       requiresOrg: true,
       children: [
-        { text: 'Payments', icon: 'credit_card', path: getPath(RouteKeys.ADMIN_PAYMENTS), requiresOrg: true },
-        { text: 'Events', icon: 'event', path: getPath(RouteKeys.ADMIN_EVENTS), requiresOrg: true },
-        { text: 'Attendance', icon: 'how_to_reg', path: getLink('admin.attendance'), requiresOrg: true },
-        { text: 'Announcements', icon: 'campaign', path: getPath(RouteKeys.ADMIN_ANNOUNCEMENTS), requiresOrg: true },
-        { text: 'Travel', icon: 'flight', path: '/admin/travel', requiresOrg: true },
-        { text: 'Uniforms', icon: 'checkroom', path: getPath(RouteKeys.ADMIN_UNIFORMS), requiresOrg: true },
+        { routeKey: 'admin.payments.list', text: 'Payments', icon: 'credit_card', path: getPath(RouteKeys.ADMIN_PAYMENTS), requiresOrg: true },
+        { routeKey: 'admin.events.list', text: 'Events', icon: 'event', path: getPath(RouteKeys.ADMIN_EVENTS), requiresOrg: true },
+        { routeKey: 'admin.attendance', text: 'Attendance', icon: 'how_to_reg', path: getLink('admin.attendance'), requiresOrg: true },
+        { routeKey: 'admin.announcements.list', text: 'Announcements', icon: 'campaign', path: getPath(RouteKeys.ADMIN_ANNOUNCEMENTS), requiresOrg: true },
+        { routeKey: 'admin.travel.list', text: 'Travel', icon: 'flight', path: '/admin/travel', requiresOrg: true },
+        { routeKey: 'admin.uniforms.list', text: 'Uniforms', icon: 'checkroom', path: getPath(RouteKeys.ADMIN_UNIFORMS), requiresOrg: true },
       ],
     },
     {
@@ -99,11 +100,74 @@ export default function AdminLayout() {
       path: getPath(RouteKeys.ADMIN_SETTINGS),
       requiresOrg: false,
       children: [
-        { text: 'Billing', icon: 'credit_card', path: getPath(RouteKeys.ADMIN_ORGANIZATION_BILLING), requiresOrg: false },
-        { text: 'Settings', icon: 'settings', path: getPath(RouteKeys.ADMIN_SETTINGS), requiresOrg: false },
+        { routeKey: 'admin.organization.billing', text: 'Billing', icon: 'credit_card', path: getPath(RouteKeys.ADMIN_ORGANIZATION_BILLING), requiresOrg: false },
+        { routeKey: 'admin.settings', text: 'Settings', icon: 'settings', path: getPath(RouteKeys.ADMIN_SETTINGS), requiresOrg: false },
       ],
     },
   ], [t])
+
+  // Convert to NavigationSection format for feature gate filtering
+  const navSections = useMemo(() => {
+    return rawMenuItems.map(item => ({
+      label: item.label,
+      route: item.path,
+      groups: item.children ? [
+        {
+          label: '',
+          items: item.children.map(child => ({
+            routeKey: child.routeKey,
+            text: child.text,
+            icon: child.icon,
+            path: child.path,
+            disabled: child.requiresOrg && !hasOrg,
+          }))
+        }
+      ] : [
+        {
+          label: '',
+          items: [{
+            routeKey: 'admin.dashboard', // Dashboard route key
+            text: item.label,
+            icon: item.icon,
+            path: item.path,
+            disabled: item.requiresOrg && !hasOrg,
+          }]
+        }
+      ]
+    }))
+  }, [rawMenuItems, hasOrg])
+
+  // Apply feature gate filtering
+  const { filteredSections, loading: navLoading } = useFilteredNavigation(navSections)
+
+  // Convert filtered sections back to menu item format
+  const menuItems = useMemo(() => {
+    return filteredSections.map((section, index) => {
+      const originalItem = rawMenuItems[index]
+      if (!section.groups[0]?.items.length) return null
+
+      const firstItem = section.groups[0].items[0]
+      
+      return {
+        label: section.label,
+        icon: originalItem.icon,
+        path: firstItem.path,
+        requiresOrg: originalItem.requiresOrg,
+        children: section.groups[0].items.length > 1 || section.groups[0].items[0].text !== section.label
+          ? section.groups[0].items.map(item => ({
+              text: item.text,
+              icon: item.icon,
+              path: item.path,
+              requiresOrg: originalItem.requiresOrg,
+              disabled: item.disabled || (item as any).isGated,
+              gateMessage: (item as any).gateMessage,
+            }))
+          : null,
+        disabled: firstItem.disabled || (firstItem as any).isGated,
+        gateMessage: (firstItem as any).gateMessage,
+      }
+    }).filter(Boolean)
+  }, [filteredSections, rawMenuItems])
 
 
 
@@ -120,36 +184,8 @@ export default function AdminLayout() {
     return location.pathname.startsWith(path)
   }
 
-  // Convert menu items to NavSection format for mobile drawer
-  const mobileNavSections: NavSection[] = useMemo(() => {
-    return menuItems.map(item => ({
-      label: item.label,
-      route: !item.children ? item.path : undefined,
-      groups: item.children ? [
-        {
-          label: '',
-          items: item.children
-            .filter(child => !child.requiresOrg || hasOrg)
-            .map(child => ({
-              text: child.text,
-              icon: child.icon,
-              path: child.path,
-              disabled: child.requiresOrg && !hasOrg,
-            }))
-        }
-      ] : [
-        {
-          label: '',
-          items: [{
-            text: item.label,
-            icon: item.icon,
-            path: item.path,
-            disabled: item.requiresOrg && !hasOrg,
-          }]
-        }
-      ]
-    }))
-  }, [menuItems, hasOrg])
+  // Mobile nav sections already filtered by useFilteredNavigation
+  const mobileNavSections: NavSection[] = filteredSections
 
   // Close mobile sidebar on route change
   useEffect(() => {

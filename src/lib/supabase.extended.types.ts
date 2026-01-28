@@ -320,6 +320,41 @@ type AdditionalFunctions = {
       has_active_guardian: boolean
     }>
   }
+  // Feature Gate functions
+  get_feature_gate: {
+    Args: {
+      p_org_id: string | null
+      p_user_id: string
+      p_feature_key: string
+    }
+    Returns: {
+      allowed: boolean
+      gate_action: 'disable' | 'overlay' | 'hide' | 'modal' | 'paywall' | 'custom' | null
+      reason_code: string
+      feature_key: string
+      limit_value?: number
+      current_usage?: number
+      user_role?: string
+      error?: string
+    }
+  }
+  get_feature_gates: {
+    Args: {
+      p_org_id: string | null
+      p_user_id: string
+      p_feature_keys: string[]
+    }
+    Returns: Record<string, {
+      allowed: boolean
+      gate_action: 'disable' | 'overlay' | 'hide' | 'modal' | 'paywall' | 'custom' | null
+      reason_code: string
+      feature_key: string
+      limit_value?: number
+      current_usage?: number
+      user_role?: string
+      error?: string
+    }>
+  }
 }
 
 // Override status and target types for entitlement overrides

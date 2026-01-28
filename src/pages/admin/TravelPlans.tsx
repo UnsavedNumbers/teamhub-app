@@ -19,6 +19,7 @@ import {
   ConfirmDialog,
   type ColumnConfig 
 } from '../../components/platformAdmin'
+import { FeatureGatedButton } from '../../components/FeatureGatedButton'
 
 type TravelPlan = FakeTravelPlan & { team?: { name: string } }
 
@@ -205,7 +206,7 @@ export default function TravelPlans() {
       <AdminPageHeader 
         title={t('admin.travel.title')} 
         subtitle={t('admin.travel.subtitle')} 
-        actions={<Button onClick={() => navigate('/admin/travel/new')}><span className="material-symbols-outlined">add</span>New Plan</Button>} 
+        actions={<FeatureGatedButton actionKey="create_travel_plan" onClick={() => navigate('/admin/travel/new')}><span className="material-symbols-outlined">add</span>New Plan</FeatureGatedButton>} 
       />
       {error && !loading && (
         <Card>
