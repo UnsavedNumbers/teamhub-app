@@ -274,7 +274,7 @@ export default function LevelsManagement() {
                         size="dense"
                         onClick={(e: React.MouseEvent) => {
                             e.stopPropagation()
-                            navigate(`${getLink('admin.organization.forms')}?edit=level&id=${row.id}&returnUrl=${encodeURIComponent(getLink('admin.levels.list'))}`)
+                            navigate(`${getLink('admin.levels.update', { id: row.id })}?returnUrl=${encodeURIComponent(getLink('admin.levels.list'))}`)
                         }}
                     >
                         Edit
@@ -392,9 +392,9 @@ export default function LevelsManagement() {
         </Card>
       ) : (
         <>
-          <Card className="pa-mb-6">
-            <div className={cn('pa-flex', 'pa-flex-col', 'md:pa-flex-row', 'pa-justify-between', 'pa-items-center', 'pa-gap-4')}>
-              <div className={cn('pa-w-full', 'md:pa-w-auto', 'md:pa-min-w-[200px]')}>
+          <Card className="pa-mb-6 pa-filter-section">
+            <div className="pa-filter-row">
+              <div className="pa-filter-control">
                 <Select
                   label="Filter by program"
                   value={filterProgramId}
@@ -409,40 +409,42 @@ export default function LevelsManagement() {
                   ]}
                 />
               </div>
-              <Link
-                to={`${getLink('admin.organization.forms')}?type=level&returnUrl=${encodeURIComponent(getLink('admin.levels.list'))}`}
-                className={cn({ 'pa-pointer-events-none pa-opacity-50': isOffline || USE_FAKE_DATA || !canCreateLevel || loading || refreshing, 'pa-w-full md:pa-w-auto': true })}
-                onClick={(e) => {
-                  if (isOffline || USE_FAKE_DATA || !canCreateLevel || loading || refreshing) {
-                    e.preventDefault()
-                    if (isOffline) {
-                      setActionError('You appear to be offline. Please reconnect and try again.')
-                    } else if (USE_FAKE_DATA) {
-                      setActionError('Sign in to add levels')
-                    } else if (!canCreateLevel) {
-                      setActionError('Add a Program first before creating levels')
+              <div className="pa-filter-actions">
+                <Link
+                  to={`${getLink('admin.organization.forms')}?type=level&returnUrl=${encodeURIComponent(getLink('admin.levels.list'))}`}
+                  className={cn({ 'pa-pointer-events-none pa-opacity-50': isOffline || USE_FAKE_DATA || !canCreateLevel || loading || refreshing })}
+                  onClick={(e) => {
+                    if (isOffline || USE_FAKE_DATA || !canCreateLevel || loading || refreshing) {
+                      e.preventDefault()
+                      if (isOffline) {
+                        setActionError('You appear to be offline. Please reconnect and try again.')
+                      } else if (USE_FAKE_DATA) {
+                        setActionError('Sign in to add levels')
+                      } else if (!canCreateLevel) {
+                        setActionError('Add a Program first before creating levels')
+                      }
                     }
-                  }
-                }}
-              >
-                <Button
-                  className="pa-w-full"
-                  disabled={!canCreateLevel || isOffline || USE_FAKE_DATA || loading || refreshing}
-                  title={
-                    loading || refreshing
-                      ? 'Loading...'
-                      : !canCreateLevel
-                        ? 'Add a Program first'
-                        : isOffline
-                          ? 'Offline - cannot add levels'
-                          : USE_FAKE_DATA
-                            ? 'Sign in to add levels'
-                            : undefined
-                  }
+                  }}
                 >
-                  Add Level
-                </Button>
-              </Link>
+                  <Button
+                    disabled={!canCreateLevel || isOffline || USE_FAKE_DATA || loading || refreshing}
+                    title={
+                      loading || refreshing
+                        ? 'Loading...'
+                        : !canCreateLevel
+                          ? 'Add a Program first'
+                          : isOffline
+                            ? 'Offline - cannot add levels'
+                            : USE_FAKE_DATA
+                              ? 'Sign in to add levels'
+                              : undefined
+                    }
+                    icon="add"
+                  >
+                    Add Level
+                  </Button>
+                </Link>
+              </div>
             </div>
           </Card>
 

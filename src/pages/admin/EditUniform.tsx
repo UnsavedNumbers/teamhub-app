@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, Navigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useT } from '../../i18n/useI18n'
 import { getUniformKit, updateUniformKit } from '../../data/services/uniformsService'
 import { AdminPageHeader, Card, Button } from '../../components/platformAdmin'
 import { SportUniformForm } from '../../components/uniforms/SportUniformForm'
@@ -15,6 +16,7 @@ import type { CreateUniformKitDTO } from '../../types/uniforms'
 export default function EditUniform() {
   const { id } = useParams<{ id: string }>()
   const { context, isReady } = useUserContext()
+  const t = useT()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [initialData, setInitialData] = useState<Partial<CreateUniformKitDTO> | null>(null)
@@ -131,6 +133,7 @@ export default function EditUniform() {
     <div className="pa-root">
       <AdminPageHeader 
         title="Edit Uniform"
+        subtitle={t('admin.uniforms.editSubtitle')}
         actions={null}
       />
 

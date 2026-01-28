@@ -810,7 +810,7 @@ export default function SeasonDetail() {
               variant="secondary"
               onClick={() =>
                 navigate(
-                  `${getLink('admin.organization.forms')}?edit=season&id=${season.id}&returnUrl=${encodeURIComponent(
+                  `${getLink('admin.seasons.update', { id: season.id })}?returnUrl=${encodeURIComponent(
                     window.location.pathname
                   )}`
                 )

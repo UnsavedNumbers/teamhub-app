@@ -583,6 +583,8 @@ export const en = {
     },
     admin: {
         dashboard: {
+            title: 'DASHBOARD',
+            subtitle: 'Organization Overview',
             totalTeams: 'TOTAL TEAMS',
             totalAthletes: 'TOTAL ATHLETES',
             activeSeasons: 'ACTIVE SEASONS',
@@ -642,6 +644,8 @@ export const en = {
             updatePlatformAdminFailed: 'Failed to update platform admin role',
         },
         uniforms: {
+            title: 'Uniforms',
+            subtitle: 'Manage uniform orders and kits',
             prerequisite: {
                 noSportsTitle: 'No sports yet',
                 noSportsDescription: 'You need to add at least one sport to your organization before you can create uniforms.',
@@ -649,14 +653,19 @@ export const en = {
                 loadError: 'Failed to load sports: {{message}}',
                 retry: 'Retry',
             },
+            createSubtitle: 'Define uniform kits and requirements for your teams',
+            editSubtitle: 'Modify an existing uniform kit',
         },
         children: {
             title: 'ALL ATHLETES',
             errorLoading: 'Error loading athletes',
             emptyTitle: 'No athletes found',
+            subtitle: 'Manage all athletes in the organization',
             emptyMessage: 'Athletes are added via Families.',
         },
         athletes: {
+            createSubtitle: 'Create a new athlete profile and link guardians',
+            editSubtitle: 'Update athlete information, sports preferences, and profile photo',
             breadcrumb: 'Athletes',
             notFound: 'Athlete not found',
             backToList: 'Back to Athletes',
@@ -920,8 +929,11 @@ export const en = {
             addChild: 'Add Athlete',
             adding: 'Adding...',
             errorCreate: 'Failed to create athlete',
+            subtitle: 'For {{familyName}}',
         },
         families: {
+            title: 'Families',
+            subtitle: 'Manage families and athletes',
             children: 'Athletes',
             addChild: 'Add Athlete',
             deleteChild: 'Delete Athlete',
@@ -929,6 +941,7 @@ export const en = {
             removeChildTitle: 'Remove Athlete?',
             removeChildMessage: 'Are you sure you want to remove this athlete from the family?',
             errorDeleteChild: 'Failed to delete athlete',
+            createSubtitle: 'Create a new family unit to group athletes and guardians',
         },
         navigation: {
             children: 'Athletes',
@@ -940,8 +953,13 @@ export const en = {
             priority: 'Priority',
             priorityNormal: 'Normal',
             priorityUrgent: 'Urgent',
+            subtitle: 'Manage organization-wide and team communications',
         },
         events: {
+            title: 'Events',
+            subtitle: 'Manage team schedules and upcoming events',
+            createSubtitle: 'Add a new event to the schedule',
+            editSubtitle: 'Update event details and settings',
             create: 'Create Event',
             edit: 'Edit Event',
             delete: 'Delete Event',
@@ -992,6 +1010,56 @@ export const en = {
                 recurringEndRequired: 'Specify end date or number of occurrences',
             },
         },
+        users: {
+            title: 'Users',
+            subtitle: 'Manage organization users and roles',
+            createSubtitle: 'Add a new user to your organization',
+        },
+        travel: {
+            title: 'Travel Plans',
+            subtitle: 'Manage travel itineraries and plans',
+            createSubtitle: 'Create a new travel plan for the team',
+            editSubtitle: 'Modify details of an existing travel plan',
+        },
+        payments: {
+            title: 'Payments',
+            subtitle: 'Manage fees and payments',
+            createFeeSubtitle: 'Create and assign fees to teams or athletes',
+            onboarding: {
+                badge: 'Getting Started',
+                title: 'Introduction to Payments',
+                description: 'Collect fees from athletes and families easily. Set up once, assign flexibly, and manage everything in one place.',
+                setup: {
+                    title: 'Payment Setup',
+                    description: 'Before collecting payments, add your organization\'s bank account information. This is a one-time setup.',
+                    emphasis: 'Payouts won\'t work until setup is complete.',
+                },
+                withdrawals: {
+                    title: 'Withdrawals',
+                    description: 'Funds collected can be withdrawn manually whenever you need them, or set up automatic withdrawals on a schedule.',
+                    emphasis: 'You stay in control of your money.',
+                },
+                fees: {
+                    title: 'Assigning Fees',
+                    description: 'Fees can be assigned to entire teams or individual athletes. Select the team first, then choose which season the fee applies to.',
+                    emphasis: 'One fee, unlimited flexibility.',
+                },
+                example: {
+                    title: 'Real-World Example',
+                    description: 'Create a "Registration Fee" for Fall 2025 season. Next spring, create a "Spring Tournament Fee" for the same team. Each fee is separate and can be assigned to different athletes, seasons, or programs as needed.',
+                },
+                cta: {
+                    title: 'Complete Payment Setup',
+                    description: 'To start collecting payments, you need to connect your organization\'s bank account. This is a one-time setup that takes just a few minutes.',
+                    button: 'Go to Payment Settings',
+                },
+            },
+        },
+        tryouts: {
+            title: 'Tryouts',
+            subtitle: 'Manage tryout sessions',
+            createSubtitle: 'Organize tryouts to evaluate new talent',
+        },
     },
 }
 
@@ -999,7 +1067,7 @@ export const en = {
  * Spanish translations - must match the `en` schema.
  * TypeScript will enforce this via the type annotation below.
  */
-export const es: typeof en = {
+export const es = {
     common: {
         loading: 'Cargando...',
         error: 'Error',
@@ -1565,6 +1633,8 @@ export const es: typeof en = {
     },
     admin: {
         dashboard: {
+            title: 'PANEL DE CONTROL',
+            subtitle: 'Resumen de la organización',
             totalTeams: 'TOTAL DE EQUIPOS',
             totalAthletes: 'TOTAL DE ATLETAS',
             activeSeasons: 'TEMPORADAS ACTIVAS',
@@ -1624,6 +1694,8 @@ export const es: typeof en = {
             updatePlatformAdminFailed: 'Error al actualizar rol de administrador de plataforma',
         },
         uniforms: {
+            title: 'Uniformes',
+            subtitle: 'Administrar pedidos de uniformes y kits',
             prerequisite: {
                 noSportsTitle: 'Aún no hay deportes',
                 noSportsDescription: 'Necesita agregar al menos un deporte a su organización antes de poder crear uniformes.',
@@ -1631,14 +1703,19 @@ export const es: typeof en = {
                 loadError: 'Error al cargar deportes: {{message}}',
                 retry: 'Reintentar',
             },
+            createSubtitle: 'Definir kits de uniformes y requisitos para sus equipos',
+            editSubtitle: 'Modificar un kit de uniforme existente',
         },
         children: {
             title: 'TODOS LOS ATLETAS',
             errorLoading: 'Error al cargar atletas',
             emptyTitle: 'No se encontraron atletas',
+            subtitle: 'Administrar todos los atletas de la organización',
             emptyMessage: 'Los atletas se agregan a través de Familias.',
         },
         athletes: {
+            createSubtitle: 'Crear un nuevo perfil de atleta y vincular tutores',
+            editSubtitle: 'Actualizar información del atleta, preferencias deportivas y foto de perfil',
             breadcrumb: 'Atletas',
             notFound: 'Atleta no encontrado',
             backToList: 'Volver a Atletas',
@@ -1902,8 +1979,11 @@ export const es: typeof en = {
             addChild: 'Agregar Atleta',
             adding: 'Agregando...',
             errorCreate: 'Error al crear atleta',
+            subtitle: 'Para {{familyName}}',
         },
         families: {
+            title: 'Familias',
+            subtitle: 'Administrar familias y atletas',
             children: 'Atletas',
             addChild: 'Agregar Atleta',
             deleteChild: 'Eliminar Atleta',
@@ -1911,6 +1991,7 @@ export const es: typeof en = {
             removeChildTitle: '¿Eliminar Atleta?',
             removeChildMessage: '¿Está seguro de que desea eliminar este atleta de la familia?',
             errorDeleteChild: 'Error al eliminar atleta',
+            createSubtitle: 'Crear una nueva unidad familiar para agrupar atletas y tutores',
         },
         navigation: {
             children: 'Atletas',
@@ -1922,8 +2003,13 @@ export const es: typeof en = {
             priority: 'Prioridad',
             priorityNormal: 'Normal',
             priorityUrgent: 'Urgente',
+            subtitle: 'Administrar comunicaciones de organización y equipo',
         },
         events: {
+            title: 'Eventos',
+            subtitle: 'Administrar horarios del equipo y próximos eventos',
+            createSubtitle: 'Agregar un nuevo evento al horario',
+            editSubtitle: 'Actualizar detalles y configuración del evento',
             create: 'Crear Evento',
             edit: 'Editar Evento',
             delete: 'Eliminar Evento',
@@ -1974,8 +2060,29 @@ export const es: typeof en = {
                 recurringEndRequired: 'Especifique fecha de finalización o número de ocurrencias',
             },
         },
+        users: {
+            title: 'Usuarios',
+            subtitle: 'Administrar usuarios y roles de la organización',
+            createSubtitle: 'Agregar un nuevo usuario a su organización',
+        },
+        travel: {
+            title: 'Planes de Viaje',
+            subtitle: 'Administrar itinerarios y planes de viaje',
+            createSubtitle: 'Crear un nuevo plan de viaje para el equipo',
+            editSubtitle: 'Modificar los detalles de un plan de viaje existente',
+        },
+        payments: {
+            title: 'Pagos',
+            subtitle: 'Administrar tarifas y pagos',
+            createFeeSubtitle: 'Crear y asignar tarifas a equipos o atletas',
+        },
+        tryouts: {
+            title: 'Pruebas',
+            subtitle: 'Administrar sesiones de prueba',
+            createSubtitle: 'Organizar pruebas para evaluar nuevos talentos',
+        },
     },
-}
+} as unknown as typeof en
 
 /**
  * All translations indexed by locale.

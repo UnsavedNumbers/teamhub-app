@@ -369,6 +369,7 @@ export default function AdminChildren() {
     <div className="pa-root">
       <AdminPageHeader 
         title={t('admin.children.title')}
+        subtitle={t('admin.children.subtitle')}
         actions={
           <div className={cn('pa-flex', 'pa-gap-2')}>
             <Button 

@@ -90,14 +90,19 @@ const CreateUser = lazy(() => import('./pages/admin/CreateUser'))
 const OrganizationStructureOverview = lazy(() => import('./pages/admin/OrganizationStructureNew'))
 const Sports = lazy(() => import('./pages/admin/Sports'))
 const SportDetail = lazy(() => import('./pages/admin/SportDetail'))
+const SportUpdate = lazy(() => import('./pages/admin/SportUpdate'))
 const Programs = lazy(() => import('./pages/admin/Programs'))
 const ProgramDetail = lazy(() => import('./pages/admin/ProgramDetail'))
+const ProgramUpdate = lazy(() => import('./pages/admin/ProgramUpdate'))
 const LevelsManagement = lazy(() => import('./pages/admin/LevelsManagement'))
 const LevelDetail = lazy(() => import('./pages/admin/LevelDetail'))
+const LevelUpdate = lazy(() => import('./pages/admin/LevelUpdate'))
 const SeasonsManagement = lazy(() => import('./pages/admin/SeasonsManagement'))
 const SeasonDetail = lazy(() => import('./pages/admin/SeasonDetail'))
+const SeasonUpdate = lazy(() => import('./pages/admin/SeasonUpdate'))
 const Teams = lazy(() => import('./pages/admin/Teams'))
 const TeamDetail = lazy(() => import('./pages/admin/TeamDetail'))
+const TeamUpdate = lazy(() => import('./pages/admin/TeamUpdate'))
 const Roster = lazy(() => import('./pages/admin/Roster'))
 const Events = lazy(() => import('./pages/admin/Events'))
 const AdminAnnouncements = lazy(() => import('./pages/admin/AdminAnnouncements'))
@@ -322,16 +327,21 @@ function AppWithTheme() {
               <Route index element={<AdminDashboard />} />
             
               {/* Standardized Entity Routes - Most specific first */}
+              <Route path="sports/:sport_slug/update" element={<SportUpdate />} />
               <Route path="sports/:sport_slug" element={<SportDetail />} />
               <Route path="sports" element={<Sports />} />
               <Route path="programs/sport/:sport_slug" element={<Programs />} />
+              <Route path="programs/:id/update" element={<ProgramUpdate />} />
               <Route path="programs/:id" element={<ProgramDetail />} />
               <Route path="programs" element={<Programs />} />
+              <Route path="levels/:id/update" element={<LevelUpdate />} />
               <Route path="levels/:id" element={<LevelDetail />} />
               <Route path="levels" element={<LevelsManagement />} />
+              <Route path="seasons/:id/update" element={<SeasonUpdate />} />
               <Route path="seasons/:id" element={<SeasonDetail />} />
               <Route path="seasons" element={<SeasonsManagement />} />
               <Route path="teams/:id/roster" element={<Roster />} />
+              <Route path="teams/:id/update" element={<TeamUpdate />} />
               <Route path="teams/:id" element={<TeamDetail />} />
               <Route path="teams" element={<Teams />} />
               <Route path="athletes/:id/edit" element={<EditAthlete />} />
@@ -362,7 +372,7 @@ function AppWithTheme() {
               <Route path="families" element={<Navigate to="/admin/guardians" replace />} />
 
               {/* Organizational Structure */}
-              <Route path="organization/structure" element={<OrganizationStructureOverview />} />
+              <Route path="organization/overview" element={<OrganizationStructureOverview />} />
 
             
               {/* Events */}

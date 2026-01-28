@@ -411,6 +411,7 @@ export default function CreateEvent() {
     <div className="pa-root">
       <AdminPageHeader 
         title="Create Event" 
+        subtitle={t('admin.events.createSubtitle')}
         breadcrumbs={[
           { label: 'Events', path: '/admin/events' },
           { label: 'Create Event' },

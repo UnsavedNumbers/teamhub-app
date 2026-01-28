@@ -18,6 +18,8 @@ import {
   TimePicker
 } from '../../components/platformAdmin'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
+import { useT } from '../../i18n/useI18n'
+import type { TranslationKey } from '../../i18n'
 
 interface TryoutFormData {
   title: string
@@ -45,6 +47,7 @@ export default function CreateTryout() {
   const { context, isReady } = useUserContext()
   const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
+  const t = useT()
 
   const { control, handleSubmit, setValue, formState: { errors } } = useForm<TryoutFormData>({
     defaultValues: {
@@ -108,6 +111,7 @@ export default function CreateTryout() {
     <div className="pa-root">
       <AdminPageHeader
         title="Create Tryout"
+        subtitle={t('admin.tryouts.createSubtitle' as TranslationKey)}
         breadcrumbs={[
           { label: 'Tryouts', path: '/admin/tryouts' },
           { label: 'Create Tryout' },

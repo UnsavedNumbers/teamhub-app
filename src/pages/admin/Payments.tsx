@@ -2,7 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
+import { useT } from '../../i18n/useI18n'
 import { getFeeAssignmentsForUser, getOrgPaymentSummary, formatCurrency } from '../../data/services/paymentsService'
+import { getStripeConnectStatus } from '../../data/services/paymentSettingsService'
 import { supabase } from '../../lib/supabase'
 import { getLink, RouteKeys } from '../../utils/routes'
 import { 
@@ -40,11 +43,15 @@ export default function Payments() {
   const [hasAthletes, setHasAthletes] = useState<boolean | null>(null)
   const [athleteCheckError, setAthleteCheckError] = useState<string | null>(null)
   const [paymentsError, setPaymentsError] = useState<string | null>(null)
+  const [stripeConnected, setStripeConnected] = useState<boolean | null>(null)
+  const [stripeCheckLoading, setStripeCheckLoading] = useState(true)
 
   const isMountedRef = useRef(true)
 
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
+  const t = useT()
   
   // Extract primitive values to avoid infinite loops in useEffect dependencies
   const orgId = context.orgId
@@ -126,6 +133,37 @@ export default function Payments() {
   useEffect(() => {
     fetchPayments()
   }, [fetchPayments])
+
+  // Check Stripe Connect status
+  useEffect(() => {
+    async function checkStripeStatus() {
+      if (!currentOrganization?.id) {
+        setStripeCheckLoading(false)
+        return
+      }
+      
+      try {
+        const { data: status, error } = await getStripeConnectStatus(currentOrganization.id)
+        if (error) {
+          console.error('Error checking Stripe status:', error)
+        }
+        if (isMountedRef.current) {
+          setStripeConnected(status?.connected ?? false)
+        }
+      } catch (err) {
+        console.error('Error checking Stripe status:', err)
+        if (isMountedRef.current) {
+          setStripeConnected(false)
+        }
+      } finally {
+        if (isMountedRef.current) {
+          setStripeCheckLoading(false)
+        }
+      }
+    }
+    
+    checkStripeStatus()
+  }, [currentOrganization?.id])
 
   // Cleanup effect to prevent state updates after unmount
   useEffect(() => {
@@ -249,10 +287,310 @@ export default function Payments() {
     ? "Checking athletes..."
     : ""
 
+  // Show loading state while checking Stripe
+  if (stripeCheckLoading) {
+    return (
+      <div className="pa-root">
+        <AdminPageHeader 
+          title={t('admin.payments.title')}
+          subtitle={t('admin.payments.subtitle')} 
+        />
+        <Card>
+          <div style={{ padding: '48px', textAlign: 'center' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--pa-n400)', animation: 'spin 1s linear infinite' }}>progress_activity</span>
+            <p style={{ marginTop: '16px', color: 'var(--pa-n500)' }}>{t('common.loading')}</p>
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
+  // Show onboarding wall if Stripe Connect is not set up
+  if (!stripeConnected) {
+    return (
+      <div className="pa-root">
+        <AdminPageHeader 
+          title={t('admin.payments.title')}
+          subtitle={t('admin.payments.subtitle')} 
+        />
+
+        {/* Introduction to Payments - Nike-style Hero with Onboarding */}
+        <Card noPadding>
+          {/* Hero Section with Background Image and Dark Overlay */}
+          <div style={{
+            position: 'relative',
+            backgroundImage: 'url(/images/payments.png)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            borderRadius: '12px',
+            overflow: 'hidden',
+          }}>
+            {/* Dark overlay */}
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.8) 100%)',
+            }} />
+            
+            {/* All Content on top of hero */}
+            <div style={{
+              position: 'relative',
+              zIndex: 10,
+              padding: '56px 48px',
+            }}>
+              {/* Hero Text */}
+              <div style={{ maxWidth: '720px', marginBottom: '40px' }}>
+                {/* Badge */}
+                <div style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  padding: '6px 14px',
+                  borderRadius: '9999px',
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  backdropFilter: 'blur(8px)',
+                  marginBottom: '20px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                }}>
+                  <span style={{ 
+                    position: 'relative',
+                    display: 'inline-flex',
+                    height: '8px',
+                    width: '8px'
+                  }}>
+                    <span style={{
+                      position: 'absolute',
+                      display: 'inline-flex',
+                      height: '100%',
+                      width: '100%',
+                      borderRadius: '50%',
+                      background: '#fff',
+                      opacity: 0.75,
+                      animation: 'ping 1s cubic-bezier(0, 0, 0.2, 1) infinite'
+                    }}></span>
+                    <span style={{
+                      position: 'relative',
+                      display: 'inline-flex',
+                      borderRadius: '50%',
+                      height: '8px',
+                      width: '8px',
+                      background: '#fff'
+                    }}></span>
+                  </span>
+                  <span style={{ 
+                    color: '#fff',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em'
+                  }}>{t('admin.payments.onboarding.badge')}</span>
+                </div>
+
+                {/* Title */}
+                <h1 style={{ 
+                  fontSize: '48px', 
+                  fontWeight: 900, 
+                  color: '#fff',
+                  marginBottom: '16px',
+                  fontFamily: 'var(--pa-font-display, Oswald, sans-serif)',
+                  letterSpacing: '-0.03em',
+                  lineHeight: 1.1,
+                  textTransform: 'uppercase',
+                  textShadow: '0 2px 12px rgba(0,0,0,0.3)',
+                }}>
+                  {t('admin.payments.onboarding.title')}
+                </h1>
+                
+                {/* Description */}
+                <p style={{ 
+                  fontSize: '20px', 
+                  color: 'rgba(255,255,255,0.9)',
+                  lineHeight: 1.6,
+                  fontWeight: 500,
+                  maxWidth: '560px',
+                }}>
+                  {t('admin.payments.onboarding.description')}
+                </p>
+              </div>
+
+              {/* Cards Grid - Translucent on hero */}
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gap: '20px',
+                marginBottom: '28px',
+              }}>
+                {/* Payment Setup Card */}
+                <div style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  borderRadius: '16px',
+                  padding: '24px',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                }}>
+                  <h3 style={{ 
+                    fontSize: '16px', 
+                    fontWeight: 800, 
+                    color: '#fff', 
+                    fontFamily: 'var(--pa-font-display, Oswald, sans-serif)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.02em',
+                    marginBottom: '12px',
+                  }}>
+                    {t('admin.payments.onboarding.setup.title')}
+                  </h3>
+                  <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', lineHeight: 1.7 }}>
+                    {t('admin.payments.onboarding.setup.description')}
+                  </p>
+                </div>
+
+                {/* Withdrawals Card */}
+                <div style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  borderRadius: '16px',
+                  padding: '24px',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                }}>
+                  <h3 style={{ 
+                    fontSize: '16px', 
+                    fontWeight: 800, 
+                    color: '#fff', 
+                    fontFamily: 'var(--pa-font-display, Oswald, sans-serif)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.02em',
+                    marginBottom: '12px',
+                  }}>
+                    {t('admin.payments.onboarding.withdrawals.title')}
+                  </h3>
+                  <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', lineHeight: 1.7 }}>
+                    {t('admin.payments.onboarding.withdrawals.description')}
+                  </p>
+                </div>
+
+                {/* Assigning Fees Card */}
+                <div style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  borderRadius: '16px',
+                  padding: '24px',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                }}>
+                  <h3 style={{ 
+                    fontSize: '16px', 
+                    fontWeight: 800, 
+                    color: '#fff', 
+                    fontFamily: 'var(--pa-font-display, Oswald, sans-serif)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.02em',
+                    marginBottom: '12px',
+                  }}>
+                    {t('admin.payments.onboarding.fees.title')}
+                  </h3>
+                  <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', lineHeight: 1.7 }}>
+                    {t('admin.payments.onboarding.fees.description')}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Real-world Example */}
+        <Card style={{ marginTop: '24px' }}>
+          <div style={{
+            background: 'rgba(251, 191, 36, 0.15)',
+            border: '1px solid rgba(251, 191, 36, 0.3)',
+            borderRadius: '12px',
+            padding: '18px 22px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#fbbf24', marginTop: '2px' }}>lightbulb</span>
+              <div>
+                <h4 style={{ 
+                  fontSize: '12px', 
+                  fontWeight: 700, 
+                  color: '#fbbf24', 
+                  marginBottom: '6px', 
+                  fontFamily: 'var(--pa-font-display, Oswald, sans-serif)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}>
+                  {t('admin.payments.onboarding.example.title')}
+                </h4>
+                <p style={{ fontSize: '14px', color: '#374151', lineHeight: 1.6 }}>
+                  {t('admin.payments.onboarding.example.description')}
+                </p>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Complete Payment Setup CTA */}
+        <Card style={{ marginTop: '24px' }}>
+          <div style={{
+            background: 'rgba(255,255,255,0.95)',
+            borderRadius: '16px',
+            padding: '36px',
+            textAlign: 'center',
+          }}>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '14px',
+              background: 'linear-gradient(135deg, #137fec 0%, #0066cc 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 18px',
+              boxShadow: '0 8px 24px -4px rgba(19, 127, 236, 0.4)',
+            }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '32px', color: 'white' }}>lock_open</span>
+            </div>
+            <h3 style={{ 
+              fontSize: '24px', 
+              fontWeight: 900, 
+              color: '#0B0F14', 
+              marginBottom: '10px',
+              fontFamily: 'var(--pa-font-display, Oswald, sans-serif)',
+              textTransform: 'uppercase',
+              letterSpacing: '-0.01em',
+            }}>
+              {t('admin.payments.onboarding.cta.title')}
+            </h3>
+            <p style={{ 
+              fontSize: '15px', 
+              color: '#4A5568', 
+              lineHeight: 1.6,
+              maxWidth: '440px',
+              margin: '0 auto 24px'
+            }}>
+              {t('admin.payments.onboarding.cta.description')}
+            </p>
+            <Button 
+              variant="primary"
+              icon="arrow_forward"
+              onClick={() => navigate('/admin/organization?tab=payments')}
+              style={{
+                padding: '16px 36px',
+                fontSize: '14px',
+                fontWeight: 700,
+                boxShadow: '0 8px 24px -4px rgba(19, 127, 236, 0.4)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}
+            >
+              {t('admin.payments.onboarding.cta.button')}
+            </Button>
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
+  // Show full payments UI when Stripe is connected
   return (
     <div className="pa-root">
       <AdminPageHeader 
-        title="Payments" 
+        title={t('admin.payments.title')}
+        subtitle={t('admin.payments.subtitle')} 
         actions={
           <Button 
             icon="add" 

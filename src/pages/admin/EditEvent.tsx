@@ -581,6 +581,7 @@ export default function EditEvent() {
     <div className="pa-root">
       <AdminPageHeader 
         title="Edit Event" 
+        subtitle={t('admin.events.editSubtitle')}
         breadcrumbs={[
           { label: 'Events', path: getLink('admin.events.list') },
           { label: 'Edit Event' },

@@ -36,7 +36,10 @@ interface AnnouncementDisplay {
 
 type PriorityFilter = 'all' | 'urgent' | 'normal'
 
+import { useT } from '../../i18n/useI18n'
+
 export default function AdminAnnouncements() {
+  const t = useT()
   const isMountedRef = useRef(true)
   const requestIdRef = useRef(0)
   const { context, isReady } = useUserContext()
@@ -501,6 +504,7 @@ export default function AdminAnnouncements() {
     <div className="pa-root">
       <AdminPageHeader 
         title="Announcements" 
+        subtitle={t('admin.announcements.subtitle')}
         actions={
           <Button 
             icon="add" 

@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router-dom'
 import { AdminPageHeader, Card, Input, Button, Select, DatePicker, ErrorState } from '../../components/platformAdmin'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useT } from '../../i18n/useI18n'
 import { createAthleteWithGuardians } from '../../data/services/familyService'
 import { GuardianList } from '../../components/admin/GuardianInput'
 import { AthletePhotoUpload } from '../../components/admin/AthletePhotoUpload'
@@ -74,6 +75,7 @@ SportItem.displayName = 'SportItem'
 export default function CreateAthlete() {
     const navigate = useNavigate()
     const { context, isReady } = useUserContext()
+    const t = useT()
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<Error | null>(null)
     const [validationErrors, setValidationErrors] = useState<string[]>([])
@@ -268,7 +270,7 @@ export default function CreateAthlete() {
         <div className="pa-root">
             <AdminPageHeader
                 title="Add Athlete"
-                subtitle="Create a new athlete profile and link guardians"
+                subtitle={t('admin.athletes.createSubtitle')}
                 breadcrumbs={[
                     { label: 'Organizations', path: getLink('admin.organization.structure') },
                     { label: 'Athletes', path: getLink('admin.athletes.list') },

@@ -214,9 +214,9 @@ export default function Programs() {
         setActionError('Program ID is required to edit program.')
         return
       }
-      navigate(`${formsRoute}?edit=program&id=${encodeURIComponent(programId.trim())}&returnUrl=${encodeURIComponent(programsRoute)}`)
+      navigate(`${getLink('admin.programs.update', { id: programId.trim() })}?returnUrl=${encodeURIComponent(programsRoute)}`)
     },
-    [navigate, formsRoute, programsRoute]
+    [navigate, programsRoute]
   )
 
   const handleNavigateToAddLevel = useCallback(
@@ -368,9 +368,9 @@ export default function Programs() {
         </Card>
       )}
 
-      <Card className="pa-mb-6">
-        <div className={cn('pa-flex', 'pa-flex-col', 'md:pa-flex-row', 'pa-justify-between', 'pa-items-center', 'pa-gap-4')}>
-          <div className={cn('pa-w-full', 'md:pa-w-64')}>
+      <Card className="pa-mb-6 pa-filter-section">
+        <div className="pa-filter-row">
+          <div className="pa-filter-control">
             <Select
               label="Filter by sport"
               value={filterSportId}
@@ -383,13 +383,15 @@ export default function Programs() {
             />
           </div>
           {filterSportId && (
-            <Button
-              onClick={() => handleNavigateToAddProgram(filterSportId)}
-              disabled={loading || isOffline || USE_FAKE_DATA || !filterSportId}
-              icon="add"
-            >
-              {USE_FAKE_DATA ? 'Sign in to Add Program' : 'Add Program'}
-            </Button>
+            <div className="pa-filter-actions">
+              <Button
+                onClick={() => handleNavigateToAddProgram(filterSportId)}
+                disabled={loading || isOffline || USE_FAKE_DATA || !filterSportId}
+                icon="add"
+              >
+                {USE_FAKE_DATA ? 'Sign in to Add Program' : 'Add Program'}
+              </Button>
+            </div>
           )}
         </div>
       </Card>

@@ -12,6 +12,14 @@ import { getLink } from '../../utils/routes'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+// Helper to get sport cover image with fallback
+const getSportCoverUrl = (sportSlug: string | null | undefined): string => {
+  if (sportSlug) {
+    return `/images/sports/${sportSlug}/covers/sport-cover.png`
+  }
+  return '/images/sports/default/covers/sport-cover.png'
+}
+
 export default function SportDetail() {
   const { sport_slug } = useParams<{ sport_slug: string }>()
   const sportSlugParam = sport_slug?.trim() || ''
@@ -36,8 +44,8 @@ export default function SportDetail() {
   const sportId = sport?.id ?? ''
   const sportsRoute = getLink('admin.sports.list')
   const programsRoute = getLink('admin.programs.list')
-  const formsRoute = getLink('admin.organization.forms')
   const structureRoute = getLink('admin.organization.structure')
+  const formsRoute = getLink('admin.organization.forms')
   const detailRoute = getLink('admin.sports.detail', { sport_slug: sport?.slug ?? sport?.id ?? sportSlugParam })
 
   const iconUrl = useMemo(() => getSportIconUrl(sport?.icon ?? null), [sport?.icon])
@@ -89,6 +97,13 @@ export default function SportDetail() {
     load()
   }, [context, isReady, sportSlugParam])
 
+  // Cover image URL with fallback
+  const [coverError, setCoverError] = useState(false)
+  const coverUrl = useMemo(() => {
+    if (coverError) return '/images/sports/default/covers/sport-cover.png'
+    return getSportCoverUrl(sport?.slug)
+  }, [sport?.slug, coverError])
+
   const refreshSport = async () => {
     if (!sport?.id) return
     const sportsResult = await getSports(context)
@@ -111,28 +126,88 @@ export default function SportDetail() {
   return (
     <div className="pa-root">
       <OfflineBanner />
-      <AdminPageHeader
-        title={sport?.name || 'Sport'}
-        subtitle="Sport details, customizations, and related programs."
-        breadcrumbs={[
-          { label: 'Organizations', path: structureRoute },
-          { label: 'Sports', path: sportsRoute },
-          { label: sport?.name || 'Sport' },
-        ]}
-        actions={
-          <div className="pa-flex pa-gap-2">
-            <Link to={sportsRoute}>
-              <Button variant="ghost">Back to Sports</Button>
-            </Link>
-            <Link to={sport?.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : `${programsRoute}?sport_id=${sportId}`}>
-              <Button variant="secondary">View {sport?.name || ''} Programs</Button>
-            </Link>
-            <Link to={`${formsRoute}?type=program&sport_id=${sportId}&returnUrl=${encodeURIComponent(sport?.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : programsRoute)}`}>
-              <Button>Add Program</Button>
-            </Link>
-          </div>
-        }
-      />
+      
+      {/* Hero section with cover image */}
+      <div 
+        className="sport-detail-hero"
+        style={{
+          position: 'relative',
+          marginBottom: 'var(--pa-space-6)',
+          borderRadius: 'var(--pa-radius-lg)',
+          overflow: 'hidden',
+          minHeight: '200px',
+        }}
+      >
+        {/* Background cover image */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: `url(${coverUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            zIndex: 0,
+          }}
+        >
+          {/* Hidden img for fallback detection */}
+          <img 
+            src={getSportCoverUrl(sport?.slug)} 
+            alt="" 
+            style={{ display: 'none' }} 
+            onError={() => setCoverError(true)}
+          />
+        </div>
+        
+        {/* Gradient overlay for readability */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.6) 100%)',
+            zIndex: 1,
+          }}
+        />
+        
+        {/* Header content */}
+        <div 
+          className="sport-detail-hero-content"
+          style={{ 
+            position: 'relative', 
+            zIndex: 2, 
+            padding: 'var(--pa-space-6)',
+            // Override text colors for hero overlay
+            '--pa-text-primary': '#fff',
+            '--pa-text-secondary': 'rgba(255,255,255,0.85)',
+            '--pa-text-muted': 'rgba(255,255,255,0.7)',
+            '--pa-n900': '#fff',
+            '--pa-n700': 'rgba(255,255,255,0.85)',
+            '--pa-n500': 'rgba(255,255,255,0.7)',
+          } as React.CSSProperties}
+        >
+          <AdminPageHeader
+            title={<span style={{ color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>{sport?.name || 'Sport'}</span>}
+            subtitle="Sport details, customizations, and related programs."
+            breadcrumbs={[
+              { label: 'Organizations', path: structureRoute },
+              { label: 'Sports', path: sportsRoute },
+              { label: sport?.name || 'Sport' },
+            ]}
+            actions={
+              <div className="pa-flex pa-gap-2">
+                <Link to={sportsRoute}>
+                  <Button variant="ghost" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }}>Back to Sports</Button>
+                </Link>
+                <Link to={sport?.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : `${programsRoute}?sport_id=${sportId}`}>
+                  <Button variant="secondary">View {sport?.name || ''} Programs</Button>
+                </Link>
+                <Link to={`${formsRoute}?type=program&sport_id=${sportId}&returnUrl=${encodeURIComponent(sport?.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : programsRoute)}`}>
+                  <Button>Add Program</Button>
+                </Link>
+              </div>
+            }
+          />
+        </div>
+      </div>
 
       {successMessage && (
         <Card className="pa-mb-6" style={{ borderLeft: '3px solid var(--pa-success)' }}>
@@ -337,8 +412,8 @@ export default function SportDetail() {
                     Remove Icon
                   </Button>
 
-                  <Link to={`${formsRoute}?edit=sport&id=${sportId}&returnUrl=${encodeURIComponent(detailRoute)}`}>
-                    <Button variant="secondary">View Sport Form</Button>
+                  <Link to={`${getLink('admin.sports.update', { sport_id: sport?.id || sportId })}?returnUrl=${encodeURIComponent(detailRoute)}`}>
+                    <Button variant="secondary">Edit Sport</Button>
                   </Link>
                 </div>
               </div>

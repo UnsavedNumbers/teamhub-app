@@ -140,15 +140,15 @@ export default function AttendanceSection({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="pa-form-container">
       <div>
-        <h3 className="text-lg font-medium text-gray-900 mb-1">Attendance Settings</h3>
-        <p className="text-sm text-gray-500">
+        <h3 className="pa-h3 pa-mb-1">Attendance Settings</h3>
+        <p className="pa-text-sm pa-text-slate-500">
           Configure attendance requirements and visibility rules
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="pa-form-grid">
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
             {error}
@@ -161,51 +161,57 @@ export default function AttendanceSection({
           </div>
         )}
 
-        <div className="space-y-4">
-          <h4 className="font-medium text-gray-900">Attendance Requirements</h4>
+        <div className="pa-checkbox-group">
+          <h4 className="pa-h4 pa-mb-3">Attendance Requirements</h4>
 
-          <Controller
-            name="required_for_practice"
-            control={control}
-            render={({ field: { value, onChange, ...field } }) => (
-              <Checkbox
-                {...field}
-                checked={value}
-                onChange={(e) => onChange(e.target.checked)}
-                label="Require attendance submission for practices"
-              />
-            )}
-          />
+          <div className="pa-checkbox-row">
+            <Controller
+              name="required_for_practice"
+              control={control}
+              render={({ field: { value, onChange, ...field } }) => (
+                <Checkbox
+                  {...field}
+                  checked={value}
+                  onChange={(e) => onChange(e.target.checked)}
+                  label="Require attendance submission for practices"
+                />
+              )}
+            />
+          </div>
 
-          <Controller
-            name="required_for_game"
-            control={control}
-            render={({ field: { value, onChange, ...field } }) => (
-              <Checkbox
-                {...field}
-                checked={value}
-                onChange={(e) => onChange(e.target.checked)}
-                label="Require attendance submission for games"
-              />
-            )}
-          />
+          <div className="pa-checkbox-row">
+            <Controller
+              name="required_for_game"
+              control={control}
+              render={({ field: { value, onChange, ...field } }) => (
+                <Checkbox
+                  {...field}
+                  checked={value}
+                  onChange={(e) => onChange(e.target.checked)}
+                  label="Require attendance submission for games"
+                />
+              )}
+            />
+          </div>
 
-          <Controller
-            name="required_for_meeting"
-            control={control}
-            render={({ field: { value, onChange, ...field } }) => (
-              <Checkbox
-                {...field}
-                checked={value}
-                onChange={(e) => onChange(e.target.checked)}
-                label="Require attendance submission for meetings"
-              />
-            )}
-          />
+          <div className="pa-checkbox-row">
+            <Controller
+              name="required_for_meeting"
+              control={control}
+              render={({ field: { value, onChange, ...field } }) => (
+                <Checkbox
+                  {...field}
+                  checked={value}
+                  onChange={(e) => onChange(e.target.checked)}
+                  label="Require attendance submission for meetings"
+                />
+              )}
+            />
+          </div>
         </div>
 
-        <div className="space-y-4">
-          <h4 className="font-medium text-gray-900">Submission & Locking</h4>
+        <div>
+          <h4 className="pa-h4 pa-mb-3">Submission & Locking</h4>
 
           <Controller
             name="submission_deadline_hours"
@@ -238,81 +244,93 @@ export default function AttendanceSection({
               />
             )}
           />
-
-          <Controller
-            name="allow_admin_override"
-            control={control}
-            render={({ field: { value, onChange, ...field } }) => (
-              <Checkbox
-                {...field}
-                checked={value}
-                onChange={(e) => onChange(e.target.checked)}
-                label="Allow admins to override locked attendance"
-              />
-            )}
-          />
-
-          <Controller
-            name="enable_coach_reminders"
-            control={control}
-            render={({ field: { value, onChange, ...field } }) => (
-              <Checkbox
-                {...field}
-                checked={value}
-                onChange={(e) => onChange(e.target.checked)}
-                label="Send reminders to coaches for missing attendance"
-              />
-            )}
-          />
         </div>
 
-        <div className="space-y-4">
-          <h4 className="font-medium text-gray-900">Parent Visibility</h4>
+        <div className="pa-checkbox-group">
+          <div className="pa-checkbox-row">
+            <Controller
+              name="allow_admin_override"
+              control={control}
+              render={({ field: { value, onChange, ...field } }) => (
+                <Checkbox
+                  {...field}
+                  checked={value}
+                  onChange={(e) => onChange(e.target.checked)}
+                  label="Allow admins to override locked attendance"
+                />
+              )}
+            />
+          </div>
 
-          <Controller
-            name="parent_can_view_own_child"
-            control={control}
-            render={({ field: { value, onChange, ...field } }) => (
-              <Checkbox
-                {...field}
-                checked={value}
-                onChange={(e) => onChange(e.target.checked)}
-                label="Parents can view their own child's attendance"
-              />
-            )}
-          />
-
-          <Controller
-            name="parent_can_view_team_attendance"
-            control={control}
-            render={({ field: { value, onChange, ...field } }) => (
-              <Checkbox
-                {...field}
-                checked={value}
-                onChange={(e) => onChange(e.target.checked)}
-                label="Parents can view full team attendance"
-              />
-            )}
-          />
-
-          <Controller
-            name="parent_can_submit_attendance"
-            control={control}
-            render={({ field: { value, onChange, ...field } }) => (
-              <Checkbox
-                {...field}
-                checked={value}
-                onChange={(e) => onChange(e.target.checked)}
-                label="Parents can submit attendance for their children"
-              />
-            )}
-          />
+          <div className="pa-checkbox-row">
+            <Controller
+              name="enable_coach_reminders"
+              control={control}
+              render={({ field: { value, onChange, ...field } }) => (
+                <Checkbox
+                  {...field}
+                  checked={value}
+                  onChange={(e) => onChange(e.target.checked)}
+                  label="Send reminders to coaches for missing attendance"
+                />
+              )}
+            />
+          </div>
         </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t">
+        <div className="pa-checkbox-group">
+          <h4 className="pa-h4 pa-mb-3">Parent Visibility</h4>
+
+          <div className="pa-checkbox-row">
+            <Controller
+              name="parent_can_view_own_child"
+              control={control}
+              render={({ field: { value, onChange, ...field } }) => (
+                <Checkbox
+                  {...field}
+                  checked={value}
+                  onChange={(e) => onChange(e.target.checked)}
+                  label="Parents can view their own child's attendance"
+                />
+              )}
+            />
+          </div>
+
+          <div className="pa-checkbox-row">
+            <Controller
+              name="parent_can_view_team_attendance"
+              control={control}
+              render={({ field: { value, onChange, ...field } }) => (
+                <Checkbox
+                  {...field}
+                  checked={value}
+                  onChange={(e) => onChange(e.target.checked)}
+                  label="Parents can view full team attendance"
+                />
+              )}
+            />
+          </div>
+
+          <div className="pa-checkbox-row">
+            <Controller
+              name="parent_can_submit_attendance"
+              control={control}
+              render={({ field: { value, onChange, ...field } }) => (
+                <Checkbox
+                  {...field}
+                  checked={value}
+                  onChange={(e) => onChange(e.target.checked)}
+                  label="Parents can submit attendance for their children"
+                />
+              )}
+            />
+          </div>
+        </div>
+
+        <div className="pa-form-actions">
           <Button
             type="button"
-            variant="blue"
+            variant="ghost"
             onClick={() => reset()}
             disabled={!isDirty || isSaving}
           >

@@ -4818,6 +4818,165 @@ html.dark .pa-text-danger {
 }
 
 /* =====================================================================
+   ORGANIZATION STRUCTURE PAGE - DARK MODE
+   ===================================================================== */
+
+html.dark .org-structure-page {
+    background: var(--pa-bg-base);
+}
+
+/* Stats Section - Dark Mode */
+html.dark .org-stats-section {
+    background: var(--pa-bg-raised);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+html.dark .org-stat-box {
+    border-right-color: var(--pa-border-light);
+}
+
+html.dark .org-stat-box:hover {
+    background: var(--pa-bg-elevated);
+}
+
+html.dark .org-stat-label {
+    color: var(--pa-text-muted);
+}
+
+html.dark .org-stat-value {
+    color: var(--pa-text-primary);
+}
+
+html.dark .org-stat-value.empty {
+    color: var(--pa-text-disabled);
+}
+
+/* Season Banner - Dark Mode */
+html.dark .org-season-banner {
+    background: var(--pa-bg-raised);
+}
+
+html.dark .org-season-name {
+    color: var(--pa-text-primary);
+}
+
+html.dark .org-season-status {
+    color: var(--pa-text-muted);
+}
+
+html.dark .org-season-btn {
+    border-color: var(--pa-border-default);
+    color: var(--pa-text-primary);
+}
+
+html.dark .org-season-btn:hover {
+    background: var(--pa-bg-elevated);
+    border-color: var(--pa-theme-action-primary);
+    color: var(--pa-text-primary);
+}
+
+/* Quick Actions - Dark Mode */
+html.dark .org-quick-actions {
+    background: var(--pa-bg-raised);
+    border-color: var(--pa-border-light);
+}
+
+html.dark .org-section-header {
+    color: var(--pa-text-primary);
+}
+
+html.dark .org-action-btn {
+    border-color: var(--pa-border-light);
+    background: var(--pa-bg-base);
+}
+
+html.dark .org-action-btn:hover {
+    border-color: var(--pa-theme-action-primary);
+    background: var(--pa-bg-elevated);
+}
+
+html.dark .org-action-icon {
+    color: var(--pa-text-muted);
+}
+
+html.dark .org-action-btn:hover .org-action-icon {
+    color: var(--pa-theme-text-accent);
+}
+
+html.dark .org-action-label {
+    color: var(--pa-text-primary);
+}
+
+html.dark .org-action-plus {
+    color: var(--pa-text-muted);
+}
+
+/* Core Principles - Dark Mode (already dark, but ensure consistency) */
+html.dark .org-principles {
+    background: var(--pa-bg-elevated);
+}
+
+html.dark .org-principles .org-section-header {
+    color: #fff;
+}
+
+html.dark .org-principle-label {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+html.dark .org-principle-desc {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Hierarchy Section - Dark Mode */
+html.dark .org-hierarchy-section {
+    background: var(--pa-bg-raised);
+    border-color: var(--pa-border-light);
+}
+
+html.dark .org-example-label {
+    color: var(--pa-text-muted);
+}
+
+html.dark .org-example-input {
+    background: var(--pa-bg-base);
+    border-color: var(--pa-border-default);
+    color: var(--pa-text-primary);
+}
+
+html.dark .org-example-input:focus {
+    outline-color: var(--pa-theme-action-primary);
+}
+
+html.dark .org-hierarchy-step.variant-dark {
+    background: var(--pa-bg-base);
+}
+
+html.dark .org-hierarchy-step.variant-primary {
+    background: var(--pa-bg-elevated);
+}
+
+html.dark .org-hierarchy-level {
+    color: var(--pa-text-muted);
+}
+
+html.dark .org-hierarchy-label {
+    color: var(--pa-text-primary);
+}
+
+html.dark .org-hierarchy-description {
+    color: var(--pa-text-secondary);
+}
+
+html.dark .org-hierarchy-example {
+    color: var(--pa-text-muted);
+}
+
+html.dark .org-hierarchy-arrow {
+    color: var(--pa-text-disabled);
+}
+
+/* =====================================================================
    FORM LAYOUT UTILITIES (Breakpoint-Specific)
    ===================================================================== */
 
@@ -5414,6 +5573,106 @@ html.dark .pa-text-danger {
     }
 }
 
+/* Alert cards - use instead of inline styles for error/success/info/warning */
+.pa-alert-card {
+    padding: var(--pa-space-3) var(--pa-space-4);
+    border-radius: var(--pa-radius-s);
+}
+
+.pa-alert-card--error {
+    background: var(--pa-danger-bg, #fef2f2);
+    border-left: 4px solid var(--pa-danger, #ef4444);
+}
+
+.pa-alert-card--error .pa-text-danger {
+    color: var(--pa-danger-dark, #991b1b);
+}
+
+.pa-alert-card--success {
+    background: var(--pa-success-bg, #ecfdf5);
+    border-left: 4px solid var(--pa-success, #10b981);
+}
+
+.pa-alert-card--success .pa-text-success {
+    color: var(--pa-success-dark, #065f46);
+}
+
+.pa-alert-card--info {
+    background: var(--pa-info-bg, #eff6ff);
+    border: 1px solid var(--pa-info, #3b82f6);
+}
+
+.pa-alert-card--warning {
+    background: var(--pa-warning-bg, #fffbeb);
+    border: 1px solid var(--pa-warning, #f59e0b);
+}
+
+.pa-alert-card .pa-alert-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.pa-alert-card--info .pa-alert-icon {
+    color: var(--pa-info, #3b82f6);
+}
+
+.pa-alert-card--warning .pa-alert-icon {
+    color: var(--pa-warning, #f59e0b);
+}
+
+/* Radio option row - for RadioGroup options */
+.pa-radio-option {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--pa-space-2);
+    cursor: pointer;
+    margin-top: var(--pa-space-2);
+}
+
+.pa-radio-option input[type="radio"] {
+    margin-top: 2px;
+}
+
+.pa-radio-option .pa-radio-label {
+    font-weight: 600;
+}
+
+.pa-radio-option .pa-radio-helper {
+    margin-top: 2px;
+}
+
+/* Form row with inline action button - button aligns with input */
+.pa-form-row-with-action {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-4);
+}
+
+@media (min-width: 768px) {
+    .pa-form-row-with-action {
+        flex-direction: row;
+        align-items: flex-end;
+        gap: var(--pa-space-4);
+    }
+
+    .pa-form-row-with-action .pa-form-row-action-btn {
+        flex-shrink: 0;
+        align-self: flex-end;
+        margin-bottom: 0;
+        white-space: nowrap;
+    }
+}
+
+@media (min-width: 1024px) {
+    .pa-form-row-with-action {
+        align-items: center;
+    }
+
+    .pa-form-row-with-action .pa-form-row-action-btn {
+        align-self: center;
+    }
+}
+
 /* Form Actions */
 .pa-form-actions {
     display: flex;
@@ -5918,6 +6177,10 @@ html.dark .oa-card .pa-table-empty {
     background-color: var(--pa-n100);
     border-radius: var(--pa-radius-xs);
     animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.pa-skeleton--form {
+    height: 500px;
 }
 
 @keyframes skeleton-pulse {

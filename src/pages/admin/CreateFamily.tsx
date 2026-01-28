@@ -5,12 +5,16 @@ import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { useUserContext } from '../../hooks/useUserContext'
 import { createFamily } from '../../data/services/familyService'
 import { getLink } from '../../utils/routes'
+import { useT } from '../../i18n/useI18n'
+import type { TranslationKey } from '../../i18n'
 
 export default function CreateFamily() {
   const navigate = useNavigate()
   const { context, isReady } = useUserContext()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
+  
+  const t = useT()
   
   const [formData, setFormData] = useState({
     name: ''
@@ -45,6 +49,7 @@ export default function CreateFamily() {
     <div className="pa-root">
       <AdminPageHeader
         title="NEW FAMILY"
+        subtitle={t('admin.families.createSubtitle' as TranslationKey)}
         breadcrumbs={[
           { label: 'Families', path: '/admin/families' },
           { label: 'New Family', path: '/admin/families/new' }
