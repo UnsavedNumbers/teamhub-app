@@ -3,38 +3,24 @@ import { serve } from "https://deno.land/std@0.208.0/http/server.ts"
 import Stripe from "https://esm.sh/stripe@12.18.0?dts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0"
 
-const supabaseUrl = Deno.env.get("SUPABASE_URL")!
-const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY")
-const priceStarter = Deno.env.get("STRIPE_PRICE_STARTER_YEAR")
-const priceStandard = Deno.env.get("STRIPE_PRICE_STANDARD_YEAR")
-const pricePro = Deno.env.get("STRIPE_PRICE_PRO_YEAR")
+// ---- CORS helpers (robust preflight) ----
+// - Echo Access-Control-Request-Headers so OPTIONS never fails due to missing headers
+// - Reflect Origin (more compatible than '*'; also safe if you later use credentials)
+// NOTE: If you DO use cookies/credentials on the frontend, you must also add:
+//   "Access-Control-Allow-Credentials": "true"
+// and you must NOT use "*" for Allow-Origin.
+function buildCorsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") ?? "*"
+  const reqHeaders =
+    req.headers.get("Access-Control-Request-Headers") ??
+    "authorization, x-client-info, apikey, content-type"
 
-if (!supabaseUrl || !supabaseServiceRoleKey) {
-  throw new Error("Supabase env vars missing")
-}
-
-const stripe = stripeSecretKey ? new Stripe(stripeSecretKey, { apiVersion: "2024-06-20" }) : null
-
-function planToPrice(plan: string) {
-  switch (plan) {
-    case "starter":
-      return priceStarter
-    case "standard":
-      return priceStandard
-    case "pro":
-      return pricePro
-    default:
-      return null
-  }
-}
-
-// CORS (wildcard is fine as long as you are not using cookies/credentials)
-function buildCorsHeaders(_req: Request) {
   return {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": origin,
+    "Vary": "Origin",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers": reqHeaders,
+    "Access-Control-Max-Age": "86400",
   }
 }
 
@@ -46,24 +32,64 @@ function json(req: Request, body: unknown, status = 200) {
   })
 }
 
+// ---- Stripe + helpers ----
+function planToPrice(
+  plan: string,
+  priceStarter?: string | null,
+  priceStandard?: string | null,
+  pricePro?: string | null,
+) {
+  switch (plan) {
+    case "starter":
+      return priceStarter ?? null
+    case "standard":
+      return priceStandard ?? null
+    case "pro":
+      return pricePro ?? null
+    default:
+      return null
+  }
+}
+
 serve(async (req) => {
-  // Preflight
+  // Preflight must always succeed with CORS headers
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: buildCorsHeaders(req) })
-  }
-
-  if (!stripe) {
-    return json(req, { error: "Stripe not configured" }, 500)
   }
 
   if (req.method !== "POST") {
     return json(req, { error: "Method not allowed" }, 405)
   }
 
+  // Read env vars inside handler so we can return JSON *with CORS* even when misconfigured
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")
+  const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    return json(
+      req,
+      { error: "Server misconfigured: missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY" },
+      500,
+    )
+  }
+
+  const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY")
+  if (!stripeSecretKey) {
+    return json(req, { error: "Stripe not configured: missing STRIPE_SECRET_KEY" }, 500)
+  }
+
+  const priceStarter = Deno.env.get("STRIPE_PRICE_STARTER_YEAR")
+  const priceStandard = Deno.env.get("STRIPE_PRICE_STANDARD_YEAR")
+  const pricePro = Deno.env.get("STRIPE_PRICE_PRO_YEAR")
+
+  const stripe = new Stripe(stripeSecretKey, { apiVersion: "2024-06-20" })
+
+  // Supabase client using service role key; pass through user Authorization header for getUser()
   const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
     global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
   })
 
+  // Parse JSON payload
   let payload: any
   try {
     payload = await req.json()
@@ -80,15 +106,17 @@ serve(async (req) => {
     return json(req, { error: "Missing required parameters" }, 400)
   }
 
-  const priceId = planToPrice(requestedPlan)
+  const priceId = planToPrice(requestedPlan, priceStarter, priceStandard, pricePro)
   if (!priceId) {
-    return json(req, { error: "Unsupported plan" }, 400)
+    return json(req, { error: "Unsupported plan or missing Stripe price env var for this plan" }, 400)
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
+  // Auth (return 401 with CORS rather than throwing)
+  const { data: userData, error: userErr } = await supabase.auth.getUser()
+  if (userErr) {
+    return json(req, { error: userErr.message || "Invalid JWT" }, 401)
+  }
+  const user = userData?.user
   if (!user) {
     return json(req, { error: "Unauthorized" }, 401)
   }
@@ -143,12 +171,9 @@ serve(async (req) => {
     stripeCustomerId = customer.id
 
     // Upsert org_licenses row (unique on org_id)
-    const { error: upsertErr } = await supabase.from("org_licenses").upsert({
-      org_id: organizationId,
-      stripe_customer_id: stripeCustomerId,
-      // status defaults to 'trial' per your schema; include explicitly only if you want:
-      // status: "trial",
-    })
+    const { error: upsertErr } = await supabase
+      .from("org_licenses")
+      .upsert({ org_id: organizationId, stripe_customer_id: stripeCustomerId }, { onConflict: "org_id" })
 
     if (upsertErr) {
       return json(req, { error: upsertErr.message }, 400)
@@ -195,6 +220,13 @@ serve(async (req) => {
       requested_plan: requestedPlan,
       checkout_session_id: checkout.id,
       environment: Deno.env.get("DENO_ENV") ?? "unknown",
+    },
+    subscription_data: {
+      metadata: {
+        org_id: organizationId,
+        checkout_session_id: checkout.id,
+        requested_plan: requestedPlan,
+      },
     },
     success_url: successUrl,
     cancel_url: cancelUrl,
