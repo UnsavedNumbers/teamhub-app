@@ -18,6 +18,7 @@ export default function Signup() {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [phone, setPhone] = useState('')
+  const [zipcode, setZipcode] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -169,6 +170,21 @@ export default function Signup() {
     // Phone validation - Bug 6 prevention
     // Note: Basic phone validation (non-empty check above is sufficient for now)
 
+    // Zipcode validation (optional field, but if provided should be 5-10 characters)
+    const trimmedZipcode = zipcode.trim()
+    if (trimmedZipcode.length > 0) {
+      // Basic format validation: digits and optional hyphen
+      const zipcodePattern = /^[0-9]{5}(-[0-9]{4})?$/
+      if (trimmedZipcode.length < 5 || trimmedZipcode.length > 10) {
+        setError('Zipcode must be between 5 and 10 characters')
+        return
+      }
+      if (!zipcodePattern.test(trimmedZipcode)) {
+        setError('Zipcode must be in format 12345 or 12345-6789')
+        return
+      }
+    }
+
     if (password !== confirmPassword) {
       setError('Passwords do not match')
       return
@@ -187,6 +203,7 @@ export default function Signup() {
       trimmedFirstName, 
       trimmedLastName, 
       trimmedPhone, 
+      trimmedZipcode,
       isOrgSetupFlow
     )
     
@@ -388,6 +405,30 @@ export default function Signup() {
               </div>
             </div>
 
+            {/* Zipcode */}
+            <div>
+              <label 
+                htmlFor="zipcode" 
+                className="block text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-2 font-impact"
+              >
+                HOME ZIPCODE <span className="text-slate-400 dark:text-slate-500 font-normal normal-case">(Optional)</span>
+              </label>
+              <div className="mt-2">
+                <input
+                  id="zipcode"
+                  name="zipcode"
+                  type="text"
+                  autoComplete="postal-code"
+                  maxLength={10}
+                  tabIndex={4}
+                  value={zipcode}
+                  onChange={(e) => setZipcode(e.target.value)}
+                  placeholder="12345 or 12345-6789"
+                  className="block w-full rounded border-0 py-3 px-4 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[var(--org-btn-primary-bg, #137fec)] sm:text-sm"
+                />
+              </div>
+            </div>
+
             {/* Email */}
             <div>
               <label 
@@ -404,7 +445,7 @@ export default function Signup() {
                   autoComplete="email"
                   required
                   readOnly={isFromInvite}
-                  tabIndex={4}
+                  tabIndex={5}
                   value={email}
                   onChange={(e) => {
                     // Only allow changes if not from invite
@@ -443,7 +484,7 @@ export default function Signup() {
                   autoComplete="new-password"
                   required
                   minLength={8}
-                  tabIndex={5}
+                  tabIndex={6}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
@@ -490,7 +531,7 @@ export default function Signup() {
                   type={showConfirmPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   required
-                  tabIndex={6}
+                  tabIndex={7}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
@@ -514,9 +555,9 @@ export default function Signup() {
             {/* Terms */}
             <p className="text-xs text-slate-500 dark:text-slate-400">
               By creating an account, you agree to our{' '}
-              <a href="#" tabIndex={8} className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">Terms of Service</a>
+              <a href="#" tabIndex={9} className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">Terms of Service</a>
               {' '}and{' '}
-              <a href="#" tabIndex={9} className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">Privacy Policy</a>
+              <a href="#" tabIndex={10} className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">Privacy Policy</a>
             </p>
 
             {/* Submit */}
@@ -524,7 +565,7 @@ export default function Signup() {
               <button
                 type="submit"
                 disabled={loading || (password !== confirmPassword && confirmPassword.length > 0)}
-                tabIndex={7}
+                tabIndex={8}
                 className="bg-slate-900 dark:bg-white text-white dark:text-black px-8 py-3 font-black text-sm tracking-widest uppercase w-full hover:bg-[#5468FF] dark:hover:bg-[#5468FF] dark:hover:text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'CREATING ACCOUNT...' : 'CONTINUE'}
@@ -536,7 +577,7 @@ export default function Signup() {
           <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800">
             <p className="text-center text-sm text-slate-500 dark:text-slate-400">
               Already have an account?{' '}
-              <Link to="/portal/login" tabIndex={10} className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">
+              <Link to="/portal/login" tabIndex={11} className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors">
                 Sign in
               </Link>
             </p>

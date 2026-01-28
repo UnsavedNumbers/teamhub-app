@@ -84,6 +84,8 @@ function mapFakeChild(c: FakeChild): Child {
         phone: null,
         email: null,
         photo_url: null,
+        profile_photo_updated_at: null,
+        has_profile_photo: false,
         created_at: c.created_at,
         updated_at: c.updated_at,
         deleted_at: null
@@ -368,6 +370,8 @@ export async function createAthleteBasic(
                 emergency_contact_phone: dto.emergency_contact_phone || null,
                 phone: dto.phone || null,
                 email: dto.email || null,
+                profile_photo_updated_at: null,
+                has_profile_photo: false,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
                 deleted_at: null
@@ -406,11 +410,23 @@ export async function updateAthlete(
     }
 
     try {
-        type ChildUpdate = Database['public']['Tables']['athletes']['Update']
-        const updateData = {
-            ...dto,
+        // Map DTO fields to database fields
+        const updateData: Record<string, any> = {
+            first_name: dto.first_name,
+            last_name: dto.last_name,
+            birthdate: dto.date_of_birth, // Map date_of_birth to birthdate
+            gender: dto.gender,
+            preferred_name: dto.preferred_name,
+            jersey_number: dto.jersey_number,
+            medical_notes: dto.medical_notes,
+            allergies: dto.allergies,
+            emergency_contact_name: dto.emergency_contact_name,
+            emergency_contact_phone: dto.emergency_contact_phone,
+            phone: dto.phone,
+            email: dto.email,
             updated_at: new Date().toISOString()
-        } satisfies ChildUpdate
+        }
+        
         const { data, error } = await supabase
             .from('athletes')
             .update(updateData)
@@ -802,6 +818,8 @@ export async function searchAthletes(
                 phone: (r.phone as string | null) || null,
                 email: (r.email as string | null) || null,
                 photo_url: null, // photo_url column doesn't exist in database yet
+                profile_photo_updated_at: (r.profile_photo_updated_at as string | null) || null,
+                has_profile_photo: (r.has_profile_photo as boolean | null) ?? false,
                 created_at: (r.created_at as string) || new Date().toISOString(),
                 updated_at: (r.updated_at as string) || new Date().toISOString(),
                 deleted_at: (r.deleted_at as string | null) || null,

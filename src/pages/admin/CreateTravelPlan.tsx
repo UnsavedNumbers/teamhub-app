@@ -18,6 +18,7 @@ import {
 } from '../../components/platformAdmin'
 import { FileUpload } from '../../components/common/FileUpload'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
+import type { StructuredAddress } from '../../types/location'
 
 interface Team { id: string; name: string }
 interface Season { id: string; name: string }
@@ -28,16 +29,64 @@ interface TravelFormData {
   location: string
   destination_city: string
   destination_state: string
+  destination_state_code: string
+  destination_country: string
+  destination_place_id: string | null
+  destination_lat: number | null
+  destination_lng: number | null
   start_date: string
   end_date: string
   venue_name: string
   venue_address: string
+  venue_place_id: string | null
+  venue_lat: number | null
+  venue_lng: number | null
   hotel_name: string
   hotel_address: string
+  hotel_place_id: string | null
+  hotel_lat: number | null
+  hotel_lng: number | null
   hotel_phone: string
   hotel_confirmation: string
   maps_url: string
   notes: string
+}
+
+// Helper to extract state code from Google Place result
+const extractStateCode = (placeResult?: google.maps.places.PlaceResult): string => {
+  if (!placeResult?.address_components) return ''
+  const stateComponent = placeResult.address_components.find(
+    c => c.types?.includes('administrative_area_level_1')
+  )
+  return stateComponent?.short_name || ''
+}
+
+// Helper to validate and round coordinates
+const validateCoordinate = (value: number | string | null | undefined): number | null => {
+  if (value === null || value === undefined) return null
+  const num = typeof value === 'string' ? parseFloat(value) : value
+  if (isNaN(num)) return null
+  // Round to 6 decimal places (≈0.1 meter precision)
+  return Math.round(num * 1e6) / 1e6
+}
+
+// Helper to get today's date in YYYY-MM-DD format
+const getTodayDate = (): string => {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// Helper to add days to a date string (YYYY-MM-DD format)
+const addDaysToDate = (dateString: string, days: number): string => {
+  const date = new Date(dateString)
+  date.setDate(date.getDate() + days)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 export default function CreateTravelPlan() {
@@ -47,7 +96,15 @@ export default function CreateTravelPlan() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [itineraryFile, setItineraryFile] = useState<File | null>(null)
+  
+  // UI State for Overrides
+  const [destinationOverride, setDestinationOverride] = useState(false)
+  
   const isMountedRef = useRef(true)
+  // Refs to track previous place IDs to detect manual clearing
+  const prevDestinationPlaceIdRef = useRef<string | null>(null)
+  const prevVenuePlaceIdRef = useRef<string | null>(null)
+  const prevHotelPlaceIdRef = useRef<string | null>(null)
 
   const { context, isReady, isLoading: contextLoading } = useUserContext()
   const navigate = useNavigate()
@@ -64,16 +121,29 @@ export default function CreateTravelPlan() {
     })
   }, [isReady, contextLoading, loading, context])
 
-  const { control, handleSubmit, watch, setValue } = useForm<TravelFormData>({
+  const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<TravelFormData>({
     defaultValues: { 
-      team_id: '', season_id: '', title: '', location: '', destination_city: '', 
-      destination_state: '', start_date: '', end_date: '', venue_name: '', venue_address: '', 
-      hotel_name: '', hotel_address: '', hotel_phone: '', hotel_confirmation: '', 
+      team_id: '', season_id: '', title: '', location: '', 
+      destination_city: '', destination_state: '', destination_state_code: '', destination_country: '',
+      destination_place_id: null, destination_lat: null, destination_lng: null,
+      start_date: '', end_date: '', 
+      venue_name: '', venue_address: '', venue_place_id: null, venue_lat: null, venue_lng: null,
+      hotel_name: '', hotel_address: '', hotel_place_id: null, hotel_lat: null, hotel_lng: null,
+      hotel_phone: '', hotel_confirmation: '', 
       maps_url: '', notes: '' 
     },
   })
 
   const watchTeamId = watch('team_id')
+  const watchSeasonId = watch('season_id')
+  
+  // Watch inputs to detect clearing
+  const watchLocation = watch('location')
+  const watchVenueName = watch('venue_name')
+  const watchHotelName = watch('hotel_name')
+  const watchDestinationPlaceId = watch('destination_place_id')
+  const watchVenuePlaceId = watch('venue_place_id')
+  const watchHotelPlaceId = watch('hotel_place_id')
 
   useEffect(() => {
     isMountedRef.current = true
@@ -81,6 +151,55 @@ export default function CreateTravelPlan() {
       isMountedRef.current = false
     }
   }, [])
+
+  // Handle clearing of places when input text is cleared
+  useEffect(() => {
+    // Destination
+    if (prevDestinationPlaceIdRef.current && !watchLocation && watchDestinationPlaceId) {
+      if (isMountedRef.current) {
+        setValue('destination_place_id', null)
+        setValue('destination_city', '')
+        setValue('destination_state', '')
+        setValue('destination_state_code', '')
+        setValue('destination_country', '')
+        setValue('destination_lat', null)
+        setValue('destination_lng', null)
+        setDestinationOverride(false)
+      }
+      prevDestinationPlaceIdRef.current = null
+    } else if (watchDestinationPlaceId) {
+      prevDestinationPlaceIdRef.current = watchDestinationPlaceId
+    }
+
+    // Venue
+    if (prevVenuePlaceIdRef.current && !watchVenueName && watchVenuePlaceId) {
+      if (isMountedRef.current) {
+        setValue('venue_place_id', null)
+        setValue('venue_address', '')
+        setValue('venue_lat', null)
+        setValue('venue_lng', null)
+      }
+      prevVenuePlaceIdRef.current = null
+    } else if (watchVenuePlaceId) {
+      prevVenuePlaceIdRef.current = watchVenuePlaceId
+    }
+
+    // Hotel
+    if (prevHotelPlaceIdRef.current && !watchHotelName && watchHotelPlaceId) {
+      if (isMountedRef.current) {
+        setValue('hotel_place_id', null)
+        setValue('hotel_address', '')
+        setValue('hotel_lat', null)
+        setValue('hotel_lng', null)
+        // Also clear derived hotel fields if they were auto-populated
+        setValue('hotel_phone', '')
+        setValue('maps_url', '')
+      }
+      prevHotelPlaceIdRef.current = null
+    } else if (watchHotelPlaceId) {
+      prevHotelPlaceIdRef.current = watchHotelPlaceId
+    }
+  }, [watchLocation, watchVenueName, watchHotelName, watchDestinationPlaceId, watchVenuePlaceId, watchHotelPlaceId, setValue])
 
   const fetchTeams = useCallback(async () => {
     console.log('[CreateTravelPlan] fetchTeams called:', { isReady, hasContext: !!context, orgId: context?.orgId })
@@ -101,7 +220,8 @@ export default function CreateTravelPlan() {
       if (!isMountedRef.current) return
       
       if (!error && data) {
-        setTeams(data.map(t => ({ id: t.id, name: t.name })))
+        const teamList = data.map(t => ({ id: t.id, name: t.name }))
+        setTeams(teamList)
       }
     } catch (err) {
       if (isMountedRef.current) {
@@ -151,14 +271,32 @@ export default function CreateTravelPlan() {
     return () => clearTimeout(timeout)
   }, [loading, isReady])
 
+  // Auto-select team if there's only one and none is selected
+  useEffect(() => {
+    if (teams.length === 1 && !watchTeamId && isReady && context) {
+      console.log('[CreateTravelPlan] Auto-selecting single team:', teams[0].id)
+      setValue('team_id', teams[0].id, { shouldValidate: false })
+    }
+  }, [teams, watchTeamId, isReady, context, setValue])
+
+  // Fetch seasons when team is selected
   useEffect(() => { 
     if (watchTeamId && isReady && context) { 
+      console.log('[CreateTravelPlan] Team selected, fetching seasons:', watchTeamId)
       fetchSeasons(watchTeamId)
       setValue('season_id', '')
     }
     // Only depend on watchTeamId, isReady, and context - fetchSeasons is stable when these don't change
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchTeamId, isReady, context])
+
+  // Auto-select season if there's only one and none is selected
+  useEffect(() => {
+    if (seasons.length === 1 && !watchSeasonId && isReady && context) {
+      console.log('[CreateTravelPlan] Auto-selecting single season:', seasons[0].id)
+      setValue('season_id', seasons[0].id, { shouldValidate: false })
+    }
+  }, [seasons, watchSeasonId, isReady, context, setValue])
 
   const onSubmit = async (data: TravelFormData) => {
     if (!isMountedRef.current) return
@@ -174,12 +312,23 @@ export default function CreateTravelPlan() {
         location: data.location,
         destination_city: data.destination_city || null,
         destination_state: data.destination_state || null,
+        destination_state_code: data.destination_state_code || null,
+        destination_country: data.destination_country || null,
+        destination_place_id: data.destination_place_id || null,
+        destination_lat: data.destination_lat || null,
+        destination_lng: data.destination_lng || null,
         start_date: data.start_date,
         end_date: data.end_date,
         venue_name: data.venue_name || null,
         venue_address: data.venue_address || null,
+        venue_place_id: data.venue_place_id || null,
+        venue_lat: data.venue_lat || null,
+        venue_lng: data.venue_lng || null,
         hotel_name: data.hotel_name || null,
         hotel_address: data.hotel_address || null,
+        hotel_place_id: data.hotel_place_id || null,
+        hotel_lat: data.hotel_lat || null,
+        hotel_lng: data.hotel_lng || null,
         hotel_phone: data.hotel_phone || null,
         hotel_confirmation: data.hotel_confirmation || null,
         maps_url: data.maps_url || null,
@@ -260,17 +409,115 @@ export default function CreateTravelPlan() {
             </div>
 
             <div className="pa-mb-4">
-              <Controller name="location" control={control} rules={{ required: 'Location is required' }} render={({ field }) => <Input {...field} label="Location (city/state or details)" required />} />
+              <Controller 
+                name="location" 
+                control={control} 
+                rules={{ 
+                    required: 'Location is required',
+                    validate: (_value, formValues) => {
+                        // User can enter text manually OR select a place.
+                        // If they selected a place (place_id exists), we should have coordinates.
+                        // If no place_id, we accept just text (manual entry fallback)
+                        if (formValues.destination_place_id && (!formValues.destination_lat || !formValues.destination_lng)) {
+                            return 'Invalid location data. Please re-select from the list or enter manually.'
+                        }
+                        return true
+                    }
+                }} 
+                render={({ field }) => (
+                  <LocationAutocomplete
+                    value={field.value || ''}
+                    onInputChange={field.onChange}
+                    onChange={(address: StructuredAddress, placeResult?: google.maps.places.PlaceResult) => {
+                      startTransition(() => {
+                        // 1. Set main text value
+                        setValue('location', address.formatted_address, { shouldValidate: true, shouldDirty: true })
+                        
+                        // 2. Set derived fields
+                        setValue('destination_place_id', address.place_id || null)
+                        setValue('destination_city', address.city || '')
+                        setValue('destination_state', address.state || '')
+                        setValue('destination_country', address.country || '')
+                        
+                        // 3. Extract and set coordinates
+                        setValue('destination_lat', validateCoordinate(address.latitude))
+                        setValue('destination_lng', validateCoordinate(address.longitude))
+                        
+                        // 4. Extract state code from raw place result
+                        const stateCode = extractStateCode(placeResult)
+                        setValue('destination_state_code', stateCode)
+                      })
+                    }}
+                    label="Location (city/state or details)"
+                    placeholder="Search for a city or location..."
+                    types={['geocode']} // Allow cities, regions, and addresses
+                    required
+                    error={errors.location?.message}
+                  />
+                )} 
+              />
             </div>
 
             <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
-              <Controller name="destination_city" control={control} render={({ field }) => <Input {...field} label="Destination City" />} />
-              <Controller name="destination_state" control={control} render={({ field }) => <Input {...field} label="Destination State" />} />
+              {/* Destination City - Read Only with Override */}
+              <Controller 
+                name="destination_city" 
+                control={control} 
+                render={({ field }) => (
+                  <div className="pa-form-group">
+                      <label className="pa-label">Destination City</label>
+                      {destinationOverride || !watchDestinationPlaceId ? (
+                        <input {...field} className="pa-input" placeholder="City" />
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', height: '40px' }}>
+                            <span className="pa-text-body">{field.value || '—'}</span>
+                            <button 
+                                type="button" 
+                                className="pa-link-button" 
+                                style={{ fontSize: '12px' }}
+                                onClick={() => setDestinationOverride(true)}
+                            >
+                                Override
+                            </button>
+                        </div>
+                      )}
+                  </div>
+                )} 
+              />
+              
+              {/* Destination State - Read Only with Override */}
+              <Controller 
+                name="destination_state" 
+                control={control} 
+                render={({ field }) => (
+                  <div className="pa-form-group">
+                      <label className="pa-label">Destination State</label>
+                      {destinationOverride || !watchDestinationPlaceId ? (
+                        <input {...field} className="pa-input" placeholder="State/Province" />
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', height: '40px' }}>
+                            <span className="pa-text-body">{field.value || '—'}</span>
+                            {destinationOverride && (
+                                <button type="button" onClick={() => setDestinationOverride(false)}>Cancel</button>
+                            )}
+                        </div>
+                      )}
+                  </div>
+                )} 
+              />
+              
               <Controller 
                 name="start_date" 
                 control={control} 
                 rules={{ required: 'Start date is required' }} 
-                render={({ field }) => <DatePicker {...field} label="Start Date" required />} 
+                render={({ field }) => (
+                  <DatePicker 
+                    {...field} 
+                    label="Start Date" 
+                    required 
+                    minValue={getTodayDate()}
+                  />
+                )} 
               />
               <Controller 
                 name="end_date" 
@@ -279,68 +526,132 @@ export default function CreateTravelPlan() {
                   required: 'End date is required',
                   validate: (value) => {
                     const startDate = watch('start_date')
-                    if (startDate && value && value < startDate) {
-                      return 'End date must be on or after start date'
+                    if (startDate && value) {
+                      const minEndDate = addDaysToDate(startDate, 1)
+                      if (value < minEndDate) {
+                        return 'End date must be at least one day after start date'
+                      }
                     }
                     return true
                   }
                 }} 
-                render={({ field, fieldState }) => (
-                  <DatePicker 
-                    {...field} 
-                    label="End Date" 
-                    required 
-                    error={fieldState.error?.message}
-                  />
-                )} 
+                render={({ field, fieldState }) => {
+                  const startDate = watch('start_date')
+                  // Minimum end date is start date + 1 day, or today + 1 if no start date
+                  const minEndDate = startDate 
+                    ? addDaysToDate(startDate, 1)
+                    : addDaysToDate(getTodayDate(), 1)
+                  
+                  return (
+                    <DatePicker 
+                      {...field} 
+                      label="End Date" 
+                      required 
+                      minValue={minEndDate}
+                      error={fieldState.error?.message}
+                    />
+                  )
+                }} 
               />
             </div>
 
             <h3 className="pa-h3 pa-mb-4 pa-mt-6">VENUE & HOTEL</h3>
             <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
-              <Controller name="venue_name" control={control} render={({ field }) => <Input {...field} label="Venue Name" />} />
+              <Controller 
+                name="venue_name" 
+                control={control} 
+                rules={{
+                    // Optional field, but if place selected, validate coordinates often implies good data
+                    validate: (_value, formValues) => {
+                        if (formValues.venue_place_id && (!formValues.venue_lat || !formValues.venue_lng)) {
+                             // This is a soft warning really, maybe we don't block
+                             // But it's good to ensure data integrity
+                             console.warn('Venue place selected but coordinates missing')
+                        }
+                        return true
+                    }
+                }}
+                render={({ field }) => (
+                    <LocationAutocomplete
+                        value={field.value || ''}
+                        onInputChange={field.onChange}
+                        onChange={(address: StructuredAddress, placeResult?: google.maps.places.PlaceResult) => {
+                            startTransition(() => {
+                                // Use place name from PlaceResult if it exists and is not the same as the address
+                                // If no name is available, leave it empty so user can enter a proper name
+                                const placeName = placeResult?.name && placeResult.name !== address.formatted_address
+                                    ? placeResult.name
+                                    : ''
+
+                                setValue('venue_name', placeName, { shouldValidate: true, shouldDirty: true })
+                                setValue('venue_address', address.formatted_address)
+                                setValue('venue_place_id', address.place_id || null)
+                                setValue('venue_lat', validateCoordinate(address.latitude))
+                                setValue('venue_lng', validateCoordinate(address.longitude))
+                            })
+                        }}
+                        label="Venue Name"
+                        placeholder="Search for venue..."
+                        types={['establishment', 'geocode']}
+                    />
+                )} 
+              />
+              
               <Controller
                 name="venue_address"
                 control={control}
-                render={({ field }) => (
-                  <LocationAutocomplete
-                    value={field.value || ''}
-                    onInputChange={field.onChange}
-                    onChange={(address) => {
-                      startTransition(() => {
-                        setValue('venue_address', address.formatted_address, { shouldValidate: false, shouldDirty: true })
-                      })
-                    }}
-                    label="Venue Address"
-                    placeholder="Enter venue address"
-                  />
-                )}
+                render={({ field }) => <Input {...field} label="Venue Address" />}
               />
-              <Controller name="hotel_name" control={control} render={({ field }) => <Input {...field} label="Hotel Name" />} />
+              
+              <Controller 
+                name="hotel_name" 
+                control={control} 
+                render={({ field }) => (
+                    <LocationAutocomplete
+                        value={field.value || ''}
+                        onInputChange={field.onChange}
+                        onChange={(address: StructuredAddress, placeResult?: google.maps.places.PlaceResult) => {
+                            startTransition(() => {
+                                // Use place name from PlaceResult if it exists and is not the same as the address
+                                // If no name is available, leave it empty so user can enter a proper name
+                                const placeName = placeResult?.name && placeResult.name !== address.formatted_address
+                                    ? placeResult.name
+                                    : ''
+                                
+                                setValue('hotel_name', placeName, { shouldValidate: true, shouldDirty: true })
+                                setValue('hotel_address', address.formatted_address)
+                                setValue('hotel_place_id', address.place_id || null)
+                                setValue('hotel_lat', validateCoordinate(address.latitude))
+                                setValue('hotel_lng', validateCoordinate(address.longitude))
+                                
+                                // Extract phone if available (PlaceResult might have it if requested)
+                                if (placeResult?.formatted_phone_number) {
+                                    setValue('hotel_phone', placeResult.formatted_phone_number)
+                                }
+                                
+                                // Generate map URL
+                                if (placeResult?.url) {
+                                    setValue('maps_url', placeResult.url)
+                                }
+                            })
+                        }}
+                        label="Hotel Name"
+                        placeholder="Search for hotel..."
+                        types={['lodging']}
+                    />
+                )} 
+              />
+              
               <Controller
                 name="hotel_address"
                 control={control}
-                render={({ field }) => (
-                  <LocationAutocomplete
-                    value={field.value || ''}
-                    onInputChange={field.onChange}
-                    onChange={(address) => {
-                      startTransition(() => {
-                        setValue('hotel_address', address.formatted_address, { shouldValidate: false, shouldDirty: true })
-                      })
-                    }}
-                    label="Hotel Address"
-                    placeholder="Enter hotel address"
-                  />
-                )}
+                render={({ field }) => <Input {...field} label="Hotel Address" />}
               />
-              <Controller name="hotel_phone" control={control} render={({ field }) => <Input {...field} label="Hotel Phone" />} />
+              
               <Controller name="hotel_confirmation" control={control} render={({ field }) => <Input {...field} label="Hotel Confirmation" />} />
             </div>
 
-            <div className="pa-mb-6">
-              <Controller name="maps_url" control={control} render={({ field }) => <Input {...field} label="Map Link URL" />} />
-            </div>
+
 
             <h3 className="pa-h3 pa-mb-4">ITINERARY FILE</h3>
             <div className="pa-mb-6">

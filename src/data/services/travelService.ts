@@ -85,10 +85,10 @@ function normalizeToISODate(date: string | Date): string {
  * Validate if a value is a valid File object
  */
 function isValidFile(file: unknown): file is File {
-    return file instanceof File && 
-           typeof file.name === 'string' && 
-           typeof file.size === 'number' &&
-           file.size > 0
+    return file instanceof File &&
+        typeof file.name === 'string' &&
+        typeof file.size === 'number' &&
+        file.size > 0
 }
 
 
@@ -96,7 +96,7 @@ function isValidFile(file: unknown): file is File {
  * Map Supabase travel plan row to FakeTravelPlan domain model
  */
 function mapSupabaseTravelPlan(row: TravelPlanRow): FakeTravelPlan {
-    return {
+    const plan: FakeTravelPlan = {
         id: row.id,
         org_id: row.team?.org_id ?? '',
         team_id: row.team_id,
@@ -125,6 +125,11 @@ function mapSupabaseTravelPlan(row: TravelPlanRow): FakeTravelPlan {
         created_at: row.created_at,
         updated_at: row.updated_at,
     }
+
+    // Add new fields if they exist in the row (they might not if types aren't fully updated everywhere)
+    // For FakeTravelPlan we'll just keep the base structure for now to avoid breaking other files
+    // The service handles the DTOs but the internal model might not need all raw place IDs for display
+    return plan
 }
 
 /**
@@ -157,19 +162,19 @@ async function validateTeamBelongsToOrg(
 
         const teamOrgId = data.org_id as string | null
         if (!teamOrgId || teamOrgId !== _context.orgId) {
-            return { 
-                valid: false, 
-                orgId: teamOrgId, 
-                error: new Error('Team does not belong to your organization') 
+            return {
+                valid: false,
+                orgId: teamOrgId,
+                error: new Error('Team does not belong to your organization')
             }
         }
 
         return { valid: true, orgId: teamOrgId, error: null }
     } catch (err) {
-        return { 
-            valid: false, 
-            orgId: null, 
-            error: err instanceof Error ? err : new Error('Failed to validate team') 
+        return {
+            valid: false,
+            orgId: null,
+            error: err instanceof Error ? err : new Error('Failed to validate team')
         }
     }
 }
@@ -218,9 +223,9 @@ async function validateTeamSeasonRelationship(
 
         return { valid: true, error: null }
     } catch (err) {
-        return { 
-            valid: false, 
-            error: err instanceof Error ? err : new Error('Failed to validate team-season relationship') 
+        return {
+            valid: false,
+            error: err instanceof Error ? err : new Error('Failed to validate team-season relationship')
         }
     }
 }
@@ -336,18 +341,29 @@ export interface CreateTravelPlanDTO {
     team_id: string
     season_id: string
     title: string
-    location: string
+    location: string // formatted address or manually entered text
     destination_city?: string | null
     destination_state?: string | null
+    destination_state_code?: string | null
+    destination_country?: string | null
+    destination_place_id?: string | null
+    destination_lat?: number | null
+    destination_lng?: number | null
     start_date: string
     end_date: string
     venue_name?: string | null
     venue_address?: string | null
+    venue_place_id?: string | null
+    venue_lat?: number | null
+    venue_lng?: number | null
     hotel_name?: string | null
     hotel_address?: string | null
-    hotel_phone?: string | null
+    hotel_place_id?: string | null
+    hotel_lat?: number | null
+    hotel_lng?: number | null
+    hotel_phone?: string | null // kept for backward compatibility but populated from place
     hotel_confirmation?: string | null
-    maps_url?: string | null
+    maps_url?: string | null // kept for backward compatibility
     notes?: string | null
     itinerary_file?: File | null
 }
@@ -433,69 +449,69 @@ export async function getTravelEvents(
     if (USE_FAKE_DATA) {
         // Fake data mode - use fake travel plans converted to events
         try {
-        await simulateDelay()
+            await simulateDelay()
 
-        const permissions = buildPermissions(context)
+            const permissions = buildPermissions(context)
 
-        // Get travel plans and convert to travel events
-        let travelEvents: TravelEvent[] = fakeTravelPlans
-            .filter(p => p.org_id === context.orgId)
-            .filter(p => params.includeCancelled || p.status !== 'cancelled')
-            .filter(p => p.status === 'published' || p.status === 'cancelled')
-            .map(convertTravelPlanToEvent)
+            // Get travel plans and convert to travel events
+            let travelEvents: TravelEvent[] = fakeTravelPlans
+                .filter(p => p.org_id === context.orgId)
+                .filter(p => params.includeCancelled || p.status !== 'cancelled')
+                .filter(p => p.status === 'published' || p.status === 'cancelled')
+                .map(convertTravelPlanToEvent)
 
-        // Also check regular events with travel indicators
-        const regularTravelEvents: TravelEvent[] = fakeEvents
-            .filter(e => {
-                const asTravelEvent = e as unknown as TravelEvent
-                return detectTravelEvent(asTravelEvent).isTravel
-            })
-            .map(e => e as unknown as TravelEvent)
+            // Also check regular events with travel indicators
+            const regularTravelEvents: TravelEvent[] = fakeEvents
+                .filter(e => {
+                    const asTravelEvent = e as unknown as TravelEvent
+                    return detectTravelEvent(asTravelEvent).isTravel
+                })
+                .map(e => e as unknown as TravelEvent)
 
-        // Merge, avoiding duplicates
-        const eventIds = new Set(travelEvents.map(e => e.id))
-        for (const event of regularTravelEvents) {
-            if (!eventIds.has(event.id)) {
-                travelEvents.push(event)
-            }
-        }
-
-        // Filter by upcoming
-        if (params.upcomingOnly) {
-            const now = new Date()
-            travelEvents = travelEvents.filter(e => new Date(e.start_time) >= now)
-        }
-
-        // Filter by team
-        if (params.teamId) {
-            travelEvents = travelEvents.filter(e => e.team_id === params.teamId)
-        }
-
-        // Apply role-based filtering (using same logic as events)
-        // In fake data demo mode, show all published travel for the org
-        if (USE_FAKE_DATA && !permissions.canViewAllOrgData) {
-            // Demo mode: show travel plans for demonstration
-            // In real mode, would filter by team access
-        } else if (!permissions.canViewAllOrgData) {
-            const accessibleTeamIds = new Set<string>()
-
-            if (permissions.canViewAssignedTeams) {
-                permissions.assignedTeamIds.forEach(id => accessibleTeamIds.add(id))
+            // Merge, avoiding duplicates
+            const eventIds = new Set(travelEvents.map(e => e.id))
+            for (const event of regularTravelEvents) {
+                if (!eventIds.has(event.id)) {
+                    travelEvents.push(event)
+                }
             }
 
-            if (permissions.canViewOwnChildrenData) {
-                getTeamsForUserChildren(context.userId).forEach(id => accessibleTeamIds.add(id))
+            // Filter by upcoming
+            if (params.upcomingOnly) {
+                const now = new Date()
+                travelEvents = travelEvents.filter(e => new Date(e.start_time) >= now)
             }
 
-            travelEvents = travelEvents.filter(e => accessibleTeamIds.has(e.team_id))
-        }
+            // Filter by team
+            if (params.teamId) {
+                travelEvents = travelEvents.filter(e => e.team_id === params.teamId)
+            }
 
-        // Sort by start date
-        travelEvents.sort((a, b) =>
-            new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
-        )
+            // Apply role-based filtering (using same logic as events)
+            // In fake data demo mode, show all published travel for the org
+            if (USE_FAKE_DATA && !permissions.canViewAllOrgData) {
+                // Demo mode: show travel plans for demonstration
+                // In real mode, would filter by team access
+            } else if (!permissions.canViewAllOrgData) {
+                const accessibleTeamIds = new Set<string>()
 
-        return { data: travelEvents, error: null }
+                if (permissions.canViewAssignedTeams) {
+                    permissions.assignedTeamIds.forEach(id => accessibleTeamIds.add(id))
+                }
+
+                if (permissions.canViewOwnChildrenData) {
+                    getTeamsForUserChildren(context.userId).forEach(id => accessibleTeamIds.add(id))
+                }
+
+                travelEvents = travelEvents.filter(e => accessibleTeamIds.has(e.team_id))
+            }
+
+            // Sort by start date
+            travelEvents.sort((a, b) =>
+                new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+            )
+
+            return { data: travelEvents, error: null }
         } catch (err) {
             console.error('getTravelEvents error:', err)
             return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
@@ -817,7 +833,7 @@ export async function createTravelPlan(
         // Upload file first if provided
         if (data.itinerary_file && isValidFile(data.itinerary_file)) {
             const objectPath = `${teamValidation.orgId}/${data.team_id}/temp/${Date.now()}-${sanitizeFilename(data.itinerary_file.name)}`
-            
+
             const { error: uploadError } = await supabase.storage
                 .from('travel-itineraries')
                 .upload(objectPath, data.itinerary_file, {
@@ -842,12 +858,23 @@ export async function createTravelPlan(
             location: data.location,
             destination_city: data.destination_city ?? null,
             destination_state: data.destination_state ?? null,
+            destination_state_code: data.destination_state_code ?? null,
+            destination_country: data.destination_country ?? null,
+            destination_place_id: data.destination_place_id ?? null,
+            destination_lat: data.destination_lat ?? null,
+            destination_lng: data.destination_lng ?? null,
             venue_name: data.venue_name ?? null,
             venue_address: data.venue_address ?? null,
+            venue_place_id: data.venue_place_id ?? null,
+            venue_lat: data.venue_lat ?? null,
+            venue_lng: data.venue_lng ?? null,
             start_date: normalizedStart,
             end_date: normalizedEnd,
             hotel_name: data.hotel_name ?? null,
             hotel_address: data.hotel_address ?? null,
+            hotel_place_id: data.hotel_place_id ?? null,
+            hotel_lat: data.hotel_lat ?? null,
+            hotel_lng: data.hotel_lng ?? null,
             hotel_phone: data.hotel_phone ?? null,
             hotel_confirmation: data.hotel_confirmation ?? null,
             maps_url: data.maps_url ?? null,
@@ -857,6 +884,17 @@ export async function createTravelPlan(
         } as Database['public']['Tables']['travel_plans']['Insert'] & {
             destination_city?: string | null
             destination_state?: string | null
+            destination_state_code?: string | null
+            destination_country?: string | null
+            destination_place_id?: string | null
+            destination_lat?: number | null
+            destination_lng?: number | null
+            venue_place_id?: string | null
+            venue_lat?: number | null
+            venue_lng?: number | null
+            hotel_place_id?: string | null
+            hotel_lat?: number | null
+            hotel_lng?: number | null
             maps_url?: string | null
             itinerary_file_path?: string | null
             status?: string
@@ -1492,7 +1530,7 @@ export async function publishTravelPlan(
             }
 
             const plan = fakeTravelPlans[planIndex]
-            
+
             // Validate status transition
             if (plan.status === 'cancelled') {
                 return { data: null, error: new Error('Cannot publish a cancelled plan. Please create a new plan.') }
@@ -1548,13 +1586,15 @@ export async function publishTravelPlan(
         }
 
         // Update to published
-        // Note: Database types may not include status column from migration 033
+        // Note: Database types may not include status/published_at columns from migration 033
+        // Use type assertion to include these fields even if not in generated types
         const updateData = {
             status: 'published',
             published_at: existingPlanTyped.published_at ?? new Date().toISOString(),
         } as Database['public']['Tables']['travel_plans']['Update'] & {
             status?: string
             published_at?: string
+            cancelled_at?: string | null
         }
 
         const { data: updated, error: updateError } = await supabase
@@ -1601,7 +1641,7 @@ export async function cancelTravelPlan(
             }
 
             const plan = fakeTravelPlans[planIndex]
-            
+
             // Validate status transition
             if (plan.status === 'cancelled') {
                 return { data: null, error: new Error('Plan is already cancelled') }

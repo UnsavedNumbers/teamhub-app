@@ -86,11 +86,17 @@ export function buildFeeAssignmentQuery(
 export function buildTeamQuery(
     supabase: SupabaseClient<SupabaseExtended>
 ) {
+    // Use explicit junction table relationship to avoid ambiguity
+    // between seasons.team_id FK and team_seasons junction table
     return supabase.from('teams').select(`
         *,
         sport:sports(id, name, icon, color),
         program:programs(id, name),
-        level:levels(id, name)
+        level:levels(id, name),
+        team_seasons(
+            is_active,
+            season:seasons(id, name, start_date, end_date)
+        )
     `)
 }
 

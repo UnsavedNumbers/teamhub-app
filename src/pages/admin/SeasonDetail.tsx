@@ -13,7 +13,6 @@ import { AdminPageHeader, Card, Button, Badge, ConfirmDialog } from '../../compo
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 import { supabase } from '../../lib/supabase'
-import { cn } from '../../utils/cn'
 
 interface SeasonStats {
   teamsCount: number
@@ -160,7 +159,7 @@ export default function SeasonDetail() {
           if (usersData) {
             // Get user roles
             const userIds = usersData.map((u: any) => u.id)
-            const { data: rolesData } = await supabase
+            const { data: rolesData } = await (supabase as any)
               .from('user_roles')
               .select('user_id')
               .in('user_id', userIds)

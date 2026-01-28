@@ -37,6 +37,10 @@ interface TravelFormData {
 
 export default function EditTravelPlan() {
   const { id } = useParams<{ id: string }>()
+  const componentIdRef = useRef(`EditTravelPlan-${Date.now()}-${Math.random()}`)
+  const renderCountRef = useRef(0)
+  const effectRunCountRef = useRef(0)
+  const fetchPlanCountRef = useRef(0)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -46,38 +50,94 @@ export default function EditTravelPlan() {
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
 
+  renderCountRef.current++
+  console.log(`[EditTravelPlan:${componentIdRef.current}] RENDER #${renderCountRef.current}`, {
+    timestamp: new Date().toISOString(),
+    id,
+    isReady,
+    contextOrgId: context?.orgId,
+  })
+
   const { control, handleSubmit, reset, setValue, watch } = useForm<TravelFormData>()
 
   useEffect(() => {
+    const mountTime = new Date().toISOString()
+    console.log(`[EditTravelPlan:${componentIdRef.current}] MOUNT`, { timestamp: mountTime })
+    isMountedRef.current = true
     return () => {
+      const unmountTime = new Date().toISOString()
+      console.log(`[EditTravelPlan:${componentIdRef.current}] UNMOUNT`, {
+        timestamp: unmountTime,
+        mountTime,
+        renderCount: renderCountRef.current,
+        effectRuns: effectRunCountRef.current,
+        fetchPlanCalls: fetchPlanCountRef.current,
+      })
       isMountedRef.current = false
     }
   }, [])
 
   const fetchPlan = useCallback(async () => {
-    if (!isReady || !id) return
+    fetchPlanCountRef.current++
+    const fetchId = fetchPlanCountRef.current
+    const fetchStartTime = Date.now()
+    console.log(`[EditTravelPlan:${componentIdRef.current}] fetchPlan #${fetchId} START`, {
+      timestamp: new Date().toISOString(),
+      id,
+      isReady,
+      contextOrgId: context?.orgId,
+      isMounted: isMountedRef.current,
+    })
+
+    if (!isReady || !id) {
+      console.log(`[EditTravelPlan:${componentIdRef.current}] fetchPlan #${fetchId} - Early return`, {
+        reason: !isReady ? 'not ready' : 'no id',
+      })
+      return
+    }
     
     // Validate UUID format
     if (!isValidUUID(id)) {
+      console.warn(`[EditTravelPlan:${componentIdRef.current}] fetchPlan #${fetchId} - Invalid UUID, navigating away`)
       if (isMountedRef.current) {
         navigate('/admin/travel')
       }
       return
     }
     
-    if (!isMountedRef.current) return
-    setLoading(true)
+    if (!isMountedRef.current) {
+      console.log(`[EditTravelPlan:${componentIdRef.current}] fetchPlan #${fetchId} - Aborted (unmounted)`)
+      return
+    }
+    
+    if (isMountedRef.current) {
+      setLoading(true)
+    }
     
     try {
+      console.log(`[EditTravelPlan:${componentIdRef.current}] fetchPlan #${fetchId} - Calling getTravelPlanById`)
+      const apiStartTime = Date.now()
       const { data, error } = await getTravelPlanById(context, id)
+      const apiDuration = Date.now() - apiStartTime
+      console.log(`[EditTravelPlan:${componentIdRef.current}] fetchPlan #${fetchId} - getTravelPlanById completed`, {
+        duration: `${apiDuration}ms`,
+        hasData: !!data,
+        hasError: !!error,
+        errorMessage: error?.message,
+      })
       
-      if (!isMountedRef.current) return
+      if (!isMountedRef.current) {
+        console.log(`[EditTravelPlan:${componentIdRef.current}] fetchPlan #${fetchId} - Aborted after API (unmounted)`)
+        return
+      }
 
       if (error || !data) {
+        console.log(`[EditTravelPlan:${componentIdRef.current}] fetchPlan #${fetchId} - Error or no data, navigating away`)
         navigate('/admin/travel')
         return
       }
 
+      console.log(`[EditTravelPlan:${componentIdRef.current}] fetchPlan #${fetchId} - Resetting form with data`)
       // Populate form with existing data
       reset({
         title: data.title,
@@ -96,29 +156,66 @@ export default function EditTravelPlan() {
         notes: data.notes ?? '',
       })
     } catch (err) {
-      if (isMountedRef.current) {
-        setError(getErrorMessage(err) || 'Failed to load travel plan')
-      }
+      if (!isMountedRef.current) return
+      console.error(`[EditTravelPlan:${componentIdRef.current}] fetchPlan #${fetchId} - Caught error:`, err)
+      setError(getErrorMessage(err) || 'Failed to load travel plan')
     } finally {
+      const totalDuration = Date.now() - fetchStartTime
+      console.log(`[EditTravelPlan:${componentIdRef.current}] fetchPlan #${fetchId} - COMPLETE`, {
+        duration: `${totalDuration}ms`,
+        isMounted: isMountedRef.current,
+      })
       if (isMountedRef.current) {
         setLoading(false)
       }
     }
-  }, [context, isReady, id, navigate, reset])
+  }, [id, context.orgId, isReady, navigate, reset])
 
-  useEffect(() => { 
-    if (isReady && id) fetchPlan() 
-  }, [isReady, id, fetchPlan])
+  useEffect(() => {
+    effectRunCountRef.current++
+    const effectId = effectRunCountRef.current
+    console.log(`[EditTravelPlan:${componentIdRef.current}] Effect #${effectId} - Trigger fetchPlan`, {
+      timestamp: new Date().toISOString(),
+      isReady,
+      id,
+      isMounted: isMountedRef.current,
+    })
+    if (isReady && id) {
+      console.log(`[EditTravelPlan:${componentIdRef.current}] Effect #${effectId} - Calling fetchPlan`)
+      fetchPlan()
+    } else {
+      console.log(`[EditTravelPlan:${componentIdRef.current}] Effect #${effectId} - Skipping fetchPlan`, {
+        reason: !isReady ? 'not ready' : 'no id',
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReady, id])
 
   const onSubmit = async (data: TravelFormData) => {
+    const submitStartTime = Date.now()
+    console.log(`[EditTravelPlan:${componentIdRef.current}] onSubmit START`, {
+      timestamp: new Date().toISOString(),
+      id,
+      isMounted: isMountedRef.current,
+    })
+
     if (!id || !isValidUUID(id)) {
-      setError('Invalid plan ID')
+      console.warn(`[EditTravelPlan:${componentIdRef.current}] onSubmit - Invalid plan ID`)
+      if (isMountedRef.current) {
+        setError('Invalid plan ID')
+      }
       return
     }
 
-    if (!isMountedRef.current) return
-    setSaving(true)
-    setError(null)
+    if (!isMountedRef.current) {
+      console.log(`[EditTravelPlan:${componentIdRef.current}] onSubmit - Aborted (unmounted)`)
+      return
+    }
+    
+    if (isMountedRef.current) {
+      setSaving(true)
+      setError(null)
+    }
     
     try {
       // Map form data to DTO
@@ -140,33 +237,59 @@ export default function EditTravelPlan() {
         itinerary_file: itineraryFile,
       }
 
+      console.log(`[EditTravelPlan:${componentIdRef.current}] onSubmit - Calling updateTravelPlan`)
+      const apiStartTime = Date.now()
       const { data: updatedPlan, error: updateError } = await updateTravelPlan(context, id, updateData)
+      const apiDuration = Date.now() - apiStartTime
+      console.log(`[EditTravelPlan:${componentIdRef.current}] onSubmit - updateTravelPlan completed`, {
+        duration: `${apiDuration}ms`,
+        hasData: !!updatedPlan,
+        hasError: !!updateError,
+        errorMessage: updateError?.message,
+      })
 
-      if (!isMountedRef.current) return
+      if (!isMountedRef.current) {
+        console.log(`[EditTravelPlan:${componentIdRef.current}] onSubmit - Aborted after API (unmounted)`)
+        return
+      }
 
       if (updateError || !updatedPlan) {
         const errorMessage = updateError?.message || 'Failed to update travel plan'
-        setError(errorMessage)
-        showError(errorMessage)
+        console.error(`[EditTravelPlan:${componentIdRef.current}] onSubmit - Error:`, errorMessage)
+        if (isMountedRef.current) {
+          setError(errorMessage)
+          showError(errorMessage)
+        }
         
         // Handle optimistic locking error
         if (errorMessage.includes('modified by another user')) {
+          console.log(`[EditTravelPlan:${componentIdRef.current}] onSubmit - Refreshing plan data due to optimistic locking error`)
           // Refresh plan data
           await fetchPlan()
         }
         return
       }
 
+      console.log(`[EditTravelPlan:${componentIdRef.current}] onSubmit - Success, navigating away`)
       showSuccess('Travel plan updated successfully!')
       if (isMountedRef.current) {
         navigate('/admin/travel')
       }
     } catch (err: unknown) { 
-      if (!isMountedRef.current) return
+      if (!isMountedRef.current) {
+        console.log(`[EditTravelPlan:${componentIdRef.current}] onSubmit - Aborted during error handling (unmounted)`)
+        return
+      }
+      console.error(`[EditTravelPlan:${componentIdRef.current}] onSubmit - Caught error:`, err)
       const errorMessage = getErrorMessage(err) || 'Failed to update travel plan'
       setError(errorMessage)
       showError(errorMessage)
-    } finally { 
+    } finally {
+      const totalDuration = Date.now() - submitStartTime
+      console.log(`[EditTravelPlan:${componentIdRef.current}] onSubmit - COMPLETE`, {
+        duration: `${totalDuration}ms`,
+        isMounted: isMountedRef.current,
+      })
       if (isMountedRef.current) {
         setSaving(false)
       }
@@ -240,8 +363,22 @@ export default function EditTravelPlan() {
                   <LocationAutocomplete
                     value={field.value || ''}
                     onInputChange={field.onChange}
-                    onChange={(address) => {
+                    onChange={(address, placeResult) => {
                       startTransition(() => {
+                        // Use place name from PlaceResult if it exists and is not the same as the address
+                        // Only update venue_name if we have a proper name (not an address)
+                        const placeName = placeResult?.name && placeResult.name !== address.formatted_address
+                            ? placeResult.name
+                            : null
+                        
+                        // Update venue_name if we have a proper name and it's currently empty or looks like an address
+                        if (placeName) {
+                          const currentVenueName = watch('venue_name')
+                          // Update if empty or if current name is the same as the address
+                          if (!currentVenueName || currentVenueName === address.formatted_address) {
+                            setValue('venue_name', placeName, { shouldValidate: false, shouldDirty: true })
+                          }
+                        }
                         setValue('venue_address', address.formatted_address, { shouldValidate: false, shouldDirty: true })
                       })
                     }}
@@ -258,8 +395,22 @@ export default function EditTravelPlan() {
                   <LocationAutocomplete
                     value={field.value || ''}
                     onInputChange={field.onChange}
-                    onChange={(address) => {
+                    onChange={(address, placeResult) => {
                       startTransition(() => {
+                        // Use place name from PlaceResult if it exists and is not the same as the address
+                        // Only update hotel_name if we have a proper name (not an address)
+                        const placeName = placeResult?.name && placeResult.name !== address.formatted_address
+                            ? placeResult.name
+                            : null
+                        
+                        // Update hotel_name if we have a proper name and it's currently empty or looks like an address
+                        if (placeName) {
+                          const currentHotelName = watch('hotel_name')
+                          // Update if empty or if current name is the same as the address
+                          if (!currentHotelName || currentHotelName === address.formatted_address) {
+                            setValue('hotel_name', placeName, { shouldValidate: false, shouldDirty: true })
+                          }
+                        }
                         setValue('hotel_address', address.formatted_address, { shouldValidate: false, shouldDirty: true })
                       })
                     }}
@@ -268,12 +419,7 @@ export default function EditTravelPlan() {
                   />
                 )}
               />
-              <Controller name="hotel_phone" control={control} render={({ field }) => <Input {...field} label="Hotel Phone" />} />
               <Controller name="hotel_confirmation" control={control} render={({ field }) => <Input {...field} label="Hotel Confirmation" />} />
-            </div>
-
-            <div className="pa-mb-6">
-              <Controller name="maps_url" control={control} render={({ field }) => <Input {...field} label="Map Link URL" />} />
             </div>
 
             <h3 className="pa-h3 pa-mb-4">ITINERARY FILE</h3>
