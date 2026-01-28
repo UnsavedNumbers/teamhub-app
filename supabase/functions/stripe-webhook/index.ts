@@ -155,34 +155,34 @@ serve(async (req) => {
   }
 
   // Idempotency guard
-  // const { data: existing, error: existingErr } = await supabase
-  //   .from("billing_events")
-  //   .select("id")
-  //   .eq("stripe_event_id", event.id)
-  //   .maybeSingle()
+  const { data: existing, error: existingErr } = await supabase
+    .from("billing_events")
+    .select("id")
+    .eq("stripe_event_id", event.id)
+    .maybeSingle()
 
-  // if (existingErr) {
-  //   // If billing_events is misconfigured, you still want webhook processing to proceed,
-  //   // but you should see this in logs.
-  //   console.error("billing_events lookup error:", existingErr.message)
-  // } else if (existing?.id) {
-  //   return new Response(JSON.stringify({ received: true }), { status: 200 })
-  // }
+  if (existingErr) {
+    // If billing_events is misconfigured, you still want webhook processing to proceed,
+    // but you should see this in logs.
+    console.error("billing_events lookup error:", existingErr.message)
+  } else if (existing?.id) {
+    return new Response(JSON.stringify({ received: true }), { status: 200 })
+  }
 
   const orgId = extractOrgIdFromEvent(event)
 
   // Best-effort logging (don’t block billing if logging fails)
-  // const { error: insertEventErr } = await supabase.from("billing_events").insert({
-  //   org_id: orgId, // <-- change this if your billing_events uses a different column name
-  //   event_type: event.type,
-  //   stripe_event_id: event.id,
-  //   stripe_object_id: (event.data.object as any)?.id,
-  //   payload: event,
-  // })
+  const { error: insertEventErr } = await supabase.from("billing_events").insert({
+    org_id: orgId, // <-- change this if your billing_events uses a different column name
+    event_type: event.type,
+    stripe_event_id: event.id,
+    stripe_object_id: (event.data.object as any)?.id,
+    payload: event,
+  })
 
-  // if (insertEventErr) {
-  //   console.error("billing_events insert error:", insertEventErr.message)
-  // }
+  if (insertEventErr) {
+    console.error("billing_events insert error:", insertEventErr.message)
+  }
 
   try {
     switch (event.type) {
@@ -384,7 +384,7 @@ serve(async (req) => {
           payment_intent: pi.id,
           limit: 1,
         })
-        
+
         const session = sessions.data[0] ?? null
         if (!session) break
 
@@ -452,9 +452,11 @@ serve(async (req) => {
           payment_intent: pi.id,
           limit: 1,
         })
-        
+
         const session = sessions.data[0] ?? null
         if (!session) break
+
+        console.log(session);
 
         const checkoutSessionId = session.metadata?.checkout_session_id as string | null
 
@@ -492,6 +494,35 @@ serve(async (req) => {
           .eq("id", checkout.id)
         if (updCheckoutErr) throw updCheckoutErr
 
+        break
+      }
+      case "account.updated": {
+        const acct = event.data.object as Stripe.Account
+
+        const payoutsEnabled = acct.payouts_enabled === true
+        const chargesEnabled = acct.charges_enabled === true
+
+        const currentlyDue = acct.requirements?.currently_due?.length ?? 0
+        const pendingVerif = acct.requirements?.pending_verification?.length ?? 0
+
+        // Map Stripe state -> your enum
+        // Adjust these strings to match your actual payout_onboarding_status enum values
+        let onboardingStatus: string
+        if (chargesEnabled && payoutsEnabled) onboardingStatus = "complete"
+        else if (currentlyDue > 0) onboardingStatus = "pending"
+        else if (pendingVerif > 0) onboardingStatus = "in_review"
+        else onboardingStatus = "restricted"
+
+        const { error } = await supabase
+          .from("organizations")
+          .update({
+            payouts_enabled: payoutsEnabled,
+            payout_onboarding_status: onboardingStatus,
+            // optional: connect_link_created_at, updated_at already handled by trigger
+          })
+          .eq("payout_account_id", acct.id)
+
+        if (error) throw error
         break
       }
       default:
