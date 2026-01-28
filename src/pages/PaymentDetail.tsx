@@ -47,22 +47,68 @@ export default function PaymentDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { context, isReady } = useUserContext()
+  const componentIdRef = useRef(`PaymentDetail-${Date.now()}-${Math.random()}`)
+  const renderCountRef = useRef(0)
+  const effectRunCountRef = useRef(0)
+  const fetchDataCountRef = useRef(0)
+  
+  renderCountRef.current++
+  console.log(`[PaymentDetail:${componentIdRef.current}] RENDER #${renderCountRef.current}`, {
+    timestamp: new Date().toISOString(),
+    id,
+    isReady,
+    contextOrgId: context?.orgId,
+    contextUserId: context?.userId,
+  })
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [assignment, setAssignment] = useState<PaymentDetailData | null>(null)
   const isMountedRef = useRef(true)
 
   useEffect(() => {
+    const mountTime = new Date().toISOString()
+    console.log(`[PaymentDetail:${componentIdRef.current}] MOUNT`, { timestamp: mountTime })
+    isMountedRef.current = true
     return () => {
+      const unmountTime = new Date().toISOString()
+      console.log(`[PaymentDetail:${componentIdRef.current}] UNMOUNT`, {
+        timestamp: unmountTime,
+        mountTime,
+        renderCount: renderCountRef.current,
+        effectRuns: effectRunCountRef.current,
+        fetchDataCalls: fetchDataCountRef.current,
+      })
       isMountedRef.current = false
     }
   }, [])
 
   const fetchData = useCallback(async () => {
+    fetchDataCountRef.current++
+    const fetchId = fetchDataCountRef.current
+    const fetchStartTime = Date.now()
+    console.log(`[PaymentDetail:${componentIdRef.current}] fetchData #${fetchId} START`, {
+      timestamp: new Date().toISOString(),
+      id,
+      isReady,
+      contextOrgId: context?.orgId,
+      isMounted: isMountedRef.current,
+    })
+
     if (!id || !isReady) {
+      console.log(`[PaymentDetail:${componentIdRef.current}] fetchData #${fetchId} - Early return`, {
+        reason: !id ? 'no id' : 'not ready',
+      })
       if (!isReady) return
-      setLoading(false)
-      navigate(getLink('portal.payments'), { replace: true })
+      if (isMountedRef.current) {
+        setLoading(false)
+        navigate(getLink('portal.payments'), { replace: true })
+      }
+      return
+    }
+
+    if (!isMountedRef.current) {
+      console.log(`[PaymentDetail:${componentIdRef.current}] fetchData #${fetchId} - Aborted (unmounted)`)
       return
     }
 
@@ -70,16 +116,34 @@ export default function PaymentDetail() {
     setError(null)
 
     try {
+      console.log(`[PaymentDetail:${componentIdRef.current}] fetchData #${fetchId} - Calling getFeeAssignmentById`)
+      const apiStartTime = Date.now()
       const { data, error: fetchError } = await getFeeAssignmentById(context, id)
+      const apiDuration = Date.now() - apiStartTime
+      console.log(`[PaymentDetail:${componentIdRef.current}] fetchData #${fetchId} - getFeeAssignmentById completed`, {
+        duration: `${apiDuration}ms`,
+        hasData: !!data,
+        hasError: !!fetchError,
+        errorMessage: fetchError?.message,
+      })
 
-      if (!isMountedRef.current) return
+      if (!isMountedRef.current) {
+        console.log(`[PaymentDetail:${componentIdRef.current}] fetchData #${fetchId} - Aborted after API (unmounted)`)
+        return
+      }
 
       if (fetchError || !data) {
-        setLoading(false)
-        if (fetchError?.message?.includes('Access denied') || fetchError?.message?.includes('not found')) {
-          navigate(getLink('portal.payments'), { replace: true })
-        } else {
-          setError(fetchError?.message || 'Failed to load payment details')
+        console.log(`[PaymentDetail:${componentIdRef.current}] fetchData #${fetchId} - Error or no data`, {
+          hasError: !!fetchError,
+          hasData: !!data,
+        })
+        if (isMountedRef.current) {
+          setLoading(false)
+          if (fetchError?.message?.includes('Access denied') || fetchError?.message?.includes('not found')) {
+            navigate(getLink('portal.payments'), { replace: true })
+          } else {
+            setError(fetchError?.message || 'Failed to load payment details')
+          }
         }
         return
       }
@@ -112,21 +176,44 @@ export default function PaymentDetail() {
         payments: data.payments ?? [],
       }
 
-      setAssignment(transformed)
-      setLoading(false)
+      console.log(`[PaymentDetail:${componentIdRef.current}] fetchData #${fetchId} - Setting assignment state`)
+      if (isMountedRef.current) {
+        setAssignment(transformed)
+        setLoading(false)
+      }
     } catch (err) {
       if (!isMountedRef.current) return
-      console.error('Error fetching payment detail:', err)
+      console.error(`[PaymentDetail:${componentIdRef.current}] fetchData #${fetchId} - Caught error:`, err)
       setError(err instanceof Error ? err.message : 'Failed to load payment details')
       setLoading(false)
+    } finally {
+      const totalDuration = Date.now() - fetchStartTime
+      console.log(`[PaymentDetail:${componentIdRef.current}] fetchData #${fetchId} - COMPLETE`, {
+        duration: `${totalDuration}ms`,
+        isMounted: isMountedRef.current,
+      })
     }
-  }, [id, context, isReady, navigate])
+  }, [id, context.orgId, context.userId, isReady, navigate])
 
   useEffect(() => {
+    effectRunCountRef.current++
+    const effectId = effectRunCountRef.current
+    console.log(`[PaymentDetail:${componentIdRef.current}] Effect #${effectId} - Trigger fetchData`, {
+      timestamp: new Date().toISOString(),
+      isReady,
+      id,
+      isMounted: isMountedRef.current,
+    })
     if (isReady && id) {
+      console.log(`[PaymentDetail:${componentIdRef.current}] Effect #${effectId} - Calling fetchData`)
       fetchData()
+    } else {
+      console.log(`[PaymentDetail:${componentIdRef.current}] Effect #${effectId} - Skipping fetchData`, {
+        reason: !isReady ? 'not ready' : 'no id',
+      })
     }
-  }, [isReady, id, fetchData])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReady, id])
 
   const handleDownloadPDF = () => {
     // TODO: Implement PDF download
@@ -284,7 +371,7 @@ export default function PaymentDetail() {
 
             {/* Itemization */}
             <Card noPadding>
-              <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+              <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center rounded-t-2xl">
                 <SectionHeader>ITEMIZATION</SectionHeader>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                   {paymentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} • {paymentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })}

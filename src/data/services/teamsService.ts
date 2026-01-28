@@ -587,8 +587,9 @@ export async function getTeamDetails(
 
         // Extract seasons - handle both nested and flat structures
         let seasons: any[] = []
-        if (mappedTeam.seasons && Array.isArray(mappedTeam.seasons) && mappedTeam.seasons.length > 0) {
-            seasons = mappedTeam.seasons
+        const mappedSeasons = (mappedTeam as any).seasons
+        if (mappedSeasons && Array.isArray(mappedSeasons) && mappedSeasons.length > 0) {
+            seasons = mappedSeasons
         } else if ((normalizedData as any).team_seasons && Array.isArray((normalizedData as any).team_seasons)) {
             // Handle team_seasons from query (before mapper processes it)
             seasons = (normalizedData as any).team_seasons.map((ts: any) => {
