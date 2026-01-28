@@ -24,6 +24,7 @@ export default function FeatureDetail() {
     description: '',
     rolloutStatus: 'live',
     isSystemFeature: false,
+    platformAdminOnly: false,
   })
   const [originalFeature, setOriginalFeature] = useState<Partial<FeatureEntitlement> | null>(null)
   const [tiers, setTiers] = useState<LicenseTier[]>([])
@@ -237,6 +238,7 @@ export default function FeatureDetail() {
           description: feature.description || null,
           rollout_status: feature.rolloutStatus || 'live',
           is_system_feature: feature.isSystemFeature ?? false,
+          platform_admin_only: feature.platformAdminOnly ?? false,
         } satisfies FeatureInsert
         const { data, error: createError } = await supabase
           .from('feature_entitlements')
@@ -283,6 +285,7 @@ export default function FeatureDetail() {
           feature_type: feature.featureType,
           description: feature.description || null,
           is_system_feature: feature.isSystemFeature ?? false,
+          platform_admin_only: feature.platformAdminOnly ?? false,
           // Only update rollout_status if feature is toggleable
           ...(feature.isToggleable !== false ? { rollout_status: feature.rolloutStatus } : {}),
         } satisfies FeatureUpdate
@@ -616,6 +619,23 @@ export default function FeatureDetail() {
                 <div className="pa-body-s" style={{ color: 'var(--pa-n600)' }}>
                   When enabled, this feature is available for every license tier, including any new tiers created later.
                   You do not need to assign it to tiers manually.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="pa-form-group">
+            <div className="pa-flex pa-items-start pa-gap-3">
+              <Checkbox
+                checked={feature.platformAdminOnly ?? false}
+                onChange={(e) => setFeature({ ...feature, platformAdminOnly: e.target.checked })}
+              />
+              <div>
+                <label htmlFor="platform-admin-only" className="pa-label" style={{ marginBottom: 'var(--pa-space-1)' }}>
+                  Not available for users (Platform Admin only)
+                </label>
+                <div className="pa-body-s" style={{ color: 'var(--pa-n600)' }}>
+                  When enabled, this feature is only for platform admins. It is not exposed to org admins, coaches, or parents.
                 </div>
               </div>
             </div>

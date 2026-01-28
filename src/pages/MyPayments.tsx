@@ -649,25 +649,25 @@ export default function MyPayments() {
               setPartialAmountCents('')
               setPartialPaymentError(null)
             }}>
-              <Card className="max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+              <Card className="max-w-md w-full p-6 dark:bg-slate-900 dark:border-slate-700" onClick={(e) => e.stopPropagation()}>
                 <h3 className="text-lg font-black text-slate-900 dark:text-white mb-4">Make a Partial Payment</h3>
                 <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
                   {assignment.fee?.title || 'Fee'}
                 </p>
                 <div className="space-y-2 mb-4">
                   {assignment.paid_cents_total > 0 ? (
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       Total: ${(assignment.amount_cents / 100).toFixed(2)} · 
                       Paid: ${(assignment.paid_cents_total / 100).toFixed(2)} · 
                       Remaining: ${(assignment.balance_cents / 100).toFixed(2)}
                     </p>
                   ) : (
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       Amount due: ${(assignment.balance_cents / 100).toFixed(2)}
                     </p>
                   )}
                   {assignment.fee?.min_partial_cents && (
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       Minimum partial payment: ${(assignment.fee.min_partial_cents / 100).toFixed(2)}
                     </p>
                   )}

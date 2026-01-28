@@ -44,6 +44,14 @@ interface EnhancedFilterBarProps {
   sourceFilter: string | null
   onSourceFilterChange: (value: string | null) => void
 
+  // System feature filter (radio)
+  systemFeatureFilter: 'all' | 'yes' | 'no'
+  onSystemFeatureFilterChange: (value: 'all' | 'yes' | 'no') => void
+
+  // Platform admin only filter (radio)
+  platformAdminOnlyFilter: 'all' | 'yes' | 'no'
+  onPlatformAdminOnlyFilterChange: (value: 'all' | 'yes' | 'no') => void
+
   // Clear all
   onClearAll: () => void
 }
@@ -100,6 +108,10 @@ export default function EnhancedFilterBar({
   onQuantifiableFilterChange,
   sourceFilter,
   onSourceFilterChange,
+  systemFeatureFilter,
+  onSystemFeatureFilterChange,
+  platformAdminOnlyFilter,
+  onPlatformAdminOnlyFilterChange,
   onClearAll,
 }: EnhancedFilterBarProps) {
   const [localSearch, setLocalSearch] = useState(searchValue)
@@ -154,7 +166,9 @@ export default function EnhancedFilterBar({
     roleFilter.length > 0 ||
     integrationFilter.length > 0 ||
     quantifiableFilter !== null ||
-    sourceFilter !== null
+    sourceFilter !== null ||
+    systemFeatureFilter !== 'all' ||
+    platformAdminOnlyFilter !== 'all'
 
   // Build active filter chips
   const activeFilters: Array<{ key: string; label: string }> = []
@@ -183,6 +197,12 @@ export default function EnhancedFilterBar({
   if (sourceFilter) {
     const option = SOURCE_OPTIONS.find(o => o.value === sourceFilter)
     activeFilters.push({ key: 'source', label: `Source: ${option?.label || sourceFilter}` })
+  }
+  if (systemFeatureFilter !== 'all') {
+    activeFilters.push({ key: 'systemFeature', label: `System feature: ${systemFeatureFilter === 'yes' ? 'Yes' : 'No'}` })
+  }
+  if (platformAdminOnlyFilter !== 'all') {
+    activeFilters.push({ key: 'platformAdminOnly', label: `Platform admin only: ${platformAdminOnlyFilter === 'yes' ? 'Yes' : 'No'}` })
   }
 
   const handleRemoveFilter = (key: string) => {
@@ -437,6 +457,54 @@ export default function EnhancedFilterBar({
                   label={option.label}
                 />
               ))}
+            </div>
+          </div>
+
+          {/* System Feature Filter */}
+          <div>
+            <label className="pa-label" style={{ marginBottom: 'var(--pa-space-2)' }}>
+              System Feature
+            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-2)' }}>
+              <Checkbox
+                checked={systemFeatureFilter === 'all'}
+                onChange={() => onSystemFeatureFilterChange('all')}
+                label="All"
+              />
+              <Checkbox
+                checked={systemFeatureFilter === 'yes'}
+                onChange={() => onSystemFeatureFilterChange('yes')}
+                label="Yes"
+              />
+              <Checkbox
+                checked={systemFeatureFilter === 'no'}
+                onChange={() => onSystemFeatureFilterChange('no')}
+                label="No"
+              />
+            </div>
+          </div>
+
+          {/* Platform Admin Only Filter */}
+          <div>
+            <label className="pa-label" style={{ marginBottom: 'var(--pa-space-2)' }}>
+              Platform Admin Only
+            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-2)' }}>
+              <Checkbox
+                checked={platformAdminOnlyFilter === 'all'}
+                onChange={() => onPlatformAdminOnlyFilterChange('all')}
+                label="All"
+              />
+              <Checkbox
+                checked={platformAdminOnlyFilter === 'yes'}
+                onChange={() => onPlatformAdminOnlyFilterChange('yes')}
+                label="Yes"
+              />
+              <Checkbox
+                checked={platformAdminOnlyFilter === 'no'}
+                onChange={() => onPlatformAdminOnlyFilterChange('no')}
+                label="No"
+              />
             </div>
           </div>
         </div>
