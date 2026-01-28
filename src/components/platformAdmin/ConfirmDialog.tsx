@@ -42,13 +42,7 @@ export function ConfirmDialog({
     onConfirm(reason)
   }
 
-  const getVariantColor = () => {
-    switch (variant) {
-      case 'danger': return 'var(--pa-n900)'
-      case 'warning': return 'var(--pa-n700)'
-      default: return 'var(--pa-n900)'
-    }
-  }
+
 
   return (
     <>
@@ -77,15 +71,15 @@ export function ConfirmDialog({
           }}
         >
           {/* Header */}
-          <div style={{ padding: 'var(--pa-space-5)', borderBottom: '1px solid var(--pa-n100)' }}>
-            <h2 className="pa-h2" style={{ margin: 0, color: getVariantColor() }}>
+          <div style={{ padding: 'var(--pa-space-5)', borderBottom: '1px solid var(--pa-n100)' }} className="dark:border-slate-700">
+            <h2 className="pa-h2" style={{ margin: 0 }}>
               {title}
             </h2>
           </div>
 
           {/* Content */}
           <div style={{ padding: 'var(--pa-space-5)' }}>
-            <p className="pa-body-m" style={{ margin: '0 0 var(--pa-space-4) 0', color: 'var(--pa-n700)' }}>
+            <p className="pa-body-m" style={{ margin: '0 0 var(--pa-space-4) 0' }}>
               {description}
             </p>
 

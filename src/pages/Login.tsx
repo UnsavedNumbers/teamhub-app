@@ -78,7 +78,7 @@ export default function Login() {
           .from('platform_admins')
           .select('user_id')
           .eq('user_id', user.id)
-          .single()
+          .maybeSingle()
         
         if (adminData) {
           navigate('/platform-admin')

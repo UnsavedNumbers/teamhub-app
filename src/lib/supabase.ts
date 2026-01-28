@@ -17,7 +17,15 @@ export const supabase: SupabaseClient<SupabaseExtended> = createClient<SupabaseE
         auth: {
             persistSession: true,
             autoRefreshToken: true,
-            detectSessionInUrl: true
+            detectSessionInUrl: true,
+            // Prevent Cloudflare cookie warnings in development
+            flowType: 'pkce',
+            storageKey: 'youthsports-auth'
+        },
+        global: {
+            headers: {
+                'X-Client-Info': 'youthsports-web'
+            }
         }
     }
 )

@@ -322,8 +322,9 @@ function AppWithTheme() {
               <Route index element={<AdminDashboard />} />
             
               {/* Standardized Entity Routes - Most specific first */}
-              <Route path="sports/:id" element={<SportDetail />} />
+              <Route path="sports/:sport_slug" element={<SportDetail />} />
               <Route path="sports" element={<Sports />} />
+              <Route path="programs/sport/:sport_slug" element={<Programs />} />
               <Route path="programs/:id" element={<ProgramDetail />} />
               <Route path="programs" element={<Programs />} />
               <Route path="levels/:id" element={<LevelDetail />} />

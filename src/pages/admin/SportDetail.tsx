@@ -10,9 +10,11 @@ import { AdminPageHeader, Button, Card } from '../../components/platformAdmin'
 import { FileUpload } from '../../components/common/FileUpload'
 import { getLink } from '../../utils/routes'
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export default function SportDetail() {
-  const { id } = useParams<{ id: string }>()
-  const sportId = id?.trim() || ''
+  const { sport_slug } = useParams<{ sport_slug: string }>()
+  const sportSlugParam = sport_slug?.trim() || ''
 
   const { context, isReady } = useUserContext()
   const { isOffline } = useOffline()
@@ -31,19 +33,22 @@ export default function SportDetail() {
   const [uploadingIcon, setUploadingIcon] = useState(false)
   const [deletingIcon, setDeletingIcon] = useState(false)
 
+  const sportId = sport?.id ?? ''
   const sportsRoute = getLink('admin.sports.list')
   const programsRoute = getLink('admin.programs.list')
   const formsRoute = getLink('admin.organization.forms')
   const structureRoute = getLink('admin.organization.structure')
-  const detailRoute = getLink('admin.sports.detail', { id: sportId })
+  const detailRoute = getLink('admin.sports.detail', { sport_slug: sport?.slug ?? sport?.id ?? sportSlugParam })
 
   const iconUrl = useMemo(() => getSportIconUrl(sport?.icon ?? null), [sport?.icon])
+  // Check if the icon is a Material Icon name (no slashes or dots)
+  const isMaterialIcon = sport?.icon && !sport.icon.includes('/') && !sport.icon.includes('.')
   const isColorDirty = useMemo(() => (sport?.color ?? 'var(--org-btn-primary-bg, #137fec)') !== pendingColor, [sport?.color, pendingColor])
 
   useEffect(() => {
     if (!isReady) return
-    if (!sportId) {
-      setError('Sport ID is required.')
+    if (!sportSlugParam) {
+      setError('Sport is required.')
       setLoading(false)
       return
     }
@@ -53,22 +58,23 @@ export default function SportDetail() {
       setError(null)
 
       try {
-        const [sportsResult, programsResult] = await Promise.all([
-          getSports(context),
-          getPrograms(context, sportId),
-        ])
-
+        const sportsResult = await getSports(context)
         if (sportsResult.error) throw sportsResult.error
-        if (programsResult.error) throw programsResult.error
 
         const allSports = Array.isArray(sportsResult.data) ? (sportsResult.data as Sport[]) : []
-        const found = allSports.find((s) => s.id === sportId) ?? null
+        const isUuid = UUID_REGEX.test(sportSlugParam)
+        const found =
+          allSports.find((s) => s.slug === sportSlugParam || s.id === sportSlugParam) ??
+          (isUuid ? allSports.find((s) => s.id === sportSlugParam) : null)
         if (!found) {
           setSport(null)
           setPrograms([])
           setError('Sport not found (or you may not have access).')
           return
         }
+
+        const programsResult = await getPrograms(context, found.id)
+        if (programsResult.error) throw programsResult.error
 
         setSport(found)
         setPendingColor(found.color || 'var(--org-btn-primary-bg, #137fec)')
@@ -81,13 +87,14 @@ export default function SportDetail() {
     }
 
     load()
-  }, [context, isReady, sportId])
+  }, [context, isReady, sportSlugParam])
 
   const refreshSport = async () => {
+    if (!sport?.id) return
     const sportsResult = await getSports(context)
     if (sportsResult.error) throw sportsResult.error
     const allSports = Array.isArray(sportsResult.data) ? (sportsResult.data as Sport[]) : []
-    const found = allSports.find((s) => s.id === sportId) ?? null
+    const found = allSports.find((s) => s.id === sport.id) ?? null
     setSport(found)
     if (found) setPendingColor(found.color || 'var(--org-btn-primary-bg, #137fec)')
   }
@@ -117,10 +124,10 @@ export default function SportDetail() {
             <Link to={sportsRoute}>
               <Button variant="ghost">Back to Sports</Button>
             </Link>
-            <Link to={`${programsRoute}?sport_id=${sportId}`}>
+            <Link to={sport?.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : `${programsRoute}?sport_id=${sportId}`}>
               <Button variant="secondary">View {sport?.name || ''} Programs</Button>
             </Link>
-            <Link to={`${formsRoute}?type=program&sport_id=${sportId}&returnUrl=${encodeURIComponent(detailRoute)}`}>
+            <Link to={`${formsRoute}?type=program&sport_id=${sportId}&returnUrl=${encodeURIComponent(sport?.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : programsRoute)}`}>
               <Button>Add Program</Button>
             </Link>
           </div>
@@ -176,6 +183,8 @@ export default function SportDetail() {
                 >
                   {iconUrl ? (
                     <img src={iconUrl} alt={`${sport.name} icon`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : isMaterialIcon ? (
+                    <span className="material-symbols-outlined" style={{ fontSize: '48px', color: pendingColor }}>{sport.icon}</span>
                   ) : (
                     <span className="material-symbols-outlined" style={{ fontSize: '36px', color: 'var(--pa-n400)' }}>sports</span>
                   )}

@@ -389,8 +389,8 @@ const admin = {
             requiresOrg: true,
         },
         detail: {
-            path: '/admin/sports/:id',
-            params: ['id'] as const,
+            path: '/admin/sports/:sport_slug',
+            params: ['sport_slug'] as const,
             label: 'Sport Details',
             icon: 'sports',
             requiresOrg: true,
@@ -402,6 +402,13 @@ const admin = {
         list: {
             path: '/admin/programs',
             label: 'Programs',
+            icon: 'category',
+            requiresOrg: true,
+        },
+        bySport: {
+            path: '/admin/programs/sport/:sport_slug',
+            params: ['sport_slug'] as const,
+            label: 'Programs by Sport',
             icon: 'category',
             requiresOrg: true,
         },

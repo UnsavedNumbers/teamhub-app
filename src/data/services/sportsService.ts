@@ -86,6 +86,7 @@ export async function getSystemSports(): Promise<{ data: Sport[]; error: Error |
             id: sport.id,
             org_id: sport.org_id,
             name: sport.name || 'Unknown Sport',
+            slug: sport.slug || null,
             icon: sport.icon || null,
             color: sport.color || 'var(--org-btn-primary-bg, #137fec)',
             created_at: sport.created_at || new Date().toISOString(),
@@ -190,6 +191,7 @@ export async function getSports(
                     id: sport.id,
                     org_id: sport.org_id,
                     name: sport.name || 'Unknown Sport',
+                    slug: sport.slug || null,
                     icon: customization?.icon_path || sport.icon || null,
                     color: customization?.color || sport.color || 'var(--org-btn-primary-bg, #137fec)',
                     created_at: sport.created_at || new Date().toISOString(),
@@ -238,9 +240,80 @@ export async function getSport(
             .single()
 
         if (error) throw error
-        return { data: data as Sport, error: null }
+        
+        const normalizedSport: Sport = {
+            id: data.id,
+            org_id: data.org_id,
+            name: data.name || 'Unknown Sport',
+            slug: (data as any).slug || null,
+            icon: data.icon || null,
+            color: data.color || 'var(--org-btn-primary-bg, #137fec)',
+            created_at: data.created_at || new Date().toISOString(),
+            updated_at: data.updated_at || new Date().toISOString(),
+            deleted_at: data.deleted_at || null,
+            is_system: data.is_system ?? (data.org_id === null),
+        }
+        
+        return { data: normalizedSport, error: null }
     } catch (err) {
         console.error('[sportsService] Error getting sport:', err)
+        return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+    }
+}
+
+/**
+ * Get a single sport by slug
+ */
+export async function getSportBySlug(
+    context: UserContext,
+    sportSlug: string
+): Promise<{ data: Sport | FakeSport | null; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+        const allSports = getSportsForOrg(context.orgId)
+        const sport = allSports.find(s => s.slug === sportSlug)
+        return { data: sport || null, error: null }
+    }
+
+    try {
+        // Get sport by slug - it should be a system sport (org_id IS NULL) or belong to the org
+        const { data, error } = await supabase
+            .from('sports')
+            .select('*')
+            .eq('slug', sportSlug)
+            .is('deleted_at', null)
+            .or(`org_id.is.null,org_id.eq.${context.orgId}`)
+            .single()
+
+        if (error) {
+            if (error.code === 'PGRST116') {
+                // No rows returned
+                return { data: null, error: null }
+            }
+            throw error
+        }
+        
+        // Verify the sport is accessible to this org (either system sport or org sport)
+        if (data.org_id && data.org_id !== context.orgId) {
+            return { data: null, error: new Error('Sport not found') }
+        }
+        
+        const normalizedSport: Sport = {
+            id: data.id,
+            org_id: data.org_id,
+            name: data.name || 'Unknown Sport',
+            slug: (data as any).slug || null,
+            icon: data.icon || null,
+            color: data.color || 'var(--org-btn-primary-bg, #137fec)',
+            created_at: data.created_at || new Date().toISOString(),
+            updated_at: data.updated_at || new Date().toISOString(),
+            deleted_at: data.deleted_at || null,
+            is_system: data.is_system ?? (data.org_id === null),
+        }
+        
+        return { data: normalizedSport, error: null }
+    } catch (err) {
+        console.error('[sportsService] Error getting sport by slug:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
     }
 }
@@ -713,6 +786,10 @@ export function getSportIconUrl(iconPath: string | null): string | null {
     // If the value is already a usable URL (e.g. a hosted asset or data URI), return as-is.
     // Some legacy/system sports may store a full URL in `sports.icon`.
     if (/^(https?:\/\/|data:)/i.test(iconPath)) return iconPath
+    
+    // If it's a Material Icon name (no slashes, no file extension), return null
+    // The component should render a Material Icon instead
+    if (!iconPath.includes('/') && !iconPath.includes('.')) return null
     
     const { data } = supabase.storage
         .from('organization-assets')

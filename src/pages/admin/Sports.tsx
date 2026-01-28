@@ -191,7 +191,7 @@ export default function Sports() {
                       <div className="pa-flex pa-items-center pa-gap-2">
                           <span 
                             className="pa-text-xs pa-font-semibold pa-text-slate-500 hover:pa-text-primary pa-cursor-pointer"
-                            onClick={() => navigate(`${programsRoute}?sport_id=${sport.id}`)}
+                            onClick={() => navigate(sport.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : `${programsRoute}?sport_id=${sport.id}`)}
                           >
                             {programCount} {programCount === 1 ? 'PROGRAM' : 'PROGRAMS'}
                           </span>
@@ -202,15 +202,15 @@ export default function Sports() {
                       <Button 
                         variant="ghost" 
                         size="dense" 
-                        onClick={() => navigate(`${programsRoute}?sport_id=${sport.id}`)}
+                        onClick={() => navigate(sport.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : `${programsRoute}?sport_id=${sport.id}`)}
                       >
-                        View Programs
+                        View {sport.name} Programs
                       </Button>
                       <Button 
                         variant="ghost" 
                         size="dense" 
                         icon="add"
-                        onClick={() => navigate(`${formsRoute}?type=program&sport_id=${sport.id}&returnUrl=${encodeURIComponent(sportsRoute)}`)}
+                        onClick={() => navigate(`${formsRoute}?type=program&sport_id=${sport.id}&returnUrl=${encodeURIComponent(sport.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : programsRoute)}`)}
                         disabled={isOffline || USE_FAKE_DATA}
                       >
                         Add Program

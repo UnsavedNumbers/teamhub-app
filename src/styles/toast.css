@@ -5,7 +5,7 @@
 
 /* Toast Container */
 .react-hot-toast {
-  font-family: var(--pa-font-body, 'Inter', 'Roboto', 'Helvetica Neue', Arial, system-ui, sans-serif);
+  font-family: var(--pa-font-body, 'Inter', 'Roboto', Arial, system-ui, sans-serif);
 }
 
 /* Toast Base Styles */
