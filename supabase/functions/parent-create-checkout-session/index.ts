@@ -66,9 +66,28 @@ async function logError(supabase: any, organizationId: string | null, message: s
 }
 
 serve(async (req) => {
-  // Preflight
+  // Preflight - handle OPTIONS requests first and always return proper CORS headers
+  // This must be handled before any other logic to ensure CORS preflight succeeds
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: buildCorsHeaders(req) })
+    try {
+      const corsHeaders = buildCorsHeaders(req)
+      return new Response(null, { 
+        status: 204, 
+        headers: corsHeaders 
+      })
+    } catch (corsErr) {
+      // Fallback CORS headers if buildCorsHeaders fails
+      const origin = req.headers.get("origin") ?? "*"
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin": origin,
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "authorization, apikey, content-type",
+          "Access-Control-Max-Age": "86400",
+        }
+      })
+    }
   }
 
   if (req.method !== "POST") {
@@ -97,13 +116,15 @@ serve(async (req) => {
     return json(req, { error: "Invalid JSON" }, 400)
   }
 
+  const feeAssignmentId = body?.fee_assignment_id as string | undefined
+  const amountCentsRaw = body?.amount_cents as number | undefined
   const feeAssignmentIds = Array.isArray(body?.fee_assignment_ids) ? body.fee_assignment_ids : []
   const discountCodeRaw = body?.discount_code as string | undefined
   const successUrl = body?.success_url as string | undefined
   const cancelUrl = body?.cancel_url as string | undefined
 
-  if (!feeAssignmentIds || feeAssignmentIds.length === 0 || !successUrl || !cancelUrl) {
-    return json(req, { error: "Missing required parameters" }, 400)
+  if (!successUrl || !cancelUrl) {
+    return json(req, { error: "Missing required parameters: success_url and cancel_url" }, 400)
   }
 
   const { data: authData, error: authErr } = await supabase.auth.getUser()
@@ -132,6 +153,239 @@ serve(async (req) => {
   let organizationId: string | null = null
 
   try {
+    // ========================================================================
+    // PARTIAL PAYMENT PATH (single fee_assignment_id + amount_cents)
+    // ========================================================================
+    if (feeAssignmentId && amountCentsRaw !== undefined) {
+      // Strict validation: partial path requires singular fee_assignment_id and amount_cents
+      // Reject if fee_assignment_ids array is also present (ambiguous)
+      if (feeAssignmentIds.length > 0) {
+        return json(req, { error: "Cannot specify both fee_assignment_id and fee_assignment_ids" }, 400)
+      }
+
+      // Validate amount_cents: must be integer, positive, and within safe range
+      const amountCents = Math.floor(Number(amountCentsRaw))
+      if (!Number.isInteger(amountCents) || amountCents < 1 || amountCents > 2147483647) {
+        return json(req, { error: "Invalid amount_cents: must be a positive integer" }, 400)
+      }
+
+      // Fetch fee assignment with fee and org policy details
+      const { data: assignment, error: assignmentError } = await supabase
+        .from("fee_assignments")
+        .select(`
+          id, fee_id, org_id, parent_id, amount_cents, balance_cents, currency,
+          fee:fees(id, title, description, allow_partial_payment, min_partial_cents)
+        `)
+        .eq("id", feeAssignmentId)
+        .eq("parent_id", user.id)
+        .single()
+
+      if (assignmentError || !assignment) {
+        return json(req, { error: "Fee assignment not found or access denied" }, 403)
+      }
+
+      organizationId = assignment.org_id
+
+      // Check fee allows partial payment
+      if (!assignment.fee?.allow_partial_payment) {
+        return json(req, { error: "Partial payments are not allowed for this fee" }, 400)
+      }
+
+      // Check org allows partial payments
+      const { data: orgPolicy, error: orgPolicyError } = await supabase
+        .from("org_payment_policies")
+        .select("allow_partial_payments")
+        .eq("org_id", organizationId)
+        .maybeSingle()
+
+      if (orgPolicyError) {
+        return json(req, { error: "Failed to check organization payment policy" }, 500)
+      }
+
+      if (!orgPolicy?.allow_partial_payments) {
+        return json(req, { error: "Partial payments are not allowed for this organization" }, 403)
+      }
+
+      // Validate amount against balance and min_partial_cents
+      const currentBalance = assignment.balance_cents ?? assignment.amount_cents ?? 0
+      if (amountCents > currentBalance) {
+        return json(req, { error: `Amount exceeds remaining balance of ${currentBalance} cents` }, 400)
+      }
+
+      if (assignment.fee.min_partial_cents && amountCents < assignment.fee.min_partial_cents) {
+        return json(req, { 
+          error: `Amount must be at least ${assignment.fee.min_partial_cents} cents` 
+        }, 400)
+      }
+
+      // Re-read balance to check for concurrent changes (proper locking would use FOR UPDATE NOWAIT via RPC)
+      // For now, we do a double-check: read balance, validate, create checkout quickly
+      // The webhook will do final validation before applying allocations
+      const { data: currentAssignment, error: currentError } = await supabase
+        .from("fee_assignments")
+        .select("balance_cents")
+        .eq("id", feeAssignmentId)
+        .single()
+
+      if (currentError || !currentAssignment) {
+        return json(req, { error: "Failed to read fee assignment" }, 500)
+      }
+
+      const currentBalance = currentAssignment.balance_cents ?? assignment.amount_cents ?? 0
+      if (amountCents > currentBalance) {
+        // Balance changed - could be concurrent payment or admin action
+        return json(req, { 
+          error: "This fee is being used in another payment. Please refresh and try again.",
+        }, 409)
+      }
+
+      // Create checkout session
+      const { data: checkout, error: checkoutError } = await supabase
+        .from("checkout_sessions")
+        .insert({
+          org_id: organizationId,
+          parent_id: user.id,
+          status: "created",
+          currency: assignment.currency || "usd",
+          subtotal_cents: amountCents,
+          platform_fee_cents: 0,
+          total_cents: amountCents,
+        })
+        .select("id")
+        .single()
+
+      if (checkoutError || !checkout) throw checkoutError
+
+      // Create charge
+      const { data: charge, error: chargeError } = await supabase
+        .from("charges")
+        .insert({
+          org_id: organizationId,
+          charge_type: "fee_payment",
+          fee_assignment_id: feeAssignmentId,
+          fee_id: assignment.fee_id,
+          description: assignment.fee?.title || "Fee payment",
+          amount_cents: amountCents,
+          currency: assignment.currency || "usd",
+          status: "pending",
+          created_by_user_id: user.id,
+        })
+        .select("id, fee_assignment_id, amount_cents")
+        .single()
+
+      if (chargeError || !charge) throw chargeError
+
+      // Create checkout_session_item (ensure charge_id and fee_assignment_id are set)
+      const { error: itemError } = await supabase
+        .from("checkout_session_items")
+        .insert({
+          checkout_session_id: checkout.id,
+          charge_id: charge.id,
+          fee_assignment_id: feeAssignmentId,
+          amount_cents: amountCents,
+        })
+
+      if (itemError) throw itemError
+
+      // Fetch organization for Stripe Connect
+      const { data: org, error: orgError } = await supabase
+        .from("organizations")
+        .select("payout_account_id, payouts_enabled, billing_mode")
+        .eq("id", organizationId)
+        .single()
+
+      if (orgError || !org) {
+        return json(req, { error: "Organization not found" }, 404)
+      }
+
+      // Create Stripe Checkout Session (partial payment)
+      const sessionParams: Stripe.Checkout.SessionCreateParams = {
+        mode: "payment",
+        payment_method_types: ["card"],
+        line_items: [{
+          price_data: {
+            currency: assignment.currency || "usd",
+            product_data: { name: assignment.fee?.title || "Fee payment" },
+            unit_amount: amountCents, // Already in cents
+          },
+          quantity: 1,
+        }],
+        client_reference_id: checkout.id,
+        metadata: {
+          checkout_session_id: checkout.id,
+          parent_id: user.id,
+          organization_id: organizationId,
+          fee_assignment_id: feeAssignmentId,
+          is_partial: "true", // Stripe metadata values are strings
+        },
+        success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${cancelUrl}?session_id={CHECKOUT_SESSION_ID}`,
+        payment_intent_data: {
+          metadata: {
+            checkout_session_id: checkout.id,
+            parent_id: user.id,
+            organization_id: organizationId,
+            fee_assignment_id: feeAssignmentId,
+            is_partial: "true", // Also in payment_intent metadata
+          },
+        },
+      }
+
+      // Route to connected account if applicable
+      if (org.payout_account_id && org.payouts_enabled && org.billing_mode === "platform_facilitated") {
+        const platformFeeCents = Math.floor(amountCents * 0.029)
+        sessionParams.payment_intent_data = {
+          ...(sessionParams.payment_intent_data ?? {}),
+          transfer_data: { destination: org.payout_account_id },
+          application_fee_amount: platformFeeCents,
+          metadata: {
+            ...(sessionParams.payment_intent_data?.metadata ?? {}),
+            checkout_session_id: checkout.id,
+            parent_id: user.id,
+            organization_id: organizationId,
+            fee_assignment_id: feeAssignmentId,
+            is_partial: "true",
+          },
+        }
+
+        await supabase
+          .from("checkout_sessions")
+          .update({ platform_fee_cents: platformFeeCents })
+          .eq("id", checkout.id)
+      }
+
+      try {
+        const stripeSession = await stripe.checkout.sessions.create(sessionParams)
+
+        await supabase
+          .from("checkout_sessions")
+          .update({
+            stripe_checkout_session_id: stripeSession.id,
+            status: "in_progress",
+          })
+          .eq("id", checkout.id)
+
+        return json(req, { checkout_session_url: stripeSession.url, session_id: stripeSession.id }, 200)
+      } catch (stripeError: any) {
+        await supabase.from("checkout_sessions").update({ status: "failed" }).eq("id", checkout.id)
+
+        await logError(
+          supabase,
+          organizationId,
+          `Stripe session creation failed: ${stripeError?.message ?? "unknown Stripe error"}`,
+          { error: stripeError?.toString?.() ?? String(stripeError), checkout_id: checkout.id },
+        )
+
+        return json(req, { error: "Payment processing failed. Please try again or contact support." }, 500)
+      }
+    }
+
+    // ========================================================================
+    // FULL PAYMENT PATH (fee_assignment_ids array, no amount_cents)
+    // ========================================================================
+    if (!feeAssignmentIds || feeAssignmentIds.length === 0) {
+      return json(req, { error: "Missing required parameters: fee_assignment_ids or fee_assignment_id with amount_cents" }, 400)
+    }
     const { data: assignments, error: assignmentError } = await supabase
       .from("fee_assignments")
       .select(`id, fee_id, org_id, parent_id, amount_cents, balance_cents, currency, fee:fees(title, description)`)
@@ -389,10 +643,19 @@ serve(async (req) => {
       return json(req, { error: "Payment processing failed. Please try again or contact support." }, 500)
     }
   } catch (err: any) {
-    await logError(supabase, organizationId, err?.message || "parent checkout error", {
-      error: err?.toString?.() ?? String(err),
-      body,
-    })
+    // Ensure we have supabase client for error logging (might not be initialized if error occurs early)
+    const supabaseForLogging = supabase || createClient(supabaseUrl, supabaseServiceRoleKey)
+    
+    try {
+      await logError(supabaseForLogging, organizationId || null, err?.message || "parent checkout error", {
+        error: err?.toString?.() ?? String(err),
+        body,
+      })
+    } catch (logErr) {
+      // Ignore logging errors - don't fail the response
+    }
+    
+    // Always return CORS headers even on error
     return json(req, { error: err?.message || "Internal error" }, 500)
   }
 })

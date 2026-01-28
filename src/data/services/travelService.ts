@@ -383,6 +383,9 @@ export interface UpdateTravelPlanDTO {
     end_date?: string
     venue_name?: string | null
     venue_address?: string | null
+    venue_place_id?: string | null
+    venue_lat?: number | null
+    venue_lng?: number | null
     hotel_name?: string | null
     hotel_address?: string | null
     hotel_phone?: string | null

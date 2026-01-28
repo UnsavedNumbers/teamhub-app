@@ -391,9 +391,14 @@ serve(async (req) => {
         const checkoutSessionId = session.metadata?.checkout_session_id as string | null
 
         const paymentIntentId = pi.id
+        // Use amount_received if available (actual captured amount), else amount (intended)
         const amountReceived = pi.amount_received ?? pi.amount ?? 0
         const currency = pi.currency ?? "usd"
         const chargeId = typeof pi.latest_charge === "string" ? pi.latest_charge : null
+
+        // Stripe metadata values are strings
+        const isPartial = session.metadata?.is_partial === "true"
+        const paymentType = isPartial ? "partial" : "full"
 
         // Fetch checkout session to get org_id/parent_id (needed for inserts)
         const { data: checkout, error: checkoutErr } = await supabase
@@ -405,7 +410,7 @@ serve(async (req) => {
         if (!checkout) break
 
         // Upsert payment by stripe_payment_intent_id (idempotent & reliable)
-        const { error: upsertPayErr } = await supabase
+        const { data: payment, error: upsertPayErr } = await supabase
           .from("payments")
           .upsert(
             {
@@ -418,13 +423,99 @@ serve(async (req) => {
               stripe_charge_id: chargeId,
               platform_fee_cents: 0,
               status: "succeeded",
+              payment_type: paymentType,
               paid_at: new Date().toISOString(),
             },
             { onConflict: "stripe_payment_intent_id" }, // ensure you have a unique constraint/index on this
           )
+          .select("id")
+          .single()
         if (upsertPayErr) throw upsertPayErr
+        if (!payment) {
+          throw new Error("Payment upsert did not return payment id")
+        }
 
-        // Update checkout session
+        // Load checkout_session_items with current fee_assignment balances for validation
+        const { data: sessionItems, error: itemsErr } = await supabase
+          .from("checkout_session_items")
+          .select(`
+            id,
+            amount_cents,
+            fee_assignment_id,
+            fee_assignment:fee_assignments(id, balance_cents)
+          `)
+          .eq("checkout_session_id", checkout.id)
+
+        if (itemsErr) throw itemsErr
+        if (!sessionItems || sessionItems.length === 0) {
+          console.warn(`No checkout_session_items found for checkout ${checkout.id}`)
+          break
+        }
+
+        // Validate each item's amount_cents <= current fee_assignment.balance_cents
+        // If any exceed, skip allocations and flag payment for review
+        let shouldProcessAllocations = true
+        const validationErrors: string[] = []
+
+        for (const item of sessionItems) {
+          const itemAmount = item.amount_cents
+          const feeAssignment = item.fee_assignment as { id: string; balance_cents: number } | null
+          
+          if (!feeAssignment) {
+            validationErrors.push(`Item ${item.id}: fee_assignment not found`)
+            shouldProcessAllocations = false
+            continue
+          }
+
+          const currentBalance = feeAssignment.balance_cents ?? 0
+          if (itemAmount > currentBalance) {
+            validationErrors.push(
+              `Item ${item.id}: amount ${itemAmount} exceeds balance ${currentBalance} for fee_assignment ${feeAssignment.id}`
+            )
+            shouldProcessAllocations = false
+          }
+        }
+
+        if (!shouldProcessAllocations) {
+          // Payment succeeded but allocations would over-allocate - flag for review
+          console.error(`Payment ${payment.id} cannot be allocated:`, validationErrors)
+          
+          // Optionally update payment with a flag or create a review record
+          // For now, we'll log and leave payment as succeeded but without allocations
+          // Admin can manually allocate or refund
+          await supabase
+            .from("checkout_sessions")
+            .update({
+              status: "succeeded",
+              stripe_payment_intent_id: paymentIntentId,
+            })
+            .eq("id", checkout.id)
+          
+          // Log to billing_events for admin visibility
+          await supabase.from("billing_events").insert({
+            org_id: checkout.org_id,
+            event_type: "payment_allocation_validation_failed",
+            stripe_event_id: event.id,
+            stripe_object_id: paymentIntentId,
+            error_message: `Allocation validation failed: ${validationErrors.join("; ")}`,
+            payload: { payment_id: payment.id, checkout_session_id: checkout.id, validation_errors: validationErrors },
+          })
+          
+          break
+        }
+
+        // All validations passed - call complete_payment_processing to create allocations
+        const { error: processErr } = await supabase.rpc("complete_payment_processing", {
+          p_payment_id: payment.id,
+          p_checkout_session_id: checkout.id,
+        })
+
+        if (processErr) {
+          console.error(`complete_payment_processing failed for payment ${payment.id}:`, processErr)
+          throw processErr
+        }
+
+        // Update checkout session status (complete_payment_processing also updates it, but ensure it's set)
         const { error: updCheckoutErr } = await supabase
           .from("checkout_sessions")
           .update({
@@ -433,14 +524,6 @@ serve(async (req) => {
           })
           .eq("id", checkout.id)
         if (updCheckoutErr) throw updCheckoutErr
-
-        const feeAssignmentIds = session.metadata?.fee_assignment_ids as string | null
-        if (feeAssignmentIds) {
-          const feeAssignmentIdsArray = feeAssignmentIds.split(",")
-          for (const feeAssignmentId of feeAssignmentIdsArray) {
-            await markFeeAssignmentPaid(supabase, feeAssignmentId, amountReceived)
-          }
-        }
 
         break
       }

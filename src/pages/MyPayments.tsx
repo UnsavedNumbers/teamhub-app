@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { useUserContext } from '../hooks/useUserContext'
 import { getFeeAssignmentsForUser, validateDiscountCode } from '../data/services/paymentsService'
-import { createParentCheckoutSession } from '../api/payments'
+import { createParentCheckoutSession, createParentPartialCheckoutSession } from '../api/payments'
 import { supabase } from '../lib/supabase'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, SectionHeader } from '../components/portal/Typography'
@@ -25,6 +25,8 @@ interface FeeAssignment {
     description: string | null
     due_date: string | null
     fee_type: string
+    allow_partial_payment?: boolean
+    min_partial_cents?: number | null
     season?: { id?: string; name?: string; team?: { id: string; name: string } | null } | null
   } | null
   child?: { id: string; first_name: string; last_name: string } | null
@@ -52,6 +54,11 @@ export default function MyPayments() {
   const [creatingCheckout, setCreatingCheckout] = useState(false)
   const [validatingDiscount, setValidatingDiscount] = useState(false)
   const [discountError, setDiscountError] = useState<string | null>(null)
+  const [orgAllowsPartialPayments] = useState<boolean>(false)
+  const [partialPaymentModalOpen, setPartialPaymentModalOpen] = useState<string | null>(null)
+  const [partialAmountCents, setPartialAmountCents] = useState<string>('')
+  const [partialPaymentError, setPartialPaymentError] = useState<string | null>(null)
+  const [creatingPartialCheckout, setCreatingPartialCheckout] = useState(false)
 
 
   const { context, isReady } = useUserContext()
@@ -103,6 +110,8 @@ export default function MyPayments() {
         description: fa.fee.description ?? null,
         due_date: fa.fee.due_date,
         fee_type: fa.fee.fee_type ?? '',
+        allow_partial_payment: (fa.fee as any).allow_partial_payment ?? false,
+        min_partial_cents: (fa.fee as any).min_partial_cents ?? null,
         season: (fa.fee as any).season ? {
           id: (fa.fee as any).season.id,
           name: (fa.fee as any).season.name,
@@ -300,6 +309,37 @@ export default function MyPayments() {
       setCheckoutError(err?.message || 'Unable to start checkout')
     } finally {
       setCreatingCheckout(false)
+    }
+  }
+
+  const handlePartialPayment = async (assignment: FeeAssignment) => {
+    const amount = Number.parseFloat(partialAmountCents)
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setPartialPaymentError('Enter a valid amount')
+      return
+    }
+
+    const amountCents = Math.round(amount * 100)
+
+    setPartialPaymentError(null)
+    setCreatingPartialCheckout(true)
+    try {
+      const { checkout_session_url } = await createParentPartialCheckoutSession({
+        feeAssignmentId: assignment.id,
+        amountCents,
+        successUrl: `${window.location.origin}/portal/payments/success`,
+        cancelUrl: `${window.location.origin}/portal/payments/cancel`,
+      })
+
+      if (checkout_session_url) {
+        window.location.href = checkout_session_url
+      } else {
+        setPartialPaymentError('Failed to create checkout session')
+      }
+    } catch (err: any) {
+      setPartialPaymentError(err?.message || 'Unable to start checkout')
+    } finally {
+      setCreatingPartialCheckout(false)
     }
   }
 
@@ -523,10 +563,35 @@ export default function MyPayments() {
                           </p>
                         )}
                       </div>
-                      <div className="text-left sm:text-right space-y-1 flex-shrink-0">
-                        <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">${((a.balance_cents ?? 0) / 100).toFixed(2)}</p>
-                        {a.paid_cents_total > 0 && (
-                          <p className="text-xs font-bold text-emerald-500 dark:text-emerald-400">Paid ${(a.paid_cents_total / 100).toFixed(2)}</p>
+                      <div className="text-left sm:text-right space-y-2 flex-shrink-0">
+                        <div className="space-y-1">
+                          {a.paid_cents_total > 0 ? (
+                            <>
+                              <p className="text-xs font-bold text-slate-400">Total: ${(a.amount_cents / 100).toFixed(2)}</p>
+                              <p className="text-xs font-bold text-emerald-500 dark:text-emerald-400">Paid: ${(a.paid_cents_total / 100).toFixed(2)}</p>
+                              <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">Remaining: ${((a.balance_cents ?? 0) / 100).toFixed(2)}</p>
+                            </>
+                          ) : (
+                            <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">${((a.balance_cents ?? a.amount_cents ?? 0) / 100).toFixed(2)}</p>
+                          )}
+                        </div>
+                        {orgAllowsPartialPayments && 
+                         a.fee?.allow_partial_payment && 
+                         (a.status === 'unpaid' || a.status === 'partial') && 
+                         a.balance_cents > 0 && (
+                          <Button
+                            variant="secondary"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setPartialPaymentModalOpen(a.id)
+                              setPartialAmountCents('')
+                              setPartialPaymentError(null)
+                            }}
+                            disabled={creatingPartialCheckout || creatingCheckout}
+                            className="mt-2 text-xs px-3 py-1.5"
+                          >
+                            Pay Partial
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -548,6 +613,92 @@ export default function MyPayments() {
             </Card>
           </>
         )}
+
+        {/* Partial Payment Modal */}
+        {partialPaymentModalOpen && (() => {
+          const assignment = filteredAssignments.find(a => a.id === partialPaymentModalOpen)
+          if (!assignment) return null
+
+          const maxAmount = assignment.balance_cents / 100
+          const minAmount = assignment.fee?.min_partial_cents ? assignment.fee.min_partial_cents / 100 : 0.01
+
+          return (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => {
+              setPartialPaymentModalOpen(null)
+              setPartialAmountCents('')
+              setPartialPaymentError(null)
+            }}>
+              <Card className="max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white mb-4">Make a Partial Payment</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
+                  {assignment.fee?.title || 'Fee'}
+                </p>
+                <div className="space-y-2 mb-4">
+                  {assignment.paid_cents_total > 0 ? (
+                    <p className="text-xs text-slate-500">
+                      Total: ${(assignment.amount_cents / 100).toFixed(2)} · 
+                      Paid: ${(assignment.paid_cents_total / 100).toFixed(2)} · 
+                      Remaining: ${(assignment.balance_cents / 100).toFixed(2)}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-slate-500">
+                      Amount due: ${(assignment.balance_cents / 100).toFixed(2)}
+                    </p>
+                  )}
+                  {assignment.fee?.min_partial_cents && (
+                    <p className="text-xs text-slate-500">
+                      Minimum partial payment: ${(assignment.fee.min_partial_cents / 100).toFixed(2)}
+                    </p>
+                  )}
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                    Payment Amount ($)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min={minAmount}
+                    max={maxAmount}
+                    value={partialAmountCents}
+                    onChange={(e) => {
+                      setPartialAmountCents(e.target.value)
+                      setPartialPaymentError(null)
+                    }}
+                    className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2.5 text-sm text-slate-900 dark:text-white"
+                    placeholder={`Enter amount (min $${minAmount.toFixed(2)}, max $${maxAmount.toFixed(2)})`}
+                    disabled={creatingPartialCheckout}
+                  />
+                  {partialPaymentError && (
+                    <p className="text-xs text-red-500 dark:text-red-400 mt-1">{partialPaymentError}</p>
+                  )}
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setPartialPaymentModalOpen(null)
+                      setPartialAmountCents('')
+                      setPartialPaymentError(null)
+                    }}
+                    disabled={creatingPartialCheckout}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={() => handlePartialPayment(assignment)}
+                    disabled={creatingPartialCheckout || !partialAmountCents}
+                    className="flex-1"
+                  >
+                    {creatingPartialCheckout ? 'Starting...' : 'Pay'}
+                  </Button>
+                </div>
+              </Card>
+            </div>
+          )
+        })()}
       </PortalLayout>
   )
 }
