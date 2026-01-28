@@ -10,6 +10,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { AdminPageHeader, Card, Input, Button, Select, DatePicker, ErrorState } from '../../components/platformAdmin'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useT } from '../../i18n/useI18n'
 import { getAthleteById, updateAthlete } from '../../data/services/familyService'
 import { updateAthleteSports } from '../../data/services/athleteSportsService'
 import { getSystemSports } from '../../data/services/sportsService'
@@ -85,6 +86,7 @@ export default function EditAthlete() {
     const navigate = useNavigate()
     const { id: athleteId } = useParams<{ id: string }>()
     const { context, isReady } = useUserContext()
+    const t = useT()
     const [loading, setLoading] = useState(true)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState<Error | null>(null)
@@ -428,7 +430,7 @@ export default function EditAthlete() {
         <div className="pa-root">
             <AdminPageHeader
                 title="Edit Athlete"
-                subtitle="Update athlete information, sports preferences, and profile photo"
+                subtitle={t('admin.athletes.editSubtitle')}
                 breadcrumbs={[
                     { label: 'Organizations', path: getLink('admin.organization.structure') },
                     { label: 'Athletes', path: getLink('admin.athletes.list') },

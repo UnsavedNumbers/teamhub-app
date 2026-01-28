@@ -374,7 +374,8 @@ export default function Events() {
   return (
     <div className="pa-root">
       <AdminPageHeader 
-        title="Events" 
+        title={t('admin.events.title')} 
+        subtitle={t('admin.events.subtitle')}
         actions={
           <Button onClick={() => navigate('/admin/events/new')} icon="add">
             {t('admin.events.create')}

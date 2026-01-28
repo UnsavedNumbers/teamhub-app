@@ -141,7 +141,8 @@ export default function UniformOrders() {
   return (
     <div className="pa-root">
       <AdminPageHeader 
-        title="Uniforms" 
+        title={t('admin.uniforms.title')}
+        subtitle={t('admin.uniforms.subtitle')} 
         actions={
           (sports?.length ?? 0) > 0 ? (
             <Button onClick={() => navigate('/admin/uniforms/new')}>

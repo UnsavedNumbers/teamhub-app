@@ -141,7 +141,7 @@ html.dark .oa-page-subtitle {
    ===================================================================== */
 
 .oa-card {
-    background: var(--org-surface-card, var(--pa-surface));
+    background: #ffffff;
     border: 1px solid var(--org-border-default, var(--pa-n100));
     border-radius: 14px;
     padding: var(--pa-space-6);
@@ -155,16 +155,32 @@ html.dark .oa-page-subtitle {
     border-color: var(--org-border-tertiary, var(--pa-n200));
 }
 
+/* Dark mode overrides */
+html.dark .oa-card {
+    background: var(--pa-surface) !important;
+    border: 1px solid var(--org-border-default, var(--pa-border-subtle)) !important;
+}
+
+html.dark .oa-card:hover {
+    border-color: var(--pa-theme-border-accent) !important;
+}
+
 /* Specific fix for card headers in org admin - use secondary background */
 .oa-card-header,
 .oa-card .pa-card-header {
     padding: var(--pa-space-5) var(--pa-space-6);
     border-bottom: 1px solid var(--org-border-default, var(--pa-n100));
     margin: calc(var(--pa-space-6) * -1) calc(var(--pa-space-6) * -1) var(--pa-space-6) calc(var(--pa-space-6) * -1);
-    background: var(--org-surface-secondary, var(--pa-surface));
+    background: #f9fafb;
     display: flex;
     align-items: center;
     justify-content: space-between;
+}
+
+html.dark .oa-card-header,
+html.dark .oa-card .pa-card-header {
+    border-bottom-color: var(--pa-border-default) !important;
+    background: var(--pa-surface-panel) !important;
 }
 
 /* If card has no padding, header needs to handle its own layout */
@@ -176,15 +192,26 @@ html.dark .oa-page-subtitle {
 .oa-card--no-padding .pa-card-header {
     margin: 0;
     /* Ensure consistent header styling - same as regular oa-card headers */
-    background: var(--org-surface-secondary, var(--pa-surface));
+    background: #f9fafb;
     border-bottom: 1px solid var(--org-border-default, var(--pa-n100));
     padding: var(--pa-space-5) var(--pa-space-6);
+}
+
+html.dark .oa-card--no-padding .oa-card-header,
+html.dark .oa-card--no-padding .pa-card-header {
+    background: var(--pa-surface-panel) !important;
+    border-bottom-color: var(--pa-border-default) !important;
 }
 
 .oa-card--no-padding .oa-card-title,
 .oa-card--no-padding .pa-card-title {
     /* Ensure title color matches regular oa-card titles */
-    color: var(--org-text-primary, var(--pa-n900));
+    color: var(--pa-n900);
+}
+
+html.dark .oa-card--no-padding .oa-card-title,
+html.dark .oa-card--no-padding .pa-card-title {
+    color: var(--pa-text-primary) !important;
 }
 
 .oa-card-title,
@@ -194,11 +221,17 @@ html.dark .oa-page-subtitle {
     font-family: var(--pa-font-display);
     text-transform: uppercase;
     letter-spacing: 0.02em;
-    color: var(--org-text-primary, var(--pa-n900));
+    color: var(--pa-n900);
     margin: 0;
     display: flex;
     align-items: center;
     gap: var(--pa-space-2);
+}
+
+/* Dark mode card title color */
+html.dark .oa-card-title,
+html.dark .oa-card .pa-card-title {
+    color: var(--pa-text-primary) !important;
 }
 
 .oa-card-actions {
@@ -259,27 +292,6 @@ html.dark .oa-card .pa-table-empty {
     border: none;
     box-shadow: none;
     background: transparent;
-}
-
-/* Dark mode overrides */
-html.dark .oa-card {
-    background: var(--org-surface-card, var(--pa-surface));
-    border: 1px solid var(--org-border-default, var(--pa-border-subtle));
-}
-
-html.dark .oa-card-header,
-html.dark .oa-card .pa-card-header {
-    border-color: var(--org-border-default, var(--pa-border-subtle));
-    background: var(--org-surface-secondary, var(--pa-surface-panel));
-}
-
-html.dark .oa-card-title,
-html.dark .oa-card .pa-card-title {
-    color: var(--pa-text-primary);
-}
-
-html.dark .oa-card:hover {
-    border-color: var(--pa-theme-border-accent);
 }
 
 /* =====================================================================
@@ -843,4 +855,113 @@ html.dark .oa-theme-active .pa-table tbody tr:hover {
         width: auto;
         min-width: 156px;
     }
+}
+
+/* =====================================================================
+   FILTER SECTIONS - Constrained width on desktop
+   ===================================================================== */
+
+/* Filter sections should not be full width on desktop */
+.oa-theme-active .pa-filter-section {
+    width: 100%;
+}
+
+@media (min-width: 1024px) {
+    .oa-theme-active .pa-filter-section {
+        max-width: 640px;
+        width: auto;
+    }
+}
+
+/* Filter row - flex container for filter controls */
+.oa-theme-active .pa-filter-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-4);
+    align-items: stretch;
+}
+
+@media (min-width: 768px) {
+    .oa-theme-active .pa-filter-row {
+        flex-direction: row;
+        align-items: flex-end;
+        gap: var(--pa-space-4);
+    }
+}
+
+@media (min-width: 1024px) {
+    .oa-theme-active .pa-filter-row {
+        align-items: center;
+        gap: var(--pa-space-4);
+    }
+}
+
+/* Filter control wrapper - individual filter inputs */
+.oa-theme-active .pa-filter-control {
+    flex: 1;
+    min-width: 0;
+}
+
+@media (min-width: 1024px) {
+    .oa-theme-active .pa-filter-control {
+        flex: 0 0 auto;
+        min-width: 200px;
+        max-width: 300px;
+    }
+}
+
+/* Filter actions - buttons in filter row */
+.oa-theme-active .pa-filter-actions {
+    display: flex;
+    gap: var(--pa-space-3);
+    align-items: center;
+}
+
+@media (min-width: 768px) {
+    .oa-theme-active .pa-filter-actions {
+        flex-shrink: 0;
+    }
+}
+
+/* =====================================================================
+   CHECKBOX ROWS - Always on own row, vertically aligned
+   ===================================================================== */
+
+.oa-theme-active .pa-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+    width: 100%;
+    margin-bottom: var(--pa-space-3);
+}
+
+.oa-theme-active .pa-checkbox-row:last-child {
+    margin-bottom: 0;
+}
+
+.oa-theme-active .pa-checkbox-row .pa-checkbox {
+    flex-shrink: 0;
+    margin: 0;
+}
+
+.oa-theme-active .pa-checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-3);
+    width: 100%;
+}
+
+/* Ensure checkboxes align with inputs vertically */
+.oa-theme-active .pa-checkbox-row .pa-checkbox input[type="checkbox"] {
+    margin-top: 0;
+    vertical-align: middle;
+}
+
+/* Checkbox label alignment */
+.oa-theme-active .pa-checkbox-row .pa-checkbox label {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+    margin: 0;
+    cursor: pointer;
 }

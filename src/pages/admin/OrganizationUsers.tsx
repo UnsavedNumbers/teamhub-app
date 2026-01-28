@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useT } from '../../i18n/useI18n'
 import { getOrganizationUsers } from '../../data/services/usersService'
 import { 
   AdminPageHeader, 
@@ -28,6 +29,7 @@ export default function OrganizationUsers() {
 
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
+  const t = useT()
 
   const fetchUsers = useCallback(async () => {
     if (!isReady) return
@@ -106,11 +108,12 @@ export default function OrganizationUsers() {
   return (
     <div className="pa-root">
       <AdminPageHeader 
-        title="Organization Users" 
+        title={t('admin.users.title')}
+        subtitle={t('admin.users.subtitle')} 
         actions={
           <Button onClick={() => navigate('/admin/users/new')}>
             <span className="material-symbols-outlined">add</span>
-            Add User
+            {t('admin.users.createSubtitle').replace('Add', 'Create').split(' ')[0] || 'Add'} User
           </Button>
         }
       />

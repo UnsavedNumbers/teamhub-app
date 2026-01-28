@@ -101,8 +101,8 @@ export default function AdminDashboard() {
   return (
     <div className="pa-root">
       <AdminPageHeader 
-        title="DASHBOARD" 
-        subtitle={currentOrganization?.name || 'ORGANIZATION OVERVIEW'} 
+        title={t('admin.dashboard.title')} 
+        subtitle={currentOrganization?.name || t('admin.dashboard.subtitle')} 
         actions={
           <Button variant="secondary" onClick={() => fetchDashboardData()} icon="refresh">
             Refresh

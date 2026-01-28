@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
-import { t } from '../../i18n'
+import { useT } from '../../i18n/useI18n'
 import { 
   getAllTravelPlansAdmin, 
   publishTravelPlan, 
@@ -36,6 +36,7 @@ export default function TravelPlans() {
 
   const navigate = useNavigate()
   const { context, isReady } = useUserContext()
+  const t = useT()
 
   const fetchPlans = useCallback(async () => {
     if (!isReady) return
@@ -202,7 +203,8 @@ export default function TravelPlans() {
   return (
     <div className="pa-root">
       <AdminPageHeader 
-        title="Travel Plans" 
+        title={t('admin.travel.title')} 
+        subtitle={t('admin.travel.subtitle')} 
         actions={<Button onClick={() => navigate('/admin/travel/new')}><span className="material-symbols-outlined">add</span>New Plan</Button>} 
       />
       {error && !loading && (

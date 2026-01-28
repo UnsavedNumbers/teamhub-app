@@ -167,7 +167,7 @@ export default function SeasonsManagement() {
             icon="edit"
             onClick={(e: React.MouseEvent) => {
                 e.stopPropagation();
-                navigate(`${getLink('admin.organization.forms')}?edit=season&id=${row.id}&returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`)
+                navigate(`${getLink('admin.seasons.update', { id: row.id })}?returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`)
             }}
           >
             Edit

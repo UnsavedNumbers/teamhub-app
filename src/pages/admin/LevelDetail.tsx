@@ -129,8 +129,8 @@ export default function LevelDetail() {
 
   const levelsRoute = getLink('admin.levels.list')
   const programsRoute = getLink('admin.programs.list')
-  const formsRoute = getLink('admin.organization.forms')
   const structureRoute = getLink('admin.organization.structure')
+  const formsRoute = getLink('admin.organization.forms')
   const detailRoute = getLink('admin.levels.detail', { id: levelId })
 
   const heroImage = useMemo(() => getRandomSportImagePath(sport?.name ?? null, 'hero'), [sport?.name])
@@ -578,7 +578,7 @@ export default function LevelDetail() {
                 <div className="pa-flex pa-items-center pa-gap-2" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   {levelId ? (
                     <Link
-                      to={`${formsRoute}?edit=level&id=${levelId}&returnUrl=${encodeURIComponent(detailRoute)}`}
+                      to={`${getLink('admin.levels.update', { id: levelId })}?returnUrl=${encodeURIComponent(detailRoute)}`}
                       onClick={(e) => {
                         if (!levelId) {
                           e.preventDefault()

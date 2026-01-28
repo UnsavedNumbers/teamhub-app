@@ -8,6 +8,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganizationSports } from '../../hooks/useOrganizationSports'
 import { useT } from '../../i18n/useI18n'
+import type { TranslationKey } from '../../i18n'
 import { createUniformKit } from '../../data/services/uniformsService'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { AdminPageHeader, Card, Button, EmptyState } from '../../components/platformAdmin'
@@ -93,6 +94,7 @@ export default function CreateUniform() {
     <div className="pa-root">
       <AdminPageHeader 
         title="Create Uniform"
+        subtitle={t('admin.uniforms.createSubtitle' as TranslationKey)}
         actions={null}
       />
 

@@ -79,13 +79,42 @@ export default function OrganizationSettings() {
     const isActive = licenseSummary.isValid ?? false
     return hasCorrectPlan && isActive
   }, [licenseSummary?.plan, licenseSummary?.isValid])
+
+  // Valid tab values for URL parameter
+  const validTabs = useMemo(() => {
+    const baseTabs = ['overview', 'general', 'appearance', 'attendance', 'registration', 'notifications', 'permissions', 'advanced']
+    if (hasPaymentAccess) {
+      baseTabs.push('payments')
+    }
+    return baseTabs
+  }, [hasPaymentAccess])
+
+  // Handle tab change - update URL
+  const handleTabChange = useCallback((newTab: string) => {
+    setActiveTab(newTab)
+    // Update URL with new tab parameter
+    if (newTab === 'overview') {
+      // Remove tab param for default tab
+      setSearchParams({}, { replace: true })
+    } else {
+      setSearchParams({ tab: newTab }, { replace: true })
+    }
+  }, [setSearchParams])
+
+  // Initialize tab from URL parameter
+  useEffect(() => {
+    const tabParam = searchParams.get('tab')
+    if (tabParam && validTabs.includes(tabParam)) {
+      setActiveTab(tabParam)
+    }
+  }, [searchParams, validTabs])
   
   // Check for onboarding redirect
   useEffect(() => {
     const onboarded = searchParams.get('onboarded')
     if (onboarded === 'true') {
       setActiveTab('payments')
-      setSearchParams({}, { replace: true })
+      setSearchParams({ tab: 'payments' }, { replace: true })
       // Poll status with exponential backoff
       let attempts = 0
       const pollStatus = async () => {
@@ -286,7 +315,7 @@ export default function OrganizationSettings() {
         </div>
       )}
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="pa-tabs">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="pa-tabs">
         <TabsList className="pa-mb-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="general">Configuration</TabsTrigger>

@@ -11,6 +11,7 @@ import {
   Input, 
   Select 
 } from '../../components/platformAdmin'
+import { useT } from '../../i18n/useI18n'
 
 interface UserFormData {
   email: string
@@ -23,10 +24,8 @@ interface UserFormData {
 export default function CreateUser() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-
-  // Context available if needed for future use
-  // const { context, isReady } = useUserContext()
+  
+  const t = useT()
   const navigate = useNavigate()
 
   const { control, handleSubmit, formState: { errors } } = useForm<UserFormData>({
@@ -133,6 +132,7 @@ export default function CreateUser() {
     <div className="pa-root">
       <AdminPageHeader 
         title="Create User" 
+        subtitle={t('admin.users.createSubtitle')} 
         breadcrumbs={[
           { label: 'Users', path: '/admin/users' },
           { label: 'Create User' },
@@ -263,4 +263,3 @@ export default function CreateUser() {
     </div>
   )
 }
-

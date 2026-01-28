@@ -477,7 +477,7 @@ export default function TeamsManagement() {
       )}
 
       {/* Filter Bar */}
-      <Card className="pa-mb-6">
+      <Card className="pa-mb-6 pa-filter-section">
         <div className={cn('pa-grid', 'pa-grid-1', 'md:pa-grid-2', 'lg:pa-grid-3', 'pa-gap-6')}>
           {/* Row 1 */}
           <div>

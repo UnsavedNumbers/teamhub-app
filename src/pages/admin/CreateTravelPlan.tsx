@@ -19,6 +19,8 @@ import {
 import { FileUpload } from '../../components/common/FileUpload'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
 import type { StructuredAddress } from '../../types/location'
+import { useT } from '../../i18n/useI18n'
+import type { TranslationKey } from '../../i18n'
 
 interface Team { id: string; name: string }
 interface Season { id: string; name: string }
@@ -97,6 +99,8 @@ export default function CreateTravelPlan() {
   const [error, setError] = useState<string | null>(null)
   const [itineraryFile, setItineraryFile] = useState<File | null>(null)
   
+  const t = useT()
+
   // UI State for Overrides
   const [destinationOverride, setDestinationOverride] = useState(false)
   
@@ -389,6 +393,7 @@ export default function CreateTravelPlan() {
     <div className="pa-root">
       <AdminPageHeader 
         title="Create Travel Plan" 
+        subtitle={t('admin.travel.createSubtitle' as TranslationKey)}
         breadcrumbs={[
           { label: 'Travel Plans', path: '/admin/travel' },
           { label: 'Create Travel Plan' },

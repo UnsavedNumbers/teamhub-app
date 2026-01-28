@@ -291,18 +291,6 @@ export default function ProgramDetail() {
     [navigate]
   )
 
-  const handleNavigateToSport = useCallback(
-    (sportId: string | null | undefined) => {
-      if (!sportId || !sportId.trim()) {
-        setActionError('Sport ID is required to view sport details.')
-        return
-      }
-      const sportDetailRoute = getLink('admin.sports.detail', { sport_slug: sportId.trim() })
-      navigate(sportDetailRoute)
-    },
-    [navigate]
-  )
-
   const handleExportCsv = useCallback(() => {
     if (levelRows.length === 0) {
       setActionError('No levels to export.')
@@ -466,7 +454,7 @@ export default function ProgramDetail() {
                   }}
                 >
                   <Button variant="secondary" disabled={loading || !sport.id} aria-label={`View ${sport.name} sport details`}>
-                    View Sport
+                    View {sport.name}
                   </Button>
                 </Link>
               ) : (
@@ -543,62 +531,40 @@ export default function ProgramDetail() {
                 }}
               />
               <div
+                className="pa-flex pa-items-center"
                 style={{
                   position: 'absolute',
-                  left: 'var(--pa-space-6)',
-                  bottom: 'var(--pa-space-6)',
-                  right: 'var(--pa-space-6)',
+                  inset: 0,
+                  padding: '0 var(--pa-space-6)',
                 }}
               >
-                {sport?.id ? (
-                  <button
-                    onClick={() => handleNavigateToSport(sport.id)}
-                    className="pa-overline"
-                    style={{
-                      color: 'rgba(255,255,255,0.75)',
-                      marginBottom: 'var(--pa-space-2)',
-                      letterSpacing: '0.16em',
-                      background: 'transparent',
-                      border: 'none',
-                      padding: 0,
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      textDecoration: 'none',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = 'rgba(255,255,255,0.95)'
-                      e.currentTarget.style.textDecoration = 'underline'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = 'rgba(255,255,255,0.75)'
-                      e.currentTarget.style.textDecoration = 'none'
-                    }}
-                    aria-label={`View ${sport.name} sport details`}
-                  >
-                    Parent Sport: {sport.name}
-                  </button>
-                ) : (
-                  <div
-                    className="pa-overline"
-                    style={{
-                      color: 'rgba(255,255,255,0.75)',
-                      marginBottom: 'var(--pa-space-2)',
-                      letterSpacing: '0.16em',
-                    }}
-                  >
-                    Parent Sport: —
-                  </div>
-                )}
                 <div
-                  className="pa-display-xl"
-                  style={{
-                    color: 'var(--pa-white)',
-                    fontWeight: 900,
-                    letterSpacing: '-0.03em',
-                    lineHeight: 1,
-                  }}
+                  className="pa-flex pa-items-center"
+                  style={{ gap: 'var(--pa-space-8)', flexShrink: 0 }}
                 >
-                  {program.name}
+                  {[
+                    { label: 'Athletes', value: totalAthletes },
+                    { label: 'Coaches', value: totalCoaches },
+                  ].map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="pa-display-xl"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'baseline',
+                        color: 'var(--pa-white)',
+                        fontWeight: 900,
+                        letterSpacing: '-0.03em',
+                        lineHeight: 1,
+                        gap: '0.4em',
+                      }}
+                    >
+                      <span style={{ textAlign: 'right' }}>
+                        {stat.value === null ? '—' : stat.value.toLocaleString()}
+                      </span>
+                      <span style={{ fontWeight: 400, opacity: 0.7 }}>{stat.label}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -632,7 +598,7 @@ export default function ProgramDetail() {
 
                     <div className="pa-flex pa-items-center pa-gap-2" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                       <Link
-                        to={`${formsRoute}?edit=program&id=${programId}&returnUrl=${encodeURIComponent(detailRoute)}`}
+                        to={`${getLink('admin.programs.update', { id: programId })}?returnUrl=${encodeURIComponent(detailRoute)}`}
                         onClick={(e) => {
                           if (!programId) {
                             e.preventDefault()
@@ -649,6 +615,13 @@ export default function ProgramDetail() {
                           Edit Program
                         </Button>
                       </Link>
+
+                      <Link to={levelsRoute}>
+                        <Button variant="ghost" disabled={loading} aria-label="Navigate to all levels">
+                          View Levels
+                        </Button>
+                      </Link>
+
                       <Link
                         to={`${formsRoute}?type=level&program_id=${programId}&sport_id=${program.sport_id}&returnUrl=${encodeURIComponent(detailRoute)}`}
                         className={isOffline || USE_FAKE_DATA ? 'pa-disabled-link' : ''}
@@ -682,6 +655,40 @@ export default function ProgramDetail() {
                           aria-label="Add a new level to this program"
                         >
                           Add Level
+                        </Button>
+                      </Link>
+
+                      <Link
+                        to={`${formsRoute}?type=team&program_id=${programId}&sport_id=${program.sport_id}&returnUrl=${encodeURIComponent(detailRoute)}`}
+                        onClick={(e) => {
+                          if (isOffline || USE_FAKE_DATA) {
+                            e.preventDefault()
+                            setActionError(
+                              isOffline
+                                ? 'You appear to be offline. Please reconnect and try again.'
+                                : 'This action is not available in demo mode. Please sign in to add teams.'
+                            )
+                          } else if (!programId || !program.sport_id) {
+                            e.preventDefault()
+                            setActionError('Program and sport information is required to add a team.')
+                          }
+                        }}
+                      >
+                        <Button
+                          variant="secondary"
+                          disabled={loading || isOffline || USE_FAKE_DATA || !programId || !program.sport_id}
+                          title={
+                            isOffline
+                              ? 'Offline - cannot add teams'
+                              : USE_FAKE_DATA
+                                ? 'Sign in to add teams'
+                                : !programId || !program.sport_id
+                                  ? 'Missing required information'
+                                  : undefined
+                          }
+                          aria-label="Add a new team to this program"
+                        >
+                          Add Team
                         </Button>
                       </Link>
                     </div>
@@ -721,138 +728,6 @@ export default function ProgramDetail() {
                       </div>
                     }
                   />
-                </Card>
-              </div>
-
-              {/* Right panel (stacks below on small screens) */}
-              <div
-                className="pa-grid"
-                style={{
-                  gridTemplateColumns: 'minmax(0, 1fr)',
-                  gap: 'var(--pa-space-6)',
-                }}
-              >
-                {/* Totals */}
-                <Card
-                  className="pa-card"
-                  style={{
-                    background: 'var(--pa-theme-action-primary)',
-                    color: 'var(--pa-theme-text-on-action)',
-                    borderColor: 'var(--pa-theme-border-accent)',
-                  }}
-                >
-                  <div
-                    style={{
-                      marginTop: 'var(--pa-space-4)',
-                      padding: 'var(--pa-space-3)',
-                      borderRadius: 'var(--pa-radius-s)',
-                      background: 'var(--pa-surface-panel)',
-                      color: 'var(--pa-n600)',
-                      fontStyle: 'italic',
-                      fontSize: '11px',
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    “The tactical board provides a visual representation of team formations and age-group progression across the program.”
-                  </div>
-                </Card>
-
-                {/* Totals */}
-                <Card
-                  className="pa-card"
-                  style={{
-                    background: 'var(--pa-theme-action-primary)',
-                    color: 'var(--pa-theme-text-on-action)',
-                    borderColor: 'var(--pa-theme-border-accent)',
-                  }}
-                >
-                  <div
-                    className="pa-overline"
-                    style={{
-                      color: 'rgba(255,255,255,0.75)',
-                      letterSpacing: '0.18em',
-                      marginBottom: 'var(--pa-space-4)',
-                    }}
-                  >
-                    Program Totals
-                  </div>
-
-                  <div style={{ display: 'grid', gap: 'var(--pa-space-4)' }}>
-                    <div>
-                      <div className="pa-display-xl" style={{ color: 'var(--pa-theme-text-on-action)' }}>
-                        {totalAthletes === null ? '—' : totalAthletes.toLocaleString()}
-                      </div>
-                      <div className="pa-overline" style={{ color: 'rgba(255,255,255,0.75)' }}>
-                        Total Athletes
-                      </div>
-                    </div>
-
-                    <div style={{ height: '1px', background: 'rgba(255,255,255,0.18)' }} />
-
-                    <div>
-                      <div className="pa-display-xl" style={{ color: 'var(--pa-theme-text-on-action)' }}>
-                        {totalCoaches === null ? '—' : totalCoaches.toLocaleString()}
-                      </div>
-                      <div className="pa-overline" style={{ color: 'rgba(255,255,255,0.75)' }}>
-                        Total Coaches
-                      </div>
-                    </div>
-
-                    {isOffline && (
-                      <div className="pa-body-s" style={{ color: 'rgba(255,255,255,0.75)' }}>
-                        Offline: roster totals may be unavailable.
-                      </div>
-                    )}
-                  </div>
-                </Card>
-
-                {/* Helper links */}
-                <Card>
-                  <div className="pa-flex pa-flex-col pa-gap-2">
-                    <div className="pa-body-m" style={{ fontWeight: 700, color: 'var(--pa-n900)' }}>
-                      Quick Actions
-                    </div>
-                    <div className="pa-flex pa-gap-2" style={{ flexWrap: 'wrap' }}>
-                      <Link to={levelsRoute}>
-                        <Button variant="ghost" disabled={loading} aria-label="Navigate to all levels">
-                          Open Levels
-                        </Button>
-                      </Link>
-                      <Link
-                        to={`${formsRoute}?type=team&program_id=${programId}&sport_id=${program.sport_id}&returnUrl=${encodeURIComponent(detailRoute)}`}
-                        onClick={(e) => {
-                          if (isOffline || USE_FAKE_DATA) {
-                            e.preventDefault()
-                            setActionError(
-                              isOffline
-                                ? 'You appear to be offline. Please reconnect and try again.'
-                                : 'This action is not available in demo mode. Please sign in to add teams.'
-                            )
-                          } else if (!programId || !program.sport_id) {
-                            e.preventDefault()
-                            setActionError('Program and sport information is required to add a team.')
-                          }
-                        }}
-                      >
-                        <Button
-                          variant="secondary"
-                          disabled={loading || isOffline || USE_FAKE_DATA || !programId || !program.sport_id}
-                          title={
-                            isOffline
-                              ? 'Offline - cannot add teams'
-                              : USE_FAKE_DATA
-                                ? 'Sign in to add teams'
-                                : !programId || !program.sport_id
-                                  ? 'Missing required information'
-                                  : undefined
-                          }
-                          aria-label="Add a new team to this program"
-                        >
-                          Add Team
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
                 </Card>
               </div>
             </div>

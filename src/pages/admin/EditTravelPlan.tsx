@@ -4,6 +4,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { startTransition } from 'react'
 
 import { useUserContext } from '../../hooks/useUserContext'
+import { useT } from '../../i18n/useI18n'
 import { getTravelPlanById, updateTravelPlan, type UpdateTravelPlanDTO } from '../../data/services/travelService'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { showSuccess, showError } from '../../utils/toast'
@@ -48,6 +49,7 @@ export default function EditTravelPlan() {
   const isMountedRef = useRef(true)
 
   const { context, isReady } = useUserContext()
+  const t = useT()
   const navigate = useNavigate()
 
   renderCountRef.current++
@@ -302,6 +304,7 @@ export default function EditTravelPlan() {
     <div className="pa-root">
       <AdminPageHeader 
         title="Edit Travel Plan" 
+        subtitle={t('admin.travel.editSubtitle')}
         breadcrumbs={[
           { label: 'Travel Plans', path: '/admin/travel' },
           { label: 'Edit Travel Plan' },

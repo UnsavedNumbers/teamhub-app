@@ -4,6 +4,7 @@ import { AdminPageHeader, PlatformDataTable, Button, Badge, ErrorState, Card } f
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useT } from '../../i18n/useI18n'
 import { getFamilies } from '../../data/services/familyService'
 import type { Family } from '../../types/family'
 import { getLink } from '../../utils/routes'
@@ -13,6 +14,7 @@ import { cn } from '../../utils/cn'
 export default function AdminFamilies() {
   const navigate = useNavigate()
   const { context, isReady } = useUserContext()
+  const t = useT()
   const [families, setFamilies] = useState<Family[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
@@ -189,14 +191,15 @@ export default function AdminFamilies() {
   return (
     <div className="pa-root">
       <AdminPageHeader 
-        title="FAMILIES" 
+        title={t('admin.families.title')} 
+        subtitle={t('admin.families.subtitle')}
         actions={
           <Button 
             onClick={handleAddAthlete}
             disabled={isNavigating || loading}
           >
             <span className="material-symbols-outlined">add</span>
-            Add Athlete
+            {t('admin.families.addChild')}
           </Button>
         }
       />

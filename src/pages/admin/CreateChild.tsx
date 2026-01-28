@@ -87,7 +87,7 @@ export default function CreateChild() {
     <div className="pa-root">
       <AdminPageHeader
         title={t('admin.createChild.title')}
-        subtitle={familyName ? `For ${familyName}` : ''}
+        subtitle={familyName ? t('admin.createChild.subtitle', { familyName }) : ''}
         breadcrumbs={[
           { label: 'Families', path: '/admin/families' },
           { label: familyName || 'Family', path: `/admin/families/${familyId}` },

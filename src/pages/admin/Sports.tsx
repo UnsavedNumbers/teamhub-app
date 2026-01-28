@@ -184,7 +184,7 @@ export default function Sports() {
                     <div className="pa-flex-1">
                       <span 
                         className="pa-stacked-list-row-title pa-cursor-pointer hover:pa-underline pa-block pa-mb-1"
-                        onClick={() => navigate(getLink('admin.sports.detail', { id: sport.id }))}
+                        onClick={() => navigate(getLink('admin.sports.detail', { sport_slug: sport.slug || sport.id }))}
                       >
                         {sport.name}
                       </span>

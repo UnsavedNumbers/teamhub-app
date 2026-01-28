@@ -53,21 +53,20 @@ function RadioGroup({
     <div className="pa-form-group">
       <label className={`pa-label ${required ? 'pa-label--required' : ''}`}>{label}</label>
       {helper && <div className="pa-helper">{helper}</div>}
-      <div className="pa-flex pa-flex-col pa-gap-2" style={{ marginTop: '8px' }}>
+      <div className="pa-radio-group">
         {options.map((option) => (
-          <label key={option.value} className="pa-flex pa-items-start pa-gap-2" style={{ cursor: 'pointer' }}>
+          <label key={option.value} className="pa-radio-option">
             <input
               type="radio"
               name={name}
               value={option.value}
               checked={value === option.value}
               onChange={() => onChange(option.value)}
-              style={{ marginTop: '2px' }}
             />
             <div>
-              <div className="pa-body-m" style={{ fontWeight: 600 }}>{option.label}</div>
+              <div className="pa-body-m pa-radio-label">{option.label}</div>
               {option.helper && (
-                <div className="pa-helper" style={{ marginTop: '2px' }}>{option.helper}</div>
+                <div className="pa-helper pa-radio-helper">{option.helper}</div>
               )}
             </div>
           </label>
@@ -820,7 +819,7 @@ export default function OrganizationStructureForms() {
             { label: activeFormLabel },
           ]}
         />
-        <div className="pa-skeleton" style={{ height: '500px' }} />
+        <div className="pa-skeleton pa-skeleton--form" />
       </div>
     )
   }
@@ -1004,17 +1003,17 @@ export default function OrganizationStructureForms() {
       ) : null}
 
       {actionError && (
-        <Card className="mb-4" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
-          <div className="pa-body-m pa-text-danger" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
-            {actionError}
+        <Card className="pa-mb-4" noPadding>
+          <div className="pa-alert-card pa-alert-card--error">
+            <div className="pa-body-m pa-text-danger">{actionError}</div>
           </div>
         </Card>
       )}
 
       {loadError && (
-        <Card className="mb-4" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
-          <div className="pa-body-m pa-text-danger" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
-            {loadError}
+        <Card className="pa-mb-4" noPadding>
+          <div className="pa-alert-card pa-alert-card--error">
+            <div className="pa-body-m pa-text-danger">{loadError}</div>
           </div>
         </Card>
       )}
@@ -1110,20 +1109,20 @@ export default function OrganizationStructureForms() {
                   </div>
                 )}
                 {USE_FAKE_DATA && (
-                  <div className="pa-card pa-mt-4" style={{ background: 'var(--pa-info-bg)', border: '1px solid var(--pa-info)', padding: 'var(--pa-space-3)' }}>
+                  <div className="pa-alert-card pa-alert-card--info pa-mt-4">
                     <div className="pa-flex pa-items-center pa-gap-2">
-                      <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-info)' }}>info</span>
-                      <span className="pa-body-s" style={{ color: 'var(--pa-n900)' }}>
+                      <span className="material-symbols-outlined pa-alert-icon">info</span>
+                      <span className="pa-body-s">
                         Demo mode: Sign in to add sports to your organization.
                       </span>
                     </div>
                   </div>
                 )}
                 {isOffline && (
-                  <div className="pa-card pa-mt-4" style={{ background: 'var(--pa-warning-bg)', border: '1px solid var(--pa-warning)', padding: 'var(--pa-space-3)' }}>
+                  <div className="pa-alert-card pa-alert-card--warning pa-mt-4">
                     <div className="pa-flex pa-items-center pa-gap-2">
-                      <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-warning)' }}>wifi_off</span>
-                      <span className="pa-body-s" style={{ color: 'var(--pa-n900)' }}>
+                      <span className="material-symbols-outlined pa-alert-icon">wifi_off</span>
+                      <span className="pa-body-s">
                         You are offline. Please reconnect to add sports.
                       </span>
                     </div>
@@ -1132,7 +1131,7 @@ export default function OrganizationStructureForms() {
               </>
             )}
             {editType !== 'sport' && (
-              <div className="pa-flex pa-justify-end pa-gap-3">
+              <div className="pa-form-actions">
                 <Button
                   variant="ghost"
                   onClick={handleCancel}
@@ -1302,7 +1301,7 @@ export default function OrganizationStructureForms() {
               error={programGenderError}
             />
             
-            <div className="pa-flex pa-justify-end pa-gap-3">
+            <div className="pa-form-actions">
               <Button
                 variant="ghost"
                 onClick={handleCancel}
@@ -1506,7 +1505,7 @@ export default function OrganizationStructureForms() {
               />
             )}
             
-            <div className="pa-flex pa-justify-end pa-gap-3">
+            <div className="pa-form-actions">
               <Button
                 variant="ghost"
                 onClick={handleCancel}
@@ -1644,33 +1643,27 @@ export default function OrganizationStructureForms() {
                 error={teamLevelError}
               />
               {!isEditingTeam && (
-                <div className="pa-flex pa-flex-col pa-gap-2">
-                  <div className="pa-flex pa-gap-2" style={{ alignItems: 'flex-start' }}>
-                    <div className="pa-flex-1">
-                      <Select
-                        label={t('admin.structureForms.fields.teamSeason.label')}
-                        required
-                        value={teamForm.seasonId}
-                        onChange={(e) => setTeamForm((prev) => ({ ...prev, seasonId: e.target.value }))}
-                        onBlur={() => markTouched('team.season')}
-                        options={seasonOptions}
-                        error={teamSeasonError}
-                        disabled={refreshingSeasons}
-                      />
-                    </div>
-                    <Button
-                      variant="ghost"
-                      onClick={() => setShowCreateSeasonModal(true)}
-                      disabled={submitting.team || refreshingSeasons}
-                      style={{ 
-                        marginTop: 'var(--pa-space-5)', // Align with input field (accounts for label height)
-                        alignSelf: 'flex-start',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      Create Season
-                    </Button>
+                <div className="pa-form-row-with-action">
+                  <div className="pa-flex-1">
+                    <Select
+                      label={t('admin.structureForms.fields.teamSeason.label')}
+                      required
+                      value={teamForm.seasonId}
+                      onChange={(e) => setTeamForm((prev) => ({ ...prev, seasonId: e.target.value }))}
+                      onBlur={() => markTouched('team.season')}
+                      options={seasonOptions}
+                      error={teamSeasonError}
+                      disabled={refreshingSeasons}
+                    />
                   </div>
+                  <Button
+                    variant="ghost"
+                    className="pa-form-row-action-btn"
+                    onClick={() => setShowCreateSeasonModal(true)}
+                    disabled={submitting.team || refreshingSeasons}
+                  >
+                    Create Season
+                  </Button>
                 </div>
               )}
             </div>
@@ -1690,7 +1683,7 @@ export default function OrganizationStructureForms() {
               label={t('admin.structureForms.fields.teamActive.label')}
             />
             
-            <div className="pa-flex pa-justify-end pa-gap-3">
+            <div className="pa-form-actions">
               <Button
                 variant="ghost"
                 onClick={handleCancel}
@@ -1898,7 +1891,7 @@ export default function OrganizationStructureForms() {
               label={t('admin.structureForms.fields.seasonActive.label')}
             />
             
-            <div className="pa-flex pa-justify-end pa-gap-3">
+            <div className="pa-form-actions">
               <Button
                 variant="ghost"
                 onClick={handleCancel}

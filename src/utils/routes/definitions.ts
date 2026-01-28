@@ -223,7 +223,7 @@ const admin = {
             requiresOrg: false,
         },
         structure: {
-            path: '/admin/organization',
+            path: '/admin/organization/overview',
             label: 'Overview',
             icon: 'info',
             description: 'Structure overview',
@@ -378,6 +378,13 @@ const admin = {
             icon: 'list',
             requiresOrg: true,
         },
+        update: {
+            path: '/admin/teams/:id/update',
+            params: ['id'] as const,
+            label: 'Update Team',
+            icon: 'edit',
+            requiresOrg: true,
+        },
     },
 
     // Sports (standardized)
@@ -393,6 +400,13 @@ const admin = {
             params: ['sport_slug'] as const,
             label: 'Sport Details',
             icon: 'sports',
+            requiresOrg: true,
+        },
+        update: {
+            path: '/admin/sports/:sport_id/update',
+            params: ['sport_id'] as const,
+            label: 'Update Sport',
+            icon: 'edit',
             requiresOrg: true,
         },
     },
@@ -419,6 +433,13 @@ const admin = {
             icon: 'category',
             requiresOrg: true,
         },
+        update: {
+            path: '/admin/programs/:id/update',
+            params: ['id'] as const,
+            label: 'Update Program',
+            icon: 'edit',
+            requiresOrg: true,
+        },
     },
 
     // Levels (standardized)
@@ -436,6 +457,13 @@ const admin = {
             icon: 'grade',
             requiresOrg: true,
         },
+        update: {
+            path: '/admin/levels/:id/update',
+            params: ['id'] as const,
+            label: 'Update Level',
+            icon: 'edit',
+            requiresOrg: true,
+        },
     },
 
     // Seasons (standardized)
@@ -451,6 +479,13 @@ const admin = {
             params: ['id'] as const,
             label: 'Season Details',
             icon: 'calendar_month',
+            requiresOrg: true,
+        },
+        update: {
+            path: '/admin/seasons/:id/update',
+            params: ['id'] as const,
+            label: 'Update Season',
+            icon: 'edit',
             requiresOrg: true,
         },
     },

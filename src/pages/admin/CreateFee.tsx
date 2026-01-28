@@ -16,6 +16,8 @@ import {
   DatePicker,
   Checkbox
 } from '../../components/platformAdmin'
+import { useT } from '../../i18n/useI18n'
+import type { TranslationKey } from '../../i18n'
 
 interface Team { id: string; name: string }
 interface Season { id: string; name: string }
@@ -68,6 +70,7 @@ export default function CreateFee() {
 
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
+  const t = useT()
 
   const { control, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm<FeeFormData>({
     defaultValues: { 
@@ -303,13 +306,14 @@ export default function CreateFee() {
     <div className="pa-root">
       <AdminPageHeader 
         title="Create Fee" 
+        subtitle={t('admin.payments.createFeeSubtitle' as TranslationKey)}
         breadcrumbs={[
           { label: 'Payments', path: '/admin/payments' },
           { label: 'Create Fee' },
         ]}
       />
       
-      <div className="pa-grid pa-gap-6" style={{ maxWidth: '800px', margin: '0 auto' }}>
+      <div className="pa-grid pa-gap-6" style={{ maxWidth: '800px', margin: '0' }}>
       <form onSubmit={handleSubmit(onSubmit)}>
         
         {error && (

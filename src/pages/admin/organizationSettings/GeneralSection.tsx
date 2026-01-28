@@ -127,15 +127,15 @@ export default function GeneralSection({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="pa-form-container">
       <div>
-        <h3 className="text-lg font-medium text-gray-900 mb-1">General Settings</h3>
-        <p className="text-sm text-gray-500">
+        <h3 className="pa-h3 pa-mb-1">General Settings</h3>
+        <p className="pa-text-sm pa-text-slate-500">
           Basic organization information and configuration
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="pa-form-grid">
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
             {error}
@@ -192,10 +192,10 @@ export default function GeneralSection({
           )}
         />
 
-        <div className="flex justify-end gap-3 pt-4 border-t">
+        <div className="pa-form-actions">
           <Button
             type="button"
-            variant="blue"
+            variant="ghost"
             onClick={() => reset()}
             disabled={!isDirty || isSaving}
           >
