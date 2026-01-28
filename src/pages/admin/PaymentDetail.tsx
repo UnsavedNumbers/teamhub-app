@@ -4,7 +4,7 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { getFeeAssignmentById, formatCurrency } from '../../data/services/paymentsService'
 import { supabase } from '../../lib/supabase'
 import { getLink } from '../../utils/routes'
-import { AdminPageHeader, Badge, Card, Button } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button } from '../../components/platformAdmin'
 
 interface PaymentDetailData {
   id: string
@@ -57,13 +57,18 @@ export default function PaymentDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { context, isReady } = useUserContext()
+  const componentIdRef = useRef(`PaymentDetail-Admin-${Date.now()}-${Math.random()}`)
+  const renderCountRef = useRef(0)
+  const effectRunCountRef = useRef(0)
+  const fetchDataCountRef = useRef(0)
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [assignment, setAssignment] = useState<PaymentDetailData | null>(null)
-  const [actionLoading, setActionLoading] = useState<string | null>(null)
-  const isMountedRef = useRef(true)
 
-  console.log('[PaymentDetail] Render:', { 
+  renderCountRef.current++
+  console.log(`[PaymentDetail-Admin:${componentIdRef.current}] RENDER #${renderCountRef.current}`, {
+    timestamp: new Date().toISOString(),
     id, 
     isReady, 
     loading, 
@@ -73,39 +78,66 @@ export default function PaymentDetail() {
     contextOrgId: context.orgId,
     contextRoles: context.roles 
   })
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const isMountedRef = useRef(true)
 
   useEffect(() => {
-    console.log('[PaymentDetail] Component mounted')
+    const mountTime = new Date().toISOString()
+    console.log(`[PaymentDetail-Admin:${componentIdRef.current}] MOUNT`, { timestamp: mountTime })
+    isMountedRef.current = true
     return () => {
-      console.log('[PaymentDetail] Component unmounting')
+      const unmountTime = new Date().toISOString()
+      console.log(`[PaymentDetail-Admin:${componentIdRef.current}] UNMOUNT`, {
+        timestamp: unmountTime,
+        mountTime,
+        renderCount: renderCountRef.current,
+        effectRuns: effectRunCountRef.current,
+        fetchDataCalls: fetchDataCountRef.current,
+      })
       isMountedRef.current = false
     }
   }, [])
 
   const fetchData = useCallback(async () => {
-    console.log('[PaymentDetail] fetchData called:', { id, isReady, contextOrgId: context.orgId })
+    fetchDataCountRef.current++
+    const fetchId = fetchDataCountRef.current
+    console.log(`[PaymentDetail-Admin:${componentIdRef.current}] fetchData #${fetchId} START`, {
+      timestamp: new Date().toISOString(),
+      id, 
+      isReady, 
+      contextOrgId: context.orgId,
+      isMounted: isMountedRef.current,
+    })
 
     if (!isReady) {
-      console.log('[PaymentDetail] Not ready yet, waiting...')
+      console.log(`[PaymentDetail-Admin:${componentIdRef.current}] fetchData #${fetchId} - Not ready yet, waiting...`)
       return
     }
 
     if (!id) {
-      console.warn('[PaymentDetail] No ID provided, navigating back to list')
-      setLoading(false)
+      console.warn(`[PaymentDetail-Admin:${componentIdRef.current}] fetchData #${fetchId} - No ID provided, navigating back to list`)
+      if (isMountedRef.current) {
+        setLoading(false)
+      }
       navigate(getLink('admin.payments.list'), { replace: true })
       return
     }
 
-    console.log('[PaymentDetail] Starting fetch for payment ID:', id)
+    if (!isMountedRef.current) {
+      console.log(`[PaymentDetail-Admin:${componentIdRef.current}] fetchData #${fetchId} - Aborted (unmounted)`)
+      return
+    }
+
     setLoading(true)
     setError(null)
 
     try {
-      console.log('[PaymentDetail] Calling getFeeAssignmentById with:', { context, id })
+      console.log(`[PaymentDetail-Admin:${componentIdRef.current}] fetchData #${fetchId} - Calling getFeeAssignmentById`)
+      const apiStartTime = Date.now()
       const { data, error: fetchError } = await getFeeAssignmentById(context, id)
-
-      console.log('[PaymentDetail] getFeeAssignmentById response:', { 
+      const apiDuration = Date.now() - apiStartTime
+      console.log(`[PaymentDetail-Admin:${componentIdRef.current}] fetchData #${fetchId} - getFeeAssignmentById completed`, {
+        duration: `${apiDuration}ms`,
         hasData: !!data, 
         hasError: !!fetchError,
         errorMessage: fetchError?.message,
@@ -113,31 +145,35 @@ export default function PaymentDetail() {
       })
 
       if (!isMountedRef.current) {
-        console.log('[PaymentDetail] Component unmounted, aborting')
+        console.log(`[PaymentDetail-Admin:${componentIdRef.current}] fetchData #${fetchId} - Aborted after API (unmounted)`)
         return
       }
 
       if (fetchError) {
-        console.error('[PaymentDetail] Fetch error:', fetchError)
-        setLoading(false)
-        if (fetchError.message?.includes('Access denied') || fetchError.message?.includes('not found')) {
-          console.log('[PaymentDetail] Access denied or not found, navigating back')
-          navigate(getLink('admin.payments.list'), { replace: true })
-        } else {
-          console.log('[PaymentDetail] Setting error state:', fetchError.message)
-          setError(fetchError.message || 'Failed to load payment details')
+        console.error(`[PaymentDetail-Admin:${componentIdRef.current}] fetchData #${fetchId} - Fetch error:`, fetchError)
+        if (isMountedRef.current) {
+          setLoading(false)
+          if (fetchError.message?.includes('Access denied') || fetchError.message?.includes('not found')) {
+            console.log(`[PaymentDetail-Admin:${componentIdRef.current}] fetchData #${fetchId} - Access denied or not found, navigating back`)
+            navigate(getLink('admin.payments.list'), { replace: true })
+          } else {
+            console.log(`[PaymentDetail-Admin:${componentIdRef.current}] fetchData #${fetchId} - Setting error state:`, fetchError.message)
+            setError(fetchError.message || 'Failed to load payment details')
+          }
         }
         return
       }
 
       if (!data) {
-        console.warn('[PaymentDetail] No data returned for payment:', id)
-        setLoading(false)
-        setError('Payment not found')
+        console.warn(`[PaymentDetail-Admin:${componentIdRef.current}] fetchData #${fetchId} - No data returned for payment:`, id)
+        if (isMountedRef.current) {
+          setLoading(false)
+          setError('Payment not found')
+        }
         return
       }
 
-      console.log('[PaymentDetail] Fetched data:', data)
+      console.log(`[PaymentDetail-Admin:${componentIdRef.current}] fetchData #${fetchId} - Fetched data:`, data)
 
       // Transform to component format
       const rawAmount = (data as any).amount_cents ?? (data as any).amount_due_cents ?? 0
@@ -184,11 +220,24 @@ export default function PaymentDetail() {
       // Fetch team and season info if available
       if (transformed.fee?.season?.id) {
         try {
+          console.log(`[PaymentDetail-Admin:${componentIdRef.current}] fetchData #${fetchId} - Fetching team info`)
+          const teamStartTime = Date.now()
           const { data: teamSeasons } = await supabase
             .from('team_seasons')
             .select('team_id, team:teams(id, name)')
             .eq('season_id', transformed.fee.season.id)
             .limit(1)
+          const teamDuration = Date.now() - teamStartTime
+          console.log(`[PaymentDetail-Admin:${componentIdRef.current}] fetchData #${fetchId} - Team fetch completed`, {
+            duration: `${teamDuration}ms`,
+            hasData: !!teamSeasons,
+            dataLength: teamSeasons?.length,
+          })
+          
+          if (!isMountedRef.current) {
+            console.log(`[PaymentDetail-Admin:${componentIdRef.current}] fetchData #${fetchId} - Aborted after team fetch (unmounted)`)
+            return
+          }
           
           if (teamSeasons && teamSeasons.length > 0 && (teamSeasons[0] as any).team) {
             transformed.team = {
@@ -198,7 +247,8 @@ export default function PaymentDetail() {
           }
           transformed.season = transformed.fee.season
         } catch (err) {
-          console.error('Error fetching team info:', err)
+          if (!isMountedRef.current) return
+          console.error(`[PaymentDetail-Admin:${componentIdRef.current}] fetchData #${fetchId} - Team fetch error:`, err)
         }
       }
 
@@ -209,16 +259,19 @@ export default function PaymentDetail() {
       
       // Validate transformed data has required fields
       if (!transformed.id) {
-        console.error('[PaymentDetail] Invalid payment data: missing ID')
-        setError('Invalid payment data: missing ID')
-        setLoading(false)
+        console.error(`[PaymentDetail-Admin:${componentIdRef.current}] fetchData #${fetchId} - Invalid payment data: missing ID`)
+        if (isMountedRef.current) {
+          setError('Invalid payment data: missing ID')
+          setLoading(false)
+        }
         return
       }
       
-      console.log('[PaymentDetail] Setting assignment and completing load:', transformed)
-      setAssignment(transformed)
-      setLoading(false)
-      console.log('[PaymentDetail] State updated - loading=false, assignment set')
+      console.log(`[PaymentDetail-Admin:${componentIdRef.current}] fetchData #${fetchId} - Setting assignment state`)
+      if (isMountedRef.current) {
+        setAssignment(transformed)
+        setLoading(false)
+      }
     } catch (err) {
       if (!isMountedRef.current) {
         console.log('[PaymentDetail] Component unmounted during error handling')
@@ -228,42 +281,44 @@ export default function PaymentDetail() {
       setError(err instanceof Error ? err.message : 'Failed to load payment details')
       setLoading(false)
     }
-  }, [id, context, isReady, navigate])
+  }, [id, context.orgId, context.userId, isReady, navigate])
 
   useEffect(() => {
-    console.log('[PaymentDetail] Effect triggered:', { isReady, id })
+    effectRunCountRef.current++
+    const effectId = effectRunCountRef.current
+    console.log(`[PaymentDetail-Admin:${componentIdRef.current}] Effect #${effectId} - Trigger fetchData`, {
+      timestamp: new Date().toISOString(),
+      isReady, 
+      id,
+      isMounted: isMountedRef.current,
+    })
     if (isReady && id) {
-      console.log('[PaymentDetail] Calling fetchData from effect')
+      console.log(`[PaymentDetail-Admin:${componentIdRef.current}] Effect #${effectId} - Calling fetchData`)
       fetchData()
     } else {
-      console.log('[PaymentDetail] Conditions not met for fetchData:', { isReady, hasId: !!id })
+      console.log(`[PaymentDetail-Admin:${componentIdRef.current}] Effect #${effectId} - Skipping fetchData`, {
+        reason: !isReady ? 'not ready' : 'no id',
+      })
     }
-  }, [isReady, id, fetchData])
-
-  const handleMarkAsPaid = async () => {
-    if (!assignment) return
-    setActionLoading('markPaid')
-    try {
-      // TODO: Implement mark as paid offline
-      console.log('Mark as paid offline:', assignment.id)
-      await fetchData()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to mark as paid')
-    } finally {
-      setActionLoading(null)
-    }
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReady, id])
 
   const handleSendReminder = async () => {
-    if (!assignment) return
-    setActionLoading('reminder')
+    if (!assignment || !isMountedRef.current) return
+    if (isMountedRef.current) {
+      setActionLoading('reminder')
+    }
     try {
       // TODO: Implement send reminder
       console.log('Send reminder:', assignment.id)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send reminder')
+      if (isMountedRef.current) {
+        setError(err instanceof Error ? err.message : 'Failed to send reminder')
+      }
     } finally {
-      setActionLoading(null)
+      if (isMountedRef.current) {
+        setActionLoading(null)
+      }
     }
   }
 
@@ -273,29 +328,61 @@ export default function PaymentDetail() {
     console.log('Download receipt:', assignment.id)
   }
 
+  const handleMarkAsPaid = async () => {
+    if (!assignment || !isMountedRef.current) return
+    if (isMountedRef.current) {
+      setActionLoading('markPaid')
+    }
+    try {
+      // TODO: Implement mark as paid offline
+      console.log('Mark as paid offline:', assignment.id)
+      await fetchData()
+    } catch (err) {
+      if (isMountedRef.current) {
+        setError(err instanceof Error ? err.message : 'Failed to mark as paid')
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setActionLoading(null)
+      }
+    }
+  }
+
   const handleIssueRefund = async () => {
-    if (!assignment) return
-    setActionLoading('refund')
+    if (!assignment || !isMountedRef.current) return
+    if (isMountedRef.current) {
+      setActionLoading('refund')
+    }
     try {
       // TODO: Implement refund
       console.log('Issue refund:', assignment.id)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to issue refund')
+      if (isMountedRef.current) {
+        setError(err instanceof Error ? err.message : 'Failed to issue refund')
+      }
     } finally {
-      setActionLoading(null)
+      if (isMountedRef.current) {
+        setActionLoading(null)
+      }
     }
   }
 
   const handleVoidPayment = async () => {
-    if (!assignment) return
-    setActionLoading('void')
+    if (!assignment || !isMountedRef.current) return
+    if (isMountedRef.current) {
+      setActionLoading('void')
+    }
     try {
       // TODO: Implement void payment
       console.log('Void payment:', assignment.id)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to void payment')
+      if (isMountedRef.current) {
+        setError(err instanceof Error ? err.message : 'Failed to void payment')
+      }
     } finally {
-      setActionLoading(null)
+      if (isMountedRef.current) {
+        setActionLoading(null)
+      }
     }
   }
 
@@ -330,269 +417,223 @@ export default function PaymentDetail() {
 
   const isPaid = assignment.status === 'paid'
   const isUnpaid = assignment.status === 'unpaid' || assignment.status === 'overdue'
-  const contextLine = [
-    assignment.fee?.season?.name,
-    assignment.team?.name,
-  ].filter(Boolean).join(' • ') || 'Payment'
-
-  const statusVariant = 
-    isPaid ? 'success' :
-    assignment.status === 'overdue' ? 'danger' :
-    assignment.status === 'partial' ? 'warning' :
-    'neutral'
+  const receiptNumber = assignment.id.slice(-8).toUpperCase()
+  const paymentDate = assignment.payments && assignment.payments.length > 0
+    ? new Date(assignment.payments[0].created_at)
+    : new Date(assignment.created_at)
 
   return (
     <div className="pa-root">
       <div
         style={{
-          maxWidth: 'calc(var(--pa-space-9) * 22.5)',
+          maxWidth: '1200px',
           margin: '0 auto',
-          padding: 'var(--pa-space-6) var(--pa-space-4)',
+          padding: 'var(--pa-space-8) var(--pa-space-5)',
         }}
       >
-        <AdminPageHeader
-          title="Payment"
-          actions={
-            <div className="pa-flex pa-gap-2">
-              {isUnpaid && (
-                <Button
-                  variant="secondary"
-                  size="compact"
-                  onClick={handleSendReminder}
-                  disabled={actionLoading !== null}
-                >
-                  Send Reminder
-                </Button>
-              )}
-              <Button
-                variant="secondary"
-                size="compact"
-                onClick={handleDownloadReceipt}
-                disabled={!isPaid || actionLoading !== null}
-              >
-                Download Receipt
-              </Button>
-              <Button
-                variant="secondary"
-                size="compact"
-                onClick={() => navigate(getLink('admin.payments.list'))}
-              >
-                Back to Payments
-              </Button>
-            </div>
-          }
-        />
+        {/* Custom Header with Back Button and Title */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(getLink('admin.payments.list'))}
+              className="size-10 flex items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-[var(--org-btn-primary-bg, #137fec)] transition-colors"
+            >
+              <span className="material-symbols-outlined">arrow_back</span>
+            </button>
+            <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+              RECEIPT #{receiptNumber}
+            </h1>
+          </div>
+          <Button
+            variant="blue"
+            onClick={handleDownloadReceipt}
+            disabled={!isPaid || actionLoading !== null}
+            icon="download"
+            className="flex items-center gap-2 uppercase tracking-widest"
+          >
+            DOWNLOAD PDF
+          </Button>
+        </div>
 
         {error && (
-          <Card className="pa-mb-6" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
-            <div className="pa-body-m pa-text-danger" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
+          <Card className="mb-6" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
+            <div className="text-sm font-medium text-red-600 dark:text-red-400" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
               {error}
             </div>
           </Card>
         )}
 
-        {/* Context Line and Status */}
-        <div className="pa-mb-6">
-          <p className="pa-text-sm pa-text-slate-500 dark:pa-text-slate-400 pa-mb-2">{contextLine}</p>
-          <Badge variant={statusVariant}>{assignment.status.toUpperCase()}</Badge>
-        </div>
+        {/* Payment Status Card */}
+        <Card className="mb-12 text-center relative overflow-hidden">
+          <div className="relative z-10">
+            <div className={`inline-flex items-center justify-center size-16 rounded-full mb-6 ${
+              isPaid 
+                ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+                : 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
+            }`}>
+              <span className="material-symbols-outlined text-4xl font-bold">
+                {isPaid ? 'check_circle' : 'pending'}
+              </span>
+            </div>
+            <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-[0.2em] text-sm mb-2">
+              {isPaid ? 'Total Amount Paid' : 'Amount Due'}
+            </p>
+            <h2 className="text-7xl font-black text-slate-900 dark:text-white tracking-tighter mb-4">
+              {formatCurrency(isPaid ? assignment.paid_cents_total : assignment.balance_cents)}
+            </h2>
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-black text-xs uppercase tracking-widest ${
+              isPaid
+                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                : assignment.status === 'partial'
+                ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+            }`}>
+              {isPaid && <span className="size-2 bg-green-500 rounded-full animate-pulse"></span>}
+              STATUS: {assignment.status.toUpperCase()}
+            </div>
+          </div>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--org-btn-primary-bg, #137fec)]/5 -mr-16 -mt-16 rounded-full"></div>
+        </Card>
 
-        <div className="pa-grid pa-grid-cols-1 lg:pa-grid-cols-3 pa-gap-8">
-        {/* Main Content */}
-        <div className="lg:pa-col-span-2 pa-space-y-8">
-          {/* Payment Breakdown */}
-          <Card>
-            <div className="pa-p-6">
-              <h3 className="pa-text-xs pa-font-bold pa-uppercase pa-tracking-[0.2em] pa-text-slate-400 pa-mb-4">
-                PAYMENT BREAKDOWN
-              </h3>
-              <div className="pa-divide-y pa-divide-slate-100 dark:pa-divide-slate-800">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Left Column - Main Content */}
+          <div className="md:col-span-2 space-y-8">
+            {/* Payer and For Section */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white">PAYER</h3>
+                <div className="flex items-center gap-4">
+                  <div className="size-12 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-slate-500">person</span>
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-900 dark:text-white">
+                      {assignment.parent?.display_name || assignment.parent?.email || 'Unknown'}
+                    </p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      {assignment.parent?.email || 'No email'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white">FOR</h3>
+                <div className="flex items-center gap-4">
+                  <div className="size-12 rounded-full border-2 border-[var(--org-btn-primary-bg, #137fec)] overflow-hidden bg-slate-200 dark:bg-slate-800 flex items-center justify-center">
+                    {assignment.athlete ? (
+                      <span className="text-slate-500 text-xs font-bold">
+                        {assignment.athlete.first_name[0]}{assignment.athlete.last_name[0]}
+                      </span>
+                    ) : (
+                      <span className="material-symbols-outlined text-slate-500">person</span>
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-900 dark:text-white">
+                      {assignment.athlete 
+                        ? `${assignment.athlete.first_name} ${assignment.athlete.last_name}`
+                        : 'Unknown Athlete'}
+                    </p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Athlete #{assignment.athlete?.id.slice(-4) || 'N/A'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Itemization */}
+            <Card noPadding>
+              <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center rounded-t-2xl">
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white">ITEMIZATION</h3>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  {paymentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} • {paymentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })}
+                </span>
+              </div>
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
                 {assignment.fee && (
-                  <div className="pa-py-4 pa-flex pa-justify-between">
+                  <div className="p-6 flex justify-between items-center">
                     <div>
-                      <p className="pa-font-bold pa-text-slate-900 dark:pa-text-white">{assignment.fee.title}</p>
-                      {assignment.fee.description && (
-                        <p className="pa-text-xs pa-text-slate-500 dark:pa-text-slate-400 pa-mt-1">
-                          {assignment.fee.description}
-                        </p>
-                      )}
+                      <p className="font-bold text-slate-900 dark:text-white">{assignment.fee.title}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {assignment.fee.description || 'Fee payment'}
+                      </p>
                     </div>
-                    <p className="pa-font-bold pa-text-slate-900 dark:pa-text-white">
+                    <p className="font-bold text-slate-900 dark:text-white">
                       {formatCurrency(assignment.fee.amount_cents)}
                     </p>
                   </div>
                 )}
-                <div className="pa-py-4 pa-bg-slate-50 dark:pa-bg-slate-800/30 pa-flex pa-justify-between pa-items-center">
-                  <p className="pa-font-black pa-text-slate-900 dark:pa-text-white pa-uppercase pa-tracking-widest pa-text-sm">
-                    Grand Total
-                  </p>
-                  <p className="pa-text-2xl pa-font-black pa-text-[var(--org-btn-primary-bg, #137fec)]">
-                    {formatCurrency(isPaid ? assignment.paid_cents_total : assignment.amount_cents)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Who Owes This Payment */}
-          <Card>
-            <div className="pa-p-6">
-              <h3 className="pa-text-xs pa-font-bold pa-uppercase pa-tracking-[0.2em] pa-text-slate-400 pa-mb-4">
-                WHO OWES THIS PAYMENT
-              </h3>
-              <div className="pa-space-y-4">
-                <div>
-                  <p className="pa-text-sm pa-text-slate-500 dark:pa-text-slate-400 pa-mb-1">Guardian</p>
-                  <p className="pa-font-bold pa-text-slate-900 dark:pa-text-white">
-                    {assignment.parent?.display_name || assignment.parent?.email || 'Unknown'}
-                  </p>
-                  <p className="pa-text-sm pa-text-slate-500 dark:pa-text-slate-400">
-                    {assignment.parent?.email || 'No email'}
-                  </p>
-                </div>
-                {assignment.athlete && (
-                  <div>
-                    <p className="pa-text-sm pa-text-slate-500 dark:pa-text-slate-400 pa-mb-1">Athlete</p>
-                    <p className="pa-font-bold pa-text-slate-900 dark:pa-text-white">
-                      {assignment.athlete.first_name} {assignment.athlete.last_name}
+                {assignment.payments && assignment.payments.length > 0 && (
+                  <div className="p-6 bg-slate-50 dark:bg-slate-800/30 flex justify-between items-center">
+                    <p className="font-black text-slate-900 dark:text-white uppercase tracking-widest text-sm">
+                      Grand Total
                     </p>
-                    {assignment.team && (
-                      <p className="pa-text-sm pa-text-slate-500 dark:pa-text-slate-400">
-                        {assignment.team.name}
-                      </p>
-                    )}
+                    <p className="text-2xl font-black text-[var(--org-btn-primary-bg, #137fec)]">
+                      {formatCurrency(assignment.paid_cents_total)}
+                    </p>
                   </div>
                 )}
               </div>
-            </div>
-          </Card>
+            </Card>
+          </div>
 
-          {/* Activity Timeline */}
-          <Card>
-            <div className="pa-p-6">
-              <h3 className="pa-text-xs pa-font-bold pa-uppercase pa-tracking-[0.2em] pa-text-slate-400 pa-mb-4">
-                ACTIVITY
-              </h3>
-              <div className="pa-space-y-3">
-                <div className="pa-flex pa-items-start pa-gap-3">
-                  <div className="pa-size-2 pa-rounded-full pa-bg-[var(--org-btn-primary-bg, #137fec)] pa-mt-2"></div>
-                  <div className="pa-flex-1">
-                    <p className="pa-text-sm pa-font-medium pa-text-slate-900 dark:pa-text-white">
-                      Payment created
+          {/* Right Column - Sidebar */}
+          <div className="space-y-8">
+            {/* Destination */}
+            <div className="space-y-4">
+              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white">DESTINATION</h3>
+              <Card className="p-5 hover:border-[var(--org-btn-primary-bg, #137fec)] transition-all group cursor-pointer">
+                <div className="flex items-center gap-4">
+                  <div className="size-10 bg-[var(--org-btn-primary-bg, #137fec)]/10 text-[var(--org-btn-primary-bg, #137fec)] rounded-lg flex items-center justify-center group-hover:bg-[var(--org-btn-primary-bg, #137fec)] group-hover:text-white transition-colors">
+                    <span className="material-symbols-outlined">sports_soccer</span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-bold text-slate-900 dark:text-white leading-tight">
+                      {assignment.team?.name || assignment.fee?.title || 'Fee'}
                     </p>
-                    <p className="pa-text-xs pa-text-slate-500 dark:pa-text-slate-400">
-                      {new Date(assignment.created_at).toLocaleString()}
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {context.organizationName || 'Organization'}
                     </p>
                   </div>
+                  <span className="material-symbols-outlined text-slate-300 group-hover:text-[var(--org-btn-primary-bg, #137fec)]">open_in_new</span>
                 </div>
-                {assignment.payments && assignment.payments.length > 0 && (
-                  <div className="pa-flex pa-items-start pa-gap-3">
-                    <div className="pa-size-2 pa-rounded-full pa-bg-green-500 pa-mt-2"></div>
-                    <div className="pa-flex-1">
-                      <p className="pa-text-sm pa-font-medium pa-text-slate-900 dark:pa-text-white">
-                        Payment completed
+              </Card>
+            </div>
+
+            {/* Payment Method */}
+            {assignment.payments && assignment.payments.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white">PAYMENT METHOD</h3>
+                <Card className="p-5">
+                  <div className="flex items-center gap-4">
+                    <div className="size-10 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-slate-500">credit_card</span>
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-900 dark:text-white leading-tight">
+                        {assignment.payments[0].stripe_payment_intent_id 
+                          ? `Payment #${assignment.payments[0].stripe_payment_intent_id.slice(-4)}`
+                          : 'Payment Processed'}
                       </p>
-                      <p className="pa-text-xs pa-text-slate-500 dark:pa-text-slate-400">
-                        {new Date(assignment.payments[0].created_at).toLocaleString()}
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Authorization: #{assignment.payments[0].id.slice(-8).toUpperCase()}
                       </p>
                     </div>
                   </div>
-                )}
+                </Card>
               </div>
-            </div>
-          </Card>
-        </div>
+            )}
 
-        {/* Summary Sidebar */}
-        <div className="pa-space-y-6">
-          <Card>
-            <div className="pa-p-6">
-              <div className="pa-text-center pa-mb-6">
-                <p className="pa-text-xs pa-font-bold pa-uppercase pa-tracking-[0.2em] pa-text-slate-400 pa-mb-2">
-                  {isPaid ? 'Amount Paid' : 'Amount Due'}
-                </p>
-                <p className="pa-text-4xl pa-font-black pa-text-slate-900 dark:pa-text-white pa-tracking-tighter">
-                  {formatCurrency(isPaid ? assignment.paid_cents_total : assignment.balance_cents)}
-                </p>
-                <Badge variant={statusVariant} className="pa-mt-3">
-                  {assignment.status.toUpperCase()}
-                </Badge>
-              </div>
-
-              <div className="pa-space-y-4 pa-divide-y pa-divide-slate-100 dark:pa-divide-slate-800">
-                <div className="pa-pt-4">
-                  <p className="pa-text-xs pa-text-slate-500 dark:pa-text-slate-400 pa-mb-1">Status</p>
-                  <p className="pa-text-sm pa-font-medium pa-text-slate-900 dark:pa-text-white">
-                    {assignment.status}
-                  </p>
-                </div>
-                {assignment.due_date && (
-                  <div className="pa-pt-4">
-                    <p className="pa-text-xs pa-text-slate-500 dark:pa-text-slate-400 pa-mb-1">Due Date</p>
-                    <p className="pa-text-sm pa-font-medium pa-text-slate-900 dark:pa-text-white">
-                      {new Date(assignment.due_date).toLocaleDateString()}
-                    </p>
-                  </div>
-                )}
-                <div className="pa-pt-4">
-                  <p className="pa-text-xs pa-text-slate-500 dark:pa-text-slate-400 pa-mb-1">Created</p>
-                  <p className="pa-text-sm pa-font-medium pa-text-slate-900 dark:pa-text-white">
-                    {new Date(assignment.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-                {assignment.fee && (
-                  <div className="pa-pt-4">
-                    <p className="pa-text-xs pa-text-slate-500 dark:pa-text-slate-400 pa-mb-1">Fee Type</p>
-                    <p className="pa-text-sm pa-font-medium pa-text-slate-900 dark:pa-text-white">
-                      {assignment.fee.title}
-                    </p>
-                  </div>
-                )}
-                {assignment.team && (
-                  <div className="pa-pt-4">
-                    <p className="pa-text-xs pa-text-slate-500 dark:pa-text-slate-400 pa-mb-1">Team</p>
-                    <p className="pa-text-sm pa-font-medium pa-text-slate-900 dark:pa-text-white">
-                      {assignment.team.name}
-                    </p>
-                  </div>
-                )}
-                {assignment.season && (
-                  <div className="pa-pt-4">
-                    <p className="pa-text-xs pa-text-slate-500 dark:pa-text-slate-400 pa-mb-1">Season</p>
-                    <p className="pa-text-sm pa-font-medium pa-text-slate-900 dark:pa-text-white">
-                      {assignment.season.name}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {assignment.payments && assignment.payments.length > 0 && (
-                <div className="pa-mt-6 pa-pt-6 pa-border-t pa-border-slate-100 dark:pa-border-slate-800">
-                  <p className="pa-text-xs pa-font-bold pa-uppercase pa-tracking-[0.2em] pa-text-slate-400 pa-mb-3">
-                    PAYMENT METHOD
-                  </p>
-                  <div className="pa-space-y-2">
-                    <p className="pa-text-sm pa-font-medium pa-text-slate-900 dark:pa-text-white">
-                      {assignment.payments[0].stripe_payment_intent_id 
-                        ? `Payment #${assignment.payments[0].stripe_payment_intent_id.slice(-4)}`
-                        : 'Payment Processed'}
-                    </p>
-                    <p className="pa-text-xs pa-text-slate-500 dark:pa-text-slate-400">
-                      Transaction: #{assignment.payments[0].id.slice(-8).toUpperCase()}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <div className="pa-mt-6 pa-pt-6 pa-border-t pa-border-slate-100 dark:pa-border-slate-800 pa-space-y-2">
-                <p className="pa-text-xs pa-font-bold pa-uppercase pa-tracking-[0.2em] pa-text-slate-400 pa-mb-3">
-                  ADMIN ACTIONS
-                </p>
+            {/* Admin Actions Section - Additional data not in Guardian view */}
+            <div className="space-y-4">
+              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white">ADMIN ACTIONS</h3>
+              <Card className="p-6 space-y-2">
                 {isUnpaid && (
                   <Button
                     variant="secondary"
                     size="compact"
-                    className="pa-w-full pa-justify-start"
+                    className="w-full justify-start"
                     onClick={handleMarkAsPaid}
                     disabled={actionLoading !== null}
                   >
@@ -603,7 +644,7 @@ export default function PaymentDetail() {
                   <Button
                     variant="secondary"
                     size="compact"
-                    className="pa-w-full pa-justify-start"
+                    className="w-full justify-start"
                     onClick={handleIssueRefund}
                     disabled={actionLoading !== null}
                   >
@@ -614,7 +655,7 @@ export default function PaymentDetail() {
                   <Button
                     variant="secondary"
                     size="compact"
-                    className="pa-w-full pa-justify-start"
+                    className="w-full justify-start"
                     onClick={handleVoidPayment}
                     disabled={actionLoading !== null}
                   >
@@ -624,17 +665,70 @@ export default function PaymentDetail() {
                 <Button
                   variant="secondary"
                   size="compact"
-                  className="pa-w-full pa-justify-start"
+                  className="w-full justify-start"
                   onClick={handleDownloadReceipt}
                   disabled={!isPaid || actionLoading !== null}
                 >
                   Download Receipt
                 </Button>
-              </div>
+              </Card>
             </div>
-          </Card>
+
+            {/* Additional Info - Team, Season, etc. */}
+            {(assignment.team || assignment.season || assignment.due_date) && (
+              <div className="space-y-4">
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white">DETAILS</h3>
+                <Card className="p-5 space-y-3">
+                  {assignment.team && (
+                    <div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Team</p>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">
+                        {assignment.team.name}
+                      </p>
+                    </div>
+                  )}
+                  {assignment.season && (
+                    <div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Season</p>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">
+                        {assignment.season.name}
+                      </p>
+                    </div>
+                  )}
+                  {assignment.due_date && (
+                    <div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Due Date</p>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">
+                        {new Date(assignment.due_date).toLocaleDateString()}
+                      </p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Created</p>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white">
+                      {new Date(assignment.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </Card>
+              </div>
+            )}
+
+            {/* Contact Registrar */}
+            <Card className="p-6 bg-slate-100 dark:bg-slate-800/30 border-dashed border-slate-300 dark:border-slate-700">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 text-center mb-4">
+                Questions about this payment?
+              </p>
+              <Button
+                variant="secondary"
+                onClick={handleSendReminder}
+                disabled={actionLoading !== null}
+                className="w-full h-10 border-2 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs font-bold tracking-widest uppercase"
+              >
+                CONTACT REGISTRAR
+              </Button>
+            </Card>
+          </div>
         </div>
-      </div>
       </div>
     </div>
   )

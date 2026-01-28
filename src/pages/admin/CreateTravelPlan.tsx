@@ -562,7 +562,7 @@ export default function CreateTravelPlan() {
                 control={control} 
                 rules={{
                     // Optional field, but if place selected, validate coordinates often implies good data
-                    validate: (value, formValues) => {
+                    validate: (_value, formValues) => {
                         if (formValues.venue_place_id && (!formValues.venue_lat || !formValues.venue_lng)) {
                              // This is a soft warning really, maybe we don't block
                              // But it's good to ensure data integrity

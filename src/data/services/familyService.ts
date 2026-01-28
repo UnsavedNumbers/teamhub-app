@@ -410,8 +410,6 @@ export async function updateAthlete(
     }
 
     try {
-        type ChildUpdate = Database['public']['Tables']['athletes']['Update']
-        
         // Map DTO fields to database fields
         const updateData: Record<string, any> = {
             first_name: dto.first_name,
