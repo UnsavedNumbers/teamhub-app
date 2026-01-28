@@ -25,6 +25,7 @@ interface PaymentDisplay {
   fee_title: string
   total_display: string
   paid_display: string
+  remaining_display: string
   status: 'unpaid' | 'partial' | 'paid' | 'waived' | 'overdue'
   created_at: string
 }
@@ -86,6 +87,7 @@ export default function Payments() {
         const raw = assignment as any
         const totalCents = raw.amount_due_cents ?? raw.amount_cents ?? 0
         const paidCents = raw.amount_paid_cents ?? raw.paid_cents_total ?? 0
+        const balanceCents = raw.balance_cents ?? Math.max(0, totalCents - paidCents)
         
         return {
           id: assignment.id,
@@ -93,6 +95,7 @@ export default function Payments() {
           fee_title: assignment.fee?.title ?? 'Fee',
           total_display: formatCurrency(totalCents),
           paid_display: formatCurrency(paidCents),
+          remaining_display: formatCurrency(balanceCents),
           status: assignment.status as PaymentDisplay['status'],
           created_at: assignment.created_at,
         }
@@ -264,13 +267,25 @@ export default function Payments() {
     },
     { id: 'paid_display', label: 'Paid', align: 'right' },
     { 
+      id: 'remaining_display', 
+      label: 'Remaining', 
+      align: 'right',
+      render: (row) => <span className="pa-font-semibold">{row.remaining_display}</span>
+    },
+    { 
       id: 'status', 
       label: 'Status',
       render: (row) => {
         const variant = 
           row.status === 'paid' ? 'success' : 
           row.status === 'partial' ? 'warning' : 'danger'
-        return <Badge variant={variant}>{row.status.toUpperCase()}</Badge>
+        const statusLabel = 
+          row.status === 'paid' ? 'Paid in Full' :
+          row.status === 'partial' ? 'Partially Paid' :
+          row.status === 'waived' ? 'Waived' :
+          row.status === 'overdue' ? 'Overdue' :
+          'Unpaid'
+        return <Badge variant={variant}>{statusLabel}</Badge>
       }
     },
     { 

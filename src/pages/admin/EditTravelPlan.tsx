@@ -390,7 +390,7 @@ export default function EditTravelPlan() {
                         setValue('venue_name', placeName, { shouldValidate: false, shouldDirty: true })
                         setValue('venue_address', address.formatted_address, { shouldValidate: false, shouldDirty: true })
                         // Persist venue coords/place_id so Nearby Amenities refetches for the new location
-                        const loc = placeResult?.geometry?.location as { lat?: () => number; lng?: () => number; lat?: number; lng?: number } | undefined
+                        const loc = placeResult?.geometry?.location as { lat?: () => number; lng?: () => number } | { lat?: number; lng?: number } | undefined
                         const lat = loc && typeof (loc as { lat: () => number }).lat === 'function' ? (loc as { lat: () => number; lng: () => number }).lat() : (loc as { lat?: number })?.lat
                         const lng = loc && typeof (loc as { lng: () => number }).lng === 'function' ? (loc as { lat: () => number; lng: () => number }).lng() : (loc as { lng?: number })?.lng
                         setValue('venue_place_id', placeResult?.place_id ?? '', { shouldValidate: false, shouldDirty: true })
