@@ -17,6 +17,44 @@ const GEMINI_TIMEOUT_MS = 15000 // 15 seconds
 const MAX_RAW_PLACES = 40 // Maximum places to store in raw_places_json
 const MIN_CURATED_ITEMS = 3 // Minimum items in curated list
 const MAX_CURATED_ITEMS = 8 // Maximum items in curated list
+const MAX_PER_CATEGORY = 5 // Cap places per category (3-5)
+const MIN_PER_CATEGORY = 3
+
+// Four curated categories (required by product)
+const CANONICAL_CATEGORIES = [
+    'Pre-Game Food',
+    'Coffee & Quick Stops',
+    'Essentials & Convenience',
+    'Post-Game Hangouts',
+] as const
+type CanonicalCategory = (typeof CANONICAL_CATEGORIES)[number]
+
+/**
+ * Normalize Gemini free-form category to one of the four canonical categories
+ */
+function normalizeCategoryToCanonical(category: string | undefined | null): CanonicalCategory | null {
+    if (!category || typeof category !== 'string') return null
+    const lower = category.toLowerCase().trim()
+    if (lower.includes('pre-game') || lower.includes('pregame') || lower.includes('pre game') || lower.includes('before game') || lower.includes('fast food') || lower.includes('quick food') || lower.includes('casual dining') && !lower.includes('post')) return 'Pre-Game Food'
+    if (lower.includes('coffee') || lower.includes('cafe') || lower.includes('bakery') || lower.includes('quick stop') || lower.includes('grab-and-go') || lower.includes('breakfast')) return 'Coffee & Quick Stops'
+    if (lower.includes('essential') || lower.includes('convenience') || lower.includes('restroom') || lower.includes('pharmacy') || lower.includes('grocery') || lower.includes('store')) return 'Essentials & Convenience'
+    if (lower.includes('post-game') || lower.includes('postgame') || lower.includes('post game') || lower.includes('hangout') || lower.includes('after game') || lower.includes('sit-down') || lower.includes('family-friendly')) return 'Post-Game Hangouts'
+    // Default ambiguous to Pre-Game Food
+    if (lower.includes('food') || lower.includes('restaurant') || lower.includes('meal')) return 'Pre-Game Food'
+    return 'Pre-Game Food'
+}
+
+/**
+ * Infer canonical category from Places API types (for fallback when Gemini fails)
+ */
+function inferCategoryFromTypes(types: string[]): CanonicalCategory {
+    const lower = (types || []).map(t => t.toLowerCase())
+    if (lower.some(t => t.includes('restaurant') || t.includes('food') || t.includes('meal') || t.includes('fast_food'))) return 'Pre-Game Food'
+    if (lower.some(t => t.includes('cafe') || t.includes('coffee') || t.includes('bakery'))) return 'Coffee & Quick Stops'
+    if (lower.some(t => t.includes('convenience') || t.includes('pharmacy') || t.includes('store') || t.includes('supermarket') || t.includes('grocery'))) return 'Essentials & Convenience'
+    return 'Post-Game Hangouts'
+}
+
 const WALKING_SPEED_M_PER_MIN = 80 // ~80 meters per minute walking
 const WALKING_FACTOR = 1.4 // Factor for non-straight-line walking paths
 
@@ -529,12 +567,21 @@ serve(async (req) => {
                 .single()
 
             if (!placesRow?.id) {
-                // Fallback: return raw places as amenities
-                amenities = rawPlaces.slice(0, MAX_CURATED_ITEMS).map(p => ({
-                    place_id: p.place_id,
-                    name: p.name,
-                    walking_minutes: p.walking_minutes,
-                }))
+                // Fallback: group raw places by inferred category
+                const byCategory = new Map<CanonicalCategory, AmenityItem[]>()
+                for (const cat of CANONICAL_CATEGORIES) byCategory.set(cat, [])
+                for (const place of rawPlaces) {
+                    const cat = inferCategoryFromTypes(place.types)
+                    const arr = byCategory.get(cat)!
+                    if (arr.length >= MAX_PER_CATEGORY) continue
+                    arr.push({
+                        place_id: place.place_id,
+                        name: place.name,
+                        walking_minutes: place.walking_minutes,
+                        category: cat,
+                    })
+                }
+                amenities = Array.from(byCategory.values()).flat()
                 return new Response(
                     JSON.stringify({ amenities, cached: false, fallback: true }),
                     { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -573,44 +620,49 @@ serve(async (req) => {
                     // Call Gemini API
                     const geminiApiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY')
                     if (!geminiApiKey) {
-                        // Fallback: return raw places without AI descriptions
-                        amenities = rawPlaces.slice(0, MAX_CURATED_ITEMS).map(p => ({
-                            place_id: p.place_id,
-                            name: p.name,
-                            walking_minutes: p.walking_minutes,
-                        }))
+                        // Fallback: group raw places by inferred category (no AI descriptions)
+                        const byCategory = new Map<CanonicalCategory, AmenityItem[]>()
+                        for (const cat of CANONICAL_CATEGORIES) byCategory.set(cat, [])
+                        for (const place of rawPlaces) {
+                            const cat = inferCategoryFromTypes(place.types)
+                            const arr = byCategory.get(cat)!
+                            if (arr.length >= MAX_PER_CATEGORY) continue
+                            arr.push({
+                                place_id: place.place_id,
+                                name: place.name,
+                                walking_minutes: place.walking_minutes,
+                                category: cat,
+                            })
+                        }
+                        amenities = Array.from(byCategory.values()).flat()
                     } else {
                         try {
-                            // Build Gemini prompt
+                            // Build Gemini prompt: four curated categories, one place per category, 3-5 per category
                             const placesListForPrompt = rawPlaces.slice(0, 20).map(p =>
                                 `- ${p.name} (${p.types.slice(0, 3).join(', ')})${p.rating ? `, rating: ${p.rating}` : ''}, ~${p.walking_minutes} min walk`
                             ).join('\n')
 
-                            const prompt = `You are helping families at a youth sports ${event_type}.
-Event time: ${timeWindow} (${event_start_time})
+                            const prompt = `You are helping families at a youth sports ${event_type}. Event start time: ${event_start_time}. Time of day: ${timeWindow}.
 
-Here are nearby places within walking distance of the venue:
+Nearby places (use EXACT names from this list):
 ${placesListForPrompt}
 
-Create a curated list of ${MIN_CURATED_ITEMS}-${MAX_CURATED_ITEMS} places that would be most useful for families with children at this sports event. 
-Consider:
-- Quick food options that work for pre-game or post-game meals
-- Coffee/drinks for parents
-- Convenience stores for last-minute supplies (snacks, water, sunscreen)
-- Family-friendly options (avoid bars, nightclubs, adult-only venues)
-- Walkability (prefer closer options)
+RULES:
+- Assign each place to exactly ONE of these four categories. Use the category names exactly as written:
+  1. "Pre-Game Food" — Restaurants suitable for teams and families; fast, casual dining. Exclude bars, nightlife, fine dining.
+  2. "Coffee & Quick Stops" — Coffee shops, cafes, bakeries, grab-and-go breakfast.
+  3. "Essentials & Convenience" — Restrooms (if you know of public facilities), convenience stores, pharmacies, grocery or big-box essentials.
+  4. "Post-Game Hangouts" — Casual sit-down restaurants, family-friendly spots, places suitable for groups after games.
+- Put each place in only ONE category. No duplicate places across categories.
+- Limit to 3–5 places per category. Rank by relevance (walkability, family-friendly, practical).
+- Favor walkable, practical options. Avoid bars, nightclubs, adult-only venues.
+- For each place provide a one-sentence description (e.g. "Popular with teams before games", "Quick coffee and pastries").
 
-For each place, provide:
-1. The exact name from the list
-2. A category (e.g., "Pre-game food", "Coffee for parents", "Quick snacks", "Essentials")
-3. A one-sentence description explaining why it's a good option for families at a sports event
-
-Respond ONLY with a valid JSON array in this exact format:
+Respond ONLY with a valid JSON array. Each object: "name" (exact name from the list), "category" (one of the four above, exactly), "description" (one sentence).
 [
-  {"name": "Place Name", "category": "Category", "description": "One sentence description."}
+  {"name": "Place Name", "category": "Pre-Game Food", "description": "One sentence."}
 ]
-
-Do not include any other text or markdown, just the JSON array.`
+No other text or markdown.`
 
                             const geminiResponse = await fetchWithTimeout(
                                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`,
@@ -623,8 +675,8 @@ Do not include any other text or markdown, just the JSON array.`
                                     body: JSON.stringify({
                                         contents: [{ parts: [{ text: prompt }] }],
                                         generationConfig: {
-                                            maxOutputTokens: 500,
-                                            temperature: 0.7,
+                                            maxOutputTokens: 800,
+                                            temperature: 0.5,
                                         },
                                     }),
                                 },
@@ -649,19 +701,29 @@ Do not include any other text or markdown, just the JSON array.`
 
                                         const parsed = JSON.parse(jsonStr)
                                         if (Array.isArray(parsed)) {
-                                            // Match Gemini output with raw places to get place_id and walking_minutes
-                                            amenities = parsed.map((item: any) => {
+                                            const seenPlaceIds = new Set<string>()
+                                            const byCategory = new Map<CanonicalCategory, AmenityItem[]>()
+                                            for (const cat of CANONICAL_CATEGORIES) byCategory.set(cat, [])
+
+                                            for (const item of parsed) {
                                                 const matchedPlace = rawPlaces.find(p =>
                                                     p.name.toLowerCase() === item.name?.toLowerCase()
                                                 )
-                                                return {
+                                                const placeKey = matchedPlace?.place_id || item.name || ''
+                                                const canonical = normalizeCategoryToCanonical(item.category)
+                                                if (!canonical || !item.name || seenPlaceIds.has(placeKey)) continue
+                                                const arr = byCategory.get(canonical)!
+                                                if (arr.length >= MAX_PER_CATEGORY) continue
+                                                seenPlaceIds.add(placeKey)
+                                                arr.push({
                                                     place_id: matchedPlace?.place_id || '',
                                                     name: item.name || matchedPlace?.name || 'Unknown',
                                                     walking_minutes: matchedPlace?.walking_minutes || 0,
-                                                    category: item.category || undefined,
+                                                    category: canonical,
                                                     description: item.description || undefined,
-                                                }
-                                            }).filter((item: AmenityItem) => item.name)
+                                                })
+                                            }
+                                            amenities = Array.from(byCategory.values()).flat()
 
                                             geminiParsed = true
 
@@ -685,23 +747,25 @@ Do not include any other text or markdown, just the JSON array.`
                                 }
                             }
 
-                            // Fallback if Gemini failed (mitigation #10 - thin list padding)
+                            // Fallback if Gemini failed: group raw places by inferred category (accordion-friendly)
                             if (!geminiParsed || amenities.length < MIN_CURATED_ITEMS) {
-                                console.log('Using fallback for thin/failed Gemini list')
+                                console.log('Using fallback: grouping raw places by category')
 
-                                // Pad with raw places up to MIN_CURATED_ITEMS
-                                const existingIds = new Set(amenities.map(a => a.place_id))
+                                const byCategory = new Map<CanonicalCategory, AmenityItem[]>()
+                                for (const cat of CANONICAL_CATEGORIES) byCategory.set(cat, [])
+
                                 for (const place of rawPlaces) {
-                                    if (amenities.length >= MAX_CURATED_ITEMS) break
-                                    if (!existingIds.has(place.place_id)) {
-                                        amenities.push({
-                                            place_id: place.place_id,
-                                            name: place.name,
-                                            walking_minutes: place.walking_minutes,
-                                        })
-                                        existingIds.add(place.place_id)
-                                    }
+                                    const cat = inferCategoryFromTypes(place.types)
+                                    const arr = byCategory.get(cat)!
+                                    if (arr.length >= MAX_PER_CATEGORY) continue
+                                    arr.push({
+                                        place_id: place.place_id,
+                                        name: place.name,
+                                        walking_minutes: place.walking_minutes,
+                                        category: cat,
+                                    })
                                 }
+                                amenities = Array.from(byCategory.values()).flat()
                             }
 
                             // Store Gemini results
@@ -735,12 +799,21 @@ Do not include any other text or markdown, just the JSON array.`
                                 },
                             } as any)
 
-                            // Fallback: return raw places without AI descriptions
-                            amenities = rawPlaces.slice(0, MAX_CURATED_ITEMS).map(p => ({
-                                place_id: p.place_id,
-                                name: p.name,
-                                walking_minutes: p.walking_minutes,
-                            }))
+                            // Fallback: group raw places by inferred category (no AI descriptions)
+                            const byCategory = new Map<CanonicalCategory, AmenityItem[]>()
+                            for (const cat of CANONICAL_CATEGORIES) byCategory.set(cat, [])
+                            for (const place of rawPlaces) {
+                                const cat = inferCategoryFromTypes(place.types)
+                                const arr = byCategory.get(cat)!
+                                if (arr.length >= MAX_PER_CATEGORY) continue
+                                arr.push({
+                                    place_id: place.place_id,
+                                    name: place.name,
+                                    walking_minutes: place.walking_minutes,
+                                    category: cat,
+                                })
+                            }
+                            amenities = Array.from(byCategory.values()).flat()
                         }
                     }
                 }

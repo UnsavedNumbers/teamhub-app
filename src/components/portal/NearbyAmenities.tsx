@@ -1,12 +1,12 @@
 /**
  * NearbyAmenities Component
- * 
- * Displays AI-curated nearby amenities (food, coffee, convenience) for event venues.
- * Shows walking distance, category grouping, and short descriptions.
- * Handles loading, error, and fallback states gracefully.
+ *
+ * Accordion-based display of four curated categories: Pre-Game Food, Coffee & Quick Stops,
+ * Essentials & Convenience, Post-Game Hangouts. Context-aware default expanded section.
+ * Handles loading, error, and fallback (unranked by category) gracefully.
  */
 
-import { useMemo } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { useNearbyAmenities, useRefreshNearbyAmenities, canShowNearbyAmenities } from '../../hooks/useNearbyAmenities'
 import { useUserContext } from '../../hooks/useUserContext'
 import { sanitizeVenueContent } from '../../utils/sanitizeVenueContent'
@@ -14,6 +14,16 @@ import Card from './Card'
 import Button from './Button'
 import Icon from './Icon'
 import type { AmenityItem } from '../../data/services/nearbyAmenitiesService'
+
+/** Four curated categories (must match Edge Function canonical names) */
+const CURATED_CATEGORIES = [
+  { id: 'Pre-Game Food', name: 'Pre-Game Food', descriptor: 'Fast, family-friendly meals', icon: 'restaurant' as const },
+  { id: 'Coffee & Quick Stops', name: 'Coffee & Quick Stops', descriptor: 'Coffee, cafes & grab-and-go', icon: 'local_cafe' as const },
+  { id: 'Essentials & Convenience', name: 'Essentials & Convenience', descriptor: 'Restrooms, stores & pharmacies', icon: 'shopping_bag' as const },
+  { id: 'Post-Game Hangouts', name: 'Post-Game Hangouts', descriptor: 'Casual spots for groups', icon: 'place' as const },
+] as const
+
+type CuratedCategoryId = (typeof CURATED_CATEGORIES)[number]['id']
 
 interface NearbyAmenitiesProps {
   latitude?: number | null
@@ -34,20 +44,30 @@ function sanitizeDescription(description: string | undefined | null): string {
 }
 
 /**
- * Group amenities by category
+ * Normalize API category to one of the four curated category ids (for display/accordion)
  */
-function groupAmenitiesByCategory(amenities: AmenityItem[]): Map<string, AmenityItem[]> {
-  const groups = new Map<string, AmenityItem[]>()
-  
+function normalizeToCuratedCategory(category: string | undefined | null): CuratedCategoryId | null {
+  if (!category) return null
+  const t = category.trim()
+  const found = CURATED_CATEGORIES.find(c => c.id === t || c.id.toLowerCase() === t.toLowerCase())
+  return found ? found.id : null
+}
+
+/**
+ * Group amenities by the four curated categories only; preserves category order; hides uncategorized
+ */
+function groupByCuratedCategories(amenities: AmenityItem[]): Array<{ category: typeof CURATED_CATEGORIES[number]; items: AmenityItem[] }> {
+  const map = new Map<CuratedCategoryId, AmenityItem[]>()
+  for (const cat of CURATED_CATEGORIES) map.set(cat.id, [])
+
   for (const amenity of amenities) {
-    const category = amenity.category || 'Nearby'
-    if (!groups.has(category)) {
-      groups.set(category, [])
-    }
-    groups.get(category)!.push(amenity)
+    const catId = normalizeToCuratedCategory(amenity.category)
+    if (catId && map.has(catId)) map.get(catId)!.push(amenity)
   }
-  
-  return groups
+
+  return CURATED_CATEGORIES
+    .map(category => ({ category, items: map.get(category.id)! }))
+    .filter(entry => entry.items.length > 0)
 }
 
 /**
@@ -64,23 +84,39 @@ function getMapsUrl(placeId: string | undefined, name: string): string | null {
 }
 
 /**
- * Category icon mapping
+ * Category icon mapping (for AmenityRow)
  */
 function getCategoryIcon(category: string): string {
   const lowerCategory = category.toLowerCase()
-  if (lowerCategory.includes('food') || lowerCategory.includes('meal') || lowerCategory.includes('restaurant')) {
-    return 'restaurant'
-  }
-  if (lowerCategory.includes('coffee') || lowerCategory.includes('drinks')) {
-    return 'local_cafe'
-  }
-  if (lowerCategory.includes('snack') || lowerCategory.includes('convenience') || lowerCategory.includes('essential')) {
-    return 'shopping_bag'
-  }
-  if (lowerCategory.includes('restroom')) {
-    return 'wc'
-  }
+  if (lowerCategory.includes('food') || lowerCategory.includes('meal') || lowerCategory.includes('restaurant')) return 'restaurant'
+  if (lowerCategory.includes('coffee') || lowerCategory.includes('drinks') || lowerCategory.includes('cafe')) return 'local_cafe'
+  if (lowerCategory.includes('snack') || lowerCategory.includes('convenience') || lowerCategory.includes('essential')) return 'shopping_bag'
+  if (lowerCategory.includes('restroom')) return 'wc'
   return 'place'
+}
+
+/**
+ * Default expanded accordion key from event start time (context-aware)
+ * Before event start → Pre-Game Food; Morning events → Coffee & Quick Stops; After event end → Post-Game Hangouts
+ */
+function getDefaultExpandedKey(eventStartTime: string, categoryIdsWithItems: CuratedCategoryId[]): CuratedCategoryId | null {
+  if (categoryIdsWithItems.length === 0) return null
+  const now = Date.now()
+  let eventStart: number
+  try {
+    eventStart = new Date(eventStartTime).getTime()
+  } catch {
+    return categoryIdsWithItems[0]
+  }
+  const hour = new Date(eventStartTime).getUTCHours()
+
+  if (now < eventStart) {
+    return categoryIdsWithItems.includes('Pre-Game Food') ? 'Pre-Game Food' : categoryIdsWithItems[0]
+  }
+  if (hour >= 5 && hour < 11) {
+    return categoryIdsWithItems.includes('Coffee & Quick Stops') ? 'Coffee & Quick Stops' : categoryIdsWithItems[0]
+  }
+  return categoryIdsWithItems.includes('Post-Game Hangouts') ? 'Post-Game Hangouts' : categoryIdsWithItems[0]
 }
 
 const TITLE_BY_VARIANT = {
@@ -179,9 +215,18 @@ export default function NearbyAmenities({
     return null
   }
 
-  // Group amenities by category
-  const groupedAmenities = groupAmenitiesByCategory(amenities)
-  const hasMultipleGroups = groupedAmenities.size > 1
+  const groupedByCategory = useMemo(() => groupByCuratedCategories(amenities), [amenities])
+  const categoryIdsWithItems = useMemo(() => groupedByCategory.map(g => g.category.id), [groupedByCategory])
+  const defaultExpanded = useMemo(
+    () => getDefaultExpandedKey(eventStartTime, categoryIdsWithItems),
+    [eventStartTime, categoryIdsWithItems]
+  )
+  const [expandedKey, setExpandedKey] = useState<CuratedCategoryId | null>(defaultExpanded)
+  const headerRefs = useRef<Map<CuratedCategoryId, HTMLButtonElement | null>>(new Map())
+
+  useEffect(() => {
+    setExpandedKey(prev => (prev && categoryIdsWithItems.includes(prev) ? prev : defaultExpanded))
+  }, [defaultExpanded, categoryIdsWithItems])
 
   const handleRefresh = () => {
     refreshMutation.mutate({
@@ -236,36 +281,114 @@ export default function NearbyAmenities({
           {/* Fallback notice */}
           {isFallback && (
             <p className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 rounded">
-              AI descriptions temporarily unavailable. Showing nearby places.
+              AI descriptions temporarily unavailable. Showing nearby places by category.
             </p>
           )}
 
-          {/* Amenities list */}
-          {hasMultipleGroups ? (
-            <div className="space-y-4">
-              {Array.from(groupedAmenities.entries()).map(([category, items]) => (
-                <div key={category}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-[var(--org-btn-primary-bg,#137fec)]/10 text-[var(--org-btn-primary-bg,#137fec)] dark:bg-[var(--org-btn-primary-bg,#137fec)]/20">
+          {/* Accordion: one section per category that has items; fallback to flat list if none match */}
+          {groupedByCategory.length > 0 ? (
+          <div className="space-y-1" role="region" aria-label="Nearby amenities by category">
+            {groupedByCategory.map(({ category, items }, index) => {
+              const isExpanded = expandedKey === category.id
+              const panelId = `nearby-amenities-panel-${category.id.replace(/\s+/g, '-')}`
+              const headerId = `nearby-amenities-header-${category.id.replace(/\s+/g, '-')}`
+
+              const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setExpandedKey(prev => (prev === category.id ? null : category.id))
+                  return
+                }
+                if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                  e.preventDefault()
+                  const next = groupedByCategory[index + 1]
+                  if (next) {
+                    headerRefs.current.get(next.category.id)?.focus()
+                    setExpandedKey(next.category.id)
+                  }
+                }
+                if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                  e.preventDefault()
+                  const prev = groupedByCategory[index - 1]
+                  if (prev) {
+                    headerRefs.current.get(prev.category.id)?.focus()
+                    setExpandedKey(prev.category.id)
+                  }
+                }
+                if (e.key === 'Home') {
+                  e.preventDefault()
+                  const first = groupedByCategory[0]
+                  if (first) {
+                    headerRefs.current.get(first.category.id)?.focus()
+                    setExpandedKey(first.category.id)
+                  }
+                }
+                if (e.key === 'End') {
+                  e.preventDefault()
+                  const last = groupedByCategory[groupedByCategory.length - 1]
+                  if (last) {
+                    headerRefs.current.get(last.category.id)?.focus()
+                    setExpandedKey(last.category.id)
+                  }
+                }
+              }
+
+              return (
+                <div
+                  key={category.id}
+                  className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden bg-white dark:bg-slate-900/50"
+                >
+                  <h4>
+                    <button
+                      ref={el => headerRefs.current.set(category.id, el)}
+                      type="button"
+                      id={headerId}
+                      aria-expanded={isExpanded}
+                      aria-controls={panelId}
+                      onClick={() => setExpandedKey(prev => (prev === category.id ? null : category.id))}
+                      onKeyDown={handleKeyDown}
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg,#137fec)] focus:ring-inset"
+                    >
                       <Icon
-                        name={getCategoryIcon(category)}
-                        size="text-sm"
+                        name={category.icon}
+                        size="text-lg"
+                        className="flex-shrink-0 text-[var(--org-btn-primary-bg,#137fec)]"
                       />
-                      {category}
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    {items.map((amenity, index) => (
-                      <AmenityRow key={`${amenity.place_id}-${index}`} amenity={amenity} category={category} />
-                    ))}
+                      <span className="flex-1 min-w-0">
+                        <span className="font-bold text-slate-900 dark:text-white block">{category.name}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">{category.descriptor}</span>
+                      </span>
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400 tabular-nums">
+                        {items.length}
+                      </span>
+                      <Icon
+                        name="expand_more"
+                        size="text-xl"
+                        className={`flex-shrink-0 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                      />
+                    </button>
+                  </h4>
+                  <div
+                    id={panelId}
+                    role="region"
+                    aria-labelledby={headerId}
+                    hidden={!isExpanded}
+                    className={isExpanded ? '' : 'hidden'}
+                  >
+                    <div className="border-t border-slate-200 dark:border-slate-700 px-4 py-3 space-y-2">
+                      {items.map((amenity, i) => (
+                        <AmenityRow key={`${amenity.place_id}-${i}`} amenity={amenity} category={category.id} />
+                      ))}
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
+              )
+            })}
+          </div>
           ) : (
             <div className="space-y-2">
-              {amenities.map((amenity, index) => (
-                <AmenityRow key={`${amenity.place_id}-${index}`} amenity={amenity} category={amenity.category} />
+              {amenities.map((amenity, i) => (
+                <AmenityRow key={`${amenity.place_id}-${i}`} amenity={amenity} category={amenity.category} />
               ))}
             </div>
           )}
