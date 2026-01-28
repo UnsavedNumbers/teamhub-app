@@ -24,14 +24,22 @@ interface FeeAssignmentRow {
   fee?: { title: string | null; description: string | null } | null
 }
 
-function buildCorsHeaders(_req: Request) {
-  // Allow-all CORS (works only if frontend does NOT use cookies / credentials: "include")
+/**
+ * CORS: Allow any origin by reflecting Origin. This works with Authorization headers
+ * as long as you are NOT using cookies/credentials in fetch().
+ */
+function buildCorsHeaders(req: Request) {
+  const origin = req.headers.get("origin") ?? "*"
+  const reqHeaders =
+    req.headers.get("access-control-request-headers") ??
+    "authorization, apikey, content-type, x-client-info, x-requested-with, accept, prefer, range"
+
   return {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers":
-      "authorization, apikey, content-type, x-client-info, x-requested-with, accept, prefer, range",
+    "Access-Control-Allow-Headers": reqHeaders,
     "Access-Control-Max-Age": "86400",
+    "Vary": "Origin",
   }
 }
 
@@ -83,6 +91,7 @@ serve(async (req) => {
 
   let body: any
   try {
+    // NOTE: This is NOT a Stripe webhook endpoint, so req.json() is fine here.
     body = await req.json()
   } catch (_err) {
     return json(req, { error: "Invalid JSON" }, 400)
@@ -125,9 +134,7 @@ serve(async (req) => {
   try {
     const { data: assignments, error: assignmentError } = await supabase
       .from("fee_assignments")
-      .select(
-        `id, fee_id, org_id, parent_id, amount_cents, balance_cents, currency, fee:fees(title, description)`,
-      )
+      .select(`id, fee_id, org_id, parent_id, amount_cents, balance_cents, currency, fee:fees(title, description)`)
       .in("id", feeAssignmentIds)
       .eq("parent_id", user.id)
 
@@ -190,7 +197,10 @@ serve(async (req) => {
       const eligibleAssignments = assignments.filter((a) =>
         !discountRow.applies_to_fee_id || a.fee_id === discountRow.applies_to_fee_id
       )
-      const eligibleSubtotal = eligibleAssignments.reduce((sum, a) => sum + (a.balance_cents ?? a.amount_cents ?? 0), 0)
+      const eligibleSubtotal = eligibleAssignments.reduce(
+        (sum, a) => sum + (a.balance_cents ?? a.amount_cents ?? 0),
+        0,
+      )
       if (eligibleSubtotal <= 0) {
         return json(req, { error: "Discount not applicable" }, 400)
       }
@@ -267,31 +277,27 @@ serve(async (req) => {
 
     if (chargeError || !createdCharges) throw chargeError
 
-    const { error: itemError } = await supabase
-      .from("checkout_session_items")
-      .insert(
-        createdCharges.map((c) => ({
-          checkout_session_id: checkout.id,
-          charge_id: c.id,
-          fee_assignment_id: c.fee_assignment_id,
-          amount_cents: c.amount_cents,
-        })),
-      )
+    const { error: itemError } = await supabase.from("checkout_session_items").insert(
+      createdCharges.map((c) => ({
+        checkout_session_id: checkout.id,
+        charge_id: c.id,
+        fee_assignment_id: c.fee_assignment_id,
+        amount_cents: c.amount_cents,
+      })),
+    )
     if (itemError) throw itemError
 
     if (discount && discountAmount > 0) {
-      const { error: redemptionError } = await supabase
-        .from("discount_redemptions")
-        .insert(
-          adjustedCharges
-            .filter((c) => c.discount_applied > 0)
-            .map((c) => ({
-              discount_code_id: discount.id,
-              fee_assignment_id: c.fee_assignment_id,
-              redeemed_by_parent_id: user.id,
-              amount_cents_applied: c.discount_applied,
-            })),
-        )
+      const { error: redemptionError } = await supabase.from("discount_redemptions").insert(
+        adjustedCharges
+          .filter((c) => c.discount_applied > 0)
+          .map((c) => ({
+            discount_code_id: discount.id,
+            fee_assignment_id: c.fee_assignment_id,
+            redeemed_by_parent_id: user.id,
+            amount_cents_applied: c.discount_applied,
+          })),
+      )
       if (redemptionError) throw redemptionError
     }
 
@@ -318,14 +324,12 @@ serve(async (req) => {
       return json(req, { error: "Organization not found" }, 404)
     }
 
-    // Build Stripe checkout session parameters
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: "payment",
       payment_method_types: ["card"],
       line_items: lineItems,
       client_reference_id: checkout.id,
       metadata: {
-        // This is Stripe session metadata (NOT PaymentIntent metadata unless you also set payment_intent_data.metadata)
         checkout_session_id: checkout.id,
         parent_id: user.id,
         organization_id: organizationId,
@@ -333,19 +337,16 @@ serve(async (req) => {
       },
       success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${cancelUrl}?session_id={CHECKOUT_SESSION_ID}`,
-    }
-
-    // OPTIONAL but recommended: ensure PaymentIntent ALSO gets your internal ids
-    // so payment_intent.* webhooks can resolve your checkout reliably.
-    sessionParams.payment_intent_data = {
-      metadata: {
-        checkout_session_id: checkout.id,
-        parent_id: user.id,
-        organization_id: organizationId,
+      payment_intent_data: {
+        metadata: {
+          checkout_session_id: checkout.id,
+          parent_id: user.id,
+          organization_id: organizationId,
+        },
       },
     }
 
-    // Route to organization's connected account if available
+    // Route to connected account (destination charge)
     if (org.payout_account_id && org.payouts_enabled && org.billing_mode === "platform_facilitated") {
       const platformFeeCents = Math.floor(totalCents * 0.029) // example fee
       sessionParams.payment_intent_data = {
@@ -360,10 +361,7 @@ serve(async (req) => {
         },
       }
 
-      await supabase
-        .from("checkout_sessions")
-        .update({ platform_fee_cents: platformFeeCents })
-        .eq("id", checkout.id)
+      await supabase.from("checkout_sessions").update({ platform_fee_cents: platformFeeCents }).eq("id", checkout.id)
     }
 
     try {
@@ -379,10 +377,7 @@ serve(async (req) => {
 
       return json(req, { checkout_session_url: stripeSession.url, session_id: stripeSession.id }, 200)
     } catch (stripeError: any) {
-      await supabase
-        .from("checkout_sessions")
-        .update({ status: "failed" })
-        .eq("id", checkout.id)
+      await supabase.from("checkout_sessions").update({ status: "failed" }).eq("id", checkout.id)
 
       await logError(
         supabase,
@@ -394,12 +389,10 @@ serve(async (req) => {
       return json(req, { error: "Payment processing failed. Please try again or contact support." }, 500)
     }
   } catch (err: any) {
-    await logError(
-      supabase,
-      organizationId,
-      err?.message || "parent checkout error",
-      { error: err?.toString?.() ?? String(err), body },
-    )
+    await logError(supabase, organizationId, err?.message || "parent checkout error", {
+      error: err?.toString?.() ?? String(err),
+      body,
+    })
     return json(req, { error: err?.message || "Internal error" }, 500)
   }
 })
