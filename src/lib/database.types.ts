@@ -2361,6 +2361,7 @@ export type Database = {
           feature_type: string
           id: string
           is_removable: boolean
+          is_system_feature: boolean
           is_toggleable: boolean
           lock_reason: string | null
           rollout_status: string | null
@@ -2376,6 +2377,7 @@ export type Database = {
           feature_type: string
           id?: string
           is_removable?: boolean
+          is_system_feature?: boolean
           is_toggleable?: boolean
           lock_reason?: string | null
           rollout_status?: string | null
@@ -2391,6 +2393,7 @@ export type Database = {
           feature_type?: string
           id?: string
           is_removable?: boolean
+          is_system_feature?: boolean
           is_toggleable?: boolean
           lock_reason?: string | null
           rollout_status?: string | null
@@ -8044,6 +8047,7 @@ export type Database = {
           integrations: string[] | null
           is_quantifiable: boolean | null
           is_removable: boolean | null
+          is_system_feature: boolean | null
           is_toggleable: boolean | null
           lock_reason: string | null
           rollout_status: string | null
@@ -8068,6 +8072,7 @@ export type Database = {
           integrations?: never
           is_quantifiable?: never
           is_removable?: boolean | null
+          is_system_feature?: boolean | null
           is_toggleable?: boolean | null
           lock_reason?: string | null
           rollout_status?: string | null
@@ -8092,6 +8097,7 @@ export type Database = {
           integrations?: never
           is_quantifiable?: never
           is_removable?: boolean | null
+          is_system_feature?: boolean | null
           is_toggleable?: boolean | null
           lock_reason?: string | null
           rollout_status?: string | null

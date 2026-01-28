@@ -184,7 +184,7 @@ export default function OrganizationDetail() {
             ? 'admin_suspend_organization'
             : 'admin_reset_mock_organization'
 
-      const { data, error: rpcError } = await supabase.rpc(rpcName, {
+      const { data, error: rpcError } = await supabase.rpc(rpcName as any, {
         target_org_id: organization.id,
         reason,
       })

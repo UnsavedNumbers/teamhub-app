@@ -212,9 +212,6 @@ otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
 
-[functions.notification-worker]
-verify_jwt = false
-
 # Use a production-ready SMTP server
 # [auth.email.smtp]
 # enabled = true
@@ -391,6 +388,9 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 verify_jwt = false
 
 [functions.admin-create-fee]
+verify_jwt = false
+
+[functions.admin-create-user]
 verify_jwt = false
 
 [functions.billing-create-checkout-session]

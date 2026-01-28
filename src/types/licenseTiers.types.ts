@@ -87,6 +87,7 @@ export interface FeatureEntitlement {
   is_toggleable?: boolean // If false, feature status cannot be changed
   is_removable?: boolean // If false, feature cannot be deleted or removed from tiers
   lock_reason?: string | null // Explanation for why feature is locked
+  is_system_feature?: boolean // If true, always available for every license tier (including new tiers)
 }
 
 /**
@@ -105,6 +106,7 @@ export interface FeatureEntitlementWithCounts extends FeatureEntitlement {
   is_toggleable?: boolean // If false, feature status cannot be changed (inherited from FeatureEntitlement)
   is_removable?: boolean // If false, feature cannot be deleted or removed from tiers (inherited from FeatureEntitlement)
   lock_reason?: string | null // Explanation for why feature is locked (inherited from FeatureEntitlement)
+  is_system_feature?: boolean // If true, always available for every license tier (inherited from FeatureEntitlement)
 }
 
 /**

@@ -18,20 +18,35 @@ async function simulateDelay(): Promise<void> {
   }
 }
 
+export interface GetSeasonsOptions {
+  activeOnly?: boolean
+}
+
 export async function getSeasons(
-  context: UserContext
+  context: UserContext,
+  options: GetSeasonsOptions = {}
 ): Promise<{ data: Season[]; error: Error | null }> {
   if (USE_FAKE_DATA) {
     await simulateDelay()
-    return { data: getSeasonsForOrg(context.orgId), error: null }
+    const allSeasons = getSeasonsForOrg(context.orgId)
+    if (options.activeOnly) {
+      return { data: allSeasons.filter(s => s.is_active), error: null }
+    }
+    return { data: allSeasons, error: null }
   }
 
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('seasons')
       .select('*')
       .eq('org_id', context.orgId)
-      .order('start_date', { ascending: false })
+
+    // Filter by active status if requested
+    if (options.activeOnly) {
+      query = query.eq('is_active', true)
+    }
+
+    const { data, error } = await query.order('start_date', { ascending: false })
 
     if (error) {
       console.error('[seasonsService] Supabase error getting seasons:', {

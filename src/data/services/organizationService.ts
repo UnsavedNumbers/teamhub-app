@@ -51,7 +51,15 @@ export async function getOrganizationDetails(orgId: string): Promise<{ data: Org
 
         const { data: rawData, error } = await supabase
             .from('organizations')
-            .select('*')
+            .select(`
+                *,
+                license_status,
+                license_plan,
+                license_trial_ends_at,
+                license_current_period_end,
+                stripe_customer_id,
+                payout_account_id
+            `)
             .eq('id', orgId)
             .single()
 

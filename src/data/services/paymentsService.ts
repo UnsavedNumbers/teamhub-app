@@ -36,6 +36,8 @@ import { buildFeeAssignmentQuery } from './queryHelpers'
 import { normalizeSupabaseResponse } from './responseHelpers'
 import { classifySupabaseError } from '../../utils/supabaseErrorHandler'
 
+const supabaseAny = supabase as any
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -1311,9 +1313,52 @@ export async function sendPaymentReminder(
             return { data: null, error: new Error('Fee assignment not found') }
         }
 
-        // TODO: Integrate with email service to send reminder
-        // For now, we'll just return success
-        // In production, this would call an email service or trigger a webhook
+        // Get parent user email and fee details
+        const { data: assignmentDetails, error: detailsError } = await supabase
+            .from('fee_assignments')
+            .select(`
+                id,
+                fee:fees(title, amount_cents, due_date),
+                parent:users!fee_assignments_parent_id_fkey(email, display_name),
+                athlete:athletes(first_name, last_name)
+            `)
+            .eq('id', assignmentId)
+            .single()
+
+        if (detailsError || !assignmentDetails) {
+            return { data: null, error: new Error('Failed to fetch fee assignment details') }
+        }
+
+        const parentEmail = (assignmentDetails.parent as any)?.email
+        if (!parentEmail) {
+            return { data: null, error: new Error('Parent email not found') }
+        }
+
+        // Create notification job for email reminder
+        const { error: jobError } = await supabaseAny
+            .from('notification_jobs')
+            .insert({
+                org_id: context.orgId,
+                user_id: (assignmentDetails.parent as any)?.id || null,
+                email: parentEmail,
+                type: 'payment_reminder',
+                payload: {
+                    fee_title: (assignmentDetails.fee as any)?.title || 'Fee',
+                    amount: ((assignmentDetails.fee as any)?.amount_cents || 0) / 100,
+                    due_date: (assignmentDetails.fee as any)?.due_date || null,
+                    athlete_name: `${(assignmentDetails.athlete as any)?.first_name || ''} ${(assignmentDetails.athlete as any)?.last_name || ''}`.trim(),
+                    assignment_id: assignmentId,
+                },
+                status: 'queued',
+            })
+
+        if (jobError) {
+            console.error('[sendPaymentReminder] Error creating notification job:', jobError)
+            return { data: null, error: new Error('Failed to queue reminder email') }
+        }
+
+        // Trigger notification worker (optional - it will process queued jobs automatically)
+        // For immediate processing, we could call the edge function, but queued is fine for reminders
 
         return { data: { sent: true }, error: null }
     } catch (err) {

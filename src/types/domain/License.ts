@@ -43,6 +43,7 @@ export interface FeatureEntitlement {
   isToggleable?: boolean // If false, feature status cannot be changed
   isRemovable?: boolean // If false, feature cannot be deleted or removed from tiers
   lockReason?: string | null // Explanation for why feature is locked
+  isSystemFeature?: boolean // If true, always available for every license tier (including new tiers)
 }
 
 export interface TierFeatureAssignment {

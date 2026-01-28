@@ -142,3 +142,4 @@ logs
 *.log
 dist/index.html
 /emails/mjml/need-to-convert/
+.cursor/

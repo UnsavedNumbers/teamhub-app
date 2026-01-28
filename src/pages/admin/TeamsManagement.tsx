@@ -14,6 +14,7 @@ import { getSports, getPrograms } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
 import { getSeasons } from '../../data/services/seasonsService'
 import type { Team, Sport, Program, Level, Season } from '../../data/types/organization'
+import { supabase } from '../../lib/supabase'
 import { AdminPageHeader, Button, ConfirmDialog, EmptyState, Card, Select, Badge, PlatformDataTable } from '../../components/platformAdmin'
 import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
 import OfflineBanner from '../../components/admin/OfflineBanner'
@@ -55,6 +56,7 @@ export default function TeamsManagement() {
   const [programs, setPrograms] = useState<Program[]>([])
   const [levels, setLevels] = useState<Level[]>([])
   const [seasons, setSeasons] = useState<Season[]>([])
+  const [teamSeasonsMap, setTeamSeasonsMap] = useState<Map<string, string[]>>(new Map())
 
   const [filterSeasonId, setFilterSeasonId] = useState<string>('')
   const [filterSportId, setFilterSportId] = useState<string>('')
@@ -114,6 +116,30 @@ export default function TeamsManagement() {
       setPrograms(Array.isArray(programsResult.data) ? programsResult.data : [])
       setLevels(Array.isArray(levelsResult.data) ? levelsResult.data : [])
       setSeasons(Array.isArray(seasonsResult.data) ? seasonsResult.data : [])
+
+      // Fetch team_seasons mapping for season filtering
+      if (Array.isArray(teamsResult.data) && teamsResult.data.length > 0) {
+        try {
+          const teamIds = teamsResult.data.map(t => t.id)
+          const { data: teamSeasonsData, error: tsError } = await supabase
+            .from('team_seasons')
+            .select('team_id, season_id')
+            .in('team_id', teamIds)
+
+          if (!tsError && teamSeasonsData) {
+            const map = new Map<string, string[]>()
+            for (const ts of teamSeasonsData) {
+              const existing = map.get(ts.team_id) || []
+              existing.push(ts.season_id)
+              map.set(ts.team_id, existing)
+            }
+            setTeamSeasonsMap(map)
+          }
+        } catch (err) {
+          console.warn('[TeamsManagement] Error fetching team_seasons:', err)
+          // Continue without season filter - teams will still be shown
+        }
+      }
       
       // Data loaded successfully
     } catch (err) {
@@ -243,14 +269,20 @@ export default function TeamsManagement() {
   const availableLevels = filterProgramId ? levels.filter((l) => l.program_id === filterProgramId) : levels
 
   const filteredTeams = useMemo(() => teams.filter((team) => {
-    if (filterSeasonId && !team.id.includes(filterSeasonId)) return false // TODO: Check actual season association
+    // Filter by season: check if team has team_seasons entry for this season
+    if (filterSeasonId) {
+      const teamSeasonIds = teamSeasonsMap.get(team.id) || []
+      if (!teamSeasonIds.includes(filterSeasonId)) {
+        return false
+      }
+    }
     if (filterSportId && team.sport_id !== filterSportId) return false
     if (filterProgramId && team.program_id !== filterProgramId) return false
     if (filterLevelId && team.level_id !== filterLevelId) return false
     if (filterStatus === 'active' && !team.is_active) return false
     if (filterStatus === 'inactive' && team.is_active) return false
     return true
-  }), [teams, filterSeasonId, filterSportId, filterProgramId, filterLevelId, filterStatus])
+  }), [teams, filterSeasonId, filterSportId, filterProgramId, filterLevelId, filterStatus, teamSeasonsMap])
 
   const columns: ColumnConfig<Team>[] = useMemo(() => [
     {

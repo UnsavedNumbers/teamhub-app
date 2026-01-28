@@ -87,6 +87,7 @@ const EmailPreview = lazy(() => import('./pages/platformAdmin/EmailPreview'))
 // Admin Pages - Lazy loaded for code splitting
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
 const CreateUser = lazy(() => import('./pages/admin/CreateUser'))
+const EditUser = lazy(() => import('./pages/admin/EditUser'))
 const OrganizationStructureOverview = lazy(() => import('./pages/admin/OrganizationStructureNew'))
 const Sports = lazy(() => import('./pages/admin/Sports'))
 const SportDetail = lazy(() => import('./pages/admin/SportDetail'))
@@ -412,6 +413,7 @@ function AppWithTheme() {
             
               {/* Users */}
               <Route path="users/new" element={<CreateUser />} />
+              <Route path="organization/users/:userId/edit" element={<EditUser />} />
             
               {/* Organization */}
               <Route path="organization" element={<OrganizationSettings />} />

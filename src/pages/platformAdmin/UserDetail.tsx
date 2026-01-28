@@ -252,9 +252,10 @@ export default function UserDetail() {
             setPlatformAdminRole(null)
           }
           
-          // Fetch family info if user has family_id (need to check users table)
-          // For now, we'll check if any org has family context
-          // TODO: Add family_id to admin_users view or query separately
+          // Fetch family info if user has family_id (from admin_users view)
+          if (normalizedUser.family_id) {
+            fetchFamilyInfo(normalizedUser.family_id)
+          }
         }
       } else {
         if (!mountedRef.current) return
@@ -359,12 +360,8 @@ export default function UserDetail() {
     }
   }, [id, fetchUser])
 
-  // Fetch family info when user has family_id
-  useEffect(() => {
-    if (user?.family_id) {
-      fetchFamilyInfo(user.family_id)
-    }
-  }, [user?.family_id, fetchFamilyInfo])
+  // Note: Family info is now fetched in fetchUser callback when user data is loaded
+  // This useEffect is kept for backward compatibility but should not be needed
 
   // Loading state
   if (loading) {

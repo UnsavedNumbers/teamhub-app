@@ -245,6 +245,7 @@ export function mapFeatureEntitlement(row: SupabaseExtended['public']['Tables'][
     isToggleable: (row as any).is_toggleable ?? true,
     isRemovable: (row as any).is_removable ?? true,
     lockReason: (row as any).lock_reason ?? null,
+    isSystemFeature: (row as any).is_system_feature ?? false,
   }
 }
 

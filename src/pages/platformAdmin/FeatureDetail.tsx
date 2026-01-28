@@ -23,6 +23,7 @@ export default function FeatureDetail() {
     featureType: 'module',
     description: '',
     rolloutStatus: 'live',
+    isSystemFeature: false,
   })
   const [originalFeature, setOriginalFeature] = useState<Partial<FeatureEntitlement> | null>(null)
   const [tiers, setTiers] = useState<LicenseTier[]>([])
@@ -235,6 +236,7 @@ export default function FeatureDetail() {
           feature_type: feature.featureType!,
           description: feature.description || null,
           rollout_status: feature.rolloutStatus || 'live',
+          is_system_feature: feature.isSystemFeature ?? false,
         } satisfies FeatureInsert
         const { data, error: createError } = await supabase
           .from('feature_entitlements')
@@ -245,8 +247,21 @@ export default function FeatureDetail() {
         if (createError) throw createError
 
         if (data) {
+          const newId = (data as { id: string }).id
+          if (feature.isSystemFeature) {
+            for (const tier of tiers) {
+              await supabase.from('tier_feature_assignments').insert({
+                license_tier_id: tier.id,
+                feature_entitlement_id: newId,
+                included: true,
+                role_admin: true,
+                role_coach: true,
+                role_parent: false,
+              })
+            }
+          }
           showSuccess('Feature created successfully!')
-          navigate(`/platform-admin/licenses/features/${(data as any).id}`)
+          navigate(`/platform-admin/licenses/features/${newId}`)
           return true
         }
         return false
@@ -267,6 +282,7 @@ export default function FeatureDetail() {
           category: feature.category,
           feature_type: feature.featureType,
           description: feature.description || null,
+          is_system_feature: feature.isSystemFeature ?? false,
           // Only update rollout_status if feature is toggleable
           ...(feature.isToggleable !== false ? { rollout_status: feature.rolloutStatus } : {}),
         } satisfies FeatureUpdate
@@ -276,7 +292,25 @@ export default function FeatureDetail() {
           .eq('id', id!)
 
         if (updateError) throw updateError
-        
+
+        // When marking as system feature, backfill assignments for all active tiers
+        if (feature.isSystemFeature && !originalFeature?.isSystemFeature) {
+          for (const tier of tiers) {
+            await supabase.from('tier_feature_assignments').upsert(
+              {
+                license_tier_id: tier.id,
+                feature_entitlement_id: id!,
+                included: true,
+                role_admin: true,
+                role_coach: true,
+                role_parent: false,
+              },
+              { onConflict: 'license_tier_id,feature_entitlement_id' }
+            )
+          }
+          await fetchAssignments()
+        }
+
         // Update original feature after successful save
         setOriginalFeature(feature)
         showSuccess('Feature updated successfully!')
@@ -567,6 +601,24 @@ export default function FeatureDetail() {
                 This feature is locked and its status cannot be changed.
               </div>
             )}
+          </div>
+
+            <div className="pa-form-group">
+            <div className="pa-flex pa-items-start pa-gap-3">
+              <Checkbox
+                checked={feature.isSystemFeature ?? false}
+                onChange={(e) => setFeature({ ...feature, isSystemFeature: e.target.checked })}
+              />
+              <div>
+                <label htmlFor="is-system-feature" className="pa-label" style={{ marginBottom: 'var(--pa-space-1)' }}>
+                  System feature (always available for all license tiers)
+                </label>
+                <div className="pa-body-s" style={{ color: 'var(--pa-n600)' }}>
+                  When enabled, this feature is available for every license tier, including any new tiers created later.
+                  You do not need to assign it to tiers manually.
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Developer snippet */}
