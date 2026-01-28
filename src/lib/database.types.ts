@@ -2364,6 +2364,7 @@ export type Database = {
           is_system_feature: boolean
           is_toggleable: boolean
           lock_reason: string | null
+          platform_admin_only: boolean
           rollout_status: string | null
           updated_at: string | null
         }
@@ -2380,6 +2381,7 @@ export type Database = {
           is_system_feature?: boolean
           is_toggleable?: boolean
           lock_reason?: string | null
+          platform_admin_only?: boolean
           rollout_status?: string | null
           updated_at?: string | null
         }
@@ -2396,6 +2398,7 @@ export type Database = {
           is_system_feature?: boolean
           is_toggleable?: boolean
           lock_reason?: string | null
+          platform_admin_only?: boolean
           rollout_status?: string | null
           updated_at?: string | null
         }
@@ -8050,6 +8053,7 @@ export type Database = {
           is_system_feature: boolean | null
           is_toggleable: boolean | null
           lock_reason: string | null
+          platform_admin_only: boolean | null
           rollout_status: string | null
           tier_assignments_count: number | null
           updated_at: string | null
@@ -8075,6 +8079,7 @@ export type Database = {
           is_system_feature?: boolean | null
           is_toggleable?: boolean | null
           lock_reason?: string | null
+          platform_admin_only?: boolean | null
           rollout_status?: string | null
           tier_assignments_count?: never
           updated_at?: string | null
@@ -8100,6 +8105,7 @@ export type Database = {
           is_system_feature?: boolean | null
           is_toggleable?: boolean | null
           lock_reason?: string | null
+          platform_admin_only?: boolean | null
           rollout_status?: string | null
           tier_assignments_count?: never
           updated_at?: string | null

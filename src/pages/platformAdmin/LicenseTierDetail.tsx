@@ -114,6 +114,7 @@ export default function LicenseTierDetail() {
         .from('feature_entitlements')
         .select('*')
         .is('archived_at', null)
+        .eq('platform_admin_only', false)
         .order('category', { ascending: true })
         .order('display_name', { ascending: true })
 

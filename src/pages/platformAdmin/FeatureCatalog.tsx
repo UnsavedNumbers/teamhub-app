@@ -92,7 +92,9 @@ export default function FeatureCatalog() {
   const [integrationFilter, setIntegrationFilter] = useState<string[]>([])
   const [quantifiableFilter, setQuantifiableFilter] = useState<string | null>(null)
   const [sourceFilter, setSourceFilter] = useState<string | null>(null)
-  
+  const [systemFeatureFilter, setSystemFeatureFilter] = useState<'all' | 'yes' | 'no'>('all')
+  const [platformAdminOnlyFilter, setPlatformAdminOnlyFilter] = useState<'all' | 'yes' | 'no'>('all')
+
   // Pagination
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(50)
@@ -225,6 +227,20 @@ export default function FeatureCatalog() {
         query = query.eq('discovery_source', sourceFilter)
       }
 
+      // System feature filter
+      if (systemFeatureFilter === 'yes') {
+        query = query.eq('is_system_feature', true)
+      } else if (systemFeatureFilter === 'no') {
+        query = query.eq('is_system_feature', false)
+      }
+
+      // Platform admin only filter
+      if (platformAdminOnlyFilter === 'yes') {
+        query = query.eq('platform_admin_only', true)
+      } else if (platformAdminOnlyFilter === 'no') {
+        query = query.eq('platform_admin_only', false)
+      }
+
       query = query.order('category', { ascending: true }).order('display_name', { ascending: true })
 
       const from = page * rowsPerPage
@@ -253,7 +269,7 @@ export default function FeatureCatalog() {
     } finally {
       setLoading(false)
     }
-  }, [page, rowsPerPage, search, categoryFilter, typeFilter, statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter])
+  }, [page, rowsPerPage, search, categoryFilter, typeFilter, statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter])
 
   // Auto-filter selections when results change
   const prevSelectionCountRef = useRef(0)
@@ -282,7 +298,9 @@ export default function FeatureCatalog() {
       JSON.stringify(prevFiltersRef.current.roleFilter) !== JSON.stringify(roleFilter) ||
       JSON.stringify(prevFiltersRef.current.integrationFilter) !== JSON.stringify(integrationFilter) ||
       prevFiltersRef.current.quantifiableFilter !== quantifiableFilter ||
-      prevFiltersRef.current.sourceFilter !== sourceFilter
+      prevFiltersRef.current.sourceFilter !== sourceFilter ||
+      prevFiltersRef.current.systemFeatureFilter !== systemFeatureFilter ||
+      prevFiltersRef.current.platformAdminOnlyFilter !== platformAdminOnlyFilter
 
     if (filtersChanged) {
       const beforeCount = prevSelectionCountRef.current || selectedFeatureIds.size
@@ -300,8 +318,8 @@ export default function FeatureCatalog() {
       
       return () => clearTimeout(timeoutId)
     }
-    prevFiltersRef.current = { statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter }
-  }, [statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, selectedFeatureIds.size])
+    prevFiltersRef.current = { statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter }
+  }, [statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter, selectedFeatureIds.size])
 
   // Discovery Logic
   const runDiscovery = useCallback(async (force = false) => {
@@ -479,9 +497,9 @@ export default function FeatureCatalog() {
       const pageIds = new Set(features.map(f => f.id))
       setSelectedFeatureIds(pageIds)
       setSelectAllMode('page')
-    } else {
-      setSelectedFeatureIds(new Set())
     }
+    // Note: Don't clear selections when mode is 'none' - that's handled by 
+    // handleSelectAll in PlatformDataTable when user clicks the header checkbox
   }, [features])
 
   // Bulk operation handlers
@@ -716,7 +734,14 @@ export default function FeatureCatalog() {
     setIntegrationFilter([])
     setQuantifiableFilter(null)
     setSourceFilter(null)
+    setSystemFeatureFilter('all')
+    setPlatformAdminOnlyFilter('all')
   }
+
+  // Reset to first page when any filter changes so results make sense
+  useEffect(() => {
+    setPage(0)
+  }, [search, categoryFilter, typeFilter, statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter])
 
   // Initial data fetch on mount
   // Initial mount: fetch tiers and run discovery once
@@ -775,6 +800,11 @@ export default function FeatureCatalog() {
             {row.is_system_feature && (
               <Badge variant="info" size="small" title="Always available for all license tiers, including new tiers">
                 System
+              </Badge>
+            )}
+            {row.platform_admin_only && (
+              <Badge variant="neutral" size="small" title="Not available to org users; platform admin only">
+                Platform Admin
               </Badge>
             )}
             {row.discovered?.confidenceScore && row.discovered.confidenceScore < 70 && (
@@ -905,6 +935,10 @@ export default function FeatureCatalog() {
           onQuantifiableFilterChange={setQuantifiableFilter}
           sourceFilter={sourceFilter}
           onSourceFilterChange={setSourceFilter}
+          systemFeatureFilter={systemFeatureFilter}
+          onSystemFeatureFilterChange={setSystemFeatureFilter}
+          platformAdminOnlyFilter={platformAdminOnlyFilter}
+          onPlatformAdminOnlyFilterChange={setPlatformAdminOnlyFilter}
           onClearAll={handleClearFilters}
         />
 
