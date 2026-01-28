@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
-import { getFeeAssignmentById } from '../data/services/paymentsService'
+import { getFeeAssignmentById, formatCurrency, generateReceiptPDF } from '../data/services/paymentsService'
+import { getOrganizationDetails } from '../data/services/organizationService'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, SectionHeader } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
-import { formatCurrency } from '../data/services/paymentsService'
 import { getLink } from '../utils/routes'
+import { showSuccess, showError } from '../utils/toast'
 
 interface PaymentDetailData {
   id: string
@@ -64,6 +65,7 @@ export default function PaymentDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [assignment, setAssignment] = useState<PaymentDetailData | null>(null)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
   const isMountedRef = useRef(true)
 
   useEffect(() => {
@@ -215,14 +217,51 @@ export default function PaymentDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isReady, id])
 
-  const handleDownloadPDF = () => {
-    // TODO: Implement PDF download
-    console.log('Download PDF for payment:', id)
+  const handleDownloadPDF = async () => {
+    if (!assignment || actionLoading !== null) return
+    if (assignment.status !== 'paid') return
+    setActionLoading('download')
+    try {
+      const { data, error } = await generateReceiptPDF(context, assignment.id)
+      if (error) {
+        showError(error.message || 'Failed to generate receipt')
+        return
+      }
+      if (data?.url) {
+        if (data.url.startsWith('http') || data.url.startsWith('https')) {
+          window.open(data.url, '_blank')
+          showSuccess('Receipt opened in new tab')
+        } else {
+          showError('Receipt URL is not available')
+        }
+      }
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to download receipt')
+    } finally {
+      setActionLoading(null)
+    }
   }
 
-  const handleContactRegistrar = () => {
-    // TODO: Implement contact registrar
-    console.log('Contact registrar for payment:', id)
+  const handleContactRegistrar = async () => {
+    if (actionLoading !== null) return
+    setActionLoading('contact')
+    try {
+      const { data: org } = await getOrganizationDetails(context.orgId)
+      const to = org?.email ?? ''
+      const subject = encodeURIComponent(`Question about payment${assignment?.fee?.title ? `: ${assignment.fee.title}` : ''}`)
+      const body = encodeURIComponent(
+        `Payment reference: ${assignment?.id ?? id}\n\n[Your message here]`
+      )
+      const mailto = `mailto:${to}?subject=${subject}&body=${body}`
+      window.location.href = mailto
+      showSuccess('Opening email client')
+    } catch {
+      const subject = encodeURIComponent(`Question about payment`)
+      window.location.href = `mailto:?subject=${subject}`
+      showSuccess('Opening email client')
+    } finally {
+      setActionLoading(null)
+    }
   }
 
   if (loading) {
@@ -252,9 +291,14 @@ export default function PaymentDetail() {
       >
         <Card className="text-center py-12">
           <p className="text-red-600 dark:text-red-400 text-sm font-bold mb-4">{error || 'Payment not found'}</p>
-          <Button variant="primary" onClick={() => navigate(getLink('portal.payments'))}>
-            Back to Payments
-          </Button>
+          <div className="flex flex-wrap justify-center gap-3">
+            <Button variant="primary" onClick={() => (setError(null), fetchData())}>
+              Retry
+            </Button>
+            <Button variant="secondary" onClick={() => navigate(getLink('portal.payments'))}>
+              Back to Payments
+            </Button>
+          </div>
         </Card>
       </PortalLayout>
     )
@@ -262,7 +306,7 @@ export default function PaymentDetail() {
 
   const totalPaid = assignment.paid_cents_total
   const isPaid = assignment.status === 'paid'
-  const receiptNumber = assignment.id.slice(-8).toUpperCase()
+  const pageTitle = assignment.fee?.title ?? 'Payment Details'
   const paymentDate = assignment.payments && assignment.payments.length > 0
     ? new Date(assignment.payments[0].created_at)
     : new Date(assignment.created_at)
@@ -284,10 +328,19 @@ export default function PaymentDetail() {
             >
               <Icon name="arrow_back" />
             </button>
-            <PageTitle className="text-3xl">RECEIPT #{receiptNumber}</PageTitle>
+            <PageTitle className="text-3xl">{pageTitle}</PageTitle>
           </div>
-          <Button variant="primary" onClick={handleDownloadPDF} className="flex items-center gap-2 uppercase tracking-widest">
-            <Icon name="download" />
+          <Button
+            variant="primary"
+            onClick={handleDownloadPDF}
+            disabled={!isPaid || actionLoading !== null}
+            className="flex items-center gap-2 uppercase tracking-widest"
+          >
+            {actionLoading === 'download' ? (
+              <span className="animate-spin size-5 border-2 border-white border-t-transparent rounded-full" />
+            ) : (
+              <Icon name="download" />
+            )}
             DOWNLOAD PDF
           </Button>
         </div>
@@ -392,14 +445,29 @@ export default function PaymentDetail() {
                   </div>
                 )}
                 {assignment.payments && assignment.payments.length > 0 && (
-                  <div className="p-6 bg-slate-50 dark:bg-slate-800/30 flex justify-between items-center">
-                    <p className="font-black text-slate-900 dark:text-white uppercase tracking-widest text-sm">
-                      Grand Total
-                    </p>
-                    <p className="text-2xl font-black text-[var(--org-btn-primary-bg, #137fec)]">
-                      {formatCurrency(totalPaid)}
-                    </p>
-                  </div>
+                  <>
+                    {assignment.payments.map((p) => (
+                      <div key={p.id} className="p-6 flex justify-between items-center">
+                        <div>
+                          <p className="font-medium text-slate-900 dark:text-white">Payment</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} • {formatCurrency(p.amount_cents)}
+                          </p>
+                        </div>
+                        <p className="font-bold text-slate-900 dark:text-white">
+                          {formatCurrency(p.amount_cents)}
+                        </p>
+                      </div>
+                    ))}
+                    <div className="p-6 bg-slate-50 dark:bg-slate-800/30 flex justify-between items-center">
+                      <p className="font-black text-slate-900 dark:text-white uppercase tracking-widest text-sm">
+                        Grand Total
+                      </p>
+                      <p className="text-2xl font-black text-[var(--org-btn-primary-bg, #137fec)]">
+                        {formatCurrency(totalPaid)}
+                      </p>
+                    </div>
+                  </>
                 )}
               </div>
             </Card>
@@ -460,9 +528,14 @@ export default function PaymentDetail() {
               <Button
                 variant="secondary"
                 onClick={handleContactRegistrar}
+                disabled={actionLoading !== null}
                 className="w-full h-10 border-2 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs font-bold tracking-widest uppercase"
               >
-                CONTACT REGISTRAR
+                {actionLoading === 'contact' ? (
+                  <span className="animate-spin size-4 border-2 border-slate-500 border-t-transparent rounded-full inline-block" />
+                ) : (
+                  'CONTACT REGISTRAR'
+                )}
               </Button>
             </Card>
           </div>

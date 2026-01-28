@@ -563,9 +563,14 @@ export default function PaymentDetail() {
         <AdminPageHeader title="Payment" />
         <Card className="pa-text-center pa-py-12">
           <p className="pa-text-red-600 dark:pa-text-red-400 pa-text-sm pa-font-bold pa-mb-4">{error || 'Payment not found'}</p>
-          <Button variant="primary" onClick={() => navigate(getLink('admin.payments.list'))}>
-            Back to Payments
-          </Button>
+          <div className="pa-flex pa-flex-wrap pa-justify-center pa-gap-3">
+            <Button variant="primary" onClick={() => { setError(null); fetchData() }}>
+              Retry
+            </Button>
+            <Button variant="secondary" onClick={() => navigate(getLink('admin.payments.list'))}>
+              Back to Payments
+            </Button>
+          </div>
         </Card>
       </div>
     )
@@ -575,7 +580,7 @@ export default function PaymentDetail() {
 
   const isPaid = assignment.status === 'paid'
   const isUnpaid = assignment.status === 'unpaid' || assignment.status === 'overdue'
-  const receiptNumber = assignment.id.slice(-8).toUpperCase()
+  const pageTitle = assignment.fee?.title ?? 'Payment Details'
   const paymentDate = assignment.payments && assignment.payments.length > 0
     ? new Date(assignment.payments[0].created_at)
     : new Date(assignment.created_at)
@@ -599,7 +604,7 @@ export default function PaymentDetail() {
               <span className="material-symbols-outlined">arrow_back</span>
             </button>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-              RECEIPT #{receiptNumber}
+              {pageTitle}
             </h1>
           </div>
           <Button
@@ -724,14 +729,29 @@ export default function PaymentDetail() {
                   </div>
                 )}
                 {assignment.payments && assignment.payments.length > 0 && (
-                  <div className="p-6 bg-slate-50 dark:bg-slate-800/30 flex justify-between items-center">
-                    <p className="font-black text-slate-900 dark:text-white uppercase tracking-widest text-sm">
-                      Grand Total
-                    </p>
-                    <p className="text-2xl font-black text-[var(--org-btn-primary-bg, #137fec)]">
-                      {formatCurrency(assignment.paid_cents_total)}
-                    </p>
-                  </div>
+                  <>
+                    {assignment.payments.map((p) => (
+                      <div key={p.id} className="p-6 flex justify-between items-center">
+                        <div>
+                          <p className="font-medium text-slate-900 dark:text-white">Payment</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} • {formatCurrency(p.amount_cents)}
+                          </p>
+                        </div>
+                        <p className="font-bold text-slate-900 dark:text-white">
+                          {formatCurrency(p.amount_cents)}
+                        </p>
+                      </div>
+                    ))}
+                    <div className="p-6 bg-slate-50 dark:bg-slate-800/30 flex justify-between items-center">
+                      <p className="font-black text-slate-900 dark:text-white uppercase tracking-widest text-sm">
+                        Grand Total
+                      </p>
+                      <p className="text-2xl font-black text-[var(--org-btn-primary-bg, #137fec)]">
+                        {formatCurrency(assignment.paid_cents_total)}
+                      </p>
+                    </div>
+                  </>
                 )}
               </div>
             </Card>
