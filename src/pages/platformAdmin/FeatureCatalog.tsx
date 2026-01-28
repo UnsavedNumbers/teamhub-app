@@ -942,20 +942,27 @@ export default function FeatureCatalog() {
           onClearAll={handleClearFilters}
         />
 
-        {/* Legacy filters (keep for backward compatibility) */}
-        <div style={{ display: 'flex', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-4)', flexWrap: 'wrap' }}>
-            <Select
+        {/* Category + Type filters */}
+        <div style={{ display: 'flex', gap: 'var(--pa-space-3)', marginBottom: 'var(--pa-space-4)', flexWrap: 'wrap', alignItems: 'center' }}>
+          <Select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
             style={{ minWidth: '200px' }}
             options={CATEGORY_OPTIONS}
-            />
-            <Select
+          />
+          <Select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
             style={{ minWidth: '150px' }}
             options={TYPE_OPTIONS}
-            />
+          />
+          <div className="pa-body-s" style={{ color: 'var(--pa-n500)', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <span>module = feature/capability</span>
+            <span>permission = access right</span>
+            <span>limit = numeric cap (e.g. max teams)</span>
+            <span>visibility = who can see it</span>
+            <span>integration = external service</span>
+          </div>
         </div>
 
         {/* Bulk Actions Toolbar */}
