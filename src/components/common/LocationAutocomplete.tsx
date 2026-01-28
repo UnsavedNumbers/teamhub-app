@@ -142,9 +142,15 @@ export function LocationAutocomplete({
 
   // Sync with external value changes
   useEffect(() => {
-    if (value !== previousValueRef.current && !selectedPlace) {
+    // Always sync when external value changes
+    // This allows parent to control the display value after selection
+    if (value !== previousValueRef.current) {
       setInputValue(value || '')
       previousValueRef.current = value || ''
+      // Clear selectedPlace when syncing to allow future syncs
+      if (selectedPlace && value !== selectedPlace.formatted_address) {
+        setSelectedPlace(null)
+      }
     }
   }, [value, selectedPlace])
 
@@ -480,15 +486,20 @@ export function LocationAutocomplete({
 
         // Update state
         setSelectedPlace(address)
-        setInputValue(address.formatted_address)
+        // Don't set inputValue here - let the parent control it via onChange callback
+        // The parent can call onInputChange with whatever display value they want
         setShowSuggestions(false)
         setSelectedIndex(-1)
         setIsLoading(false)
         setApiError(null)
 
-        // Call onChange
+        // Call onChange - parent is responsible for setting the display value
+        // via calling onInputChange with their desired value (name or address)
         onChange(address, placeResult)
-        onInputChange?.(address.formatted_address)
+        
+        // Update previousValueRef to prevent sync effect from overwriting
+        // after parent sets the value
+        previousValueRef.current = ''
       } catch (err) {
         if (mountedRef.current) {
           console.error('Place selection error:', err)

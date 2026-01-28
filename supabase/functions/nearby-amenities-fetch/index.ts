@@ -34,8 +34,20 @@ type CanonicalCategory = (typeof CANONICAL_CATEGORIES)[number]
  */
 function normalizeCategoryToCanonical(category: string | undefined | null): CanonicalCategory | null {
     if (!category || typeof category !== 'string') return null
-    const lower = category.toLowerCase().trim()
-    if (lower.includes('pre-game') || lower.includes('pregame') || lower.includes('pre game') || lower.includes('before game') || lower.includes('fast food') || lower.includes('quick food') || lower.includes('casual dining') && !lower.includes('post')) return 'Pre-Game Food'
+    const trimmed = category.trim()
+    
+    // Exact match first (Gemini should return exact category names)
+    if (CANONICAL_CATEGORIES.includes(trimmed as CanonicalCategory)) {
+        return trimmed as CanonicalCategory
+    }
+    
+    // Case-insensitive exact match
+    const exactMatch = CANONICAL_CATEGORIES.find(c => c.toLowerCase() === trimmed.toLowerCase())
+    if (exactMatch) return exactMatch
+    
+    // Fuzzy pattern matching for variations
+    const lower = trimmed.toLowerCase()
+    if (lower.includes('pre-game') || lower.includes('pregame') || lower.includes('pre game') || lower.includes('before game') || (lower.includes('fast food') || lower.includes('quick food') || lower.includes('casual dining')) && !lower.includes('post')) return 'Pre-Game Food'
     if (lower.includes('coffee') || lower.includes('cafe') || lower.includes('bakery') || lower.includes('quick stop') || lower.includes('grab-and-go') || lower.includes('breakfast')) return 'Coffee & Quick Stops'
     if (lower.includes('essential') || lower.includes('convenience') || lower.includes('restroom') || lower.includes('pharmacy') || lower.includes('grocery') || lower.includes('store')) return 'Essentials & Convenience'
     if (lower.includes('post-game') || lower.includes('postgame') || lower.includes('post game') || lower.includes('hangout') || lower.includes('after game') || lower.includes('sit-down') || lower.includes('family-friendly')) return 'Post-Game Hangouts'

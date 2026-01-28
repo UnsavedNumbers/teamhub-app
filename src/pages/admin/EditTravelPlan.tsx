@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { startTransition } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
@@ -28,6 +29,9 @@ interface TravelFormData {
   end_date: string
   venue_name: string
   venue_address: string
+  venue_place_id: string
+  venue_lat: number | ''
+  venue_lng: number | ''
   hotel_name: string
   hotel_address: string
   hotel_phone: string
@@ -51,6 +55,7 @@ export default function EditTravelPlan() {
   const { context, isReady } = useUserContext()
   const t = useT()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   renderCountRef.current++
   console.log(`[EditTravelPlan:${componentIdRef.current}] RENDER #${renderCountRef.current}`, {
@@ -150,6 +155,9 @@ export default function EditTravelPlan() {
         end_date: data.end_date,
         venue_name: data.venue_name ?? '',
         venue_address: data.venue_address ?? '',
+        venue_place_id: data.venue_place_id ?? '',
+        venue_lat: data.venue_lat ?? '',
+        venue_lng: data.venue_lng ?? '',
         hotel_name: data.hotel_name ?? '',
         hotel_address: data.hotel_address ?? '',
         hotel_phone: data.hotel_phone ?? '',
@@ -230,6 +238,9 @@ export default function EditTravelPlan() {
         end_date: data.end_date,
         venue_name: data.venue_name || null,
         venue_address: data.venue_address || null,
+        venue_place_id: data.venue_place_id || null,
+        venue_lat: data.venue_lat !== '' && data.venue_lat != null && Number.isFinite(Number(data.venue_lat)) ? Number(data.venue_lat) : null,
+        venue_lng: data.venue_lng !== '' && data.venue_lng != null && Number.isFinite(Number(data.venue_lng)) ? Number(data.venue_lng) : null,
         hotel_name: data.hotel_name || null,
         hotel_address: data.hotel_address || null,
         hotel_phone: data.hotel_phone || null,
@@ -273,6 +284,10 @@ export default function EditTravelPlan() {
       }
 
       console.log(`[EditTravelPlan:${componentIdRef.current}] onSubmit - Success, navigating away`)
+      
+      // Invalidate nearby amenities cache so it refetches with new location
+      queryClient.invalidateQueries({ queryKey: ['nearbyAmenities'] })
+      
       showSuccess('Travel plan updated successfully!')
       if (isMountedRef.current) {
         navigate('/admin/travel')
@@ -358,9 +373,8 @@ export default function EditTravelPlan() {
 
             <h3 className="pa-h3 pa-mb-4 pa-mt-6">VENUE & HOTEL</h3>
             <div className="pa-form-grid pa-form-grid-2 pa-gap-4 pa-mb-4">
-              <Controller name="venue_name" control={control} render={({ field }) => <Input {...field} label="Venue Name" />} />
               <Controller
-                name="venue_address"
+                name="venue_name"
                 control={control}
                 render={({ field }) => (
                   <LocationAutocomplete
@@ -369,30 +383,34 @@ export default function EditTravelPlan() {
                     onChange={(address, placeResult) => {
                       startTransition(() => {
                         // Use place name from PlaceResult if it exists and is not the same as the address
-                        // Only update venue_name if we have a proper name (not an address)
                         const placeName = placeResult?.name && placeResult.name !== address.formatted_address
                             ? placeResult.name
-                            : null
-                        
-                        // Update venue_name if we have a proper name and it's currently empty or looks like an address
-                        if (placeName) {
-                          const currentVenueName = watch('venue_name')
-                          // Update if empty or if current name is the same as the address
-                          if (!currentVenueName || currentVenueName === address.formatted_address) {
-                            setValue('venue_name', placeName, { shouldValidate: false, shouldDirty: true })
-                          }
-                        }
+                            : ''
+
+                        setValue('venue_name', placeName, { shouldValidate: false, shouldDirty: true })
                         setValue('venue_address', address.formatted_address, { shouldValidate: false, shouldDirty: true })
+                        // Persist venue coords/place_id so Nearby Amenities refetches for the new location
+                        const loc = placeResult?.geometry?.location as { lat?: () => number; lng?: () => number; lat?: number; lng?: number } | undefined
+                        const lat = loc && typeof (loc as { lat: () => number }).lat === 'function' ? (loc as { lat: () => number; lng: () => number }).lat() : (loc as { lat?: number })?.lat
+                        const lng = loc && typeof (loc as { lng: () => number }).lng === 'function' ? (loc as { lat: () => number; lng: () => number }).lng() : (loc as { lng?: number })?.lng
+                        setValue('venue_place_id', placeResult?.place_id ?? '', { shouldValidate: false, shouldDirty: true })
+                        setValue('venue_lat', lat != null && Number.isFinite(lat) ? Number(lat) : '', { shouldValidate: false, shouldDirty: true })
+                        setValue('venue_lng', lng != null && Number.isFinite(lng) ? Number(lng) : '', { shouldValidate: false, shouldDirty: true })
+                        // Update the input display to show the place name (not address)
+                        if (placeName) {
+                          field.onChange(placeName)
+                        }
                       })
                     }}
-                    label="Venue Address"
-                    placeholder="Enter venue address"
+                    label="Venue Name"
+                    placeholder="Search for venue..."
+                    types={['establishment', 'geocode']}
                   />
                 )}
               />
-              <Controller name="hotel_name" control={control} render={({ field }) => <Input {...field} label="Hotel Name" />} />
+              <Controller name="venue_address" control={control} render={({ field }) => <Input {...field} label="Venue Address" />} />
               <Controller
-                name="hotel_address"
+                name="hotel_name"
                 control={control}
                 render={({ field }) => (
                   <LocationAutocomplete
@@ -401,27 +419,26 @@ export default function EditTravelPlan() {
                     onChange={(address, placeResult) => {
                       startTransition(() => {
                         // Use place name from PlaceResult if it exists and is not the same as the address
-                        // Only update hotel_name if we have a proper name (not an address)
                         const placeName = placeResult?.name && placeResult.name !== address.formatted_address
                             ? placeResult.name
-                            : null
+                            : ''
                         
-                        // Update hotel_name if we have a proper name and it's currently empty or looks like an address
-                        if (placeName) {
-                          const currentHotelName = watch('hotel_name')
-                          // Update if empty or if current name is the same as the address
-                          if (!currentHotelName || currentHotelName === address.formatted_address) {
-                            setValue('hotel_name', placeName, { shouldValidate: false, shouldDirty: true })
-                          }
-                        }
+                        setValue('hotel_name', placeName, { shouldValidate: false, shouldDirty: true })
                         setValue('hotel_address', address.formatted_address, { shouldValidate: false, shouldDirty: true })
+                        
+                        // Update the input display to show the place name (not address)
+                        if (placeName) {
+                          field.onChange(placeName)
+                        }
                       })
                     }}
-                    label="Hotel Address"
-                    placeholder="Enter hotel address"
+                    label="Hotel Name"
+                    placeholder="Search for hotel..."
+                    types={['lodging']}
                   />
                 )}
               />
+              <Controller name="hotel_address" control={control} render={({ field }) => <Input {...field} label="Hotel Address" />} />
               <Controller name="hotel_confirmation" control={control} render={({ field }) => <Input {...field} label="Hotel Confirmation" />} />
             </div>
 

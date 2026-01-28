@@ -6,7 +6,7 @@
  * Handles loading, error, and fallback (unranked by category) gracefully.
  */
 
-import { useMemo, useState, useRef, useEffect } from 'react'
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react'
 import { useNearbyAmenities, useRefreshNearbyAmenities, canShowNearbyAmenities } from '../../hooks/useNearbyAmenities'
 import { useUserContext } from '../../hooks/useUserContext'
 import { sanitizeVenueContent } from '../../utils/sanitizeVenueContent'
@@ -49,8 +49,23 @@ function sanitizeDescription(description: string | undefined | null): string {
 function normalizeToCuratedCategory(category: string | undefined | null): CuratedCategoryId | null {
   if (!category) return null
   const t = category.trim()
-  const found = CURATED_CATEGORIES.find(c => c.id === t || c.id.toLowerCase() === t.toLowerCase())
-  return found ? found.id : null
+  
+  // Exact match first
+  const exactMatch = CURATED_CATEGORIES.find(c => c.id === t)
+  if (exactMatch) return exactMatch.id
+  
+  // Case-insensitive match
+  const caseMatch = CURATED_CATEGORIES.find(c => c.id.toLowerCase() === t.toLowerCase())
+  if (caseMatch) return caseMatch.id
+  
+  // Fuzzy match for common variations
+  const lower = t.toLowerCase()
+  if (lower.includes('pre-game') || lower.includes('pregame') || lower.includes('food')) return 'Pre-Game Food'
+  if (lower.includes('coffee') || lower.includes('cafe') || lower.includes('quick')) return 'Coffee & Quick Stops'
+  if (lower.includes('essential') || lower.includes('convenience') || lower.includes('store')) return 'Essentials & Convenience'
+  if (lower.includes('post-game') || lower.includes('postgame') || lower.includes('hangout')) return 'Post-Game Hangouts'
+  
+  return null
 }
 
 /**
@@ -159,15 +174,52 @@ export default function NearbyAmenities({
     return context.roles.includes('org_admin') || context.roles.includes('coach')
   }, [context])
 
-  // Don't render if we can't show
-  if (!canShow) {
-    return null
-  }
-
   // Extract amenities
   const amenities = data?.amenities || []
   const hasData = amenities.length > 0
   const isFallback = data?.fallback === true
+  
+  // DEBUG: Log categories coming from API
+  if (hasData) {
+    console.log('[NearbyAmenities] API returned categories:', amenities.map(a => ({ name: a.name, category: a.category })))
+  }
+  
+  // All hooks must be called before any conditional returns
+  const groupedByCategory = useMemo(() => 
+    hasData ? groupByCuratedCategories(amenities) : [], 
+    [amenities, hasData]
+  )
+  const categoryIdsWithItems = useMemo(() => 
+    groupedByCategory.map(g => g.category.id), 
+    [groupedByCategory]
+  )
+  const defaultExpanded = useMemo(
+    () => getDefaultExpandedKey(eventStartTime, categoryIdsWithItems),
+    [eventStartTime, categoryIdsWithItems]
+  )
+  const [expandedKey, setExpandedKey] = useState<CuratedCategoryId | null>(defaultExpanded)
+  const headerRefs = useRef<Map<CuratedCategoryId, HTMLButtonElement | null>>(new Map())
+
+  useEffect(() => {
+    setExpandedKey(prev => (prev && categoryIdsWithItems.includes(prev) ? prev : defaultExpanded))
+  }, [defaultExpanded, categoryIdsWithItems])
+
+  const handleRefresh = useCallback(() => {
+    refreshMutation.mutate({
+      latitude: latitude ?? undefined,
+      longitude: longitude ?? undefined,
+      placeId: placeId ?? undefined,
+      eventType,
+      eventStartTime,
+      refresh: true,
+    })
+  }, [refreshMutation, latitude, longitude, placeId, eventType, eventStartTime])
+
+  // Now safe to do conditional returns after all hooks
+  // Don't render if we can't show
+  if (!canShow) {
+    return null
+  }
   
   // Loading state (only show skeleton if no data) - mirror final layout
   if (isLoading && !hasData) {
@@ -215,30 +267,6 @@ export default function NearbyAmenities({
     return null
   }
 
-  const groupedByCategory = useMemo(() => groupByCuratedCategories(amenities), [amenities])
-  const categoryIdsWithItems = useMemo(() => groupedByCategory.map(g => g.category.id), [groupedByCategory])
-  const defaultExpanded = useMemo(
-    () => getDefaultExpandedKey(eventStartTime, categoryIdsWithItems),
-    [eventStartTime, categoryIdsWithItems]
-  )
-  const [expandedKey, setExpandedKey] = useState<CuratedCategoryId | null>(defaultExpanded)
-  const headerRefs = useRef<Map<CuratedCategoryId, HTMLButtonElement | null>>(new Map())
-
-  useEffect(() => {
-    setExpandedKey(prev => (prev && categoryIdsWithItems.includes(prev) ? prev : defaultExpanded))
-  }, [defaultExpanded, categoryIdsWithItems])
-
-  const handleRefresh = () => {
-    refreshMutation.mutate({
-      latitude: latitude ?? undefined,
-      longitude: longitude ?? undefined,
-      placeId: placeId ?? undefined,
-      eventType,
-      eventStartTime,
-      refresh: true,
-    })
-  }
-
   return (
     <div className={className}>
       <Card className="p-0 overflow-hidden relative bg-gradient-to-r from-[var(--org-btn-primary-bg,#137fec)]/5 to-transparent dark:from-[var(--org-btn-primary-bg,#137fec)]/10 dark:to-transparent">
@@ -248,9 +276,9 @@ export default function NearbyAmenities({
           {TITLE_BY_VARIANT[variant]}
         </div>
 
-        <div className="pt-12 p-6 space-y-4">
+        <div className="pt-12 px-4 pb-4 space-y-3">
           {/* Subtitle */}
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             {SUBTITLE}
           </p>
 
@@ -347,23 +375,23 @@ export default function NearbyAmenities({
                       aria-controls={panelId}
                       onClick={() => setExpandedKey(prev => (prev === category.id ? null : category.id))}
                       onKeyDown={handleKeyDown}
-                      className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg,#137fec)] focus:ring-inset"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg,#137fec)] focus:ring-inset"
                     >
                       <Icon
                         name={category.icon}
-                        size="text-lg"
+                        size="text-base"
                         className="flex-shrink-0 text-[var(--org-btn-primary-bg,#137fec)]"
                       />
                       <span className="flex-1 min-w-0">
-                        <span className="font-bold text-slate-900 dark:text-white block">{category.name}</span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400">{category.descriptor}</span>
+                        <span className="font-semibold text-sm text-slate-900 dark:text-white">{category.name}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 ml-2">{category.descriptor}</span>
                       </span>
-                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400 tabular-nums">
+                      <span className="text-xs font-medium text-slate-400 tabular-nums">
                         {items.length}
                       </span>
                       <Icon
                         name="expand_more"
-                        size="text-xl"
+                        size="text-lg"
                         className={`flex-shrink-0 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                       />
                     </button>
@@ -375,7 +403,7 @@ export default function NearbyAmenities({
                     hidden={!isExpanded}
                     className={isExpanded ? '' : 'hidden'}
                   >
-                    <div className="border-t border-slate-200 dark:border-slate-700 px-4 py-3 space-y-2">
+                    <div className="border-t border-slate-200 dark:border-slate-700 px-3 py-1">
                       {items.map((amenity, i) => (
                         <AmenityRow key={`${amenity.place_id}-${i}`} amenity={amenity} category={category.id} />
                       ))}
@@ -393,9 +421,8 @@ export default function NearbyAmenities({
             </div>
           )}
 
-          {/* Footer with icon */}
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
-            <Icon name="info" size="text-sm" className="text-slate-400 flex-shrink-0" />
+          {/* Footer */}
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
             <span className="text-xs text-slate-400">
               Walking times are approximate
             </span>
@@ -407,7 +434,7 @@ export default function NearbyAmenities({
 }
 
 /**
- * Individual amenity row component - place card with icon circle, walking badge, tagline
+ * Individual amenity row component - compact horizontal layout
  */
 function AmenityRow({ amenity, category }: { amenity: AmenityItem; category?: string }) {
   const mapsUrl = getMapsUrl(amenity.place_id, amenity.name)
@@ -415,58 +442,42 @@ function AmenityRow({ amenity, category }: { amenity: AmenityItem; category?: st
   const categoryIcon = getCategoryIcon(category || amenity.category || 'Nearby')
 
   return (
-    <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/30 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:shadow-sm transition-all duration-200">
-      {/* Category icon in circle */}
+    <a
+      href={mapsUrl || '#'}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors border-b border-slate-100 dark:border-slate-800 last:border-b-0"
+    >
+      {/* Category icon */}
       <div
-        className="flex-shrink-0 w-10 h-10 rounded-full bg-[var(--org-btn-primary-bg,#137fec)]/10 dark:bg-[var(--org-btn-primary-bg,#137fec)]/20 flex items-center justify-center"
+        className="flex-shrink-0 w-8 h-8 rounded-full bg-[var(--org-btn-primary-bg,#137fec)]/10 flex items-center justify-center"
         aria-hidden
       >
-        <Icon name={categoryIcon} size="text-lg" className="text-[var(--org-btn-primary-bg,#137fec)]" />
+        <Icon name={categoryIcon} size="text-base" className="text-[var(--org-btn-primary-bg,#137fec)]" />
       </div>
 
-      {/* Place info */}
+      {/* Name and description */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap gap-y-1">
-          {mapsUrl ? (
-            <a
-              href={mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-bold text-slate-900 dark:text-white hover:text-[var(--org-link-color)] hover:underline truncate"
-            >
-              {amenity.name}
-            </a>
-          ) : (
-            <span className="font-bold text-slate-900 dark:text-white truncate">
-              {amenity.name}
-            </span>
-          )}
-          {amenity.walking_minutes > 0 && (
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700/80 px-2.5 py-1 rounded-full whitespace-nowrap border border-slate-200 dark:border-slate-600">
-              <Icon name="directions_walk" size="text-xs" />
-              ~{amenity.walking_minutes} min
-            </span>
-          )}
-        </div>
+        <span className="font-semibold text-sm text-slate-900 dark:text-white block truncate">
+          {amenity.name}
+        </span>
         {sanitizedDescription && (
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 italic">
+          <span className="text-xs text-slate-500 dark:text-slate-400 truncate block">
             {sanitizedDescription}
-          </p>
+          </span>
         )}
       </div>
 
-      {/* Maps link icon */}
-      {mapsUrl && (
-        <a
-          href={mapsUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex-shrink-0 p-2 text-slate-400 hover:text-[var(--org-btn-primary-bg,#137fec)] transition-colors rounded hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
-          aria-label={`Open ${amenity.name} in Google Maps`}
-        >
-          <Icon name="open_in_new" size="text-lg" />
-        </a>
+      {/* Walking time */}
+      {amenity.walking_minutes > 0 && (
+        <span className="flex-shrink-0 inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+          <Icon name="directions_walk" size="text-sm" />
+          {amenity.walking_minutes}m
+        </span>
       )}
-    </div>
+
+      {/* External link icon */}
+      <Icon name="open_in_new" size="text-sm" className="flex-shrink-0 text-slate-300 dark:text-slate-600" />
+    </a>
   )
 }
