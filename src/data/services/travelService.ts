@@ -1586,13 +1586,15 @@ export async function publishTravelPlan(
         }
 
         // Update to published
-        // Note: Database types may not include status column from migration 033
+        // Note: Database types may not include status/published_at columns from migration 033
+        // Use type assertion to include these fields even if not in generated types
         const updateData = {
             status: 'published',
             published_at: existingPlanTyped.published_at ?? new Date().toISOString(),
         } as Database['public']['Tables']['travel_plans']['Update'] & {
             status?: string
             published_at?: string
+            cancelled_at?: string | null
         }
 
         const { data: updated, error: updateError } = await supabase

@@ -577,17 +577,12 @@ export default function CreateTravelPlan() {
                         onInputChange={field.onChange}
                         onChange={(address: StructuredAddress, placeResult?: google.maps.places.PlaceResult) => {
                             startTransition(() => {
-                                // Prefer the name from PlaceResult if available, otherwise formatted address
-                                // In Google Places, placeResult usually has 'name' or 'displayName' if we asked for it
-                                // For now, we will use the user's input or the suggestion description as the "Name"
-                                // But typically for venue_name we want the actual name (e.g. "Madison Square Garden")
-                                // not "4 Penn Plaza". 
-                                // LocationAutocomplete usually puts the main text in address.formatted_address logic roughly
-                                // Let's use the placeResult keys if possible.
-                                
-                                // Attempt to find a name property. The PlaceResult type is standard google maps
-                                const placeName = placeResult?.name || address.formatted_address.split(',')[0]
-                                
+                                // Use place name from PlaceResult if it exists and is not the same as the address
+                                // If no name is available, leave it empty so user can enter a proper name
+                                const placeName = placeResult?.name && placeResult.name !== address.formatted_address
+                                    ? placeResult.name
+                                    : ''
+
                                 setValue('venue_name', placeName, { shouldValidate: true, shouldDirty: true })
                                 setValue('venue_address', address.formatted_address)
                                 setValue('venue_place_id', address.place_id || null)
@@ -617,7 +612,11 @@ export default function CreateTravelPlan() {
                         onInputChange={field.onChange}
                         onChange={(address: StructuredAddress, placeResult?: google.maps.places.PlaceResult) => {
                             startTransition(() => {
-                                const placeName = placeResult?.name || address.formatted_address.split(',')[0]
+                                // Use place name from PlaceResult if it exists and is not the same as the address
+                                // If no name is available, leave it empty so user can enter a proper name
+                                const placeName = placeResult?.name && placeResult.name !== address.formatted_address
+                                    ? placeResult.name
+                                    : ''
                                 
                                 setValue('hotel_name', placeName, { shouldValidate: true, shouldDirty: true })
                                 setValue('hotel_address', address.formatted_address)

@@ -605,8 +605,21 @@ export default function TravelDetail() {
                   Venue Location
                 </div>
                 <div className="pt-12">
-                  <CardTitle className="text-xl mb-2">{plan.venue_name}</CardTitle>
-                <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-4">{plan.venue_address}</p>
+                  {(() => {
+                    const venueHeader = plan.venue_name && plan.venue_name !== plan.venue_address
+                      ? plan.venue_name
+                      : (plan.venue_address ? plan.venue_address.split(',')[0].trim() : 'Venue')
+                    const showAddress = plan.venue_address && plan.venue_address !== venueHeader
+                    
+                    return (
+                      <>
+                        <CardTitle className="text-xl mb-2">{venueHeader}</CardTitle>
+                        {showAddress && (
+                          <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-4">{plan.venue_address}</p>
+                        )}
+                      </>
+                    )
+                  })()}
                 
                 {/* Smart Map Links */}
                 <div className="mb-4">
@@ -712,8 +725,21 @@ export default function TravelDetail() {
                   Lodging
                 </div>
                 <div className="pt-12">
-                  <CardTitle className="text-xl mb-2">{plan.hotel_name}</CardTitle>
-                {plan.hotel_address && <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-4">{plan.hotel_address}</p>}
+                  {(() => {
+                    const hotelHeader = plan.hotel_name && plan.hotel_name !== plan.hotel_address
+                      ? plan.hotel_name
+                      : (plan.hotel_address ? plan.hotel_address.split(',')[0].trim() : 'Hotel')
+                    const showAddress = plan.hotel_address && plan.hotel_address !== hotelHeader
+                    
+                    return (
+                      <>
+                        <CardTitle className="text-xl mb-2">{hotelHeader}</CardTitle>
+                        {showAddress && (
+                          <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-4">{plan.hotel_address}</p>
+                        )}
+                      </>
+                    )
+                  })()}
                 
                 <div className="grid sm:grid-cols-2 gap-3 mb-4">
                   {plan.hotel_phone && (
