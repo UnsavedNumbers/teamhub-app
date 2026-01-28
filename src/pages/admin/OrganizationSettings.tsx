@@ -53,6 +53,7 @@ import {
 } from '../../data/services/paymentSettingsService'
 
 import type { StripeConnectStatus } from '../../types/stripeConnect.types'
+import { supabase } from '../../lib/supabase'
 
 import { type OrganizationSettings as OrgSettingsType } from '@/types/organizationSettings'
 
@@ -771,6 +772,47 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const [allowPartialPayments, setAllowPartialPayments] = useState<boolean>(true)
+  const [policyLoading, setPolicyLoading] = useState(true)
+  const [policySaving, setPolicySaving] = useState(false)
+
+  const loadPolicy = useCallback(async () => {
+    if (!organizationId) return
+    setPolicyLoading(true)
+    const { data, error: policyError } = await supabase
+      .from('org_payment_policies')
+      .select('allow_partial_payments')
+      .eq('org_id', organizationId)
+      .maybeSingle()
+    if (!policyError && data) {
+      setAllowPartialPayments(data.allow_partial_payments ?? true)
+    }
+    setPolicyLoading(false)
+  }, [organizationId])
+
+  useEffect(() => {
+    loadPolicy()
+  }, [loadPolicy])
+
+  const handleSavePartialPayments = async (checked: boolean) => {
+    if (!organizationId) return
+    setPolicySaving(true)
+    setError(null)
+    const { error: upsertError } = await supabase
+      .from('org_payment_policies')
+      .upsert(
+        { org_id: organizationId, allow_partial_payments: checked },
+        { onConflict: 'org_id' }
+      )
+    if (upsertError) {
+      setError(upsertError.message)
+    } else {
+      setAllowPartialPayments(checked)
+      showSuccess('Payment policy saved')
+    }
+    setPolicySaving(false)
+  }
+
   const loadStatus = useCallback(async () => {
     if (!organizationId) return
     setLoading(true)
@@ -815,7 +857,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
     setRefreshing(false)
   }
 
-  if (loading) {
+  if (loading || policyLoading) {
     return (
       <Card>
         <div className="pa-text-center pa-p-8">Loading payment settings...</div>
@@ -824,6 +866,23 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
   }
 
   return (
+    <>
+    <Card className="pa-mb-6">
+      <h3 className="pa-h3 pa-mb-4">Payment Options</h3>
+      
+      <div className="pa-form-group">
+        <Checkbox
+          label="Allow Partial Payments"
+          checked={allowPartialPayments}
+          onChange={(e) => handleSavePartialPayments(e.target.checked)}
+          disabled={policySaving}
+        />
+        <p className="pa-text-sm pa-text-muted pa-mt-2">
+          When enabled, parents can make partial payments on fees that allow it. Each fee can individually control whether partial payments are allowed.
+        </p>
+      </div>
+    </Card>
+
     <Card>
       <h3 className="pa-h3 pa-mb-4">Stripe Connect Settings</h3>
       
@@ -929,6 +988,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
         )}
       </div>
     </Card>
+    </>
   )
 }
 

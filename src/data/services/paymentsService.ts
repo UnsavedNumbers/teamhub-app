@@ -1373,21 +1373,32 @@ export async function generateReceiptPDF(
             return { data: null, error: new Error('Access denied') }
         }
 
-        // TODO: Generate PDF and store in storage, then return signed URL
-        // For now, return a placeholder
-        // In production, this would:
-        // 1. Generate PDF using a library like pdfkit or puppeteer
-        // 2. Upload to Supabase Storage in receipts bucket
-        // 3. Get signed URL
-        // 4. Return URL
+        // Try Stripe hosted receipt first (Edge Function returns receipt_url from Stripe Charge)
+        const { data: stripeData, error: stripeError } = await supabase.functions.invoke(
+            'stripe-receipt-url',
+            { body: { assignment_id: assignmentId } }
+        )
+        const stripeUrl = stripeData?.url
+        if (!stripeError && typeof stripeUrl === 'string' && stripeUrl.length > 0) {
+            return { data: { url: stripeUrl }, error: null }
+        }
+        const status = (stripeError as { context?: { status?: number } } | null)?.context?.status
+        if (status === 401 || status === 403) {
+            return { data: null, error: new Error('Access denied') }
+        }
+        if (status === 404) {
+            // No Stripe receipt for this assignment; fall through to Storage / placeholder
+        } else if (stripeError) {
+            return { data: null, error: new Error('Receipt unavailable. Please try again later.') }
+        }
 
+        // Fallback: pre-uploaded PDF in Storage or placeholder (offline/legacy payments)
         const receiptPath = `receipts/${context.orgId}/${assignmentId}.pdf`
         const { data: urlData, error: urlError } = await supabase.storage
             .from('receipts')
             .createSignedUrl(receiptPath, 3600) // 1 hour expiry
 
         if (urlError || !urlData) {
-            // If receipt doesn't exist, generate it (placeholder for now)
             return { data: { url: `#receipt-${assignmentId}` }, error: null }
         }
 

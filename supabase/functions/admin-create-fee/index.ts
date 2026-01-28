@@ -42,6 +42,12 @@ interface CreateFeeRequest {
   scope: "team" | "selected_players" | "individual"
   team_id?: string | null
   athlete_ids?: string[]
+  
+  // Optional payment settings
+  allow_partial_payment?: boolean
+  allow_installments?: boolean
+  allow_discounts?: boolean
+  allow_scholarships?: boolean
 }
 
 interface OrganizationMembership {
@@ -76,6 +82,12 @@ interface FeeData {
   scope: string
   status: string
   created_by_admin_id: string
+  
+  // Optional payment settings
+  allow_partial_payment?: boolean
+  allow_installments?: boolean
+  allow_discounts?: boolean
+  allow_scholarships?: boolean
 }
 
 // ---- Validation helpers ----
@@ -304,6 +316,12 @@ serve(async (req) => {
       scope: requestData.scope,
       status: "published",
       created_by_admin_id: user.id,
+      
+      // Optional payment settings
+      allow_partial_payment: requestData.allow_partial_payment,
+      allow_installments: requestData.allow_installments,
+      allow_discounts: requestData.allow_discounts,
+      allow_scholarships: requestData.allow_scholarships,
     }
 
     const { data: result, error: rpcError } = await supabaseClient.rpc("create_fee_with_assignments", {
