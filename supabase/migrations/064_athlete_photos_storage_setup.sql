@@ -2,29 +2,46 @@
 -- ========================================================
 -- Creates bucket and storage policies for athlete profile photos
 -- Bucket is public for reads, authenticated writes with org validation
+--
+-- NOTE: If you get "must be owner of relation objects" error, you may need to:
+-- 1. Create the bucket via Supabase Dashboard first (Storage > New bucket)
+-- 2. Then create policies via Dashboard (Storage > Policies) or run this migration
+--    with superuser privileges
 
 -- ==============================================
 -- Create public-media bucket (if not exists)
 -- ==============================================
--- Note: Bucket creation must be done via Supabase Dashboard or API
--- This migration assumes the bucket exists
--- To create: Go to Storage > New bucket > Name: "public-media" > Public: true
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'public-media',
+  'public-media',
+  true, -- Public bucket for direct access
+  5242880, -- 5MB limit
+  ARRAY['image/jpeg', 'image/jpg', 'image/png']
+)
+ON CONFLICT (id) DO NOTHING;
 
 -- ==============================================
 -- Storage Policies for public-media bucket
 -- ==============================================
 
+-- Drop existing policies if re-running locally
+DROP POLICY IF EXISTS "Public read access for athlete photos" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can upload athlete photos" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can update athlete photos" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can delete athlete photos" ON storage.objects;
+
 -- Policy: Anyone can read athlete photos (public bucket)
 -- Since bucket is public, this is mainly for documentation
 -- Public buckets don't need read policies, but we add one for clarity
-CREATE POLICY IF NOT EXISTS "Public read access for athlete photos"
+CREATE POLICY "Public read access for athlete photos"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'public-media');
 
 -- Policy: Authenticated users in org can upload athlete photos
 -- DB validation ensures user has permission (org_admin, coach, or guardian)
 -- Storage policy just checks user is authenticated and in an org
-CREATE POLICY IF NOT EXISTS "Authenticated users can upload athlete photos"
+CREATE POLICY "Authenticated users can upload athlete photos"
 ON storage.objects FOR INSERT
 WITH CHECK (
   bucket_id = 'public-media'
@@ -40,7 +57,7 @@ WITH CHECK (
 );
 
 -- Policy: Authenticated users can update athlete photos (overwrite)
-CREATE POLICY IF NOT EXISTS "Authenticated users can update athlete photos"
+CREATE POLICY "Authenticated users can update athlete photos"
 ON storage.objects FOR UPDATE
 USING (
   bucket_id = 'public-media'
@@ -64,7 +81,7 @@ WITH CHECK (
 );
 
 -- Policy: Authenticated users can delete athlete photos
-CREATE POLICY IF NOT EXISTS "Authenticated users can delete athlete photos"
+CREATE POLICY "Authenticated users can delete athlete photos"
 ON storage.objects FOR DELETE
 USING (
   bucket_id = 'public-media'

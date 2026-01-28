@@ -1,3 +1,4 @@
+import { forwardRef } from 'react'
 import {
   DatePicker as AriaDatePicker,
   Label,
@@ -55,7 +56,7 @@ interface DatePickerProps {
  * - Disabled and read-only states
  * - Consistent styling with design system
  */
-export function DatePicker({
+export const DatePicker = forwardRef<HTMLDivElement, DatePickerProps>(({
   label,
   helper,
   error,
@@ -68,7 +69,7 @@ export function DatePicker({
   isReadOnly = false,
   className = '',
   name,
-}: DatePickerProps) {
+}, ref) => {
   const hasError = !!error
   const isRequired = required === true
 
@@ -84,7 +85,7 @@ export function DatePicker({
   }
 
   return (
-    <div className="pa-form-group">
+    <div ref={ref} className="pa-form-group">
       <AriaDatePicker
         value={dateValue}
         onChange={handleChange}
@@ -159,6 +160,8 @@ export function DatePicker({
       </AriaDatePicker>
     </div>
   )
-}
+})
+
+DatePicker.displayName = 'DatePicker'
 
 export default DatePicker

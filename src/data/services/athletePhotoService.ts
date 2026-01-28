@@ -14,6 +14,8 @@ import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
 
+const supabaseAny = supabase as any
+
 // ============================================================================
 // Type Definitions
 // ============================================================================
@@ -133,29 +135,44 @@ async function checkPhotoUploadPermission(
     athleteId: string
 ): Promise<{ allowed: boolean; error: Error | null }> {
     try {
-        // Check if user is org admin
+        // Check if user is org admin or parent in organization
         const { data: orgMember, error: orgError } = await supabase
             .from('organization_members')
             .select('role')
             .eq('org_id', context.orgId)
             .eq('user_id', context.userId)
-            .single()
+            .maybeSingle()
 
-        if (!orgError && orgMember?.role === 'org_admin') {
-            return { allowed: true, error: null }
+        if (!orgError && orgMember) {
+            // Org admins can upload for any athlete in their org
+            if (orgMember.role === 'org_admin') {
+                return { allowed: true, error: null }
+            }
+            // Parents in org can upload for their athletes
+            if (orgMember.role === 'parent') {
+                // Still need to verify they're guardian of this specific athlete
+                // (fall through to guardian check below)
+            }
         }
 
-        // Check if user is guardian of athlete
-        const { data: guardianLink, error: guardianError } = await supabase
+        // Check if user is guardian of athlete (for parents or any guardian)
+        // Try without org_id first (some guardians might not have org_id set correctly)
+        let guardianQuery = supabase
             .from('athlete_guardians')
             .select('id')
             .eq('athlete_id', athleteId)
             .eq('user_id', context.userId)
-            .eq('org_id', context.orgId)
             .eq('status', 'active')
-            .single()
+            .limit(1)
 
-        if (!guardianError && guardianLink) {
+        // Add org_id filter if available
+        if (context.orgId) {
+            guardianQuery = guardianQuery.eq('org_id', context.orgId)
+        }
+
+        const { data: guardianLinks, error: guardianError } = await guardianQuery
+
+        if (!guardianError && guardianLinks && guardianLinks.length > 0) {
             return { allowed: true, error: null }
         }
 
@@ -169,15 +186,21 @@ async function checkPhotoUploadPermission(
             const teamIds = teamMemberships.map(tm => tm.team_id)
             
             // Check if user is coach assigned to any of these teams
-            const { data: coachAssignments, error: coachError } = await supabase
-                .from('coach_assignments')
-                .select('team_id')
-                .eq('user_id', context.userId)
-                .in('team_id', teamIds)
-                .limit(1)
+            // Handle case where coach_assignments table might not exist
+            try {
+                const { data: coachAssignments, error: coachError } = await supabaseAny
+                    .from('coach_assignments')
+                    .select('team_id')
+                    .eq('user_id', context.userId)
+                    .in('team_id', teamIds)
+                    .limit(1)
 
-            if (!coachError && coachAssignments && coachAssignments.length > 0) {
-                return { allowed: true, error: null }
+                if (!coachError && coachAssignments && coachAssignments.length > 0) {
+                    return { allowed: true, error: null }
+                }
+            } catch (coachTableError) {
+                // Table doesn't exist or other error - fall through to org member check
+                console.log('[athletePhotoService] coach_assignments table not available, using org member check')
             }
 
             // Fallback: check organization_members for coach role in org
@@ -186,6 +209,18 @@ async function checkPhotoUploadPermission(
                 return { allowed: true, error: null }
             }
         }
+
+        // Log permission check failure for debugging
+        console.warn('[athletePhotoService] Permission denied:', {
+            userId: context.userId,
+            orgId: context.orgId,
+            athleteId,
+            orgMember: orgMember || null,
+            orgError: orgError?.message || null,
+            guardianError: guardianError?.message || null,
+            guardianLinks: guardianLinks?.length || 0,
+            teamError: teamError?.message || null
+        })
 
         return { 
             allowed: false, 
@@ -322,7 +357,7 @@ export async function uploadAthletePhoto(
                     result.error.message?.includes('RLS') || 
                     result.error.message?.includes('permission') ||
                     result.error.message?.includes('denied') ||
-                    result.error.code === '42501') {
+                    (result.error as any).code === '42501') {
                     console.error('[athletePhotoService] Storage permission error:', result.error)
                     return { 
                         error: new Error('Storage permission denied. Please ensure the "public-media" bucket is set to public and allows authenticated uploads.') 
@@ -341,7 +376,7 @@ export async function uploadAthletePhoto(
             .update({
                 profile_photo_updated_at: new Date().toISOString(),
                 has_profile_photo: true
-            })
+            } as any)
             .eq('id', athleteId)
             .eq('org_id', context.orgId)
 
@@ -428,7 +463,7 @@ export async function deleteAthletePhoto(
             .update({
                 profile_photo_updated_at: null,
                 has_profile_photo: false
-            })
+            } as any)
             .eq('id', athleteId)
             .eq('org_id', context.orgId)
 

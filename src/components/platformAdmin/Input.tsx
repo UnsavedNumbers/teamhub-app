@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes } from 'react'
+import { forwardRef, type InputHTMLAttributes } from 'react'
 import { cn } from '../../utils/cn'
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -26,7 +26,7 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
  * - Error states with red border
  * - Optional icons
  */
-export function Input({
+export const Input = forwardRef<HTMLInputElement, InputProps>(({
   label,
   helper,
   error,
@@ -35,7 +35,7 @@ export function Input({
   iconRight,
   className = '',
   ...props
-}: InputProps) {
+}, ref) => {
   const hasError = !!error
   const isRequired = required === true
 
@@ -57,6 +57,7 @@ export function Input({
         )}
         
         <input
+          ref={ref}
           className={cn(
             'pa-input',
             hasError && 'pa-input--error',
@@ -83,6 +84,8 @@ export function Input({
       )}
     </div>
   )
-}
+})
+
+Input.displayName = 'Input'
 
 export default Input
