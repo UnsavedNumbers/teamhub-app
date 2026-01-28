@@ -32,6 +32,7 @@ export type PlatformAdminAction =
     // Org management (ops/super)
     | 'activate_organization'
     | 'suspend_organization'
+    | 'reset_mock_organization'
     // User management
     | 'disable_user'        // ops/super
     | 'enable_user'         // ops/super
@@ -79,6 +80,7 @@ const PERMISSION_MATRIX: Record<PlatformAdminAction, PlatformAdminRole[]> = {
     // Org management - ops/super
     activate_organization: ['super_admin', 'ops_admin'],
     suspend_organization: ['super_admin', 'ops_admin'],
+    reset_mock_organization: ['super_admin', 'ops_admin'],
 
     // User management
     disable_user: ['super_admin', 'ops_admin'],

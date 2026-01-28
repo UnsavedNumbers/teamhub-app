@@ -30,6 +30,7 @@ export interface RolePermissions {
   // Org management
   canActivateOrganization: boolean
   canSuspendOrganization: boolean
+  canResetMockOrganization: boolean
 
   // User management
   canDisableUser: boolean
@@ -87,6 +88,7 @@ export function useRolePermissions(): RolePermissions {
     // Org management
     canActivateOrganization: canPerformAction(adminRole, 'activate_organization'),
     canSuspendOrganization: canPerformAction(adminRole, 'suspend_organization'),
+    canResetMockOrganization: canPerformAction(adminRole, 'reset_mock_organization'),
 
     // User management
     canDisableUser: canPerformAction(adminRole, 'disable_user'),

@@ -6,12 +6,13 @@
  */
 
 import { useLayoutEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useOrganization } from '../contexts/OrganizationContext'
 import { useUserContext } from './useUserContext'
 import { useTheme } from './useTheme'
 import { getOrganizationThemeSettings } from '../data/services/organizationSettingsService'
 import { getTheme, getDefaultTheme } from '../config/themes'
-import { generateTokens, type ThemeTokens } from '../utils/themeTokens'
+import { generateTokens, getPlatformAdminFixedTokens, type ThemeTokens } from '../utils/themeTokens'
 
 // Global theme version counter for triggering refetches
 let globalThemeVersion = 0
@@ -47,7 +48,10 @@ function applyThemeTokens(tokens: ThemeTokens): void {
  * 
  * @returns { ready: boolean } - Indicates when theme is loaded and ready
  */
+const PLATFORM_ADMIN_PATH_PREFIX = '/platform-admin'
+
 export function useOrganizationTheme(): { ready: boolean } {
+  const location = useLocation()
   const { currentOrganization } = useOrganization()
   const { context } = useUserContext()
   const { resolvedTheme } = useTheme()
@@ -57,44 +61,50 @@ export function useOrganizationTheme(): { ready: boolean } {
   // Track if we've loaded the org theme
   const [, setHasLoadedOrgTheme] = useState(false)
 
-  // Listen for theme change events
+  const isPlatformAdminRoute = location.pathname.startsWith(PLATFORM_ADMIN_PATH_PREFIX)
+
+  // Listen for theme change events (do not apply org theme when on platform admin)
   useLayoutEffect(() => {
     const handleThemeChanged = (e: Event) => {
       const customEvent = e as CustomEvent<{ themeId?: string | null }>
-      // If a theme ID was passed, apply it immediately without waiting for DB
       if (customEvent.detail?.themeId !== undefined) {
         const newThemeId = customEvent.detail.themeId
         setThemeId(newThemeId)
-        // Apply immediately for instant feedback
-        const theme = newThemeId ? getTheme(newThemeId) : getDefaultTheme()
-        const newTokens = generateTokens(theme, resolvedTheme === 'dark')
-        applyThemeTokens(newTokens)
+        if (location.pathname.startsWith(PLATFORM_ADMIN_PATH_PREFIX)) {
+          applyThemeTokens(getPlatformAdminFixedTokens())
+        } else {
+          const theme = newThemeId ? getTheme(newThemeId) : getDefaultTheme()
+          applyThemeTokens(generateTokens(theme, resolvedTheme === 'dark'))
+        }
         setHasLoadedOrgTheme(true)
       }
       setThemeVersion(v => v + 1)
     }
     window.addEventListener('organization-theme-changed', handleThemeChanged)
     return () => window.removeEventListener('organization-theme-changed', handleThemeChanged)
-  }, [resolvedTheme])
+  }, [resolvedTheme, location.pathname])
 
   // Memoize token generation - only recalculate when theme ID or mode changes
+  // When on platform admin route, use fixed PA tokens (no org colors)
   const tokens = useMemo(() => {
+    if (isPlatformAdminRoute) {
+      return getPlatformAdminFixedTokens()
+    }
     const theme = themeId ? getTheme(themeId) : getDefaultTheme()
     return generateTokens(theme, resolvedTheme === 'dark')
-  }, [themeId, resolvedTheme])
+  }, [themeId, resolvedTheme, isPlatformAdminRoute])
 
   // Apply default theme immediately on mount to prevent FOUC
   useLayoutEffect(() => {
-    const defaultTheme = getDefaultTheme()
-    const defaultTokens = generateTokens(defaultTheme, resolvedTheme === 'dark')
-    applyThemeTokens(defaultTokens)
-  }, [resolvedTheme])
+    const tokensToApply = isPlatformAdminRoute
+      ? getPlatformAdminFixedTokens()
+      : generateTokens(getDefaultTheme(), resolvedTheme === 'dark')
+    applyThemeTokens(tokensToApply)
+  }, [resolvedTheme, isPlatformAdminRoute])
 
   // Apply tokens whenever they change - this ensures theme toggles work immediately
-  // The tokens memo already handles both default and org themes correctly
+  // On platform admin route we always use fixed PA tokens (no org customization)
   useLayoutEffect(() => {
-    // Always apply tokens when they change, regardless of hasLoadedOrgTheme
-    // This ensures theme toggles work even before org theme is fully loaded
     applyThemeTokens(tokens)
   }, [tokens])
 
@@ -110,11 +120,16 @@ export function useOrganizationTheme(): { ready: boolean } {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [tokens])
 
-  // Load and apply organization theme
+  // Load and apply organization theme (skip when on platform admin - we use fixed PA tokens)
   useLayoutEffect(() => {
     const abortController = new AbortController()
 
     const loadAndApplyTheme = async () => {
+      if (isPlatformAdminRoute) {
+        setHasLoadedOrgTheme(true)
+        setIsLoading(false)
+        return
+      }
       if (!context || !currentOrganization) {
         // No organization - use default theme
         setHasLoadedOrgTheme(true)
@@ -167,7 +182,7 @@ export function useOrganizationTheme(): { ready: boolean } {
     return () => {
       abortController.abort()
     }
-  }, [context, currentOrganization?.id, themeVersion]) // Added themeVersion dependency
+  }, [context, currentOrganization?.id, themeVersion, isPlatformAdminRoute])
 
   // Return ready state - theme is always ready (default theme is applied immediately)
   // Loading state is only for background updates, doesn't block rendering

@@ -294,6 +294,7 @@ export type KnownFeatureFlag =
 export type AuditAction =
     | 'activate_organization'
     | 'suspend_organization'
+    | 'reset_mock_organization'
     | 'disable_user'
     | 'enable_user'
     | 'set_feature_flag'

@@ -78,7 +78,7 @@ export default function LicenseTiers() {
             className="pa-body-m"
             style={{
               fontWeight: 600,
-              color: 'var(--pa-theme-action-primary, var(--pa-n900))',
+              color: 'var(--pa-n900)',
               textDecoration: 'none',
               cursor: 'pointer',
             }}
@@ -120,7 +120,7 @@ export default function LicenseTiers() {
               style={{
                 fontFamily: 'var(--pa-font-mono)',
                 fontSize: '12px',
-                color: 'var(--pa-theme-action-primary, var(--pa-n900))',
+                color: 'var(--pa-n900)',
                 textDecoration: 'none',
                 cursor: 'pointer',
               }}

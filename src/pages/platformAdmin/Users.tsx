@@ -286,15 +286,18 @@ export default function Users() {
           className={cn(
             'pa-card', 
             'pa-mb-4',
-            'pa-bg-theme-highlight',
-            'pa-border-l-3',
-            'pa-border-theme-primary'
+            'pa-border-l-3'
           )}
+          style={{
+            backgroundColor: 'var(--pa-n50)',
+            borderLeftColor: 'var(--pa-n900)',
+          }}
         >
           <div className={cn('pa-flex', 'pa-items-center', 'pa-justify-between')}>
             <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-2')}>
               <span 
-                className={cn('material-symbols-outlined', 'pa-text-theme-primary', 'pa-icon-md')}
+                className={cn('material-symbols-outlined', 'pa-icon-md')}
+                style={{ color: 'var(--pa-n900)' }}
               >
                 filter_alt
               </span>
