@@ -5934,6 +5934,16 @@ html.dark .oa-card .pa-table-empty {
     }
 }
 
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
 /* Opacity */
 .pa-opacity-100 {
     opacity: 1;

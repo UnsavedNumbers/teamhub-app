@@ -7,10 +7,15 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import type { LocationAutocompleteProps, StructuredAddress } from '../../types/location'
+import type { LocationAutocompleteProps as BaseProps, StructuredAddress } from '../../types/location'
 import { parsePlace, validateStructuredAddress, isPlaceResult, hasAddressComponents } from '../../types/location'
 import { loadGoogleMapsScript, isGoogleMapsLoaded } from '../../utils/googleMapsLoader'
 import { Input } from '../platformAdmin/Input'
+
+// Extend the props to include the callback with place result
+interface LocationAutocompleteProps extends Omit<BaseProps, 'onChange'> {
+  onChange: (address: StructuredAddress, placeResult?: google.maps.places.PlaceResult) => void
+}
 
 /**
  * Debounce function with cancel capability
@@ -379,20 +384,48 @@ export function LocationAutocomplete({
         // Convert PlacePrediction to Place using the new API
         const place = suggestion.placePrediction.toPlace()
         
-        // Fetch required fields
+        // Fetch required fields including displayName
         await place.fetchFields({
-          fields: ['id', 'formattedAddress', 'addressComponents', 'location'],
+          fields: ['id', 'formattedAddress', 'addressComponents', 'location', 'displayName'],
         })
 
         if (!mountedRef.current) return
+
+        // Extract displayName - it might be a LocalizedText object with a text property
+        let placeName = ''
+        if (place.displayName) {
+          // displayName can be a string or a LocalizedText object with a text property
+          placeName = typeof place.displayName === 'string' 
+            ? place.displayName 
+            : (place.displayName as any)?.text || ''
+        }
+        
+        // Fallback to main_text from suggestion if displayName is not available
+        // main_text from autocomplete should be the place name (e.g., "Hilton Hotel")
+        // not the address (e.g., "515 15th St NW")
+        if (!placeName && suggestion.structured_formatting?.main_text) {
+          placeName = suggestion.structured_formatting.main_text
+        }
 
         // Convert new Place object to legacy PlaceResult format for compatibility
         // The new Place API uses different property names and structures
         // Place.location is a LatLng object with lat() and lng() methods
         const location = place.location
+        const formattedAddress = place.formattedAddress || ''
+        
+        // Only use placeName if it's different from the formatted address
+        // Also check if placeName looks like an address (contains numbers and common address words)
+        // This prevents using the address as the name
+        const looksLikeAddress = placeName && (
+          placeName === formattedAddress ||
+          /^\d+\s+[A-Za-z\s]+(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Boulevard|Dr|Drive|Ln|Lane|Ct|Court|Pl|Place|Way|Cir|Circle)/i.test(placeName)
+        )
+        const finalName = placeName && !looksLikeAddress ? placeName : ''
+        
         const placeResult: google.maps.places.PlaceResult = {
           place_id: place.id || suggestion.place_id,
-          formatted_address: place.formattedAddress || '',
+          name: finalName,
+          formatted_address: formattedAddress,
           address_components: place.addressComponents?.map((comp) => ({
             long_name: comp.longText || '',
             short_name: comp.shortText || '',
@@ -454,7 +487,7 @@ export function LocationAutocomplete({
         setApiError(null)
 
         // Call onChange
-        onChange(address)
+        onChange(address, placeResult)
         onInputChange?.(address.formatted_address)
       } catch (err) {
         if (mountedRef.current) {

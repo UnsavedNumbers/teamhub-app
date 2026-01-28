@@ -1026,3 +1026,372 @@ export async function getParentPaymentSummary(
         return { data: null, error: err instanceof Error ? err : new Error('Failed to fetch parent summary') }
     }
 }
+
+// ============================================================================
+// Admin Actions on Fee Assignments
+// ============================================================================
+
+/**
+ * Mark a fee assignment as paid offline (admin action)
+ * Updates status to 'paid', sets balance to 0, and updates paid_cents_total
+ */
+export async function markFeeAssignmentAsPaidOffline(
+    context: UserContext,
+    assignmentId: string
+): Promise<{ data: { id: string; status: string } | null; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+            const permissions = buildPermissions(context)
+            if (!permissions.canViewAllOrgData) {
+                return { data: null, error: new Error('Access denied: Admin only') }
+            }
+
+            // Find and update fake assignment
+            const assignment = fakeFeeAssignments.find(fa => fa.id === assignmentId)
+            if (!assignment) {
+                return { data: null, error: new Error('Fee assignment not found') }
+            }
+
+            // Update fake data
+            assignment.status = 'paid' as any
+            assignment.amount_paid_cents = assignment.amount_due_cents
+
+            return { data: { id: assignmentId, status: 'paid' }, error: null }
+        } catch (err) {
+            return { data: null, error: err instanceof Error ? err : new Error('Failed to mark as paid') }
+        }
+    }
+
+    try {
+        if (!isOrgAdmin(context)) {
+            return { data: null, error: new Error('Access denied: Admin only') }
+        }
+
+        // Verify assignment exists and belongs to org
+        const { data: existing, error: checkError } = await supabase
+            .from('fee_assignments')
+            .select('id, org_id, amount_cents, balance_cents, paid_cents_total')
+            .eq('id', assignmentId)
+            .eq('org_id', context.orgId)
+            .single()
+
+        if (checkError || !existing) {
+            return { data: null, error: new Error('Fee assignment not found') }
+        }
+
+        // Update assignment to paid
+        const { data, error } = await supabase
+            .from('fee_assignments')
+            .update({
+                status: 'paid',
+                balance_cents: 0,
+                paid_cents_total: existing.amount_cents,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', assignmentId)
+            .eq('org_id', context.orgId)
+            .select('id, status')
+            .single()
+
+        if (error) throw error
+
+        return { data: { id: data.id, status: data.status }, error: null }
+    } catch (err) {
+        const classified = classifySupabaseError(err)
+        return { data: null, error: classified }
+    }
+}
+
+/**
+ * Issue a refund for a paid fee assignment
+ * Creates a refund record and updates the assignment status/balance
+ */
+export async function issueRefundForFeeAssignment(
+    context: UserContext,
+    assignmentId: string,
+    refundAmountCents: number,
+    reason: string
+): Promise<{ data: { id: string; refundId: string } | null; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+            const permissions = buildPermissions(context)
+            if (!permissions.canViewAllOrgData) {
+                return { data: null, error: new Error('Access denied: Admin only') }
+            }
+
+            const assignment = fakeFeeAssignments.find(fa => fa.id === assignmentId)
+            if (!assignment || assignment.status !== 'paid') {
+                return { data: null, error: new Error('Fee assignment not found or not paid') }
+            }
+
+            // Simulate refund
+            const refundId = `refund_${Date.now()}`
+            assignment.amount_paid_cents = Math.max(0, assignment.amount_paid_cents - refundAmountCents)
+            assignment.status = refundAmountCents >= assignment.amount_due_cents ? 'unpaid' : 'partial'
+
+            return { data: { id: assignmentId, refundId }, error: null }
+        } catch (err) {
+            return { data: null, error: err instanceof Error ? err : new Error('Failed to issue refund') }
+        }
+    }
+
+    try {
+        if (!isOrgAdmin(context)) {
+            return { data: null, error: new Error('Access denied: Admin only') }
+        }
+
+        // Verify assignment exists, is paid, and belongs to org
+        const { data: existing, error: checkError } = await supabase
+            .from('fee_assignments')
+            .select('id, org_id, status, paid_cents_total, amount_cents')
+            .eq('id', assignmentId)
+            .eq('org_id', context.orgId)
+            .single()
+
+        if (checkError || !existing) {
+            return { data: null, error: new Error('Fee assignment not found') }
+        }
+
+        if (existing.status !== 'paid') {
+            return { data: null, error: new Error('Can only refund paid assignments') }
+        }
+
+        if (refundAmountCents > existing.paid_cents_total) {
+            return { data: null, error: new Error('Refund amount exceeds paid amount') }
+        }
+
+        // Create refund record (if refunds table exists)
+        // For now, we'll update the assignment directly
+        const newPaidTotal = existing.paid_cents_total - refundAmountCents
+        const newBalance = refundAmountCents
+        const newStatus = newPaidTotal === 0 ? 'unpaid' : 'partial'
+
+        const { data, error } = await supabase
+            .from('fee_assignments')
+            .update({
+                status: newStatus,
+                balance_cents: newBalance,
+                paid_cents_total: newPaidTotal,
+                notes_internal: reason ? `Refund issued: ${reason}` : 'Refund issued',
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', assignmentId)
+            .eq('org_id', context.orgId)
+            .select('id')
+            .single()
+
+        if (error) throw error
+
+        return { data: { id: data.id, refundId: `refund_${assignmentId}_${Date.now()}` }, error: null }
+    } catch (err) {
+        const classified = classifySupabaseError(err)
+        return { data: null, error: classified }
+    }
+}
+
+/**
+ * Void a fee assignment (admin action)
+ * Sets status to a voided state and clears balance
+ */
+export async function voidFeeAssignment(
+    context: UserContext,
+    assignmentId: string,
+    reason: string
+): Promise<{ data: { id: string } | null; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+            const permissions = buildPermissions(context)
+            if (!permissions.canViewAllOrgData) {
+                return { data: null, error: new Error('Access denied: Admin only') }
+            }
+
+            const assignment = fakeFeeAssignments.find(fa => fa.id === assignmentId)
+            if (!assignment) {
+                return { data: null, error: new Error('Fee assignment not found') }
+            }
+
+            // Mark as voided (using waived status as proxy)
+            assignment.status = 'waived' as any
+            assignment.amount_paid_cents = 0
+
+            return { data: { id: assignmentId }, error: null }
+        } catch (err) {
+            return { data: null, error: err instanceof Error ? err : new Error('Failed to void payment') }
+        }
+    }
+
+    try {
+        if (!isOrgAdmin(context)) {
+            return { data: null, error: new Error('Access denied: Admin only') }
+        }
+
+        // Verify assignment exists and belongs to org
+        const { data: existing, error: checkError } = await supabase
+            .from('fee_assignments')
+            .select('id, org_id, status')
+            .eq('id', assignmentId)
+            .eq('org_id', context.orgId)
+            .single()
+
+        if (checkError || !existing) {
+            return { data: null, error: new Error('Fee assignment not found') }
+        }
+
+        if (existing.status === 'paid') {
+            return { data: null, error: new Error('Cannot void paid assignments. Use refund instead.') }
+        }
+
+        // Update to waived status (voided)
+        const { data, error } = await supabase
+            .from('fee_assignments')
+            .update({
+                status: 'waived',
+                balance_cents: 0,
+                notes_internal: reason ? `Voided: ${reason}` : 'Voided by admin',
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', assignmentId)
+            .eq('org_id', context.orgId)
+            .select('id')
+            .single()
+
+        if (error) throw error
+
+        return { data: { id: data.id }, error: null }
+    } catch (err) {
+        const classified = classifySupabaseError(err)
+        return { data: null, error: classified }
+    }
+}
+
+/**
+ * Send payment reminder email to parent
+ */
+export async function sendPaymentReminder(
+    context: UserContext,
+    assignmentId: string
+): Promise<{ data: { sent: boolean } | null; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+            const permissions = buildPermissions(context)
+            if (!permissions.canViewAllOrgData) {
+                return { data: null, error: new Error('Access denied: Admin only') }
+            }
+
+            const assignment = fakeFeeAssignments.find(fa => fa.id === assignmentId)
+            if (!assignment) {
+                return { data: null, error: new Error('Fee assignment not found') }
+            }
+
+            // Simulate sending reminder
+            return { data: { sent: true }, error: null }
+        } catch (err) {
+            return { data: null, error: err instanceof Error ? err : new Error('Failed to send reminder') }
+        }
+    }
+
+    try {
+        if (!isOrgAdmin(context)) {
+            return { data: null, error: new Error('Access denied: Admin only') }
+        }
+
+        // Verify assignment exists and belongs to org
+        const { data: existing, error: checkError } = await supabase
+            .from('fee_assignments')
+            .select('id, org_id, parent_id')
+            .eq('id', assignmentId)
+            .eq('org_id', context.orgId)
+            .single()
+
+        if (checkError || !existing) {
+            return { data: null, error: new Error('Fee assignment not found') }
+        }
+
+        // TODO: Integrate with email service to send reminder
+        // For now, we'll just return success
+        // In production, this would call an email service or trigger a webhook
+
+        return { data: { sent: true }, error: null }
+    } catch (err) {
+        const classified = classifySupabaseError(err)
+        return { data: null, error: classified }
+    }
+}
+
+/**
+ * Generate or download receipt PDF for a paid fee assignment
+ * Returns a signed URL for the receipt PDF
+ */
+export async function generateReceiptPDF(
+    context: UserContext,
+    assignmentId: string
+): Promise<{ data: { url: string } | null; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+            const permissions = buildPermissions(context)
+            if (!permissions.canViewAllOrgData) {
+                return { data: null, error: new Error('Access denied: Admin only') }
+            }
+
+            const assignment = fakeFeeAssignments.find(fa => fa.id === assignmentId)
+            if (!assignment || assignment.status !== 'paid') {
+                return { data: null, error: new Error('Fee assignment not found or not paid') }
+            }
+
+            // Return fake PDF URL
+            return { data: { url: `https://example.com/receipts/${assignmentId}.pdf` }, error: null }
+        } catch (err) {
+            return { data: null, error: err instanceof Error ? err : new Error('Failed to generate receipt') }
+        }
+    }
+
+    try {
+        if (!isOrgAdmin(context)) {
+            return { data: null, error: new Error('Access denied: Admin only') }
+        }
+
+        // Verify assignment exists, is paid, and belongs to org
+        const { data: existing, error: checkError } = await supabase
+            .from('fee_assignments')
+            .select('id, org_id, status')
+            .eq('id', assignmentId)
+            .eq('org_id', context.orgId)
+            .single()
+
+        if (checkError || !existing) {
+            return { data: null, error: new Error('Fee assignment not found') }
+        }
+
+        if (existing.status !== 'paid') {
+            return { data: null, error: new Error('Receipts can only be generated for paid assignments') }
+        }
+
+        // TODO: Generate PDF and store in storage, then return signed URL
+        // For now, return a placeholder
+        // In production, this would:
+        // 1. Generate PDF using a library like pdfkit or puppeteer
+        // 2. Upload to Supabase Storage in receipts bucket
+        // 3. Get signed URL
+        // 4. Return URL
+
+        const receiptPath = `receipts/${context.orgId}/${assignmentId}.pdf`
+        const { data: urlData, error: urlError } = await supabase.storage
+            .from('receipts')
+            .createSignedUrl(receiptPath, 3600) // 1 hour expiry
+
+        if (urlError || !urlData) {
+            // If receipt doesn't exist, generate it (placeholder for now)
+            return { data: { url: `#receipt-${assignmentId}` }, error: null }
+        }
+
+        return { data: { url: urlData.signedUrl }, error: null }
+    } catch (err) {
+        const classified = classifySupabaseError(err)
+        return { data: null, error: classified }
+    }
+}

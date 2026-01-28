@@ -94,8 +94,44 @@ function buildPermissions(context: UserContext): PermissionSet {
 
 /**
  * Map Supabase team row to Team domain type
+ * Handles nested seasons structure from team_seasons junction table
  */
 function mapSupabaseTeamToDomain(team: any): Team {
+    // Handle team_seasons array (from junction table query)
+    if (team.team_seasons && Array.isArray(team.team_seasons)) {
+        team.seasons = team.team_seasons.map((ts: any) => {
+            if (ts.season) {
+                return {
+                    id: ts.season.id,
+                    name: ts.season.name,
+                    start_date: ts.season.start_date,
+                    end_date: ts.season.end_date,
+                    is_active: ts.is_active ?? ts.season.is_active ?? false,
+                }
+            }
+            return ts
+        })
+    }
+    // Also handle direct seasons array (for backward compatibility)
+    else if (team.seasons && Array.isArray(team.seasons)) {
+        team.seasons = team.seasons.map((ts: any) => {
+            // If it's already flat (has id directly), return as-is
+            if (ts.id && !ts.season) {
+                return ts
+            }
+            // If it's nested (from team_seasons), flatten it
+            if (ts.season) {
+                return {
+                    id: ts.season.id,
+                    name: ts.season.name,
+                    start_date: ts.season.start_date,
+                    end_date: ts.season.end_date,
+                    is_active: ts.is_active ?? ts.season.is_active ?? false,
+                }
+            }
+            return ts
+        })
+    }
     return team as Team
 }
 
@@ -546,14 +582,71 @@ export async function getTeamDetails(
             }
         }
 
+        // Map the team data (this will flatten the nested seasons structure)
+        const mappedTeam = mapSupabaseTeamToDomain(normalizedData)
+
+        // Extract seasons - handle both nested and flat structures
+        let seasons: any[] = []
+        const mappedSeasons = (mappedTeam as any).seasons
+        if (mappedSeasons && Array.isArray(mappedSeasons) && mappedSeasons.length > 0) {
+            seasons = mappedSeasons
+        } else if ((normalizedData as any).team_seasons && Array.isArray((normalizedData as any).team_seasons)) {
+            // Handle team_seasons from query (before mapper processes it)
+            seasons = (normalizedData as any).team_seasons.map((ts: any) => {
+                if (ts.season) {
+                    return {
+                        id: ts.season.id,
+                        name: ts.season.name,
+                        start_date: ts.season.start_date,
+                        end_date: ts.season.end_date,
+                        is_active: ts.is_active ?? ts.season.is_active ?? false,
+                    }
+                }
+                return ts
+            })
+        } else if ((normalizedData as any).seasons && Array.isArray((normalizedData as any).seasons)) {
+            // Fallback: if mapper didn't process seasons, try to extract them manually
+            seasons = (normalizedData as any).seasons.map((ts: any) => {
+                if (ts.season) {
+                    return {
+                        id: ts.season.id,
+                        name: ts.season.name,
+                        start_date: ts.season.start_date,
+                        end_date: ts.season.end_date,
+                        is_active: ts.is_active ?? ts.season.is_active ?? false,
+                    }
+                }
+                return ts
+            })
+        } else {
+            // Final fallback: query seasons directly from team_seasons if not included in team query
+            try {
+                const { data: seasonsData, error: seasonsError } = await supabase
+                    .from('team_seasons')
+                    .select('is_active, season:seasons(id, name, start_date, end_date, is_active)')
+                    .eq('team_id', teamId)
+
+                if (!seasonsError && seasonsData) {
+                    seasons = seasonsData.map((ts: any) => ({
+                        id: ts.season.id,
+                        name: ts.season.name,
+                        start_date: ts.season.start_date,
+                        end_date: ts.season.end_date,
+                        is_active: ts.is_active ?? ts.season.is_active ?? false,
+                    }))
+                }
+            } catch (err) {
+                console.warn('[getTeamDetails] Error fetching seasons fallback:', err)
+            }
+        }
+
         // Transform to match getTeamWithDetails return type
-        const teamData = normalizedData as any
-        const mappedTeam = {
-            ...teamData,
-            seasons: teamData.seasons || [],
+        const teamData = {
+            ...mappedTeam,
+            seasons: seasons,
         } as ReturnType<typeof getTeamWithDetails>
 
-        return { data: mappedTeam, error: null }
+        return { data: teamData, error: null }
     } catch (err) {
         const classifiedError = classifySupabaseError(err, 'Team')
         return { data: null, error: classifiedError }
