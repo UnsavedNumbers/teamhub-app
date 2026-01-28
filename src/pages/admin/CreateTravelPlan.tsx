@@ -404,7 +404,7 @@ export default function CreateTravelPlan() {
           <form onSubmit={handleSubmit(onSubmit)}>
             {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
             
-            <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+            <div className="pa-form-grid pa-form-grid-2 pa-gap-4 pa-mb-4">
               <Controller name="team_id" control={control} rules={{ required: 'Team is required' }} render={({ field }) => <Select {...field} label="Team" options={teams.map(t => ({value:t.id, label:t.name}))} required />} />
               <Controller name="season_id" control={control} rules={{ required: 'Season is required' }} render={({ field }) => <Select {...field} label="Season" options={seasons.map(s => ({value:s.id, label:s.name}))} required disabled={!watchTeamId} />} />
             </div>
@@ -463,7 +463,7 @@ export default function CreateTravelPlan() {
               />
             </div>
 
-            <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+            <div className="pa-form-grid pa-form-grid-2 pa-gap-4 pa-mb-4">
               {/* Destination City - Read Only with Override */}
               <Controller 
                 name="destination_city" 
@@ -472,14 +472,14 @@ export default function CreateTravelPlan() {
                   <div className="pa-form-group">
                       <label className="pa-label">Destination City</label>
                       {destinationOverride || !watchDestinationPlaceId ? (
-                        <input {...field} className="pa-input" placeholder="City" />
+                        <input {...field} className="pa-input" placeholder="City" style={{ minHeight: '44px' }} />
                       ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', height: '40px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minHeight: '44px' }}>
                             <span className="pa-text-body">{field.value || '—'}</span>
                             <button 
                                 type="button" 
                                 className="pa-link-button" 
-                                style={{ fontSize: '12px' }}
+                                style={{ fontSize: '12px', minHeight: '44px', padding: '0 8px' }}
                                 onClick={() => setDestinationOverride(true)}
                             >
                                 Override
@@ -498,12 +498,12 @@ export default function CreateTravelPlan() {
                   <div className="pa-form-group">
                       <label className="pa-label">Destination State</label>
                       {destinationOverride || !watchDestinationPlaceId ? (
-                        <input {...field} className="pa-input" placeholder="State/Province" />
+                        <input {...field} className="pa-input" placeholder="State/Province" style={{ minHeight: '44px' }} />
                       ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', height: '40px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minHeight: '44px' }}>
                             <span className="pa-text-body">{field.value || '—'}</span>
                             {destinationOverride && (
-                                <button type="button" onClick={() => setDestinationOverride(false)}>Cancel</button>
+                                <button type="button" onClick={() => setDestinationOverride(false)} style={{ minHeight: '44px', padding: '0 8px' }}>Cancel</button>
                             )}
                         </div>
                       )}
@@ -677,9 +677,9 @@ export default function CreateTravelPlan() {
               <div className="pa-label">Notes</div>
             </div>
 
-            <div className="pa-flex pa-justify-end pa-gap-3">
-              <Button variant="blue" onClick={() => navigate('/admin/travel')} disabled={saving}>Cancel</Button>
-              <Button type="submit" loading={saving} disabled={saving}>Create Draft Plan</Button>
+            <div className="pa-form-actions">
+              <Button variant="blue" onClick={() => navigate('/admin/travel')} disabled={saving} className="w-full sm:w-auto">Cancel</Button>
+              <Button type="submit" loading={saving} disabled={saving} className="pa-form-submit-btn w-full sm:w-auto">Create Draft Plan</Button>
             </div>
           </form>
         </Card>

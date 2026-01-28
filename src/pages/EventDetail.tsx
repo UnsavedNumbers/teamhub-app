@@ -194,43 +194,43 @@ export default function EventDetail() {
         ]}
       >
         {/* Sport Hero Section */}
-        <div className="-mx-6 mb-8">
-          <SportHero sport={eventSport} height="50vh">
-            <div className="max-w-[1200px] mx-auto px-6 pb-8">
-              <div className="mb-8">
-                <PageTitle className="text-white">{event.title}</PageTitle>
-                <p className="text-xs font-bold uppercase tracking-widest text-white/80">{event.team.name}</p>
+        <div className="-mx-4 sm:-mx-6 mb-6 sm:mb-8">
+          <SportHero sport={eventSport} height="40vh sm:50vh">
+            <div className="max-w-[1200px] mx-auto px-4 sm:px-6 pb-6 sm:pb-8">
+              <div className="mb-6 sm:mb-8">
+                <PageTitle className="text-white text-2xl sm:text-3xl md:text-4xl">{event.title}</PageTitle>
+                <p className="text-xs font-bold uppercase tracking-widest text-white/80 mt-2">{event.team.name}</p>
               </div>
             </div>
           </SportHero>
         </div>
 
-        <Card className="mb-8 p-8">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <Icon name="event" className="text-slate-400" />
-              <div>
-                <p className="font-black text-slate-900 dark:text-white">{formatDate(event.start_time)}</p>
+        <Card className="mb-6 sm:mb-8 p-4 sm:p-6 md:p-8">
+          <div className="space-y-3 sm:space-y-4">
+            <div className="flex items-start sm:items-center gap-3">
+              <Icon name="event" className="text-slate-400 flex-shrink-0 mt-1 sm:mt-0" />
+              <div className="min-w-0">
+                <p className="font-black text-slate-900 dark:text-white text-base sm:text-lg">{formatDate(event.start_time)}</p>
                 <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{formatTime(event.start_time)} - {formatTime(event.end_time)}</p>
               </div>
             </div>
 
             {event.arrival_time && (
-              <div className="flex items-center gap-3">
-                <Icon name="schedule" className="text-amber-500" />
+              <div className="flex items-start sm:items-center gap-3">
+                <Icon name="schedule" className="text-amber-500 flex-shrink-0 mt-1 sm:mt-0" />
                 <p className="font-black text-slate-900 dark:text-white">Arrive by {formatTime(event.arrival_time)}</p>
               </div>
             )}
 
             {event.location && (
-              <div className="flex items-center gap-3">
-                <Icon name="location_on" className="text-slate-400" />
-                <p className="font-black text-slate-900 dark:text-white">{event.location}</p>
+              <div className="flex items-start sm:items-center gap-3">
+                <Icon name="location_on" className="text-slate-400 flex-shrink-0 mt-1 sm:mt-0" />
+                <p className="font-black text-slate-900 dark:text-white break-words">{event.location}</p>
               </div>
             )}
 
             {event.notes && (
-              <div className="pt-4 border-t border-slate-200 dark:border-slate-700 mt-4">
+              <div className="pt-3 sm:pt-4 border-t border-slate-200 dark:border-slate-700 mt-3 sm:mt-4">
                 <p className="text-sm text-slate-500 dark:text-slate-400 whitespace-pre-wrap">{event.notes}</p>
               </div>
             )}
@@ -242,32 +242,32 @@ export default function EventDetail() {
           <VenueInsights placeId={event.event_location.place_id} className="mb-8" />
         )}
 
-        <SectionHeader className="mb-6">RSVP</SectionHeader>
+        <SectionHeader className="mb-4 sm:mb-6">RSVP</SectionHeader>
         
         {children.length === 0 ? (
-          <Card className="text-center py-12">
-            <p className="text-slate-500 dark:text-slate-400 mb-6">{t('portal.events.noChildren')}</p>
-            <Button variant="primary" onClick={() => navigate('/portal/athletes')}>
+          <Card className="text-center py-8 sm:py-12">
+            <p className="text-slate-500 dark:text-slate-400 mb-4 sm:mb-6">{t('portal.events.noChildren')}</p>
+            <Button variant="primary" onClick={() => navigate('/portal/athletes')} className="w-full sm:w-auto">
               {t('portal.events.add')}
             </Button>
           </Card>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {children.map((child) => {
               const att = attendance[child.id]
               return (
-                <Card key={child.id} className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <CardTitle className="text-lg">{child.first_name} {child.last_name}</CardTitle>
+                <Card key={child.id} className="p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 mb-3 sm:mb-4">
+                    <CardTitle className="text-base sm:text-lg">{child.first_name} {child.last_name}</CardTitle>
                     {saving === child.id && <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Saving</span>}
                   </div>
-                  <div className="flex gap-3">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                     {(['going', 'late', 'not_going'] as const).map((status) => (
                       <button
                         key={status}
                         onClick={() => handleRsvp(child.id, status)}
                         disabled={saving === child.id}
-                        className={`flex-1 py-3 px-4 rounded font-bold text-sm uppercase tracking-wide transition-colors ${
+                        className={`flex-1 py-2.5 sm:py-3 px-4 rounded font-bold text-sm uppercase tracking-wide transition-colors min-h-[44px] ${
                           att?.status === status
                             ? statusStyles[status]
                             : statusInactiveStyles

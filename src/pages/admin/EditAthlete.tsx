@@ -496,7 +496,7 @@ export default function EditAthlete() {
                     <Card>
                         <h2 className="pa-h2 pa-mb-6">Athlete Information</h2>
 
-                        <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+                        <div className="pa-form-grid pa-form-grid-2 pa-gap-4 pa-mb-4">
                             <Input
                                 label="First Name"
                                 value={formData.first_name}
@@ -511,7 +511,7 @@ export default function EditAthlete() {
                             />
                         </div>
 
-                        <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
+                        <div className="pa-form-grid pa-form-grid-2 pa-gap-4 pa-mb-4">
                             <DatePicker
                                 label="Date of Birth"
                                 value={formData.date_of_birth}
@@ -549,7 +549,7 @@ export default function EditAthlete() {
                             />
                         </div>
 
-                        <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-6">
+                        <div className="pa-form-grid pa-form-grid-2 pa-gap-4 pa-mb-6">
                             <Input
                                 label="Phone Number (Optional)"
                                 type="tel"
@@ -587,7 +587,7 @@ export default function EditAthlete() {
                             />
                         </div>
 
-                        <div className="pa-grid pa-grid-2 pa-gap-4">
+                        <div className="pa-form-grid pa-form-grid-2 pa-gap-4">
                             <Input
                                 label="Emergency Contact Name (Optional)"
                                 value={formData.emergency_contact_name}
@@ -635,16 +635,17 @@ export default function EditAthlete() {
                     </Card>
 
                     {/* Submit Buttons */}
-                    <div className="mt-6 flex justify-end gap-3">
+                    <div className="pa-form-actions mt-6">
                         <Button
                             type="button"
                             variant="ghost"
                             onClick={() => navigate(getLink('admin.athletes.list'))}
                             disabled={isSubmitting}
+                            className="w-full sm:w-auto"
                         >
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={isSubmitting}>
+                        <Button type="submit" disabled={isSubmitting} className="pa-form-submit-btn w-full sm:w-auto">
                             {isSubmitting ? 'Saving...' : 'Save Changes'}
                         </Button>
                     </div>

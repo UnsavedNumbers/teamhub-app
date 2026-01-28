@@ -346,15 +346,15 @@ export default function Calendar() {
         ]}
       >
         {/* Header Section */}
-        <div className="mb-8">
-          <div className="mb-8 flex items-end justify-between">
-            <div>
+        <div className="mb-6 sm:mb-8">
+          <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 sm:gap-6">
+            <div className="flex-1">
               <PageTitle>{safeT('calendar.title', 'Calendar')}</PageTitle>
-              <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
+              <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide">
                 {currentDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
               </p>
             </div>
-            <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1">
+            <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1 w-full sm:w-auto">
               {(['agenda', 'week', 'month'] as CalendarViewMode[]).map((v) => (
                 <button
                   key={v}
@@ -363,7 +363,7 @@ export default function Calendar() {
                     setCurrentPage(1) // Reset page when changing view
                   }}
                   disabled={loading}
-                  className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  className={`flex-1 sm:flex-none px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                     viewMode === v
                       ? 'bg-[var(--org-btn-primary-bg)] text-white'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -376,8 +376,8 @@ export default function Calendar() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <div className="lg:col-span-1">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="lg:col-span-1 order-2 lg:order-1">
                  <EventFilters filters={filters} onFiltersChange={setFilters} />
                  
                  {/* Mini Calendar Navigation could go here too */}
@@ -421,7 +421,7 @@ export default function Calendar() {
                  </Card>
             </div>
 
-            <div className="lg:col-span-3">
+            <div className="lg:col-span-3 order-1 lg:order-2">
                 {loading ? (
                 <div className="flex flex-col items-center justify-center py-12">
                     <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>

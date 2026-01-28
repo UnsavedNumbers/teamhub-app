@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect, useCallback, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import FocusLock from 'react-focus-lock'
 import { RemoveScroll } from 'react-remove-scroll'
 import { useScrollLock } from '@/hooks/useScrollLock'
-import type { NavSection, MenuState } from '@/types/menu'
+import type { NavSection } from '@/types/menu'
 
 interface MobileNavDrawerProps {
   isOpen: boolean
@@ -20,145 +20,88 @@ interface MobileNavDrawerProps {
  * - Scroll lock when open
  * - Focus trap for accessibility
  * - Keyboard navigation (Escape to close)
- * - State machine to prevent flicker from rapid clicks
- * - Refs to prevent stale closures
- * - Unmount safety checks
  */
 export default function MobileNavDrawer({ isOpen, onClose, sections }: MobileNavDrawerProps) {
   const location = useLocation()
   const drawerRef = useRef<HTMLDivElement>(null)
-  const backdropRef = useRef<HTMLDivElement>(null)
-  const isMountedRef = useRef(true)
+  const previousPathRef = useRef(location.pathname)
   
-  // State machine to prevent invalid transitions
-  // Initialize state based on isOpen prop
-  const [state, setState] = useState<MenuState>(() => isOpen ? 'opening' : 'closed')
+  // Track if we should render (for close animation)
+  const [shouldRender, setShouldRender] = useState(isOpen)
   
-  // Refs to prevent stale closures in event handlers
-  const isOpenRef = useRef(isOpen)
-  const stateRef = useRef(state)
-  
-  // Sync refs with state
+  // When isOpen becomes true, render immediately
+  // When isOpen becomes false, wait for animation before unmounting
   useEffect(() => {
-    isOpenRef.current = isOpen
-  }, [isOpen])
-  
-  useEffect(() => {
-    stateRef.current = state
-  }, [state])
-  
-  // Unmount safety
-  useEffect(() => {
-    isMountedRef.current = true
-    return () => {
-      isMountedRef.current = false
-    }
-  }, [])
-  
-  // State machine transitions
-  useEffect(() => {
-    if (isOpen && state === 'closed') {
-      setState('opening')
-      // Transition to open after animation starts
+    if (isOpen) {
+      setShouldRender(true)
+    } else {
+      // Wait for close animation (300ms)
       const timer = setTimeout(() => {
-        if (isMountedRef.current) {
-          setState('open')
-        }
-      }, 0)
-      return () => clearTimeout(timer)
-    } else if (!isOpen && state === 'open') {
-      setState('closing')
-      // Transition to closed after animation completes (300ms matches CSS)
-      const timer = setTimeout(() => {
-        if (isMountedRef.current) {
-          setState('closed')
-        }
+        setShouldRender(false)
       }, 300)
       return () => clearTimeout(timer)
     }
-  }, [isOpen, state])
+  }, [isOpen])
   
-  // Close on route change
+  // Close on route change (but not on initial mount)
   useEffect(() => {
-    if (isOpenRef.current && isMountedRef.current) {
-      onClose()
+    if (previousPathRef.current !== location.pathname) {
+      previousPathRef.current = location.pathname
+      if (isOpen) {
+        onClose()
+      }
     }
-  }, [location.pathname, onClose])
+  }, [location.pathname, isOpen, onClose])
   
-  // Scroll lock
-  useScrollLock(isOpen && state !== 'closed')
+  // Scroll lock when open
+  useScrollLock(isOpen)
   
   // Close on Escape key
   useEffect(() => {
-    if (!isOpen || state === 'closed') return
+    if (!isOpen) return
     
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpenRef.current) {
+      if (e.key === 'Escape') {
         e.preventDefault()
-        if (isMountedRef.current) {
-          onClose()
-        }
+        onClose()
       }
     }
     
     document.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [isOpen, state, onClose])
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
   
-  // Handle backdrop click
+  // Handle backdrop click - close when clicking outside drawer
   const handleBackdropClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     // Only close if clicking the backdrop itself, not drawer content
-    const target = e.target as HTMLElement
-    if (
-      backdropRef.current &&
-      drawerRef.current &&
-      backdropRef.current.contains(target) &&
-      !drawerRef.current.contains(target) &&
-      isMountedRef.current &&
-      stateRef.current !== 'closing'
-    ) {
+    if (e.target === e.currentTarget) {
       onClose()
     }
   }, [onClose])
-  
-  // Prevent clicks inside drawer from closing
-  const handleDrawerClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation()
-  }, [])
   
   // Handle close button click
   const handleCloseClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault()
     e.stopPropagation()
-    if (isMountedRef.current) {
-      onClose()
-    }
+    onClose()
   }, [onClose])
   
-  // Don't render if closed and isOpen is false
-  if (!isOpen && state === 'closed') {
+  // Don't render if not needed
+  if (!shouldRender) {
     return null
   }
   
-  // Visible when open or opening (for animation)
-  // Also visible immediately when isOpen is true (even if state hasn't transitioned yet)
-  const isVisible = isOpen || state === 'open' || state === 'opening'
-  
   return (
-    <RemoveScroll enabled={isVisible}>
-      <FocusLock disabled={!isVisible}>
+    <RemoveScroll enabled={isOpen}>
+      <FocusLock disabled={!isOpen} returnFocus>
         <div
-          ref={backdropRef}
-          className="mobile-drawer-backdrop"
+          className={`mobile-drawer-backdrop ${isOpen ? 'mobile-drawer-backdrop--visible' : ''}`}
           onClick={handleBackdropClick}
-          aria-hidden={!isVisible}
+          aria-hidden={!isOpen}
         >
           <div
             ref={drawerRef}
-            className={`mobile-drawer ${isVisible ? 'mobile-drawer--open' : ''}`}
-            onClick={handleDrawerClick}
+            className={`mobile-drawer ${isOpen ? 'mobile-drawer--open' : ''}`}
             role="navigation"
             aria-label="Mobile navigation menu"
           >

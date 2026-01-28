@@ -160,10 +160,14 @@ export default function PlatformDataTable<T extends { id: string }>({
     )
   }
 
+  // Get first column as key field (usually name/title)
+  const keyColumn = safeColumns[0]
+  const otherColumns = safeColumns.slice(1)
+
   return (
     <div className="pa-card" style={{ padding: 0, overflow: 'hidden' }}>
-      {/* Table */}
-      <div style={{ overflowX: 'auto' }}>
+      {/* Desktop Table View - hidden on mobile */}
+      <div className="pa-table-desktop" style={{ overflowX: 'auto' }}>
         <table className="pa-table" style={{ width: '100%' }}>
           <thead>
             <tr>
@@ -275,16 +279,80 @@ export default function PlatformDataTable<T extends { id: string }>({
         </table>
       </div>
 
+      {/* Mobile Card View - shown only on mobile */}
+      <div className="pa-table-mobile">
+        <div className="space-y-3" style={{ padding: 'var(--pa-space-4)' }}>
+          {safeRows.map((row) => (
+            <div
+              key={row.id}
+              onClick={() => onRowClick?.(row)}
+              className={cn(
+                'pa-card',
+                onRowClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''
+              )}
+              style={{
+                padding: 'var(--pa-space-4)',
+                backgroundColor: selectable && selectedIds.has(row.id) ? 'var(--pa-primary-bg)' : undefined,
+              }}
+            >
+              {/* Key field (first column) - prominent */}
+              {keyColumn && (
+                <div style={{ marginBottom: 'var(--pa-space-3)', paddingBottom: 'var(--pa-space-3)', borderBottom: '1px solid var(--pa-n100)' }}>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--pa-n500)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 'var(--pa-space-1)' }}>
+                    {keyColumn.label}
+                  </div>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--pa-n900)' }}>
+                    {keyColumn.render
+                      ? keyColumn.render(row)
+                      : String(row[keyColumn.id as keyof T] ?? '—')}
+                  </div>
+                </div>
+              )}
+
+              {/* Other fields - stacked */}
+              <div className="space-y-2">
+                {otherColumns.map((column) => (
+                  <div key={String(column.id)}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--pa-n500)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 'var(--pa-space-1)' }}>
+                      {column.label}
+                    </div>
+                    <div style={{ fontSize: '0.875rem', color: 'var(--pa-n700)' }}>
+                      {column.render
+                        ? column.render(row)
+                        : String(row[column.id as keyof T] ?? '—')}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Selection checkbox on mobile */}
+              {selectable && (
+                <div 
+                  style={{ marginTop: 'var(--pa-space-3)', paddingTop: 'var(--pa-space-3)', borderTop: '1px solid var(--pa-n100)' }}
+                  onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                >
+                  <Checkbox
+                    checked={selectedIds.has(row.id)}
+                    onChange={() => handleRowToggle(row.id)}
+                    label="Select"
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Pagination */}
       <div
-        className={cn('pa-flex', 'pa-items-center', 'pa-justify-between', 'pa-bg-n50')}
+        className={cn('pa-flex', 'pa-flex-col', 'pa-items-stretch', 'pa-gap-3', 'pa-bg-n50', 'pa-table-pagination')}
         style={{
-          padding: 'var(--pa-space-4)',
+          padding: 'var(--pa-space-3)',
           borderTop: '1px solid var(--pa-n100)',
         }}
       >
         {/* Rows per page */}
-        <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-3')}>
+        <div className={cn('pa-flex', 'pa-flex-col', 'pa-items-stretch', 'pa-gap-2', 'pa-table-pagination-controls')}>
           <span className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
             Rows per page:
           </span>
@@ -292,7 +360,7 @@ export default function PlatformDataTable<T extends { id: string }>({
             className="pa-input pa-select"
             value={rowsPerPage}
             onChange={(e) => onRowsPerPageChange(Number(e.target.value))}
-            style={{ width: 'auto', height: '36px', padding: '0 var(--pa-space-3)' }}
+            style={{ width: '100%', height: '44px', padding: '0 var(--pa-space-3)' }}
           >
             <option value={10}>10</option>
             <option value={25}>25</option>
@@ -302,17 +370,18 @@ export default function PlatformDataTable<T extends { id: string }>({
         </div>
 
         {/* Page info */}
-        <span className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
+        <span className="pa-body-s pa-text-center" style={{ color: 'var(--pa-n700)' }}>
           {startRow}–{endRow} of {totalCount}
         </span>
 
         {/* Page controls */}
-        <div className={cn('pa-flex', 'pa-gap-2')}>
+        <div className={cn('pa-flex', 'pa-gap-2', 'pa-justify-center')}>
           <button
             className="pa-btn pa-btn--ghost pa-btn--dense"
             onClick={() => onPageChange(page - 1)}
             disabled={page === 0}
             aria-label="Previous page"
+            style={{ minHeight: '44px', minWidth: '44px' }}
           >
             <span className="material-symbols-outlined">chevron_left</span>
           </button>
@@ -321,6 +390,7 @@ export default function PlatformDataTable<T extends { id: string }>({
             onClick={() => onPageChange(page + 1)}
             disabled={page >= totalPages - 1}
             aria-label="Next page"
+            style={{ minHeight: '44px', minWidth: '44px' }}
           >
             <span className="material-symbols-outlined">chevron_right</span>
           </button>

@@ -193,15 +193,15 @@ export default function SportDetail() {
               { label: sport?.name || 'Sport' },
             ]}
             actions={
-              <div className="pa-flex pa-gap-2">
-                <Link to={sportsRoute}>
-                  <Button variant="ghost" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }}>Back to Sports</Button>
+              <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2">
+                <Link to={sportsRoute} className="w-full sm:w-auto">
+                  <Button variant="ghost" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} className="w-full sm:w-auto min-h-[44px]">Back to Sports</Button>
                 </Link>
-                <Link to={sport?.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : `${programsRoute}?sport_id=${sportId}`}>
-                  <Button variant="secondary">View {sport?.name || ''} Programs</Button>
+                <Link to={sport?.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : `${programsRoute}?sport_id=${sportId}`} className="w-full sm:w-auto">
+                  <Button variant="secondary" className="w-full sm:w-auto min-h-[44px]">View {sport?.name || ''} Programs</Button>
                 </Link>
-                <Link to={`${formsRoute}?type=program&sport_id=${sportId}&returnUrl=${encodeURIComponent(sport?.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : programsRoute)}`}>
-                  <Button>Add Program</Button>
+                <Link to={`${formsRoute}?type=program&sport_id=${sportId}&returnUrl=${encodeURIComponent(sport?.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : programsRoute)}`} className="w-full sm:w-auto">
+                  <Button className="w-full sm:w-auto min-h-[44px]">Add Program</Button>
                 </Link>
               </div>
             }
@@ -239,8 +239,8 @@ export default function SportDetail() {
             <div className="oa-card-header">
               <h3 className="oa-card-title">Customization</h3>
             </div>
-            <div className="pa-flex pa-items-start pa-gap-4" style={{ alignItems: 'flex-start' }}>
-              <div style={{ width: '96px' }}>
+            <div className="pa-flex pa-flex-col sm:pa-flex-row pa-items-start pa-gap-4" style={{ alignItems: 'flex-start' }}>
+              <div style={{ width: '96px', flexShrink: 0 }}>
                 <div className="pa-text-sm pa-text-muted" style={{ marginBottom: '8px' }}>Icon</div>
                 <div
                   style={{
@@ -314,6 +314,7 @@ export default function SportDetail() {
                         setSavingColor(false)
                       }
                     }}
+                    className="min-h-[44px]"
                   >
                     Save Color
                   </Button>
@@ -337,10 +338,11 @@ export default function SportDetail() {
                   />
                 </div>
 
-                <div className="pa-flex pa-gap-2" style={{ marginTop: '12px' }}>
+                <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2" style={{ marginTop: '12px' }}>
                   <Button
                     disabled={!iconFile || uploadingIcon || isOffline || USE_FAKE_DATA}
                     loading={uploadingIcon}
+                    className="w-full sm:w-auto min-h-[44px]"
                     onClick={async () => {
                       if (!iconFile) return
 
@@ -412,8 +414,8 @@ export default function SportDetail() {
                     Remove Icon
                   </Button>
 
-                  <Link to={`${getLink('admin.sports.update', { sport_id: sport?.id || sportId })}?returnUrl=${encodeURIComponent(detailRoute)}`}>
-                    <Button variant="secondary">Edit Sport</Button>
+                  <Link to={`${getLink('admin.sports.update', { sport_id: sport?.id || sportId })}?returnUrl=${encodeURIComponent(detailRoute)}`} className="w-full sm:w-auto">
+                    <Button variant="secondary" className="w-full sm:w-auto min-h-[44px]">Edit Sport</Button>
                   </Link>
                 </div>
               </div>

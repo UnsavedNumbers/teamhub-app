@@ -422,36 +422,36 @@ export default function Dashboard() {
 
       <main className="max-w-[1200px] mx-auto">
         {/* Sport Hero Section */}
-        <div className="px-6 -mx-6 mb-8">
-          <SportHero sport={primarySport} height="60vh" forceDefault={true}>
-            <div className="max-w-[1200px] mx-auto px-6 pb-12">
+        <div className="px-4 sm:px-6 -mx-4 sm:-mx-6 mb-6 sm:mb-8">
+          <SportHero sport={primarySport} height="50vh sm:60vh" forceDefault={true}>
+            <div className="max-w-[1200px] mx-auto px-4 sm:px-6 pb-8 sm:pb-12">
               {/* Breadcrumbs & Greeting */}
-              <div className="mb-8">
-          <nav className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/60 mb-6">
+              <div className="mb-6 sm:mb-8">
+          <nav className="hidden sm:flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/60 mb-4 sm:mb-6">
             <Link to="/portal/dashboard" className="hover:text-white transition-colors">Home</Link>
             <span className="material-symbols-outlined text-[10px]">chevron_right</span>
             <span className="text-white">Parent Portal</span>
           </nav>
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6">
             <div>
-              <h1 className="text-5xl font-black tracking-tighter text-white mb-2 leading-none">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter text-white mb-2 leading-none">
                 {getGreeting()}, {firstName}.
               </h1>
-              <p className="text-white/80 text-lg font-light tracking-wide">
+              <p className="text-white/80 text-base sm:text-lg font-light tracking-wide">
                 Elite performance starts with the right logistics.
               </p>
             </div>
             {!statsLoading && activePlayerCount !== null && activePlayerCount > 0 && (
-              <div className="flex gap-4">
+              <div className="flex flex-wrap gap-2 sm:gap-4">
                 {activeSeasonName && (
-                  <div className="px-6 py-3 border border-white/20 rounded-lg flex flex-col bg-black/20 backdrop-blur-sm whitespace-nowrap">
-                    <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest whitespace-nowrap">Active Season</span>
-                    <span className="font-bold text-white whitespace-nowrap">{activeSeasonName}</span>
+                  <div className="px-4 sm:px-6 py-2 sm:py-3 border border-white/20 rounded-lg flex flex-col bg-black/20 backdrop-blur-sm">
+                    <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest">Active Season</span>
+                    <span className="font-bold text-white text-sm sm:text-base">{activeSeasonName}</span>
                   </div>
                 )}
-                <div className="px-6 py-3 border border-white/20 rounded-lg flex flex-col bg-black/20 backdrop-blur-sm whitespace-nowrap">
-                  <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest whitespace-nowrap">{t('portal.children.title')}</span>
-                  <span className="font-bold text-white whitespace-nowrap">{activePlayerCount} Active</span>
+                <div className="px-4 sm:px-6 py-2 sm:py-3 border border-white/20 rounded-lg flex flex-col bg-black/20 backdrop-blur-sm">
+                  <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest">{t('portal.children.title')}</span>
+                  <span className="font-bold text-white text-sm sm:text-base">{activePlayerCount} Active</span>
                 </div>
               </div>
             )}
@@ -461,16 +461,16 @@ export default function Dashboard() {
           </SportHero>
         </div>
 
-        <div className="px-6">
+        <div className="px-4 sm:px-6">
           {unread.length > 0 && (
-          <div className="mb-10 bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
+          <div className="mb-6 sm:mb-10 bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl sm:rounded-2xl p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
               <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white">Notifications</h2>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
                 <button
                   onClick={markAllAsRead}
                   disabled={markingAllRead || unread.length === 0}
-                  className="text-xs font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-xs font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed text-left sm:text-right"
                 >
                   {markingAllRead ? 'Marking...' : 'Mark all read'}
                 </button>
@@ -483,17 +483,17 @@ export default function Dashboard() {
               {unread.map((n) => (
                 <div
                   key={n.id}
-                  className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700"
+                  className="p-3 sm:p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                    <div className="flex-1">
                       <p className="text-sm font-bold text-slate-900 dark:text-white">{n.title}</p>
                       <p className="text-sm text-slate-500 dark:text-slate-400">{n.body}</p>
                     </div>
                     <button
                       onClick={() => markAsRead(n.id)}
                       disabled={markingRead === n.id}
-                      className="text-xs font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="text-xs font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed self-start sm:self-auto"
                     >
                       {markingRead === n.id ? 'Marking...' : 'Mark read'}
                     </button>
@@ -505,18 +505,18 @@ export default function Dashboard() {
         )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 px-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12 px-4 sm:px-6">
           {/* Main Content: Priority Actions */}
-          <div className="lg:col-span-8">
-            <div className="flex items-center justify-between mb-8 border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div className="lg:col-span-8 order-1">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-6 sm:mb-8 border-b border-slate-100 dark:border-slate-800 pb-4">
               <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white">Priority Actions</h2>
               <Link to="/portal/calendar" className="text-xs font-bold text-[var(--org-link-color)] cursor-pointer hover:underline">
                 View Full Calendar
               </Link>
             </div>
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {eventsLoading ? (
-                <div className="bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl p-12 text-center">
+                <div className="bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl sm:rounded-2xl p-8 sm:p-12 text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white mx-auto"></div>
                 </div>
               ) : upcomingEvents.length > 0 ? (
@@ -524,35 +524,35 @@ export default function Dashboard() {
                   <Link 
                     key={event.id} 
                     to={`/portal/calendar/events/${event.id}`}
-                    className="group bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden hover:shadow-2xl hover:shadow-[var(--org-btn-primary-bg, #137fec)]/5 transition-all duration-300 cursor-pointer block"
+                    className="group bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl sm:rounded-2xl overflow-hidden hover:shadow-2xl hover:shadow-[var(--org-btn-primary-bg, #137fec)]/5 transition-all duration-300 cursor-pointer block"
                   >
                     <div className="flex flex-col md:flex-row h-full">
                       <div className="md:w-1/3">
                         <SportCardImage 
                           sport={eventSports[event.id] || null} 
                           className="h-full rounded-none"
-                          height="h-full min-h-[200px]"
+                          height="h-full min-h-[180px] sm:min-h-[200px]"
                         />
                       </div>
-                      <div className="flex-1 p-8 flex flex-col justify-between">
+                      <div className="flex-1 p-4 sm:p-6 md:p-8 flex flex-col justify-between">
                         <div>
-                          <div className="flex items-center gap-2 mb-3">
+                          <div className="flex items-center gap-2 mb-2 sm:mb-3">
                             <div className={`w-2 h-2 rounded-full ${event.type === 'practice' ? 'bg-[var(--org-btn-primary-bg)]' : 'bg-orange-500'}`}></div>
                             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{formatEventTime(event)}</span>
                           </div>
-                          <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2 leading-tight uppercase">
+                          <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mb-2 leading-tight uppercase">
                             {event.title}
                           </h3>
-                          <p className="text-slate-500 dark:text-slate-400 font-light mb-6">
+                          <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 font-light mb-4 sm:mb-6">
                             {event.notes ?? `${event.type.charAt(0).toUpperCase() + event.type.slice(1)} event`}
                           </p>
                         </div>
-                        <div className="flex flex-wrap gap-3">
-                          <Link to={`/portal/calendar/events/${event.id}`} className="bg-[var(--org-btn-primary-bg)] hover:bg-[var(--org-btn-primary-bg)]/90 text-white px-8 py-3 rounded font-bold text-sm tracking-wide transition-all active:scale-95 flex items-center gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                          <Link to={`/portal/calendar/events/${event.id}`} className="w-full sm:w-auto bg-[var(--org-btn-primary-bg)] hover:bg-[var(--org-btn-primary-bg)]/90 text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded font-bold text-sm tracking-wide transition-all active:scale-95 flex items-center justify-center gap-2">
                             VIEW <span className="material-symbols-outlined text-sm">arrow_forward</span>
                           </Link>
                           {event.event_location?.maps_url && (
-                            <a href={event.event_location.maps_url} target="_blank" rel="noopener noreferrer" className="border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 px-8 py-3 rounded font-bold text-sm tracking-wide transition-all text-slate-900 dark:text-white flex items-center gap-2">
+                            <a href={event.event_location.maps_url} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 px-6 sm:px-8 py-2.5 sm:py-3 rounded font-bold text-sm tracking-wide transition-all text-slate-900 dark:text-white flex items-center justify-center gap-2">
                               LOCATION <span className="material-symbols-outlined text-sm">location_on</span>
                             </a>
                           )}
@@ -562,7 +562,7 @@ export default function Dashboard() {
                   </Link>
                 ))
               ) : (
-                <div className="bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl p-12 text-center">
+                <div className="bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl sm:rounded-2xl p-8 sm:p-12 text-center">
                   <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full mb-4">
                     <span className="material-symbols-outlined text-slate-400 text-4xl">event</span>
                   </div>
@@ -577,37 +577,39 @@ export default function Dashboard() {
           </div>
 
           {/* Sidebar: Status Lines & Announcements */}
-          <div className="lg:col-span-4 space-y-12">
+          <div className="lg:col-span-4 space-y-8 sm:space-y-12 order-2">
             {/* Financials */}
             {!paymentsLoading && paymentItems.length > 0 && (
               <div>
-                <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-6 border-b border-slate-100 dark:border-slate-800 pb-4">
+                <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-4 sm:mb-6 border-b border-slate-100 dark:border-slate-800 pb-3 sm:pb-4">
                   Financial Overview
                 </h2>
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {paymentItems.map((item, idx) => (
                     <div key={idx}>
-                      <div className="flex items-center justify-between group py-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 group py-2">
                         <div className="flex items-center gap-3">
-                          <div className={`size-2 rounded-full ${
+                          <div className={`size-2 rounded-full flex-shrink-0 ${
                             item.status === 'paid' ? 'bg-emerald-500' :
                             item.status === 'due' ? 'bg-[var(--org-btn-primary-bg)] animate-pulse' :
                             'bg-slate-300'
                           }`}></div>
-                          <div>
-                            <p className="text-sm font-bold text-slate-900 dark:text-white">{item.title}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{item.title}</p>
                             <p className="text-[10px] text-slate-400 uppercase font-black">{item.subtitle}</p>
                           </div>
                         </div>
-                        {item.status === 'paid' ? (
-                          <span className="text-xs font-bold text-emerald-500">PAID</span>
-                        ) : item.status === 'due' ? (
-                          <Link to="/portal/payments" className="text-xs font-bold text-[var(--org-link-color)] underline">
-                            PAY {item.amount}
-                          </Link>
-                        ) : (
-                          <span className="text-xs font-bold text-slate-400">PENDING</span>
-                        )}
+                        <div className="sm:ml-auto">
+                          {item.status === 'paid' ? (
+                            <span className="text-xs font-bold text-emerald-500">PAID</span>
+                          ) : item.status === 'due' ? (
+                            <Link to="/portal/payments" className="text-xs font-bold text-[var(--org-link-color)] underline whitespace-nowrap">
+                              PAY {item.amount}
+                            </Link>
+                          ) : (
+                            <span className="text-xs font-bold text-slate-400">PENDING</span>
+                          )}
+                        </div>
                       </div>
                       {idx < paymentItems.length - 1 && (
                         <div className="h-px bg-slate-50 dark:bg-slate-800 w-full"></div>
@@ -620,15 +622,15 @@ export default function Dashboard() {
 
             {/* Bulletin */}
             {!announcementsLoading && announcements.length > 0 && (
-              <div className="bg-slate-50 dark:bg-slate-900/80 p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
-                <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+              <div className="bg-slate-50 dark:bg-slate-900/80 p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-slate-100 dark:border-slate-800">
+                <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-4 sm:mb-6 flex items-center gap-2">
                   <span className="material-symbols-outlined text-sm">campaign</span> Bulletin Board
                 </h2>
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                   {announcements.map((announcement) => (
                     <div 
                       key={announcement.id}
-                      className={`relative pl-6 border-l-2 ${
+                      className={`relative pl-4 sm:pl-6 border-l-2 ${
                         announcement.priority === 'urgent' 
                           ? 'border-[var(--org-btn-primary-bg, #137fec)]' 
                           : 'border-slate-200 dark:border-slate-700'
@@ -645,7 +647,7 @@ export default function Dashboard() {
                 </div>
                 <Link 
                   to="/portal/messages"
-                  className="w-full mt-8 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors block text-center"
+                  className="w-full mt-6 sm:mt-8 py-2.5 sm:py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors block text-center"
                 >
                   All Announcements
                 </Link>
@@ -657,14 +659,14 @@ export default function Dashboard() {
               <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Support</h2>
               <Link 
                 to="/portal/settings" 
-                className="text-sm font-bold text-slate-900 dark:text-white hover:text-[var(--org-link-color)] flex items-center justify-between group"
+                className="text-sm font-bold text-slate-900 dark:text-white hover:text-[var(--org-link-color)] flex items-center justify-between group py-2"
               >
                 Contact League Office
                 <span className="material-symbols-outlined text-lg opacity-0 group-hover:opacity-100 transition-opacity">arrow_forward</span>
               </Link>
               <button
                 onClick={() => showInfo('Help documentation coming soon')}
-                className="text-sm font-bold text-slate-900 dark:text-white hover:text-[var(--org-link-color)] flex items-center justify-between group text-left w-full"
+                className="text-sm font-bold text-slate-900 dark:text-white hover:text-[var(--org-link-color)] flex items-center justify-between group text-left w-full py-2"
               >
                 Help & Documentation
                 <span className="material-symbols-outlined text-lg opacity-0 group-hover:opacity-100 transition-opacity">arrow_forward</span>

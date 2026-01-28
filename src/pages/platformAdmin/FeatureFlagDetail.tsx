@@ -330,8 +330,8 @@ export default function FeatureFlagDetail() {
         subtitle={flag.description || 'No description'}
       />
       
-      <div style={{ display: 'flex', gap: '16px', marginBottom: 'var(--pa-space-4)' }}>
-        <Button variant="ghost" onClick={() => navigate('/platform-admin/feature-flags')}>
+      <div className="pa-flex pa-flex-col sm:pa-flex-row pa-items-stretch sm:pa-items-center pa-gap-2 pa-mb-4" style={{ flexWrap: 'wrap' }}>
+        <Button variant="ghost" onClick={() => navigate('/platform-admin/feature-flags')} className="w-full sm:w-auto min-h-[44px]">
           ← Back to Flags
         </Button>
         <Badge variant={flag.deletedAt ? 'danger' : 'success'}>
@@ -343,7 +343,7 @@ export default function FeatureFlagDetail() {
       
       {/* Flag Info */}
       <Card title="Flag Information" style={{ marginBottom: 'var(--pa-space-4)' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--pa-space-4)' }}>
+        <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2" style={{ gap: 'var(--pa-space-4)' }}>
           <div>
             <div className="pa-body-s" style={{ color: 'var(--pa-n700)', marginBottom: '4px' }}>Key</div>
             <div className="pa-body-m" style={{ fontWeight: 600 }}>{flag.key}</div>
@@ -380,9 +380,10 @@ export default function FeatureFlagDetail() {
       </Card>
       
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: 'var(--pa-space-4)', borderBottom: '2px solid var(--pa-n100)' }}>
+      <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2 pa-mb-4" style={{ borderBottom: '2px solid var(--pa-n100)' }}>
         <button
           onClick={() => setActiveTab('overrides')}
+          className="w-full sm:w-auto min-h-[44px]"
           style={{
             padding: '12px 24px',
             background: 'none',
@@ -397,6 +398,7 @@ export default function FeatureFlagDetail() {
         </button>
         <button
           onClick={() => setActiveTab('audit')}
+          className="w-full sm:w-auto min-h-[44px]"
           style={{
             padding: '12px 24px',
             background: 'none',

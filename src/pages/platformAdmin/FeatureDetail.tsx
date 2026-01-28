@@ -306,11 +306,12 @@ export default function FeatureDetail() {
         title={isNew ? 'Create Feature' : feature.displayName || 'Feature'}
         subtitle={isNew ? 'Add a new feature to the catalog' : `Manage ${feature.displayName}`}
         actions={
-          <div style={{ display: 'flex', gap: 'var(--pa-space-3)' }}>
+          <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2">
             {!isNew && (
               <Button 
                 variant="ghost" 
                 onClick={() => navigate('/platform-admin/licenses/features')}
+                className="w-full sm:w-auto min-h-[44px]"
                 style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
               >
                 <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>arrow_back</span>
@@ -318,7 +319,7 @@ export default function FeatureDetail() {
               </Button>
             )}
             {isNew && (
-              <Button variant="blue" onClick={() => navigate('/platform-admin/licenses/features')}>
+              <Button variant="blue" onClick={() => navigate('/platform-admin/licenses/features')} className="w-full sm:w-auto min-h-[44px]">
                 Cancel
               </Button>
             )}
@@ -333,11 +334,12 @@ export default function FeatureDetail() {
                   }
                 }} 
                 disabled={saving}
+                className="w-full sm:w-auto min-h-[44px]"
               >
                 {saving ? 'Saving...' : 'Save and Go Back'}
               </Button>
             )}
-            <Button variant="primary" onClick={handleSave} disabled={saving}>
+            <Button variant="primary" onClick={handleSave} disabled={saving} className="w-full sm:w-auto min-h-[44px]">
               {saving ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
@@ -414,7 +416,7 @@ export default function FeatureDetail() {
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 'var(--pa-space-2)' }}>
+          <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2">
             <Button
               variant="ghost"
               size="dense"
@@ -425,6 +427,7 @@ export default function FeatureDetail() {
                 }
               }}
               disabled={saving}
+              className="w-full sm:w-auto min-h-[44px]"
             >
               Discard
             </Button>
@@ -433,6 +436,7 @@ export default function FeatureDetail() {
               size="dense"
               onClick={handleSave}
               disabled={saving}
+              className="w-full sm:w-auto min-h-[44px]"
             >
               {saving ? 'Saving...' : 'Save Changes'}
             </Button>

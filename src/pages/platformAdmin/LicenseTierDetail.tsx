@@ -717,10 +717,11 @@ export default function LicenseTierDetail() {
           { label: isNew ? 'Create' : tier.tier_name || 'Tier' },
         ]}
         actions={
-          <div style={{ display: 'flex', gap: 'var(--pa-space-3)', flexWrap: 'wrap' }}>
+          <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2" style={{ flexWrap: 'wrap' }}>
             <Button 
               variant="ghost" 
               onClick={() => navigate(getLink('platformAdmin.licenses.tiers'))}
+              className="w-full sm:w-auto min-h-[44px]"
               style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
             >
               <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>arrow_back</span>
@@ -732,6 +733,7 @@ export default function LicenseTierDetail() {
                   variant="ghost"
                   onClick={handleRefresh}
                   disabled={loading}
+                  className="w-full sm:w-auto min-h-[44px]"
                   style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>refresh</span>
@@ -741,6 +743,7 @@ export default function LicenseTierDetail() {
                   variant="blue"
                   onClick={handleDuplicate}
                   disabled={duplicating || isOffline}
+                  className="w-full sm:w-auto min-h-[44px]"
                   style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>content_copy</span>
@@ -750,6 +753,7 @@ export default function LicenseTierDetail() {
                   variant={tier.status === 'active' ? 'blue' : 'primary'}
                   onClick={() => setArchiveDialog(true)}
                   disabled={saving || isOffline}
+                  className="w-full sm:w-auto min-h-[44px]"
                   style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
@@ -760,6 +764,7 @@ export default function LicenseTierDetail() {
                 <Button
                   variant="ghost"
                   onClick={() => navigate(`/platform-admin/licenses/audit?target_type=tier&target_id=${id}`)}
+                  className="w-full sm:w-auto min-h-[44px]"
                   style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>history</span>
@@ -817,7 +822,7 @@ export default function LicenseTierDetail() {
         />
       )}
 
-      <div className="pa-grid pa-grid-2" style={{ gap: 'var(--pa-space-5)' }}>
+      <div className="pa-grid pa-grid-cols-1 lg:pa-grid-cols-2" style={{ gap: 'var(--pa-space-5)' }}>
         {/* Tier Settings */}
         <Card title="Tier Settings">
           <div className="pa-form-group">
@@ -949,9 +954,7 @@ export default function LicenseTierDetail() {
                     </div>
 
                     {/* Details Grid */}
-                    <div style={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+                    <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-4" style={{ 
                       gap: 'var(--pa-space-4)',
                       paddingTop: 'var(--pa-space-4)',
                       borderTop: '1px solid rgba(34, 197, 94, 0.2)',

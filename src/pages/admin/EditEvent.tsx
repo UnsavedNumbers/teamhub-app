@@ -622,7 +622,7 @@ export default function EditEvent() {
               <Controller name="title" control={control} rules={{ required: 'Title is required' }} render={({ field }) => <Input {...field} label="Event Title" required error={errors.title?.message || undefined} />} />
             </div>
 
-            <div className="pa-grid pa-grid-3 pa-mb-4 pa-gap-4">
+            <div className="pa-form-grid pa-form-grid-3 pa-mb-4 pa-gap-4">
               <Controller name="type" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label="Event Type" options={eventTypeOptions} />} />
               <Controller name="team_id" control={control} rules={{ required: 'Team is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label="Team" options={teams.map(t => ({value:t.id, label:t.name}))} required error={errors.team_id?.message || undefined} />} />
               <Controller name="season_id" control={control} rules={{ required: 'Season is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label="Season" options={seasons.map(s => ({value:s.id, label:s.name}))} required disabled={!watchTeamId} />} />
@@ -708,7 +708,7 @@ export default function EditEvent() {
             </div>
             
             <div className="pa-space-y-4">
-              <div className="pa-grid pa-grid-2 pa-gap-4">
+              <div className="pa-form-grid pa-form-grid-2 pa-gap-4">
                 <Controller name="location.venue_name" control={control} render={({ field }) => <Input {...field} label="Venue Name" placeholder="e.g. Field 1" />} />
                 <Controller
                   name="location.address_line1"
@@ -738,12 +738,12 @@ export default function EditEvent() {
               
               {showLocationDetails && (
                 <>
-                  <div className="pa-grid pa-grid-3 pa-gap-4">
+                  <div className="pa-form-grid pa-form-grid-3 pa-form-grid-tablet-2col pa-gap-4">
                     <Controller name="location.city" control={control} render={({ field }) => <Input {...field} label="City" />} />
                     <Controller name="location.state" control={control} render={({ field }) => <Input {...field} label="State" />} />
                     <Controller name="location.postal_code" control={control} render={({ field }) => <Input {...field} label="Zip Code" />} />
                   </div>
-                  <div className="pa-flex pa-gap-4">
+                  <div className="pa-checkbox-group pa-gap-4">
                     <Controller name="location.is_tbd" control={control} render={({ field: { value, onChange } }) => <Checkbox checked={value} onChange={(e) => onChange(e.target.checked)} label="Location TBD" />} />
                     <Controller name="location.is_virtual" control={control} render={({ field: { value, onChange } }) => <Checkbox checked={value} onChange={(e) => onChange(e.target.checked)} label="Virtual Event" />} />
                   </div>
@@ -807,7 +807,7 @@ export default function EditEvent() {
           </div>
 
           {/* SECTION 5: NOTES + PREP */}
-          <div className="pa-grid pa-grid-2 pa-mb-6 pa-gap-4">
+          <div className="pa-form-grid pa-form-grid-2 pa-mb-6 pa-gap-4">
             <Controller name="notes" control={control} render={({ field }) => <textarea className="pa-input pa-textarea" {...field} placeholder="General Notes..." style={{ minHeight: '80px' }} />} />
             <div className="pa-space-y-2">
               <Controller name="uniform_notes" control={control} render={({ field }) => <Input {...field} label="Uniform Notes" placeholder="e.g. Home Kit" />} />
@@ -859,34 +859,39 @@ export default function EditEvent() {
           )}
 
           {/* SECTION 6: ACTIONS */}
-          <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
-            <div className="pa-flex pa-gap-3">
-              <Button
-                variant="ghost"
-                onClick={() => setCancelDialog(true)}
-                disabled={saving || actionLoading}
-                style={{ color: 'var(--pa-warning)' }}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: '18px', marginRight: '4px' }}>cancel</span>
-                Cancel Event
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setDeleteDialog(true)}
-                disabled={saving || actionLoading}
-                style={{ color: 'var(--pa-danger)' }}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: '18px', marginRight: '4px' }}>delete</span>
-                Delete Event
-              </Button>
+          <div className="pa-mb-4">
+            <div className="pa-flex pa-flex-col sm:pa-flex-row pa-justify-between pa-items-stretch sm:pa-items-center pa-gap-3 pa-mb-4">
+              <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => setCancelDialog(true)}
+                  disabled={saving || actionLoading}
+                  style={{ color: 'var(--pa-warning)' }}
+                  className="w-full sm:w-auto min-h-[44px]"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px', marginRight: '4px' }}>cancel</span>
+                  Cancel Event
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setDeleteDialog(true)}
+                  disabled={saving || actionLoading}
+                  style={{ color: 'var(--pa-danger)' }}
+                  className="w-full sm:w-auto min-h-[44px]"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px', marginRight: '4px' }}>delete</span>
+                  Delete Event
+                </Button>
+              </div>
             </div>
-            <div className="pa-flex pa-justify-end pa-gap-3">
-              <Button variant="blue" onClick={() => navigate(getLink('admin.events.list'))} disabled={saving || actionLoading}>Cancel</Button>
+            <div className="pa-form-actions">
+              <Button variant="blue" onClick={() => navigate(getLink('admin.events.list'))} disabled={saving || actionLoading} className="w-full sm:w-auto">Cancel</Button>
               <Button 
                 type="submit" 
                 loading={saving}
                 disabled={isOffline || USE_FAKE_DATA || saving || actionLoading}
                 title={isOffline ? 'Cannot save while offline' : USE_FAKE_DATA ? 'Demo mode: changes not saved' : undefined}
+                className="pa-form-submit-btn w-full sm:w-auto"
               >
                 Update Event
               </Button>

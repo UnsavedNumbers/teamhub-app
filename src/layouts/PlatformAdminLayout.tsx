@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import {
@@ -8,7 +8,11 @@ import {
 } from '../utils/platformAdminPermissions'
 import { usePlatformAdminTheme } from '../hooks/usePlatformAdminTheme'
 import { useTheme } from '../hooks/useTheme'
+import { useMobile } from '@/hooks/useMobile'
+import { useScrollLock } from '@/hooks/useScrollLock'
 import GlobalNav from '../components/common/GlobalNav'
+import MobileNavDrawer from '../components/common/MobileNavDrawer'
+import type { NavSection as MobileNavSection } from '@/types/menu'
 import { getLink, getPath, RouteKeys } from '@/utils/routes'
 
 // Navigation structure per design spec
@@ -110,13 +114,29 @@ function LoadingSpinner() {
 export default function PlatformAdminLayout() {
   const { loaded: themeLoaded } = usePlatformAdminTheme()
   const { resolvedTheme } = useTheme()
-  const [mobileOpen, setMobileOpen] = useState(false)
+  const isMobile = useMobile()
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
   const { profile, signOut } = useAuth()
 
   // Get admin role from profile (Bug Prevention #1, Technical Bug #4)
   const adminRole = profile?.platformAdminRole ?? null
+
+  // Close mobile sidebar on route change
+  const handleMobileSidebarClose = useCallback(() => {
+    setMobileSidebarOpen(false)
+  }, [])
+
+  // Scroll lock when mobile sidebar is open
+  useScrollLock(mobileSidebarOpen && isMobile)
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    if (mobileSidebarOpen) {
+      setMobileSidebarOpen(false)
+    }
+  }, [location.pathname, mobileSidebarOpen])
 
   const handleSignOut = async () => {
     await signOut()
@@ -163,6 +183,38 @@ export default function PlatformAdminLayout() {
     return activePath === path
   }
 
+  // Convert navSections to MobileNavSection format for mobile drawer
+  const mobileNavSections: MobileNavSection[] = useMemo(() => {
+    return navSections
+      .filter(section => {
+        // Filter sections based on permissions
+        const visibleItems = section.items.filter((item) =>
+          canPerformAction(adminRole, item.requiredAction)
+        )
+        return visibleItems.length > 0
+      })
+      .map(section => {
+        const visibleItems = section.items.filter((item) =>
+          canPerformAction(adminRole, item.requiredAction)
+        )
+        return {
+          label: section.label,
+          route: undefined,
+          groups: [
+            {
+              label: '',
+              items: visibleItems.map(item => ({
+                text: item.text,
+                icon: item.icon,
+                path: item.path,
+                disabled: false,
+              }))
+            }
+          ]
+        }
+      })
+  }, [adminRole])
+
   // Show loading while theme loads or profile is loading
   if (!themeLoaded || !profile) {
     return <LoadingSpinner />
@@ -170,11 +222,29 @@ export default function PlatformAdminLayout() {
 
   return (
     <div className="pa-root pa-app">
-      {/* Sidebar */}
-      <aside className={`pa-sidebar ${mobileOpen ? 'open' : ''}`}>
+      {/* Mobile hamburger button */}
+      {isMobile && (
+        <button
+          className="pa-mobile-sidebar-toggle"
+          onClick={() => {
+            setMobileSidebarOpen(prev => !prev)
+          }}
+          aria-expanded={mobileSidebarOpen}
+          aria-label="Toggle sidebar"
+          type="button"
+        >
+          <span className="material-symbols-outlined">
+            {mobileSidebarOpen ? 'close' : 'menu'}
+          </span>
+        </button>
+      )}
+
+      {/* Sidebar - hidden on mobile */}
+      {!isMobile && (
+        <aside className="pa-sidebar">
         {/* Brand */}
         <div className="pa-sidebar-header">
-          <Link to={getLink(RouteKeys.PLATFORM_DASHBOARD)} className="pa-sidebar-brand" onClick={() => setMobileOpen(false)}>
+          <Link to={getLink(RouteKeys.PLATFORM_DASHBOARD)} className="pa-sidebar-brand">
             <img 
               src={resolvedTheme === 'dark' ? '/images/logo-light.png' : '/images/logo-dark.png'} 
               alt="Youth Sports" 
@@ -208,7 +278,6 @@ export default function PlatformAdminLayout() {
                       <Link
                         to={item.path}
                         className={`pa-nav-link ${isActive(item.path) ? 'active' : ''}`}
-                        onClick={() => setMobileOpen(false)}
                       >
                         <span className="material-symbols-outlined">{item.icon}</span>
                         <span>{item.text}</span>
@@ -240,6 +309,7 @@ export default function PlatformAdminLayout() {
           </div>
         </div>
       </aside>
+      )}
 
       {/* Main */}
       <div className="pa-main">
@@ -252,16 +322,12 @@ export default function PlatformAdminLayout() {
         </main>
       </div>
 
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div
-          onClick={() => setMobileOpen(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(11, 15, 20, 0.5)',
-            zIndex: 99,
-          }}
+      {/* Mobile sidebar drawer */}
+      {isMobile && (
+        <MobileNavDrawer
+          isOpen={mobileSidebarOpen}
+          onClose={handleMobileSidebarClose}
+          sections={mobileNavSections}
         />
       )}
     </div>

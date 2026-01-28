@@ -593,7 +593,8 @@ body {
   display: none;
 }
 
-@media (max-width: 1024px) {
+/* Mobile: < 768px */
+@media (max-width: 767px) {
   .gn-nav {
     display: none;
   }
@@ -620,9 +621,7 @@ body {
     grid-template-columns: 1fr;
     min-width: auto;
   }
-}
 
-@media (max-width: 768px) {
   .gn-root {
     padding: 0 16px;
   }
@@ -633,6 +632,36 @@ body {
 
   .gn-divider {
     display: none;
+  }
+}
+
+/* Tablet: 768px - 1023px */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .gn-nav {
+    display: none;
+  }
+
+  .gn-mobile-toggle {
+    display: flex;
+  }
+
+  /* Tablet mega menu becomes full-width drawer */
+  .gn-mega {
+    position: fixed;
+    top: 64px;
+    left: 0;
+    right: 0;
+    max-width: none;
+    max-height: calc(100vh - 64px);
+    overflow-y: auto;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  .gn-mega--wide {
+    grid-template-columns: 1fr;
+    min-width: auto;
   }
 }
 

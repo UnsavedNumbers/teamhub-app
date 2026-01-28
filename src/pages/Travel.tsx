@@ -189,9 +189,9 @@ export default function Travel() {
           { label: 'Travel' },
         ]}
       >
-        <div className="mb-12">
+        <div className="mb-8 sm:mb-12">
           <PageTitle>Travel</PageTitle>
-          <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
+          <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide">
             View upcoming travel plans and tournament details.
           </p>
         </div>
@@ -217,7 +217,7 @@ export default function Travel() {
             <p className="text-slate-500 dark:text-slate-400">Travel plans will appear here when your team has tournaments.</p>
           </Card>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {plans.map((plan) => (
               <div
                 key={plan.id}
@@ -225,9 +225,9 @@ export default function Travel() {
                 className="overflow-hidden cursor-pointer hover:shadow-2xl hover:shadow-[var(--org-btn-primary-bg, #137fec)]/5 transition-all duration-300"
               >
                 <Card className="p-0">
-                  <SportCardImage sport={planSports[plan.id] || null} height="h-48" type="travel">
-                    <div className="relative z-10 w-full">
-                      <div className="flex gap-2 mb-3">
+                  <SportCardImage sport={planSports[plan.id] || null} height="h-40 sm:h-48" type="travel">
+                    <div className="relative z-10 w-full p-4 sm:p-6">
+                      <div className="flex flex-wrap gap-2 mb-3">
                         {plan.status === 'cancelled' ? (
                           <span className="inline-block px-3 py-1 bg-red-500 text-white text-xs font-bold uppercase tracking-widest rounded">Cancelled</span>
                         ) : (
@@ -242,35 +242,35 @@ export default function Travel() {
                           </span>
                         )}
                       </div>
-                      <CardTitle className="mb-2 text-white">{plan.title}</CardTitle>
-                      <p className="text-xs font-bold uppercase tracking-widest text-white/80">
+                      <CardTitle className="mb-2 text-white text-lg sm:text-xl">{plan.title}</CardTitle>
+                      <p className="text-xs font-bold uppercase tracking-widest text-white/80 break-words">
                         {plan.location} • {formatDateRange(plan.start_date, plan.end_date)}
                       </p>
                     </div>
                   </SportCardImage>
 
-                  <div className="p-6 grid md:grid-cols-2 gap-4">
+                  <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                     {plan.venue_name && (
-                      <div className="flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-                        <Icon name="location_on" className="text-slate-400" />
-                        <div>
-                          <p className="font-black text-slate-900 dark:text-white">{plan.venue_name}</p>
-                          {plan.venue_address && <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{plan.venue_address}</p>}
+                      <div className="flex items-start gap-3 p-3 sm:p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                        <Icon name="location_on" className="text-slate-400 flex-shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <p className="font-black text-slate-900 dark:text-white break-words">{plan.venue_name}</p>
+                          {plan.venue_address && <p className="text-sm font-bold text-slate-500 dark:text-slate-400 break-words">{plan.venue_address}</p>}
                         </div>
                       </div>
                     )}
                     {plan.hotel_name && (
-                      <div className="flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-                        <Icon name="hotel" className="text-slate-400" />
-                        <div>
-                          <p className="font-black text-slate-900 dark:text-white">{plan.hotel_name}</p>
-                          {plan.hotel_address && <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{plan.hotel_address}</p>}
+                      <div className="flex items-start gap-3 p-3 sm:p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                        <Icon name="hotel" className="text-slate-400 flex-shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <p className="font-black text-slate-900 dark:text-white break-words">{plan.hotel_name}</p>
+                          {plan.hotel_address && <p className="text-sm font-bold text-slate-500 dark:text-slate-400 break-words">{plan.hotel_address}</p>}
                         </div>
                       </div>
                     )}
                   </div>
 
-                  <div className="px-6 pb-6 flex justify-between items-center border-t border-slate-100 dark:border-slate-800 pt-6">
+                  <div className="px-4 sm:px-6 pb-4 sm:pb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-4 border-t border-slate-100 dark:border-slate-800 pt-4 sm:pt-6">
                     <span className="text-xs font-bold uppercase tracking-widest text-slate-400">{plan.team?.name}</span>
                     <span className="text-[var(--org-link-color)] text-sm font-bold uppercase tracking-wide flex items-center gap-2">
                       View Details

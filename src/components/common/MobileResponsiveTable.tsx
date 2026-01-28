@@ -1,15 +1,15 @@
 /**
- * StandardTable
+ * MobileResponsiveTable
  * 
- * A reusable table component that matches the Teams/Levels/Seasons page styling.
- * Provides consistent table UI/UX across admin pages.
- * 
- * Uses Tailwind classes to match the existing codebase pattern.
+ * A table component that automatically converts to stacked card layout on mobile.
+ * On mobile (<768px): Each row becomes a card with stacked fields
+ * On tablet (768-1023px): Can show 2 columns max
+ * On desktop (>=1024px): Standard table layout
  */
 
 import type { ReactNode } from 'react'
 
-export interface StandardTableProps {
+export interface MobileResponsiveTableProps {
   /** Table header cells - can be strings or React nodes */
   headers: (string | ReactNode)[]
   /** Table rows - each row is an array of cells */
@@ -22,48 +22,28 @@ export interface StandardTableProps {
   tableClassName?: string
   /** Optional header alignment - 'left' | 'right' | 'center' (default: 'left') */
   headerAlign?: ('left' | 'right' | 'center')[]
+  /** Key field index - shown first on mobile cards (default: 0) */
+  keyFieldIndex?: number
 }
 
 /**
- * StandardTable Component
+ * MobileResponsiveTable Component
  * 
- * Matches the styling from Teams/Levels/Seasons pages:
- * - White background with slate border and rounded corners
- * - Slate-50 header background
- * - Hover effects on rows
- * - Group hover visibility for action buttons
- * 
- * Usage example:
- * ```tsx
- * <StandardTable
- *   headers={['Name', 'Status', 'Actions']}
- *   rows={[
- *     [
- *       <div className="font-bold text-slate-900">Item 1</div>,
- *       <Badge>Active</Badge>,
- *       <Link className="invisible group-hover:visible focus:visible">
- *         <button>Edit</button>
- *       </Link>
- *     ],
- *   ]}
- *   emptyState={
- *     <>
- *       <span className="material-symbols-outlined text-5xl text-slate-200 mb-4">inbox</span>
- *       <p className="text-slate-500 font-medium">No items found</p>
- *     </>
- *   }
- * />
- * ```
+ * Automatically adapts to screen size:
+ * - Mobile: Stacked card layout (one record per block)
+ * - Tablet: Can show 2 columns max
+ * - Desktop: Standard table layout
  */
-export default function StandardTable({
+export default function MobileResponsiveTable({
   headers,
   rows,
   emptyState,
   className = '',
   tableClassName = '',
   headerAlign = [],
-}: StandardTableProps) {
-  // If no rows and custom empty state, show it in container
+  keyFieldIndex = 0,
+}: MobileResponsiveTableProps) {
+  // If no rows and custom empty state, show it
   if (rows.length === 0 && emptyState) {
     return (
       <div className={`bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm ${className}`}>
@@ -138,28 +118,30 @@ export default function StandardTable({
           </div>
         ) : (
           rows.map((row, rowIndex) => {
-            // First field (usually name/title) shown prominently
-            const primaryField = row[0]
+            // Key field (usually first) shown prominently
+            const keyField = row[keyFieldIndex]
             // Other fields shown below
-            const otherFields = row.slice(1)
+            const otherFields = row.filter((_, index) => index !== keyFieldIndex)
 
             return (
               <div
                 key={rowIndex}
                 className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm"
               >
-                {/* Primary field - prominent */}
+                {/* Key field - prominent */}
                 <div className="mb-3 pb-3 border-b border-slate-100">
                   <div className="font-semibold text-slate-900 text-base">
-                    {primaryField}
+                    {keyField}
                   </div>
                 </div>
 
                 {/* Other fields - stacked */}
                 <div className="space-y-2">
                   {otherFields.map((cell, cellIndex) => {
-                    const header = headers[cellIndex + 1]
-                    const headerText = typeof header === 'string' ? header : `Field ${cellIndex + 2}`
+                    // Skip keyFieldIndex in mapping
+                    const actualIndex = cellIndex < keyFieldIndex ? cellIndex : cellIndex + 1
+                    const header = headers[actualIndex]
+                    const headerText = typeof header === 'string' ? header : `Field ${actualIndex + 1}`
 
                     return (
                       <div key={cellIndex} className="flex flex-col">

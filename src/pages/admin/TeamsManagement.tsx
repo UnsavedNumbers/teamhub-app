@@ -478,91 +478,93 @@ export default function TeamsManagement() {
 
       {/* Filter Bar */}
       <Card className="pa-mb-6 pa-filter-section">
-        <div className={cn('pa-grid', 'pa-grid-1', 'md:pa-grid-2', 'lg:pa-grid-3', 'pa-gap-6')}>
-          {/* Row 1 */}
-          <div>
-            <label className="pa-overline pa-mb-2 pa-block">Season</label>
-            <Select
-              value={filterSeasonId}
-              onChange={(e) => setFilterSeasonId(e.target.value)}
-              disabled={loading || navigating}
-              options={[
-                { value: '', label: 'All seasons' },
-                ...seasons.map((s) => ({ value: s.id, label: s.name })),
-              ]}
-            />
+        <div className="pa-filter-row">
+          <div className={cn('pa-grid', 'pa-grid-1', 'sm:pa-grid-2', 'lg:pa-grid-3', 'pa-gap-4', 'pa-flex-1')}>
+            {/* Row 1 */}
+            <div className="pa-filter-control">
+              <label className="pa-overline pa-mb-2 pa-block">Season</label>
+              <Select
+                value={filterSeasonId}
+                onChange={(e) => setFilterSeasonId(e.target.value)}
+                disabled={loading || navigating}
+                options={[
+                  { value: '', label: 'All seasons' },
+                  ...seasons.map((s) => ({ value: s.id, label: s.name })),
+                ]}
+              />
+            </div>
+
+            <div className="pa-filter-control">
+               <label className="pa-overline pa-mb-2 pa-block">Sport</label>
+              <Select
+                value={filterSportId}
+                onChange={(e) => {
+                  setFilterSportId(e.target.value)
+                  setFilterProgramId('')
+                  setFilterLevelId('')
+                }}
+                disabled={loading || navigating}
+                options={[
+                  { value: '', label: 'All sports' },
+                  ...sports.map((s) => ({ value: s.id, label: s.name })),
+                ]}
+              />
+            </div>
+
+            {/* Row 2 */}
+            <div className="pa-filter-control">
+              <label className="pa-overline pa-mb-2 pa-block">Program</label>
+              <Select
+                value={filterProgramId}
+                onChange={(e) => {
+                  setFilterProgramId(e.target.value)
+                  setFilterLevelId('')
+                }}
+                disabled={(!filterSportId && availablePrograms.length === programs.length) || loading || navigating}
+                options={[
+                  { value: '', label: 'All programs' },
+                  ...availablePrograms.map((p) => ({ value: p.id, label: p.name })),
+                ]}
+              />
+            </div>
+
+            <div className="pa-filter-control">
+              <label className="pa-overline pa-mb-2 pa-block">Level</label>
+              <Select
+                value={filterLevelId}
+                onChange={(e) => setFilterLevelId(e.target.value)}
+                disabled={loading || navigating}
+                options={[
+                  { value: '', label: 'All levels' },
+                  ...availableLevels.map((l) => ({ value: l.id, label: l.name })),
+                ]}
+              />
+            </div>
+
+            <div className="pa-filter-control">
+              <label className="pa-overline pa-mb-2 pa-block">Status</label>
+              <Select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                disabled={loading || navigating}
+                options={[
+                  { value: 'all', label: 'All statuses' },
+                  { value: 'active', label: 'Active' },
+                  { value: 'inactive', label: 'Inactive' },
+                ]}
+              />
+            </div>
           </div>
 
-          <div>
-             <label className="pa-overline pa-mb-2 pa-block">Sport</label>
-            <Select
-              value={filterSportId}
-              onChange={(e) => {
-                setFilterSportId(e.target.value)
-                setFilterProgramId('')
-                setFilterLevelId('')
-              }}
-              disabled={loading || navigating}
-              options={[
-                { value: '', label: 'All sports' },
-                ...sports.map((s) => ({ value: s.id, label: s.name })),
-              ]}
-            />
-          </div>
-
-          <div className={cn('pa-flex', 'pa-items-end', 'pa-justify-end', 'md:pa-col-span-2', 'lg:pa-col-span-1')}>
+          <div className="pa-filter-actions">
             <Button
-              className="pa-w-full lg:pa-w-auto"
+              className="pa-w-full sm:pa-w-auto"
               disabled={!canCreateTeam || navigating || loading}
               title={!canCreateTeam ? 'Add a Level first' : undefined}
               onClick={handleAddTeam}
             >
               Add Team
             </Button>
-          </div>
-
-          {/* Row 2 */}
-          <div>
-            <label className="pa-overline pa-mb-2 pa-block">Program</label>
-            <Select
-              value={filterProgramId}
-              onChange={(e) => {
-                setFilterProgramId(e.target.value)
-                setFilterLevelId('')
-              }}
-              disabled={(!filterSportId && availablePrograms.length === programs.length) || loading || navigating}
-              options={[
-                { value: '', label: 'All programs' },
-                ...availablePrograms.map((p) => ({ value: p.id, label: p.name })),
-              ]}
-            />
-          </div>
-
-          <div>
-            <label className="pa-overline pa-mb-2 pa-block">Level</label>
-            <Select
-              value={filterLevelId}
-              onChange={(e) => setFilterLevelId(e.target.value)}
-              disabled={loading || navigating}
-              options={[
-                { value: '', label: 'All levels' },
-                ...availableLevels.map((l) => ({ value: l.id, label: l.name })),
-              ]}
-            />
-          </div>
-
-          <div>
-            <label className="pa-overline pa-mb-2 pa-block">Status</label>
-            <Select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              disabled={loading || navigating}
-              options={[
-                { value: 'all', label: 'All statuses' },
-                { value: 'active', label: 'Active' },
-                { value: 'inactive', label: 'Inactive' },
-              ]}
-            />
           </div>
         </div>
       </Card>

@@ -590,15 +590,15 @@ export default function PaymentDetail() {
         }}
       >
         {/* Custom Header with Back Button and Title */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(getLink('admin.payments.list'))}
-              className="size-10 flex items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-[var(--org-btn-primary-bg, #137fec)] transition-colors"
+              className="size-10 flex items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-[var(--org-btn-primary-bg, #137fec)] transition-colors min-h-[44px] min-w-[44px]"
             >
               <span className="material-symbols-outlined">arrow_back</span>
             </button>
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
               RECEIPT #{receiptNumber}
             </h1>
           </div>
@@ -608,7 +608,7 @@ export default function PaymentDetail() {
             disabled={!isPaid || actionLoading !== null}
             loading={actionLoading === 'download'}
             icon="download"
-            className="flex items-center gap-2 uppercase tracking-widest"
+            className="flex items-center gap-2 uppercase tracking-widest w-full sm:w-auto min-h-[44px]"
           >
             DOWNLOAD PDF
           </Button>
@@ -654,11 +654,11 @@ export default function PaymentDetail() {
           <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--org-btn-primary-bg, #137fec)]/5 -mr-16 -mt-16 rounded-full"></div>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Main Content */}
-          <div className="md:col-span-2 space-y-8">
+          <div className="lg:col-span-2 space-y-8">
             {/* Payer and For Section */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
               <div className="space-y-4">
                 <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white">PAYER</h3>
                 <div className="flex items-center gap-4">

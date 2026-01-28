@@ -12,7 +12,7 @@ import { cn } from '../../utils/cn'
 // Loading skeleton for stats
 function StatsSkeleton() {
   return (
-    <div className="pa-grid pa-grid-4">
+    <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-4 pa-gap-4">
       {[1, 2, 3, 4].map((i) => (
         <div key={i} className="pa-kpi-card">
           <div className={cn('pa-skeleton', 'pa-w-3-5', 'pa-h-4', 'pa-mb-2')} />
@@ -176,7 +176,7 @@ export default function PlatformAdminDashboard() {
       )}
 
       {/* Stats Row 1: Organizations & Users */}
-      <div className="pa-grid pa-grid-4">
+      <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-4 pa-gap-4">
         <StatCard
           label="Active Organizations"
           value={health?.active_organizations ?? 0}
@@ -206,7 +206,7 @@ export default function PlatformAdminDashboard() {
       </div>
 
       {/* Stats Row 2: Payments & Structure */}
-      <div className="pa-grid pa-grid-4 pa-mt-5">
+      <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-4 pa-gap-4 pa-mt-5">
         <StatCard
           label="Successful Payments"
           value={health?.successful_payments ?? 0}

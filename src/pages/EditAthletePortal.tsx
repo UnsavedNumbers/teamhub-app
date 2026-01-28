@@ -541,7 +541,7 @@ export default function EditAthletePortal() {
                         Basic Information
                     </h2>
 
-                    <div className="grid gap-4 md:grid-cols-2 mb-4">
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 mb-4">
                         <div>
                             <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
                                 First Name *
@@ -550,7 +550,7 @@ export default function EditAthletePortal() {
                                 type="text"
                                 value={formData.first_name}
                                 onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                                className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                                className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 min-h-[44px]"
                                 placeholder="First name"
                                 required
                             />
@@ -563,14 +563,14 @@ export default function EditAthletePortal() {
                                 type="text"
                                 value={formData.last_name}
                                 onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                                className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                                className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 min-h-[44px]"
                                 placeholder="Last name"
                                 required
                             />
                         </div>
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-2 mb-4">
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 mb-4">
                         <PortalDatePicker
                             label="Date of Birth"
                             value={formData.date_of_birth}
@@ -602,7 +602,7 @@ export default function EditAthletePortal() {
                             type="text"
                             value={formData.preferred_name}
                             onChange={(e) => setFormData({ ...formData, preferred_name: e.target.value })}
-                            className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                            className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 min-h-[44px]"
                             placeholder="e.g. Mike, Johnny, etc."
                         />
                     </div>
@@ -662,12 +662,12 @@ export default function EditAthletePortal() {
                             type="text"
                             value={formData.allergies}
                             onChange={(e) => setFormData({ ...formData, allergies: e.target.value })}
-                            className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                            className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 min-h-[44px]"
                             placeholder="List any allergies"
                         />
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                         <div>
                             <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
                                 Emergency Contact Name
@@ -678,7 +678,7 @@ export default function EditAthletePortal() {
                                 onChange={(e) =>
                                     setFormData({ ...formData, emergency_contact_name: e.target.value })
                                 }
-                                className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                                className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 min-h-[44px]"
                                 placeholder="Contact name"
                             />
                         </div>
@@ -692,7 +692,7 @@ export default function EditAthletePortal() {
                                 onChange={(e) =>
                                     setFormData({ ...formData, emergency_contact_phone: e.target.value })
                                 }
-                                className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                                className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 min-h-[44px]"
                                 placeholder="(555) 123-4567"
                             />
                         </div>
@@ -727,16 +727,17 @@ export default function EditAthletePortal() {
                 </Card>
 
                 {/* Submit Buttons */}
-                <div className="flex gap-3 justify-end">
+                <div className="flex flex-col sm:flex-row gap-3 justify-end">
                     <Button
                         type="button"
                         variant="secondary"
                         onClick={() => navigate('/portal/athletes')}
                         disabled={isSubmitting}
+                        className="w-full sm:w-auto min-h-[44px]"
                     >
                         Cancel
                     </Button>
-                    <Button type="submit" variant="primary" disabled={isSubmitting || !isFormValid}>
+                    <Button type="submit" variant="primary" disabled={isSubmitting || !isFormValid} className="w-full sm:w-auto min-h-[44px]">
                         {isSubmitting ? 'Saving...' : 'Save Changes'}
                     </Button>
                 </div>

@@ -8,7 +8,7 @@ import type { LicenseMetrics, LicenseAlert } from '../../types/licenseTiers.type
 // Loading skeleton for stats
 function StatsSkeleton() {
   return (
-    <div className="pa-grid pa-grid-4">
+    <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-4 pa-gap-4">
       {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
         <div key={i} className="pa-kpi-card">
           <div className="pa-skeleton" style={{ width: '60%', height: '14px', marginBottom: '8px' }} />
@@ -216,7 +216,7 @@ export default function LicensesOverview() {
       )}
 
       {/* Stats Row 1: Tiers & Features */}
-      <div className="pa-grid pa-grid-4">
+      <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-4 pa-gap-4">
         <StatCard
           label="Active License Tiers"
           value={metrics?.active_tiers ?? 0}
@@ -244,7 +244,7 @@ export default function LicensesOverview() {
       </div>
 
       {/* Stats Row 2: Organizations & Overrides */}
-      <div className="pa-grid pa-grid-4 pa-mt-5">
+      <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-4 pa-gap-4 pa-mt-5">
         <StatCard
           label="Organizations on Basic"
           value={metrics?.orgs_on_basic ?? 0}
@@ -285,7 +285,7 @@ export default function LicensesOverview() {
             </Button>
           }
         >
-          <div className="pa-grid pa-grid-3" style={{ gap: 'var(--pa-space-4)' }}>
+          <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-3" style={{ gap: 'var(--pa-space-4)' }}>
             <button
               className="pa-btn pa-btn--secondary"
               onClick={() => navigate('/platform-admin/licenses/features/new')}
