@@ -7,27 +7,22 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
-import { getSeason } from '../../data/services/seasonsService'
-import { getEvents } from '../../data/services/eventsService'
-import { getOrganizationUsers } from '../../data/services/usersService'
-import { supabase } from '../../lib/supabase'
+import { getSeason, deleteSeason } from '../../data/services/seasonsService'
 import type { Season } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button, ConfirmDialog } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, Badge, ConfirmDialog } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
+import { supabase } from '../../lib/supabase'
 import { cn } from '../../utils/cn'
 
 interface SeasonStats {
-  teams: number
-  sportsPrograms: {
-    varsity: number
-    jv: number
-    freshman: number
-  }
-  registered: number
-  games: number
-  venues: number
-  staff: number
+  teamsCount: number
+  programsByLevel: Record<string, number>
+  sportsCount: number
+  registeredAthletes: number
+  gamesCount: number
+  venuesCount: number
+  staffCount: number
 }
 
 export default function SeasonDetail() {
@@ -36,38 +31,13 @@ export default function SeasonDetail() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [showArchiveDialog, setShowArchiveDialog] = useState(false)
   const [season, setSeason] = useState<Season | null>(null)
-  const [stats, setStats] = useState<SeasonStats>({
-    teams: 0,
-    sportsPrograms: { varsity: 0, jv: 0, freshman: 0 },
-    registered: 0,
-    games: 0,
-    venues: 0,
-    staff: 0,
-  })
+  const [stats, setStats] = useState<SeasonStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(true)
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false)
+  const [archiving, setArchiving] = useState(false)
 
-  const calculateSeasonProgress = useCallback((season: Season): number => {
-    if (!season.start_date || !season.end_date) return 0
-    const start = new Date(season.start_date).getTime()
-    const end = new Date(season.end_date).getTime()
-    const now = Date.now()
-    if (now < start) return 0
-    if (now > end) return 100
-    return Math.round(((now - start) / (end - start)) * 100)
-  }, [])
-
-  const formatDateRange = useCallback((season: Season): string => {
-    if (!season.start_date || !season.end_date) return ''
-    const start = new Date(season.start_date)
-    const end = new Date(season.end_date)
-    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
-    const startStr = `${months[start.getMonth()]} ${String(start.getDate()).padStart(2, '0')}`
-    const endStr = `${months[end.getMonth()]} ${String(end.getDate()).padStart(2, '0')}, ${end.getFullYear()}`
-    return `${startStr} — ${endStr}`
-  }, [])
-
+  // Load season data
   useEffect(() => {
     if (!isReady || !id) return
 
@@ -94,111 +64,138 @@ export default function SeasonDetail() {
     load()
   }, [context, isReady, id])
 
+  // Load season statistics
   useEffect(() => {
     if (!isReady || !id || !season) return
 
     const loadStats = async () => {
       setStatsLoading(true)
+
       try {
         // Get teams for this season
         const { data: teamSeasons, error: teamSeasonsError } = await supabase
           .from('team_seasons')
-          .select('team_id')
-          .eq('season_id', id)
-
-        if (teamSeasonsError) throw teamSeasonsError
-
-        const teamIds = (teamSeasons || []).map((ts: any) => ts.team_id)
-        const teamsCount = teamIds.length
-
-        // Get teams with their programs/levels for sports breakdown
-        let sportsPrograms = { varsity: 0, jv: 0, freshman: 0 }
-        let registeredCount = 0
-        let venuesSet = new Set<string>()
-
-        if (teamIds.length > 0) {
-          // Get teams with program/level info
-          const { data: teamsData, error: teamsError } = await supabase
-            .from('teams')
-            .select(`
+          .select(`
+            team_id,
+            team:teams(
               id,
               program_id,
-              level:levels(name, level_type)
-            `)
-            .in('id', teamIds)
+              program:programs(
+                id,
+                level_id,
+                level:levels(id, name)
+              ),
+              sport_id,
+              sport:sports(id, name)
+            )
+          `)
+          .eq('season_id', id)
 
-          if (!teamsError && teamsData) {
-            // Count by level type (simplified - map level names to varsity/jv/freshman)
-            teamsData.forEach((team: any) => {
-              const levelName = team.level?.name?.toLowerCase() || ''
-              if (levelName.includes('varsity')) sportsPrograms.varsity++
-              else if (levelName.includes('jv') || levelName.includes('junior')) sportsPrograms.jv++
-              else if (levelName.includes('freshman') || levelName.includes('fresh')) sportsPrograms.freshman++
-            })
-
-            // Count registered athletes (team memberships)
-            const { count: membershipsCount } = await supabase
-              .from('team_memberships')
-              .select('*', { count: 'exact', head: true })
-              .in('team_id', teamIds)
-              .eq('season_id', id)
-              .eq('status', 'active')
-
-            registeredCount = membershipsCount || 0
-          }
+        if (teamSeasonsError) {
+          console.error('Error loading team seasons:', teamSeasonsError)
         }
 
-        // Get events for this season
-        const startDate = season.start_date ? new Date(season.start_date) : null
-        const endDate = season.end_date ? new Date(season.end_date) : null
+        const teams = teamSeasons || []
+        const teamsCount = teams.length
 
+        // Count programs by level
+        const programsByLevel: Record<string, number> = {}
+        const uniqueSports = new Set<string>()
+
+        teams.forEach((ts: any) => {
+          const team = ts.team
+          if (team?.program?.level) {
+            const levelName = team.program.level.name || 'Unknown'
+            programsByLevel[levelName] = (programsByLevel[levelName] || 0) + 1
+          }
+          if (team?.sport?.id) {
+            uniqueSports.add(team.sport.id)
+          }
+        })
+
+        // Get registered athletes count
+        const { count: athletesCount } = await supabase
+          .from('team_memberships')
+          .select('*', { count: 'exact', head: true })
+          .eq('season_id', id)
+          .eq('status', 'active')
+
+        // Get games/events count (if events table exists and has season_id)
         let gamesCount = 0
-        if (startDate && endDate) {
-          const { data: eventsData, error: eventsError } = await getEvents(context, {
-            startDate,
-            endDate,
-            seasonId: id,
-            includeCancelled: false,
-          })
+        try {
+          const { count: eventsCount } = await supabase
+            .from('events')
+            .select('*', { count: 'exact', head: true })
+            .eq('season_id', id)
+          gamesCount = eventsCount || 0
+        } catch {
+          // Events table might not exist or have season_id
+        }
 
-          if (!eventsError && eventsData) {
-            gamesCount = eventsData.filter((e) => e.type === 'game').length
+        // Get venues count (distinct venues from events)
+        let venuesCount = 0
+        try {
+          const { data: venuesData } = await supabase
+            .from('events')
+            .select('venue_id')
+            .eq('season_id', id)
+            .not('venue_id', 'is', null)
+          
+          if (venuesData) {
+            const uniqueVenues = new Set(venuesData.map((e: any) => e.venue_id).filter(Boolean))
+            venuesCount = uniqueVenues.size
+          }
+        } catch {
+          // Venues might not be available
+        }
 
-            // Get unique venues from events
-            const eventIds = eventsData.map((e) => e.id)
-            if (eventIds.length > 0) {
-              const { data: locationsData } = await supabase
-                .from('event_locations')
-                .select('place_id, venue_name')
-                .in('event_id', eventIds)
-                .not('place_id', 'is', null)
-
-              if (locationsData) {
-                locationsData.forEach((loc: any) => {
-                  if (loc.place_id) venuesSet.add(loc.place_id)
-                })
-              }
+        // Get staff count (users with coach/admin roles in org)
+        let staffCount = 0
+        try {
+          const { data: usersData } = await supabase
+            .from('users')
+            .select('id')
+            .eq('org_id', context.orgId)
+          
+          if (usersData) {
+            // Get user roles
+            const userIds = usersData.map((u: any) => u.id)
+            const { data: rolesData } = await supabase
+              .from('user_roles')
+              .select('user_id')
+              .in('user_id', userIds)
+              .in('role', ['coach', 'admin', 'staff'])
+            
+            if (rolesData) {
+              const uniqueStaff = new Set(rolesData.map((r: any) => r.user_id))
+              staffCount = uniqueStaff.size
             }
           }
+        } catch {
+          // Staff count might not be available
         }
 
-        // Get staff count (coaches)
-        const { data: usersData, error: usersError } = await getOrganizationUsers(context)
-        const staffCount = usersError
-          ? 0
-          : usersData.filter((u) => u.roles.includes('coach')).length
-
         setStats({
-          teams: teamsCount,
-          sportsPrograms,
-          registered: registeredCount,
-          games: gamesCount,
-          venues: venuesSet.size,
-          staff: staffCount,
+          teamsCount,
+          programsByLevel,
+          sportsCount: uniqueSports.size,
+          registeredAthletes: athletesCount || 0,
+          gamesCount,
+          venuesCount,
+          staffCount,
         })
       } catch (err) {
         console.error('Error loading season stats:', err)
-        // Don't set error state, just show zeros
+        // Set default stats on error
+        setStats({
+          teamsCount: 0,
+          programsByLevel: {},
+          sportsCount: 0,
+          registeredAthletes: 0,
+          gamesCount: 0,
+          venuesCount: 0,
+          staffCount: 0,
+        })
       } finally {
         setStatsLoading(false)
       }
@@ -207,8 +204,60 @@ export default function SeasonDetail() {
     loadStats()
   }, [context, isReady, id, season])
 
+  const handleArchive = useCallback(async () => {
+    if (!season || !id) return
+
+    setArchiving(true)
+    try {
+      const result = await deleteSeason(context, id)
+      if (result.error) {
+        setError(result.error.message)
+        setShowArchiveDialog(false)
+      } else {
+        // Navigate to seasons list after successful archive
+        navigate(getLink('admin.seasons.list'))
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to archive season')
+      setShowArchiveDialog(false)
+    } finally {
+      setArchiving(false)
+    }
+  }, [context, id, season, navigate])
+
+  // Calculate season progress
+  const getSeasonProgress = () => {
+    if (!season?.start_date || !season?.end_date) return 0
+
+    const start = new Date(season.start_date).getTime()
+    const end = new Date(season.end_date).getTime()
+    const now = new Date().getTime()
+
+    if (now < start) return 0
+    if (now > end) return 100
+
+    return Math.round(((now - start) / (end - start)) * 100)
+  }
+
+  // Format date range
+  const formatDateRange = () => {
+    if (!season?.start_date || !season?.end_date) return '—'
+
+    const start = new Date(season.start_date)
+    const end = new Date(season.end_date)
+
+    const startStr = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()
+    const endStr = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase()
+
+    return `${startStr} — ${endStr}`
+  }
+
   if (loading) {
-    return <div className="pa-skeleton" style={{ height: '500px' }} />
+    return (
+      <div className="pa-root">
+        <div className="pa-skeleton" style={{ height: '500px' }} />
+      </div>
+    )
   }
 
   if (error || !season) {
@@ -234,94 +283,157 @@ export default function SeasonDetail() {
     )
   }
 
-  const progress = calculateSeasonProgress(season)
-  const dateRange = formatDateRange(season)
+  const progress = getSeasonProgress()
+  const dateRange = formatDateRange()
 
   return (
     <div className="pa-root">
       <OfflineBanner />
-      <div className={cn('pa-content', 'pa-w-full', 'pa-mx-auto', 'pa-p-5')} style={{ maxWidth: '1200px' }}>
+      
+      <div
+        style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          width: '100%',
+          padding: 'var(--pa-space-6) var(--pa-space-4)',
+          paddingBottom: 'var(--pa-space-10)',
+        }}
+      >
         {/* Hero Header Section */}
         <div
-          className={cn('pa-relative', 'pa-mb-8', 'pa-overflow-hidden', 'pa-rounded-xl', 'pa-shadow-xl')}
+          className="pa-mb-6"
           style={{
+            position: 'relative',
+            overflow: 'hidden',
+            borderRadius: 'var(--pa-radius-m)',
             background: 'var(--pa-n900)',
-            minHeight: '320px',
+            boxShadow: 'var(--pa-shadow-3)',
           }}
         >
           <div
-            className={cn('pa-absolute', 'pa-inset-0', 'pa-bg-cover', 'pa-bg-center')}
             style={{
+              position: 'absolute',
+              inset: 0,
               opacity: 0.6,
-              backgroundImage: 'linear-gradient(to right, rgba(0,0,0,0.8), rgba(0,0,0,0.2)), url("https://lh3.googleusercontent.com/aida-public/AB6AXuBu4HCQ9PZNmVmyMU9yEUANgUxkHrShObpL2Ih0mcZSgLGn3ygtDw3oDxRxlY8Qi6J88chTLIZVxjMEa1XX5VDrUc9NL99j7yrzHPPCAJ9Is3Krsl_vML3K7iUnbSIuA4ybgQBZKcXiXOHR7p8itgQRn4ZCyxKOul81eWkqPWbqoZtd8gadbsk9f6zQ4uJLoedADEbyPtPBlNkPkhZb1k5Sds1VR2ZRqqgJ6A9dlggpMIzSKfjq3V91X2bXdchA-I4HsQ02gEJbxac")',
+              backgroundImage: 'linear-gradient(to right, rgba(0,0,0,0.8), rgba(0,0,0,0.2))',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
             }}
-            data-alt="High-contrast abstract autumn field texture"
           />
           <div
-            className={cn('pa-relative', 'pa-z-10', 'pa-flex', 'pa-flex-col', 'md:pa-flex-row', 'pa-justify-between', 'pa-items-end', 'pa-p-8', 'md:pa-p-12')}
-            style={{ minHeight: '320px' }}
+            style={{
+              position: 'relative',
+              zIndex: 10,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--pa-space-2)',
+              padding: 'var(--pa-space-8)',
+              minHeight: '320px',
+            }}
+            className="md:flex-row md:justify-between md:items-end"
           >
-            <div className={cn('pa-flex', 'pa-flex-col', 'pa-gap-2')}>
-              <div
-                className={cn('pa-inline-flex', 'pa-items-center', 'pa-gap-2', 'pa-rounded-lg', 'pa-px-3', 'pa-py-1', 'pa-mb-4', 'pa-text-xs', 'pa-font-bold', 'pa-uppercase', 'pa-tracking-widest', 'pa-shadow-lg', 'pa-badge', 'pa-badge--success')}
-                style={{ color: 'white' }}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>check_circle</span>
-                Status: {season.is_active ? 'Active' : 'Upcoming'}
-              </div>
-              <h1
-                className={cn('pa-font-black', 'pa-leading-none', 'pa-uppercase', 'pa-tracking-tighter')}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-2)' }}>
+              <Badge
+                variant={season.is_active ? 'success' : 'neutral'}
                 style={{
-                  color: 'white',
+                  alignSelf: 'flex-start',
+                  marginBottom: 'var(--pa-space-4)',
+                  background: season.is_active
+                    ? 'var(--pa-theme-action-primary, var(--pa-n900))'
+                    : 'var(--pa-n700)',
+                  color: 'var(--pa-n0)',
+                  padding: 'var(--pa-space-2) var(--pa-space-3)',
+                  borderRadius: 'var(--pa-radius-xs)',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 'var(--pa-space-2)',
+                }}
+                icon="check_circle"
+              >
+                Status: {season.is_active ? 'Active' : 'Upcoming'}
+              </Badge>
+              <h1
+                style={{
                   fontFamily: 'var(--pa-font-display)',
-                  fontSize: 'clamp(2.5rem, 8vw, 4.5rem)',
+                  fontSize: 'clamp(36px, 8vw, 72px)',
+                  fontWeight: 900,
+                  lineHeight: 1,
+                  textTransform: 'uppercase',
+                  letterSpacing: '-0.05em',
+                  color: 'var(--pa-n0)',
+                  margin: 0,
                 }}
               >
                 {season.name}
               </h1>
               <p
-                className={cn('pa-text-lg', 'md:pa-text-xl', 'pa-font-medium', 'pa-tracking-widest', 'pa-mt-2')}
                 style={{
-                  color: 'var(--pa-theme-action-primary, #10b77d)',
+                  color: 'var(--pa-theme-action-primary, #258cf4)',
+                  fontSize: 'clamp(16px, 2vw, 20px)',
+                  fontWeight: 500,
+                  letterSpacing: '0.1em',
+                  marginTop: 'var(--pa-space-2)',
+                  textTransform: 'uppercase',
                 }}
               >
                 {dateRange}
               </p>
             </div>
-            {/* Side Panel Graphic: Stopwatch */}
+            {/* Progress Indicator */}
             <div
-              className={cn('pa-hidden', 'lg:pa-flex', 'pa-items-center', 'pa-justify-center', 'pa-p-6', 'pa-rounded-xl', 'pa-border')}
+              className="hidden lg:flex"
               style={{
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 'var(--pa-space-6)',
                 background: 'rgba(255, 255, 255, 0.1)',
-                borderColor: 'rgba(255, 255, 255, 0.2)',
                 backdropFilter: 'blur(12px)',
+                borderRadius: 'var(--pa-radius-m)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
               }}
             >
-              <div className={cn('pa-flex', 'pa-flex-col', 'pa-items-center', 'pa-gap-2')} style={{ color: 'white' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--pa-space-2)' }}>
                 <span
                   className="material-symbols-outlined"
                   style={{
-                    fontSize: '4rem',
-                    color: 'rgba(16, 183, 125, 0.8)',
+                    fontSize: '48px',
+                    color: 'var(--pa-theme-action-primary, #258cf4)',
+                    opacity: 0.8,
                   }}
                 >
                   timer
                 </span>
                 <span
-                  className={cn('pa-font-bold', 'pa-uppercase', 'pa-tracking-widest', 'pa-opacity-70')}
-                  style={{ fontSize: '10px' }}
+                  style={{
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                    opacity: 0.7,
+                    color: 'var(--pa-n0)',
+                  }}
                 >
                   Season Progress
                 </span>
                 <div
-                  className={cn('pa-w-32', 'pa-h-2', 'pa-rounded-full', 'pa-mt-2', 'pa-overflow-hidden')}
-                  style={{ background: 'rgba(255, 255, 255, 0.2)' }}
+                  style={{
+                    width: '128px',
+                    height: '8px',
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    borderRadius: '999px',
+                    marginTop: 'var(--pa-space-2)',
+                    overflow: 'hidden',
+                  }}
                 >
                   <div
                     style={{
-                      background: 'var(--pa-theme-action-primary, #10b77d)',
                       height: '100%',
                       width: `${progress}%`,
+                      background: 'var(--pa-theme-action-primary, #258cf4)',
                       transition: 'width 0.3s ease',
                     }}
                   />
@@ -333,184 +445,326 @@ export default function SeasonDetail() {
 
         {/* Athletic Grid Cards */}
         <div
-          className={cn('pa-grid', 'pa-grid-cols-1', 'md:pa-grid-cols-3', 'pa-gap-6', 'pa-mb-12')}
-          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}
+          className="pa-grid pa-grid-cols-1 md:pa-grid-cols-3"
+          style={{ gap: 'var(--pa-space-6)', marginBottom: 'var(--pa-space-6)' }}
         >
-          {/* Card 1: Sports & Programs */}
-          <Card className={cn('pa-flex', 'pa-flex-col', 'pa-gap-6')} style={{ padding: 'var(--pa-space-8)' }}>
-            <div className={cn('pa-flex', 'pa-items-center', 'pa-justify-between')}>
+          {/* Sports & Programs Card */}
+          <Card>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 'var(--pa-space-6)',
+              }}
+            >
               <h3
-                className={cn('pa-text-sm', 'pa-font-black', 'pa-uppercase', 'pa-tracking-widest')}
-                style={{ color: 'var(--pa-n500)' }}
+                style={{
+                  fontFamily: 'var(--pa-font-body)',
+                  fontSize: '12px',
+                  fontWeight: 900,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                  color: 'var(--pa-n500)',
+                  margin: 0,
+                }}
               >
                 Sports & Programs
               </h3>
               <span
                 className="material-symbols-outlined"
-                style={{ color: 'var(--pa-theme-action-primary, #10b77d)' }}
+                style={{
+                  fontSize: '24px',
+                  color: 'var(--pa-theme-action-primary, var(--pa-n900))',
+                }}
               >
                 sports_football
               </span>
             </div>
-            <div className="pa-space-y-4">
-              <div
-                className={cn('pa-flex', 'pa-justify-between', 'pa-items-center', 'pa-pb-2')}
-                style={{ borderBottom: '1px solid var(--pa-n100)' }}
-              >
-                <span className="pa-font-bold">Varsity</span>
-                <span style={{ color: 'var(--pa-n500)' }}>
-                  {statsLoading ? '—' : `${stats.sportsPrograms.varsity} Sports`}
-                </span>
-              </div>
-              <div
-                className={cn('pa-flex', 'pa-justify-between', 'pa-items-center', 'pa-pb-2')}
-                style={{ borderBottom: '1px solid var(--pa-n100)' }}
-              >
-                <span className="pa-font-bold">JV</span>
-                <span style={{ color: 'var(--pa-n500)' }}>
-                  {statsLoading ? '—' : `${stats.sportsPrograms.jv} Sports`}
-                </span>
-              </div>
-              <div
-                className={cn('pa-flex', 'pa-justify-between', 'pa-items-center', 'pa-pb-2')}
-                style={{ borderBottom: '1px solid var(--pa-n100)' }}
-              >
-                <span className="pa-font-bold">Freshman</span>
-                <span style={{ color: 'var(--pa-n500)' }}>
-                  {statsLoading ? '—' : `${stats.sportsPrograms.freshman} Sports`}
-                </span>
-              </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-4)' }}>
+              {statsLoading ? (
+                <div className="pa-body-m pa-text-muted">Loading...</div>
+              ) : stats && Object.keys(stats.programsByLevel).length > 0 ? (
+                Object.entries(stats.programsByLevel).map(([level, count]) => (
+                  <div
+                    key={level}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      paddingBottom: 'var(--pa-space-2)',
+                      borderBottom: '1px solid var(--pa-n100)',
+                    }}
+                  >
+                    <span style={{ fontWeight: 700, color: 'var(--pa-n900)' }}>{level}</span>
+                    <span style={{ color: 'var(--pa-n500)' }}>{count} {count === 1 ? 'Sport' : 'Sports'}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="pa-body-m pa-text-muted">No programs available</div>
+              )}
             </div>
-            <Button
-              variant="ghost"
-              iconRight="arrow_forward"
+            <button
               onClick={() => navigate(getLink('admin.organization.structure'))}
-              style={{ marginTop: 'auto' }}
+              style={{
+                marginTop: 'auto',
+                color: 'var(--pa-theme-action-primary, var(--pa-n900))',
+                fontSize: '14px',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--pa-space-1)',
+                padding: 0,
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'gap 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.gap = 'var(--pa-space-2)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.gap = 'var(--pa-space-1)'
+              }}
             >
-              VIEW PROGRAMS
-            </Button>
+              VIEW PROGRAMS{' '}
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
+                arrow_forward
+              </span>
+            </button>
           </Card>
 
-          {/* Card 2: Teams */}
+          {/* Teams Card */}
           <Card
-            className={cn('pa-flex', 'pa-flex-col', 'pa-justify-between')}
             style={{
-              padding: 'var(--pa-space-8)',
-              borderColor: 'rgba(16, 183, 125, 0.3)',
-              boxShadow: '0 4px 14px rgba(16, 183, 125, 0.05)',
+              borderColor: 'var(--pa-theme-border-accent, var(--pa-n200))',
+              boxShadow: 'var(--pa-shadow-2)',
             }}
           >
-            <div className={cn('pa-flex', 'pa-items-center', 'pa-justify-between')}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 'var(--pa-space-6)',
+              }}
+            >
               <h3
-                className={cn('pa-text-sm', 'pa-font-black', 'pa-uppercase', 'pa-tracking-widest')}
-                style={{ color: 'var(--pa-n500)' }}
+                style={{
+                  fontFamily: 'var(--pa-font-body)',
+                  fontSize: '12px',
+                  fontWeight: 900,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                  color: 'var(--pa-n500)',
+                  margin: 0,
+                }}
               >
                 Teams
               </h3>
               <span
                 className="material-symbols-outlined"
-                style={{ color: 'var(--pa-theme-action-primary, #10b77d)' }}
+                style={{
+                  fontSize: '24px',
+                  color: 'var(--pa-theme-action-primary, var(--pa-n900))',
+                }}
               >
                 groups
               </span>
             </div>
-            <div className="pa-py-4">
+            <div style={{ padding: 'var(--pa-space-4) 0' }}>
               <span
-                className={cn('pa-font-black', 'pa-block', 'pa-tracking-tighter')}
                 style={{
                   fontFamily: 'var(--pa-font-display)',
-                  fontSize: '4.5rem',
+                  fontSize: '72px',
+                  fontWeight: 900,
                   lineHeight: 1,
+                  letterSpacing: '-0.05em',
                   color: 'var(--pa-n900)',
+                  display: 'block',
                 }}
               >
-                {statsLoading ? '—' : stats.teams}
+                {statsLoading ? '—' : stats?.teamsCount || 0}
               </span>
               <span
-                className={cn('pa-text-lg', 'pa-font-bold', 'pa-uppercase', 'pa-tracking-tight', 'pa-block', 'pa-mt-2')}
                 style={{
-                  color: 'var(--pa-theme-action-primary, #10b77d)',
+                  fontSize: '18px',
+                  fontWeight: 700,
+                  color: 'var(--pa-theme-action-primary, var(--pa-n900))',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
                 }}
               >
                 Active Teams
               </span>
             </div>
-            <div className="pa-text-sm" style={{ color: 'var(--pa-n500)' }}>
-              {statsLoading ? 'Loading...' : '+4 from Fall 2024'}
+            <div style={{ fontSize: '14px', color: 'var(--pa-n500)' }}>
+              {statsLoading ? '—' : stats?.teamsCount ? `Active in ${season.name}` : 'No teams yet'}
             </div>
           </Card>
 
-          {/* Card 3: Season Stats */}
-          <Card className={cn('pa-flex', 'pa-flex-col', 'pa-gap-6')} style={{ padding: 'var(--pa-space-8)' }}>
-            <div className={cn('pa-flex', 'pa-items-center', 'pa-justify-between')}>
+          {/* Season Stats Card */}
+          <Card>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 'var(--pa-space-6)',
+              }}
+            >
               <h3
-                className={cn('pa-text-sm', 'pa-font-black', 'pa-uppercase', 'pa-tracking-widest')}
-                style={{ color: 'var(--pa-n500)' }}
+                style={{
+                  fontFamily: 'var(--pa-font-body)',
+                  fontSize: '12px',
+                  fontWeight: 900,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                  color: 'var(--pa-n500)',
+                  margin: 0,
+                }}
               >
                 Season Stats
               </h3>
               <span
                 className="material-symbols-outlined"
-                style={{ color: 'var(--pa-theme-action-primary, #10b77d)' }}
+                style={{
+                  fontSize: '24px',
+                  color: 'var(--pa-theme-action-primary, var(--pa-n900))',
+                }}
               >
                 insights
               </span>
             </div>
-            <div className={cn('pa-grid', 'pa-grid-cols-2', 'pa-gap-4')}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: 'var(--pa-space-4)',
+              }}
+            >
               <div
-                className={cn('pa-p-4', 'pa-rounded-lg')}
-                style={{ background: 'var(--pa-n50)' }}
+                className="pa-stat-box"
+                style={{
+                  background: 'var(--pa-n50)',
+                  padding: 'var(--pa-space-4)',
+                  borderRadius: 'var(--pa-radius-xs)',
+                }}
               >
                 <p
-                  className={cn('pa-font-bold', 'pa-uppercase', 'pa-mb-1')}
-                  style={{ color: 'var(--pa-n500)', fontSize: '10px' }}
+                  style={{
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    color: 'var(--pa-n500)',
+                    textTransform: 'uppercase',
+                    margin: '0 0 var(--pa-space-1) 0',
+                  }}
                 >
                   Registered
                 </p>
-                <p className={cn('pa-text-2xl', 'pa-font-black')}>
-                  {statsLoading ? '—' : stats.registered >= 1000 ? `${(stats.registered / 1000).toFixed(1)}k` : stats.registered}
+                <p
+                  style={{
+                    fontSize: '24px',
+                    fontWeight: 900,
+                    color: 'var(--pa-n900)',
+                    margin: 0,
+                    fontFamily: 'var(--pa-font-display)',
+                  }}
+                >
+                  {statsLoading ? '—' : formatNumber(stats?.registeredAthletes || 0)}
                 </p>
               </div>
               <div
-                className={cn('pa-p-4', 'pa-rounded-lg')}
-                style={{ background: 'var(--pa-n50)' }}
+                className="pa-stat-box"
+                style={{
+                  background: 'var(--pa-n50)',
+                  padding: 'var(--pa-space-4)',
+                  borderRadius: 'var(--pa-radius-xs)',
+                }}
               >
                 <p
-                  className={cn('pa-font-bold', 'pa-uppercase', 'pa-mb-1')}
-                  style={{ color: 'var(--pa-n500)', fontSize: '10px' }}
+                  style={{
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    color: 'var(--pa-n500)',
+                    textTransform: 'uppercase',
+                    margin: '0 0 var(--pa-space-1) 0',
+                  }}
                 >
                   Games
                 </p>
-                <p className={cn('pa-text-2xl', 'pa-font-black')}>
-                  {statsLoading ? '—' : stats.games}
+                <p
+                  style={{
+                    fontSize: '24px',
+                    fontWeight: 900,
+                    color: 'var(--pa-n900)',
+                    margin: 0,
+                    fontFamily: 'var(--pa-font-display)',
+                  }}
+                >
+                  {statsLoading ? '—' : stats?.gamesCount || 0}
                 </p>
               </div>
               <div
-                className={cn('pa-p-4', 'pa-rounded-lg')}
-                style={{ background: 'var(--pa-n50)' }}
+                className="pa-stat-box"
+                style={{
+                  background: 'var(--pa-n50)',
+                  padding: 'var(--pa-space-4)',
+                  borderRadius: 'var(--pa-radius-xs)',
+                }}
               >
                 <p
-                  className={cn('pa-font-bold', 'pa-uppercase', 'pa-mb-1')}
-                  style={{ color: 'var(--pa-n500)', fontSize: '10px' }}
+                  style={{
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    color: 'var(--pa-n500)',
+                    textTransform: 'uppercase',
+                    margin: '0 0 var(--pa-space-1) 0',
+                  }}
                 >
                   Venues
                 </p>
-                <p className={cn('pa-text-2xl', 'pa-font-black')}>
-                  {statsLoading ? '—' : stats.venues}
+                <p
+                  style={{
+                    fontSize: '24px',
+                    fontWeight: 900,
+                    color: 'var(--pa-n900)',
+                    margin: 0,
+                    fontFamily: 'var(--pa-font-display)',
+                  }}
+                >
+                  {statsLoading ? '—' : stats?.venuesCount || 0}
                 </p>
               </div>
               <div
-                className={cn('pa-p-4', 'pa-rounded-lg')}
-                style={{ background: 'var(--pa-n50)' }}
+                className="pa-stat-box"
+                style={{
+                  background: 'var(--pa-n50)',
+                  padding: 'var(--pa-space-4)',
+                  borderRadius: 'var(--pa-radius-xs)',
+                }}
               >
                 <p
-                  className={cn('pa-font-bold', 'pa-uppercase', 'pa-mb-1')}
-                  style={{ color: 'var(--pa-n500)', fontSize: '10px' }}
+                  style={{
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    color: 'var(--pa-n500)',
+                    textTransform: 'uppercase',
+                    margin: '0 0 var(--pa-space-1) 0',
+                  }}
                 >
                   Staff
                 </p>
-                <p className={cn('pa-text-2xl', 'pa-font-black')}>
-                  {statsLoading ? '—' : stats.staff}
+                <p
+                  style={{
+                    fontSize: '24px',
+                    fontWeight: 900,
+                    color: 'var(--pa-n900)',
+                    margin: 0,
+                    fontFamily: 'var(--pa-font-display)',
+                  }}
+                >
+                  {statsLoading ? '—' : stats?.staffCount || 0}
                 </p>
               </div>
             </div>
@@ -519,33 +773,61 @@ export default function SeasonDetail() {
 
         {/* Action Bar */}
         <div
-          className={cn('pa-flex', 'pa-flex-col', 'sm:pa-flex-row', 'pa-items-center', 'pa-justify-between', 'pa-gap-4', 'pa-p-6', 'pa-rounded-xl')}
           style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--pa-space-4)',
+            padding: 'var(--pa-space-6)',
             background: 'var(--pa-n50)',
+            borderRadius: 'var(--pa-radius-m)',
           }}
+          className="sm:flex-row sm:items-center sm:justify-between"
         >
-          <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-3')} style={{ color: 'var(--pa-n500)' }}>
-            <span className="material-symbols-outlined">settings_suggest</span>
-            <span className={cn('pa-text-sm', 'pa-font-medium')}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--pa-space-3)',
+              color: 'var(--pa-n500)',
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+              settings_suggest
+            </span>
+            <span style={{ fontSize: '14px', fontWeight: 500 }}>
               Administrator controls for {season.name} season management
             </span>
           </div>
-          <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-4', 'pa-w-full', 'sm:pa-w-auto')}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--pa-space-4)',
+              width: '100%',
+            }}
+            className="sm:w-auto"
+          >
             <Button
-              variant="ghost"
-              icon="edit"
+              variant="secondary"
               onClick={() =>
                 navigate(
-                  `${getLink('admin.organization.forms')}?edit=season&id=${season.id}&returnUrl=${encodeURIComponent(window.location.pathname)}`
+                  `${getLink('admin.organization.forms')}?edit=season&id=${season.id}&returnUrl=${encodeURIComponent(
+                    window.location.pathname
+                  )}`
                 )
               }
+              icon="edit"
+              style={{ flex: '1 1 auto' }}
+              className="sm:flex-none"
             >
               Edit Season
             </Button>
             <Button
               variant="danger"
-              icon="archive"
               onClick={() => setShowArchiveDialog(true)}
+              icon="archive"
+              style={{ flex: '1 1 auto' }}
+              className="sm:flex-none"
             >
               Archive Season
             </Button>
@@ -553,21 +835,24 @@ export default function SeasonDetail() {
         </div>
       </div>
 
-      {/* Archive Season Confirmation Dialog */}
       <ConfirmDialog
         open={showArchiveDialog}
         title="Archive Season"
-        description="Are you sure you want to archive this season?"
+        description={`Are you sure you want to archive "${season.name}"? This action cannot be undone.`}
         confirmLabel="Archive"
         cancelLabel="Cancel"
         variant="danger"
-        onConfirm={() => {
-          // TODO: Implement archive season functionality
-          console.log('Archive season:', season.id)
-          setShowArchiveDialog(false)
-        }}
+        loading={archiving}
+        onConfirm={handleArchive}
         onCancel={() => setShowArchiveDialog(false)}
       />
     </div>
   )
+}
+
+function formatNumber(num: number): string {
+  if (num >= 1000) {
+    return `${(num / 1000).toFixed(1)}k`
+  }
+  return num.toString()
 }

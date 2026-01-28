@@ -98,13 +98,13 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
             { text: 'Teams', icon: 'groups', path: getLink('admin.teams.list'), description: 'Teams and rosters' },
             { text: 'Events', icon: 'event', path: '/admin/events', description: 'Schedule and calendar' },
             { text: 'Payments', icon: 'receipt_long', path: '/admin/payments', description: 'Fees and collections' },
+            { text: 'Travel', icon: 'flight', path: '/admin/travel', description: 'Trip planning' },
           ],
         },
         {
           label: 'Programs',
           items: [
             { text: 'Tryouts', icon: 'emoji_events', path: '/admin/tryouts', description: 'Registration and evaluation' },
-            { text: 'Travel', icon: 'flight', path: '/admin/travel', description: 'Trip planning' },
             { text: 'Uniforms', icon: 'checkroom', path: '/admin/uniforms', description: 'Kits and gear' },
           ],
         },

@@ -44,6 +44,7 @@ export function TeamAttendanceTab({ teamId, seasonId, teamName }: TeamAttendance
           icon="how_to_reg"
           title="No active season"
           description="Please select an active season to view attendance records."
+          noCard
         />
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--pa-space-4)' }}>
           <Button variant="secondary" onClick={() => navigate(`/admin/attendance?teamId=${teamId}`)}>
@@ -140,6 +141,7 @@ export function TeamAttendanceTab({ teamId, seasonId, teamName }: TeamAttendance
             icon="how_to_reg"
             title="No attendance records"
             description={`No attendance has been recorded for ${teamName} yet.`}
+            noCard
           />
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--pa-space-4)' }}>

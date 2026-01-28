@@ -195,6 +195,7 @@ export default function Structure() {
             icon="account_tree"
             title="No Structure Data"
             description="No organizations, teams, or seasons found. Try adjusting your filters."
+            noCard
           />
         </Card>
       )}

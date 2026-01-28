@@ -23,6 +23,7 @@ import {
     getPaymentsForOrg,
     getTotalPaidForOrg,
     getTotalOutstandingForOrg,
+    getFeeAssignmentWithDetails,
     getFeeAssignmentsWithDetailsForChild,
     formatCurrency,
     type FakeFee,
@@ -263,6 +264,116 @@ export async function getFeeAssignmentsForUser(
     } catch (err) {
         const classifiedError = classifySupabaseError(err)
         return { data: [], error: classifiedError }
+    }
+}
+
+/**
+ * Get a single fee assignment by ID with full details
+ */
+export async function getFeeAssignmentById(
+    context: UserContext,
+    assignmentId: string
+): Promise<{ data: (FakeFeeAssignment & { fee?: FakeFee; payments?: FakePayment[]; athlete?: any; parent?: any }) | null; error: Error | null }> {
+    console.log('[paymentsService] getFeeAssignmentById called:', { 
+        assignmentId, 
+        userId: context.userId, 
+        orgId: context.orgId,
+        roles: context.roles,
+        useFakeData: USE_FAKE_DATA 
+    })
+
+    if (USE_FAKE_DATA) {
+        try {
+            console.log('[paymentsService] Using fake data')
+            await simulateDelay()
+            const assignment = getFeeAssignmentWithDetails(assignmentId)
+            console.log('[paymentsService] Fake data assignment:', assignment)
+            if (!assignment) {
+                console.log('[paymentsService] No fake assignment found')
+                return { data: null, error: null }
+            }
+            // Check permissions - user must be parent of the athlete or admin
+            const permissions = buildPermissions(context)
+            console.log('[paymentsService] Permissions:', permissions)
+            if (!permissions.canViewAllOrgData) {
+                const childIds = getChildrenForUserId(context.userId)
+                console.log('[paymentsService] Non-admin, childIds:', childIds)
+                if (!childIds.includes((assignment as any).child_id)) {
+                    console.log('[paymentsService] Access denied - not child\'s parent')
+                    return { data: null, error: new Error('Access denied') }
+                }
+            }
+            console.log('[paymentsService] Returning fake assignment')
+            return { data: assignment, error: null }
+        } catch (err) {
+            console.error('[paymentsService] Fake data error:', err)
+            return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        }
+    }
+
+    // Real Supabase implementation
+    try {
+        console.log('[paymentsService] Using real Supabase data')
+        const isAdmin = isOrgAdmin(context)
+        console.log('[paymentsService] isAdmin:', isAdmin)
+        
+        const childIds = isAdmin ? [] : await getAthleteIdsForUser(context.userId, context.orgId)
+        console.log('[paymentsService] childIds:', childIds)
+
+        let query = buildFeeAssignmentQuery(supabase)
+            .eq('id', assignmentId)
+            .eq('org_id', context.orgId)
+
+        if (!isAdmin) {
+            if (childIds.length === 0) {
+                console.log('[paymentsService] Non-admin with no children, returning null')
+                return { data: null, error: null }
+            }
+            query = query.in('athlete_id', childIds)
+        }
+
+        console.log('[paymentsService] Executing Supabase query')
+        const { data, error } = await query.single()
+        console.log('[paymentsService] Supabase query result:', { hasData: !!data, error })
+        
+        if (error) {
+            console.error('[paymentsService] Supabase error:', error)
+            throw error
+        }
+
+        // Normalize and map response
+        console.log('[paymentsService] Normalizing response')
+        const normalizedData = normalizeSupabaseResponse(data, false)
+        if (!normalizedData) {
+            console.log('[paymentsService] No normalized data')
+            return { data: null, error: null }
+        }
+
+        console.log('[paymentsService] Mapping to domain model')
+        const mappedAssignment = mapSupabaseFeeAssignmentToDomain(normalizedData)
+        
+        // Fetch parent info
+        const parentId = (normalizedData as any).parent_id
+        if (parentId) {
+            console.log('[paymentsService] Fetching parent info for:', parentId)
+            const { data: parentData } = await supabase
+                .from('users')
+                .select('id, email, display_name')
+                .eq('id', parentId)
+                .single()
+            console.log('[paymentsService] Parent data:', parentData)
+            if (parentData) {
+                (mappedAssignment as any).parent = parentData
+            }
+        }
+
+        console.log('[paymentsService] Successfully mapped assignment:', mappedAssignment)
+        return { data: mappedAssignment, error: null }
+    } catch (err) {
+        console.error('[paymentsService] Caught error:', err)
+        const classifiedError = classifySupabaseError(err)
+        console.error('[paymentsService] Classified error:', classifiedError)
+        return { data: null, error: classifiedError }
     }
 }
 

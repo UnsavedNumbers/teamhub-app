@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useUserContext } from '../../hooks/useUserContext'
-import { getAnnouncements, createAnnouncement } from '../../data/services/messagesService'
+import { getAnnouncements, createAnnouncement, deleteAnnouncement, type Announcement } from '../../data/services/messagesService'
 import { getTeams } from '../../data/services/teamsService'
-import { supabase } from '../../lib/supabase'
-import { getErrorMessage } from '../../utils/errorUtils'
 import { showSuccess, showError } from '../../utils/toast'
 import { useAuth } from '../../hooks/useAuth'
 import { 
@@ -19,16 +17,21 @@ import {
 } from '../../components/platformAdmin'
 import { cn } from '../../utils/cn'
 import CreateAnnouncementModal from '../../components/admin/CreateAnnouncementModal'
+import { getAnnouncementEmoji, type AnnouncementType } from '../../utils/announcementTypes'
 
 interface AnnouncementDisplay {
   id: string
   title: string
   team_name: string
-  team_id: string
+  team_id: string | null
+  org_id: string | null
+  author_id: string
   author_email: string
   author_role: string
   priority: 'normal' | 'urgent'
+  type: AnnouncementType
   created_at: string
+  is_org_wide: boolean
 }
 
 type PriorityFilter = 'all' | 'urgent' | 'normal'
@@ -63,6 +66,8 @@ export default function AdminAnnouncements() {
   })
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const deleteRequestIdRef = useRef(0)
 
   // Cleanup on unmount
   useEffect(() => {
@@ -109,11 +114,25 @@ export default function AdminAnnouncements() {
     }
   }, [context, isReady])
 
+  // Type guard for Announcement
+  function isAnnouncement(obj: any): obj is Announcement {
+    return (
+      typeof obj === 'object' &&
+      obj !== null &&
+      typeof obj.id === 'string' &&
+      typeof obj.title === 'string' &&
+      typeof obj.content === 'string' &&
+      'priority' in obj &&
+      'type' in obj
+    )
+  }
+
   // Fetch announcements with race condition protection
   const fetchAnnouncements = useCallback(async () => {
     if (!isReady) return
 
     const currentRequestId = ++requestIdRef.current
+    if (!isMountedRef.current) return
     setLoading(true)
     setError(null)
 
@@ -124,7 +143,8 @@ export default function AdminAnnouncements() {
       if (!isMountedRef.current || currentRequestId !== requestIdRef.current) return
 
       if (fetchError) {
-        setError(fetchError.message || 'Failed to load announcements')
+        if (!isMountedRef.current || currentRequestId !== requestIdRef.current) return
+        setError(fetchError.message ?? 'Failed to load announcements')
         setAnnouncements([])
         setTotalCount(0)
         return
@@ -135,18 +155,66 @@ export default function AdminAnnouncements() {
       const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
 
       // Transform with safe defaults and apply date filter
-      let displayAnnouncements: AnnouncementDisplay[] = (data || []).map(ann => {
-        // Handle both Announcement and FakeAnnouncement types
-        const isRealAnnouncement = 'priority' in ann && 'content' in ann
+      // Technical Issue 4: Use nullish coalescing for arrays
+      // Technical Issue 1: Use optional chaining for nested properties
+      // Technical Issue 2: Use type guards before assertions
+      // Technical Issue 3: Validate dates before parsing
+      let displayAnnouncements: AnnouncementDisplay[] = (data ?? []).map(ann => {
+        // Type guard check - if it's a real Announcement, use it; otherwise map from FakeAnnouncement
+        let announcement: Announcement
+        let teamName: string
+        let authorEmail: string
+        let authorRole: string
+        let authorId: string
+        
+        if (isAnnouncement(ann)) {
+          announcement = ann
+          teamName = ann.team?.name ?? (announcement.team_id === null ? 'All Teams' : 'Unknown Team')
+          authorEmail = ann.author?.email ?? ''
+          authorRole = ann.author?.role ?? 'parent'
+          authorId = ann.author_id
+        } else {
+          // Handle FakeAnnouncement - map to Announcement structure
+          const fakeAnn = ann as unknown as { id: string; title: string; team_id: string | null; org_id: string; created_by_user_id: string; created_at: string }
+          announcement = {
+            id: fakeAnn.id,
+            title: fakeAnn.title,
+            team_id: fakeAnn.team_id,
+            org_id: fakeAnn.org_id,
+            author_id: fakeAnn.created_by_user_id,
+            content: '',
+            priority: 'normal',
+            type: 'general',
+            created_at: fakeAnn.created_at,
+            updated_at: fakeAnn.created_at,
+          }
+          teamName = fakeAnn.team_id === null ? 'All Teams' : 'Unknown Team'
+          authorEmail = ''
+          authorRole = 'parent'
+          authorId = fakeAnn.created_by_user_id
+        }
+        
+        const isOrgWide = announcement.team_id === null
+        
+        // Technical Issue 3: Validate date before use
+        const createdAt = announcement.created_at ?? ''
+        const validDate = createdAt && !isNaN(new Date(createdAt).getTime())
+          ? createdAt
+          : new Date().toISOString()
+        
         return {
-          id: ann.id || '',
-          title: ann.title || 'Untitled',
-          team_name: (isRealAnnouncement && 'team' in ann && ann.team?.name) ? ann.team.name : 'Unknown Team',
-          team_id: ann.team_id || '',
-          author_email: (isRealAnnouncement && 'author' in ann && ann.author?.email) ? ann.author.email : '',
-          author_role: (isRealAnnouncement && 'author' in ann && ann.author?.role) ? ann.author.role : 'parent',
-          priority: (isRealAnnouncement && 'priority' in ann) ? ann.priority : 'normal',
-          created_at: ann.created_at || new Date().toISOString(),
+          id: announcement.id ?? '',
+          title: announcement.title ?? 'Untitled',
+          team_name: teamName,
+          team_id: announcement.team_id ?? null,
+          org_id: announcement.org_id ?? null,
+          author_id: authorId,
+          author_email: authorEmail,
+          author_role: authorRole,
+          priority: announcement.priority ?? 'normal',
+          type: (announcement.type ?? 'general') as AnnouncementType,
+          created_at: validDate,
+          is_org_wide: isOrgWide,
         }
       })
 
@@ -154,7 +222,7 @@ export default function AdminAnnouncements() {
       if (dateRangeFilter === 'recent') {
         displayAnnouncements = displayAnnouncements.filter(ann => {
           const createdDate = new Date(ann.created_at)
-          return createdDate >= ninetyDaysAgo
+          return !isNaN(createdDate.getTime()) && createdDate >= ninetyDaysAgo
         })
       }
 
@@ -163,17 +231,26 @@ export default function AdminAnnouncements() {
         displayAnnouncements = displayAnnouncements.filter(ann => ann.priority === priorityFilter)
       }
 
-      // Apply team filter
+      // Apply team filter (include org-wide announcements)
       if (selectedTeamFilter) {
-        displayAnnouncements = displayAnnouncements.filter(ann => ann.team_id === selectedTeamFilter)
+        displayAnnouncements = displayAnnouncements.filter(ann => 
+          ann.team_id === selectedTeamFilter || ann.is_org_wide
+        )
       }
 
+      if (!isMountedRef.current || currentRequestId !== requestIdRef.current) return
       setTotalCount(displayAnnouncements.length)
 
       // Client-side pagination
-      const from = page * rowsPerPage
-      const to = from + rowsPerPage
-      setAnnouncements(displayAnnouncements.slice(from, to))
+      // Technical Issue 10: Validate pagination indices before slice
+      const from = Math.max(0, page * rowsPerPage)
+      const to = Math.min(displayAnnouncements.length, from + rowsPerPage)
+      const paginated = from < displayAnnouncements.length 
+        ? displayAnnouncements.slice(from, to)
+        : []
+      
+      if (!isMountedRef.current || currentRequestId !== requestIdRef.current) return
+      setAnnouncements(paginated)
     } catch (err) {
       if (!isMountedRef.current || currentRequestId !== requestIdRef.current) return
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'
@@ -185,7 +262,7 @@ export default function AdminAnnouncements() {
         setLoading(false)
       }
     }
-  }, [orgId, userId, isReady, priorityFilter, selectedTeamFilter, dateRangeFilter, page, rowsPerPage])
+  }, [orgId, userId, isReady, priorityFilter, selectedTeamFilter, dateRangeFilter, page, rowsPerPage, context])
 
   // Load data when ready
   useEffect(() => {
@@ -205,15 +282,31 @@ export default function AdminAnnouncements() {
     title: string,
     content: string,
     priority: 'normal' | 'urgent',
-    teamId: string
+    teamId: string | null,
+    type: AnnouncementType,
+    isOrgWide: boolean
   ) => {
     if (!user) {
       showError('You must be logged in to create announcements')
       return
     }
 
+    if (!orgId) {
+      showError('Organization context is required')
+      return
+    }
+
     try {
-      const { data, error: createError } = await createAnnouncement(title, content, priority, teamId, user.id)
+      const { data, error: createError } = await createAnnouncement(
+        title, 
+        content, 
+        priority, 
+        teamId, 
+        user.id,
+        orgId,
+        type,
+        isOrgWide
+      )
 
       if (createError) {
         showError(createError.message || 'Failed to create announcement')
@@ -235,28 +328,44 @@ export default function AdminAnnouncements() {
   }
 
   const handleDelete = async (_reason: string) => {
-    if (!deleteDialog.announcement) return
+    if (!deleteDialog.announcement || !isReady) return
+
+    const currentDeleteRequestId = ++deleteRequestIdRef.current
+    const announcementId = deleteDialog.announcement.id
 
     setActionLoading(true)
     setActionError(null)
+    setDeletingId(announcementId)
 
     try {
-      const { error: deleteError } = await supabase
-        .from('announcements')
-        .delete()
-        .eq('id', deleteDialog.announcement.id)
+      const { success, error: deleteError } = await deleteAnnouncement(context, announcementId)
 
-      if (deleteError) throw deleteError
+      // Check if still mounted and request is current
+      if (!isMountedRef.current || currentDeleteRequestId !== deleteRequestIdRef.current) return
+
+      if (deleteError || !success) {
+        const errorMessage = deleteError?.message ?? 'Failed to delete announcement'
+        setActionError(errorMessage)
+        showError(errorMessage)
+        return
+      }
 
       showSuccess('Announcement deleted successfully')
       setDeleteDialog({ open: false, announcement: null })
+      setDeletingId(null)
+      
+      // Always refetch after successful delete (Issue 2 Solution)
       await fetchAnnouncements()
     } catch (err) {
-      const errorMessage = getErrorMessage(err) || 'Failed to delete announcement'
+      if (!isMountedRef.current || currentDeleteRequestId !== deleteRequestIdRef.current) return
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete announcement'
       setActionError(errorMessage)
       showError(errorMessage)
     } finally {
-      setActionLoading(false)
+      if (isMountedRef.current && currentDeleteRequestId === deleteRequestIdRef.current) {
+        setActionLoading(false)
+        setDeletingId(null)
+      }
     }
   }
 
@@ -276,6 +385,10 @@ export default function AdminAnnouncements() {
       label: 'Title',
       render: (row) => (
         <div className="pa-flex pa-items-center pa-gap-2">
+          <span className="pa-text-lg">{getAnnouncementEmoji(row.type)}</span>
+          {row.is_org_wide && (
+            <Badge variant="info">ORG-WIDE</Badge>
+          )}
           {row.priority === 'urgent' && (
             <Badge variant="danger">URGENT</Badge>
           )}
@@ -285,11 +398,23 @@ export default function AdminAnnouncements() {
     },
     {
       id: 'team_name',
-      label: 'Team',
+      label: 'Scope',
       render: (row) => (
         <span className="pa-text-sm pa-font-medium pa-text-slate-700 dark:pa-text-slate-300">
-          {row.team_name}
+          {row.is_org_wide ? 'All Teams' : row.team_name}
         </span>
+      )
+    },
+    {
+      id: 'type',
+      label: 'Type',
+      render: (row) => (
+        <div className="pa-flex pa-items-center pa-gap-2">
+          <span>{getAnnouncementEmoji(row.type)}</span>
+          <span className="pa-text-sm pa-font-medium pa-text-slate-700 dark:pa-text-slate-300">
+            {row.type.charAt(0).toUpperCase() + row.type.slice(1).replace('_', ' ')}
+          </span>
+        </div>
       )
     },
     {
@@ -328,22 +453,37 @@ export default function AdminAnnouncements() {
       id: 'actions',
       label: '',
       align: 'right',
-      render: (row) => (
-        <div className="pa-flex pa-gap-1 pa-justify-end">
-          <Button
-            variant="ghost"
-            size="dense"
-            onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-              e.stopPropagation()
-              setDeleteDialog({ open: true, announcement: row })
-            }}
-            title="Delete announcement"
-            className="pa-text-danger hover:pa-bg-danger-surface"
-          >
-            <span className="material-symbols-outlined pa-icon-sm">delete</span>
-          </Button>
-        </div>
-      ),
+      render: (row) => {
+        // Issue 3 Solution: Check permission in UI (defense in depth)
+        const isAuthor = user?.id === row.author_id
+        const isOrgAdmin = context.roles?.includes('org_admin') ?? false
+        const canDelete = isOrgAdmin || isAuthor
+        const isDeleting = deletingId === row.id
+
+        return (
+          <div className="pa-flex pa-gap-1 pa-justify-end">
+            <Button
+              variant="ghost"
+              size="dense"
+              onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                e.stopPropagation()
+                if (!actionLoading && !isDeleting) {
+                  setDeleteDialog({ open: true, announcement: row })
+                }
+              }}
+              disabled={!canDelete || actionLoading || isDeleting}
+              title={!canDelete ? "You don't have permission to delete this announcement" : isDeleting ? "Deleting..." : "Delete announcement"}
+              className="pa-text-danger hover:pa-bg-danger-surface"
+            >
+              {isDeleting ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-current"></div>
+              ) : (
+                <span className="material-symbols-outlined pa-icon-sm">delete</span>
+              )}
+            </Button>
+          </div>
+        )
+      },
     }
   ]
 
@@ -388,8 +528,18 @@ export default function AdminAnnouncements() {
       {error && (
         <Card className="pa-mb-4" noPadding>
           <div className="pa-p-4" style={{ background: 'var(--pa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--pa-danger, #ef4444)' }}>
-            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-danger-dark, #991b1b)' }}>
-              {error}
+            <div className="pa-flex pa-items-center pa-justify-between">
+              <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-danger-dark, #991b1b)' }}>
+                {error}
+              </div>
+              <Button
+                variant="secondary"
+                size="compact"
+                onClick={() => fetchAnnouncements()}
+                disabled={loading}
+              >
+                Retry
+              </Button>
             </div>
           </div>
         </Card>
@@ -461,7 +611,8 @@ export default function AdminAnnouncements() {
             action={hasTeams ? { 
               label: 'New Announcement', 
               onClick: () => setIsCreateModalOpen(true) 
-            } : undefined} 
+            } : undefined}
+            noCard
           />
         </Card>
       ) : (

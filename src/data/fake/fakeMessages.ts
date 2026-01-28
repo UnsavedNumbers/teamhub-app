@@ -366,3 +366,12 @@ export function markNotificationAsRead(notificationId: string): void {
         notification.read_at = new Date().toISOString()
     }
 }
+
+export function deleteAnnouncementById(announcementId: string): boolean {
+    const index = fakeAnnouncements.findIndex((a) => a.id === announcementId)
+    if (index === -1) {
+        return false
+    }
+    fakeAnnouncements.splice(index, 1)
+    return true
+}

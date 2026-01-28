@@ -162,6 +162,7 @@ export default function Sports() {
               icon="sports"
               title="No sports added"
               description="Start by adding a sport to your organization."
+              noCard
             >
                 <Button 
                     icon="add"

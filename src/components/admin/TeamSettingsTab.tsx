@@ -32,6 +32,7 @@ export function TeamSettingsTab({ teamId: _teamId, teamName }: TeamSettingsTabPr
           icon="lock"
           title="Settings unavailable"
           description="Team settings are only available to organization administrators."
+          noCard
         />
       </div>
     )
@@ -60,6 +61,7 @@ export function TeamSettingsTab({ teamId: _teamId, teamName }: TeamSettingsTabPr
             icon="settings"
             title="Settings coming soon"
             description={`Team settings for ${teamName} will be available in a future update.`}
+            noCard
           />
         </div>
       </div>

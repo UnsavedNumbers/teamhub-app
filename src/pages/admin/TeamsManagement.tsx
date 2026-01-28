@@ -367,6 +367,7 @@ export default function TeamsManagement() {
             icon="groups"
             title="No programs yet"
             description="You need to create at least one program before you can add teams. Teams require levels, and levels require programs."
+            noCard
           >
             <Link to={`${getLink('admin.organization.forms')}?type=program`}>
               <Button>Add a Program</Button>
@@ -394,6 +395,7 @@ export default function TeamsManagement() {
             icon="groups"
             title="No levels yet"
             description="You need to create at least one level before you can add teams."
+            noCard
           >
             <Link to={`${getLink('admin.organization.forms')}?type=level&returnUrl=${encodeURIComponent(getLink('admin.teams.list'))}`}>
               <Button>Add a Level</Button>

@@ -336,3 +336,34 @@ export function getTravelPlanWithTeamInfo(
         team: { id: plan.team_id, name: teamNames[plan.team_id] ?? 'Unknown Team' },
     }
 }
+
+// ============================================================================
+// Mutation Helpers for Fake Data
+// ============================================================================
+
+/**
+ * Add a new fake travel plan to the array
+ */
+export function addFakeTravelPlan(plan: FakeTravelPlan): void {
+    fakeTravelPlans.push(plan)
+}
+
+/**
+ * Update an existing fake travel plan
+ */
+export function updateFakeTravelPlan(id: string, updates: Partial<FakeTravelPlan>): void {
+    const index = fakeTravelPlans.findIndex(p => p.id === id)
+    if (index !== -1) {
+        fakeTravelPlans[index] = { ...fakeTravelPlans[index], ...updates }
+    }
+}
+
+/**
+ * Delete a fake travel plan from the array
+ */
+export function deleteFakeTravelPlan(id: string): void {
+    const index = fakeTravelPlans.findIndex(p => p.id === id)
+    if (index !== -1) {
+        fakeTravelPlans.splice(index, 1)
+    }
+}

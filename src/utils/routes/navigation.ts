@@ -55,13 +55,13 @@ export const parentNavSections: NavigationSection[] = [
         ],
     },
     {
-        label: 'Messages',
+        label: 'Huddles',
         route: '/portal/messages',
         groups: [
             {
-                label: 'Messages',
+                label: 'Huddles',
                 items: [
-                    { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', description: 'Announcements and chat' },
+                    { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', description: 'Team chat and announcements' },
                 ],
             },
         ],
@@ -162,7 +162,7 @@ export const coachNavSections: NavigationSection[] = [
                 items: [
                     { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', description: 'Tryout sessions' },
                     { routeKey: 'portal.travel', text: 'Travel', icon: 'flight', description: 'Trip details' },
-                    { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', description: 'Communications' },
+                    { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', description: 'Team chat' },
                     { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', description: 'Preferences' },
                 ],
             },

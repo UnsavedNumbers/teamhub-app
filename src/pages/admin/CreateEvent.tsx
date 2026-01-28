@@ -16,7 +16,8 @@ import {
   Select,
   DatePicker,
   TimePicker,
-  Checkbox
+  Checkbox,
+  Badge
 } from '../../components/platformAdmin'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
 import { startTransition } from 'react'
@@ -217,6 +218,10 @@ export default function CreateEvent() {
             // Team exists, trigger validation to clear any false errors
             trigger('team_id')
           }
+        } else if (data.length === 1) {
+          // Auto-select if there's only one team
+          setValue('team_id', data[0].id, { shouldValidate: false })
+          trigger('team_id')
         }
       }, 100)
     } else if (error) {
@@ -226,23 +231,31 @@ export default function CreateEvent() {
   }, [context, isReady, watch, setValue, trigger])
 
   const fetchSeasons = useCallback(async (teamId: string, restoreSeasonId?: string) => {
-    if (!isReady || !teamId) return
+    if (!isReady || !teamId) {
+      setSeasons([])
+      setValue('season_id', '', { shouldValidate: false })
+      return
+    }
     
+    // Fetch all seasons for the selected team
     const { data, error } = await supabase
         .from('team_seasons_view')
-        .select('season_id, name, is_active')
+        .select('season_id, name, is_active, start_date, end_date')
         .eq('team_id', teamId)
-        .order('is_active', { ascending: false }) // Active seasons first
+        .order('start_date', { ascending: false }) // Most recent/future first
 
     if (!error && data) {
+      // Map all available seasons for the team
       const mappedSeasons = data
-        .filter(s => s.season_id !== null && s.name !== null)
+        .filter(s => s.season_id && s.name)
         .map(s => ({
           id: s.season_id as string,
           name: s.name as string,
           team_id: teamId,
           is_active: s.is_active ?? false
         }))
+      
+      console.log('Fetched seasons for team:', teamId, 'Count:', mappedSeasons.length, 'Data:', mappedSeasons)
       setSeasons(mappedSeasons)
       
       // If we have a restored season_id, try to use it if it's valid
@@ -250,19 +263,16 @@ export default function CreateEvent() {
         const restoredSeason = mappedSeasons.find(s => s.id === restoreSeasonId)
         if (restoredSeason) {
           setValue('season_id', restoredSeason.id, { shouldValidate: false })
-          // Trigger validation after a small delay to clear any false errors
           setTimeout(() => trigger('season_id'), 100)
           return
         }
       }
       
-      // Otherwise, auto-select the active season if it exists, otherwise select the first one
-      const activeSeason = mappedSeasons.find(s => s.is_active)
-      if (activeSeason) {
-        setValue('season_id', activeSeason.id, { shouldValidate: false })
-        setTimeout(() => trigger('season_id'), 100)
-      } else if (mappedSeasons.length > 0) {
-        setValue('season_id', mappedSeasons[0].id, { shouldValidate: false })
+      // Auto-select the active season if it exists, otherwise select the first one
+      if (mappedSeasons.length > 0) {
+        const activeSeason = mappedSeasons.find(s => s.is_active)
+        const seasonToSelect = activeSeason || mappedSeasons[0]
+        setValue('season_id', seasonToSelect.id, { shouldValidate: false })
         setTimeout(() => trigger('season_id'), 100)
       } else {
         // No seasons available, clear the selection
@@ -270,10 +280,11 @@ export default function CreateEvent() {
       }
     } else {
       // No seasons found or error, clear the selection
+      console.error('Error fetching seasons:', error)
       setSeasons([])
       setValue('season_id', '', { shouldValidate: false })
     }
-  }, [context, isReady, setValue])
+  }, [context, isReady, setValue, trigger])
 
   useEffect(() => { 
     if (isReady) fetchTeams() 
@@ -304,8 +315,8 @@ export default function CreateEvent() {
         team_id: data.team_id,
         season_id: data.season_id,
         start_time: new Date(data.start_time).toISOString(),
-        end_time: data.end_time ? new Date(data.end_time).toISOString() : '',
-        arrival_time: data.arrival_time ? new Date(data.arrival_time).toISOString() : '',
+        end_time: data.end_time ? new Date(data.end_time).toISOString() : new Date(data.start_time).toISOString(),
+        arrival_time: data.arrival_time ? new Date(data.arrival_time).toISOString() : null,
         timezone: data.timezone,
         notes: data.notes,
         uniform_notes: data.uniform_notes,
@@ -364,8 +375,26 @@ export default function CreateEvent() {
       }
 
       navigate('/admin/events')
-    } catch (err: unknown) { 
-      setError(getErrorMessage(err) || 'Failed to create event') 
+    } catch (err: unknown) {
+      // Parse database errors and show friendly messages
+      const rawError = getErrorMessage(err) || ''
+      let friendlyError = t('admin.events.validation.titleRequired') // default fallback
+      
+      if (rawError.includes('end_time') && rawError.includes('not-null')) {
+        friendlyError = t('admin.events.validation.endTimeRequired')
+      } else if (rawError.includes('start_time') && rawError.includes('not-null')) {
+        friendlyError = t('admin.events.validation.startTimeRequired')
+      } else if (rawError.includes('title') && rawError.includes('not-null')) {
+        friendlyError = t('admin.events.validation.titleRequired')
+      } else if (rawError.includes('team_id') && rawError.includes('not-null')) {
+        friendlyError = t('admin.events.validation.teamRequired')
+      } else if (rawError.includes('season_id') && rawError.includes('not-null')) {
+        friendlyError = t('admin.events.validation.seasonRequired')
+      } else if (rawError) {
+        friendlyError = 'Failed to create event. Please check all required fields and try again.'
+      }
+      
+      setError(friendlyError)
     } finally { 
       setSaving(false) 
     }
@@ -394,7 +423,7 @@ export default function CreateEvent() {
             
             {/* SECTION 1: EVENT BASICS */}
             <div className="pa-mb-4">
-              <Controller name="title" control={control} rules={{ required: 'Title is required' }} render={({ field }) => <Input {...field} label="Event Title" required error={errors.title?.message || undefined} />} />
+              <Controller name="title" control={control} rules={{ required: t('admin.events.validation.titleRequired'), minLength: { value: 3, message: t('admin.events.validation.titleMinLength') } }} render={({ field }) => <Input {...field} label="Event Title" required error={errors.title?.message || undefined} />} />
             </div>
             
             {/* Mobile: Single column | Tablet: Single column | Desktop: Three columns with medium-width selects */}
@@ -406,7 +435,7 @@ export default function CreateEvent() {
                 <Controller 
                   name="team_id" 
                   control={control} 
-                  rules={{ required: 'Team is required' }} 
+                  rules={{ required: t('admin.events.validation.teamRequired') }} 
                   render={({ field }) => (
                     <Select 
                       {...field} 
@@ -426,24 +455,81 @@ export default function CreateEvent() {
                   )} 
                 />
               </div>
-              <div className="pa-select-wrapper">
-                <Controller 
-                  name="season_id" 
-                  control={control} 
-                  rules={{ required: 'Season is required' }} 
-                  render={({ field }) => (
-                    <Select 
-                      {...field} 
-                      value={field.value || ''} 
-                      label="Season" 
-                      options={seasons.map(s => ({value:s.id, label:s.name}))} 
-                      required 
-                      disabled={!watchTeamId || loading}
-                      error={errors.season_id?.message || undefined}
+              {watchTeamId && seasons.length > 0 ? (
+                seasons.length > 1 ? (
+                  // Show dropdown when there are multiple seasons
+                  <div className="pa-select-wrapper">
+                    <Controller 
+                      name="season_id" 
+                      control={control} 
+                      rules={{ required: t('admin.events.validation.seasonRequired') }} 
+                      render={({ field }) => (
+                        <Select 
+                          {...field} 
+                          value={field.value || ''} 
+                          label="Season" 
+                          options={seasons.map(s => ({value:s.id, label:s.name}))} 
+                          required 
+                          disabled={loading}
+                          error={errors.season_id?.message || undefined}
+                        />
+                      )} 
                     />
-                  )} 
-                />
-              </div>
+                  </div>
+                ) : (
+                  // Show season name as badge when there's only one season
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <label className="pa-label">Season</label>
+                    <div style={{ display: 'flex', alignItems: 'center', minHeight: '42px' }}>
+                      <Badge variant="info">{seasons[0]?.name || 'No season available'}</Badge>
+                    </div>
+                    <Controller 
+                      name="season_id" 
+                      control={control} 
+                      rules={{ required: t('admin.events.validation.seasonRequired') }} 
+                      render={({ field }) => (
+                        <input type="hidden" {...field} value={seasons[0]?.id || ''} />
+                      )} 
+                    />
+                  </div>
+                )
+              ) : watchTeamId ? (
+                // Team selected but no seasons available
+                <div>
+                  <label className="pa-label">Season</label>
+                  <div className="pa-input" style={{ backgroundColor: 'var(--pa-bg-secondary)', cursor: 'not-allowed', color: 'var(--pa-text-muted)' }}>
+                    No active or future seasons available
+                  </div>
+                  <Controller 
+                    name="season_id" 
+                    control={control} 
+                    rules={{ required: t('admin.events.validation.seasonRequired') }} 
+                    render={({ field }) => (
+                      <input type="hidden" {...field} value="" />
+                    )} 
+                  />
+                </div>
+              ) : (
+                // No team selected
+                <div className="pa-select-wrapper">
+                  <Controller 
+                    name="season_id" 
+                    control={control} 
+                    rules={{ required: t('admin.events.validation.seasonRequired') }} 
+                    render={({ field }) => (
+                      <Select 
+                        {...field} 
+                        value={field.value || ''} 
+                        label="Season" 
+                        options={[]} 
+                        required 
+                        disabled={true}
+                        error={errors.season_id?.message || undefined}
+                      />
+                    )} 
+                  />
+                </div>
+              )}
             </div>
 
             {/* SECTION 2: DATE + TIME */}
@@ -453,7 +539,7 @@ export default function CreateEvent() {
                 <Controller 
                   name="start_time" 
                   control={control} 
-                  rules={{ required: 'Start date and time are required' }} 
+                  rules={{ required: t('admin.events.validation.startTimeRequired') }} 
                   render={({ field }) => (
                     <DatePicker 
                       label="Event Date" 
@@ -488,6 +574,7 @@ export default function CreateEvent() {
                   <Controller 
                     name="end_time" 
                     control={control} 
+                    rules={{ required: t('admin.events.validation.endTimeRequired') }}
                     render={({ field }) => (
                       <TimePicker 
                         label="End Time" 
@@ -496,6 +583,8 @@ export default function CreateEvent() {
                           const startDate = watch('start_time')?.split('T')[0] || new Date().toISOString().split('T')[0]
                           field.onChange(time ? `${startDate}T${time}` : '')
                         }}
+                        required
+                        error={errors.end_time?.message}
                       />
                     )} 
                   />

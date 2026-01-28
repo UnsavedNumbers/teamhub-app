@@ -69,9 +69,23 @@ function mapFakeFamily(f: FakeFamily): Family {
 
 function mapFakeChild(c: FakeChild): Child {
     return {
-        ...c,
+        id: c.id,
+        family_id: c.family_id,
+        first_name: c.first_name,
+        last_name: c.last_name,
+        date_of_birth: c.date_of_birth,
+        gender: c.gender,
         preferred_name: null,
+        jersey_number: c.jersey_number,
+        medical_notes: c.medical_notes,
+        allergies: c.allergies,
+        emergency_contact_name: c.emergency_contact_name,
+        emergency_contact_phone: c.emergency_contact_phone,
+        phone: null,
+        email: null,
         photo_url: null,
+        created_at: c.created_at,
+        updated_at: c.updated_at,
         deleted_at: null
     }
 }
@@ -352,6 +366,8 @@ export async function createAthleteBasic(
                 allergies: dto.allergies || null,
                 emergency_contact_name: dto.emergency_contact_name || null,
                 emergency_contact_phone: dto.emergency_contact_phone || null,
+                phone: dto.phone || null,
+                email: dto.email || null,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
                 deleted_at: null
@@ -402,10 +418,15 @@ export async function updateAthlete(
             .select()
             .single()
 
-        if (error) throw error
+        if (error) {
+            console.error('[updateAthlete] Supabase error:', error)
+            throw error
+        }
         return { data: data as unknown as Child, error: null }
     } catch (err) {
-        return { data: null, error: err instanceof Error ? err : new Error('Update athlete failed') }
+        console.error('[updateAthlete] Exception:', err)
+        const errorMessage = err instanceof Error ? err.message : 'Update athlete failed'
+        return { data: null, error: new Error(errorMessage) }
     }
 }
 
@@ -498,7 +519,12 @@ export async function getAthletes(
             allergies: d.allergies ?? null,
             emergency_contact_name: d.emergency_contact_name ?? null,
             emergency_contact_phone: d.emergency_contact_phone ?? null,
-            photo_url: null, // photo_url column doesn't exist in database yet
+            phone: d.phone ?? null,
+            email: d.email ?? null,
+            photo_url: null, // @deprecated - Use profile_photo_updated_at instead
+            profile_photo_updated_at: d.profile_photo_updated_at ?? null,
+            has_profile_photo: d.has_profile_photo ?? false,
+            org_id: context.orgId, // Include org_id for photo URL generation
             created_at: d.created_at || new Date().toISOString(),
             updated_at: d.updated_at || new Date().toISOString(),
             deleted_at: d.deleted_at,
@@ -773,6 +799,8 @@ export async function searchAthletes(
                 allergies: (r.allergies as string | null) || null,
                 emergency_contact_name: (r.emergency_contact_name as string | null) || null,
                 emergency_contact_phone: (r.emergency_contact_phone as string | null) || null,
+                phone: (r.phone as string | null) || null,
+                email: (r.email as string | null) || null,
                 photo_url: null, // photo_url column doesn't exist in database yet
                 created_at: (r.created_at as string) || new Date().toISOString(),
                 updated_at: (r.updated_at as string) || new Date().toISOString(),
@@ -880,12 +908,17 @@ export async function getAthleteById(
             date_of_birth: data.birthdate || '',
             gender: data.gender as Gender | null,
             preferred_name: data.preferred_name ?? null,
-            jersey_number: null,
-            medical_notes: null,
-            allergies: null,
-            emergency_contact_name: null,
-            emergency_contact_phone: null,
-            photo_url: null,
+            jersey_number: data.jersey_number ?? null,
+            medical_notes: data.medical_notes ?? null,
+            allergies: data.allergies ?? null,
+            phone: (data as any).phone ?? null,
+            email: (data as any).email ?? null,
+            emergency_contact_name: data.emergency_contact_name ?? null,
+            emergency_contact_phone: data.emergency_contact_phone ?? null,
+            photo_url: null, // @deprecated - Use profile_photo_updated_at instead
+            profile_photo_updated_at: (data as any).profile_photo_updated_at ?? null,
+            has_profile_photo: (data as any).has_profile_photo ?? false,
+            org_id: context.orgId, // Include org_id for photo URL generation
             created_at: data.created_at ?? new Date().toISOString(),
             updated_at: data.updated_at ?? new Date().toISOString(),
             deleted_at: data.deleted_at,
@@ -937,6 +970,8 @@ export async function createAthleteWithGuardians(
             allergies: dto.allergies || null,
             emergency_contact_name: dto.emergency_contact_name || null,
             emergency_contact_phone: dto.emergency_contact_phone || null,
+            phone: dto.phone || null,  // Athlete phone number
+            email: dto.email || null,  // Athlete email address
             family_id: dto.family_id || null,
             team_id: dto.team_id || null,
             season_id: dto.season_id || null

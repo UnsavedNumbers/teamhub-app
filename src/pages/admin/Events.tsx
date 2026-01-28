@@ -387,7 +387,8 @@ export default function Events() {
             icon="event" 
             title="NO UPCOMING EVENTS" 
             description="Create your first event to get started." 
-            action={{ label: t('admin.events.create'), onClick: () => navigate('/admin/events/new') }} 
+            action={{ label: t('admin.events.create'), onClick: () => navigate('/admin/events/new') }}
+            noCard
           />
         </Card>
       ) : (

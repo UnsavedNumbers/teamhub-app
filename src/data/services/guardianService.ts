@@ -329,6 +329,8 @@ export async function getGuardianAthletes(
             allergies: null,
             emergency_contact_name: null,
             emergency_contact_phone: null,
+            phone: a.phone ?? null,
+            email: a.email ?? null,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             deleted_at: null

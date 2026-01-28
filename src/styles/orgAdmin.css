@@ -215,6 +215,52 @@ html.dark .oa-page-subtitle {
     border-radius: 0;
 }
 
+/* Tables inside oa-cards should not have rounded corners */
+.oa-card .pa-table-card,
+.oa-card .pa-table-wrapper {
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+}
+
+/* Remove top rounded corners from tables under section headers */
+.oa-card-header + .pa-table-wrapper .pa-table,
+.oa-card-title + .pa-table-wrapper .pa-table {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+/* Remove shadows from nested components in oa-cards */
+.oa-card .pa-table-card:hover {
+    box-shadow: none;
+}
+
+html.dark .oa-card .pa-table-card {
+    box-shadow: none;
+}
+
+html.dark .oa-card .pa-table-card:hover {
+    box-shadow: none;
+}
+
+/* Empty states inside oa-cards should not have card styling */
+.oa-card .pa-card,
+.oa-card .pa-empty,
+.oa-card .pa-table-empty {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
+html.dark .oa-card .pa-card,
+html.dark .oa-card .pa-empty,
+html.dark .oa-card .pa-table-empty {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+}
+
 /* Dark mode overrides */
 html.dark .oa-card {
     background: var(--org-surface-card, var(--pa-surface));
@@ -264,11 +310,35 @@ html.dark .oa-theme-active textarea:focus {
     outline: 2px solid var(--org-surface-tertiary, rgba(107, 114, 128, 0.25));
 }
 
+/* Error states - use theme color for visibility */
+.oa-theme-active .pa-input--error,
+.oa-theme-active .pa-select--error,
+.oa-theme-active .pa-input:invalid,
+.oa-theme-active .pa-select:invalid {
+    border-color: var(--org-action-primary, var(--pa-danger));
+    border-width: 2px;
+    outline: 2px solid color-mix(in srgb, var(--org-action-primary, var(--pa-danger)) 25%, transparent);
+    outline-offset: 0;
+}
+
+.oa-theme-active .pa-input--error:focus,
+.oa-theme-active .pa-select--error:focus {
+    outline-color: var(--org-action-primary, var(--pa-danger));
+    outline-width: 3px;
+}
+
+.oa-theme-active .pa-helper--error {
+    color: var(--org-action-primary, var(--pa-danger));
+    font-weight: 600;
+    font-size: 13px;
+    margin-top: var(--pa-space-2);
+}
+
 .oa-theme-active .pa-form-container {
     width: 100%;
     max-width: 960px;
     margin: 0;
-    padding: var(--pa-space-6) var(--pa-space-4);
+    padding: var(--pa-space-6) 0;
     display: grid;
     gap: var(--pa-space-6);
 }
@@ -314,13 +384,13 @@ html.dark .oa-theme-active textarea:focus {
 
 @media (max-width: 639px) {
     .oa-theme-active .pa-form-container {
-        padding: var(--pa-space-5) var(--pa-space-4);
+        padding: var(--pa-space-5) 0;
     }
 }
 
 @media (min-width: 640px) and (max-width: 1023px) {
     .oa-theme-active .pa-form-container {
-        padding: var(--pa-space-6) var(--pa-space-6);
+        padding: var(--pa-space-6) 0;
     }
 
     .oa-theme-active .pa-form-grid-2.pa-form-grid-tablet-2col {
@@ -745,7 +815,7 @@ html.dark .oa-theme-active .pa-table tbody tr:hover {
 
 @media (min-width: 1024px) {
     .oa-theme-active .pa-form-container {
-        padding: var(--pa-space-7) var(--pa-space-7);
+        padding: var(--pa-space-7) 0;
     }
 
     .oa-theme-active .pa-form-grid-2 {
