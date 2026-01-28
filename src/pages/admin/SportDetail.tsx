@@ -9,6 +9,7 @@ import OfflineBanner from '../../components/admin/OfflineBanner'
 import { AdminPageHeader, Button, Card } from '../../components/platformAdmin'
 import { FileUpload } from '../../components/common/FileUpload'
 import { getLink } from '../../utils/routes'
+import './SportDetail.css'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -116,18 +117,18 @@ export default function SportDetail() {
 
   if (loading) {
     return (
-      <div className="pa-root">
+      <div className="pa-root sport-detail-page">
         <OfflineBanner />
-        <div className="pa-skeleton" style={{ height: '520px' }} />
+        <div className="sport-detail-skeleton pa-skeleton" style={{ height: '520px' }} />
       </div>
     )
   }
 
   return (
-    <div className="pa-root">
+    <div className="pa-root sport-detail-page">
       <OfflineBanner />
       
-      {/* Hero section with cover image */}
+      {/* Hero section with cover image — theme overlay for contrast */}
       <div 
         className="sport-detail-hero"
         style={{
@@ -138,7 +139,6 @@ export default function SportDetail() {
           minHeight: '200px',
         }}
       >
-        {/* Background cover image */}
         <div
           style={{
             position: 'absolute',
@@ -149,7 +149,6 @@ export default function SportDetail() {
             zIndex: 0,
           }}
         >
-          {/* Hidden img for fallback detection */}
           <img 
             src={getSportCoverUrl(sport?.slug)} 
             alt="" 
@@ -157,8 +156,6 @@ export default function SportDetail() {
             onError={() => setCoverError(true)}
           />
         </div>
-        
-        {/* Gradient overlay for readability */}
         <div
           style={{
             position: 'absolute',
@@ -167,15 +164,12 @@ export default function SportDetail() {
             zIndex: 1,
           }}
         />
-        
-        {/* Header content */}
         <div 
           className="sport-detail-hero-content"
           style={{ 
             position: 'relative', 
             zIndex: 2, 
             padding: 'var(--pa-space-6)',
-            // Override text colors for hero overlay
             '--pa-text-primary': '#fff',
             '--pa-text-secondary': 'rgba(255,255,255,0.85)',
             '--pa-text-muted': 'rgba(255,255,255,0.7)',
@@ -185,7 +179,7 @@ export default function SportDetail() {
           } as React.CSSProperties}
         >
           <AdminPageHeader
-            title={<span style={{ color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>{sport?.name || 'Sport'}</span>}
+            title={<span className="sport-detail-hero-title">{sport?.name || 'Sport'}</span>}
             subtitle="Sport details, customizations, and related programs."
             breadcrumbs={[
               { label: 'Organizations', path: structureRoute },
@@ -194,8 +188,8 @@ export default function SportDetail() {
             ]}
             actions={
               <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2">
-                <Link to={sportsRoute} className="w-full sm:w-auto">
-                  <Button variant="ghost" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} className="w-full sm:w-auto min-h-[44px]">Back to Sports</Button>
+                <Link to={sportsRoute} className="sport-detail-hero-link sport-detail-hero-link--ghost w-full sm:w-auto">
+                  <Button variant="ghost" className="w-full sm:w-auto min-h-[44px]">Back to Sports</Button>
                 </Link>
                 <Link to={sport?.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : `${programsRoute}?sport_id=${sportId}`} className="w-full sm:w-auto">
                   <Button variant="secondary" className="w-full sm:w-auto min-h-[44px]">View {sport?.name || ''} Programs</Button>
@@ -210,51 +204,60 @@ export default function SportDetail() {
       </div>
 
       {successMessage && (
-        <Card className="pa-mb-6" style={{ borderLeft: '3px solid var(--pa-success)' }}>
-          <div className="pa-body-m" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)', color: 'var(--pa-n900)' }}>
+        <Card 
+          className="pa-mb-6 sport-detail-alert sport-detail-alert--success" 
+          style={{ background: 'var(--pa-success-bg, rgba(46, 125, 50, 0.08))' }}
+        >
+          <div className="pa-body-m sport-detail-alert-text sport-detail-alert-text--success" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
             {successMessage}
           </div>
         </Card>
       )}
 
       {actionError && (
-        <Card className="pa-mb-6" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
-          <div className="pa-body-m pa-text-danger" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
+        <Card 
+          className="pa-mb-6 sport-detail-alert sport-detail-alert--error" 
+          style={{ background: 'var(--pa-danger-bg, rgba(198, 40, 40, 0.08))' }}
+        >
+          <div className="pa-body-m sport-detail-alert-text sport-detail-alert-text--error" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
             {actionError}
           </div>
         </Card>
       )}
 
       {error && (
-        <Card className="pa-mb-6" style={{ borderLeft: '3px solid var(--pa-danger)' }}>
-          <div className="pa-body-m pa-text-danger" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
+        <Card 
+          className="pa-mb-6 sport-detail-alert sport-detail-alert--error" 
+          style={{ background: 'var(--pa-danger-bg, rgba(198, 40, 40, 0.08))' }}
+        >
+          <div className="pa-body-m sport-detail-alert-text sport-detail-alert-text--error" style={{ padding: 'var(--pa-space-3) var(--pa-space-4)' }}>
             {error}
           </div>
         </Card>
       )}
 
       {!sport ? null : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--pa-space-6)' }}>
-          <div className="oa-card">
+        <div className="sport-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--pa-space-6)' }}>
+          <div className="oa-card sport-detail-card">
             <div className="oa-card-header">
               <h3 className="oa-card-title">Customization</h3>
             </div>
             <div className="pa-flex pa-flex-col sm:pa-flex-row pa-items-start pa-gap-4" style={{ alignItems: 'flex-start' }}>
               <div style={{ width: '96px', flexShrink: 0 }}>
-                <div className="pa-text-sm pa-text-muted" style={{ marginBottom: '8px' }}>Icon</div>
+                <div className="pa-text-sm pa-text-muted sport-detail-label" style={{ marginBottom: '8px' }}>Icon</div>
                 <div
+                  className="sport-detail-icon-box"
                   style={{
                     width: '96px',
                     height: '96px',
                     borderRadius: '12px',
-                    border: '1px solid var(--pa-n200)',
-                    background: 'var(--pa-n50)',
+                    border: '1px solid var(--org-border-default, var(--pa-n200))',
+                    background: 'var(--org-surface-section, var(--pa-n50))',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     overflow: 'hidden',
                   }}
-                  className="dark:border-slate-700 dark:bg-slate-800"
                 >
                   {iconUrl ? (
                     <img src={iconUrl} alt={`${sport.name} icon`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -267,7 +270,7 @@ export default function SportDetail() {
               </div>
 
               <div className="pa-flex-1">
-                <div className="pa-text-sm pa-text-muted" style={{ marginBottom: '8px' }}>Sport Color</div>
+                <div className="pa-text-sm pa-text-muted sport-detail-label" style={{ marginBottom: '8px' }}>Sport Color</div>
                 <div className="pa-flex pa-items-center pa-gap-3" style={{ marginBottom: '12px' }}>
                   <input
                     type="color"
@@ -379,7 +382,7 @@ export default function SportDetail() {
                   </Button>
 
                   <Button
-                    variant="ghost"
+                    variant="danger"
                     disabled={!sport.icon || deletingIcon || isOffline || USE_FAKE_DATA}
                     loading={deletingIcon}
                     onClick={async () => {
@@ -422,27 +425,32 @@ export default function SportDetail() {
             </div>
           </div>
 
-          <div className="oa-card oa-card--no-padding">
+          <div className="oa-card oa-card--no-padding sport-detail-card">
             <div className="oa-card-header">
-              <h3 className="oa-card-title">Programs ({programs.length})</h3>
+              <h3 className="oa-card-title sport-detail-programs-title">
+                Programs
+                <span className="sport-detail-badge" aria-label={`${programs.length} programs`}>
+                  {programs.length}
+                </span>
+              </h3>
             </div>
             {programs.length === 0 ? (
-              <div style={{ padding: 'var(--pa-space-5)' }} className="pa-text-muted">
+              <div className="sport-detail-empty pa-text-muted" style={{ padding: 'var(--pa-space-5)' }}>
                 No programs yet for this sport. Create one to start building out levels and teams.
               </div>
             ) : (
-              <div className="pa-stacked-list">
+              <div className="pa-stacked-list sport-detail-program-list">
                 {programs.map((p) => (
                   <Link
                     key={p.id}
                     to={getLink('admin.programs.detail', { id: p.id })}
-                    className="pa-stacked-list-row"
+                    className="pa-stacked-list-row sport-detail-program-row"
                     style={{ textDecoration: 'none', color: 'inherit' }}
                   >
                     <div className="pa-stacked-list-row-content">
                       <div>
-                        <div className="pa-stacked-list-row-title">{p.name}</div>
-                        <div className="pa-stacked-list-row-meta">{p.gender_category}</div>
+                        <div className="pa-stacked-list-row-title sport-detail-program-name">{p.name}</div>
+                        <div className="pa-stacked-list-row-meta sport-detail-program-meta">{p.gender_category}</div>
                       </div>
                     </div>
                   </Link>

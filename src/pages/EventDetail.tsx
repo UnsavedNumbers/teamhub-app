@@ -11,6 +11,7 @@ import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import VenueInsights from '../components/portal/VenueInsights'
+import NearbyAmenities from '../components/portal/NearbyAmenities'
 import { useT } from '../i18n/useI18n'
 
 interface Event {
@@ -26,6 +27,8 @@ interface Event {
   event_location?: {
     place_id: string | null
     venue_name: string | null
+    latitude: number | null
+    longitude: number | null
   } | null
 }
 
@@ -87,6 +90,8 @@ export default function EventDetail() {
       event_location: eventData.event_location ? {
         place_id: eventData.event_location.place_id,
         venue_name: eventData.event_location.venue_name,
+        latitude: eventData.event_location.latitude ?? null,
+        longitude: eventData.event_location.longitude ?? null,
       } : null,
     })
 
@@ -239,8 +244,19 @@ export default function EventDetail() {
 
         {/* Venue Insights */}
         {event.event_location?.place_id && (
-          <VenueInsights placeId={event.event_location.place_id} className="mb-8" />
+          <VenueInsights placeId={event.event_location.place_id} className="mb-6" />
         )}
+
+        {/* Nearby Amenities */}
+        <NearbyAmenities
+          latitude={event.event_location?.latitude}
+          longitude={event.event_location?.longitude}
+          placeId={event.event_location?.place_id}
+          eventType={event.type}
+          eventStartTime={event.start_time}
+          variant="event"
+          className="mb-8"
+        />
 
         <SectionHeader className="mb-4 sm:mb-6">RSVP</SectionHeader>
         

@@ -1,0 +1,428 @@
+/**
+ * MobileMenu - Quicken Simplifi-inspired mobile navigation
+ * 
+ * Design principles:
+ * - Clean, minimal aesthetic with plenty of whitespace
+ * - Clear visual hierarchy with section labels
+ * - Subtle active states with brand color highlight
+ * - Smooth animations with proper easing
+ * - Full accessibility support
+ */
+
+/* =====================================================================
+   BACKDROP
+   ===================================================================== */
+
+.mm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 9998;
+  opacity: 0;
+  visibility: hidden;
+  transition: 
+    opacity 250ms cubic-bezier(0.32, 0.72, 0, 1),
+    visibility 250ms cubic-bezier(0.32, 0.72, 0, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mm-backdrop--visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* =====================================================================
+   DRAWER
+   ===================================================================== */
+
+.mm-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(320px, 85vw);
+  max-width: 380px;
+  background: var(--pa-surface, #ffffff);
+  z-index: 9999;
+  transform: translateX(-100%);
+  transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 
+    0 0 0 1px rgba(0, 0, 0, 0.05),
+    0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.mm-drawer--open {
+  transform: translateX(0);
+}
+
+/* Dark mode support */
+:root[data-theme="dark"] .mm-drawer,
+.dark .mm-drawer {
+  background: var(--pa-surface-dark, #18181b);
+  box-shadow: 
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+/* =====================================================================
+   HEADER / BRAND
+   ===================================================================== */
+
+.mm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 16px 16px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--pa-n100, rgba(0, 0, 0, 0.06));
+}
+
+:root[data-theme="dark"] .mm-header,
+.dark .mm-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.mm-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mm-brand-logo {
+  height: 32px;
+  width: auto;
+  object-fit: contain;
+}
+
+.mm-brand-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--pa-primary, #6366f1) 0%, #8b5cf6 100%);
+  border-radius: 10px;
+  color: white;
+}
+
+.mm-brand-icon .material-symbols-outlined {
+  font-size: 24px;
+}
+
+.mm-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.mm-brand-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--pa-n900, #111827);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+:root[data-theme="dark"] .mm-brand-name,
+.dark .mm-brand-name {
+  color: var(--pa-n50, #f9fafb);
+}
+
+.mm-brand-subtitle {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--pa-n500, #6b7280);
+  line-height: 1.3;
+}
+
+:root[data-theme="dark"] .mm-brand-subtitle,
+.dark .mm-brand-subtitle {
+  color: var(--pa-n400, #9ca3af);
+}
+
+.mm-close {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: 12px;
+  color: var(--pa-n500, #6b7280);
+  cursor: pointer;
+  transition: all 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mm-close:hover {
+  background: var(--pa-n100, rgba(0, 0, 0, 0.05));
+  color: var(--pa-n900, #111827);
+}
+
+.mm-close:active {
+  transform: scale(0.92);
+}
+
+:root[data-theme="dark"] .mm-close,
+.dark .mm-close {
+  color: var(--pa-n400, #9ca3af);
+}
+
+:root[data-theme="dark"] .mm-close:hover,
+.dark .mm-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--pa-n50, #f9fafb);
+}
+
+.mm-close .material-symbols-outlined {
+  font-size: 24px;
+}
+
+/* =====================================================================
+   NAVIGATION
+   ===================================================================== */
+
+.mm-nav {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px 12px;
+  padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Custom scrollbar */
+.mm-nav::-webkit-scrollbar {
+  width: 4px;
+}
+
+.mm-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mm-nav::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+}
+
+:root[data-theme="dark"] .mm-nav::-webkit-scrollbar-thumb,
+.dark .mm-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* =====================================================================
+   SECTIONS
+   ===================================================================== */
+
+.mm-section {
+  margin-bottom: 8px;
+}
+
+.mm-section:last-child {
+  margin-bottom: 0;
+}
+
+.mm-section-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--pa-primary, #6366f1);
+  padding: 20px 12px 10px;
+  user-select: none;
+}
+
+:root[data-theme="dark"] .mm-section-label,
+.dark .mm-section-label {
+  color: var(--pa-primary-light, #818cf8);
+}
+
+.mm-group {
+  /* Optional grouping within section */
+}
+
+.mm-group-label {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--pa-n400, #9ca3af);
+  padding: 12px 12px 6px;
+  user-select: none;
+}
+
+/* =====================================================================
+   MENU ITEMS
+   ===================================================================== */
+
+.mm-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 12px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--pa-n700, #374151);
+  cursor: pointer;
+  transition: all 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  min-height: 48px;
+}
+
+.mm-item:hover {
+  background: var(--pa-n50, rgba(0, 0, 0, 0.04));
+  text-decoration: none;
+}
+
+.mm-item:active {
+  transform: scale(0.98);
+  background: var(--pa-n100, rgba(0, 0, 0, 0.06));
+}
+
+:root[data-theme="dark"] .mm-item,
+.dark .mm-item {
+  color: var(--pa-n200, #e5e7eb);
+}
+
+:root[data-theme="dark"] .mm-item:hover,
+.dark .mm-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+:root[data-theme="dark"] .mm-item:active,
+.dark .mm-item:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Active state */
+.mm-item--active {
+  background: var(--pa-primary-bg, rgba(99, 102, 241, 0.1));
+  color: var(--pa-primary, #6366f1);
+}
+
+.mm-item--active:hover {
+  background: var(--pa-primary-bg, rgba(99, 102, 241, 0.14));
+}
+
+.mm-item--active .mm-item-icon {
+  color: var(--pa-primary, #6366f1);
+}
+
+.mm-item--active .mm-item-text {
+  font-weight: 600;
+}
+
+:root[data-theme="dark"] .mm-item--active,
+.dark .mm-item--active {
+  background: rgba(99, 102, 241, 0.18);
+  color: var(--pa-primary-light, #a5b4fc);
+}
+
+:root[data-theme="dark"] .mm-item--active .mm-item-icon,
+.dark .mm-item--active .mm-item-icon {
+  color: var(--pa-primary-light, #a5b4fc);
+}
+
+/* Disabled state */
+.mm-item--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Icon */
+.mm-item-icon {
+  font-size: 22px;
+  color: var(--pa-n500, #6b7280);
+  flex-shrink: 0;
+  transition: color 150ms ease;
+}
+
+:root[data-theme="dark"] .mm-item-icon,
+.dark .mm-item-icon {
+  color: var(--pa-n400, #9ca3af);
+}
+
+/* Text */
+.mm-item-text {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+}
+
+/* =====================================================================
+   TABLET ADAPTATIONS (larger screens within mobile breakpoint)
+   ===================================================================== */
+
+@media (min-width: 600px) and (max-width: 1024px) {
+  .mm-drawer {
+    width: 340px;
+    max-width: 380px;
+  }
+
+  .mm-header {
+    padding: 24px 20px 20px;
+  }
+
+  .mm-brand-name {
+    font-size: 22px;
+  }
+
+  .mm-nav {
+    padding: 16px 16px;
+  }
+
+  .mm-item {
+    padding: 16px 14px;
+    gap: 16px;
+    min-height: 52px;
+  }
+
+  .mm-item-icon {
+    font-size: 24px;
+  }
+
+  .mm-item-text {
+    font-size: 16px;
+  }
+
+  .mm-section-label {
+    padding: 24px 14px 12px;
+    font-size: 13px;
+  }
+}
+
+/* =====================================================================
+   ANIMATIONS
+   ===================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .mm-backdrop,
+  .mm-drawer,
+  .mm-item,
+  .mm-close {
+    transition: none;
+  }
+}
+
+/* =====================================================================
+   SAFE AREA INSETS (for notched devices)
+   ===================================================================== */
+
+@supports (padding-top: env(safe-area-inset-top)) {
+  .mm-header {
+    padding-top: max(20px, env(safe-area-inset-top));
+  }
+
+  .mm-drawer {
+    padding-left: env(safe-area-inset-left);
+  }
+}

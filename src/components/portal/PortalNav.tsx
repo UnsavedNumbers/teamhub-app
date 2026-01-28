@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import MegaMenu from '../common/MegaMenu'
 import ThemeToggle from './ThemeToggle'
 import UserContextDropdown from '../common/UserContextDropdown'
-import MobileNavDrawer from '../common/MobileNavDrawer'
+import MobileMenu from '../common/MobileMenu'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useTheme } from '../../hooks/useTheme'
@@ -559,11 +559,13 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
       </div>
     </nav>
 
-    {/* Mobile drawer */}
-    <MobileNavDrawer
+    {/* Mobile Menu */}
+    <MobileMenu
       isOpen={mobileMenuOpen}
       onClose={handleMobileMenuClose}
       sections={navSections}
+      brandName="Youth Sports"
+      brandSubtitle="Team Hub"
     />
     </>
   )
