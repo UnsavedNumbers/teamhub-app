@@ -71,4 +71,18 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'travel_plans' AND column_name = 'status') THEN
     ALTER TABLE travel_plans ADD COLUMN status TEXT NOT NULL DEFAULT 'published';
   END IF;
+
+  -- Status lifecycle timestamps (from migration 033)
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'travel_plans' AND column_name = 'published_at') THEN
+    ALTER TABLE travel_plans ADD COLUMN published_at TIMESTAMPTZ;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'travel_plans' AND column_name = 'cancelled_at') THEN
+    ALTER TABLE travel_plans ADD COLUMN cancelled_at TIMESTAMPTZ;
+  END IF;
+
+  -- Meeting locations (from migration 033)
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'travel_plans' AND column_name = 'meeting_locations') THEN
+    ALTER TABLE travel_plans ADD COLUMN meeting_locations JSONB;
+  END IF;
 END $$;

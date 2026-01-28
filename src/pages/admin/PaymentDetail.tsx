@@ -1,10 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
-import { getFeeAssignmentById, formatCurrency } from '../../data/services/paymentsService'
+import { 
+  getFeeAssignmentById, 
+  formatCurrency,
+  markFeeAssignmentAsPaidOffline,
+  issueRefundForFeeAssignment,
+  voidFeeAssignment,
+  sendPaymentReminder,
+  generateReceiptPDF
+} from '../../data/services/paymentsService'
 import { supabase } from '../../lib/supabase'
 import { getLink } from '../../utils/routes'
-import { AdminPageHeader, Card, Button } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, ConfirmDialog } from '../../components/platformAdmin'
+import { showSuccess, showError } from '../../utils/toast'
 
 interface PaymentDetailData {
   id: string
@@ -80,6 +89,25 @@ export default function PaymentDetail() {
   })
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const isMountedRef = useRef(true)
+  
+  // Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean
+    action: 'markPaid' | 'refund' | 'void' | null
+    title: string
+    description: string
+    variant: 'info' | 'warning' | 'danger'
+    requireReason: boolean
+    error: string | null
+  }>({
+    open: false,
+    action: null,
+    title: '',
+    description: '',
+    variant: 'info',
+    requireReason: false,
+    error: null,
+  })
 
   useEffect(() => {
     const mountTime = new Date().toISOString()
@@ -304,16 +332,25 @@ export default function PaymentDetail() {
   }, [isReady, id])
 
   const handleSendReminder = async () => {
-    if (!assignment || !isMountedRef.current) return
-    if (isMountedRef.current) {
-      setActionLoading('reminder')
-    }
+    if (!assignment || !isMountedRef.current || actionLoading !== null) return
+    
+    setActionLoading('reminder')
     try {
-      // TODO: Implement send reminder
-      console.log('Send reminder:', assignment.id)
+      const { data, error } = await sendPaymentReminder(context, assignment.id)
+      
+      if (!isMountedRef.current) return
+      
+      if (error) {
+        showError(error.message || 'Failed to send reminder')
+        setError(error.message || 'Failed to send reminder')
+      } else if (data?.sent) {
+        showSuccess('Payment reminder sent successfully')
+      }
     } catch (err) {
       if (isMountedRef.current) {
-        setError(err instanceof Error ? err.message : 'Failed to send reminder')
+        const errorMessage = err instanceof Error ? err.message : 'Failed to send reminder'
+        showError(errorMessage)
+        setError(errorMessage)
       }
     } finally {
       if (isMountedRef.current) {
@@ -322,24 +359,72 @@ export default function PaymentDetail() {
     }
   }
 
-  const handleDownloadReceipt = () => {
+  const handleDownloadReceipt = async () => {
+    if (!assignment || actionLoading !== null) return
+    
+    setActionLoading('download')
+    try {
+      const { data, error } = await generateReceiptPDF(context, assignment.id)
+      
+      if (error) {
+        showError(error.message || 'Failed to generate receipt')
+        return
+      }
+      
+      if (data?.url) {
+        // Open receipt in new tab or download
+        if (data.url.startsWith('http') || data.url.startsWith('https')) {
+          window.open(data.url, '_blank')
+          showSuccess('Receipt opened in new tab')
+        } else {
+          showError('Receipt URL is not available')
+        }
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to download receipt'
+      showError(errorMessage)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleMarkAsPaidClick = () => {
     if (!assignment) return
-    // TODO: Implement PDF download
-    console.log('Download receipt:', assignment.id)
+    setConfirmDialog({
+      open: true,
+      action: 'markPaid',
+      title: 'Mark as Paid (Offline)',
+      description: `Mark this payment as paid offline? This will update the status to "paid" and set the balance to $0. Amount: ${formatCurrency(assignment.amount_cents)}`,
+      variant: 'info',
+      requireReason: false,
+      error: null,
+    })
   }
 
-  const handleMarkAsPaid = async () => {
+  const handleMarkAsPaid = async (_reason: string) => {
     if (!assignment || !isMountedRef.current) return
-    if (isMountedRef.current) {
-      setActionLoading('markPaid')
-    }
+    
+    setActionLoading('markPaid')
     try {
-      // TODO: Implement mark as paid offline
-      console.log('Mark as paid offline:', assignment.id)
-      await fetchData()
+      const { data, error } = await markFeeAssignmentAsPaidOffline(context, assignment.id)
+      
+      if (!isMountedRef.current) return
+      
+      if (error) {
+        const errorMessage = error.message || 'Failed to mark as paid'
+        showError(errorMessage)
+        setConfirmDialog(prev => ({ ...prev, error: errorMessage }))
+      } else if (data) {
+        showSuccess('Payment marked as paid successfully')
+        setConfirmDialog(prev => ({ ...prev, open: false, error: null }))
+        // Refresh data
+        await fetchData()
+      }
     } catch (err) {
       if (isMountedRef.current) {
-        setError(err instanceof Error ? err.message : 'Failed to mark as paid')
+        const errorMessage = err instanceof Error ? err.message : 'Failed to mark as paid'
+        showError(errorMessage)
+        setConfirmDialog(prev => ({ ...prev, error: errorMessage }))
       }
     } finally {
       if (isMountedRef.current) {
@@ -348,17 +433,50 @@ export default function PaymentDetail() {
     }
   }
 
-  const handleIssueRefund = async () => {
-    if (!assignment || !isMountedRef.current) return
-    if (isMountedRef.current) {
-      setActionLoading('refund')
-    }
+  const handleIssueRefundClick = () => {
+    if (!assignment) return
+    setConfirmDialog({
+      open: true,
+      action: 'refund',
+      title: 'Issue Refund',
+      description: `Issue a refund for this payment? Amount paid: ${formatCurrency(assignment.paid_cents_total)}. You will be able to specify the refund amount.`,
+      variant: 'warning',
+      requireReason: true,
+      error: null,
+    })
+  }
+
+  const handleIssueRefund = async (reason: string) => {
+    if (!assignment || !isMountedRef.current || !reason.trim()) return
+    
+    setActionLoading('refund')
     try {
-      // TODO: Implement refund
-      console.log('Issue refund:', assignment.id)
+      // For now, refund the full amount. In production, you might want a dialog to specify amount
+      const refundAmount = assignment.paid_cents_total
+      const { data, error } = await issueRefundForFeeAssignment(
+        context, 
+        assignment.id, 
+        refundAmount,
+        reason
+      )
+      
+      if (!isMountedRef.current) return
+      
+      if (error) {
+        const errorMessage = error.message || 'Failed to issue refund'
+        showError(errorMessage)
+        setConfirmDialog(prev => ({ ...prev, error: errorMessage }))
+      } else if (data) {
+        showSuccess(`Refund of ${formatCurrency(refundAmount)} issued successfully`)
+        setConfirmDialog(prev => ({ ...prev, open: false, error: null }))
+        // Refresh data
+        await fetchData()
+      }
     } catch (err) {
       if (isMountedRef.current) {
-        setError(err instanceof Error ? err.message : 'Failed to issue refund')
+        const errorMessage = err instanceof Error ? err.message : 'Failed to issue refund'
+        showError(errorMessage)
+        setConfirmDialog(prev => ({ ...prev, error: errorMessage }))
       }
     } finally {
       if (isMountedRef.current) {
@@ -367,23 +485,63 @@ export default function PaymentDetail() {
     }
   }
 
-  const handleVoidPayment = async () => {
-    if (!assignment || !isMountedRef.current) return
-    if (isMountedRef.current) {
-      setActionLoading('void')
-    }
+  const handleVoidPaymentClick = () => {
+    if (!assignment) return
+    setConfirmDialog({
+      open: true,
+      action: 'void',
+      title: 'Void Payment',
+      description: `Void this payment assignment? This will mark it as waived and set the balance to $0. This action cannot be undone. Amount: ${formatCurrency(assignment.amount_cents)}`,
+      variant: 'danger',
+      requireReason: true,
+      error: null,
+    })
+  }
+
+  const handleVoidPayment = async (reason: string) => {
+    if (!assignment || !isMountedRef.current || !reason.trim()) return
+    
+    setActionLoading('void')
     try {
-      // TODO: Implement void payment
-      console.log('Void payment:', assignment.id)
+      const { data, error } = await voidFeeAssignment(context, assignment.id, reason)
+      
+      if (!isMountedRef.current) return
+      
+      if (error) {
+        const errorMessage = error.message || 'Failed to void payment'
+        showError(errorMessage)
+        setConfirmDialog(prev => ({ ...prev, error: errorMessage }))
+      } else if (data) {
+        showSuccess('Payment voided successfully')
+        setConfirmDialog(prev => ({ ...prev, open: false, error: null }))
+        // Refresh data
+        await fetchData()
+      }
     } catch (err) {
       if (isMountedRef.current) {
-        setError(err instanceof Error ? err.message : 'Failed to void payment')
+        const errorMessage = err instanceof Error ? err.message : 'Failed to void payment'
+        showError(errorMessage)
+        setConfirmDialog(prev => ({ ...prev, error: errorMessage }))
       }
     } finally {
       if (isMountedRef.current) {
         setActionLoading(null)
       }
     }
+  }
+
+  const handleConfirmDialogConfirm = (reason: string) => {
+    if (confirmDialog.action === 'markPaid') {
+      handleMarkAsPaid(reason)
+    } else if (confirmDialog.action === 'refund') {
+      handleIssueRefund(reason)
+    } else if (confirmDialog.action === 'void') {
+      handleVoidPayment(reason)
+    }
+  }
+
+  const handleConfirmDialogCancel = () => {
+    setConfirmDialog(prev => ({ ...prev, open: false }))
   }
 
   if (loading) {
@@ -448,6 +606,7 @@ export default function PaymentDetail() {
             variant="blue"
             onClick={handleDownloadReceipt}
             disabled={!isPaid || actionLoading !== null}
+            loading={actionLoading === 'download'}
             icon="download"
             className="flex items-center gap-2 uppercase tracking-widest"
           >
@@ -583,7 +742,16 @@ export default function PaymentDetail() {
             {/* Destination */}
             <div className="space-y-4">
               <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white">DESTINATION</h3>
-              <Card className="p-5 hover:border-[var(--org-btn-primary-bg, #137fec)] transition-all group cursor-pointer">
+              <Card 
+                className={`p-5 transition-all group ${assignment.team?.id || assignment.season?.id ? 'hover:border-[var(--org-btn-primary-bg, #137fec)] cursor-pointer' : 'cursor-default'}`}
+                onClick={() => {
+                  if (assignment.team?.id) {
+                    navigate(getLink('admin.teams.detail', { id: assignment.team.id }))
+                  } else if (assignment.season?.id) {
+                    navigate(getLink('admin.seasons.detail', { id: assignment.season.id }))
+                  }
+                }}
+              >
                 <div className="flex items-center gap-4">
                   <div className="size-10 bg-[var(--org-btn-primary-bg, #137fec)]/10 text-[var(--org-btn-primary-bg, #137fec)] rounded-lg flex items-center justify-center group-hover:bg-[var(--org-btn-primary-bg, #137fec)] group-hover:text-white transition-colors">
                     <span className="material-symbols-outlined">sports_soccer</span>
@@ -634,8 +802,9 @@ export default function PaymentDetail() {
                     variant="secondary"
                     size="compact"
                     className="w-full justify-start"
-                    onClick={handleMarkAsPaid}
+                    onClick={handleMarkAsPaidClick}
                     disabled={actionLoading !== null}
+                    loading={actionLoading === 'markPaid'}
                   >
                     Mark as Paid (Offline)
                   </Button>
@@ -645,8 +814,9 @@ export default function PaymentDetail() {
                     variant="secondary"
                     size="compact"
                     className="w-full justify-start"
-                    onClick={handleIssueRefund}
+                    onClick={handleIssueRefundClick}
                     disabled={actionLoading !== null}
+                    loading={actionLoading === 'refund'}
                   >
                     Issue Refund
                   </Button>
@@ -656,8 +826,9 @@ export default function PaymentDetail() {
                     variant="secondary"
                     size="compact"
                     className="w-full justify-start"
-                    onClick={handleVoidPayment}
+                    onClick={handleVoidPaymentClick}
                     disabled={actionLoading !== null}
+                    loading={actionLoading === 'void'}
                   >
                     Void Payment
                   </Button>
@@ -668,6 +839,7 @@ export default function PaymentDetail() {
                   className="w-full justify-start"
                   onClick={handleDownloadReceipt}
                   disabled={!isPaid || actionLoading !== null}
+                  loading={actionLoading === 'download'}
                 >
                   Download Receipt
                 </Button>
@@ -722,6 +894,7 @@ export default function PaymentDetail() {
                 variant="secondary"
                 onClick={handleSendReminder}
                 disabled={actionLoading !== null}
+                loading={actionLoading === 'reminder'}
                 className="w-full h-10 border-2 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs font-bold tracking-widest uppercase"
               >
                 CONTACT REGISTRAR
@@ -730,6 +903,25 @@ export default function PaymentDetail() {
           </div>
         </div>
       </div>
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        variant={confirmDialog.variant}
+        requireReason={confirmDialog.requireReason}
+        loading={actionLoading !== null}
+        error={confirmDialog.error}
+        confirmLabel={
+          confirmDialog.action === 'markPaid' ? 'Mark as Paid' :
+          confirmDialog.action === 'refund' ? 'Issue Refund' :
+          confirmDialog.action === 'void' ? 'Void Payment' :
+          'Confirm'
+        }
+        onConfirm={handleConfirmDialogConfirm}
+        onCancel={handleConfirmDialogCancel}
+      />
     </div>
   )
 }

@@ -363,8 +363,22 @@ export default function EditTravelPlan() {
                   <LocationAutocomplete
                     value={field.value || ''}
                     onInputChange={field.onChange}
-                    onChange={(address) => {
+                    onChange={(address, placeResult) => {
                       startTransition(() => {
+                        // Use place name from PlaceResult if it exists and is not the same as the address
+                        // Only update venue_name if we have a proper name (not an address)
+                        const placeName = placeResult?.name && placeResult.name !== address.formatted_address
+                            ? placeResult.name
+                            : null
+                        
+                        // Update venue_name if we have a proper name and it's currently empty or looks like an address
+                        if (placeName) {
+                          const currentVenueName = watch('venue_name')
+                          // Update if empty or if current name is the same as the address
+                          if (!currentVenueName || currentVenueName === address.formatted_address) {
+                            setValue('venue_name', placeName, { shouldValidate: false, shouldDirty: true })
+                          }
+                        }
                         setValue('venue_address', address.formatted_address, { shouldValidate: false, shouldDirty: true })
                       })
                     }}
@@ -381,8 +395,22 @@ export default function EditTravelPlan() {
                   <LocationAutocomplete
                     value={field.value || ''}
                     onInputChange={field.onChange}
-                    onChange={(address) => {
+                    onChange={(address, placeResult) => {
                       startTransition(() => {
+                        // Use place name from PlaceResult if it exists and is not the same as the address
+                        // Only update hotel_name if we have a proper name (not an address)
+                        const placeName = placeResult?.name && placeResult.name !== address.formatted_address
+                            ? placeResult.name
+                            : null
+                        
+                        // Update hotel_name if we have a proper name and it's currently empty or looks like an address
+                        if (placeName) {
+                          const currentHotelName = watch('hotel_name')
+                          // Update if empty or if current name is the same as the address
+                          if (!currentHotelName || currentHotelName === address.formatted_address) {
+                            setValue('hotel_name', placeName, { shouldValidate: false, shouldDirty: true })
+                          }
+                        }
                         setValue('hotel_address', address.formatted_address, { shouldValidate: false, shouldDirty: true })
                       })
                     }}
