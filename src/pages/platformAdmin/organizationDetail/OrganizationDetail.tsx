@@ -26,6 +26,7 @@ import { showSuccess } from '../../../utils/toast'
 import { USE_FAKE_DATA } from '../../../data/config'
 import { getStatusVariant } from '../../../utils/organizationUtils'
 import { validateAdminOrganization } from '../../../types/platformAdmin.types'
+import { isMockOrganization } from '../../../utils/mockOrganizationUtils'
 import type { AdminOrganization, AdminRpcResponse, PlatformAdminRole } from '../../../types/platformAdmin.types'
 
 // Import tab components from barrel export
@@ -35,6 +36,7 @@ type DialogState =
   | { open: false }
   | { open: true; type: 'activate' }
   | { open: true; type: 'suspend' }
+  | { open: true; type: 'reset' }
 
 export default function OrganizationDetail() {
   const { id } = useParams<{ id: string }>()
@@ -159,7 +161,7 @@ export default function OrganizationDetail() {
   }, [fetchOrganization])
 
   const handleConfirmAction = async (reason: string) => {
-    if (!organization) return
+    if (!organization?.id) return
 
     if (isOffline) {
       setDialogError('You appear to be offline. Please reconnect and try again.')
@@ -174,10 +176,13 @@ export default function OrganizationDetail() {
         setDialogError('Dialog state is invalid')
         return
       }
-      
-      const rpcName = confirmDialog.type === 'activate'
-        ? 'admin_activate_organization'
-        : 'admin_suspend_organization'
+
+      const rpcName =
+        confirmDialog.type === 'activate'
+          ? 'admin_activate_organization'
+          : confirmDialog.type === 'suspend'
+            ? 'admin_suspend_organization'
+            : 'admin_reset_mock_organization'
 
       const { data, error: rpcError } = await supabase.rpc(rpcName, {
         target_org_id: organization.id,
@@ -185,13 +190,13 @@ export default function OrganizationDetail() {
       })
 
       if (rpcError) {
-        // Check if RPC function doesn't exist
-        const is404 = rpcError.code === 'PGRST116' || 
-                      rpcError.message.includes('404') || 
-                      rpcError.message.includes('not found') ||
-                      rpcError.message.includes('function') ||
-                      rpcError.message.includes('does not exist')
-        
+        const is404 =
+          rpcError.code === 'PGRST116' ||
+          rpcError.message.includes('404') ||
+          rpcError.message.includes('not found') ||
+          rpcError.message.includes('function') ||
+          rpcError.message.includes('does not exist')
+
         if (is404) {
           setDialogError(`RPC function '${rpcName}' not available. Please ensure database migrations are up to date.`)
         } else {
@@ -208,8 +213,12 @@ export default function OrganizationDetail() {
 
       resetDialog()
       const actionType = confirmDialog.open ? confirmDialog.type : 'activate'
-      showSuccess(`Organization ${actionType === 'activate' ? 'activated' : 'suspended'} successfully`)
-      fetchOrganization() // Refresh to get updated status
+      if (actionType === 'reset') {
+        showSuccess('Organization reset to empty state successfully. Re-run seed-all.ts to repopulate.')
+      } else {
+        showSuccess(`Organization ${actionType === 'activate' ? 'activated' : 'suspended'} successfully`)
+      }
+      fetchOrganization()
     } catch (err) {
       console.error('[OrganizationDetail] Error in handleConfirmAction:', err)
       const normalized = handleRpcError(err, 'organization_action')
@@ -469,6 +478,25 @@ export default function OrganizationDetail() {
               Suspend
             </button>
           )}
+          {organization?.id && isMockOrganization(organization.id) && permissions.canResetMockOrganization && (
+            <button
+              className="pa-btn pa-btn--secondary pa-btn--compact"
+              disabled={isOffline || dialogLoading}
+              onClick={() => {
+                resetDialog()
+                setConfirmDialog({ open: true, type: 'reset' })
+              }}
+              title={
+                isOffline
+                  ? 'Offline - action unavailable'
+                  : 'Reset this mock organization to empty state (re-run seed-all.ts to repopulate)'
+              }
+              style={{ color: 'var(--pa-danger)', borderColor: 'var(--pa-danger)' }}
+            >
+              <span className="material-symbols-outlined">restart_alt</span>
+              Reset to Seed State
+            </button>
+          )}
         </div>
       </div>
 
@@ -592,24 +620,34 @@ export default function OrganizationDetail() {
           confirmDialog.open && confirmDialog.type === 'activate'
             ? 'Activate Organization'
             : confirmDialog.open && confirmDialog.type === 'suspend'
-            ? 'Suspend Organization'
-            : 'Confirm Action'
+              ? 'Suspend Organization'
+              : confirmDialog.open && confirmDialog.type === 'reset'
+                ? 'Reset Organization to Seed State'
+                : 'Confirm Action'
         }
         description={
           confirmDialog.open && confirmDialog.type === 'activate'
             ? `Are you sure you want to activate "${organization.name}"? This will allow the organization to access all features.`
             : confirmDialog.open && confirmDialog.type === 'suspend'
-            ? `Are you sure you want to suspend "${organization.name}"? This will prevent all users from accessing the organization.`
-            : ''
+              ? `Are you sure you want to suspend "${organization.name}"? This will prevent all users from accessing the organization.`
+              : confirmDialog.open && confirmDialog.type === 'reset'
+                ? `This will permanently delete all org-scoped data for "${organization.name}" (programs, teams, members, fees, payments, etc.). The organization row will remain. Re-run seed-all.ts to repopulate. This action cannot be undone.`
+                : ''
         }
         confirmLabel={
           confirmDialog.open && confirmDialog.type === 'activate'
             ? 'Activate'
             : confirmDialog.open && confirmDialog.type === 'suspend'
-            ? 'Suspend'
-            : 'Confirm'
+              ? 'Suspend'
+              : confirmDialog.open && confirmDialog.type === 'reset'
+                ? 'Reset'
+                : 'Confirm'
         }
-        variant={confirmDialog.open && confirmDialog.type === 'suspend' ? 'danger' : 'info'}
+        variant={
+          confirmDialog.open && (confirmDialog.type === 'suspend' || confirmDialog.type === 'reset')
+            ? 'danger'
+            : 'info'
+        }
         requireReason
         loading={dialogLoading}
         error={dialogError}

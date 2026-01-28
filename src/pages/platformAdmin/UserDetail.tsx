@@ -453,7 +453,7 @@ export default function UserDetail() {
         >
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
-        <span className={cn("material-symbols-outlined", "pa-icon-xl", "pa-text-theme-primary")}>
+        <span className={cn("material-symbols-outlined", "pa-icon-xl")} style={{ color: 'var(--pa-n900)' }}>
           person
         </span>
         <div className="pa-flex-1">

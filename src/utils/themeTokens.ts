@@ -122,6 +122,85 @@ function validateTokens(tokens: ThemeTokens): boolean {
 }
 
 /**
+ * Fixed Platform Admin design system tokens (no org customization).
+ * Used when the user is on a platform admin route so org admin theme colors are never applied.
+ * Values match platformAdmin.css .pa-theme-active defaults.
+ */
+export function getPlatformAdminFixedTokens(): ThemeTokens {
+  const primary = '#003A8F'
+  const primaryHover = '#0052C7'
+  const primaryActive = '#002866'
+  const surfaceAccent = 'rgba(182, 201, 226, 0.1)'
+  const surfaceHighlight = 'rgba(0, 58, 143, 0.15)'
+  const textOnAction = '#FFFFFF'
+  const borderAccent = 'rgba(0, 58, 143, 0.3)'
+  const focusRing = 'rgba(0, 58, 143, 0.5)'
+  const textPrimary = '#0B0F14'
+  const textSecondary = '#6B7280'
+  const textMuted = '#9CA3AF'
+  const borderDefault = '#E2E8F0'
+  const surfacePage = '#F7F9FC'
+  const surfaceSection = '#EEF2F7'
+  const surfaceCard = '#FFFFFF'
+  const surfaceCardHeader = '#F3F4F6'
+  const surfaceHover = '#F9FAFB'
+  const surfaceActive = '#F3F4F6'
+  const borderSubtle = '#F3F4F6'
+  const disabledBg = '#E1E6ED'
+  const disabledText = '#9AA4B2'
+
+  return {
+    '--pa-theme-action-primary': primary,
+    '--pa-theme-action-hover': primaryHover,
+    '--pa-theme-action-active': primaryActive,
+    '--pa-theme-surface-accent': surfaceAccent,
+    '--pa-theme-surface-highlight': surfaceHighlight,
+    '--pa-theme-text-accent': primary,
+    '--pa-theme-text-on-action': textOnAction,
+    '--pa-theme-border-accent': borderAccent,
+    '--pa-theme-focus-ring': focusRing,
+
+    '--org-btn-primary-bg': primary,
+    '--org-btn-primary-hover': primaryHover,
+    '--org-btn-primary-active': primaryActive,
+    '--org-btn-primary-text': textOnAction,
+    '--org-btn-secondary-bg': 'transparent',
+    '--org-btn-secondary-hover': 'rgba(0,0,0,0.05)',
+    '--org-btn-secondary-text': textPrimary,
+    '--org-btn-secondary-border': borderDefault,
+    '--org-link-color': primary,
+    '--org-link-hover': primaryHover,
+    '--org-link-muted': '#6b7280',
+    '--org-badge-primary-bg': surfaceAccent,
+    '--org-badge-primary-text': primary,
+    '--org-card-accent-border': borderAccent,
+    '--org-card-accent-bg': surfaceAccent,
+    '--org-highlight-bg': surfaceHighlight,
+    '--org-focus-ring': focusRing,
+
+    '--org-text-primary': textPrimary,
+    '--org-text-secondary': textSecondary,
+    '--org-text-muted': textMuted,
+    '--org-text-inverse': '#FFFFFF',
+    '--org-surface-page': surfacePage,
+    '--org-surface-section': surfaceSection,
+    '--org-surface-card': surfaceCard,
+    '--org-surface-card-header': surfaceCardHeader,
+    '--org-surface-hover': surfaceHover,
+    '--org-surface-active': surfaceActive,
+    '--org-border-default': borderDefault,
+    '--org-border-subtle': borderSubtle,
+    '--org-border-active': primary,
+    '--org-btn-disabled-bg': disabledBg,
+    '--org-btn-disabled-text': disabledText,
+    '--org-status-success': '#10B981',
+    '--org-status-warning': '#F59E0B',
+    '--org-status-error': '#EF4444',
+    '--org-status-info': '#3B82F6',
+  }
+}
+
+/**
  * Adjust color for dark mode
  * Lightens dark colors and darkens light colors for better visibility
  */
