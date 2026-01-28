@@ -1560,6 +1560,143 @@ html.dark .pa-card-actions .pa-btn--danger {
     /* Destructive actions are muted, placed last */
 }
 
+/* Tier assignment cards (Feature Detail - light and dark) */
+.pa-tier-assignment-card {
+    padding: var(--pa-space-4);
+    border-radius: var(--pa-radius-s);
+    border: 1px solid var(--pa-n200);
+    background: var(--pa-surface-panel);
+    transition: border-color var(--pa-motion-normal) var(--pa-ease-out),
+                background-color var(--pa-motion-normal) var(--pa-ease-out),
+                box-shadow var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.pa-tier-assignment-card:hover {
+    border-color: var(--pa-n300);
+}
+
+.pa-tier-assignment-card--included {
+    border-color: var(--pa-n400);
+    background: var(--pa-success-bg);
+}
+
+.pa-tier-assignment-card--included:hover {
+    border-color: var(--pa-n500);
+}
+
+.pa-tier-assignment-card__header {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--pa-space-3);
+    min-width: 0;
+}
+
+.pa-tier-assignment-card__main {
+    flex: 1;
+    min-width: 0;
+}
+
+.pa-tier-assignment-card__title {
+    font: var(--pa-text-body-m);
+    font-weight: 600;
+    color: var(--pa-n900);
+    margin: 0;
+}
+
+.pa-tier-assignment-card__key {
+    font: var(--pa-text-body-s);
+    color: var(--pa-n500);
+    margin-top: 2px;
+}
+
+.pa-tier-assignment-card__divider {
+    height: 1px;
+    background: var(--pa-n200);
+    margin: var(--pa-space-3) 0 var(--pa-space-3) 0;
+    border: none;
+}
+
+.pa-tier-assignment-card__details {
+    font: var(--pa-text-body-s);
+    color: var(--pa-n700);
+    margin-left: 0;
+}
+
+.pa-tier-assignment-card__details strong {
+    font-weight: 600;
+}
+
+.pa-tier-assignment-card__footer {
+    margin-top: var(--pa-space-3);
+}
+
+.pa-tier-assignment-card__configure {
+    font: var(--pa-text-caption);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--pa-n900);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: none;
+    transition: color var(--pa-motion-fast) var(--pa-ease-out);
+}
+
+.pa-tier-assignment-card__configure:hover:not(:disabled) {
+    color: var(--pa-n700);
+    text-decoration: underline;
+}
+
+.pa-tier-assignment-card__configure:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Dark mode - tier assignment cards */
+html.dark .pa-tier-assignment-card {
+    border-color: var(--pa-border-default);
+    background: var(--pa-surface);
+}
+
+html.dark .pa-tier-assignment-card:hover {
+    border-color: var(--pa-border-emphasis);
+}
+
+html.dark .pa-tier-assignment-card--included {
+    border-color: var(--pa-border-emphasis);
+    background: var(--pa-theme-surface-accent);
+}
+
+html.dark .pa-tier-assignment-card--included:hover {
+    border-color: var(--pa-n500);
+}
+
+html.dark .pa-tier-assignment-card__title {
+    color: var(--pa-text-primary);
+}
+
+html.dark .pa-tier-assignment-card__key {
+    color: var(--pa-text-muted);
+}
+
+html.dark .pa-tier-assignment-card__divider {
+    background: var(--pa-border-subtle);
+}
+
+html.dark .pa-tier-assignment-card__details {
+    color: var(--pa-text-secondary);
+}
+
+html.dark .pa-tier-assignment-card__configure {
+    color: var(--pa-text-primary);
+}
+
+html.dark .pa-tier-assignment-card__configure:hover:not(:disabled) {
+    color: var(--pa-text-secondary);
+}
+
 /* =====================================================================
    13.1) STACKED LISTS (CARDS WITH ROWS)
    ===================================================================== */

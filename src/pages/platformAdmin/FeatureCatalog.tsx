@@ -103,13 +103,15 @@ export default function FeatureCatalog() {
   // Selection State
   const [selectedFeatureIds, setSelectedFeatureIds] = useState<Set<string>>(new Set())
   const [selectAllMode, setSelectAllMode] = useState<'none' | 'page' | 'all'>('none')
-  const prevFiltersRef = useRef<{ statusFilter: string[]; tierFilter: string[]; roleFilter: string[]; integrationFilter: string[]; quantifiableFilter: string | null; sourceFilter: string | null }>({ 
+  const prevFiltersRef = useRef<{ statusFilter: string[]; tierFilter: string[]; roleFilter: string[]; integrationFilter: string[]; quantifiableFilter: string | null; sourceFilter: string | null; systemFeatureFilter: 'all' | 'yes' | 'no'; platformAdminOnlyFilter: 'all' | 'yes' | 'no' }>({ 
     statusFilter: [], 
     tierFilter: [], 
     roleFilter: [], 
     integrationFilter: [], 
     quantifiableFilter: null, 
-    sourceFilter: null 
+    sourceFilter: null,
+    systemFeatureFilter: 'all',
+    platformAdminOnlyFilter: 'all'
   })
 
   // Modal States

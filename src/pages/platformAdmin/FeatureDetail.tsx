@@ -664,9 +664,9 @@ export default function FeatureDetail() {
 
         {/* Tier Assignments */}
         <Card title="Tier Assignments">
-          <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginBottom: 'var(--pa-space-4)' }}>
+          <p className="pa-body-s pa-text-muted" style={{ marginBottom: 'var(--pa-space-4)' }}>
             Configure how this feature is assigned to each license tier.
-          </div>
+          </p>
 
           {tiers.map((tier) => {
             const assignment = assignments[tier.id]
@@ -674,111 +674,82 @@ export default function FeatureDetail() {
             const isSaving = savingAssignment[tier.id] || false
 
             return (
-              <div 
-                key={tier.id} 
-                className="pa-card pa-mb-3" 
-                style={{ 
-                  padding: 'var(--pa-space-4)',
-                  border: included ? '1px solid var(--pa-success)' : '1px solid var(--pa-n100)',
-                  backgroundColor: included ? 'var(--pa-success-bg)' : 'var(--pa-n50)',
-                  transition: 'all 0.2s ease',
-                }}
+              <div
+                key={tier.id}
+                className={`pa-tier-assignment-card pa-mb-3 ${included ? 'pa-tier-assignment-card--included' : ''}`}
               >
-                <div className="pa-flex pa-items-center pa-justify-between">
-                  <div style={{ flex: 1 }}>
-                    <div className="pa-flex pa-items-center pa-gap-3">
-                      <Checkbox
-                        checked={included}
-                        onChange={(e) => {
-                          const newValue = e.target.checked
-                          if (feature.isToggleable === false && !newValue) {
-                            showError(
-                              `Cannot remove "${feature.displayName}" from license tiers. ` +
-                              (feature.lockReason || 'This feature is required for platform functionality.')
-                            )
-                            return
-                          }
-                          toggleTierAssignment(tier.id, newValue)
-                        }}
-                        disabled={isSaving || isNew || (feature.isToggleable === false && !included)}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div className="pa-flex pa-items-center pa-gap-2">
-                          <div className="pa-body-m" style={{ fontWeight: 600, color: 'var(--pa-n900)' }}>
-                            {tier.tierName}
-                          </div>
-                          {feature.isToggleable === false && included && (
-                            <span
-                              className="material-symbols-outlined"
-                              style={{
-                                fontSize: '16px',
-                                color: 'var(--pa-warning)',
-                                cursor: 'help',
-                              }}
-                              title="This feature is locked and cannot be removed from this tier"
-                            >
-                              lock
-                            </span>
-                          )}
-                        </div>
-                        <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '2px' }}>
-                          {tier.tierKey}
-                        </div>
+                <div className="pa-flex pa-items-start pa-justify-between pa-gap-3">
+                  <div className="pa-tier-assignment-card__header">
+                    <Checkbox
+                      checked={included}
+                      onChange={(e) => {
+                        const newValue = e.target.checked
+                        if (feature.isToggleable === false && !newValue) {
+                          showError(
+                            `Cannot remove "${feature.displayName}" from license tiers. ` +
+                            (feature.lockReason || 'This feature is required for platform functionality.')
+                          )
+                          return
+                        }
+                        toggleTierAssignment(tier.id, newValue)
+                      }}
+                      disabled={isSaving || isNew || (feature.isToggleable === false && !included)}
+                    />
+                    <div className="pa-tier-assignment-card__main">
+                      <div className="pa-flex pa-items-center pa-gap-2">
+                        <h4 className="pa-tier-assignment-card__title">{tier.tierName}</h4>
+                        {feature.isToggleable === false && included && (
+                          <span
+                            className="material-symbols-outlined"
+                            style={{ fontSize: '16px', color: 'var(--pa-warning)', cursor: 'help' }}
+                            title="This feature is locked and cannot be removed from this tier"
+                          >
+                            lock
+                          </span>
+                        )}
                       </div>
+                      <p className="pa-tier-assignment-card__key">{tier.tierKey}</p>
                     </div>
-
-                    {included && assignment && (
-                      <div style={{ 
-                        marginTop: 'var(--pa-space-3)', 
-                        paddingTop: 'var(--pa-space-3)', 
-                        borderTop: '1px solid var(--pa-n200)',
-                        marginLeft: '30px'
-                      }}>
-                        {feature.featureType === 'limit' && (
-                          <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
-                            <strong>Limit:</strong> {assignment.limitValue ?? 'Not set'}
-                          </div>
-                        )}
-                        {feature.featureType === 'permission' && (
-                          <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
-                            <strong>Roles:</strong> {[
-                              assignment.roleAdmin && 'Admin',
-                              assignment.roleCoach && 'Coach',
-                              assignment.roleParent && 'Parent',
-                            ].filter(Boolean).join(', ') || 'None'}
-                          </div>
-                        )}
-                        {feature.featureType !== 'limit' && feature.featureType !== 'permission' && (
-                          <div className="pa-body-s" style={{ color: 'var(--pa-n600)' }}>
-                            Configured for this tier
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
-
                   {isSaving && (
-                    <div style={{ marginLeft: 'var(--pa-space-3)' }}>
-                      <span className="material-symbols-outlined pa-spin" style={{ 
-                        fontSize: '18px',
-                        color: 'var(--pa-n500)'
-                      }}>
-                        sync
-                      </span>
-                    </div>
+                    <span className="material-symbols-outlined pa-spin" style={{ fontSize: '18px', color: 'var(--pa-n500)', flexShrink: 0 }} aria-hidden>
+                      sync
+                    </span>
                   )}
                 </div>
 
+                {included && assignment && (
+                  <>
+                    <hr className="pa-tier-assignment-card__divider" />
+                    <div className="pa-tier-assignment-card__details">
+                      {feature.featureType === 'limit' && (
+                        <span><strong>Limit:</strong> {assignment.limitValue ?? 'Not set'}</span>
+                      )}
+                      {feature.featureType === 'permission' && (
+                        <span>
+                          <strong>Roles:</strong>{' '}
+                          {[assignment.roleAdmin && 'Admin', assignment.roleCoach && 'Coach', assignment.roleParent && 'Parent']
+                            .filter(Boolean)
+                            .join(', ') || 'None'}
+                        </span>
+                      )}
+                      {feature.featureType !== 'limit' && feature.featureType !== 'permission' && (
+                        <span>Configured for this tier</span>
+                      )}
+                    </div>
+                  </>
+                )}
+
                 {included && !isNew && (
-                  <div style={{ marginTop: 'var(--pa-space-3)', marginLeft: '30px' }}>
-                    <Button
-                      variant="ghost"
-                      size="dense"
+                  <div className="pa-tier-assignment-card__footer">
+                    <button
+                      type="button"
+                      className="pa-tier-assignment-card__configure"
                       onClick={() => navigate(`/platform-admin/licenses/tiers/${tier.id}`)}
                       disabled={isSaving}
                     >
                       Configure Details
-                    </Button>
+                    </button>
                   </div>
                 )}
               </div>
@@ -786,7 +757,7 @@ export default function FeatureDetail() {
           })}
 
           {tiers.length === 0 && (
-            <div className="pa-body-s" style={{ color: 'var(--pa-n500)', textAlign: 'center', padding: 'var(--pa-space-5)' }}>
+            <div className="pa-body-s pa-text-muted" style={{ textAlign: 'center', padding: 'var(--pa-space-5)' }}>
               No active license tiers. Create a tier first.
             </div>
           )}
