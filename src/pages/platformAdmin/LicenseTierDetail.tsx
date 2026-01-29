@@ -431,6 +431,7 @@ export default function LicenseTierDetail() {
         id: tier.id!,
         tier_key: tier.tier_key,
         tier_name: tier.tier_name ?? '',
+        description: tier.description ?? null,
         stripe_price_id: tier.stripe_price_id ?? '',
         status: (tier.status ?? 'active') as 'active' | 'archived',
         version: tier.version ?? 1,

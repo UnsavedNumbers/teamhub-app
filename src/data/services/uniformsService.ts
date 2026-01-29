@@ -146,7 +146,7 @@ export async function getUniformSubmissions(
     if (USE_FAKE_DATA) {
         let submissions = fakeUniformSubmissions
         if (childIds && childIds.length > 0) {
-            submissions = submissions.filter(s => childIds.includes((s as { athlete_id?: string; child_id?: string }).athlete_id ?? s.child_id))
+            submissions = submissions.filter(s => childIds.includes((s as { athlete_id?: string; child_id?: string }).athlete_id ?? (s as { child_id?: string }).child_id))
         }
         // Include items for fake data to match real data structure
         const submissionsWithItems = submissions.map(submission => ({
@@ -162,7 +162,7 @@ export async function getUniformSubmissions(
             .select('*, items:uniform_submission_items(*)')
 
         if (childIds && childIds.length > 0) {
-            query = query.in('child_id', childIds)
+            query = query.in('athlete_id', childIds)
         }
 
         const { data, error } = await query
@@ -258,7 +258,7 @@ export async function submitUniformSizes(
             .from('uniform_submissions')
             .select('id')
             .eq('kit_id', kitId)
-            .eq('child_id', childId)
+            .eq('athlete_id', childId)
             .single()
 
         if (fetchError && fetchError.code !== 'PGRST116') throw fetchError
@@ -269,7 +269,7 @@ export async function submitUniformSizes(
             .upsert({
                 id: existing?.id,
                 kit_id: kitId,
-                child_id: childId,
+                athlete_id: childId,
                 status: 'submitted',
                 submitted_at: now,
                 updated_at: now,

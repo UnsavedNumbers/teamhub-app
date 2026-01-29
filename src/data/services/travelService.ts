@@ -511,11 +511,7 @@ export async function getTravelEvents(
             }
 
             // Apply role-based filtering (using same logic as events)
-            // In fake data demo mode, show all published travel for the org
-            if (USE_FAKE_DATA && !permissions.canViewAllOrgData) {
-                // Demo mode: show travel plans for demonstration
-                // In real mode, would filter by team access
-            } else if (!permissions.canViewAllOrgData) {
+            if (!permissions.canViewAllOrgData) {
                 const accessibleTeamIds = new Set<string>()
 
                 if (permissions.canViewAssignedTeams) {
@@ -1300,7 +1296,7 @@ export async function getTravelPlans(
     context: UserContext,
     params: TravelPlansQueryParams = {}
 ): Promise<{ data: FakeTravelPlan[]; error: Error | null }> {
-    const isGuardianViewer = context.roles.includes('guardian') || context.roles.includes('parent')
+    const isGuardianViewer = context.roles.includes('parent')
 
     if (USE_FAKE_DATA) {
         // Convert to event-based approach for fake data
@@ -1350,19 +1346,43 @@ export async function getTravelPlans(
     try {
         // For guardians/parents, first get their accessible teams
         let accessibleTeamIds: string[] | null = null
-        if (isGuardianViewer && !context.roles.includes('admin') && !context.roles.includes('org_admin')) {
-            // Get teams via athlete's team memberships where guardian has access
+        if (isGuardianViewer && !context.roles.includes('org_admin')) {
+            if (!context.orgId) {
+                return { data: [], error: new Error('Missing organization context') }
+            }
+
+            // Step 1: Get athlete IDs this guardian can access (active only)
+            const { data: guardianAthletes, error: guardianAthletesError } = await supabase.rpc(
+                'get_guardian_athletes',
+                { p_org_id: context.orgId, p_user_id: context.userId }
+            )
+
+            if (guardianAthletesError) {
+                console.error('Error fetching guardian athletes:', guardianAthletesError)
+                return { data: [], error: new Error(guardianAthletesError.message) }
+            }
+
+            const athleteIds = (guardianAthletes || [])
+                .filter((a: any) => a?.status === 'active')
+                .map((a: any) => a.athlete_id)
+                .filter(Boolean)
+
+            if (athleteIds.length === 0) {
+                return { data: [], error: null }
+            }
+
+            // Step 2: Get team IDs for those athletes
             const { data: memberships, error: membershipError } = await supabase
                 .from('team_memberships')
-                .select('team_id, athlete:athletes!inner(guardian_user_id)')
-                .eq('athletes.guardian_user_id', context.userId)
-            
-            if (!membershipError && memberships) {
-                accessibleTeamIds = [...new Set(memberships.map((m: any) => m.team_id).filter(Boolean))]
-            } else {
-                // If query fails, return empty to be safe
-                accessibleTeamIds = []
+                .select('team_id')
+                .in('athlete_id', athleteIds)
+
+            if (membershipError) {
+                console.error('Error fetching team memberships:', membershipError)
+                return { data: [], error: new Error(membershipError.message) }
             }
+
+            accessibleTeamIds = [...new Set((memberships || []).map((m: any) => m.team_id).filter(Boolean))]
         }
 
         let query = supabase
@@ -1375,9 +1395,16 @@ export async function getTravelPlans(
 
         // Filter by team
         if (params.teamId) {
+            if (accessibleTeamIds !== null && !accessibleTeamIds.includes(params.teamId)) {
+                return { data: [], error: null }
+            }
             query = query.eq('team_id', params.teamId)
         } else if (accessibleTeamIds !== null) {
             // Guardian/parent: filter to only their athlete's teams
+            if (accessibleTeamIds.length === 0) {
+                return { data: [], error: null }
+            }
+            query = query.in('team_id', accessibleTeamIds)
         }
 
         // Note: Status filtering is handled by RLS policies in the database
@@ -1480,7 +1507,7 @@ export async function getTravelPlanDetails(
     context: UserContext,
     planId: string
 ): Promise<{ data: FakeTravelPlan | null; error: Error | null }> {
-    const isGuardianViewer = context.roles.includes('guardian') || context.roles.includes('parent')
+    const isGuardianViewer = context.roles.includes('parent')
 
     if (USE_FAKE_DATA) {
         const { data: event, error } = await getTravelEventDetails(context, planId)
@@ -1554,15 +1581,37 @@ export async function getTravelPlanDetails(
         }
 
         // Guardians can only see plans for teams their athletes are on
-        if (isGuardianViewer && !context.roles.includes('admin') && !context.roles.includes('org_admin')) {
-            const { data: memberships } = await supabase
+        if (isGuardianViewer && !context.roles.includes('org_admin')) {
+            if (!context.orgId) {
+                return { data: null, error: new Error('Travel plan not found') }
+            }
+
+            const { data: guardianAthletes, error: guardianAthletesError } = await supabase.rpc(
+                'get_guardian_athletes',
+                { p_org_id: context.orgId, p_user_id: context.userId }
+            )
+
+            if (guardianAthletesError) {
+                return { data: null, error: new Error('Travel plan not found') }
+            }
+
+            const athleteIds = (guardianAthletes || [])
+                .filter((a: any) => a?.status === 'active')
+                .map((a: any) => a.athlete_id)
+                .filter(Boolean)
+
+            if (athleteIds.length === 0) {
+                return { data: null, error: new Error('Travel plan not found') }
+            }
+
+            const { data: memberships, error: membershipError } = await supabase
                 .from('team_memberships')
-                .select('team_id')
+                .select('id')
                 .eq('team_id', plan.team_id)
-                .eq('athletes.guardian_user_id', context.userId)
+                .in('athlete_id', athleteIds)
                 .limit(1)
-            
-            if (!memberships || memberships.length === 0) {
+
+            if (membershipError || !memberships || memberships.length === 0) {
                 return { data: null, error: new Error('Travel plan not found') }
             }
         }

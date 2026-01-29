@@ -148,7 +148,7 @@ export async function updateAttendance(
         type EventAttendanceUpsert = Database['public']['Tables']['event_attendance']['Insert']
         const upsertData2 = {
             event_id: eventId,
-            athlete_id: childId,
+            child_id: childId,
             status,
             notes,
             recorded_by_user_id: context.userId,
@@ -156,7 +156,7 @@ export async function updateAttendance(
         } satisfies EventAttendanceUpsert
         const { error } = await supabase
             .from('event_attendance')
-            .upsert(upsertData2, { onConflict: 'event_id, athlete_id' })
+            .upsert(upsertData2, { onConflict: 'event_id,child_id' })
 
         return { error: error ? new Error(error.message) : null }
     } catch (e: any) {
@@ -297,7 +297,7 @@ export async function getAttendancePeople(
                 child_id,
                 status,
                 event:events(start_time),
-                athlete:athletes(id, first_name, last_name)
+                child:athletes(id, first_name, last_name)
             `)
             .limit(1000)
             .returns<EventAttendanceRow[]>() // Safety cap
@@ -308,7 +308,7 @@ export async function getAttendancePeople(
         const statsMap = new Map<string, AttendancePersonSummary>()
 
         records.forEach((r: EventAttendanceRow) => {
-            const cid = r.athlete_id
+            const cid = r.child_id
             if (!statsMap.has(cid)) {
                 statsMap.set(cid, {
                     athlete_id: cid,

@@ -97,7 +97,7 @@ export default function UniformKitOrder() {
         const existingSelections: ChildSelections = {}
         childrenList.forEach(child => {
           existingSelections[child.id] = {}
-          const submission = submissionsData.find(s => s.kit_id === kitId && (s.athlete_id ?? (s as { child_id?: string }).child_id) === child.id)
+          const submission = submissionsData.find(s => s.kit_id === kitId && ((s as any).athlete_id ?? (s as any).child_id) === child.id)
           if (submission && submission.items && Array.isArray(submission.items)) {
             submission.items.forEach((item: any) => {
               if (item.item_id && item.size) {

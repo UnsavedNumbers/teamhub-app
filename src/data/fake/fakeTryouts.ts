@@ -208,7 +208,7 @@ export const fakeTryoutRegistrations: FakeTryoutRegistration[] = [
     {
         id: 'reg-002',
         tryout_id: TRYOUT_U14_SOCCER_ELITE_ID,
-        child_id: CHILD_SOPHIA_CHEN_ID,
+        athlete_id: CHILD_SOPHIA_CHEN_ID,
         status: 'confirmed',
         registered_by_user_id: PARENT_ADMIN_ID,
         experience_level: '4 years soccer, team captain on current U10 team',
@@ -232,7 +232,7 @@ export const fakeTryoutRegistrations: FakeTryoutRegistration[] = [
     {
         id: 'reg-004',
         tryout_id: TRYOUT_U14_SOCCER_ELITE_ID,
-        child_id: CHILD_AVA_WILLIAMS_ID,
+        athlete_id: CHILD_AVA_WILLIAMS_ID,
         status: 'pending',
         registered_by_user_id: PARENT_ADMIN_ID,
         experience_level: '2 years rec soccer',

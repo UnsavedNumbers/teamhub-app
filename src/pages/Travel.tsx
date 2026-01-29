@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { 
@@ -9,11 +9,12 @@ import type { FakeTravelPlan } from '../data/fake/fakeTravel'
 import { getSportFromTeam, type SportInfo } from '../utils/sportContext'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
-import { SportCardImage } from '../components/portal/SportCardImage'
+// SportCardImage removed
 import Card from '../components/portal/Card'
 import Icon from '../components/portal/Icon'
 import Button from '../components/portal/Button'
 import { cn } from '../utils/cn'
+import { useT } from '../i18n/useI18n'
 
 // ----------------------------------------------------------------------------
 // Types & Helpers
@@ -42,33 +43,78 @@ function getGroupLabel(plan: FakeTravelPlan): string {
     return isNaN(year) ? 'Unknown Date' : `${year}`
 }
 
-function getDisplayStatus(plan: FakeTravelPlan): { label: string; color: string } {
-    if (plan.status === 'cancelled') {
-        return { label: 'Cancelled', color: 'bg-red-500' }
-    }
-    
-    // Check if completed (end date < today)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const endDate = new Date(plan.end_date)
-    // Add one day to end date to make it inclusive (trip ends at end of day)
-    // Actually, simply: if end_date < today (string compare often safer for YYYY-MM-DD but Date object works if normalized)
-    // plan.end_date is YYYY-MM-DD string.
-    
-    if (plan.end_date < today.toISOString().split('T')[0]) { 
-        return { label: 'Completed', color: 'bg-slate-500' } 
-    }
-
-    return { label: 'Upcoming', color: 'bg-[var(--org-btn-primary-bg)]' }
-}
+// Note: status badge labels are translated inside the component via `useT()`.
 
 // ----------------------------------------------------------------------------
 // Components
 // ----------------------------------------------------------------------------
 
 export default function Travel() {
+    const t = useT()
     const navigate = useNavigate()
     const { context, isReady } = useUserContext()
+
+    const showDateDebug = useMemo(() => {
+        if (import.meta.env.DEV) return true
+        try {
+            return localStorage.getItem('debugTravelDates') === '1'
+        } catch {
+            return false
+        }
+    }, [])
+
+    const toLocalDateOnlyFromDate = (d: Date): string => {
+        const y = String(d.getFullYear())
+        const m = String(d.getMonth() + 1).padStart(2, '0')
+        const day = String(d.getDate()).padStart(2, '0')
+        return `${y}-${m}-${day}`
+    }
+
+    const toDateOnly = (value: string): string => {
+        // Normalizes various backend formats to YYYY-MM-DD.
+        // - YYYY-MM-DD
+        // - YYYY-MM-DDTHH:mm:ssZ
+        // - YYYY-MM-DD HH:mm:ss+00
+        // - Other parseable date strings
+        const v = value.trim()
+        if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v
+        if (/^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10)
+        const parsed = new Date(v)
+        if (!Number.isNaN(parsed.getTime())) return toLocalDateOnlyFromDate(parsed)
+        return v
+    }
+
+    const getTodayLocalDateOnly = (): string => {
+        // Use local date parts so timezone/UTC offsets don't affect comparisons.
+        return toLocalDateOnlyFromDate(new Date())
+    }
+
+    const getDisplayStatus = (plan: FakeTravelPlan): { label: string; color: string } => {
+        if (plan.status === 'cancelled') {
+            return { label: t('portal.travel.badges.cancelled'), color: 'bg-red-500' }
+        }
+
+        // Normalize in case the backend returns timestamps.
+        const startDate = toDateOnly(plan.start_date)
+        const endDate = toDateOnly(plan.end_date)
+        const todayStr = getTodayLocalDateOnly()
+
+        if (endDate < todayStr) {
+            return { label: t('portal.travel.badges.completed'), color: 'bg-slate-500' }
+        }
+
+        // If the trip starts today, call it out.
+        if (startDate === todayStr) {
+            return { label: t('portal.travel.badges.today'), color: 'bg-emerald-600' }
+        }
+
+        // If today's date is between start and end (inclusive), show Active (green).
+        if (startDate <= todayStr && todayStr <= endDate) {
+            return { label: t('portal.travel.badges.active'), color: 'bg-emerald-600' }
+        }
+
+        return { label: t('portal.travel.badges.upcoming'), color: 'bg-[var(--org-btn-primary-bg)]' }
+    }
     
     // -- State --
     const [activeTab, setActiveTab] = useState<TabType>('upcoming')
@@ -81,6 +127,7 @@ export default function Travel() {
     const [isLoadingUpcoming, setIsLoadingUpcoming] = useState(true)
     const [isLoadingAll, setIsLoadingAll] = useState(false)
     const [error, setError] = useState<Error | null>(null)
+    const [retryCount, setRetryCount] = useState(0)
     
     // Plan metadata (sports info)
     const [planSports, setPlanSports] = useState<Record<string, SportInfo | null>>({})
@@ -120,7 +167,7 @@ export default function Travel() {
 
         loadUpcoming()
         return () => { mounted = false }
-    }, [context, isReady])
+    }, [context, isReady, retryCount])
 
     // 2. Load "All Plans" when tab switches to Past or All (if not loaded)
     useEffect(() => {
@@ -143,8 +190,10 @@ export default function Travel() {
                 }
             } catch (err) {
                 console.error(err)
-                // Don't set main error if background fetch fails, maybe just log or show toast?
-                // But for now, let's keep it simple.
+                if (mounted) {
+                    setError(err instanceof Error ? err : new Error('Failed to load travel plans'))
+                    setAllPlans([])
+                }
             } finally {
                 if (mounted) setIsLoadingAll(false)
             }
@@ -152,7 +201,7 @@ export default function Travel() {
 
         loadAll()
         return () => { mounted = false }
-    }, [activeTab, isReady, allPlans, isLoadingAll, context])
+    }, [activeTab, isReady, allPlans, isLoadingAll, context, retryCount])
 
     // Helper to load sports for new plans
     const loadSports = async (plans: FakeTravelPlan[]) => {
@@ -325,7 +374,10 @@ export default function Travel() {
                        <Icon name="error" size="text-6xl" className="text-red-400 mb-4 mx-auto" />
                        <CardTitle className="mb-2">Error loading plans</CardTitle>
                        <p className="text-slate-500 mb-6">{error.message}</p>
-                       <Button onClick={() => window.location.reload()}>Retry</Button>
+                       <Button onClick={() => {
+                           setError(null)
+                           setRetryCount(c => c + 1)
+                       }}>Retry</Button>
                    </Card>
                 </div>
             </PortalLayout>
@@ -359,7 +411,11 @@ export default function Travel() {
                                     : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                             )}
                         >
-                            {tab}
+                            {tab === 'upcoming'
+                                ? t('portal.travel.tabs.current')
+                                : tab === 'past'
+                                    ? t('portal.travel.tabs.past')
+                                    : t('portal.travel.tabs.all')}
                         </button>
                     ))}
                 </div>
@@ -377,7 +433,7 @@ export default function Travel() {
                        <Icon name="search" className="absolute left-3 top-2.5 text-slate-400 text-sm" />
                    </div>
                    <Button 
-                       variant="outline" 
+                       variant="secondary" 
                        onClick={() => setFiltersOpen(!filtersOpen)}
                        className={cn(filtersOpen && "bg-slate-100 dark:bg-slate-800")}
                    >
@@ -414,7 +470,7 @@ export default function Travel() {
                         </div>
                         <div className="flex items-end">
                             <Button 
-                                variant="text" 
+                                variant="secondary" 
                                 className="text-red-500 hover:text-red-600 text-sm px-0"
                                 onClick={() => {
                                     setSeasonFilter('')
@@ -471,6 +527,10 @@ export default function Travel() {
                                     {group.items.map(plan => {
                                         const status = getDisplayStatus(plan)
                                         const sport = planSports[plan.id]
+
+                                        const debugStart = toDateOnly(plan.start_date)
+                                        const debugEnd = toDateOnly(plan.end_date)
+                                        const debugToday = getTodayLocalDateOnly()
                                         
                                         return (
                                             <div 
@@ -507,6 +567,13 @@ export default function Travel() {
                                                         <Icon name="calendar_today" size="text-sm" className="text-slate-400" />
                                                         <span className="font-medium">{formatDateRange(plan.start_date, plan.end_date)}</span>
                                                     </div>
+                                                    {showDateDebug && (
+                                                        <div className="text-[10px] font-mono text-slate-400 leading-snug">
+                                                            <div>today={debugToday}</div>
+                                                            <div>start(raw)={String(plan.start_date)} start(norm)={debugStart}</div>
+                                                            <div>end(raw)={String(plan.end_date)} end(norm)={debugEnd}</div>
+                                                        </div>
+                                                    )}
                                                     <div className="flex items-center gap-2">
                                                         <Icon name="place" size="text-sm" className="text-slate-400" />
                                                         <span className="font-medium">
