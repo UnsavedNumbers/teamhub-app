@@ -429,30 +429,30 @@ export const fakeEventLocations: EventLocation[] = [
 
 export const fakeEventRSVPs: EventRSVP[] = [
     // U10 Soccer Practice 1 - RSVPs
-    { id: 'rsvp-001', event_id: EVENT_U10_SOCCER_PRACTICE_1_ID, child_id: CHILD_EMMA_JOHNSON_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T10:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T10:00:00Z', child: { id: CHILD_EMMA_JOHNSON_ID, first_name: 'Emma', last_name: 'Johnson' } },
-    { id: 'rsvp-002', event_id: EVENT_U10_SOCCER_PRACTICE_1_ID, child_id: CHILD_SOPHIA_CHEN_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T11:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T11:00:00Z', child: { id: CHILD_SOPHIA_CHEN_ID, first_name: 'Sophia', last_name: 'Chen' } },
-    { id: 'rsvp-003', event_id: EVENT_U10_SOCCER_PRACTICE_1_ID, child_id: CHILD_AIDEN_PATEL_ID, status: 'late' as RSVPStatus, responded_at: '2024-03-01T12:00:00Z', responded_by_user_id: null, note: 'Will arrive 15 min late from school pickup', created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T12:00:00Z', child: { id: CHILD_AIDEN_PATEL_ID, first_name: 'Aiden', last_name: 'Patel' } },
+    { id: 'rsvp-001', event_id: EVENT_U10_SOCCER_PRACTICE_1_ID, athlete_id: CHILD_EMMA_JOHNSON_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T10:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T10:00:00Z', child: { id: CHILD_EMMA_JOHNSON_ID, first_name: 'Emma', last_name: 'Johnson' } },
+    { id: 'rsvp-002', event_id: EVENT_U10_SOCCER_PRACTICE_1_ID, athlete_id: CHILD_SOPHIA_CHEN_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T11:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T11:00:00Z', child: { id: CHILD_SOPHIA_CHEN_ID, first_name: 'Sophia', last_name: 'Chen' } },
+    { id: 'rsvp-003', event_id: EVENT_U10_SOCCER_PRACTICE_1_ID, athlete_id: CHILD_AIDEN_PATEL_ID, status: 'late' as RSVPStatus, responded_at: '2024-03-01T12:00:00Z', responded_by_user_id: null, note: 'Will arrive 15 min late from school pickup', created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T12:00:00Z', child: { id: CHILD_AIDEN_PATEL_ID, first_name: 'Aiden', last_name: 'Patel' } },
 
     // U10 Soccer Game 1 - RSVPs
-    { id: 'rsvp-004', event_id: EVENT_U10_SOCCER_GAME_1_ID, child_id: CHILD_EMMA_JOHNSON_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-02T10:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-02T00:00:00Z', updated_at: '2024-03-02T10:00:00Z', child: { id: CHILD_EMMA_JOHNSON_ID, first_name: 'Emma', last_name: 'Johnson' } },
-    { id: 'rsvp-005', event_id: EVENT_U10_SOCCER_GAME_1_ID, child_id: CHILD_SOPHIA_CHEN_ID, status: 'unknown' as RSVPStatus, responded_at: null, responded_by_user_id: null, note: null, created_at: '2024-03-02T00:00:00Z', updated_at: '2024-03-02T00:00:00Z', child: { id: CHILD_SOPHIA_CHEN_ID, first_name: 'Sophia', last_name: 'Chen' } },
-    { id: 'rsvp-006', event_id: EVENT_U10_SOCCER_GAME_1_ID, child_id: CHILD_AIDEN_PATEL_ID, status: 'not_going' as RSVPStatus, responded_at: '2024-03-02T14:00:00Z', responded_by_user_id: null, note: 'Family commitment - out of town', created_at: '2024-03-02T00:00:00Z', updated_at: '2024-03-02T14:00:00Z', child: { id: CHILD_AIDEN_PATEL_ID, first_name: 'Aiden', last_name: 'Patel' } },
+    { id: 'rsvp-004', event_id: EVENT_U10_SOCCER_GAME_1_ID, athlete_id: CHILD_EMMA_JOHNSON_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-02T10:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-02T00:00:00Z', updated_at: '2024-03-02T10:00:00Z', child: { id: CHILD_EMMA_JOHNSON_ID, first_name: 'Emma', last_name: 'Johnson' } },
+    { id: 'rsvp-005', event_id: EVENT_U10_SOCCER_GAME_1_ID, athlete_id: CHILD_SOPHIA_CHEN_ID, status: 'unknown' as RSVPStatus, responded_at: null, responded_by_user_id: null, note: null, created_at: '2024-03-02T00:00:00Z', updated_at: '2024-03-02T00:00:00Z', child: { id: CHILD_SOPHIA_CHEN_ID, first_name: 'Sophia', last_name: 'Chen' } },
+    { id: 'rsvp-006', event_id: EVENT_U10_SOCCER_GAME_1_ID, athlete_id: CHILD_AIDEN_PATEL_ID, status: 'not_going' as RSVPStatus, responded_at: '2024-03-02T14:00:00Z', responded_by_user_id: null, note: 'Family commitment - out of town', created_at: '2024-03-02T00:00:00Z', updated_at: '2024-03-02T14:00:00Z', child: { id: CHILD_AIDEN_PATEL_ID, first_name: 'Aiden', last_name: 'Patel' } },
 
     // U12 Soccer Practice - RSVPs
-    { id: 'rsvp-007', event_id: EVENT_U12_SOCCER_PRACTICE_1_ID, child_id: CHILD_OLIVIA_SMITH_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T09:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T09:00:00Z', child: { id: CHILD_OLIVIA_SMITH_ID, first_name: 'Olivia', last_name: 'Smith' } },
-    { id: 'rsvp-008', event_id: EVENT_U12_SOCCER_PRACTICE_1_ID, child_id: CHILD_MASON_RODRIGUEZ_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T09:30:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T09:30:00Z', child: { id: CHILD_MASON_RODRIGUEZ_ID, first_name: 'Mason', last_name: 'Rodriguez' } },
-    { id: 'rsvp-009', event_id: EVENT_U12_SOCCER_PRACTICE_1_ID, child_id: CHILD_AVA_WILLIAMS_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T10:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T10:00:00Z', child: { id: CHILD_AVA_WILLIAMS_ID, first_name: 'Ava', last_name: 'Williams' } },
+    { id: 'rsvp-007', event_id: EVENT_U12_SOCCER_PRACTICE_1_ID, athlete_id: CHILD_OLIVIA_SMITH_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T09:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T09:00:00Z', child: { id: CHILD_OLIVIA_SMITH_ID, first_name: 'Olivia', last_name: 'Smith' } },
+    { id: 'rsvp-008', event_id: EVENT_U12_SOCCER_PRACTICE_1_ID, athlete_id: CHILD_MASON_RODRIGUEZ_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T09:30:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T09:30:00Z', child: { id: CHILD_MASON_RODRIGUEZ_ID, first_name: 'Mason', last_name: 'Rodriguez' } },
+    { id: 'rsvp-009', event_id: EVENT_U12_SOCCER_PRACTICE_1_ID, athlete_id: CHILD_AVA_WILLIAMS_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T10:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T10:00:00Z', child: { id: CHILD_AVA_WILLIAMS_ID, first_name: 'Ava', last_name: 'Williams' } },
 
     // U10 Basketball Practice - RSVPs
-    { id: 'rsvp-010', event_id: EVENT_U10_BB_PRACTICE_1_ID, child_id: CHILD_LIAM_JOHNSON_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T08:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T08:00:00Z', child: { id: CHILD_LIAM_JOHNSON_ID, first_name: 'Liam', last_name: 'Johnson' } },
-    { id: 'rsvp-011', event_id: EVENT_U10_BB_PRACTICE_1_ID, child_id: CHILD_NOAH_SMITH_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T08:30:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T08:30:00Z', child: { id: CHILD_NOAH_SMITH_ID, first_name: 'Noah', last_name: 'Smith' } },
-    { id: 'rsvp-012', event_id: EVENT_U10_BB_PRACTICE_1_ID, child_id: CHILD_ETHAN_WILLIAMS_ID, status: 'unknown' as RSVPStatus, responded_at: null, responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T00:00:00Z', child: { id: CHILD_ETHAN_WILLIAMS_ID, first_name: 'Ethan', last_name: 'Williams' } },
+    { id: 'rsvp-010', event_id: EVENT_U10_BB_PRACTICE_1_ID, athlete_id: CHILD_LIAM_JOHNSON_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T08:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T08:00:00Z', child: { id: CHILD_LIAM_JOHNSON_ID, first_name: 'Liam', last_name: 'Johnson' } },
+    { id: 'rsvp-011', event_id: EVENT_U10_BB_PRACTICE_1_ID, athlete_id: CHILD_NOAH_SMITH_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T08:30:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T08:30:00Z', child: { id: CHILD_NOAH_SMITH_ID, first_name: 'Noah', last_name: 'Smith' } },
+    { id: 'rsvp-012', event_id: EVENT_U10_BB_PRACTICE_1_ID, athlete_id: CHILD_ETHAN_WILLIAMS_ID, status: 'unknown' as RSVPStatus, responded_at: null, responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T00:00:00Z', child: { id: CHILD_ETHAN_WILLIAMS_ID, first_name: 'Ethan', last_name: 'Williams' } },
 
     // U10 Basketball Game - RSVPs
-    { id: 'rsvp-013', event_id: EVENT_U10_BB_GAME_1_ID, child_id: CHILD_LIAM_JOHNSON_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-02T09:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-02T00:00:00Z', updated_at: '2024-03-02T09:00:00Z', child: { id: CHILD_LIAM_JOHNSON_ID, first_name: 'Liam', last_name: 'Johnson' } },
+    { id: 'rsvp-013', event_id: EVENT_U10_BB_GAME_1_ID, athlete_id: CHILD_LIAM_JOHNSON_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-02T09:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-02T00:00:00Z', updated_at: '2024-03-02T09:00:00Z', child: { id: CHILD_LIAM_JOHNSON_ID, first_name: 'Liam', last_name: 'Johnson' } },
 
     // U12 Basketball Practice - RSVPs
-    { id: 'rsvp-014', event_id: EVENT_U12_BB_PRACTICE_1_ID, child_id: CHILD_ISABELLA_RODRIGUEZ_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T07:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T07:00:00Z', child: { id: CHILD_ISABELLA_RODRIGUEZ_ID, first_name: 'Isabella', last_name: 'Rodriguez' } },
+    { id: 'rsvp-014', event_id: EVENT_U12_BB_PRACTICE_1_ID, athlete_id: CHILD_ISABELLA_RODRIGUEZ_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T07:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T07:00:00Z', child: { id: CHILD_ISABELLA_RODRIGUEZ_ID, first_name: 'Isabella', last_name: 'Rodriguez' } },
 ]
 
 // ============================================================================
@@ -505,11 +505,11 @@ export function getRSVPsForEvent(eventId: string): EventRSVP[] {
 }
 
 export function getRSVPsForChild(childId: string): EventRSVP[] {
-    return fakeEventRSVPs.filter((r) => r.child_id === childId)
+    return fakeEventRSVPs.filter((r) => r.athlete_id === childId)
 }
 
 export function getChildRSVPForEvent(eventId: string, childId: string): EventRSVP | undefined {
-    return fakeEventRSVPs.find((r) => r.event_id === eventId && r.child_id === childId)
+    return fakeEventRSVPs.find((r) => r.event_id === eventId && r.athlete_id === childId)
 }
 
 export function getEventsForChildTeams(childId: string, teamMemberships: Array<{ childId: string; teamId: string }>): CalendarEvent[] {

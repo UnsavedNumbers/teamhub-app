@@ -9,7 +9,7 @@ export type AttendanceStatus = EventAttendanceTable extends { Row: { status: inf
 export interface AttendanceRecord {
     id: string
     event_id: string
-    child_id: string
+    athlete_id: string
     status: AttendanceStatus
     notes: string | null
     recorded_by_user_id: string | null
@@ -56,7 +56,7 @@ export interface AttendanceEventSummary {
 }
 
 export interface AttendancePersonSummary {
-    child_id: string
+    athlete_id: string
     first_name: string
     last_name: string
     team_names: string[]

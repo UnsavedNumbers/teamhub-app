@@ -5,7 +5,12 @@
 
 -- Step 1: Rename children table to athletes
 -- ==========================================
-ALTER TABLE children RENAME TO athletes;
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'children') THEN
+    ALTER TABLE children RENAME TO athletes;
+  END IF;
+END $$;
 
 -- Rename indexes (only if they exist)
 DO $$
@@ -15,19 +20,46 @@ BEGIN
   END IF;
 END $$;
 
--- Rename trigger
-DROP TRIGGER IF EXISTS update_children_updated_at ON athletes;
-CREATE TRIGGER update_athletes_updated_at
-  BEFORE UPDATE ON athletes
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+-- Rename trigger (idempotent)
+DO $$
+BEGIN
+  -- Drop old trigger if it exists
+  DROP TRIGGER IF EXISTS update_children_updated_at ON athletes;
+  
+  -- Only create new trigger if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger
+    WHERE tgname = 'update_athletes_updated_at'
+    AND tgrelid = 'athletes'::regclass
+  ) THEN
+    CREATE TRIGGER update_athletes_updated_at
+      BEFORE UPDATE ON athletes
+      FOR EACH ROW
+      EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+END $$;
 
 -- Step 2: Rename child_guardians table to athlete_guardians
 -- ==========================================================
-ALTER TABLE child_guardians RENAME TO athlete_guardians;
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'child_guardians') THEN
+    ALTER TABLE child_guardians RENAME TO athlete_guardians;
+  END IF;
+END $$;
 
 -- Rename column child_id to athlete_id
-ALTER TABLE athlete_guardians RENAME COLUMN child_id TO athlete_id;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'athlete_guardians'
+    AND column_name = 'child_id'
+  ) THEN
+    ALTER TABLE athlete_guardians RENAME COLUMN child_id TO athlete_id;
+  END IF;
+END $$;
 
 -- Rename indexes (only if they exist)
 DO $$
@@ -63,12 +95,22 @@ BEGIN
   END IF;
 END $$;
 
--- Rename trigger
-DROP TRIGGER IF EXISTS update_child_guardians_updated_at ON athlete_guardians;
-CREATE TRIGGER update_athlete_guardians_updated_at
-  BEFORE UPDATE ON athlete_guardians
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+-- Rename trigger (idempotent)
+DO $$
+BEGIN
+  DROP TRIGGER IF EXISTS update_child_guardians_updated_at ON athlete_guardians;
+  
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger
+    WHERE tgname = 'update_athlete_guardians_updated_at'
+    AND tgrelid = 'athlete_guardians'::regclass
+  ) THEN
+    CREATE TRIGGER update_athlete_guardians_updated_at
+      BEFORE UPDATE ON athlete_guardians
+      FOR EACH ROW
+      EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+END $$;
 
 -- Rename enum type (only if exists)
 DO $$
@@ -80,7 +122,17 @@ END $$;
 
 -- Step 3: Update parent_invites table
 -- ====================================
-ALTER TABLE parent_invites RENAME COLUMN child_id TO athlete_id;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'parent_invites'
+    AND column_name = 'child_id'
+  ) THEN
+    ALTER TABLE parent_invites RENAME COLUMN child_id TO athlete_id;
+  END IF;
+END $$;
 
 -- Rename indexes
 DO $$
@@ -92,7 +144,17 @@ END $$;
 
 -- Step 4: Update join_requests table
 -- ===================================
-ALTER TABLE join_requests RENAME COLUMN child_id TO athlete_id;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'join_requests'
+    AND column_name = 'child_id'
+  ) THEN
+    ALTER TABLE join_requests RENAME COLUMN child_id TO athlete_id;
+  END IF;
+END $$;
 
 -- Rename indexes
 DO $$
@@ -111,6 +173,11 @@ BEGIN
     SELECT FROM pg_tables
     WHERE schemaname = 'public'
     AND tablename = 'child_claim_tokens'
+  ) AND EXISTS (
+    SELECT FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'child_claim_tokens'
+    AND column_name = 'child_id'
   ) THEN
     ALTER TABLE child_claim_tokens RENAME COLUMN child_id TO athlete_id;
     
@@ -127,7 +194,17 @@ END $$;
 
 -- Step 6: Update team_memberships table
 -- ======================================
-ALTER TABLE team_memberships RENAME COLUMN child_id TO athlete_id;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'team_memberships'
+    AND column_name = 'child_id'
+  ) THEN
+    ALTER TABLE team_memberships RENAME COLUMN child_id TO athlete_id;
+  END IF;
+END $$;
 
 -- Rename indexes
 DO $$

@@ -92,7 +92,7 @@ export interface FakeTeamMember {
     id: string
     team_id: string
     season_id: string
-    child_id: string
+    athlete_id: string
     role: 'player' | 'captain' | 'manager'
     status: 'active' | 'inactive' | 'pending'
     jersey_number: string | null
@@ -693,19 +693,19 @@ export const fakeTeamSeasons: FakeTeamSeason[] = [
 
 export const fakeTeamMembers: FakeTeamMember[] = [
     // Need to use new unified season IDs
-    { id: 'tm-001', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_EMMA_JOHNSON_ID, role: 'player', status: 'active', jersey_number: '7', position: 'Forward', joined_at: getDateInCurrentYear(2, 1), created_at: getDateInCurrentYear(2, 1), updated_at: getDateInCurrentYear(2, 1) },
-    { id: 'tm-002', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_SOPHIA_CHEN_ID, role: 'captain', status: 'active', jersey_number: '10', position: 'Midfielder', joined_at: getDateInCurrentYear(2, 1), created_at: getDateInCurrentYear(2, 1), updated_at: getDateInCurrentYear(2, 1) },
-    { id: 'tm-003', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_AIDEN_PATEL_ID, role: 'player', status: 'active', jersey_number: '5', position: 'Defender', joined_at: getDateInCurrentYear(2, 5), created_at: getDateInCurrentYear(2, 5), updated_at: getDateInCurrentYear(2, 5) },
+    { id: 'tm-001', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, athlete_id: CHILD_EMMA_JOHNSON_ID, role: 'player', status: 'active', jersey_number: '7', position: 'Forward', joined_at: getDateInCurrentYear(2, 1), created_at: getDateInCurrentYear(2, 1), updated_at: getDateInCurrentYear(2, 1) },
+    { id: 'tm-002', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, athlete_id: CHILD_SOPHIA_CHEN_ID, role: 'captain', status: 'active', jersey_number: '10', position: 'Midfielder', joined_at: getDateInCurrentYear(2, 1), created_at: getDateInCurrentYear(2, 1), updated_at: getDateInCurrentYear(2, 1) },
+    { id: 'tm-003', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, athlete_id: CHILD_AIDEN_PATEL_ID, role: 'player', status: 'active', jersey_number: '5', position: 'Defender', joined_at: getDateInCurrentYear(2, 5), created_at: getDateInCurrentYear(2, 5), updated_at: getDateInCurrentYear(2, 5) },
 
-    { id: 'tm-004', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_OLIVIA_SMITH_ID, role: 'player', status: 'active', jersey_number: '23', position: 'Goalkeeper', joined_at: getDateInCurrentYear(2, 1), created_at: getDateInCurrentYear(2, 1), updated_at: getDateInCurrentYear(2, 1) },
-    { id: 'tm-005', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_MASON_RODRIGUEZ_ID, role: 'captain', status: 'active', jersey_number: '22', position: 'Forward', joined_at: getDateInCurrentYear(2, 1), created_at: getDateInCurrentYear(2, 1), updated_at: getDateInCurrentYear(2, 1) },
-    { id: 'tm-006', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_AVA_WILLIAMS_ID, role: 'player', status: 'active', jersey_number: '15', position: 'Midfielder', joined_at: getDateInCurrentYear(2, 3), created_at: getDateInCurrentYear(2, 3), updated_at: getDateInCurrentYear(2, 3) },
+    { id: 'tm-004', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, athlete_id: CHILD_OLIVIA_SMITH_ID, role: 'player', status: 'active', jersey_number: '23', position: 'Goalkeeper', joined_at: getDateInCurrentYear(2, 1), created_at: getDateInCurrentYear(2, 1), updated_at: getDateInCurrentYear(2, 1) },
+    { id: 'tm-005', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, athlete_id: CHILD_MASON_RODRIGUEZ_ID, role: 'captain', status: 'active', jersey_number: '22', position: 'Forward', joined_at: getDateInCurrentYear(2, 1), created_at: getDateInCurrentYear(2, 1), updated_at: getDateInCurrentYear(2, 1) },
+    { id: 'tm-006', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, athlete_id: CHILD_AVA_WILLIAMS_ID, role: 'player', status: 'active', jersey_number: '15', position: 'Midfielder', joined_at: getDateInCurrentYear(2, 3), created_at: getDateInCurrentYear(2, 3), updated_at: getDateInCurrentYear(2, 3) },
 
-    { id: 'tm-007', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_LIAM_JOHNSON_ID, role: 'player', status: 'active', jersey_number: '12', position: 'Guard', joined_at: getDateInCurrentYear(2, 10), created_at: getDateInCurrentYear(2, 10), updated_at: getDateInCurrentYear(2, 10) },
-    { id: 'tm-008', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_NOAH_SMITH_ID, role: 'player', status: 'active', jersey_number: '8', position: 'Forward', joined_at: getDateInCurrentYear(2, 10), created_at: getDateInCurrentYear(2, 10), updated_at: getDateInCurrentYear(2, 10) },
-    { id: 'tm-009', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_ETHAN_WILLIAMS_ID, role: 'player', status: 'active', jersey_number: '3', position: 'Center', joined_at: getDateInCurrentYear(2, 12), created_at: getDateInCurrentYear(2, 12), updated_at: getDateInCurrentYear(2, 12) },
+    { id: 'tm-007', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, athlete_id: CHILD_LIAM_JOHNSON_ID, role: 'player', status: 'active', jersey_number: '12', position: 'Guard', joined_at: getDateInCurrentYear(2, 10), created_at: getDateInCurrentYear(2, 10), updated_at: getDateInCurrentYear(2, 10) },
+    { id: 'tm-008', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, athlete_id: CHILD_NOAH_SMITH_ID, role: 'player', status: 'active', jersey_number: '8', position: 'Forward', joined_at: getDateInCurrentYear(2, 10), created_at: getDateInCurrentYear(2, 10), updated_at: getDateInCurrentYear(2, 10) },
+    { id: 'tm-009', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, athlete_id: CHILD_ETHAN_WILLIAMS_ID, role: 'player', status: 'active', jersey_number: '3', position: 'Center', joined_at: getDateInCurrentYear(2, 12), created_at: getDateInCurrentYear(2, 12), updated_at: getDateInCurrentYear(2, 12) },
 
-    { id: 'tm-010', team_id: TEAM_U12_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, child_id: CHILD_ISABELLA_RODRIGUEZ_ID, role: 'player', status: 'active', jersey_number: '17', position: 'Guard', joined_at: getDateInCurrentYear(2, 15), created_at: getDateInCurrentYear(2, 15), updated_at: getDateInCurrentYear(2, 15) },
+    { id: 'tm-010', team_id: TEAM_U12_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, athlete_id: CHILD_ISABELLA_RODRIGUEZ_ID, role: 'player', status: 'active', jersey_number: '17', position: 'Guard', joined_at: getDateInCurrentYear(2, 15), created_at: getDateInCurrentYear(2, 15), updated_at: getDateInCurrentYear(2, 15) },
 ]
 
 export const fakeCoachAssignments: FakeCoachAssignment[] = [
@@ -795,11 +795,11 @@ export function getTeamMembersForSeason(teamId: string, seasonId: string): FakeT
 }
 
 export function getTeamMembersForChild(childId: string): FakeTeamMember[] {
-    return fakeTeamMembers.filter((tm) => tm.child_id === childId)
+    return fakeTeamMembers.filter((tm) => tm.athlete_id === childId)
 }
 
 export function getActiveTeamMembershipsForChild(childId: string): FakeTeamMember[] {
-    return fakeTeamMembers.filter((tm) => tm.child_id === childId && tm.status === 'active')
+    return fakeTeamMembers.filter((tm) => tm.athlete_id === childId && tm.status === 'active')
 }
 
 export function getCoachAssignmentsForUser(userId: string): FakeCoachAssignment[] {
@@ -821,7 +821,7 @@ export function isUserCoachOfTeam(userId: string, teamId: string): boolean {
 export function getChildTeamMemberships(): Array<{ childId: string; teamId: string }> {
     return fakeTeamMembers
         .filter((tm) => tm.status === 'active')
-        .map((tm) => ({ childId: tm.child_id, teamId: tm.team_id }))
+        .map((tm) => ({ childId: tm.athlete_id, teamId: tm.team_id }))
 }
 
 /**

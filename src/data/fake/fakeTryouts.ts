@@ -53,7 +53,7 @@ export interface FakeTryout {
 export interface FakeTryoutRegistration {
     id: string
     tryout_id: string
-    child_id: string
+    athlete_id: string
     status: RegistrationStatus
     registered_by_user_id: string
     experience_level: string | null
@@ -196,7 +196,7 @@ export const fakeTryoutRegistrations: FakeTryoutRegistration[] = [
     {
         id: 'reg-001',
         tryout_id: TRYOUT_U14_SOCCER_ELITE_ID,
-        child_id: CHILD_EMMA_JOHNSON_ID,
+        athlete_id: CHILD_EMMA_JOHNSON_ID,
         status: 'confirmed',
         registered_by_user_id: PARENT_ONLY_ID,
         experience_level: '3 years competitive soccer, currently on U10 rec team',
@@ -220,7 +220,7 @@ export const fakeTryoutRegistrations: FakeTryoutRegistration[] = [
     {
         id: 'reg-003',
         tryout_id: TRYOUT_U14_SOCCER_ELITE_ID,
-        child_id: CHILD_MASON_RODRIGUEZ_ID,
+        athlete_id: CHILD_MASON_RODRIGUEZ_ID,
         status: 'confirmed',
         registered_by_user_id: DEMO_USER_IDS['parent-coach@example.com'],
         experience_level: '5 years playing, 2 years competitive',
@@ -246,7 +246,7 @@ export const fakeTryoutRegistrations: FakeTryoutRegistration[] = [
     {
         id: 'reg-005',
         tryout_id: TRYOUT_U12_BASKETBALL_ELITE_ID,
-        child_id: CHILD_NOAH_SMITH_ID,
+        athlete_id: CHILD_NOAH_SMITH_ID,
         status: 'confirmed',
         registered_by_user_id: 'user-mike-smith-002', // Mike Smith
         experience_level: '2 years basketball, school team',
@@ -301,7 +301,7 @@ export function getRegistrationsForTryout(tryoutId: string): FakeTryoutRegistrat
 }
 
 export function getRegistrationsForChild(childId: string): FakeTryoutRegistration[] {
-    return fakeTryoutRegistrations.filter((r) => r.child_id === childId)
+    return fakeTryoutRegistrations.filter((r) => r.athlete_id === childId)
 }
 
 export function getConfirmedRegistrationsCount(tryoutId: string): number {
@@ -317,7 +317,7 @@ export function getAvailableSpotsForTryout(tryoutId: string): number {
 
 export function isChildRegisteredForTryout(childId: string, tryoutId: string): boolean {
     return fakeTryoutRegistrations.some(
-        (r) => r.child_id === childId && r.tryout_id === tryoutId && r.status !== 'cancelled'
+        (r) => r.athlete_id === childId && r.tryout_id === tryoutId && r.status !== 'cancelled'
     )
 }
 

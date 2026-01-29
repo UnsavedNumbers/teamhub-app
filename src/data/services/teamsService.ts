@@ -1089,7 +1089,7 @@ export async function getTeamRoster(
 
             const members = getTeamMembersForSeason(teamId, seasonId)
             const childIds = getChildrenForUserId(context.userId)
-            const filtered = members.filter((m) => childIds.includes(m.child_id))
+            const filtered = members.filter((m) => childIds.includes((m as { athlete_id?: string }).athlete_id ?? (m as { child_id?: string }).child_id ?? ''))
 
             return { data: filtered, error: null }
         } catch (err) {
@@ -1111,7 +1111,7 @@ export async function getTeamRoster(
         const mapped = Array.isArray(normalizedData)
             ? normalizedData.map((row: any) => ({
                 ...mapSupabaseTeamMemberToDomain(row),
-                child_id: row.athlete_id ?? row.athlete?.id,
+                athlete_id: row.athlete_id ?? row.athlete?.id,
             }))
             : []
 
@@ -1121,7 +1121,7 @@ export async function getTeamRoster(
         const isAdmin = isOrgAdmin(context)
         const visible = isAdmin ? mapped : mapped.filter((m) => {
             const member = m as FakeTeamMember & { child_id?: string }
-            return member.child_id && childIds.includes(member.child_id)
+            return (member.athlete_id ?? (member as { child_id?: string }).child_id) && childIds.includes(member.athlete_id ?? (member as { child_id?: string }).child_id ?? '')
         })
 
         return { data: visible, error: null }

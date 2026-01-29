@@ -371,7 +371,7 @@ BEGIN
 
   -- Verify child belongs to family
   IF NOT EXISTS (
-    SELECT 1 FROM children c
+    SELECT 1 FROM athletes c
     WHERE c.id = p_child_id AND c.family_id = v_family_id
   ) THEN
     RAISE EXCEPTION 'Child does not belong to user family';
@@ -452,7 +452,7 @@ BEGIN
     RAISE EXCEPTION 'Not authenticated';
   END IF;
 
-  SELECT r.child_id, r.tryout_id
+  SELECT r.athlete_id, r.tryout_id
     INTO v_child_id, v_tryout_id
   FROM tryout_registrations r
   WHERE r.id = p_registration_id;

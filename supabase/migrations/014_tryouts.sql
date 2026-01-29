@@ -45,7 +45,7 @@ ALTER TABLE tryouts ENABLE ROW LEVEL SECURITY;
 CREATE TABLE IF NOT EXISTS tryout_registrations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tryout_id UUID NOT NULL REFERENCES tryouts(id) ON DELETE CASCADE,
-  child_id UUID NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+  athlete_id UUID NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
   family_id UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
   status tryout_registration_status NOT NULL DEFAULT 'registered',
   jersey_number INTEGER,
@@ -53,12 +53,12 @@ CREATE TABLE IF NOT EXISTS tryout_registrations (
   offer_deadline TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(tryout_id, child_id)
+  UNIQUE(tryout_id, athlete_id)
 );
 
 -- Add indexes
 CREATE INDEX idx_tryout_registrations_tryout_id ON tryout_registrations(tryout_id);
-CREATE INDEX idx_tryout_registrations_child_id ON tryout_registrations(child_id);
+CREATE INDEX idx_tryout_registrations_athlete_id ON tryout_registrations(athlete_id);
 CREATE INDEX idx_tryout_registrations_status ON tryout_registrations(status);
 
 -- Add trigger for updated_at

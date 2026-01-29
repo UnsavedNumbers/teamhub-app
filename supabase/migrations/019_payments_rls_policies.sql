@@ -85,8 +85,8 @@ CREATE POLICY "Parents can view published fees" ON fees
       -- Fee is assigned to their children
       EXISTS (
         SELECT 1 FROM users u
-        JOIN children c ON c.family_id = u.family_id
-        JOIN fee_assignments fa ON fa.child_id = c.id
+        JOIN athletes c ON c.family_id = u.family_id
+        JOIN fee_assignments fa ON fa.athlete_id = c.id
         WHERE u.id = auth.uid()
         AND u.role = 'parent'
         AND fa.fee_id = fees.id
@@ -136,7 +136,7 @@ CREATE POLICY "Coaches can view fee assignment status" ON fee_assignments
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      JOIN children c ON c.id = fee_assignments.child_id
+      JOIN athletes c ON c.id = fee_assignments.athlete_id
       JOIN families f ON f.id = c.family_id
       WHERE u.id = auth.uid()
       AND u.role = 'coach'

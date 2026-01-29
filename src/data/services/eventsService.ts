@@ -86,13 +86,14 @@ function mapSupabaseEventToCalendarEvent(event: any): CalendarEvent {
  * Ensures all required fields are present
  */
 function mapSupabaseRSVPToEventRSVP(rsvp: any): EventRSVP {
-    if (!rsvp.id || !rsvp.event_id || !rsvp.child_id) {
+    const athleteId = rsvp.athlete_id ?? rsvp.child_id
+    if (!rsvp.id || !rsvp.event_id || !athleteId) {
         throw new Error('Invalid RSVP data: missing required fields')
     }
     return {
         id: rsvp.id,
         event_id: rsvp.event_id,
-        child_id: rsvp.child_id,
+        athlete_id: athleteId,
         status: rsvp.status || 'unknown',
         note: rsvp.note || null,
         responded_at: rsvp.responded_at || null,
@@ -343,7 +344,7 @@ export async function getEventRSVPs(
             const permissions = buildPermissions(context)
             if (!permissions.canViewAllOrgData && permissions.canViewOwnChildrenData) {
                 return {
-                    data: rsvps.filter((r) => permissions.ownedChildIds.includes(r.child_id)),
+                    data: rsvps.filter((r) => permissions.ownedChildIds.includes(r.athlete_id)),
                     error: null,
                 }
             }
@@ -410,7 +411,7 @@ export async function getAthleteEventRSVP(
             .from('event_rsvps')
             .select('*')
             .eq('event_id', eventId)
-            .eq('child_id', childId)
+            .eq('athlete_id', childId)
             .maybeSingle()
 
         if (error) throw error
@@ -487,7 +488,7 @@ export async function updateRSVP(
         type EventRSVPUpsert = Database['public']['Tables']['event_rsvps']['Insert']
         const upsertData = {
             event_id: eventId,
-            child_id: childId,
+            athlete_id: childId,
             status: status,
             note: note ?? null,
             responded_at: new Date().toISOString(),
@@ -495,7 +496,7 @@ export async function updateRSVP(
         } satisfies EventRSVPUpsert
         const { data, error } = await supabase
             .from('event_rsvps')
-            .upsert(upsertData, { onConflict: 'event_id,child_id' })
+            .upsert(upsertData, { onConflict: 'event_id,athlete_id' })
             .select()
             .single()
 

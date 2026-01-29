@@ -169,7 +169,7 @@ export interface AdminPayment {
     fee_assignment_id: string | null
     fee_id: string | null
     fee_title: string | null
-    child_id: string | null
+    athlete_id: string | null
     child_name: string | null
     parent_email: string | null
     parent_name: string | null

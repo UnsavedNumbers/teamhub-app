@@ -251,7 +251,7 @@ JOIN organizations o ON o.id = p.org_id
 LEFT JOIN payment_allocations pa ON pa.payment_id = p.id
 LEFT JOIN fee_assignments fa ON fa.id = pa.fee_assignment_id
 LEFT JOIN fees f ON f.id = fa.fee_id
-LEFT JOIN children c ON c.id = fa.child_id
+LEFT JOIN athletes c ON c.id = fa.athlete_id
 LEFT JOIN users u ON u.id = fa.parent_id
 WHERE EXISTS (SELECT 1 FROM platform_admins pla WHERE pla.user_id = auth.uid());
 
@@ -314,7 +314,7 @@ SELECT
   (SELECT COUNT(*) FROM payments WHERE status = 'failed') AS failed_payments,
   (SELECT COALESCE(SUM(amount_cents), 0) FROM payments WHERE status = 'succeeded') AS total_payment_volume_cents,
   (SELECT COUNT(*) FROM teams) AS total_teams,
-  (SELECT COUNT(*) FROM children) AS total_children
+  (SELECT COUNT(*) FROM athletes) AS total_children
 WHERE EXISTS (SELECT 1 FROM platform_admins pa WHERE pa.user_id = auth.uid());
 
 -- 5.8 admin_feature_flags - Feature flags per organization

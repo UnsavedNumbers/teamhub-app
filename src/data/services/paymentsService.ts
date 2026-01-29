@@ -300,7 +300,7 @@ export async function getFeeAssignmentById(
             if (!permissions.canViewAllOrgData) {
                 const childIds = getChildrenForUserId(context.userId)
                 console.log('[paymentsService] Non-admin, childIds:', childIds)
-                if (!childIds.includes((assignment as any).child_id)) {
+                if (!childIds.includes((assignment as any).athlete_id ?? (assignment as any).child_id)) {
                     console.log('[paymentsService] Access denied - not child\'s parent')
                     return { data: null, error: new Error('Access denied') }
                 }
@@ -1383,7 +1383,7 @@ export async function generateReceiptPDF(
                 return { data: null, error: new Error('Fee assignment not found or not paid') }
             }
             const permissions = buildPermissions(context)
-            const canView = permissions.canViewAllOrgData || permissions.ownedChildIds.includes((assignment as { child_id?: string }).child_id ?? '')
+            const canView = permissions.canViewAllOrgData || permissions.ownedChildIds.includes((assignment as { athlete_id?: string; child_id?: string }).athlete_id ?? (assignment as { child_id?: string }).child_id ?? '')
             if (!canView) {
                 return { data: null, error: new Error('Access denied') }
             }

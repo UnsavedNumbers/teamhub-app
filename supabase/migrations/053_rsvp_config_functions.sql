@@ -82,7 +82,7 @@ BEGIN
     SELECT 1
     FROM team_memberships tm
     JOIN events e ON e.team_id = tm.team_id AND e.season_id = tm.season_id
-    WHERE tm.child_id = p_child_id
+    WHERE tm.athlete_id = p_child_id
       AND e.id = p_event_id
       AND tm.status = 'active'
   );

@@ -139,7 +139,7 @@ export interface EventLocation {
 export interface EventRSVP {
     id: string
     event_id: string
-    child_id: string
+    athlete_id: string
     status: RSVPStatus
     responded_at: string | null
     responded_by_user_id: string | null
@@ -302,7 +302,7 @@ export interface RSVPSummary {
 export interface EventConflict {
     event1: CalendarEvent
     event2: CalendarEvent
-    child_id: string
+    athlete_id: string
     overlap_minutes: number
 }
 
@@ -399,7 +399,7 @@ export function detectEventConflicts(
 ): EventConflict[] {
     const conflicts: EventConflict[] = []
     const childEvents = events.filter(e =>
-        e.rsvps?.some(r => r.child_id === childId && r.status !== 'not_going')
+        e.rsvps?.some(r => r.athlete_id === childId && r.status !== 'not_going')
     )
 
     for (let i = 0; i < childEvents.length; i++) {
@@ -421,7 +421,7 @@ export function detectEventConflicts(
                 conflicts.push({
                     event1,
                     event2,
-                    child_id: childId,
+                    athlete_id: childId,
                     overlap_minutes: overlapMinutes,
                 })
             }
