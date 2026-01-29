@@ -76,20 +76,20 @@ async function fetchAndUploadPhoto(
     // Fetch the photo from Google
     // Note: The API redirects to the image URL by default, fetch follows redirects
     const response = await fetchWithTimeout(
-      googleUrl, 
+      googleUrl,
       {
         headers: {
           'User-Agent': 'YouthSports.team/1.0',
           'Referer': 'https://youthsports.team', // Help with API restrictions
         }
-      }, 
+      },
       PHOTO_FETCH_TIMEOUT_MS
     )
-    
+
     if (!response.ok) {
       const status = response.status
       const errorText = await response.text().catch(() => 'No error details')
-      
+
       // Log fetch failure
       try {
         await supabaseClient.rpc('log_event', {
@@ -97,9 +97,9 @@ async function fetchAndUploadPhoto(
           p_event_type: 'VENUE_INSIGHTS_PHOTO_FETCH_FAILED',
           p_actor_user_id: null,
           p_actor_role: 'system',
-          p_metadata: { 
-            place_id: placeId, 
-            photo_reference: photoReference, 
+          p_metadata: {
+            place_id: placeId,
+            photo_reference: photoReference,
             status: status,
             error: errorText
           },
@@ -107,14 +107,14 @@ async function fetchAndUploadPhoto(
       } catch (e) {
         console.error('Failed to log fetch error:', e)
       }
-      
+
       return { url: null, error: `Failed to fetch photo: ${status}` }
     }
 
     const contentType = response.headers.get('content-type') || 'image/jpeg'
     const photoDataBuffer = await response.arrayBuffer()
     const photoData = new Uint8Array(photoDataBuffer)
-    
+
     // Generate a unique filename
     const extension = contentType.includes('png') ? 'png' : 'jpg'
     const fileName = `venue-photos/${placeId}/${photoIndex}.${extension}`
@@ -293,11 +293,16 @@ serve(async (req) => {
       // Release lock before making API calls
       await supabaseClient.rpc('pg_advisory_unlock_wrapper', { key: Number(lockKey) })
 
-      // Fetch Place Details API
+      // Fetch Place Details API (also refetch when cached place_details lacks area_summary — backfill for old rows)
       let placeDetails: unknown = null
       let placeDetailsError: string | null = null
+      const cachedPd = existing?.place_details_json as { area_summary?: { content_blocks?: unknown[] } } | null | undefined
+      const cachedMissingAreaSummary = cachedPd && (!cachedPd.area_summary || !(cachedPd.area_summary.content_blocks?.length))
       const shouldFetchPlaceDetails =
-        refresh || !existing?.place_details_json || !existing?.place_details_fetched_at
+        refresh ||
+        !existing?.place_details_json ||
+        !existing?.place_details_fetched_at ||
+        !!cachedMissingAreaSummary
 
       if (shouldFetchPlaceDetails) {
         const { data: canFetch } = await supabaseClient.rpc('can_fetch_place_details', {
@@ -325,6 +330,7 @@ serve(async (req) => {
               'editorialSummary',
               'priceLevel',
               'location',
+              'neighborhoodSummary', // Area/neighborhood AI summary (overview + description)
             ]
 
             const url = `https://places.googleapis.com/v1/places/${place_id}`
@@ -345,7 +351,7 @@ serve(async (req) => {
 
             if (!response.ok) {
               const errorText = await response.text()
-              
+
               // Log error to event_logs
               await supabaseClient.rpc('log_event', {
                 p_category: 'EVENT',
@@ -358,12 +364,12 @@ serve(async (req) => {
                   status: response.status,
                 },
               } as any)
-              
+
               throw new Error(`Place Details API error: ${response.status} ${errorText}`)
             }
 
             const placeDetailsData = await response.json()
-            
+
             // Transform to match our expected format
             // Use the full photo resource name as the reference
             const transformPhotos = (photos: Array<{ name?: string; widthPx?: number; heightPx?: number; authorAttributions?: Array<{ displayName?: string }> }> | undefined) => {
@@ -372,7 +378,7 @@ serve(async (req) => {
                 // Use the full resource name (e.g., "places/ChIJ.../photos/Aap_uED...")
                 // This is required for the New Places API Media endpoint
                 const photoReference = photo.name || ''
-                
+
                 return {
                   photo_reference: photoReference,
                   width: photo.widthPx || 0,
@@ -396,23 +402,38 @@ serve(async (req) => {
               website: placeDetailsData.websiteUri,
               international_phone_number: placeDetailsData.nationalPhoneNumber,
               editorial_summary: placeDetailsData.editorialSummary ? {
-                overview: typeof placeDetailsData.editorialSummary === 'string' 
-                  ? placeDetailsData.editorialSummary 
+                overview: typeof placeDetailsData.editorialSummary === 'string'
+                  ? placeDetailsData.editorialSummary
                   : placeDetailsData.editorialSummary.text,
               } : undefined,
-              price_level: placeDetailsData.priceLevel === 'PRICE_LEVEL_FREE' ? 0 : 
-                          placeDetailsData.priceLevel === 'PRICE_LEVEL_INEXPENSIVE' ? 1 :
-                          placeDetailsData.priceLevel === 'PRICE_LEVEL_MODERATE' ? 2 :
-                          placeDetailsData.priceLevel === 'PRICE_LEVEL_EXPENSIVE' ? 3 :
-                          placeDetailsData.priceLevel === 'PRICE_LEVEL_VERY_EXPENSIVE' ? 4 : undefined,
+              price_level: placeDetailsData.priceLevel === 'PRICE_LEVEL_FREE' ? 0 :
+                placeDetailsData.priceLevel === 'PRICE_LEVEL_INEXPENSIVE' ? 1 :
+                  placeDetailsData.priceLevel === 'PRICE_LEVEL_MODERATE' ? 2 :
+                    placeDetailsData.priceLevel === 'PRICE_LEVEL_EXPENSIVE' ? 3 :
+                      placeDetailsData.priceLevel === 'PRICE_LEVEL_VERY_EXPENSIVE' ? 4 : undefined,
               geometry: placeDetailsData.location ? {
                 location: {
                   lat: placeDetailsData.location.latitude,
                   lng: placeDetailsData.location.longitude,
                 },
               } : undefined,
+              // Map neighborhoodSummary to area_summary.content_blocks for frontend
+              area_summary: (() => {
+                const ns = placeDetailsData.neighborhoodSummary
+                if (!ns) return undefined
+                const blocks: Array<{ topic: string; content: string }> = []
+                const overviewText = ns.overview?.content?.text
+                if (overviewText && typeof overviewText === 'string') {
+                  blocks.push({ topic: 'overview', content: overviewText })
+                }
+                const descriptionText = ns.description?.content?.text
+                if (descriptionText && typeof descriptionText === 'string') {
+                  blocks.push({ topic: 'description', content: descriptionText })
+                }
+                return blocks.length > 0 ? { content_blocks: blocks } : undefined
+              })(),
             }
-            
+
             // Log successful fetch
             await supabaseClient.rpc('log_event', {
               p_category: 'EVENT',
@@ -424,7 +445,7 @@ serve(async (req) => {
                 has_photos: (placeDetails as { photos?: unknown[] })?.photos?.length > 0,
               },
             } as any)
-            
+
             // Check if place_id is valid (always valid if we got a response)
             const placeIdValid = true
 
@@ -456,7 +477,7 @@ serve(async (req) => {
               // Upload photos to Supabase Storage (limit to 5 photos)
               const uploadedPhotoUrls: string[] = []
               const photosToUpload = photosJson.slice(0, 5)
-              
+
               for (let i = 0; i < photosToUpload.length; i++) {
                 const photo = photosToUpload[i]
                 if (photo.reference) {
@@ -641,7 +662,7 @@ Output format: Markdown bullet list (each tip on a new line starting with -)`
                 const candidates = summaryData.candidates?.[0]?.content?.parts?.[0]?.text
                 if (candidates && typeof candidates === 'string') {
                   aiSummary = candidates.trim().substring(0, 500) // Max 500 chars
-                  
+
                   // Log successful AI generation
                   await supabaseClient.rpc('log_event', {
                     p_category: 'EVENT',
@@ -665,7 +686,7 @@ Output format: Markdown bullet list (each tip on a new line starting with -)`
                 const candidates = tipsData.candidates?.[0]?.content?.parts?.[0]?.text
                 if (candidates && typeof candidates === 'string') {
                   aiWhatToExpect = candidates.trim().substring(0, 1000) // Max 1000 chars
-                  
+
                   // Log successful AI generation
                   await supabaseClient.rpc('log_event', {
                     p_category: 'EVENT',

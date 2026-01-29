@@ -6,7 +6,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchVenueInsights, refreshVenueInsights } from '../data/services/venueInsightsService'
+import { fetchVenueInsights, refreshVenueInsights, fetchNeighborhoodSummaryDirect } from '../data/services/venueInsightsService'
 
 /**
  * Hook to fetch venue insights for a given place_id
@@ -48,5 +48,28 @@ export function useRefreshVenueInsights() {
         queryClient.invalidateQueries({ queryKey: ['venueInsights', placeId] })
       }
     },
+  })
+}
+
+/**
+ * Hook to fetch neighborhood/area summary directly from Google Places API (New).
+ * Bypasses edge function for immediate, fresh data.
+ * 
+ * @param placeId - Google Place ID (null to disable query)
+ * @returns React Query result with neighborhood summary data
+ */
+export function useNeighborhoodSummaryDirect(placeId: string | null) {
+  return useQuery({
+    queryKey: ['neighborhoodSummary', placeId],
+    queryFn: () => {
+      if (!placeId) {
+        throw new Error('place_id is required')
+      }
+      return fetchNeighborhoodSummaryDirect(placeId)
+    },
+    enabled: !!placeId,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+    retry: 1,
   })
 }

@@ -7,22 +7,22 @@
 
 // Base type from database (fallback if table doesn't exist in generated types yet)
 export type VenueInsightsRow = {
-      id: string
-      place_id: string
-      place_details_json: unknown
-      photos_json: unknown
-      ai_summary: string | null
-      ai_what_to_expect: string | null
-      ai_generated_at: string | null
-      ai_validation_status: string | null
-      place_details_fetched_at: string | null
-      last_place_details_call_at: string | null
-      last_gemini_call_at: string | null
-      fetch_in_progress: boolean | null
-      place_id_valid: boolean | null
-      created_at: string
-      updated_at: string
-    }
+  id: string
+  place_id: string
+  place_details_json: unknown
+  photos_json: unknown
+  ai_summary: string | null
+  ai_what_to_expect: string | null
+  ai_generated_at: string | null
+  ai_validation_status: string | null
+  place_details_fetched_at: string | null
+  last_place_details_call_at: string | null
+  last_gemini_call_at: string | null
+  fetch_in_progress: boolean | null
+  place_id_valid: boolean | null
+  created_at: string
+  updated_at: string
+}
 
 // Photo reference structure (stored in photos_json)
 export interface PhotoReference {
@@ -55,6 +55,12 @@ export interface PlaceDetailsResponse {
   international_phone_number?: string
   editorial_summary?: {
     overview?: string
+  }
+  area_summary?: {
+    content_blocks: Array<{
+      topic: string
+      content: string
+    }>
   }
   price_level?: number
   geometry?: {
@@ -118,8 +124,8 @@ export function mapVenueInsightsRow(row: VenueInsightsRow): VenueInsights {
   let placeDetails: PlaceDetailsResponse | null = null
   if (row.place_details_json) {
     try {
-      const parsed = typeof row.place_details_json === 'string' 
-        ? JSON.parse(row.place_details_json) 
+      const parsed = typeof row.place_details_json === 'string'
+        ? JSON.parse(row.place_details_json)
         : row.place_details_json
       if (isPlaceDetailsResponse(parsed)) {
         placeDetails = parsed

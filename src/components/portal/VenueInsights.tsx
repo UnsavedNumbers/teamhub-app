@@ -6,7 +6,7 @@
  * Renders as a collapsible section (collapsed by default).
  */
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useVenueInsights, useRefreshVenueInsights } from '../../hooks/useVenueInsights'
 import { useUserContext } from '../../hooks/useUserContext'
 import VenuePhotoGallery from './VenuePhotoGallery'
@@ -45,9 +45,36 @@ export default function VenueInsights({ placeId, className = '' }: VenueInsights
   const aiWhatToExpect = venueData?.ai_what_to_expect
   const errors = venueData?.errors
 
+  // Area Summary debug (why it might not show)
+  const areaSummaryPresent = !!placeDetails?.area_summary
+  const areaSummaryBlocks = placeDetails?.area_summary?.content_blocks
+  const areaSummaryBlockCount = Array.isArray(areaSummaryBlocks) ? areaSummaryBlocks.length : 0
+  const areaSummaryShown = areaSummaryBlockCount > 0
+  const areaSummaryDebug =
+    import.meta.env.DEV
+      ? {
+          placeId,
+          isLoading,
+          error: error?.message ?? null,
+          hasVenueData: !!venueData,
+          hasPlaceDetails: !!placeDetails,
+          placeDetailsKeys: placeDetails ? Object.keys(placeDetails) : [],
+          areaSummaryPresent,
+          areaSummaryBlockCount,
+          areaSummaryShown,
+          errors: errors ? { place_details: errors.place_details, gemini: errors.gemini } : null,
+        }
+      : null
+
   // Determine if we should show the component
-  const hasData = placeDetails || photos.length > 0 || aiSummary || aiWhatToExpect
+  const hasData = placeDetails || photos.length > 0 || aiSummary || aiWhatToExpect || areaSummaryShown
   const hasErrors = errors?.place_details || errors?.gemini
+
+  useEffect(() => {
+    if (import.meta.env.DEV && areaSummaryDebug) {
+      console.debug('[VenueInsights] Area Summary debug', areaSummaryDebug)
+    }
+  }, [areaSummaryDebug])
 
   if (isLoading && !hasData) {
     return (
@@ -76,6 +103,23 @@ export default function VenueInsights({ placeId, className = '' }: VenueInsights
   }
 
   if (!hasData && !hasErrors) {
+    if (import.meta.env.DEV && placeId) {
+      return (
+        <div className={className}>
+          <div className="border-t border-slate-200 dark:border-slate-700 pt-4 mt-4">
+            <div className="rounded border border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs font-mono space-y-1">
+              <div className="font-bold text-amber-800 dark:text-amber-200 uppercase tracking-wider mb-2">
+                Area Summary debug (no data yet)
+              </div>
+              <div><span className="text-amber-700 dark:text-amber-300">placeId:</span> {placeId}</div>
+              <div><span className="text-amber-700 dark:text-amber-300">isLoading:</span> {String(isLoading)}</div>
+              <div><span className="text-amber-700 dark:text-amber-300">error:</span> {error?.message ?? '—'}</div>
+              <div className="text-amber-700 dark:text-amber-300 mt-2">Venue data not loaded or empty. Area Summary needs place_details.area_summary.content_blocks from the API.</div>
+            </div>
+          </div>
+        </div>
+      )
+    }
     return null
   }
 
@@ -133,10 +177,55 @@ export default function VenueInsights({ placeId, className = '' }: VenueInsights
               </div>
             )}
 
+            {/* Area Summary debug (dev only) */}
+            {areaSummaryDebug && (
+              <div className="rounded border border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs font-mono space-y-1">
+                <div className="font-bold text-amber-800 dark:text-amber-200 uppercase tracking-wider mb-2">
+                  Area Summary debug
+                </div>
+                <div><span className="text-amber-700 dark:text-amber-300">placeId:</span> {areaSummaryDebug.placeId ?? '—'}</div>
+                <div><span className="text-amber-700 dark:text-amber-300">isLoading:</span> {String(areaSummaryDebug.isLoading)}</div>
+                <div><span className="text-amber-700 dark:text-amber-300">error:</span> {areaSummaryDebug.error ?? '—'}</div>
+                <div><span className="text-amber-700 dark:text-amber-300">hasVenueData:</span> {String(areaSummaryDebug.hasVenueData)}</div>
+                <div><span className="text-amber-700 dark:text-amber-300">hasPlaceDetails:</span> {String(areaSummaryDebug.hasPlaceDetails)}</div>
+                <div><span className="text-amber-700 dark:text-amber-300">placeDetailsKeys:</span> {areaSummaryDebug.placeDetailsKeys.length ? areaSummaryDebug.placeDetailsKeys.join(', ') : '—'}</div>
+                <div><span className="text-amber-700 dark:text-amber-300">areaSummaryPresent:</span> {String(areaSummaryDebug.areaSummaryPresent)}</div>
+                <div><span className="text-amber-700 dark:text-amber-300">areaSummaryBlockCount:</span> {areaSummaryDebug.areaSummaryBlockCount}</div>
+                <div><span className="text-amber-700 dark:text-amber-300">areaSummaryShown:</span> {String(areaSummaryDebug.areaSummaryShown)}</div>
+                {areaSummaryDebug.errors && (
+                  <div><span className="text-amber-700 dark:text-amber-300">errors:</span> place_details={String(areaSummaryDebug.errors.place_details ?? '—')} gemini={String(areaSummaryDebug.errors.gemini ?? '—')}</div>
+                )}
+              </div>
+            )}
+
             {/* Photos */}
             {photos.length > 0 && (
               <div>
                 <VenuePhotoGallery photos={photos} venueName={venueName} />
+              </div>
+            )}
+
+            {/* Area Summary (Google Places) */}
+            {placeDetails?.area_summary?.content_blocks && placeDetails.area_summary.content_blocks.length > 0 && (
+              <div className="space-y-4">
+                 <div className="flex items-center gap-2">
+                  <h4 className="font-bold text-slate-900 dark:text-white text-sm">Area Overview</h4>
+                   <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                    Google
+                  </span>
+                </div>
+                {placeDetails.area_summary.content_blocks.map((block, idx) => (
+                  <div key={idx}>
+                    {block.topic !== 'overview' && (
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                            {block.topic}
+                        </p>
+                    )}
+                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                        {block.content}
+                    </p>
+                  </div>
+                ))}
               </div>
             )}
 

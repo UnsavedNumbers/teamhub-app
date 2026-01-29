@@ -22,7 +22,7 @@ import { FileUpload } from '../../components/common/FileUpload'
 import PlanTravelContacts from '../../components/admin/travel/PlanTravelContacts'
 import { getOrganizationTravelContacts, upsertOrganizationTravelContact } from '../../data/services/organizationTravelContactsService'
 import { TRAVEL_CONTACT_CATEGORIES, type TravelContactCategory, type OrganizationTravelContactRow, type TravelContactCategoryOrg } from '../../types/travelContacts'
-import { getTravelPlanContacts, upsertTravelPlanContacts } from '../../data/services/travelService'
+import { getTravelPlanContacts, deleteTravelPlanContactsForPlan, insertTravelPlanContacts } from '../../data/services/travelService'
 
 interface TravelFormData { 
   title: string
@@ -78,7 +78,39 @@ export default function EditTravelPlan() {
     contextOrgId: context?.orgId,
   })
 
-  const { control, handleSubmit, reset, setValue, watch } = useForm<TravelFormData>()
+  const defaultFormValues: TravelFormData = {
+    title: '',
+    location: '',
+    destination_city: '',
+    destination_state: '',
+    start_date: '',
+    end_date: '',
+    venue_name: '',
+    venue_address: '',
+    venue_place_id: '',
+    venue_lat: '',
+    venue_lng: '',
+    hotel_name: '',
+    hotel_address: '',
+    hotel_phone: '',
+    hotel_confirmation: '',
+    maps_url: '',
+    notes: '',
+    contacts: TRAVEL_CONTACT_CATEGORIES.map(cat => ({
+      category: cat,
+      is_custom: false,
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone: '',
+    })),
+  }
+
+  const { control, handleSubmit, reset, setValue, watch } = useForm<TravelFormData>({
+    defaultValues: defaultFormValues,
+  })
+
+  const [hasFormData, setHasFormData] = useState(false)
 
   useEffect(() => {
     const mountTime = new Date().toISOString()
@@ -115,7 +147,12 @@ export default function EditTravelPlan() {
       })
       return
     }
-    
+
+    if (!context) {
+      if (isMountedRef.current) setLoading(false)
+      return
+    }
+
     // Validate UUID format
     if (!isValidUUID(id)) {
       console.warn(`[EditTravelPlan:${componentIdRef.current}] fetchPlan #${fetchId} - Invalid UUID, navigating away`)
@@ -195,6 +232,10 @@ export default function EditTravelPlan() {
             }
         })
       })
+      if (isMountedRef.current) {
+        setHasFormData(true)
+        setError(null)
+      }
     } catch (err) {
       if (!isMountedRef.current) return
       console.error(`[EditTravelPlan:${componentIdRef.current}] fetchPlan #${fetchId} - Caught error:`, err)
@@ -229,16 +270,23 @@ export default function EditTravelPlan() {
       id,
       isMounted: isMountedRef.current,
     })
-    if (isReady && id) {
-      console.log(`[EditTravelPlan:${componentIdRef.current}] Effect #${effectId} - Calling fetchPlan`)
-      fetchPlan()
-    } else {
-      console.log(`[EditTravelPlan:${componentIdRef.current}] Effect #${effectId} - Skipping fetchPlan`, {
-        reason: !isReady ? 'not ready' : 'no id',
-      })
+    if (!isReady) {
+      return
     }
+    if (!id) {
+      setLoading(false)
+      navigate('/admin/travel', { replace: true })
+      return
+    }
+    if (!isValidUUID(id)) {
+      setLoading(false)
+      navigate('/admin/travel', { replace: true })
+      return
+    }
+    console.log(`[EditTravelPlan:${componentIdRef.current}] Effect #${effectId} - Calling fetchPlan`)
+    fetchPlan()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isReady, id])
+  }, [isReady, id, navigate])
 
   const onSubmit = async (data: TravelFormData) => {
     const submitStartTime = Date.now()
@@ -247,6 +295,12 @@ export default function EditTravelPlan() {
       id,
       isMounted: isMountedRef.current,
     })
+
+    if (!context) {
+      setError('You must be signed in to save changes.')
+      showError('You must be signed in to save changes.')
+      return
+    }
 
     if (!id || !isValidUUID(id)) {
       console.warn(`[EditTravelPlan:${componentIdRef.current}] onSubmit - Invalid plan ID`)
@@ -322,20 +376,34 @@ export default function EditTravelPlan() {
         return
       }
 
-      // Save travel contacts
+      // Save travel contacts (CRUD: delete all, then insert only custom overrides)
       if (data.contacts && id) {
-         await upsertTravelPlanContacts(
-             context, 
-             id, 
-             data.contacts.map(c => ({
-                 category: c.category as TravelContactCategory,
-                 is_custom: c.is_custom,
-                 first_name: c.first_name,
-                 last_name: c.last_name,
-                 email: c.email,
-                 phone: c.phone
-             }))
-         )
+        const { error: deleteError } = await deleteTravelPlanContactsForPlan(context, id)
+        if (deleteError && isMountedRef.current) {
+          setSaving(false)
+          setError(deleteError.message)
+          showError(deleteError.message)
+          return
+        }
+
+        const customContacts = data.contacts.filter(
+          c => c.is_custom && c.first_name?.trim() && c.last_name?.trim() && c.email?.trim()
+        )
+        if (customContacts.length > 0) {
+          const { error: insertError } = await insertTravelPlanContacts(context, id, customContacts.map(c => ({
+            category: c.category as TravelContactCategory,
+            first_name: c.first_name!.trim(),
+            last_name: c.last_name!.trim(),
+            email: c.email!.trim(),
+            phone: c.phone?.trim() || null,
+          })))
+          if (insertError && isMountedRef.current) {
+            setSaving(false)
+            setError(insertError.message)
+            showError(insertError.message)
+            return
+          }
+        }
       }
 
       console.log(`[EditTravelPlan:${componentIdRef.current}] onSubmit - Success, navigating away`)
@@ -368,7 +436,33 @@ export default function EditTravelPlan() {
     }
   }
 
-  if (loading) return <div className="pa-skeleton" style={{ height: '500px' }} />
+  if (loading) {
+    return <div className="pa-root"><div className="pa-skeleton" style={{ height: '500px' }} /></div>
+  }
+
+  if (error && !hasFormData) {
+    return (
+      <div className="pa-root">
+        <AdminPageHeader
+          title="Edit Travel Plan"
+          subtitle={t('admin.travel.editSubtitle')}
+          breadcrumbs={[
+            { label: 'Travel Plans', path: '/admin/travel' },
+            { label: 'Edit Travel Plan' },
+          ]}
+        />
+        <div className="pa-form-container">
+          <Card>
+            <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>
+            <div className="pa-form-actions">
+              <Button variant="secondary" onClick={() => navigate('/admin/travel')}>Back to Travel Plans</Button>
+              <Button variant="blue" onClick={() => { setError(null); fetchPlan(); setLoading(true); }}>Retry</Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="pa-root">
@@ -506,7 +600,6 @@ export default function EditTravelPlan() {
                 buttonText="Choose file"
                 replaceText="Replace file"
                 accept=".pdf,application/pdf"
-                maxSize={10 * 1024 * 1024}
                 maxSize={10 * 1024 * 1024}
                 fullWidth
               />

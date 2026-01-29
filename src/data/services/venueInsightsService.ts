@@ -113,3 +113,94 @@ export async function refreshVenueInsights(
 ): Promise<{ data: VenueInsightsResponse | null; error: Error | null }> {
   return fetchVenueInsights(placeId, true)
 }
+
+// ============================================================================
+// Direct Google Places API (New) - bypasses edge function
+// ============================================================================
+
+export interface NeighborhoodSummaryResponse {
+  name: string | null
+  area_summary: {
+    content_blocks: Array<{ topic: string; content: string }>
+  } | null
+  error: string | null
+}
+
+/**
+ * Fetch neighborhood/area summary directly from Google Places API (New).
+ * Bypasses edge function for immediate, fresh data.
+ * 
+ * @param placeId - Google Place ID
+ * @returns Area summary data or error
+ */
+export async function fetchNeighborhoodSummaryDirect(
+  placeId: string
+): Promise<{ data: NeighborhoodSummaryResponse | null; error: Error | null }> {
+  if (!placeId) {
+    return { data: null, error: new Error('place_id is required') }
+  }
+
+  const apiKey = import.meta.env.VITE_GOOGLE_PLACES_API_KEY
+  if (!apiKey) {
+    return { data: null, error: new Error('Google Places API key not configured') }
+  }
+
+  try {
+    const fields = ['displayName', 'neighborhoodSummary']
+    const url = `https://places.googleapis.com/v1/places/${placeId}`
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': fields.join(','),
+      },
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Google Places API error:', response.status, errorText)
+      return {
+        data: { name: null, area_summary: null, error: `API error: ${response.status}` },
+        error: null,
+      }
+    }
+
+    const data = await response.json()
+
+    // Map neighborhoodSummary to our area_summary shape
+    const ns = data.neighborhoodSummary
+    let areaSummary: NeighborhoodSummaryResponse['area_summary'] = null
+
+    if (ns) {
+      const blocks: Array<{ topic: string; content: string }> = []
+      const overviewText = ns.overview?.content?.text
+      if (overviewText && typeof overviewText === 'string') {
+        blocks.push({ topic: 'overview', content: overviewText })
+      }
+      const descriptionText = ns.description?.content?.text
+      if (descriptionText && typeof descriptionText === 'string') {
+        blocks.push({ topic: 'description', content: descriptionText })
+      }
+      if (blocks.length > 0) {
+        areaSummary = { content_blocks: blocks }
+      }
+    }
+
+    return {
+      data: {
+        name: data.displayName?.text || null,
+        area_summary: areaSummary,
+        error: null,
+      },
+      error: null,
+    }
+  } catch (err) {
+    console.error('fetchNeighborhoodSummaryDirect error:', err)
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error('Unknown error fetching neighborhood summary'),
+    }
+  }
+}

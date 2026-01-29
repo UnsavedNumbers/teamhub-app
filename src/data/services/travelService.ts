@@ -1025,6 +1025,9 @@ export async function updateTravelPlan(
                 end_date: data.end_date ? normalizeToISODate(data.end_date) : existingPlan.end_date,
                 venue_name: data.venue_name ?? existingPlan.venue_name,
                 venue_address: data.venue_address ?? existingPlan.venue_address,
+                venue_place_id: data.venue_place_id ?? existingPlan.venue_place_id,
+                venue_lat: data.venue_lat ?? existingPlan.venue_lat,
+                venue_lng: data.venue_lng ?? existingPlan.venue_lng,
                 hotel_name: data.hotel_name ?? existingPlan.hotel_name,
                 hotel_address: data.hotel_address ?? existingPlan.hotel_address,
                 hotel_phone: data.hotel_phone ?? existingPlan.hotel_phone,
@@ -1687,7 +1690,87 @@ export async function getTravelPlanContacts(
 }
 
 /**
- * Upsert travel plan contacts.
+ * Delete all travel plan contacts for a plan (so categories fall back to org default).
+ */
+export async function deleteTravelPlanContactsForPlan(
+    _context: UserContext,
+    planId: string
+): Promise<{ error: Error | null }> {
+    if (!isValidUUID(planId)) {
+        return { error: new Error('Invalid plan ID') }
+    }
+
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+        return { error: null }
+    }
+
+    try {
+        const { error } = await supabase
+            .from('travel_plan_contacts')
+            .delete()
+            .eq('travel_plan_id', planId)
+
+        if (error) throw error
+        return { error: null }
+    } catch (err) {
+        console.error('deleteTravelPlanContactsForPlan error:', err)
+        return { error: err instanceof Error ? err : new Error('Unknown error deleting travel plan contacts') }
+    }
+}
+
+/**
+ * Insert travel plan contacts (custom overrides only).
+ * Call after deleteTravelPlanContactsForPlan to replace with only custom rows.
+ */
+export async function insertTravelPlanContacts(
+    _context: UserContext,
+    planId: string,
+    contacts: {
+        category: TravelContactCategory;
+        first_name: string;
+        last_name: string;
+        email: string;
+        phone?: string | null;
+    }[]
+): Promise<{ error: Error | null }> {
+    if (!isValidUUID(planId)) {
+        return { error: new Error('Invalid plan ID') }
+    }
+
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+        return { error: null }
+    }
+
+    try {
+        if (contacts.length === 0) return { error: null }
+
+        const rows = contacts.map(c => ({
+            travel_plan_id: planId,
+            category: c.category,
+            is_custom: true,
+            first_name: c.first_name,
+            last_name: c.last_name,
+            email: c.email,
+            phone: c.phone ?? null,
+        }))
+
+        const { error } = await supabase
+            .from('travel_plan_contacts')
+            .insert(rows)
+
+        if (error) throw error
+        return { error: null }
+    } catch (err) {
+        console.error('insertTravelPlanContacts error:', err)
+        return { error: err instanceof Error ? err : new Error('Unknown error saving travel plan contacts') }
+    }
+}
+
+/**
+ * Upsert travel plan contacts (all categories; keeps rows for is_custom false).
+ * Prefer deleteTravelPlanContactsForPlan + insertTravelPlanContacts for replace semantics.
  */
 export async function upsertTravelPlanContacts(
     _context: UserContext,
@@ -1762,24 +1845,21 @@ export async function resolveAllTravelContactsForPlan(
 
     try {
         const { data, error } = await supabase
-            .rpc('resolve_all_travel_contacts_for_plan', {
+            .rpc('resolve_travel_contacts_for_plan', {
                 p_plan_id: planId
             })
 
         if (error) throw error
 
-        // Data is JSONB, cast to ResolvedTravelContacts
-        // Ensure all categories are present
+        // Data is JSONB (categories -> { first_name, last_name, email, phone }); RPC does not return source
         const result = TRAVEL_CONTACT_CATEGORIES.reduce((acc, cat) => {
             const contact = data?.[cat]
             acc[cat] = contact ? {
                 first_name: contact.first_name || '',
                 last_name: contact.last_name || '',
                 email: contact.email || '',
-                phone: contact.phone || null,
-                source: contact.source
+                phone: contact.phone ?? null
             } : {
-                // Should not happen if RPC works as designed (always returns object), but safe fallback
                 first_name: '', last_name: '', email: '', phone: null
             }
             return acc

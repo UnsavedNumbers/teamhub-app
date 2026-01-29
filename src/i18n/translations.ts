@@ -424,6 +424,7 @@ export const en = {
             schedule: 'Schedule',
             scheduleLoading: 'Loading schedule…',
             scheduleEmpty: 'No events scheduled during these dates.',
+            areaSummaryNotAvailable: 'No summary available for {{venueName}}.',
         },
         settings: {
             title: 'Settings',
@@ -1486,6 +1487,7 @@ export const es = {
             schedule: 'Horario',
             scheduleLoading: 'Cargando horario…',
             scheduleEmpty: 'No hay eventos programados durante estas fechas.',
+            areaSummaryNotAvailable: 'No hay resumen disponible para {{venueName}}.',
         },
         settings: {
             title: 'Configuración',
