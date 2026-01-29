@@ -51,13 +51,15 @@ export function FeatureGateRoute({
 }: FeatureGateRouteProps) {
   const location = useLocation();
   const featureKey = explicitFeatureKey ?? getFeatureKeyForRoute(routeKey);
+  
+  // IMPORTANT: Call all hooks before any conditional returns (Rules of Hooks)
+  // Pass empty string to useFeatureGate if no feature key (it will handle gracefully)
+  const { allowed, gate_action, reason_code, loading } = useFeatureGate(featureKey || '');
 
   // Ungated routes pass through
   if (!featureKey || isRouteUngated(routeKey)) {
     return <>{children}</>;
   }
-
-  const { allowed, gate_action, reason_code, loading } = useFeatureGate(featureKey);
 
   // While loading, render nothing (ProtectedRoute handles loading state)
   if (loading) {

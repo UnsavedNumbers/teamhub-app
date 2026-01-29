@@ -16,6 +16,7 @@ import {
   Select,
   DatePicker 
 } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { FileUpload } from '../../components/common/FileUpload'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
 import type { StructuredAddress } from '../../types/location'
@@ -430,7 +431,7 @@ export default function CreateTravelPlan() {
         <Card>
           <div className="pa-text-center pa-p-8">
             <p className="pa-text-danger">Unable to load organization context. Please make sure you have an organization selected.</p>
-            <Button variant="blue" onClick={() => navigate('/admin/travel')} className="pa-mt-4">Back to Travel Plans</Button>
+            <OrgAdminButton variant="primary" onClick={() => navigate('/admin/travel')} className="pa-mt-4">Back to Travel Plans</OrgAdminButton>
           </div>
         </Card>
       </div>
@@ -742,7 +743,7 @@ export default function CreateTravelPlan() {
             />
 
             <div className="pa-form-actions">
-              <Button variant="blue" onClick={() => navigate('/admin/travel')} disabled={saving} className="w-full sm:w-auto">Cancel</Button>
+              <OrgAdminButton variant="primary" onClick={() => navigate('/admin/travel')} disabled={saving} className="w-full sm:w-auto">Cancel</OrgAdminButton>
               <Button type="submit" loading={saving} disabled={saving} className="pa-form-submit-btn w-full sm:w-auto">Create Draft Plan</Button>
             </div>
           </form>

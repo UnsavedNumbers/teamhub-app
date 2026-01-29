@@ -71,9 +71,9 @@ export const parentNavSections: NavigationSection[] = [
         route: '/portal/payments',
         groups: [
             {
-                label: 'Payments',
+                label: '',
                 items: [
-                    { routeKey: 'portal.payments', text: 'Fees Due', icon: 'receipt_long', description: 'Outstanding fees' },
+                    { routeKey: 'portal.payments', text: 'Payments', icon: 'receipt_long', description: 'Outstanding fees' },
                 ],
             },
         ],
@@ -261,17 +261,35 @@ export const adminMenuItems: MenuItemDefinition[] = [
         requiresOrg: true,
         children: [
             { text: 'Athletes', icon: 'child_care', routeKey: 'admin.athletes.list', requiresOrg: true },
-            { text: 'Guardians', icon: 'home', routeKey: 'admin.guardians.list', requiresOrg: true },
-            { text: 'Guardian Requests', icon: 'person_add', routeKey: 'admin.guardianRequests', requiresOrg: true },
         ],
+    },
+    {
+        label: 'Guardians',
+        icon: 'home',
+        routeKey: 'admin.guardians.list',
+        requiresOrg: true,
+        children: null,
+    },
+    {
+        label: 'Guardian Requests',
+        icon: 'person_add',
+        routeKey: 'admin.guardianRequests',
+        requiresOrg: true,
+        children: null,
+    },
+    {
+        label: 'Payments',
+        icon: 'credit_card',
+        routeKey: 'admin.payments.list',
+        requiresOrg: true,
+        children: null,
     },
     {
         label: 'Operations',
         icon: 'settings',
-        routeKey: 'admin.payments.list',
+        routeKey: 'admin.events.list',
         requiresOrg: true,
         children: [
-            { text: 'Payments', icon: 'credit_card', routeKey: 'admin.payments.list', requiresOrg: true },
             { text: 'Events', icon: 'event', routeKey: 'admin.events.list', requiresOrg: true },
             { text: 'Attendance', icon: 'how_to_reg', routeKey: 'admin.attendance', requiresOrg: true },
             { text: 'Uniforms', icon: 'checkroom', routeKey: 'admin.uniforms.list', requiresOrg: true },

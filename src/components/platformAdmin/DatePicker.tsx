@@ -22,6 +22,8 @@ import { parseDate } from '@internationalized/date'
 interface DatePickerProps {
   /** Input label */
   label?: string
+  /** Accessible name when label is not visible (required if label is omitted) */
+  'aria-label'?: string
   /** Helper text below input */
   helper?: string
   /** Error message */
@@ -58,6 +60,7 @@ interface DatePickerProps {
  */
 export const DatePicker = forwardRef<HTMLDivElement, DatePickerProps>(({
   label,
+  'aria-label': ariaLabel,
   helper,
   error,
   required = false,
@@ -72,6 +75,8 @@ export const DatePicker = forwardRef<HTMLDivElement, DatePickerProps>(({
 }, ref) => {
   const hasError = !!error
   const isRequired = required === true
+  // Accessible name: visible label, explicit aria-label, or default for screen readers
+  const accessibleName = label || ariaLabel || 'Date'
 
   // Convert string dates to DateValue
   const dateValue = value ? parseDate(value) : null
@@ -96,6 +101,7 @@ export const DatePicker = forwardRef<HTMLDivElement, DatePickerProps>(({
         isRequired={isRequired}
         name={name}
         className={className}
+        aria-label={!label ? accessibleName : undefined}
       >
         {label && (
           <Label className={`pa-label ${isRequired ? 'pa-label--required' : ''}`}>
@@ -104,7 +110,7 @@ export const DatePicker = forwardRef<HTMLDivElement, DatePickerProps>(({
         )}
         
         <Group className={`pa-datepicker-group ${hasError ? 'pa-datepicker-group--error' : ''}`}>
-          <DateInput className="pa-datepicker-input">
+          <DateInput className="pa-datepicker-input" aria-label={!label ? accessibleName : undefined}>
             {(segment) => (
               <DateSegment
                 segment={segment}

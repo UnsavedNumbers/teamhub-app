@@ -8,12 +8,12 @@ import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { 
   AdminPageHeader, 
   Card, 
-  Button, 
   PlatformDataTable, 
   Badge,
   EmptyState,
   type ColumnConfig 
 } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { getLink } from '../../utils/routes'
 
 export default function UniformOrders() {
@@ -148,10 +148,9 @@ export default function UniformOrders() {
         subtitle={t('admin.uniforms.subtitle')} 
         actions={
           (sports?.length ?? 0) > 0 ? (
-            <Button onClick={() => navigate('/admin/uniforms/new')} variant="blue" className="w-full sm:w-auto">
-              <span className="material-symbols-outlined">add</span>
+            <OrgAdminButton onClick={() => navigate('/admin/uniforms/new')} variant="primary" icon="add" className="w-full sm:w-auto">
               Create Uniform
-            </Button>
+            </OrgAdminButton>
           ) : null
         }
       />

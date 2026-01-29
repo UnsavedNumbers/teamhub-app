@@ -48,6 +48,11 @@ interface FeatureGatedButtonProps extends React.ButtonHTMLAttributes<HTMLButtonE
   iconRight?: string;
   /** Loading state - shows spinner */
   loading?: boolean;
+  /**
+   * Theme namespace: 'pa' = Platform Admin (pa-btn), 'oa' = Org Admin (oa-btn).
+   * Use 'oa' in organization admin views so styling uses org theme only.
+   */
+  themeNamespace?: 'pa' | 'oa';
 }
 
 /**
@@ -80,10 +85,17 @@ export const FeatureGatedButton = forwardRef<HTMLButtonElement, FeatureGatedButt
     // Combine loading states
     const loading = externalLoading || gateLoading;
 
-    // Compute button classes like Button component
-    const sizeClass = size === 'compact' ? 'pa-btn--compact' : size === 'dense' ? 'pa-btn--dense' : '';
-    const variantClass = `pa-btn--${variant}`;
-    const buttonClassName = cn('pa-btn', variantClass, sizeClass, className);
+    // Theme namespace: oa = org admin (oa-btn), pa = platform admin (pa-btn)
+    const isOa = themeNamespace === 'oa';
+    const prefix = isOa ? 'oa-btn' : 'pa-btn';
+    // Map 'blue' to 'primary' for org admin (oa has no blue variant)
+    const oaVariant = variant === 'blue' ? 'primary' : variant;
+    const effectiveVariant = isOa ? oaVariant : variant;
+    const sizeClass = size === 'compact' ? `${prefix}--compact` : size === 'dense' ? `${prefix}--dense` : '';
+    const variantClass = `${prefix}--${effectiveVariant}`;
+    const buttonClassName = cn(prefix, variantClass, sizeClass, className);
+    const spinnerClass = isOa ? 'oa-btn-spinner' : 'pa-spinner';
+    const iconSizeClass = isOa ? '' : 'pa-icon-sm';
 
     // If no feature key found, render as normal button
     if (!featureKey) {
@@ -97,23 +109,15 @@ export const FeatureGatedButton = forwardRef<HTMLButtonElement, FeatureGatedButt
         >
           {loading ? (
             <span
-              className="pa-spinner"
-              style={{
-                width: '16px',
-                height: '16px',
-                borderWidth: '2px',
-              }}
+              className={spinnerClass}
+              style={isOa ? undefined : { width: '16px', height: '16px', borderWidth: '2px' }}
             />
           ) : icon ? (
-            <span className={cn('material-symbols-outlined', 'pa-icon-sm')}>
-              {icon}
-            </span>
+            <span className={cn('material-symbols-outlined', iconSizeClass)}>{icon}</span>
           ) : null}
           {children}
           {iconRight && !loading && (
-            <span className={cn('material-symbols-outlined', 'pa-icon-sm')}>
-              {iconRight}
-            </span>
+            <span className={cn('material-symbols-outlined', iconSizeClass)}>{iconRight}</span>
           )}
         </button>
       );
@@ -157,23 +161,15 @@ export const FeatureGatedButton = forwardRef<HTMLButtonElement, FeatureGatedButt
         >
           {loading ? (
             <span
-              className="pa-spinner"
-              style={{
-                width: '16px',
-                height: '16px',
-                borderWidth: '2px',
-              }}
+              className={spinnerClass}
+              style={isOa ? undefined : { width: '16px', height: '16px', borderWidth: '2px' }}
             />
           ) : icon ? (
-            <span className={cn('material-symbols-outlined', 'pa-icon-sm')}>
-              {icon}
-            </span>
+            <span className={cn('material-symbols-outlined', iconSizeClass)}>{icon}</span>
           ) : null}
           {children}
           {iconRight && !loading && (
-            <span className={cn('material-symbols-outlined', 'pa-icon-sm')}>
-              {iconRight}
-            </span>
+            <span className={cn('material-symbols-outlined', iconSizeClass)}>{iconRight}</span>
           )}
         </button>
 

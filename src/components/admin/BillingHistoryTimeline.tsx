@@ -3,6 +3,7 @@ import type { BillingEvent } from '../../api/billing'
 import { groupEventsByDate } from '../../utils/billingHelpers'
 import { getEventLabel } from '../../utils/billingEventLabels'
 import { t } from '../../i18n'
+import { OrgAdminButton } from './OrgAdminButton'
 
 interface BillingHistoryTimelineProps {
   events: BillingEvent[]
@@ -113,13 +114,13 @@ export function BillingHistoryTimeline({
           </span>
           <h3 className="pa-h4 pa-mb-2">{t('billing.emptyState.noSubscription')}</h3>
           {onSelectPlan && (
-            <button
+            <OrgAdminButton
+              variant="primary"
               onClick={onSelectPlan}
-              className="pa-btn pa-btn--primary"
-              style={{ marginTop: 'var(--pa-space-4)' }}
+              className="mt-4"
             >
               {t('billing.selectPlan')}
-            </button>
+            </OrgAdminButton>
           )}
         </div>
       )

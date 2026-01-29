@@ -1,4 +1,5 @@
 import type { LicenseSummary } from '../../utils/licenseUtils'
+import { OrgAdminButton } from './OrgAdminButton'
 
 interface LicenseWarningBannerProps {
   summary: LicenseSummary
@@ -10,22 +11,22 @@ export function LicenseWarningBanner({ summary }: LicenseWarningBannerProps) {
   const isCritical = (summary.daysRemaining ?? 0) <= 3
 
   return (
-    <div 
-      className="pa-card" 
-      style={{ 
-        margin: 'var(--pa-space-5) var(--pa-space-5) 0',
-        padding: 'var(--pa-space-3) var(--pa-space-4)',
-        background: isCritical ? 'var(--pa-n900)' : 'var(--pa-n800)',
-        color: 'var(--pa-white)',
+    <div
+      className="oa-card"
+      style={{
+        margin: '1.25rem 1.25rem 0',
+        padding: '0.75rem 1rem',
+        background: isCritical ? 'var(--org-status-error-bg, #1e293b)' : 'var(--org-surface-tertiary, #334155)',
+        color: 'var(--org-btn-primary-text, #fff)',
         border: 'none',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        borderRadius: 0
+        borderRadius: 0,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)' }}>
-        <span className="material-symbols-outlined" style={{ color: 'var(--pa-white)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <span className="material-symbols-outlined" style={{ color: 'var(--org-btn-primary-text, #fff)' }}>
           {isCritical ? 'warning' : 'info'}
         </span>
         <div>
@@ -37,24 +38,15 @@ export function LicenseWarningBanner({ summary }: LicenseWarningBannerProps) {
           </div>
         </div>
       </div>
-      <a 
-        href="/admin/organization/billing" 
-        className="pa-btn"
-        style={{ 
-          background: 'var(--pa-white)', 
-          color: 'var(--pa-n900)',
-          height: '32px',
-          padding: '0 12px',
-          fontSize: '12px',
-          fontWeight: 600,
-          borderRadius: 0,
-          textDecoration: 'none',
-          display: 'flex',
-          alignItems: 'center'
-        }}
+      <OrgAdminButton
+        as="a"
+        href="/admin/organization/billing"
+        variant="secondary"
+        size="compact"
+        className="!h-8 !px-3 !text-xs"
       >
         Renew Now
-      </a>
+      </OrgAdminButton>
     </div>
   )
 }

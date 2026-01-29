@@ -1,0 +1,93 @@
+import { cn } from '../../utils/cn'
+import { OrgAdminButton } from './OrgAdminButton'
+import type { TravelTimeContext, TravelViewMode } from '../../types/travelManagement'
+
+interface TravelHeaderProps {
+    timeContext: TravelTimeContext
+    viewMode: TravelViewMode
+    onTimeContextChange: (context: TravelTimeContext) => void
+    onViewModeChange: (mode: TravelViewMode) => void
+    onCreateClick: () => void
+    upcomingCount?: number
+}
+
+export default function TravelHeader({
+    timeContext,
+    viewMode,
+    onTimeContextChange,
+    onViewModeChange,
+    onCreateClick,
+    upcomingCount,
+}: TravelHeaderProps) {
+    const timeContextOptions: { value: TravelTimeContext; label: string }[] = [
+        { value: 'upcoming', label: 'Upcoming' },
+        { value: 'past', label: 'Past' },
+        { value: 'all', label: 'All' },
+    ]
+
+    const viewModeOptions: { value: TravelViewMode; label: string; icon: string }[] = [
+        { value: 'list', label: 'List', icon: 'view_list' },
+        { value: 'calendar', label: 'Calendar', icon: 'calendar_month' },
+        { value: 'agenda', label: 'Agenda', icon: 'view_agenda' },
+    ]
+
+    return (
+        <div className={cn('flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6')}>
+            <div className={cn('flex gap-1 p-1 rounded-md')} style={{ background: 'var(--org-surface-secondary, rgba(0,0,0,0.06))' }}>
+                {timeContextOptions.map((option) => (
+                    <button
+                        key={option.value}
+                        onClick={() => onTimeContextChange(option.value)}
+                        className={cn(
+                            'px-4 py-2 rounded text-sm font-bold transition-colors',
+                            timeContext === option.value ? 'shadow-sm' : 'bg-transparent'
+                        )}
+                        style={
+                            timeContext === option.value
+                                ? { background: 'var(--org-surface-primary, #fff)', color: 'var(--org-text-primary, #111)' }
+                                : { color: 'var(--org-text-secondary, #555)' }
+                        }
+                    >
+                        {option.label}
+                        {option.value === 'upcoming' && upcomingCount !== undefined && (
+                            <span
+                                className="ml-2 text-xs px-1.5 py-0.5 rounded-full"
+                                style={{ background: 'var(--org-btn-primary-bg)', color: 'var(--org-btn-primary-text)' }}
+                            >
+                                {upcomingCount}
+                            </span>
+                        )}
+                    </button>
+                ))}
+            </div>
+
+            <div className={cn('flex items-center gap-3 w-full sm:w-auto')}>
+                <div className={cn('flex gap-1 p-1 rounded-md')} style={{ background: 'var(--org-surface-secondary, rgba(0,0,0,0.06))' }}>
+                    {viewModeOptions.map((option) => (
+                        <button
+                            key={option.value}
+                            onClick={() => onViewModeChange(option.value)}
+                            className={cn(
+                                'px-3 py-2 rounded text-sm font-bold transition-colors flex items-center gap-1',
+                                viewMode === option.value ? 'shadow-sm' : 'bg-transparent'
+                            )}
+                            style={
+                                viewMode === option.value
+                                    ? { background: 'var(--org-surface-primary, #fff)', color: 'var(--org-text-primary, #111)' }
+                                    : { color: 'var(--org-text-secondary, #555)' }
+                            }
+                            title={option.label}
+                        >
+                            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>{option.icon}</span>
+                            <span className="hidden sm:inline">{option.label}</span>
+                        </button>
+                    ))}
+                </div>
+
+                <OrgAdminButton onClick={onCreateClick} variant="primary" icon="add" className="whitespace-nowrap">
+                    Create Plan
+                </OrgAdminButton>
+            </div>
+        </div>
+    )
+}
