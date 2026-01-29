@@ -6,12 +6,13 @@
  */
 
 import { useState, useEffect } from 'react'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm, Controller, FormProvider } from 'react-hook-form'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getSports } from '../../data/services/sportsService'
 import { getSeasons } from '../../data/services/seasonsService'
 import { getTeams } from '../../data/services/teamsService'
 import { getUniformConfigForSport } from '../../config/uniformFieldConfigs'
+import AdminLoadingSpinner from '../admin/AdminLoadingSpinner'
 import { Input, Select, Button, Card, DatePicker, TimePicker } from '../platformAdmin'
 import { SportFieldRenderer } from './SportFieldRenderer'
 import { UniformPartsSelector } from './UniformPartsSelector'
@@ -40,7 +41,7 @@ export function SportUniformForm({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { control, handleSubmit, watch, setValue } = useForm<CreateUniformKitDTO & {
+  const methods = useForm<CreateUniformKitDTO & {
     sport_name: string
     program_id_select: string
     season_id_select: string
@@ -69,6 +70,7 @@ export function SportUniformForm({
       selectedParts: [],
     },
   })
+  const { control, handleSubmit, watch, setValue } = methods
 
   const selectedSportName = watch('sport_name')
   const selectedSportId = watch('sport_id')
@@ -178,20 +180,46 @@ export function SportUniformForm({
     team_id_select: string
     selectedParts: string[]
   }) => {
+    if (submitting) return
     setSubmitting(true)
     setError(null)
 
     try {
-      // Build sport_specific_fields from form data
-      const sportSpecificFields: Record<string, any> = {}
-      if (sportConfig) {
-        sportConfig.fields.forEach(field => {
-          const fieldValue = data[field.key as keyof typeof data]
-          if (fieldValue !== undefined && fieldValue !== null && fieldValue !== '') {
-            sportSpecificFields[field.key] = fieldValue
-          }
-        })
+      // Validate team-level required fields
+      if (!isOrgLevel) {
+        if (!data.team_id) {
+          setError('Team is required.')
+          setSubmitting(false)
+          return
+        }
+        if (!data.season_id) {
+          setError('Season is required.')
+          setSubmitting(false)
+          return
+        }
       }
+      if (!context?.orgId) {
+        setError('Organization context is missing.')
+        setSubmitting(false)
+        return
+      }
+      // Build sport_specific_fields from form data (fields are registered under sport_specific_fields.*)
+      const sportSpecificFields: Record<string, unknown> =
+        (data.sport_specific_fields && typeof data.sport_specific_fields === 'object')
+          ? { ...data.sport_specific_fields }
+          : {}
+
+      // Map selectedParts to items for the kit (each part becomes an item with default size options)
+      const defaultSizeOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
+      const items =
+        (data.selectedParts && Array.isArray(data.selectedParts) && data.selectedParts.length > 0)
+          ? data.selectedParts.map((partName, index) => ({
+              name: partName.charAt(0).toUpperCase() + partName.slice(1),
+              required: true,
+              size_options: defaultSizeOptions,
+              sort_order: index * 10,
+            }))
+          : undefined
 
       const submitData: CreateUniformKitDTO = {
         name: data.name,
@@ -207,7 +235,8 @@ export function SportUniformForm({
         notes: data.notes || null,
         status: data.status || 'active',
         deadline_at: data.deadline_at || null,
-        sport_specific_fields: sportSpecificFields,
+        sport_specific_fields: Object.keys(sportSpecificFields).length > 0 ? (sportSpecificFields as Record<string, any>) : undefined,
+        items,
       }
 
       await onSubmit(submitData)
@@ -220,10 +249,11 @@ export function SportUniformForm({
   }
 
   if (loading) {
-    return <div>Loading...</div>
+    return <AdminLoadingSpinner />
   }
 
   return (
+    <FormProvider {...methods}>
     <form onSubmit={handleSubmit(onFormSubmit)}>
       {error && (
         <div className="pa-alert pa-alert--error" style={{ marginBottom: '16px' }}>
@@ -515,6 +545,7 @@ export function SportUniformForm({
         </Button>
       </div>
     </form>
+    </FormProvider>
   )
 }
 

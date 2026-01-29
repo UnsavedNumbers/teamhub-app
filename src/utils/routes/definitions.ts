@@ -605,6 +605,13 @@ const admin = {
             icon: 'add',
             requiresOrg: true,
         },
+        detail: {
+            path: '/admin/events/:id',
+            params: ['id'] as const,
+            label: 'Event Details',
+            icon: 'event',
+            requiresOrg: true,
+        },
         edit: {
             path: '/admin/events/:id/edit',
             params: ['id'] as const,

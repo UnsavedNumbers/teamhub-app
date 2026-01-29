@@ -312,9 +312,27 @@ export async function createUniformKit(
 ): Promise<{ data: { id: string } | null; error: Error | null }> {
     await simulateDelay()
 
+    // Input validation
+    if (!dto.name?.trim()) {
+        return { data: null, error: new Error('Uniform name is required') }
+    }
+    if (!dto.org_id) {
+        return { data: null, error: new Error('Organization is required') }
+    }
+    if (dto.team_id != null && dto.season_id == null) {
+        return { data: null, error: new Error('Season is required when creating a team-level uniform') }
+    }
+
     if (USE_FAKE_DATA) {
-        // In fake mode, just return a mock ID
-        return { data: { id: `kit-${Date.now()}` }, error: null }
+        const { id } = createFakeUniformKit(context.orgId, {
+            name: dto.name,
+            team_id: dto.team_id,
+            season_id: dto.season_id,
+            status: dto.status,
+            deadline_at: dto.deadline_at,
+            vendor: dto.vendor,
+        })
+        return { data: { id }, error: null }
     }
 
     try {

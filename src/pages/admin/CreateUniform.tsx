@@ -22,17 +22,19 @@ export default function CreateUniform() {
   const navigate = useNavigate()
   const t = useT()
 
-  const handleSubmit = async (data: CreateUniformKitDTO) => {
+  const handleSubmit = async (data: CreateUniformKitDTO): Promise<void> => {
     if (!context || !isReady) {
       throw new Error('User context not ready')
     }
 
-    const { error } = await createUniformKit(context, data)
+    const { data: result, error } = await createUniformKit(context, data)
     if (error) {
       throw error
     }
+    if (!result?.id) {
+      throw new Error('Uniform was not created. Please try again.')
+    }
 
-    // Navigate back to uniforms list
     navigate('/admin/uniforms')
   }
 
