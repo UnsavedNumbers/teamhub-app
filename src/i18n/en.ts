@@ -212,5 +212,10 @@ export const en = {
         noAllergies: 'No allergies on file.',
       },
     },
+    events: {
+      title: 'Events',
+      subtitle: 'Manage events, practices, and games for your organization',
+      create: 'Create Event',
+    },
   },
 }

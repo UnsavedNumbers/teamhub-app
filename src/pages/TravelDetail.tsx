@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
-import { getTravelPlanById, formatDateRange, resolveAllTravelContactsForPlan } from '../data/services/travelService'
+import { getTravelPlanById, formatDateRange, resolveAllTravelContactsForPlan, getTravelPlanContacts } from '../data/services/travelService'
+import { getOrganizationTravelContacts } from '../data/services/organizationTravelContactsService'
+import { getOrganizationDetails } from '../data/services/organizationService'
 import { getEvents } from '../data/services/eventsService'
-import { getContactForCategory } from '../data/services/organizationContactsService'
-import { TRAVEL_CONTACT_CATEGORIES, TRAVEL_CONTACT_CATEGORY_LABELS, type ResolvedTravelContacts } from '../types/travelContacts'
+import { TRAVEL_CONTACT_CATEGORIES, TRAVEL_CONTACT_CATEGORY_LABELS, type ResolvedTravelContacts, type TravelContactCategory } from '../types/travelContacts'
+import type { TravelPlanContactRow } from '../types/travelContacts'
+import type { OrganizationTravelContactRow } from '../types/travelContacts'
 import type { FakeTravelPlan } from '../data/fake/fakeTravel'
 import type { CalendarEvent } from '../types/calendar'
 import { supabase } from '../lib/supabase'
@@ -202,6 +205,9 @@ export default function TravelDetail() {
   const [teamName, setTeamName] = useState<string>('')
   const [emergencyContact, setEmergencyContact] = useState<{ name: string; phone: string; role: string } | null>(null)
   const [resolvedContacts, setResolvedContacts] = useState<ResolvedTravelContacts | null>(null)
+  const [planContactsRaw, setPlanContactsRaw] = useState<Record<TravelContactCategory, TravelPlanContactRow | null> | null>(null)
+  const [defaultContact, setDefaultContact] = useState<OrganizationTravelContactRow | null>(null)
+  const [orgFallbackContact, setOrgFallbackContact] = useState<{ email: string | null; phone: string | null } | null>(null)
   const isMountedRef = useRef(true)
 
   // Direct Google Places API call for Area Summary (bypasses edge function)
@@ -366,12 +372,43 @@ export default function TravelDetail() {
             console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Resolving contacts`)
             const { data: contactsData, error: contactsError } = await resolveAllTravelContactsForPlan(context, id!)
             if (contactsError) throw contactsError
-            
+
             if (isMountedRef.current && contactsData) {
                 setResolvedContacts(contactsData)
             }
         } catch (err) {
             console.error('Error fetching resolved travel contacts', err)
+        }
+
+        // Raw plan contacts (to know which are custom)
+        try {
+            const { data: rawData } = await getTravelPlanContacts(context, id!)
+            if (isMountedRef.current && rawData) {
+                setPlanContactsRaw(rawData)
+            }
+        } catch (err) {
+            console.error('Error fetching plan contacts', err)
+        }
+
+        // Org default contact for "Everything Else" row; fallback to org details if no travel default
+        try {
+            const { data: orgContacts } = await getOrganizationTravelContacts(context)
+            if (isMountedRef.current && orgContacts?.default && (orgContacts.default.email || orgContacts.default.phone)) {
+                setDefaultContact(orgContacts.default)
+            }
+        } catch (err) {
+            console.error('Error fetching org default contact', err)
+        }
+        try {
+            const { data: orgDetails } = await getOrganizationDetails(context.orgId)
+            if (isMountedRef.current && orgDetails) {
+                setOrgFallbackContact({
+                    email: orgDetails.email ?? null,
+                    phone: orgDetails.phone ?? null,
+                })
+            }
+        } catch (err) {
+            console.error('Error fetching org details for fallback contact', err)
         }
       } catch (err) {
         if (!isMountedRef.current) return
@@ -903,92 +940,145 @@ export default function TravelDetail() {
           )}
         </div>
 
-        {/* Right Column - Quick Actions & Emergency Info */}
+        {/* Right Column - Quick Actions & Contacts */}
         <div className="space-y-6">
-          {/* Emergency Contact Card */}
-          {emergencyContact && emergencyContact.phone && (
-            <Card className="p-6 bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900">
-              <div className="flex items-center gap-2 mb-4">
-                <Icon name="emergency" size="text-2xl" className="text-red-600 dark:text-red-400" />
-                <CardTitle className="text-red-900 dark:text-red-100">Emergency Contact</CardTitle>
+          {/* Single Contacts Card - iPhone contact list style */}
+          {(emergencyContact?.phone || resolvedContacts || defaultContact || (orgFallbackContact && (orgFallbackContact.email || orgFallbackContact.phone))) && (
+            <Card className="p-0 overflow-hidden bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+              <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+                <CardTitle className="flex items-center gap-2 mb-0">
+                  <Icon name="contacts" size="text-xl" className="text-slate-500 dark:text-slate-400" />
+                  Contacts
+                </CardTitle>
               </div>
-              <div className="space-y-3">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-red-600 dark:text-red-400 mb-1">Coach (Urgent)</p>
-                  <p className="font-black text-red-900 dark:text-red-100">{emergencyContact.name}</p>
-                  <a href={`tel:${emergencyContact.phone}`} className="text-red-600 dark:text-red-400 font-bold hover:underline">
-                    {emergencyContact.phone}
-                  </a>
-                </div>
-                <div className="pt-3 border-t border-red-200 dark:border-red-900">
-                  <a href={`tel:${emergencyContact.phone}`}>
-                    <Button variant="primary" className="w-full bg-red-600 hover:bg-red-700 text-white">
-                      <Icon name="phone" size="text-sm" className="mr-2" />
-                      Call Coach Now
-                    </Button>
-                  </a>
-                </div>
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                {/* Emergency (Coach) - first row if present */}
+                {emergencyContact?.phone && (
+                  <div className="flex items-center gap-4 px-5 py-3.5 active:bg-slate-50 dark:active:bg-slate-800/50">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center text-red-600 dark:text-red-400 font-semibold text-base">
+                      {(emergencyContact.name || 'C').charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-slate-900 dark:text-white truncate">{emergencyContact.name}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Emergency · Coach</p>
+                    </div>
+                    <a href={`tel:${emergencyContact.phone}`} className="flex-shrink-0 p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Call">
+                      <Icon name="phone" size="text-lg" />
+                    </a>
+                  </div>
+                )}
+
+                {/* Custom contacts first (plan-specific overrides) */}
+                {resolvedContacts && (() => {
+                  const customCategories = planContactsRaw
+                    ? TRAVEL_CONTACT_CATEGORIES.filter(cat => planContactsRaw[cat]?.is_custom)
+                    : []
+                  return customCategories.map(category => {
+                    const contact = resolvedContacts[category]
+                    if (!contact || (!contact.email && !contact.phone)) return null
+                    const label = TRAVEL_CONTACT_CATEGORY_LABELS[category]
+                    const fullName = [contact.first_name, contact.last_name].filter(Boolean).join(' ') || 'Contact'
+                    const initial = fullName.charAt(0).toUpperCase() || '?'
+                    return (
+                      <div key={`custom-${category}`} className="flex items-center gap-4 px-5 py-3.5 active:bg-slate-50 dark:active:bg-slate-800/50">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-semibold text-base">
+                          {initial}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-slate-900 dark:text-white truncate">{fullName}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{label}</p>
+                        </div>
+                        <div className="flex-shrink-0 flex items-center gap-1">
+                          {contact.phone && (
+                            <a href={`tel:${contact.phone}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Call">
+                              <Icon name="phone" size="text-lg" />
+                            </a>
+                          )}
+                          {contact.email && (
+                            <a href={`mailto:${contact.email}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Email">
+                              <Icon name="email" size="text-lg" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })
+                })()}
+
+                {/* Non-custom resolved contacts (existing category contacts) */}
+                {resolvedContacts && (() => {
+                  const nonCustomCategories = planContactsRaw
+                    ? TRAVEL_CONTACT_CATEGORIES.filter(cat => !planContactsRaw[cat]?.is_custom)
+                    : TRAVEL_CONTACT_CATEGORIES
+                  return nonCustomCategories.map(category => {
+                    const contact = resolvedContacts[category]
+                    if (!contact || (!contact.email && !contact.phone)) return null
+                    const label = TRAVEL_CONTACT_CATEGORY_LABELS[category]
+                    const fullName = [contact.first_name, contact.last_name].filter(Boolean).join(' ') || 'Contact'
+                    const initial = fullName.charAt(0).toUpperCase() || '?'
+                    return (
+                      <div key={category} className="flex items-center gap-4 px-5 py-3.5 active:bg-slate-50 dark:active:bg-slate-800/50">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-semibold text-base">
+                          {initial}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-slate-900 dark:text-white truncate">{fullName}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{label}</p>
+                        </div>
+                        <div className="flex-shrink-0 flex items-center gap-1">
+                          {contact.phone && (
+                            <a href={`tel:${contact.phone}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Call">
+                              <Icon name="phone" size="text-lg" />
+                            </a>
+                          )}
+                          {contact.email && (
+                            <a href={`mailto:${contact.email}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Email">
+                              <Icon name="email" size="text-lg" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })
+                })()}
+
+                {/* Last row: Everything Else — org default contact or org details fallback (always shown when either has email/phone) */}
+                {(() => {
+                  const hasDefault = defaultContact && (defaultContact.email || defaultContact.phone)
+                  const hasFallback = orgFallbackContact && (orgFallbackContact.email || orgFallbackContact.phone)
+                  if (!hasDefault && !hasFallback) return null
+                  const displayName = hasDefault
+                    ? ([defaultContact!.first_name, defaultContact!.last_name].filter(Boolean).join(' ') || 'General Info')
+                    : 'General Info'
+                  const initial = (displayName.charAt(0) || 'G').toUpperCase()
+                  const email = hasDefault ? defaultContact!.email : orgFallbackContact!.email
+                  const phone = hasDefault ? defaultContact!.phone : orgFallbackContact!.phone
+                  return (
+                    <div className="flex items-center gap-4 px-5 py-3.5 active:bg-slate-50 dark:active:bg-slate-800/50">
+                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-semibold text-base">
+                        {initial}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-slate-900 dark:text-white truncate">{displayName}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Everything Else</p>
+                      </div>
+                      <div className="flex-shrink-0 flex items-center gap-1">
+                        {phone && (
+                          <a href={`tel:${phone}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Call">
+                            <Icon name="phone" size="text-lg" />
+                          </a>
+                        )}
+                        {email && (
+                          <a href={`mailto:${email}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Email">
+                            <Icon name="email" size="text-lg" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
             </Card>
-          )}
-
-          {/* Travel Contacts List */}
-          {resolvedContacts && (
-            <div className="space-y-4">
-               {TRAVEL_CONTACT_CATEGORIES.map(category => {
-                   const contact = resolvedContacts[category]
-                   if (!contact || (!contact.email && !contact.phone)) return null
-                   
-                   // Skip emergency if empty (we have the Coach card separately, but if a custom emergency contact is set, show it too?)
-                   // "Emergency" category in resolved contacts is distinct from the Coach role.
-                   
-                   const label = TRAVEL_CONTACT_CATEGORY_LABELS[category]
-                   
-                   return (
-                    <Card key={category} className="p-6 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Icon name="support_agent" size="text-2xl" className="text-blue-600 dark:text-blue-400" />
-                        <CardTitle className="text-blue-900 dark:text-blue-100">{label}</CardTitle>
-                      </div>
-                      <div className="space-y-3">
-                        <div>
-                          <p className="font-black text-blue-900 dark:text-blue-100">
-                             {contact.first_name} {contact.last_name}
-                          </p>
-                          {contact.phone && (
-                             <a href={`tel:${contact.phone}`} className="block text-blue-600 dark:text-blue-400 font-bold hover:underline">
-                                {contact.phone}
-                             </a>
-                           )}
-                           {contact.email && (
-                           <a href={`mailto:${contact.email}`} className="block text-blue-600 dark:text-blue-400 font-bold hover:underline">
-                              {contact.email}
-                           </a>
-                           )}
-                        </div>
-                         <div className="pt-3 border-t border-blue-200 dark:border-blue-900 flex gap-2">
-                           {contact.phone && (
-                              <a href={`tel:${contact.phone}`} className="flex-1">
-                                <Button variant="primary" className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs">
-                                  <Icon name="phone" size="text-sm" className="mr-2" />
-                                  Call
-                                </Button>
-                              </a>
-                           )}
-                           {contact.email && (
-                           <a href={`mailto:${contact.email}`} className="flex-1">
-                              <Button variant="secondary" className="w-full text-xs">
-                                <Icon name="email" size="text-sm" className="mr-2" />
-                                Email
-                              </Button>
-                           </a>
-                           )}
-                         </div>
-                      </div>
-                    </Card>
-                   )
-               })}
-            </div>
           )}
 
           {/* Area Summary (venue's place_id) - fetched directly from Google Places API */}

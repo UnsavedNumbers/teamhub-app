@@ -1,0 +1,560 @@
+/**
+ * iOS-Style Design Tokens for Events Management
+ * 
+ * Inspired by Apple Calendar, Reminders, and Settings
+ * Focus: Calm, lightweight, clear, scannable
+ */
+
+/* ============================================================================
+   COLORS - iOS System Colors
+   ============================================================================ */
+:root {
+    /* Backgrounds */
+    --ios-bg-primary: #ffffff;
+    --ios-bg-secondary: #f2f2f7;
+    --ios-bg-tertiary: #fafafa;
+    --ios-bg-grouped: #f2f2f7;
+
+    /* Text */
+    --ios-text-primary: #000000;
+    --ios-text-secondary: #3c3c43;
+    --ios-text-tertiary: #8e8e93;
+    --ios-text-quaternary: #c7c7cc;
+
+    /* Separators */
+    --ios-separator: rgba(60, 60, 67, 0.12);
+    --ios-separator-opaque: #c6c6c8;
+
+    /* System Colors */
+    --ios-blue: #007aff;
+    --ios-green: #34c759;
+    --ios-orange: #ff9500;
+    --ios-red: #ff3b30;
+    --ios-gray: #8e8e93;
+
+    /* Event Type Colors (Soft, iOS-like) */
+    --ios-event-practice: #007aff;
+    --ios-event-game: #34c759;
+    --ios-event-tournament: #ff9500;
+    --ios-event-meeting: #5856d6;
+    --ios-event-default: #8e8e93;
+
+    /* Shadows */
+    --ios-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+    --ios-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+    /* Spacing */
+    --ios-space-xs: 4px;
+    --ios-space-sm: 8px;
+    --ios-space-md: 12px;
+    --ios-space-lg: 16px;
+    --ios-space-xl: 20px;
+    --ios-space-2xl: 24px;
+
+    /* Border Radius */
+    --ios-radius-sm: 8px;
+    --ios-radius-md: 10px;
+    --ios-radius-lg: 12px;
+    --ios-radius-xl: 16px;
+
+    /* Typography */
+    --ios-font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+
+    /* Font Sizes - iOS Scale */
+    --ios-text-xs: 11px;
+    --ios-text-sm: 13px;
+    --ios-text-base: 15px;
+    --ios-text-lg: 17px;
+    --ios-text-xl: 20px;
+    --ios-text-2xl: 22px;
+    --ios-text-3xl: 28px;
+
+    /* Font Weights */
+    --ios-weight-regular: 400;
+    --ios-weight-medium: 500;
+    --ios-weight-semibold: 600;
+    --ios-weight-bold: 700;
+
+    /* Line Heights */
+    --ios-leading-tight: 1.2;
+    --ios-leading-normal: 1.4;
+    --ios-leading-relaxed: 1.6;
+
+    /* Transitions */
+    --ios-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --ios-transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    --ios-transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================================================
+   COMPONENT STYLES - iOS Events
+   ============================================================================ */
+
+/* List View - iOS List Style */
+.ios-events-list {
+    background: var(--ios-bg-grouped);
+    padding: var(--ios-space-lg) 0;
+}
+
+.ios-event-row {
+    background: var(--ios-bg-primary);
+    border-radius: var(--ios-radius-lg);
+    margin: 0 var(--ios-space-lg) var(--ios-space-sm) var(--ios-space-lg);
+    padding: var(--ios-space-lg);
+    box-shadow: var(--ios-shadow-sm);
+    transition: all var(--ios-transition-fast);
+    cursor: pointer;
+    border: 1px solid var(--ios-separator);
+}
+
+.ios-event-row:hover {
+    background: var(--ios-bg-tertiary);
+    box-shadow: var(--ios-shadow-md);
+    transform: translateY(-1px);
+}
+
+.ios-event-row:active {
+    transform: scale(0.99);
+    transition: transform 100ms;
+}
+
+.ios-event-row+.ios-event-row {
+    margin-top: var(--ios-space-sm);
+}
+
+/* Event Row Content */
+.ios-event-date {
+    font-size: var(--ios-text-xs);
+    font-weight: var(--ios-weight-semibold);
+    color: var(--ios-text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: var(--ios-space-xs);
+}
+
+.ios-event-title {
+    font-size: var(--ios-text-lg);
+    font-weight: var(--ios-weight-semibold);
+    color: var(--ios-text-primary);
+    margin-bottom: var(--ios-space-xs);
+    line-height: var(--ios-leading-tight);
+}
+
+.ios-event-time {
+    font-size: var(--ios-text-base);
+    font-weight: var(--ios-weight-regular);
+    color: var(--ios-text-secondary);
+    margin-bottom: var(--ios-space-sm);
+}
+
+.ios-event-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--ios-space-md);
+    font-size: var(--ios-text-sm);
+    color: var(--ios-text-tertiary);
+}
+
+.ios-event-meta-item {
+    display: flex;
+    align-items: center;
+    gap: var(--ios-space-xs);
+}
+
+.ios-event-meta-item .material-symbols-outlined {
+    font-size: 16px;
+    color: var(--ios-text-quaternary);
+}
+
+/* Event Type Pill */
+.ios-event-type-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: var(--ios-text-xs);
+    font-weight: var(--ios-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.ios-event-type-pill.practice {
+    background: rgba(0, 122, 255, 0.1);
+    color: var(--ios-event-practice);
+}
+
+.ios-event-type-pill.game {
+    background: rgba(52, 199, 89, 0.1);
+    color: var(--ios-event-game);
+}
+
+.ios-event-type-pill.tournament {
+    background: rgba(255, 149, 0, 0.1);
+    color: var(--ios-event-tournament);
+}
+
+.ios-event-type-pill.meeting {
+    background: rgba(88, 86, 214, 0.1);
+    color: var(--ios-event-meeting);
+}
+
+.ios-event-type-pill.default {
+    background: rgba(142, 142, 147, 0.1);
+    color: var(--ios-event-default);
+}
+
+/* Agenda View - iOS Calendar Agenda Style */
+.ios-agenda-container {
+    background: var(--ios-bg-grouped);
+    padding: var(--ios-space-lg);
+}
+
+.ios-agenda-day-group {
+    background: var(--ios-bg-primary);
+    border-radius: var(--ios-radius-lg);
+    overflow: hidden;
+    margin-bottom: var(--ios-space-lg);
+    box-shadow: var(--ios-shadow-sm);
+}
+
+.ios-agenda-day-header {
+    padding: var(--ios-space-md) var(--ios-space-lg);
+    background: var(--ios-bg-tertiary);
+    border-bottom: 1px solid var(--ios-separator);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.ios-agenda-day-title {
+    font-size: var(--ios-text-lg);
+    font-weight: var(--ios-weight-semibold);
+    color: var(--ios-text-primary);
+    margin-bottom: 2px;
+}
+
+.ios-agenda-day-subtitle {
+    font-size: var(--ios-text-sm);
+    color: var(--ios-text-tertiary);
+}
+
+.ios-agenda-event-card {
+    padding: var(--ios-space-lg);
+    border-bottom: 1px solid var(--ios-separator);
+    transition: background var(--ios-transition-fast);
+    cursor: pointer;
+    position: relative;
+}
+
+.ios-agenda-event-card:last-child {
+    border-bottom: none;
+}
+
+.ios-agenda-event-card:hover {
+    background: var(--ios-bg-tertiary);
+}
+
+.ios-agenda-event-card:active {
+    background: var(--ios-bg-secondary);
+}
+
+/* Vertical accent bar for event type */
+.ios-agenda-event-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: var(--ios-space-lg);
+    bottom: var(--ios-space-lg);
+    width: 3px;
+    border-radius: 2px;
+    background: var(--ios-event-default);
+}
+
+.ios-agenda-event-card.practice::before {
+    background: var(--ios-event-practice);
+}
+
+.ios-agenda-event-card.game::before {
+    background: var(--ios-event-game);
+}
+
+.ios-agenda-event-card.tournament::before {
+    background: var(--ios-event-tournament);
+}
+
+.ios-agenda-event-time {
+    font-size: var(--ios-text-base);
+    font-weight: var(--ios-weight-semibold);
+    color: var(--ios-text-primary);
+    margin-bottom: 2px;
+}
+
+.ios-agenda-event-duration {
+    font-size: var(--ios-text-xs);
+    color: var(--ios-text-tertiary);
+}
+
+/* Calendar View - iOS Calendar Month Style */
+.ios-calendar-container {
+    background: var(--ios-bg-primary);
+    border-radius: var(--ios-radius-lg);
+    overflow: hidden;
+    box-shadow: var(--ios-shadow-sm);
+}
+
+.ios-calendar-header {
+    padding: var(--ios-space-lg);
+    border-bottom: 1px solid var(--ios-separator);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ios-calendar-month-title {
+    font-size: var(--ios-text-xl);
+    font-weight: var(--ios-weight-semibold);
+    color: var(--ios-text-primary);
+}
+
+.ios-calendar-nav-button {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--ios-blue);
+    cursor: pointer;
+    transition: background var(--ios-transition-fast);
+}
+
+.ios-calendar-nav-button:hover {
+    background: var(--ios-bg-secondary);
+}
+
+.ios-calendar-nav-button:active {
+    background: var(--ios-bg-grouped);
+}
+
+.ios-calendar-today-button {
+    padding: 6px 12px;
+    border-radius: 16px;
+    background: transparent;
+    border: none;
+    color: var(--ios-blue);
+    font-size: var(--ios-text-base);
+    font-weight: var(--ios-weight-medium);
+    cursor: pointer;
+    transition: background var(--ios-transition-fast);
+}
+
+.ios-calendar-today-button:hover {
+    background: var(--ios-bg-secondary);
+}
+
+.ios-calendar-grid {
+    padding: var(--ios-space-md);
+}
+
+.ios-calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    margin-bottom: var(--ios-space-sm);
+}
+
+.ios-calendar-weekday {
+    text-align: center;
+    font-size: var(--ios-text-xs);
+    font-weight: var(--ios-weight-semibold);
+    color: var(--ios-text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: var(--ios-space-xs) 0;
+}
+
+.ios-calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+
+.ios-calendar-day {
+    aspect-ratio: 1;
+    min-height: 80px;
+    padding: var(--ios-space-xs);
+    border-radius: var(--ios-radius-sm);
+    background: var(--ios-bg-tertiary);
+    cursor: pointer;
+    transition: all var(--ios-transition-fast);
+    position: relative;
+    overflow: hidden;
+}
+
+.ios-calendar-day:hover {
+    background: var(--ios-bg-secondary);
+    transform: scale(1.02);
+}
+
+.ios-calendar-day.today {
+    background: rgba(0, 122, 255, 0.08);
+}
+
+.ios-calendar-day.empty {
+    background: transparent;
+    cursor: default;
+}
+
+.ios-calendar-day.empty:hover {
+    transform: none;
+}
+
+.ios-calendar-day-number {
+    font-size: var(--ios-text-base);
+    font-weight: var(--ios-weight-medium);
+    color: var(--ios-text-secondary);
+    text-align: right;
+    margin-bottom: var(--ios-space-xs);
+}
+
+.ios-calendar-day.today .ios-calendar-day-number {
+    color: var(--ios-blue);
+    font-weight: var(--ios-weight-semibold);
+}
+
+/* Event dots in calendar */
+.ios-calendar-events {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ios-calendar-event-dot {
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--ios-event-default);
+}
+
+.ios-calendar-event-dot.practice {
+    background: var(--ios-event-practice);
+}
+
+.ios-calendar-event-dot.game {
+    background: var(--ios-event-game);
+}
+
+.ios-calendar-event-dot.tournament {
+    background: var(--ios-event-tournament);
+}
+
+.ios-calendar-event-pill {
+    font-size: 10px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    background: var(--ios-bg-primary);
+    color: var(--ios-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-left: 2px solid var(--ios-event-default);
+}
+
+.ios-calendar-event-pill.practice {
+    border-left-color: var(--ios-event-practice);
+}
+
+.ios-calendar-event-pill.game {
+    border-left-color: var(--ios-event-game);
+}
+
+.ios-calendar-event-pill.tournament {
+    border-left-color: var(--ios-event-tournament);
+}
+
+.ios-calendar-more {
+    font-size: 10px;
+    color: var(--ios-text-tertiary);
+    padding: 2px 4px;
+}
+
+/* Actions - Hidden by default, shown on hover */
+.ios-event-actions {
+    opacity: 0;
+    transition: opacity var(--ios-transition-fast);
+    display: flex;
+    gap: var(--ios-space-xs);
+}
+
+.ios-event-row:hover .ios-event-actions,
+.ios-agenda-event-card:hover .ios-event-actions {
+    opacity: 1;
+}
+
+.ios-action-button {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--ios-text-tertiary);
+    cursor: pointer;
+    transition: all var(--ios-transition-fast);
+}
+
+.ios-action-button:hover {
+    background: var(--ios-bg-secondary);
+    color: var(--ios-text-primary);
+}
+
+.ios-action-button.destructive {
+    color: var(--ios-red);
+}
+
+.ios-action-button.destructive:hover {
+    background: rgba(255, 59, 48, 0.1);
+}
+
+/* Cancelled state */
+.ios-event-cancelled {
+    opacity: 0.5;
+}
+
+.ios-event-cancelled .ios-event-title {
+    text-decoration: line-through;
+    color: var(--ios-text-tertiary);
+}
+
+.ios-cancelled-badge {
+    display: inline-flex;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(255, 59, 48, 0.1);
+    color: var(--ios-red);
+    font-size: var(--ios-text-xs);
+    font-weight: var(--ios-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .ios-event-row {
+        margin: 0 var(--ios-space-md) var(--ios-space-sm) var(--ios-space-md);
+        padding: var(--ios-space-md);
+    }
+
+    .ios-calendar-day {
+        min-height: 60px;
+    }
+
+    .ios-event-actions {
+        opacity: 1;
+        /* Always visible on mobile */
+    }
+}
