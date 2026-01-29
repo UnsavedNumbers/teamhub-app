@@ -596,12 +596,13 @@ export default function Payments() {
         title={t('admin.payments.title')}
         subtitle={t('admin.payments.subtitle')} 
         actions={
-          <FeatureGatedButton 
+          <FeatureGatedButton
             actionKey="create_fee"
             onClick={() => navigate(getLink(RouteKeys.ADMIN_CREATE_FEE))}
             disabled={isButtonDisabled}
             title={buttonTooltip}
-            variant="blue"
+            themeNamespace="oa"
+            variant="primary"
             className="w-full sm:w-auto"
           >
             Assign Fee

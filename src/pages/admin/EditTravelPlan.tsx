@@ -456,7 +456,7 @@ export default function EditTravelPlan() {
             <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>
             <div className="pa-form-actions">
               <Button variant="secondary" onClick={() => navigate('/admin/travel')}>Back to Travel Plans</Button>
-              <Button variant="blue" onClick={() => { setError(null); fetchPlan(); setLoading(true); }}>Retry</Button>
+              <OrgAdminButton variant="primary" onClick={() => { setError(null); fetchPlan(); setLoading(true); }}>Retry</OrgAdminButton>
             </div>
           </Card>
         </div>
@@ -612,7 +612,7 @@ export default function EditTravelPlan() {
             />
 
             <div className="pa-form-actions">
-              <Button variant="blue" onClick={() => navigate('/admin/travel')} disabled={saving} className="w-full sm:w-auto">Cancel</Button>
+              <OrgAdminButton variant="primary" onClick={() => navigate('/admin/travel')} disabled={saving} className="w-full sm:w-auto">Cancel</OrgAdminButton>
               <Button type="submit" loading={saving} disabled={saving} className="pa-form-submit-btn w-full sm:w-auto">Save Changes</Button>
             </div>
           </form>

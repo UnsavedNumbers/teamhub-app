@@ -6,7 +6,7 @@ import { getTeamDetails, getTeamRoster } from '../../data/services/teamsService'
 import { supabase } from '../../lib/supabase'
 import { getLink } from '../../utils/routes/helpers'
 import type { FakeTeamMember } from '../../data/fake/fakeTeams'
-import { Button } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { AddExistingAthleteModal } from '../../components/admin/AddExistingAthleteModal'
 import { EmptyRosterState } from '../../components/admin/EmptyRosterState'
 import { TeamOverviewTab } from '../../components/admin/TeamOverviewTab'
@@ -374,9 +374,9 @@ export default function TeamDetail() {
           <h1 className="pa-page-title">Team not found</h1>
           {error && <p className="pa-body-m" style={{ color: 'var(--pa-danger)', marginTop: 'var(--pa-space-2)' }}>{error}</p>}
           <div style={{ marginTop: 'var(--pa-space-4)' }}>
-            <Button variant="blue" onClick={() => navigate(getLink('admin.teams.list'))}>
+            <OrgAdminButton variant="primary" onClick={() => navigate(getLink('admin.teams.list'))}>
               Back to Teams
-            </Button>
+            </OrgAdminButton>
           </div>
         </div>
       </div>

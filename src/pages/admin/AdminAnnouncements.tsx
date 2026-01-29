@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getAnnouncements, createAnnouncement, deleteAnnouncement, type Announcement } from '../../data/services/messagesService'
 import { getTeams } from '../../data/services/teamsService'
@@ -18,6 +18,7 @@ import {
 import { cn } from '../../utils/cn'
 import CreateAnnouncementModal from '../../components/admin/CreateAnnouncementModal'
 import { getAnnouncementEmoji, type AnnouncementType } from '../../utils/announcementTypes'
+import '../../styles/orgAdmin.css'
 
 interface AnnouncementDisplay {
   id: string
@@ -560,56 +561,66 @@ export default function AdminAnnouncements() {
         </Card>
       )}
 
-      {/* Filters */}
-      <Card className="pa-mb-6 pa-filter-section">
-        <div className="pa-filter-row">
-          <div className={cn('pa-flex', 'pa-flex-col', 'sm:pa-flex-row', 'pa-gap-3', 'pa-flex-1', 'pa-flex-wrap')}>
-            <div className={cn('pa-flex', 'pa-gap-2', 'pa-flex-wrap')}>
-              {(['all', 'urgent', 'normal'] as PriorityFilter[]).map((f) => (
-                <Button
-                  key={f}
-                  variant={priorityFilter === f ? 'primary' : 'secondary'}
-                  size="compact"
-                  onClick={() => handleFilterChange(f)}
-                  className="pa-flex-1 sm:pa-flex-none"
-                >
-                  {f === 'all' ? 'ALL' : f.toUpperCase()}
-                </Button>
-              ))}
-            </div>
-
-            <Select
-              value={selectedTeamFilter || ''}
-              onChange={(e) => handleTeamFilterChange(e.target.value)}
-              options={[
-                { value: '', label: 'All Teams' },
-                ...teams.map(t => ({ value: t.id, label: t.name }))
-              ]}
-              className="pa-w-full sm:pa-w-auto"
-              style={{ minWidth: '200px' }}
-            />
-
-            <div className={cn('pa-flex', 'pa-gap-2', 'pa-flex-wrap')}>
-              <Button
-                variant={dateRangeFilter === 'recent' ? 'primary' : 'secondary'}
-                size="compact"
-                onClick={() => setDateRangeFilter('recent')}
-                className="pa-flex-1 sm:pa-flex-none"
-              >
-                Recent (90 days)
-              </Button>
-              <Button
-                variant={dateRangeFilter === 'all' ? 'primary' : 'secondary'}
-                size="compact"
-                onClick={() => setDateRangeFilter('all')}
-                className="pa-flex-1 sm:pa-flex-none"
-              >
-                All Time
-              </Button>
-            </div>
+      {/* Filters (Redesigned) */}
+      <div className="oa-filter-grid">
+        {/* Priority Group */}
+        <div className="oa-filter-group oa-filter-group--narrow">
+          <label className="oa-filter-label">Priority Level</label>
+          <div className="oa-toggle-group">
+            <button 
+                className={cn('oa-toggle-btn', priorityFilter === 'all' && 'active')}
+                onClick={() => handleFilterChange('all')}
+            >
+                ALL
+            </button>
+            <button 
+                className={cn('oa-toggle-btn', priorityFilter === 'urgent' && 'active')}
+                onClick={() => handleFilterChange('urgent')}
+            >
+                URGENT
+            </button>
+            <button 
+                className={cn('oa-toggle-btn', priorityFilter === 'normal' && 'active')}
+                onClick={() => handleFilterChange('normal')}
+            >
+                NORMAL
+            </button>
           </div>
         </div>
-      </Card>
+
+        {/* Team Selection */}
+        <div className="oa-filter-group">
+          <label className="oa-filter-label">Team Scope</label>
+          <Select
+            value={selectedTeamFilter || ''}
+            onChange={(e: any) => handleTeamFilterChange(e.target.value)}
+            options={[
+              { value: '', label: 'All Teams (Global Scope)' },
+              ...teams.map(t => ({ value: t.id, label: t.name }))
+            ]}
+            className="pa-w-full"
+          />
+        </div>
+
+        {/* Time Range */}
+        <div className="oa-filter-group oa-filter-group--narrow">
+          <label className="oa-filter-label">Time Range</label>
+          <div className="oa-toggle-group">
+            <button 
+                className={cn('oa-toggle-btn', dateRangeFilter === 'recent' && 'active')}
+                onClick={() => setDateRangeFilter('recent')}
+            >
+                Recent (90 Days)
+            </button>
+            <button 
+                className={cn('oa-toggle-btn', dateRangeFilter === 'all' && 'active')}
+                onClick={() => setDateRangeFilter('all')}
+            >
+                All Time
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Table or Empty State */}
       {displayAnnouncements.length === 0 && !loading ? (

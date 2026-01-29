@@ -13,7 +13,8 @@ import type {
   FilterState,
   AthleteWithTeams
 } from '../../types/athletes'
-import { Button, Input, EmptyState } from '../platformAdmin'
+import { Input, EmptyState } from '../platformAdmin'
+import { OrgAdminButton } from './OrgAdminButton'
 
 /**
  * Debounce utility function
@@ -364,22 +365,22 @@ export function AddExistingAthleteModal({
                     {athletes.length} athlete{athletes.length !== 1 ? 's' : ''} found
                   </p>
                   <div style={{ display: 'flex', gap: 'var(--pa-space-2)' }}>
-                    <Button
+                    <OrgAdminButton
                       variant="secondary"
-                      size="small"
+                      size="compact"
                       onClick={handleSelectAll}
                       disabled={submitting}
                     >
                       Select All
-                    </Button>
-                    <Button
+                    </OrgAdminButton>
+                    <OrgAdminButton
                       variant="secondary"
-                      size="small"
+                      size="compact"
                       onClick={handleDeselectAll}
                       disabled={submitting}
                     >
                       Deselect All
-                    </Button>
+                    </OrgAdminButton>
                   </div>
                 </div>
 
@@ -471,21 +472,21 @@ export function AddExistingAthleteModal({
               {selectedCount > 0 ? `${selectedCount} athlete${selectedCount !== 1 ? 's' : ''} selected` : 'No athletes selected'}
             </p>
             <div style={{ display: 'flex', gap: 'var(--pa-space-3)' }}>
-              <Button
+              <OrgAdminButton
                 variant="secondary"
                 onClick={onClose}
                 disabled={submitting}
               >
                 Cancel
-              </Button>
-              <Button
-                variant="blue"
+              </OrgAdminButton>
+              <OrgAdminButton
+                variant="primary"
                 onClick={handleSubmit}
                 disabled={submitting || selectedCount === 0}
                 loading={submitting}
               >
                 {submitting ? 'Adding...' : 'Add to Team'}
-              </Button>
+              </OrgAdminButton>
             </div>
           </div>
         </div>

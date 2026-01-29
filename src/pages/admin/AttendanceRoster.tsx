@@ -6,11 +6,11 @@ import { getEventAttendance, updateAttendance } from '../../data/services/attend
 import type { AttendanceRecord, AttendanceStatus } from '../../types/attendance'
 import {
   Card, 
-  Button, 
   PlatformDataTable, 
   Badge,
   type ColumnConfig 
 } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 
 export default function AttendanceRoster() {
   const { id } = useParams<{ id: string }>() // Route is events/:id/attendance, so param is :id? Wait App.tsx said :id
@@ -117,9 +117,9 @@ export default function AttendanceRoster() {
   return (
     <div className="pa-root">
       <div className="pa-flex pa-items-center pa-gap-4 pa-mb-6">
-        <Button variant="blue" onClick={() => navigate('/admin/attendance')}>
+        <OrgAdminButton variant="primary" onClick={() => navigate('/admin/attendance')}>
            Back to Attendance
-        </Button>
+        </OrgAdminButton>
         <div className="pa-flex-1">
             <h1 className="pa-text-2xl pa-font-bold">Event Attendance</h1>
         </div>
