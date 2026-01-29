@@ -12,6 +12,7 @@ export interface LicenseSummary {
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
   stripePriceId?: string | null
+  tierName?: string | null
   // Computed properties used by UI components
   isTrial?: boolean
   isGracePeriod?: boolean

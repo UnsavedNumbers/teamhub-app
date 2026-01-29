@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { PageHeader, Card, Button, Input, Select, Badge, Checkbox, ConfirmDialog, ErrorState, Accordion } from '../../components/platformAdmin'
 import type { LicenseTier, FeatureEntitlement, TierFeatureAssignment, StripePriceVerification } from '../../types/licenseTiers.types'
 import { isStripeVerificationValid } from '../../utils/licenseEntitlementsHelpers'
@@ -31,6 +31,8 @@ import { useI18n } from '../../i18n/useI18n'
 export default function LicenseTierDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const hashFeatureId = location.hash?.startsWith('#feature-') ? location.hash.slice('#feature-'.length) : null
   const { isOffline } = useOffline()
   const { t } = useI18n()
   const isNew = id === 'new'
@@ -510,6 +512,17 @@ export default function LicenseTierDetail() {
     return acc
   }, {} as Record<string, FeatureEntitlement[]>)
 
+  // When navigating with #feature-{id}, expand the accordion and scroll to the feature
+  useEffect(() => {
+    if (!hashFeatureId || features.length === 0) return
+    const el = document.getElementById(`feature-${hashFeatureId}`)
+    if (!el) return
+    const timer = setTimeout(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [hashFeatureId, features.length])
+
   if (invalidRoute) {
     return (
       <div>
@@ -910,10 +923,11 @@ export default function LicenseTierDetail() {
             items={Object.entries(featuresByCategory).map(([category, categoryFeatures]) => {
               const includedCount = categoryFeatures.filter(f => assignments[f.id]?.included).length
               const totalCount = categoryFeatures.length
+              const categoryContainsHashFeature = hashFeatureId != null && categoryFeatures.some(f => f.id === hashFeatureId)
               return {
                 title: category,
                 count: `${includedCount} / ${totalCount}`,
-                defaultExpanded: false,
+                defaultExpanded: categoryContainsHashFeature,
                 children: (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-3)' }}>
                     {categoryFeatures.map((feature) => {
@@ -923,6 +937,7 @@ export default function LicenseTierDetail() {
                       return (
                         <div
                           key={feature.id}
+                          id={`feature-${feature.id}`}
                           style={{
                             padding: 'var(--pa-space-4)',
                             border: '1px solid var(--pa-n100)',
@@ -993,30 +1008,28 @@ export default function LicenseTierDetail() {
                                 </div>
                               )}
 
-                              {feature.feature_type === 'permission' && (
-                                <div className="pa-form-group" style={{ marginBottom: 0 }}>
-                                  <label className="pa-label" style={{ fontSize: '12px', marginBottom: 'var(--pa-space-2)' }}>
-                                    Role Access
-                                  </label>
-                                  <div className="pa-flex pa-flex-col pa-gap-2">
-                                    <Checkbox
-                                      checked={assignment?.role_admin ?? true}
-                                      onChange={(e) => updateAssignment(feature.id, { role_admin: e.target.checked })}
-                                      label="Admin"
-                                    />
-                                    <Checkbox
-                                      checked={assignment?.role_coach ?? true}
-                                      onChange={(e) => updateAssignment(feature.id, { role_coach: e.target.checked })}
-                                      label="Coach"
-                                    />
-                                    <Checkbox
-                                      checked={assignment?.role_parent ?? false}
-                                      onChange={(e) => updateAssignment(feature.id, { role_parent: e.target.checked })}
-                                      label="Parent"
-                                    />
-                                  </div>
+                              <div className="pa-form-group" style={{ marginBottom: 0 }}>
+                                <label className="pa-label" style={{ fontSize: '12px', marginBottom: 'var(--pa-space-2)' }}>
+                                  Role Access
+                                </label>
+                                <div className="pa-flex pa-flex-col pa-gap-2">
+                                  <Checkbox
+                                    checked={assignment?.role_admin ?? true}
+                                    onChange={(e) => updateAssignment(feature.id, { role_admin: e.target.checked })}
+                                    label="Admin"
+                                  />
+                                  <Checkbox
+                                    checked={assignment?.role_coach ?? true}
+                                    onChange={(e) => updateAssignment(feature.id, { role_coach: e.target.checked })}
+                                    label="Coach"
+                                  />
+                                  <Checkbox
+                                    checked={assignment?.role_parent ?? false}
+                                    onChange={(e) => updateAssignment(feature.id, { role_parent: e.target.checked })}
+                                    label="Parent"
+                                  />
                                 </div>
-                              )}
+                              </div>
                             </div>
                           )}
                         </div>

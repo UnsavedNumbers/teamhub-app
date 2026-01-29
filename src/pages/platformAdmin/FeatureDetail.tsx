@@ -745,7 +745,7 @@ export default function FeatureDetail() {
                     <button
                       type="button"
                       className="pa-tier-assignment-card__configure"
-                      onClick={() => navigate(`/platform-admin/licenses/tiers/${tier.id}`)}
+                      onClick={() => navigate(`/platform-admin/licenses/tiers/${tier.id}#feature-${feature.id}`)}
                       disabled={isSaving}
                     >
                       Configure Details
