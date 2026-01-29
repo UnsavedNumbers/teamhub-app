@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AdminPageHeader, Card, Input, Button, ErrorState } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { useUserContext } from '../../hooks/useUserContext'
 import { createFamily } from '../../data/services/familyService'
@@ -78,14 +79,13 @@ export default function CreateFamily() {
             </div>
 
             <div className="pa-flex pa-justify-end pa-gap-4 pa-mt-8">
-              <Button 
-                type="button" 
-                variant="blue" 
+              <OrgAdminButton
+                variant="primary"
                 onClick={() => navigate(getLink('admin.guardians.list'))}
                 disabled={loading}
               >
                 Cancel
-              </Button>
+              </OrgAdminButton>
               <Button 
                 type="submit" 
                 disabled={loading || !formData.name}

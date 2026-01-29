@@ -7,6 +7,7 @@ import { getPrograms, getSportIconUrl, getSports, deleteSportIcon, updateSportCu
 import type { Program, Sport } from '../../data/types/organization'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { AdminPageHeader, Button, Card } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { FileUpload } from '../../components/common/FileUpload'
 import { getLink } from '../../utils/routes'
 import './SportDetail.css'
@@ -195,7 +196,7 @@ export default function SportDetail() {
                   <Button variant="secondary" className="w-full sm:w-auto min-h-[44px]">View {sport?.name || ''} Programs</Button>
                 </Link>
                 <Link to={`${formsRoute}?type=program&sport_id=${sportId}&returnUrl=${encodeURIComponent(sport?.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : programsRoute)}`} className="w-full sm:w-auto">
-                  <Button variant="blue" className="w-full sm:w-auto min-h-[44px]">Add Program</Button>
+                  <OrgAdminButton variant="primary" className="w-full sm:w-auto min-h-[44px]">Add Program</OrgAdminButton>
                 </Link>
               </div>
             }

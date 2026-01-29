@@ -10,6 +10,7 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { getSeasons, deleteSeason, isSeasonEmpty } from '../../data/services/seasonsService'
 import type { Season } from '../../data/types/organization'
 import { AdminPageHeader, Card, Button, ConfirmDialog, EmptyState, Badge, PlatformDataTable } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
@@ -211,14 +212,14 @@ export default function SeasonsManagement() {
         ]}
         actions={
           seasons.length > 0 && (
-            <Button 
+            <OrgAdminButton
                 icon="add"
+                variant="primary"
                 onClick={() => navigate(`${getLink('admin.organization.forms')}?type=season&returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`)}
-                variant="blue"
                 className="w-full sm:w-auto"
             >
                 Add Season
-            </Button>
+            </OrgAdminButton>
           )
         }
       />

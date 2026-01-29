@@ -12,6 +12,7 @@ import { getTeams, createTeam, updateTeam } from '../../data/services/teamsServi
 import { getSeasons, createSeason, updateSeason } from '../../data/services/seasonsService'
 import type { Sport, Program, Level, Team, Season, GenderCategory, LevelType } from '../../data/types/organization'
 import { AdminPageHeader, Card, Button, Input, Select, DatePicker, Checkbox } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { FileUpload } from '../../components/common/FileUpload'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import HierarchyCreationPrompt from '../../components/admin/HierarchyCreationPrompt'
@@ -844,7 +845,7 @@ export default function OrganizationStructureForms() {
               {t('admin.structureForms.empty.noSportsForProgram')}
             </div>
             <Link to={`${getLink('admin.organization.forms')}?type=sport`}>
-              <Button variant="blue" className="w-full sm:w-auto">{t('admin.structureForms.empty.createSportFirst')}</Button>
+              <OrgAdminButton variant="primary" className="w-full sm:w-auto">{t('admin.structureForms.empty.createSportFirst')}</OrgAdminButton>
             </Link>
           </Card>
         </div>
@@ -871,7 +872,7 @@ export default function OrganizationStructureForms() {
               {t('admin.structureForms.empty.noProgramsForLevel')}
             </div>
             <Link to={`${getLink('admin.organization.forms')}?type=program`}>
-              <Button variant="blue" className="w-full sm:w-auto">{t('admin.structureForms.empty.createProgramFirst')}</Button>
+              <OrgAdminButton variant="primary" className="w-full sm:w-auto">{t('admin.structureForms.empty.createProgramFirst')}</OrgAdminButton>
             </Link>
           </Card>
         </div>
@@ -898,7 +899,7 @@ export default function OrganizationStructureForms() {
               {t('admin.structureForms.empty.noLevelsForTeam')}
             </div>
             <Link to={`${getLink('admin.organization.forms')}?type=level`}>
-              <Button variant="blue" className="w-full sm:w-auto">{t('admin.structureForms.empty.createLevelFirst')}</Button>
+              <OrgAdminButton variant="primary" className="w-full sm:w-auto">{t('admin.structureForms.empty.createLevelFirst')}</OrgAdminButton>
             </Link>
           </Card>
         </div>
@@ -924,7 +925,7 @@ export default function OrganizationStructureForms() {
             {t('admin.structureForms.empty.noSportsForProgram')}
           </div>
           <Link to={`${getLink('admin.organization.forms')}?type=sport`}>
-            <Button variant="blue" className="w-full sm:w-auto">{t('admin.structureForms.empty.createSportFirst')}</Button>
+            <OrgAdminButton variant="primary" className="w-full sm:w-auto">{t('admin.structureForms.empty.createSportFirst')}</OrgAdminButton>
           </Link>
         </Card>
       </div>
@@ -948,7 +949,7 @@ export default function OrganizationStructureForms() {
             {t('admin.structureForms.empty.noProgramsForLevel')}
           </div>
           <Link to={`${getLink('admin.organization.forms')}?type=program`}>
-            <Button variant="blue" className="w-full sm:w-auto">{t('admin.structureForms.empty.createProgramFirst')}</Button>
+            <OrgAdminButton variant="primary" className="w-full sm:w-auto">{t('admin.structureForms.empty.createProgramFirst')}</OrgAdminButton>
           </Link>
         </Card>
       </div>
@@ -972,7 +973,7 @@ export default function OrganizationStructureForms() {
             {t('admin.structureForms.empty.noLevelsForTeam')}
           </div>
           <Link to={`${getLink('admin.organization.forms')}?type=level`}>
-            <Button variant="blue" className="w-full sm:w-auto">{t('admin.structureForms.empty.createLevelFirst')}</Button>
+            <OrgAdminButton variant="primary" className="w-full sm:w-auto">{t('admin.structureForms.empty.createLevelFirst')}</OrgAdminButton>
           </Link>
         </Card>
       </div>
@@ -1023,19 +1024,19 @@ export default function OrganizationStructureForms() {
           <Card title={t('admin.structureForms.selector.title')} className="pa-mb-6">
             <div className="pa-flex pa-flex-col pa-gap-3">
               <Link to={`${getLink('admin.organization.forms')}?type=sport`}>
-                <Button variant="blue" className="w-full sm:w-auto">{t('admin.structureForms.actions.addItem', { item: formLabels.sport })}</Button>
+                <OrgAdminButton variant="primary" className="w-full sm:w-auto">{t('admin.structureForms.actions.addItem', { item: formLabels.sport })}</OrgAdminButton>
               </Link>
               <Link to={`${getLink('admin.organization.forms')}?type=program`}>
-                <Button variant="blue" className="w-full sm:w-auto">{t('admin.structureForms.actions.addItem', { item: formLabels.program })}</Button>
+                <OrgAdminButton variant="primary" className="w-full sm:w-auto">{t('admin.structureForms.actions.addItem', { item: formLabels.program })}</OrgAdminButton>
               </Link>
               <Link to={`${getLink('admin.organization.forms')}?type=level`}>
-                <Button variant="blue" className="w-full sm:w-auto">{t('admin.structureForms.actions.addItem', { item: formLabels.level })}</Button>
+                <OrgAdminButton variant="primary" className="w-full sm:w-auto">{t('admin.structureForms.actions.addItem', { item: formLabels.level })}</OrgAdminButton>
               </Link>
               <Link to={`${getLink('admin.organization.forms')}?type=team`}>
-                <Button variant="blue" className="w-full sm:w-auto">{t('admin.structureForms.actions.addItem', { item: formLabels.team })}</Button>
+                <OrgAdminButton variant="primary" className="w-full sm:w-auto">{t('admin.structureForms.actions.addItem', { item: formLabels.team })}</OrgAdminButton>
               </Link>
               <Link to={`${getLink('admin.organization.forms')}?type=season`}>
-                <Button variant="primary">{t('admin.structureForms.actions.addItem', { item: formLabels.season })}</Button>
+                <OrgAdminButton variant="primary">{t('admin.structureForms.actions.addItem', { item: formLabels.season })}</OrgAdminButton>
               </Link>
             </div>
           </Card>
@@ -1309,7 +1310,7 @@ export default function OrganizationStructureForms() {
               >
                 Cancel
               </Button>
-              <Button
+                <Button
                 disabled={!canCreateProgram || submitting.program}
                 loading={submitting.program}
                 onClick={async () => {
@@ -1513,7 +1514,7 @@ export default function OrganizationStructureForms() {
               >
                 Cancel
               </Button>
-              <Button
+                <Button
                 disabled={!canCreateLevel || submitting.level}
                 loading={submitting.level}
                 onClick={async () => {
@@ -1617,8 +1618,8 @@ export default function OrganizationStructureForms() {
                   setSubmitting((prev) => ({ ...prev, level: false }))
                 }}
               >
-                {t(editType === 'level' ? 'admin.structureForms.actions.updateItem' : 'admin.structureForms.actions.createItem', { item: formLabels.level })}
-              </Button>
+{t(editType === 'level' ? 'admin.structureForms.actions.updateItem' : 'admin.structureForms.actions.createItem', { item: formLabels.level })}
+                </Button>
             </div>
           </div>
         </Card>
@@ -1691,7 +1692,7 @@ export default function OrganizationStructureForms() {
               >
                 Cancel
               </Button>
-              <Button
+                <Button
                 disabled={!canCreateTeam || submitting.team}
                 loading={submitting.team}
                 onClick={async () => {
@@ -1899,7 +1900,7 @@ export default function OrganizationStructureForms() {
               >
                 Cancel
               </Button>
-              <Button
+                <Button
                 disabled={!canCreateSeason || submitting.season}
                 loading={submitting.season}
                 onClick={async () => {

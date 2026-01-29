@@ -10,6 +10,7 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
 import { getUniformKit, updateUniformKit } from '../../data/services/uniformsService'
 import { AdminPageHeader, Card, Button } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { SportUniformForm } from '../../components/uniforms/SportUniformForm'
 import type { CreateUniformKitDTO } from '../../types/uniforms'
 
@@ -110,9 +111,9 @@ export default function EditUniform() {
         <AdminPageHeader title="Edit Uniform" />
         <Card>
           <div className="pa-alert pa-alert--error">{error}</div>
-          <Button onClick={() => navigate('/admin/uniforms')} variant="blue">
+          <OrgAdminButton onClick={() => navigate('/admin/uniforms')} variant="primary">
             Back to Uniforms
-          </Button>
+          </OrgAdminButton>
         </Card>
       </div>
     )

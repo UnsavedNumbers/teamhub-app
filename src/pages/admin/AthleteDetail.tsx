@@ -750,9 +750,9 @@ export default function AthleteDetail() {
           <h1 className="pa-page-title">{t('admin.athletes.notFound')}</h1>
           {error && <p className="pa-body-m" style={{ color: 'var(--pa-danger)', marginTop: 'var(--pa-space-2)' }}>{error}</p>}
           <div style={{ marginTop: 'var(--pa-space-4)' }}>
-            <Button variant="blue" onClick={() => navigate(getLink('admin.athletes.list'))}>
+            <OrgAdminButton variant="primary" onClick={() => navigate(getLink('admin.athletes.list'))}>
               {t('admin.athletes.backToList')}
-            </Button>
+            </OrgAdminButton>
           </div>
         </div>
       </div>
@@ -931,15 +931,15 @@ export default function AthleteDetail() {
                 >
                   {displayName}
                 </h1>
-                <Button
+                <OrgAdminButton
                   onClick={handleEditClick}
                   disabled={navigating}
-                  variant="blue"
+                  variant="primary"
                   icon="edit"
                   size="compact"
                 >
                   {t('admin.athletes.edit')}
-                </Button>
+                </OrgAdminButton>
               </div>
 
               {/* Info Badges Row */}
@@ -1284,14 +1284,14 @@ export default function AthleteDetail() {
               <Card>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--pa-space-4)' }}>
                   <h2 className="pa-card-title" style={{ margin: 0 }}>{t('admin.athletes.guardians.title')}</h2>
-                  <Button
-                    variant="blue"
+                  <OrgAdminButton
+                    variant="primary"
                     icon="person_add"
                     onClick={handleOpenLinkGuardianModal}
                     disabled={isLinkingGuardian}
                   >
                     {t('admin.athletes.guardians.add')}
-                  </Button>
+                  </OrgAdminButton>
                 </div>
                 {guardians.length === 0 && pendingInvites.length === 0 ? (
                   <p className="pa-body-m" style={{ color: 'var(--pa-n500)' }}>{t('admin.athletes.guardians.empty')}</p>
@@ -1399,14 +1399,14 @@ export default function AthleteDetail() {
               >
                 {t('admin.athletes.guardians.cancel')}
               </Button>
-              <Button
-                variant="blue"
+              <OrgAdminButton
+                variant="primary"
                 onClick={handleLinkGuardian}
                 disabled={isLinkingGuardian || !guardianEmail || !validateGuardianEmail(guardianEmail) || !!linkGuardianError}
                 loading={isLinkingGuardian}
               >
                 {t('admin.athletes.guardians.linkButton')}
-              </Button>
+              </OrgAdminButton>
             </div>
           </div>
         </div>

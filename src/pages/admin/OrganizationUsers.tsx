@@ -118,10 +118,9 @@ export default function OrganizationUsers() {
         title={t('admin.users.title')}
         subtitle={t('admin.users.subtitle')} 
         actions={
-          <Button onClick={() => navigate('/admin/users/new')} variant="blue" className="w-full sm:w-auto">
-            <span className="material-symbols-outlined">add</span>
+          <OrgAdminButton onClick={() => navigate('/admin/users/new')} variant="primary" icon="add" className="w-full sm:w-auto">
             {t('admin.users.createSubtitle').replace('Add', 'Create').split(' ')[0] || 'Add'} User
-          </Button>
+          </OrgAdminButton>
         }
       />
 

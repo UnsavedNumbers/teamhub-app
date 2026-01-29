@@ -13,6 +13,7 @@ import {
 import { supabase } from '../../lib/supabase'
 import { getLink } from '../../utils/routes'
 import { AdminPageHeader, Card, Button, ConfirmDialog } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { showSuccess, showError } from '../../utils/toast'
 
 interface PaymentDetailData {
@@ -610,8 +611,8 @@ export default function PaymentDetail() {
               {pageTitle}
             </h1>
           </div>
-          <Button
-            variant="blue"
+          <OrgAdminButton
+            variant="primary"
             onClick={handleDownloadReceipt}
             disabled={!isPaid || actionLoading !== null}
             loading={actionLoading === 'download'}
@@ -619,7 +620,7 @@ export default function PaymentDetail() {
             className="flex items-center gap-2 uppercase tracking-widest w-full sm:w-auto min-h-[44px]"
           >
             DOWNLOAD PDF
-          </Button>
+          </OrgAdminButton>
         </div>
 
         {error && (

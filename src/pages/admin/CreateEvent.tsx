@@ -19,6 +19,7 @@ import {
   Checkbox,
   Badge
 } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
 import type { StructuredAddress } from '../../types/location'
 import { startTransition } from 'react'
@@ -801,10 +802,9 @@ export default function CreateEvent() {
           {/* SECTION 6: ACTIONS */}
           {/* Mobile: Full-width stacked | Tablet: Full-width or right-aligned | Desktop: Right-aligned */}
           <div className="pa-form-actions">
-            <Button 
-              variant="blue" 
+            <OrgAdminButton
+              variant="primary"
               onClick={() => {
-                // Clear saved form data when canceling
                 try {
                   sessionStorage.removeItem(STORAGE_KEY)
                 } catch (err) {
@@ -815,7 +815,7 @@ export default function CreateEvent() {
               className="w-full sm:w-auto"
             >
               Cancel
-            </Button>
+            </OrgAdminButton>
             <Button type="submit" loading={saving} className="pa-form-submit-btn w-full sm:w-auto">Create Event</Button>
           </div>
         </form>

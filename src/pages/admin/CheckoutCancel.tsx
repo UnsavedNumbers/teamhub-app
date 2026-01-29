@@ -5,6 +5,7 @@ import {
   Card, 
   Button 
 } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 
 export default function CheckoutCancel() {
   const navigate = useNavigate()
@@ -22,7 +23,7 @@ export default function CheckoutCancel() {
         </div>
         <div className="pa-flex pa-gap-3">
           <Button onClick={() => navigate('/admin/organization/billing')}>{t('checkout.returnToBilling')}</Button>
-          <Button variant="blue" onClick={() => navigate('/admin/organization/billing/plan-selection')}>{t('billing.planSelectionTitle')}</Button>
+          <OrgAdminButton variant="primary" onClick={() => navigate('/admin/organization/billing/plan-selection')}>{t('billing.planSelectionTitle')}</OrgAdminButton>
         </div>
       </Card>
     </div>

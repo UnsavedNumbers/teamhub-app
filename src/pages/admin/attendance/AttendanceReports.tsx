@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Card, CardHeader, CardTitle, CardContent, Button } from '../../../components/platformAdmin'
+import { OrgAdminButton } from '../../../components/admin/OrgAdminButton'
 import { useUserContext } from '../../../hooks/useUserContext'
 import { getAttendanceEvents, getAttendancePeople } from '../../../data/services/attendanceService'
 import {
@@ -117,13 +118,13 @@ export default function AttendanceReports() {
           <p className="pa-mb-4 pa-text-sm pa-text-neutral-500">
             Generate a full breakdown of attendance by team and season (last 90 days).
           </p>
-          <Button 
-            variant="blue" 
+          <OrgAdminButton
+            variant="primary"
             onClick={handleOrganizationSummary}
             disabled={loading || events.length === 0}
           >
             {loading ? 'Loading...' : 'Download CSV'}
-          </Button>
+          </OrgAdminButton>
           {events.length > 0 && (
             <p className="pa-mt-2 pa-text-xs pa-text-neutral-400">
               {events.length} events available
@@ -140,13 +141,13 @@ export default function AttendanceReports() {
           <p className="pa-mb-4 pa-text-sm pa-text-neutral-500">
             List of all events where attendance has not been submitted.
           </p>
-          <Button 
-            variant="blue" 
+          <OrgAdminButton
+            variant="primary"
             onClick={handleMissingAttendance}
             disabled={loading || events.length === 0}
           >
             {loading ? 'Loading...' : 'Download CSV'}
-          </Button>
+          </OrgAdminButton>
           {events.length > 0 && (
             <p className="pa-mt-2 pa-text-xs pa-text-neutral-400">
               {events.filter(e => e.status === 'missing').length} events missing attendance
@@ -164,13 +165,13 @@ export default function AttendanceReports() {
             List of players with attendance below the "Watch" threshold (70%).
           </p>
           <div className="pa-flex pa-gap-2">
-            <Button 
-              variant="blue" 
+            <OrgAdminButton
+              variant="primary"
               onClick={handleAtRiskCSV}
               disabled={loading || people.length === 0}
             >
               {loading ? 'Loading...' : 'Download CSV'}
-            </Button>
+            </OrgAdminButton>
             <Button 
               variant="secondary" 
               onClick={handleAtRiskPDF}

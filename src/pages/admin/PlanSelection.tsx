@@ -11,6 +11,7 @@ import {
   Card, 
   Button 
 } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 
 interface PlanCard {
   id: LicensePlan
@@ -72,7 +73,7 @@ export default function PlanSelection() {
     <div className="pa-root">
       <AdminPageHeader 
         title={t('billing.planSelectionTitle')} 
-        actions={<Button variant="blue" onClick={() => navigate('/admin/organization/billing')}>{t('common.goBack')}</Button>} 
+        actions={<OrgAdminButton variant="primary" onClick={() => navigate('/admin/organization/billing')}>{t('common.goBack')}</OrgAdminButton>} 
       />
 
       {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}

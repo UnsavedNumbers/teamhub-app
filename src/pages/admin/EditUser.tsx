@@ -390,7 +390,7 @@ export default function EditUser() {
             </div>
 
             <div className="pa-flex pa-justify-end pa-gap-3">
-              <Button variant="blue" onClick={() => navigate('/admin/organization/users')}>Cancel</Button>
+              <OrgAdminButton variant="primary" onClick={() => navigate('/admin/organization/users')}>Cancel</OrgAdminButton>
               <Button type="submit" loading={saving}>Save Changes</Button>
             </div>
           </form>

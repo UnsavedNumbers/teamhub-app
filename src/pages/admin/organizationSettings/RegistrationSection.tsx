@@ -12,6 +12,7 @@ import { useUserContext } from '../../../hooks/useUserContext'
 import { updateRegistrationSettings } from '../../../data/services/organizationSettingsService'
 import type { RegistrationSettings } from '../../../types/organizationSettings'
 import { Button, Checkbox } from '../../../components/platformAdmin'
+import { OrgAdminButton } from '../../../components/admin/OrgAdminButton'
 import { showSuccess, showError } from '../../../utils/toast'
 
 const AVAILABLE_FIELDS = [
@@ -231,14 +232,14 @@ export default function RegistrationSection({
         </div>
 
         <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button
+          <OrgAdminButton
             type="button"
-            variant="blue"
+            variant="primary"
             onClick={() => reset()}
             disabled={!isDirty || isSaving}
           >
             Reset
-          </Button>
+          </OrgAdminButton>
           <Button type="submit" loading={saving} disabled={!isDirty || isSaving}>
             Save Changes
           </Button>
