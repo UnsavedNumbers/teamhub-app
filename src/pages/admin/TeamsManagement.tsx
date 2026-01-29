@@ -402,7 +402,7 @@ export default function TeamsManagement() {
             noCard
           >
             <Link to={`${getLink('admin.organization.forms')}?type=program`}>
-              <Button>Add a Program</Button>
+              <Button variant="blue" className="w-full sm:w-auto">Add a Program</Button>
             </Link>
           </EmptyState>
         </Card>
@@ -430,7 +430,7 @@ export default function TeamsManagement() {
             noCard
           >
             <Link to={`${getLink('admin.organization.forms')}?type=level&returnUrl=${encodeURIComponent(getLink('admin.teams.list'))}`}>
-              <Button>Add a Level</Button>
+              <Button variant="blue" className="w-full sm:w-auto">Add a Level</Button>
             </Link>
           </EmptyState>
         </Card>

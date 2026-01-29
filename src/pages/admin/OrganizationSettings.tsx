@@ -56,6 +56,7 @@ import type { StripeConnectStatus } from '../../types/stripeConnect.types'
 import { supabase } from '../../lib/supabase'
 
 import { type OrganizationSettings as OrgSettingsType } from '@/types/organizationSettings'
+import ContactSection from './organizationSettings/ContactSection'
 
 import type { Organization } from '../../types/domain/Organization'
 
@@ -83,7 +84,7 @@ export default function OrganizationSettings() {
 
   // Valid tab values for URL parameter
   const validTabs = useMemo(() => {
-    const baseTabs = ['overview', 'general', 'appearance', 'attendance', 'registration', 'notifications', 'permissions', 'advanced']
+    const baseTabs = ['overview', 'contact', 'general', 'appearance', 'attendance', 'registration', 'notifications', 'permissions', 'advanced']
     if (hasPaymentAccess) {
       baseTabs.push('payments')
     }
@@ -319,6 +320,7 @@ export default function OrganizationSettings() {
       <Tabs value={activeTab} onValueChange={handleTabChange} className="pa-tabs">
         <TabsList className="pa-mb-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="contact">Contact</TabsTrigger>
           <TabsTrigger value="general">Configuration</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
@@ -331,6 +333,10 @@ export default function OrganizationSettings() {
 
         <TabsContent value="overview">
           {orgDetails && <OverviewForm org={orgDetails} onSave={handleSaveOverview} loading={saving} />}
+        </TabsContent>
+
+        <TabsContent value="contact">
+            {currentOrganization?.id && <ContactSection orgId={currentOrganization.id} />}
         </TabsContent>
 
         <TabsContent value="general">

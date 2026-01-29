@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useUserContext } from '../hooks/useUserContext'
 import { useOrganization } from '../contexts/OrganizationContext'
 import { getTryouts, getTryoutRegistrations, registerAthleteForTryout } from '../data/services/tryoutsService'
+import { getContactForCategory } from '../data/services/organizationContactsService'
 import { getAthletes } from '../data/services/familyService'
 import type { Tryout, TryoutRegistration } from '../data/services/tryoutsService'
 import PortalLayout from '../components/portal/PortalLayout'
@@ -18,6 +19,7 @@ export default function Tryouts() {
   const [loading, setLoading] = useState(true)
   const [selectedTryout, setSelectedTryout] = useState<Tryout | null>(null)
   const [selectedChild, setSelectedChild] = useState('')
+  const [registrationContact, setRegistrationContact] = useState<{ name: string; email: string; phone?: string | null } | null>(null)
 
 
   const { context, isReady } = useUserContext()
@@ -36,6 +38,21 @@ export default function Tryouts() {
     setTryouts(tryoutsRes.data)
     setRegistrations(regsRes.data)
     setChildren(childrenRes.data.map(c => ({ id: c.id, first_name: c.first_name, last_name: c.last_name })))
+
+    // Fetch registration contact
+    try {
+        const { data: contact } = await getContactForCategory(currentOrganization.id, 'registration')
+        if (contact) {
+            setRegistrationContact({
+                name: `${contact.first_name} ${contact.last_name}`,
+                email: contact.email,
+                phone: contact.phone
+            })
+        }
+    } catch (err) {
+        console.warn('Failed to fetch registration contact', err)
+    }
+
     setLoading(false)
   }, [context, isReady, currentOrganization])
 
@@ -130,6 +147,38 @@ export default function Tryouts() {
                   </Card>
                 ))}
               </div>
+            )}
+            
+            {registrationContact && (
+                <Card className="mt-8 p-6 bg-slate-50 dark:bg-slate-800/50">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <Icon name="description" size="text-4xl" className="text-slate-400" />
+                            <div>
+                                <CardTitle className="text-lg mb-1">Registration Questions?</CardTitle>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">
+                                    Contact <span className="font-bold text-slate-900 dark:text-white">{registrationContact.name}</span>
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex gap-3">
+                             <a href={`mailto:${registrationContact.email}`}>
+                                <Button variant="secondary" className="gap-2">
+                                    <Icon name="email" size="text-sm" />
+                                    Email
+                                </Button>
+                             </a>
+                             {registrationContact.phone && (
+                                 <a href={`tel:${registrationContact.phone}`}>
+                                    <Button variant="secondary" className="gap-2">
+                                        <Icon name="phone" size="text-sm" />
+                                        Call
+                                    </Button>
+                                 </a>
+                             )}
+                        </div>
+                    </div>
+                </Card>
             )}
           </>
         )}

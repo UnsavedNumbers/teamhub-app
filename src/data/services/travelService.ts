@@ -40,6 +40,12 @@ import { fakeTravelPlans, type FakeTravelPlan, type MeetingLocation } from '../f
 import { isValidUUID } from '../../utils/uuid'
 import { safeParseJSONB } from '../../utils/featureDiscovery/jsonbUtils'
 import { getSeasonById, getTeamById } from '../fake/fakeTeams'
+import type {
+    TravelContactCategory,
+    ResolvedContact,
+    ResolvedTravelContacts,
+} from '../../types/travelContacts'
+import { TRAVEL_CONTACT_CATEGORIES } from '../../types/travelContacts'
 
 // ============================================================================
 // Re-exports for convenience
@@ -441,6 +447,93 @@ export interface TravelPlanRow {
     updated_at: string
     team: { id: string; name: string; org_id: string } | null
     season: { id: string; name: string } | null
+}
+
+// ============================================================================
+// Travel contact resolution (single source of truth: DB RPC)
+// ============================================================================
+
+const EMPTY_CONTACT: ResolvedContact = {
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: null,
+}
+
+function parseResolvedContact(raw: unknown): ResolvedContact {
+    if (raw && typeof raw === 'object' && 'email' in (raw as object)) {
+        const o = raw as Record<string, unknown>
+        return {
+            first_name: typeof o.first_name === 'string' ? o.first_name : '',
+            last_name: typeof o.last_name === 'string' ? o.last_name : '',
+            email: typeof o.email === 'string' ? o.email : '',
+            phone: typeof o.phone === 'string' ? o.phone : o.phone === null ? null : null,
+        }
+    }
+    return EMPTY_CONTACT
+}
+
+/**
+ * Resolve travel contacts for all five categories for a plan.
+ * Uses DB RPC resolve_travel_contacts_for_plan; never returns null for a category.
+ */
+export async function resolveAllTravelContactsForPlan(
+    _context: UserContext,
+    planId: string
+): Promise<{ data: ResolvedTravelContacts; error: Error | null }> {
+    if (!isValidUUID(planId)) {
+        return {
+            data: TRAVEL_CONTACT_CATEGORIES.reduce(
+                (acc, cat) => ({ ...acc, [cat]: EMPTY_CONTACT }),
+                {} as ResolvedTravelContacts
+            ),
+            error: new Error('Invalid plan ID'),
+        }
+    }
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+        const fallback: ResolvedTravelContacts = TRAVEL_CONTACT_CATEGORIES.reduce(
+            (acc, cat) => ({ ...acc, [cat]: EMPTY_CONTACT }),
+            {} as ResolvedTravelContacts
+        )
+        return { data: fallback, error: null }
+    }
+    try {
+        const { data, error } = await supabase.rpc('resolve_travel_contacts_for_plan' as any, {
+            p_plan_id: planId,
+        })
+        if (error) throw error
+        const raw = data as Record<string, unknown> | null
+        const result = TRAVEL_CONTACT_CATEGORIES.reduce(
+            (acc, cat) => ({
+                ...acc,
+                [cat]: parseResolvedContact(raw?.[cat] ?? EMPTY_CONTACT),
+            }),
+            {} as ResolvedTravelContacts
+        )
+        return { data: result, error: null }
+    } catch (err) {
+        return {
+            data: TRAVEL_CONTACT_CATEGORIES.reduce(
+                (acc, cat) => ({ ...acc, [cat]: EMPTY_CONTACT }),
+                {} as ResolvedTravelContacts
+            ),
+            error: err instanceof Error ? err : new Error('Failed to resolve travel contacts'),
+        }
+    }
+}
+
+/**
+ * Resolve a single category contact for a plan.
+ */
+export async function resolveTravelContact(
+    context: UserContext,
+    planId: string,
+    category: TravelContactCategory
+): Promise<{ data: ResolvedContact; error: Error | null }> {
+    const { data: all, error } = await resolveAllTravelContactsForPlan(context, planId)
+    if (error) return { data: EMPTY_CONTACT, error }
+    return { data: all[category], error: null }
 }
 
 // ============================================================================

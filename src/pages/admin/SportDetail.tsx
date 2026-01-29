@@ -195,7 +195,7 @@ export default function SportDetail() {
                   <Button variant="secondary" className="w-full sm:w-auto min-h-[44px]">View {sport?.name || ''} Programs</Button>
                 </Link>
                 <Link to={`${formsRoute}?type=program&sport_id=${sportId}&returnUrl=${encodeURIComponent(sport?.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : programsRoute)}`} className="w-full sm:w-auto">
-                  <Button className="w-full sm:w-auto min-h-[44px]">Add Program</Button>
+                  <Button variant="blue" className="w-full sm:w-auto min-h-[44px]">Add Program</Button>
                 </Link>
               </div>
             }

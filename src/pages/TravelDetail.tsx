@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { getTravelPlanById, formatDateRange } from '../data/services/travelService'
 import { getEvents } from '../data/services/eventsService'
+import { getContactForCategory } from '../data/services/organizationContactsService'
 import type { FakeTravelPlan } from '../data/fake/fakeTravel'
 import type { CalendarEvent } from '../types/calendar'
 import { supabase } from '../lib/supabase'
@@ -198,6 +199,7 @@ export default function TravelDetail() {
   const [copyError, setCopyError] = useState<string | null>(null)
   const [teamName, setTeamName] = useState<string>('')
   const [emergencyContact, setEmergencyContact] = useState<{ name: string; phone: string; role: string } | null>(null)
+  const [travelContact, setTravelContact] = useState<{ name: string; email: string; phone?: string | null } | null>(null)
   const isMountedRef = useRef(true)
 
   useEffect(() => {
@@ -349,6 +351,20 @@ export default function TravelDetail() {
         } catch (err) {
           if (!isMountedRef.current) return
           console.error(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Coach fetch error:`, err)
+        }
+        
+        // Fetch travel contact
+        try {
+            const { data: contact } = await getContactForCategory(context.orgId, 'travel')
+            if (isMountedRef.current && contact) {
+                setTravelContact({
+                    name: `${contact.first_name} ${contact.last_name}`,
+                    email: contact.email,
+                    phone: contact.phone
+                })
+            }
+        } catch (err) {
+            console.error('Error fetching travel contact', err)
         }
       } catch (err) {
         if (!isMountedRef.current) return
@@ -907,6 +923,46 @@ export default function TravelDetail() {
                     </Button>
                   </a>
                 </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Travel Coordinator Card */}
+          {travelContact && (
+            <Card className="p-6 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
+               <div className="flex items-center gap-2 mb-4">
+                <Icon name="support_agent" size="text-2xl" className="text-blue-600 dark:text-blue-400" />
+                <CardTitle className="text-blue-900 dark:text-blue-100">Travel Coordinator</CardTitle>
+              </div>
+              <div className="space-y-3">
+                 <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-1">Contact</p>
+                  <p className="font-black text-blue-900 dark:text-blue-100">{travelContact.name}</p>
+                   {travelContact.phone && (
+                     <a href={`tel:${travelContact.phone}`} className="block text-blue-600 dark:text-blue-400 font-bold hover:underline">
+                        {travelContact.phone}
+                     </a>
+                   )}
+                   <a href={`mailto:${travelContact.email}`} className="block text-blue-600 dark:text-blue-400 font-bold hover:underline">
+                      {travelContact.email}
+                   </a>
+                </div>
+                 <div className="pt-3 border-t border-blue-200 dark:border-blue-900 flex gap-2">
+                   {travelContact.phone && (
+                      <a href={`tel:${travelContact.phone}`} className="flex-1">
+                        <Button variant="primary" className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs">
+                          <Icon name="phone" size="text-sm" className="mr-2" />
+                          Call
+                        </Button>
+                      </a>
+                   )}
+                   <a href={`mailto:${travelContact.email}`} className="flex-1">
+                      <Button variant="secondary" className="w-full text-xs">
+                        <Icon name="email" size="text-sm" className="mr-2" />
+                        Email
+                      </Button>
+                   </a>
+                 </div>
               </div>
             </Card>
           )}

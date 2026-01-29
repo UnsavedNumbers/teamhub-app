@@ -377,7 +377,7 @@ export default function Events() {
         title={t('admin.events.title')} 
         subtitle={t('admin.events.subtitle')}
         actions={
-          <Button onClick={() => navigate('/admin/events/new')} icon="add">
+          <Button onClick={() => navigate('/admin/events/new')} variant="blue" className="w-full sm:w-auto" icon="add">
             {t('admin.events.create')}
           </Button>
         } 
