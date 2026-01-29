@@ -6,12 +6,14 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 // Timeout constants
 const PLACE_DETAILS_TIMEOUT_MS = 15000 // 15 seconds
 const GEMINI_TIMEOUT_MS = 15000 // 15 seconds
+const PHOTO_FETCH_TIMEOUT_MS = 10000 // 10 seconds
 
 interface FetchWithTimeoutOptions extends RequestInit {
   timeout?: number
@@ -46,7 +48,96 @@ async function fetchWithTimeout(
 }
 
 /**
- * Generate photo URL from photo reference
+ * Fetch photo from Google Places API and upload to Supabase Storage
+ * Returns the public URL of the uploaded photo
+ */
+async function fetchAndUploadPhoto(
+  supabaseClient: ReturnType<typeof createClient>,
+  photoReference: string,
+  placeId: string,
+  photoIndex: number,
+  maxWidth: number = 800
+): Promise<{ url: string | null; error: string | null }> {
+  const apiKey = Deno.env.get('GOOGLE_PLACES_API_KEY')
+  if (!apiKey) {
+    return { url: null, error: 'GOOGLE_PLACES_API_KEY not configured' }
+  }
+
+  if (!photoReference || typeof photoReference !== 'string' || photoReference.length === 0) {
+    return { url: null, error: 'Invalid photo_reference' }
+  }
+
+  const googleUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxWidth}&photo_reference=${encodeURIComponent(photoReference)}&key=${apiKey}`
+
+  try {
+    // Fetch the photo from Google
+    const response = await fetchWithTimeout(googleUrl, {}, PHOTO_FETCH_TIMEOUT_MS)
+    
+    if (!response.ok) {
+      return { url: null, error: `Failed to fetch photo: ${response.status}` }
+    }
+
+    const contentType = response.headers.get('content-type') || 'image/jpeg'
+    const photoDataBuffer = await response.arrayBuffer()
+    const photoData = new Uint8Array(photoDataBuffer)
+    
+    // Generate a unique filename
+    const extension = contentType.includes('png') ? 'png' : 'jpg'
+    const fileName = `venue-photos/${placeId}/${photoIndex}.${extension}`
+
+    // Upload to Supabase Storage
+    const { error: uploadError } = await supabaseClient.storage
+      .from('public-media')
+      .upload(fileName, photoData, {
+        contentType,
+        upsert: true,
+      })
+
+    if (uploadError) {
+      // Log upload failure
+      try {
+        await supabaseClient.rpc('log_event', {
+          p_category: 'EVENT',
+          p_event_type: 'VENUE_INSIGHTS_PHOTO_UPLOAD_FAILED',
+          p_actor_user_id: null,
+          p_actor_role: 'system',
+          p_metadata: { place_id: placeId, photo_reference: photoReference, error: uploadError.message },
+        } as any)
+      } catch (e) {
+        console.error('Failed to log upload error:', e)
+      }
+      console.error('Photo upload error:', uploadError)
+      return { url: null, error: `Upload failed: ${uploadError.message}` }
+    }
+
+    // Get the public URL
+    const { data: { publicUrl } } = supabaseClient.storage
+      .from('public-media')
+      .getPublicUrl(fileName)
+
+    // Log successful upload
+    try {
+      await supabaseClient.rpc('log_event', {
+        p_category: 'EVENT',
+        p_event_type: 'VENUE_INSIGHTS_PHOTO_UPLOADED',
+        p_actor_user_id: null,
+        p_actor_role: 'system',
+        p_metadata: { place_id: placeId, photo_reference: photoReference, url: publicUrl },
+      } as any)
+    } catch (e) {
+      console.error('Failed to log upload success:', e)
+    }
+
+    return { url: publicUrl, error: null }
+  } catch (err) {
+    console.error('Photo fetch/upload error:', err)
+    return { url: null, error: err instanceof Error ? err.message : 'Unknown error' }
+  }
+}
+
+/**
+ * Generate photo URL from photo reference (legacy - for direct URLs)
+ * Note: Direct URLs may fail due to Google referrer restrictions
  */
 function generatePhotoUrl(photoReference: string, maxWidth: number = 800): { url: string | null; error: string | null } {
   const apiKey = Deno.env.get('GOOGLE_PLACES_API_KEY')
@@ -154,24 +245,29 @@ serve(async (req) => {
           // Release lock and return cached data
           await supabaseClient.rpc('pg_advisory_unlock_wrapper', { key: Number(lockKey) })
 
-          // Generate photo URLs from references
-          const photos = existing.photos_json
-            ? (Array.isArray(existing.photos_json)
-                ? existing.photos_json
-                : typeof existing.photos_json === 'string'
-                ? JSON.parse(existing.photos_json)
-                : [])
-            : []
-
-          const photoUrls = photos
-            .map((photo: { reference?: string }) => {
-              if (photo.reference) {
-                return generatePhotoUrl(photo.reference)
-              }
-              return { url: null, error: 'Missing photo reference' }
-            })
-            .filter((result: { url: string | null }) => result.url !== null)
-            .map((result: { url: string }) => result.url)
+          // Use stored photo URLs from Supabase Storage, or fallback to Google URLs
+          let photoUrls: string[] = []
+          if (existing.photo_urls && Array.isArray(existing.photo_urls) && existing.photo_urls.length > 0) {
+            photoUrls = existing.photo_urls
+          } else {
+            // Fallback to Google URLs
+            const photos = existing.photos_json
+              ? (Array.isArray(existing.photos_json)
+                  ? existing.photos_json
+                  : typeof existing.photos_json === 'string'
+                  ? JSON.parse(existing.photos_json)
+                  : [])
+              : []
+            photoUrls = photos
+              .map((photo: { reference?: string }) => {
+                if (photo.reference) {
+                  return generatePhotoUrl(photo.reference)
+                }
+                return { url: null, error: 'Missing photo reference' }
+              })
+              .filter((result: { url: string | null }) => result.url !== null)
+              .map((result: { url: string }) => result.url)
+          }
 
           return new Response(
             JSON.stringify({
@@ -373,9 +469,29 @@ serve(async (req) => {
                   attribution: photo.html_attributions?.[0] || '',
                 }))
 
+              // Upload photos to Supabase Storage (limit to 5 photos)
+              const uploadedPhotoUrls: string[] = []
+              const photosToUpload = photosJson.slice(0, 5)
+              
+              for (let i = 0; i < photosToUpload.length; i++) {
+                const photo = photosToUpload[i]
+                if (photo.reference) {
+                  const result = await fetchAndUploadPhoto(
+                    supabaseClient,
+                    photo.reference,
+                    place_id,
+                    i
+                  )
+                  if (result.url) {
+                    uploadedPhotoUrls.push(result.url)
+                  }
+                }
+              }
+
               const updateData: Record<string, unknown> = {
                 place_details_json: placeDetails,
                 photos_json: photosJson,
+                photo_urls: uploadedPhotoUrls,
                 place_details_fetched_at: new Date().toISOString(),
                 last_place_details_call_at: new Date().toISOString(),
                 place_id_valid: placeIdValid,
@@ -440,9 +556,9 @@ serve(async (req) => {
 
         if (canFetch) {
           try {
-            const geminiApiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY')
+            const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
             if (!geminiApiKey) {
-              throw new Error('GOOGLE_GEMINI_API_KEY not configured')
+              throw new Error('GEMINI_API_KEY not configured')
             }
 
             const placeDetailsObj = placeDetails as {
@@ -647,35 +763,53 @@ Output format: Markdown bullet list (each tip on a new line starting with -)`
         aiWhatToExpect = existing.ai_what_to_expect
       }
 
-      // Generate photo URLs from references
-      // Use current placeDetails photos if available, otherwise use cached photos_json
-      let photosToProcess: Array<{ reference?: string; photo_reference?: string }> = []
+      // Get photo URLs - prefer uploaded URLs from storage, fall back to Google URLs
+      let photoUrls: string[] = []
       
-      if (placeDetails) {
-        const placeDetailsPhotos = (placeDetails as { photos?: Array<{ photo_reference: string }> })?.photos || []
-        photosToProcess = placeDetailsPhotos.map((photo) => ({ photo_reference: photo.photo_reference }))
-      } else if (existing?.photos_json) {
-        if (Array.isArray(existing.photos_json)) {
-          photosToProcess = existing.photos_json
-        } else if (typeof existing.photos_json === 'string') {
-          try {
-            photosToProcess = JSON.parse(existing.photos_json)
-          } catch {
-            photosToProcess = []
+      // First, check if we have uploaded photo URLs in the database
+      const { data: latestData } = await supabaseClient
+        .from('venue_insights')
+        .select('photo_urls, photos_json')
+        .eq('place_id', place_id)
+        .single()
+      
+      if (latestData?.photo_urls && Array.isArray(latestData.photo_urls) && latestData.photo_urls.length > 0) {
+        // Use cached photo URLs from Supabase Storage
+        photoUrls = latestData.photo_urls
+      } else if (existing?.photo_urls && Array.isArray(existing.photo_urls) && existing.photo_urls.length > 0) {
+        // Use existing photo URLs
+        photoUrls = existing.photo_urls
+      } else {
+        // Fallback: generate Google URLs from photo references
+        let photosToProcess: Array<{ reference?: string; photo_reference?: string }> = []
+        
+        if (placeDetails) {
+          const placeDetailsPhotos = (placeDetails as { photos?: Array<{ photo_reference: string }> })?.photos || []
+          photosToProcess = placeDetailsPhotos.map((photo) => ({ photo_reference: photo.photo_reference }))
+        } else if (latestData?.photos_json || existing?.photos_json) {
+          const photosJson = latestData?.photos_json || existing?.photos_json
+          if (Array.isArray(photosJson)) {
+            photosToProcess = photosJson
+          } else if (typeof photosJson === 'string') {
+            try {
+              photosToProcess = JSON.parse(photosJson)
+            } catch {
+              photosToProcess = []
+            }
           }
         }
+        
+        photoUrls = photosToProcess
+          .map((photo: { reference?: string; photo_reference?: string }) => {
+            const ref = photo.reference || photo.photo_reference
+            if (ref) {
+              return generatePhotoUrl(ref)
+            }
+            return { url: null, error: 'Missing photo reference' }
+          })
+          .filter((result: { url: string | null }) => result.url !== null)
+          .map((result: { url: string }) => result.url)
       }
-
-      const photoUrls = photosToProcess
-        .map((photo: { reference?: string; photo_reference?: string }) => {
-          const ref = photo.reference || photo.photo_reference
-          if (ref) {
-            return generatePhotoUrl(ref)
-          }
-          return { url: null, error: 'Missing photo reference' }
-        })
-        .filter((result: { url: string | null }) => result.url !== null)
-        .map((result: { url: string }) => result.url)
 
       // Return response
       return new Response(

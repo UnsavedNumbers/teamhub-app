@@ -12,7 +12,7 @@ import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
-import VenueInsights from '../components/portal/VenueInsights' // eslint-disable-line @typescript-eslint/no-unused-vars
+import VenueInsights from '../components/portal/VenueInsights'
 import NearbyAmenities from '../components/portal/NearbyAmenities'
 import { useT } from '../i18n/useI18n'
 

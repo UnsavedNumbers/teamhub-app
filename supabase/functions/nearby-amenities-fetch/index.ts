@@ -7,6 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 // Timeout constants
@@ -630,7 +631,7 @@ serve(async (req) => {
                     cached = true
                 } else {
                     // Call Gemini API
-                    const geminiApiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY')
+                    const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
                     if (!geminiApiKey) {
                         // Fallback: group raw places by inferred category (no AI descriptions)
                         const byCategory = new Map<CanonicalCategory, AmenityItem[]>()
