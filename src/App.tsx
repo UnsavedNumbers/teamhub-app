@@ -384,6 +384,7 @@ function AppWithTheme() {
               <Route path="events/new" element={<FeatureGateRoute routeKey="admin.events.create"><CreateEvent /></FeatureGateRoute>} />
               <Route path="events/:id/edit" element={<FeatureGateRoute routeKey="admin.events.edit"><EditEvent /></FeatureGateRoute>} />
               <Route path="events/:id/attendance" element={<FeatureGateRoute routeKey="admin.attendance"><AttendanceRoster /></FeatureGateRoute>} />
+              <Route path="events/:id" element={<FeatureGateRoute routeKey="admin.events.list"><Events /></FeatureGateRoute>} />
 
               {/* Announcements */}
               <Route path="announcements" element={<FeatureGateRoute routeKey="admin.announcements.list"><AdminAnnouncements /></FeatureGateRoute>} />

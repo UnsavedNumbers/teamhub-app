@@ -15,7 +15,9 @@ interface SportFieldRendererProps {
 }
 
 export function SportFieldRenderer({ field, name }: SportFieldRendererProps) {
-  const { control, watch } = useFormContext()
+  const formContext = useFormContext()
+  if (!formContext) return null
+  const { control, watch } = formContext
 
   // Handle conditional visibility
   if (field.visibility?.dependsOn) {

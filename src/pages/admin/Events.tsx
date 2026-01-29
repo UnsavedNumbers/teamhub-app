@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
 import { getEvents, getEventsCount } from '../../data/services/eventsService'
@@ -46,7 +46,7 @@ const DEFAULT_FILTERS: EventsFiltersType = {
 }
 
 export default function Events() {
-    const [searchParams, setSearchParams] = useSearchParams()
+    const { id: eventIdParam } = useParams<{ id: string }>()
     
     // View state
     const [timeContext, setTimeContext] = useState<EventTimeContext>('upcoming')
@@ -139,11 +139,10 @@ export default function Events() {
         if (savedTimeContext) setTimeContext(savedTimeContext)
     }, [])
 
-    // Sync detail event ID with URL
+    // Sync detail event ID with route param (events/:id)
     useEffect(() => {
-        const eventId = searchParams.get('eventId')
-        setDetailEventId(eventId)
-    }, [searchParams])
+        setDetailEventId(eventIdParam ?? null)
+    }, [eventIdParam])
 
     const fetchEvents = useCallback(async () => {
         if (!isReady) return
@@ -388,11 +387,11 @@ export default function Events() {
     }
 
     const handleEventClick = (event: CalendarEvent) => {
-        setSearchParams({ eventId: event.id })
+        navigate(getLink('admin.events.detail', { id: event.id }))
     }
 
     const handleCloseDetail = () => {
-        setSearchParams({})
+        navigate(getLink('admin.events.list'))
     }
 
     if (!isReady) {
