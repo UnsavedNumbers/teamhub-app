@@ -8,6 +8,7 @@ import type { Program, GenderCategory, Sport } from '../../data/types/organizati
 import { AdminPageHeader, Card, Button, Input, Select } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
+import '../../styles/orgAdmin.css'
 
 const GENDER_OPTIONS = [
   { value: '', label: 'Select gender category' },
@@ -117,28 +118,28 @@ export default function ProgramUpdate() {
 
   if (loading) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <OfflineBanner />
-        <div className="pa-skeleton" style={{ height: '400px' }} />
+        <div className="oa-skeleton" style={{ height: '400px' }} />
       </div>
     )
   }
 
   if (!program) {
     return (
-      <div className="pa-root">
+      <div className="oa-root">
         <OfflineBanner />
         <Card>
-          <div className="pa-body-m pa-text-danger">Program not found</div>
+          <div className="oa-body-m oa-text-danger">Program not found</div>
         </Card>
       </div>
     )
   }
 
   return (
-    <div className="pa-root">
+    <div className="oa-root">
       <OfflineBanner />
-      
+
       <AdminPageHeader
         title="Update Program"
         subtitle={`Edit ${program.name}`}
@@ -150,17 +151,17 @@ export default function ProgramUpdate() {
       />
 
       {error && (
-        <Card className="pa-mb-6" noPadding>
-          <div className="pa-alert-card pa-alert-card--error">
-            <div className="pa-body-m pa-text-danger">{error}</div>
+        <Card className="oa-mb-6" noPadding>
+          <div className="oa-alert-card oa-alert-card--error">
+            <div className="oa-body-m oa-text-danger">{error}</div>
           </div>
         </Card>
       )}
 
-      <div className="pa-form-container">
+      <div className="oa-form-container">
         <Card>
-          <form onSubmit={handleSubmit} className="pa-form-grid">
-          <div className="pa-form-group">
+          <form onSubmit={handleSubmit} className="oa-form-grid">
+          <div className="oa-form-group oa-form-row-thirds">
             <Select
               label="Sport"
               value={sportId}
@@ -169,9 +170,6 @@ export default function ProgramUpdate() {
               required
               disabled={isOffline || USE_FAKE_DATA || submitting}
             />
-          </div>
-
-          <div className="pa-form-group">
             <Select
               label="Gender Category"
               value={gender}
@@ -182,7 +180,7 @@ export default function ProgramUpdate() {
             />
           </div>
 
-          <div className="pa-form-group">
+          <div className="oa-form-group">
             <Input
               label="Program Name"
               value={name}
@@ -193,7 +191,7 @@ export default function ProgramUpdate() {
             />
           </div>
 
-          <div className="pa-form-actions">
+          <div className="oa-form-actions">
             <Button
               type="submit"
               disabled={!sportId || !gender || !name.trim() || submitting || isOffline || USE_FAKE_DATA}

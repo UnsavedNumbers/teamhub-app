@@ -10,6 +10,7 @@ import {
   Badge,
   type ColumnConfig 
 } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { mapDbRoleToFrontendRole } from '../../utils/roleHelpers'
 import { formatDate } from '../../utils/dateFormatters'
 
@@ -138,4 +139,3 @@ export default function OrganizationUsers() {
     </div>
   )
 }
-

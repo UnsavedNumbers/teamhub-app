@@ -41,8 +41,8 @@ export default function TravelPlans() {
     const [loading, setLoading] = useState(true)
     const [page, setPage] = useState(0)
     const [rowsPerPage, setRowsPerPage] = useState(50)
-    const [orderBy, setOrderBy] = useState('start_date')
-    const [order, setOrder] = useState<'asc' | 'desc'>('asc')
+  const [orderBy] = useState('start_date')
+  const [order] = useState<'asc' | 'desc'>('asc')
 
     const [detailPlanId, setDetailPlanId] = useState<string | null>(null)
     const [calendarDate, setCalendarDate] = useState(new Date())

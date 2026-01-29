@@ -8,6 +8,7 @@ import {
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
+import '../../styles/orgAdmin.css'
 
 interface Team {
   id: string
@@ -170,38 +171,21 @@ export default function CreateAnnouncementModal({
               {/* Audience Selector */}
               {canCreateOrgWide && (
                 <div className="pa-form-group">
-                  <label className="pa-label pa-label--required">{t('admin.announcements.audience')}</label>
-                  <div className="pa-flex pa-gap-3 pa-mt-2">
+                  <label className="oa-filter-label">{t('admin.announcements.audience')}</label>
+                  <div className="oa-toggle-group">
                     <button
                       type="button"
                       onClick={() => setIsOrgWide(false)}
                       disabled={loading}
-                      className={cn(
-                        'pa-flex-1 pa-px-4 pa-py-3 pa-rounded-lg pa-border-2 pa-transition-all pa-font-bold pa-text-sm',
-                        !isOrgWide
-                          ? 'pa-border-[var(--org-btn-primary-bg, #137fec)] pa-bg-[var(--org-btn-primary-bg, #137fec)]/10 dark:pa-bg-[var(--org-btn-primary-bg, #137fec)]/20 pa-text-[var(--org-btn-primary-bg, #137fec)]'
-                          : 'pa-border-slate-300 dark:pa-border-slate-600 pa-bg-white dark:pa-bg-slate-800 pa-text-slate-600 dark:pa-text-slate-400',
-                        !loading && !isOrgWide && 'hover:pa-bg-[var(--org-btn-primary-bg, #137fec)]/20 dark:hover:pa-bg-[var(--org-btn-primary-bg, #137fec)]/30',
-                        !loading && isOrgWide && 'hover:pa-border-slate-400 dark:hover:pa-border-slate-500 hover:pa-bg-slate-50 dark:hover:pa-bg-slate-700',
-                        loading && 'pa-opacity-50 pa-cursor-not-allowed'
-                      )}
+                      className={cn('oa-toggle-btn', !isOrgWide && 'active', loading && 'pa-opacity-50 pa-cursor-not-allowed')}
                     >
                       {t('admin.announcements.audienceTeamOnly')}
                     </button>
-
                     <button
                       type="button"
                       onClick={() => setIsOrgWide(true)}
                       disabled={loading}
-                      className={cn(
-                        'pa-flex-1 pa-px-4 pa-py-3 pa-rounded-lg pa-border-2 pa-transition-all pa-font-bold pa-text-sm',
-                        isOrgWide
-                          ? 'pa-border-[var(--org-btn-primary-bg, #137fec)] pa-bg-[var(--org-btn-primary-bg, #137fec)]/10 dark:pa-bg-[var(--org-btn-primary-bg, #137fec)]/20 pa-text-[var(--org-btn-primary-bg, #137fec)]'
-                          : 'pa-border-slate-300 dark:pa-border-slate-600 pa-bg-white dark:pa-bg-slate-800 pa-text-slate-600 dark:pa-text-slate-400',
-                        !loading && isOrgWide && 'hover:pa-bg-[var(--org-btn-primary-bg, #137fec)]/20 dark:hover:pa-bg-[var(--org-btn-primary-bg, #137fec)]/30',
-                        !loading && !isOrgWide && 'hover:pa-border-slate-400 dark:hover:pa-border-slate-500 hover:pa-bg-slate-50 dark:hover:pa-bg-slate-700',
-                        loading && 'pa-opacity-50 pa-cursor-not-allowed'
-                      )}
+                      className={cn('oa-toggle-btn', isOrgWide && 'active', loading && 'pa-opacity-50 pa-cursor-not-allowed')}
                     >
                       {t('admin.announcements.audienceEveryone', { orgName })}
                     </button>

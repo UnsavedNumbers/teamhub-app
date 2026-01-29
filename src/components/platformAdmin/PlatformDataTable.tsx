@@ -206,7 +206,7 @@ export default function PlatformDataTable<T extends { id: string }>({
                   )}
                   style={{
                     textAlign: column.align || 'left',
-                    minWidth: column.minWidth,
+                    minWidth: column.minWidth ?? (column.align === 'right' ? 200 : undefined),
                     cursor: column.sortable && onSort ? 'pointer' : 'default',
                   }}
                   onClick={() => column.sortable && onSort && handleSort(String(column.id))}
@@ -283,9 +283,17 @@ export default function PlatformDataTable<T extends { id: string }>({
                     key={String(column.id)}
                     style={{ textAlign: column.align || 'left' }}
                   >
-                    {column.render
-                      ? column.render(row)
-                      : String(row[column.id as keyof T] ?? '—')}
+                    {column.align === 'right' ? (
+                      <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end' }}>
+                        {column.render
+                          ? column.render(row)
+                          : String(row[column.id as keyof T] ?? '—')}
+                      </div>
+                    ) : column.render ? (
+                      column.render(row)
+                    ) : (
+                      String(row[column.id as keyof T] ?? '—')
+                    )}
                   </td>
                 ))}
               </tr>
@@ -376,7 +384,10 @@ export default function PlatformDataTable<T extends { id: string }>({
         }}
       >
         {/* Rows per page */}
-        <div className={cn('pa-flex', 'pa-flex-col', 'pa-items-stretch', 'pa-gap-2', 'pa-table-pagination-controls')}>
+        <div
+          className={cn('pa-flex', 'pa-items-center', 'pa-gap-2', 'pa-table-pagination-controls')}
+          style={{ whiteSpace: 'nowrap' }}
+        >
           <span className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
             Rows per page:
           </span>
@@ -384,7 +395,7 @@ export default function PlatformDataTable<T extends { id: string }>({
             className="pa-input pa-select"
             value={rowsPerPage}
             onChange={(e) => onRowsPerPageChange(Number(e.target.value))}
-            style={{ width: '100%', height: '44px', padding: '0 var(--pa-space-3)' }}
+            style={{ height: '44px', padding: '0 var(--pa-space-3)', minWidth: '4.5rem' }}
           >
             <option value={10}>10</option>
             <option value={25}>25</option>

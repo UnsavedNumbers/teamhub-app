@@ -22,6 +22,7 @@ import {
   Checkbox
 } from '../../components/platformAdmin'
 import { ConfirmDialog } from '../../components/platformAdmin/ConfirmDialog'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
 import { 
     EventFormData, 
@@ -35,7 +36,7 @@ interface Team { id: string; name: string }
 interface Season { id: string; name: string; team_id: string }
 
 export default function EditEvent() {
-  const { eventId } = useParams<{ eventId: string }>()
+  const { id: eventId } = useParams<{ id: string }>()
   const [teams, setTeams] = useState<Team[]>([])
   const [seasons, setSeasons] = useState<Season[]>([])
   const [loading, setLoading] = useState(true)

@@ -1,4 +1,3 @@
-import React from 'react'
 import '../../styles/ios-events.css'
 import type { CalendarEvent, EventType } from '../../types/calendar'
 
@@ -30,7 +29,6 @@ export default function EventsList({
     rowsPerPage,
     totalCount,
     onPageChange,
-    onRowsPerPageChange,
     onRowClick,
     onEdit,
     onDuplicate,

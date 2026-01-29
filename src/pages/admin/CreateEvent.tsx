@@ -6,6 +6,9 @@ import { useForm, Controller } from 'react-hook-form'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
 import { getErrorMessage, normalizeSupabaseError } from '../../utils/errorUtils'
+import { getSports } from '../../data/services/sportsService'
+import { getPrograms } from '../../data/services/sportsService'
+import { getTeams } from '../../data/services/teamsService'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { 
@@ -39,10 +42,14 @@ const validateCoordinate = (value: number | string | null | undefined): number |
   return Math.round(num * 1e6) / 1e6
 }
 
+interface Sport { id: string; name: string }
+interface Program { id: string; name: string; sport_id: string }
 interface Team { id: string; name: string }
-interface Season { id: string; name: string; team_id: string; is_active?: boolean }
+interface Season { id: string; name: string; team_id?: string; is_active?: boolean; start_date?: string; end_date?: string }
 
 export default function CreateEvent() {
+  const [sports, setSports] = useState<Sport[]>([])
+  const [programs, setPrograms] = useState<Program[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [seasons, setSeasons] = useState<Season[]>([])
   const [loading, setLoading] = useState(true)
@@ -56,11 +63,15 @@ export default function CreateEvent() {
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
   const hasRestoredRef = useRef(false)
+  const previousSportIdRef = useRef<string | undefined>(undefined)
+  const previousProgramIdRef = useRef<string | undefined>(undefined)
 
   // Default form values
   const getDefaultValues = (): EventFormData => ({ 
     title: '', 
     type: 'practice', 
+    sport_id: '',
+    program_id: '',
     team_id: '', 
     season_id: '', 
     start_time: '', 
@@ -163,6 +174,9 @@ export default function CreateEvent() {
     }
   }, [])
 
+  const watchSportId = watch('sport_id')
+  const watchProgramId = watch('program_id')
+  const watchSeasonId = watch('season_id')
   const watchTeamId = watch('team_id')
   const watchRSVPEnabled = watch('rsvp_enabled')
   
@@ -218,116 +232,174 @@ export default function CreateEvent() {
     }
   }, [formValues, showLocationDetails, showRecurring])
 
-  const fetchTeams = useCallback(async () => {
-    if (!isReady) return
-    
-    // Using Supabase directly for Admin pages to ensure real data access if service is mocked
-    const { data, error } = await supabase
-        .from('teams')
-        .select('id, name')
-        .eq('org_id', context.orgId!)
-        .eq('is_active', true)
-        .order('name')
-    
-    if (!error && data) {
-      setTeams(data)
-      
-      // After teams are loaded, if we have a restored team_id, ensure it's valid
-      // Use a small delay to ensure form is initialized
-      setTimeout(() => {
-        const currentTeamId = watch('team_id')
-        if (currentTeamId) {
-          const teamExists = data.some(t => t.id === currentTeamId)
-          if (!teamExists) {
-            // Restored team doesn't exist, clear it
-            setValue('team_id', '', { shouldValidate: false })
-          } else {
-            // Team exists, trigger validation to clear any false errors
-            trigger('team_id')
-          }
-        } else if (data.length === 1) {
-          // Auto-select if there's only one team
-          setValue('team_id', data[0].id, { shouldValidate: false })
-          trigger('team_id')
-        }
-      }, 100)
-    } else if (error) {
-       console.error(error)
-    }
-    setLoading(false)
-  }, [context, isReady, watch, setValue, trigger])
+  // Cascade: Sport → Program → Season → Team. Each step populates the next dropdown.
 
-  const fetchSeasons = useCallback(async (teamId: string, restoreSeasonId?: string) => {
-    if (!isReady || !teamId) {
-      setSeasons([])
-      setValue('season_id', '', { shouldValidate: false })
-      return
+  const fetchSports = useCallback(async () => {
+    if (!isReady || !context?.orgId) return
+    setLoading(true)
+    try {
+      const { data, error } = await getSports(context)
+      if (error) throw error
+      setSports((data || []).map(s => ({ id: s.id, name: s.name })))
+    } catch (err) {
+      console.error('Error fetching sports:', err)
+      setSports([])
+    } finally {
+      setLoading(false)
     }
-    
-    // Fetch all seasons for the selected team
-    const { data, error } = await supabase
+  }, [context, isReady])
+
+  const fetchProgramsForSport = useCallback(async (sportId: string) => {
+    if (!isReady || !context?.orgId) return
+    try {
+      const { data, error } = await getPrograms(context, sportId)
+      if (error) throw error
+      setPrograms((data || []).map(p => ({ id: p.id, name: p.name, sport_id: p.sport_id })))
+    } catch (err) {
+      console.error('Error fetching programs:', err)
+      setPrograms([])
+    }
+  }, [context, isReady])
+
+  const fetchSeasonsForProgram = useCallback(async (sportId: string, programId: string) => {
+    if (!isReady || !context?.orgId) return
+    try {
+      const { data: teamsData, error: teamsError } = await getTeams(context, {
+        sportId,
+        programId,
+        activeOnly: true,
+      })
+      if (teamsError) throw teamsError
+      const teamIds = (teamsData || []).map(t => t.id)
+      setTeams([])
+      setValue('team_id', '', { shouldValidate: false })
+
+      if (teamIds.length === 0) {
+        setSeasons([])
+        setValue('season_id', '', { shouldValidate: false })
+        return
+      }
+
+      const { data: tsData, error: tsError } = await supabase
         .from('team_seasons_view')
         .select('season_id, name, is_active, start_date, end_date')
-        .eq('team_id', teamId)
-        .order('start_date', { ascending: false }) // Most recent/future first
+        .in('team_id', teamIds)
+        .order('start_date', { ascending: false })
 
-    if (!error && data) {
-      // Map all available seasons for the team
-      const mappedSeasons = data
-        .filter(s => s.season_id && s.name)
-        .map(s => ({
-          id: s.season_id as string,
-          name: s.name as string,
-          team_id: teamId,
-          is_active: s.is_active ?? false
-        }))
-      
-      console.log('Fetched seasons for team:', teamId, 'Count:', mappedSeasons.length, 'Data:', mappedSeasons)
-      setSeasons(mappedSeasons)
-      
-      // If we have a restored season_id, try to use it if it's valid
-      if (restoreSeasonId) {
-        const restoredSeason = mappedSeasons.find(s => s.id === restoreSeasonId)
-        if (restoredSeason) {
-          setValue('season_id', restoredSeason.id, { shouldValidate: false })
-          setTimeout(() => trigger('season_id'), 100)
-          return
-        }
-      }
-      
-      // Auto-select the active season if it exists, otherwise select the first one
-      if (mappedSeasons.length > 0) {
-        const activeSeason = mappedSeasons.find(s => s.is_active)
-        const seasonToSelect = activeSeason || mappedSeasons[0]
-        setValue('season_id', seasonToSelect.id, { shouldValidate: false })
-        setTimeout(() => trigger('season_id'), 100)
-      } else {
-        // No seasons available, clear the selection
+      if (tsError) {
+        setSeasons([])
         setValue('season_id', '', { shouldValidate: false })
+        return
       }
-    } else {
-      // No seasons found or error, clear the selection
-      console.error('Error fetching seasons:', error)
+
+      const today = new Date().toISOString().split('T')[0]
+      const bySeasonId = new Map<string, { id: string; name: string; is_active?: boolean; end_date?: string }>()
+      ;(tsData || []).forEach((row: { season_id: string; name: string; is_active?: boolean; end_date?: string }) => {
+        if (!row.season_id || !row.name) return
+        const isActive = row.is_active ?? false
+        const isFuture = (row.end_date || '') >= today
+        if (!isActive && !isFuture) return
+        if (!bySeasonId.has(row.season_id)) {
+          bySeasonId.set(row.season_id, {
+            id: row.season_id,
+            name: row.name,
+            is_active: row.is_active,
+            end_date: row.end_date,
+          })
+        }
+      })
+      const seasonList = Array.from(bySeasonId.values())
+      setSeasons(seasonList)
+      setValue('season_id', '', { shouldValidate: false })
+      if (seasonList.length === 1) {
+        setValue('season_id', seasonList[0].id, { shouldValidate: false })
+      }
+    } catch (err) {
+      console.error('Error fetching seasons for program:', err)
       setSeasons([])
       setValue('season_id', '', { shouldValidate: false })
+      setValue('team_id', '', { shouldValidate: false })
     }
-  }, [context, isReady, setValue, trigger])
+  }, [context, isReady, setValue])
 
-  useEffect(() => { 
-    if (isReady) fetchTeams() 
-  }, [isReady, fetchTeams])
+  const filterTeamsForSeason = useCallback(async (seasonId: string) => {
+    if (!context?.orgId) return
+    const { data, error } = await supabase
+      .from('team_seasons')
+      .select('team_id')
+      .eq('season_id', seasonId)
+    if (error || !data || data.length === 0) {
+      setTeams([])
+      setValue('team_id', '', { shouldValidate: false })
+      return
+    }
+    const allowedTeamIds = new Set((data as { team_id: string }[]).map(r => r.team_id))
+    const { data: teamsData, error: teamsError } = await getTeams(context, {
+      sportId: watchSportId || undefined,
+      programId: watchProgramId || undefined,
+      activeOnly: true,
+    })
+    if (teamsError || !teamsData) {
+      setTeams([])
+      return
+    }
+    const filtered = teamsData.filter(t => allowedTeamIds.has(t.id)).map(t => ({ id: t.id, name: t.name }))
+    setTeams(filtered)
+    setValue('team_id', '', { shouldValidate: false })
+    if (filtered.length === 1) {
+      setValue('team_id', filtered[0].id, { shouldValidate: false })
+    }
+  }, [context, watchSportId, watchProgramId, setValue])
 
-  useEffect(() => { 
-    if (watchTeamId && isReady) {
-      // Check if we have a season_id that needs to be restored
-      const currentSeasonId = watch('season_id')
-      fetchSeasons(watchTeamId, currentSeasonId || undefined)
-    } else if (!watchTeamId) {
-      // Team cleared, clear seasons
+  useEffect(() => {
+    if (isReady) fetchSports()
+  }, [isReady, fetchSports])
+
+  useEffect(() => {
+    if (!watchSportId) {
+      setPrograms([])
       setSeasons([])
+      setTeams([])
+      setValue('program_id', '', { shouldValidate: false })
       setValue('season_id', '', { shouldValidate: false })
+      setValue('team_id', '', { shouldValidate: false })
+      previousSportIdRef.current = undefined
+      previousProgramIdRef.current = undefined
+      return
     }
-  }, [watchTeamId, isReady, fetchSeasons, watch, setValue])
+    const sportChanged = previousSportIdRef.current !== undefined && previousSportIdRef.current !== watchSportId
+    previousSportIdRef.current = watchSportId
+    if (sportChanged) {
+      setValue('program_id', '', { shouldValidate: false })
+      setValue('season_id', '', { shouldValidate: false })
+      setValue('team_id', '', { shouldValidate: false })
+      previousProgramIdRef.current = undefined
+    }
+    fetchProgramsForSport(watchSportId)
+  }, [watchSportId, isReady, fetchProgramsForSport, setValue])
+
+  useEffect(() => {
+    if (!watchProgramId || !watchSportId) {
+      setSeasons([])
+      setTeams([])
+      setValue('season_id', '', { shouldValidate: false })
+      setValue('team_id', '', { shouldValidate: false })
+      previousProgramIdRef.current = undefined
+      return
+    }
+    const programChanged = previousProgramIdRef.current !== undefined && previousProgramIdRef.current !== watchProgramId
+    previousProgramIdRef.current = watchProgramId
+    if (programChanged) {
+      setValue('season_id', '', { shouldValidate: false })
+      setValue('team_id', '', { shouldValidate: false })
+    }
+    fetchSeasonsForProgram(watchSportId, watchProgramId)
+  }, [watchProgramId, watchSportId, isReady, fetchSeasonsForProgram, setValue])
+
+  useEffect(() => {
+    if (!watchSeasonId || !watchSportId || !watchProgramId) return
+    filterTeamsForSeason(watchSeasonId)
+  }, [watchSeasonId, watchSportId, watchProgramId, filterTeamsForSeason])
 
   const onSubmit = async (data: EventFormData) => {
     setSaving(true)
@@ -468,110 +540,98 @@ export default function CreateEvent() {
               <Controller name="title" control={control} rules={{ required: t('admin.events.validation.titleRequired'), minLength: { value: 3, message: t('admin.events.validation.titleMinLength') } }} render={({ field }) => <Input {...field} label="Event Title" required error={errors.title?.message || undefined} />} />
             </div>
             
-            {/* Mobile: Single column | Tablet: Single column | Desktop: Three columns with medium-width selects */}
+            {/* Basic info: Sport → Program → Season → Team (each dropdown drives the next) */}
+            <div className="pa-form-grid pa-form-grid-4 pa-mb-4">
+              <div className="pa-select-wrapper">
+                <Controller
+                  name="sport_id"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      {...field}
+                      value={field.value || ''}
+                      label="Sport"
+                      options={sports.map(s => ({ value: s.id, label: s.name }))}
+                      placeholder="Select sport"
+                      onChange={(value) => {
+                        field.onChange(value)
+                        setValue('program_id', '', { shouldValidate: false })
+                        setValue('season_id', '', { shouldValidate: false })
+                        setValue('team_id', '', { shouldValidate: false })
+                      }}
+                    />
+                  )}
+                />
+              </div>
+              <div className="pa-select-wrapper">
+                <Controller
+                  name="program_id"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      {...field}
+                      value={field.value || ''}
+                      label="Program"
+                      options={programs.map(p => ({ value: p.id, label: p.name }))}
+                      placeholder="Select program"
+                      disabled={!watchSportId}
+                      onChange={(value) => {
+                        field.onChange(value)
+                        setValue('season_id', '', { shouldValidate: false })
+                        setValue('team_id', '', { shouldValidate: false })
+                      }}
+                    />
+                  )}
+                />
+              </div>
+              <div className="pa-select-wrapper">
+                <Controller
+                  name="season_id"
+                  control={control}
+                  rules={{ required: t('admin.events.validation.seasonRequired') }}
+                  render={({ field }) => (
+                    <Select
+                      {...field}
+                      value={field.value || ''}
+                      label="Season"
+                      options={seasons.map(s => ({ value: s.id, label: s.name }))}
+                      placeholder="Select season"
+                      required
+                      disabled={!watchProgramId || loading}
+                      error={errors.season_id?.message || undefined}
+                      onChange={(value) => {
+                        field.onChange(value)
+                        setValue('team_id', '', { shouldValidate: false })
+                      }}
+                    />
+                  )}
+                />
+              </div>
+              <div className="pa-select-wrapper">
+                <Controller
+                  name="team_id"
+                  control={control}
+                  rules={{ required: t('admin.events.validation.teamRequired') }}
+                  render={({ field }) => (
+                    <Select
+                      {...field}
+                      value={field.value || ''}
+                      label="Team"
+                      options={teams.map(t => ({ value: t.id, label: t.name }))}
+                      placeholder="Select team"
+                      required
+                      disabled={!watchSeasonId || loading}
+                      error={errors.team_id?.message || undefined}
+                    />
+                  )}
+                />
+              </div>
+            </div>
+            {/* Event type (same row or next row) */}
             <div className="pa-form-grid pa-form-grid-3 pa-mb-4">
               <div className="pa-select-wrapper">
                 <Controller name="type" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label="Event Type" options={eventTypeOptions} />} />
               </div>
-              <div className="pa-select-wrapper">
-                <Controller 
-                  name="team_id" 
-                  control={control} 
-                  rules={{ required: t('admin.events.validation.teamRequired') }} 
-                  render={({ field }) => (
-                    <Select 
-                      {...field} 
-                      value={field.value || ''} 
-                      label="Team" 
-                      options={teams.map(t => ({value:t.id, label:t.name}))} 
-                      required 
-                      error={errors.team_id?.message || undefined}
-                      onChange={(value) => {
-                        field.onChange(value)
-                        // Clear season when team changes
-                        if (String(value) !== String(field.value)) {
-                          setValue('season_id', '', { shouldValidate: false })
-                        }
-                      }}
-                    />
-                  )} 
-                />
-              </div>
-              {watchTeamId && seasons.length > 0 ? (
-                seasons.length > 1 ? (
-                  // Show dropdown when there are multiple seasons
-                  <div className="pa-select-wrapper">
-                    <Controller 
-                      name="season_id" 
-                      control={control} 
-                      rules={{ required: t('admin.events.validation.seasonRequired') }} 
-                      render={({ field }) => (
-                        <Select 
-                          {...field} 
-                          value={field.value || ''} 
-                          label="Season" 
-                          options={seasons.map(s => ({value:s.id, label:s.name}))} 
-                          required 
-                          disabled={loading}
-                          error={errors.season_id?.message || undefined}
-                        />
-                      )} 
-                    />
-                  </div>
-                ) : (
-                  // Show season name as badge when there's only one season
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <label className="pa-label">Season</label>
-                    <div style={{ display: 'flex', alignItems: 'center', minHeight: '42px' }}>
-                      <Badge variant="info">{seasons[0]?.name || 'No season available'}</Badge>
-                    </div>
-                    <Controller 
-                      name="season_id" 
-                      control={control} 
-                      rules={{ required: t('admin.events.validation.seasonRequired') }} 
-                      render={({ field }) => (
-                        <input type="hidden" {...field} value={seasons[0]?.id || ''} />
-                      )} 
-                    />
-                  </div>
-                )
-              ) : watchTeamId ? (
-                // Team selected but no seasons available
-                <div>
-                  <label className="pa-label">Season</label>
-                  <div className="pa-input" style={{ backgroundColor: 'var(--pa-bg-secondary)', cursor: 'not-allowed', color: 'var(--pa-text-muted)' }}>
-                    No active or future seasons available
-                  </div>
-                  <Controller 
-                    name="season_id" 
-                    control={control} 
-                    rules={{ required: t('admin.events.validation.seasonRequired') }} 
-                    render={({ field }) => (
-                      <input type="hidden" {...field} value="" />
-                    )} 
-                  />
-                </div>
-              ) : (
-                // No team selected
-                <div className="pa-select-wrapper">
-                  <Controller 
-                    name="season_id" 
-                    control={control} 
-                    rules={{ required: t('admin.events.validation.seasonRequired') }} 
-                    render={({ field }) => (
-                      <Select 
-                        {...field} 
-                        value={field.value || ''} 
-                        label="Season" 
-                        options={[]} 
-                        required 
-                        disabled={true}
-                        error={errors.season_id?.message || undefined}
-                      />
-                    )} 
-                  />
-                </div>
-              )}
             </div>
 
             {/* SECTION 2: DATE + TIME */}

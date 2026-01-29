@@ -7,6 +7,8 @@ import type {
 } from '../../types/travelContacts'
 import { TRAVEL_CONTACT_CATEGORIES_ORG } from '../../types/travelContacts'
 
+const supabaseAny = supabase as any
+
 /**
  * Get all organization travel contacts
  */
@@ -23,7 +25,7 @@ export async function getOrganizationTravelContacts(
   }
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAny
       .from('organization_travel_contacts')
       .select('*')
       .eq('org_id', context.orgId!)
@@ -63,7 +65,7 @@ export async function upsertOrganizationTravelContact(
   }
 
   try {
-    const { error } = await supabase
+    const { error } = await supabaseAny
       .from('organization_travel_contacts')
       .upsert({
         org_id: context.orgId!,

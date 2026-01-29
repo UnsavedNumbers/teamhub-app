@@ -1,4 +1,3 @@
-import React from 'react'
 import '../../styles/ios-events.css'
 import type { TravelPlanWithTeam } from './TravelList'
 import type { TravelPlanStatus } from '../../types/travelManagement'

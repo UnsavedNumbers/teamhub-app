@@ -1,4 +1,3 @@
-import React from 'react'
 import '../../styles/ios-events.css'
 import { formatDateRange } from '../../data/services/travelService'
 import type { FakeTravelPlan } from '../../data/services/travelService'
@@ -38,7 +37,6 @@ export default function TravelList({
     rowsPerPage,
     totalCount,
     onPageChange,
-    onRowsPerPageChange,
     onRowClick,
     onEdit,
     onPublish,

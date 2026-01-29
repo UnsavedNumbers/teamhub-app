@@ -20,7 +20,6 @@ import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
-import { cn } from '../../utils/cn'
 
 export default function TeamsManagement() {
   const { context, isReady } = useUserContext()
@@ -512,83 +511,74 @@ export default function TeamsManagement() {
       {/* Filter Bar */}
       <Card className="pa-mb-6 pa-filter-section">
         <div className="pa-filter-row">
-          <div className={cn('pa-grid', 'pa-grid-1', 'sm:pa-grid-2', 'lg:pa-grid-3', 'pa-gap-4', 'pa-flex-1')}>
-            {/* Row 1 */}
-            <div className="pa-filter-control">
-              <label className="pa-overline pa-mb-2 pa-block">Season</label>
-              <Select
-                value={filterSeasonId}
-                onChange={(e) => setFilterSeasonId(e.target.value)}
-                disabled={loading || navigating}
-                options={[
-                  { value: '', label: 'All seasons' },
-                  ...seasons.map((s) => ({ value: s.id, label: s.name })),
-                ]}
-              />
-            </div>
-
-            <div className="pa-filter-control">
-               <label className="pa-overline pa-mb-2 pa-block">Sport</label>
-              <Select
-                value={filterSportId}
-                onChange={(e) => {
-                  setFilterSportId(e.target.value)
-                  setFilterProgramId('')
-                  setFilterLevelId('')
-                }}
-                disabled={loading || navigating}
-                options={[
-                  { value: '', label: 'All sports' },
-                  ...sports.map((s) => ({ value: s.id, label: s.name })),
-                ]}
-              />
-            </div>
-
-            {/* Row 2 */}
-            <div className="pa-filter-control">
-              <label className="pa-overline pa-mb-2 pa-block">Program</label>
-              <Select
-                value={filterProgramId}
-                onChange={(e) => {
-                  setFilterProgramId(e.target.value)
-                  setFilterLevelId('')
-                }}
-                disabled={(!filterSportId && availablePrograms.length === programs.length) || loading || navigating}
-                options={[
-                  { value: '', label: 'All programs' },
-                  ...availablePrograms.map((p) => ({ value: p.id, label: p.name })),
-                ]}
-              />
-            </div>
-
-            <div className="pa-filter-control">
-              <label className="pa-overline pa-mb-2 pa-block">Level</label>
-              <Select
-                value={filterLevelId}
-                onChange={(e) => setFilterLevelId(e.target.value)}
-                disabled={loading || navigating}
-                options={[
-                  { value: '', label: 'All levels' },
-                  ...availableLevels.map((l) => ({ value: l.id, label: l.name })),
-                ]}
-              />
-            </div>
-
-            <div className="pa-filter-control">
-              <label className="pa-overline pa-mb-2 pa-block">Status</label>
-              <Select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                disabled={loading || navigating}
-                options={[
-                  { value: 'all', label: 'All statuses' },
-                  { value: 'active', label: 'Active' },
-                  { value: 'inactive', label: 'Inactive' },
-                ]}
-              />
-            </div>
+          <div className="pa-filter-control">
+            <Select
+              label="Filter by season"
+              value={filterSeasonId}
+              onChange={(e) => setFilterSeasonId(e.target.value)}
+              disabled={loading || navigating}
+              options={[
+                { value: '', label: 'All seasons' },
+                ...seasons.map((s) => ({ value: s.id, label: s.name })),
+              ]}
+            />
           </div>
-
+          <div className="pa-filter-control">
+            <Select
+              label="Filter by sport"
+              value={filterSportId}
+              onChange={(e) => {
+                setFilterSportId(e.target.value)
+                setFilterProgramId('')
+                setFilterLevelId('')
+              }}
+              disabled={loading || navigating}
+              options={[
+                { value: '', label: 'All sports' },
+                ...sports.map((s) => ({ value: s.id, label: s.name })),
+              ]}
+            />
+          </div>
+          <div className="pa-filter-control">
+            <Select
+              label="Filter by program"
+              value={filterProgramId}
+              onChange={(e) => {
+                setFilterProgramId(e.target.value)
+                setFilterLevelId('')
+              }}
+              disabled={(!filterSportId && availablePrograms.length === programs.length) || loading || navigating}
+              options={[
+                { value: '', label: 'All programs' },
+                ...availablePrograms.map((p) => ({ value: p.id, label: p.name })),
+              ]}
+            />
+          </div>
+          <div className="pa-filter-control">
+            <Select
+              label="Filter by level"
+              value={filterLevelId}
+              onChange={(e) => setFilterLevelId(e.target.value)}
+              disabled={loading || navigating}
+              options={[
+                { value: '', label: 'All levels' },
+                ...availableLevels.map((l) => ({ value: l.id, label: l.name })),
+              ]}
+            />
+          </div>
+          <div className="pa-filter-control">
+            <Select
+              label="Filter by status"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              disabled={loading || navigating}
+              options={[
+                { value: 'all', label: 'All statuses' },
+                { value: 'active', label: 'Active' },
+                { value: 'inactive', label: 'Inactive' },
+              ]}
+            />
+          </div>
           <div className="pa-filter-actions">
             <Button
               className="pa-w-full sm:pa-w-auto"

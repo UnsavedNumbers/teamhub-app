@@ -239,6 +239,7 @@ export default function SportDetail() {
 
       {!sport ? null : (
         <div className="sport-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--pa-space-6)' }}>
+          {false && (
           <div className="oa-card sport-detail-card">
             <div className="oa-card-header">
               <h3 className="oa-card-title">Customization</h3>
@@ -425,6 +426,7 @@ export default function SportDetail() {
               </div>
             </div>
           </div>
+          )}
 
           <div className="oa-card oa-card--no-padding sport-detail-card">
             <div className="oa-card-header">

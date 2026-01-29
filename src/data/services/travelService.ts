@@ -38,6 +38,8 @@ import {
 import { fakeEvents } from '../fake/fakeEvents'
 import { fakeTravelPlans, type FakeTravelPlan, type MeetingLocation } from '../fake/fakeTravel'
 import { isValidUUID } from '../../utils/uuid'
+
+const supabaseAny = supabase as any
 import { safeParseJSONB } from '../../utils/featureDiscovery/jsonbUtils'
 import { getSeasonById, getTeamById } from '../fake/fakeTeams'
 import {
@@ -1662,7 +1664,7 @@ export async function getTravelPlanContacts(
     }
 
     try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAny
             .from('travel_plan_contacts')
             .select('*')
             .eq('travel_plan_id', planId)
@@ -1706,7 +1708,7 @@ export async function deleteTravelPlanContactsForPlan(
     }
 
     try {
-        const { error } = await supabase
+        const { error } = await supabaseAny
             .from('travel_plan_contacts')
             .delete()
             .eq('travel_plan_id', planId)
@@ -1756,7 +1758,7 @@ export async function insertTravelPlanContacts(
             phone: c.phone ?? null,
         }))
 
-        const { error } = await supabase
+        const { error } = await supabaseAny
             .from('travel_plan_contacts')
             .insert(rows)
 
@@ -1807,7 +1809,7 @@ export async function upsertTravelPlanContacts(
             updated_at: new Date().toISOString(),
         }))
 
-        const { error } = await supabase
+        const { error } = await supabaseAny
             .from('travel_plan_contacts')
             .upsert(rows, {
                 onConflict: 'travel_plan_id,category'
@@ -1837,14 +1839,14 @@ export async function resolveAllTravelContactsForPlan(
         await simulateDelay()
         // Return nulls/empties
         const result = TRAVEL_CONTACT_CATEGORIES.reduce((acc, cat) => {
-            acc[cat] = { first_name: '', last_name: '', email: '', phone: null, source: 'org_default' }
+            acc[cat] = { first_name: '', last_name: '', email: '', phone: null }
             return acc
         }, {} as ResolvedTravelContacts)
         return { data: result, error: null }
     }
 
     try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAny
             .rpc('resolve_travel_contacts_for_plan', {
                 p_plan_id: planId
             })
@@ -1852,8 +1854,9 @@ export async function resolveAllTravelContactsForPlan(
         if (error) throw error
 
         // Data is JSONB (categories -> { first_name, last_name, email, phone }); RPC does not return source
+        const raw = data as Record<string, any> | null
         const result = TRAVEL_CONTACT_CATEGORIES.reduce((acc, cat) => {
-            const contact = data?.[cat]
+            const contact = raw?.[cat]
             acc[cat] = contact ? {
                 first_name: contact.first_name || '',
                 last_name: contact.last_name || '',
@@ -1962,6 +1965,7 @@ async function notifyTravelPlanPublished(
                 })
                 .join('<br/>')
         }
+        void contactDetails
 
         // Email sending uses Node fs/Resend and cannot run in the browser.
         // To notify on publish, invoke an Edge Function or backend job that uses

@@ -7,6 +7,7 @@ import { getTeams, getTeamDetails } from '../../data/services/teamsService'
 import { supabase } from '../../lib/supabase'
 import { createFee } from '../../api/fees'
 import { getErrorMessage } from '../../utils/errorUtils'
+import { cn } from '../../utils/cn'
 import { 
   AdminPageHeader, 
   Card, 
@@ -18,6 +19,7 @@ import {
 } from '../../components/platformAdmin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { useT } from '../../i18n/useI18n'
+import '../../styles/orgAdmin.css'
 import type { TranslationKey } from '../../i18n'
 
 interface Team { id: string; name: string }
@@ -73,7 +75,7 @@ export default function CreateFee() {
   const navigate = useNavigate()
   const t = useT()
 
-  const { control, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm<FeeFormData>({
+  const { control, handleSubmit, watch, setValue, trigger, register, formState: { errors } } = useForm<FeeFormData>({
     defaultValues: { 
       title: '',
       description: '',
@@ -228,10 +230,10 @@ export default function CreateFee() {
   // Handlers
   const handleSelectAll = (select: boolean) => {
     const newSelection: Record<string, boolean> = {}
-    if (select) {
-        roster.forEach(p => newSelection[p.id] = true)
-    }
-    setValue('selected_athlete_ids', newSelection)
+    roster.forEach(p => {
+      newSelection[p.id] = select
+    })
+    setValue('selected_athlete_ids', newSelection, { shouldDirty: true })
   }
 
   const selectedCount = Object.values(watchSelectedAthletes || {}).filter(Boolean).length
@@ -385,22 +387,26 @@ export default function CreateFee() {
             
             {/* Scope Selector */}
             <div className="pa-form-group pa-mb-6">
-                <label className="pa-label">Who is this fee for?</label>
-                <div className="pa-flex pa-gap-4 pa-flex-wrap">
-                    <label className={`pa-card pa-p-3 pa-flex pa-items-center pa-gap-2 pa-cursor-pointer ${watchScope === 'team' ? 'pa-border-primary' : ''}`} style={{ flex: 1, border: watchScope === 'team' ? '2px solid var(--pa-primary)' : '1px solid var(--pa-border)' }}>
-                        <input type="radio" value="team" {...control.register('scope')} />
-                        <div>
-                            <div className="pa-font-bold">Entire Team</div>
-                            <div className="pa-text-sm pa-text-muted">Assign to all active players</div>
-                        </div>
-                    </label>
-                    <label className={`pa-card pa-p-3 pa-flex pa-items-center pa-gap-2 pa-cursor-pointer ${watchScope !== 'team' ? 'pa-border-primary' : ''}`} style={{ flex: 1, border: watchScope !== 'team' ? '2px solid var(--pa-primary)' : '1px solid var(--pa-border)' }}>
-                        <input type="radio" value="selected_players" {...control.register('scope')} />
-                        <div>
-                            <div className="pa-font-bold">Specific Players</div>
-                            <div className="pa-text-sm pa-text-muted">Select specific athletes</div>
-                        </div>
-                    </label>
+                <label className="oa-filter-label">Who is this fee for?</label>
+                <input type="hidden" {...register('scope')} />
+                <div className="oa-toggle-group">
+                    <button
+                        type="button"
+                        onClick={() => setValue('scope', 'team', { shouldValidate: false })}
+                        className={cn('oa-toggle-btn', watchScope === 'team' && 'active')}
+                    >
+                        Entire Team
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setValue('scope', 'selected_players', { shouldValidate: false })}
+                        className={cn('oa-toggle-btn', watchScope !== 'team' && 'active')}
+                    >
+                        Specific Players
+                    </button>
+                </div>
+                <div className="pa-text-sm pa-text-slate-500 pa-mt-2">
+                    {watchScope === 'team' ? 'Assign to all active players.' : 'Select specific athletes for this fee.'}
                 </div>
             </div>
 
@@ -457,7 +463,7 @@ export default function CreateFee() {
                                 <div className="pa-p-4 pa-text-center pa-text-muted">No athletes found</div>
                             ) : (
                                 filteredRoster.map(athlete => (
-                                    <label key={athlete.id} className="pa-flex pa-items-center pa-p-2 pa-border-b hover:bg-gray-50 pa-cursor-pointer">
+                                    <label key={athlete.id} className="pa-flex pa-items-center pa-p-2 hover:pa-bg-n50 pa-cursor-pointer">
                                         <div className="pa-mr-3">
                                             <input 
                                                 type="checkbox" 

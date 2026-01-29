@@ -1248,7 +1248,7 @@ export default function OrganizationStructureForms() {
               >
                   {USE_FAKE_DATA 
                     ? 'Sign in to Add Sport'
-                    : t('admin.structureForms.actions.createItem', { item: formLabels.sport })
+                    : t('admin.structureForms.actions.addItem', { item: formLabels.sport })
                   }
                 </Button>
               </div>

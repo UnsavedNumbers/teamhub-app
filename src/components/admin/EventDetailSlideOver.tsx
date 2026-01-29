@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../../styles/orgAdmin.css'
 import { getEventDetails } from '../../data/services/eventsService'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getLink } from '../../utils/routes'
 import type { CalendarEvent } from '../../types/calendar'
-import { formatEventLocation, formatEventTimeRange, formatEventDate } from '../../types/calendar'
+import { formatEventTimeRange, formatEventDate } from '../../types/calendar'
 
 interface EventDetailSlideOverProps {
     eventId: string | null
@@ -151,9 +151,9 @@ export default function EventDetailSlideOver({
                             </div>
 
                             {/* Arrival / Mandatory Card */}
-                            {(event.arrival_time || event.is_mandatory) && (
+                            {(event.arrival_time || (event as { is_mandatory?: boolean }).is_mandatory) && (
                                 <div className="oa-arrival-card" style={{ marginBottom: '24px' }}>
-                                    {event.is_mandatory && (
+                                    {(event as { is_mandatory?: boolean }).is_mandatory && (
                                         <span className="oa-arrival-label">MANDATORY</span>
                                     )}
                                     {event.arrival_time && (

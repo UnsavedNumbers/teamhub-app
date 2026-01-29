@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, PlatformDataTable, Button, Badge } from '../../../components/platformAdmin'
+import { Card, PlatformDataTable, Badge } from '../../../components/platformAdmin'
 import { OrgAdminButton } from '../../../components/admin/OrgAdminButton'
 import type { ColumnConfig } from '../../../components/platformAdmin/PlatformDataTable'
 import { useUserContext } from '../../../hooks/useUserContext'
