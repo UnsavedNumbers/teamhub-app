@@ -39,6 +39,7 @@ import { fakeEvents } from '../fake/fakeEvents'
 import { fakeTravelPlans, type FakeTravelPlan, type MeetingLocation } from '../fake/fakeTravel'
 import { isValidUUID } from '../../utils/uuid'
 import { safeParseJSONB } from '../../utils/featureDiscovery/jsonbUtils'
+import { getSeasonById, getTeamById } from '../fake/fakeTeams'
 
 // ============================================================================
 // Re-exports for convenience
@@ -132,6 +133,21 @@ function mapSupabaseTravelPlan(row: TravelPlanRow): FakeTravelPlan {
     // Add new fields if they exist in the row (they might not if types aren't fully updated everywhere)
     // For FakeTravelPlan we'll just keep the base structure for now to avoid breaking other files
     // The service handles the DTOs but the internal model might not need all raw place IDs for display
+    // Add team and season info if available
+    if (row.team) {
+        plan.team = {
+            id: row.team.id,
+            name: row.team.name
+        }
+    }
+
+    if (row.season) {
+        plan.season = {
+            id: row.season.id,
+            name: row.season.name
+        }
+    }
+
     return plan
 }
 
@@ -485,7 +501,8 @@ export async function getTravelEvents(
             // Filter by upcoming
             if (params.upcomingOnly) {
                 const now = new Date()
-                travelEvents = travelEvents.filter(e => new Date(e.start_time) >= now)
+                // Use end_time >= now so ongoing trips are included
+                travelEvents = travelEvents.filter(e => new Date(e.end_time) >= now)
             }
 
             // Filter by team
@@ -1283,6 +1300,8 @@ export async function getTravelPlans(
     context: UserContext,
     params: TravelPlansQueryParams = {}
 ): Promise<{ data: FakeTravelPlan[]; error: Error | null }> {
+    const isGuardianViewer = context.roles.includes('guardian') || context.roles.includes('parent')
+
     if (USE_FAKE_DATA) {
         // Convert to event-based approach for fake data
         const { data: events, error } = await getTravelEvents(context, {
@@ -1296,18 +1315,56 @@ export async function getTravelPlans(
         }
 
         // Convert back to FakeTravelPlan format for backward compatibility
-        const plans = events.map(e => convertEventToTravelPlan(e))
+        const plans = events.map(e => {
+            const plan = convertEventToTravelPlan(e)
+            // Enrich with team and season info for fake data if missing
+            if (!plan.team && plan.team_id) {
+                const team = getTeamById(plan.team_id)
+                if (team) {
+                    plan.team = { id: team.id, name: team.name }
+                }
+            }
+            if (!plan.season && plan.season_id) {
+                const season = getSeasonById(plan.season_id)
+                if (season) {
+                    plan.season = { id: season.id, name: season.name }
+                }
+            }
+            return plan
+        })
+
+        // Guardians/parents should never see unpublished/draft plans
+        const visibilityFilteredPlans = isGuardianViewer
+            ? plans.filter(p => p.status !== 'draft')
+            : plans
 
         // Filter by status if specified
         if (params.status && params.status !== 'cancelled') {
-            return { data: plans.filter(p => p.status === params.status), error: null }
+            return { data: visibilityFilteredPlans.filter(p => p.status === params.status), error: null }
         }
 
-        return { data: plans, error: null }
+        return { data: visibilityFilteredPlans, error: null }
     }
 
     // Real Supabase implementation - query travel_plans table directly
     try {
+        // For guardians/parents, first get their accessible teams
+        let accessibleTeamIds: string[] | null = null
+        if (isGuardianViewer && !context.roles.includes('admin') && !context.roles.includes('org_admin')) {
+            // Get teams via athlete's team memberships where guardian has access
+            const { data: memberships, error: membershipError } = await supabase
+                .from('team_memberships')
+                .select('team_id, athlete:athletes!inner(guardian_user_id)')
+                .eq('athletes.guardian_user_id', context.userId)
+            
+            if (!membershipError && memberships) {
+                accessibleTeamIds = [...new Set(memberships.map((m: any) => m.team_id).filter(Boolean))]
+            } else {
+                // If query fails, return empty to be safe
+                accessibleTeamIds = []
+            }
+        }
+
         let query = supabase
             .from('travel_plans')
             .select(`
@@ -1319,6 +1376,8 @@ export async function getTravelPlans(
         // Filter by team
         if (params.teamId) {
             query = query.eq('team_id', params.teamId)
+        } else if (accessibleTeamIds !== null) {
+            // Guardian/parent: filter to only their athlete's teams
         }
 
         // Note: Status filtering is handled by RLS policies in the database
@@ -1331,7 +1390,7 @@ export async function getTravelPlans(
             const today = new Date()
             today.setHours(0, 0, 0, 0)
             const todayStr = today.toISOString().split('T')[0]
-            query = query.gte('start_date', todayStr)
+            query = query.gte('end_date', todayStr)
         }
 
         // Apply ordering
@@ -1353,7 +1412,11 @@ export async function getTravelPlans(
             throw new Error('Invalid travel plan data format')
         })
 
-        return { data: plans, error: null }
+        const visibilityFilteredPlans = isGuardianViewer
+            ? plans.filter(p => p.status !== 'draft')
+            : plans
+
+        return { data: visibilityFilteredPlans, error: null }
     } catch (err) {
         console.error('getTravelPlans error:', err)
         const errorMessage = err instanceof Error ? err.message : 'Unknown error'
@@ -1405,6 +1468,8 @@ function convertEventToTravelPlan(event: TravelEvent): FakeTravelPlan {
         cancelled_at: event.cancelled_at,
         created_at: event.created_at,
         updated_at: event.updated_at,
+        team: event.team ? { id: event.team.id, name: event.team.name } : undefined,
+        season: event.season ? { id: event.season.id, name: event.season.name } : undefined,
     }
 }
 
@@ -1415,6 +1480,8 @@ export async function getTravelPlanDetails(
     context: UserContext,
     planId: string
 ): Promise<{ data: FakeTravelPlan | null; error: Error | null }> {
+    const isGuardianViewer = context.roles.includes('guardian') || context.roles.includes('parent')
+
     if (USE_FAKE_DATA) {
         const { data: event, error } = await getTravelEventDetails(context, planId)
 
@@ -1422,7 +1489,11 @@ export async function getTravelPlanDetails(
             return { data: null, error }
         }
 
-        return { data: convertEventToTravelPlan(event), error: null }
+        const plan = convertEventToTravelPlan(event)
+        if (isGuardianViewer && plan.status === 'draft') {
+            return { data: null, error: new Error('Travel plan not found') }
+        }
+        return { data: plan, error: null }
     }
 
     // Real Supabase implementation - query travel_plans table directly
@@ -1475,6 +1546,25 @@ export async function getTravelPlanDetails(
             cancelled_at: (data as any).cancelled_at || null,
             created_at: data.created_at || '',
             updated_at: data.updated_at || '',
+        }
+
+        // Guardians can't see draft plans
+        if (isGuardianViewer && plan.status === 'draft') {
+            return { data: null, error: new Error('Travel plan not found') }
+        }
+
+        // Guardians can only see plans for teams their athletes are on
+        if (isGuardianViewer && !context.roles.includes('admin') && !context.roles.includes('org_admin')) {
+            const { data: memberships } = await supabase
+                .from('team_memberships')
+                .select('team_id')
+                .eq('team_id', plan.team_id)
+                .eq('athletes.guardian_user_id', context.userId)
+                .limit(1)
+            
+            if (!memberships || memberships.length === 0) {
+                return { data: null, error: new Error('Travel plan not found') }
+            }
         }
 
         return { data: plan, error: null }

@@ -101,6 +101,14 @@ export default function TravelPlans() {
     }
   }
 
+  const isPastPlan = (plan: Pick<TravelPlan, 'end_date'>): boolean => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const end = new Date(plan.end_date)
+    end.setHours(0, 0, 0, 0)
+    return end < today
+  }
+
   const handlePublish = async (id: string) => {
     setPublishLoading(id)
     setActionError(null)
@@ -219,7 +227,25 @@ export default function TravelPlans() {
       {plans.length === 0 && !loading && !error ? (
         <Card><EmptyState icon="flight_takeoff" title="NO TRAVEL PLANS" description="Create a travel plan to help your teams prepare for events." action={{ label: 'Create Plan', onClick: () => navigate('/admin/travel/new') }} noCard /></Card>
       ) : (
-        <PlatformDataTable columns={columns} rows={plans} loading={loading} totalCount={totalCount} page={page} rowsPerPage={rowsPerPage} onPageChange={setPage} onRowsPerPageChange={setRowsPerPage} onRowClick={r => navigate(`/admin/travel/${r.id}`)} />
+        <PlatformDataTable
+          columns={columns}
+          rows={plans}
+          loading={loading}
+          totalCount={totalCount}
+          page={page}
+          rowsPerPage={rowsPerPage}
+          onPageChange={setPage}
+          onRowsPerPageChange={setRowsPerPage}
+          onRowClick={r => navigate(`/admin/travel/${r.id}`)}
+          getRowStyle={(row) =>
+            isPastPlan(row)
+              ? {
+                  opacity: 0.55,
+                  filter: 'grayscale(0.2)',
+                }
+              : undefined
+          }
+        />
       )}
 
       <ConfirmDialog
