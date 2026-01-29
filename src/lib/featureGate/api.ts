@@ -55,11 +55,12 @@ export async function fetchFeatureGate(
     }
 
     try {
-        const { data, error } = await supabase.rpc('get_feature_gate', {
-            p_org_id: context.org_id || null,
+        const params: any = {
+            p_org_id: context.org_id ?? null,
             p_user_id: context.user_id,
             p_feature_key: featureKey,
-        });
+        }
+        const { data, error } = await supabase.rpc('get_feature_gate', params as any);
 
         if (error) {
             console.error('[FeatureGate] RPC error:', error);
@@ -121,11 +122,12 @@ export async function fetchFeatureGates(
     }
 
     try {
-        const { data, error } = await supabase.rpc('get_feature_gates', {
-            p_org_id: context.org_id || null,
+        const batchParams: any = {
+            p_org_id: context.org_id ?? null,
             p_user_id: context.user_id,
             p_feature_keys: uncachedKeys,
-        });
+        }
+        const { data, error } = await supabase.rpc('get_feature_gates', batchParams as any);
 
         if (error) {
             console.error('[FeatureGate] Batch RPC error:', error);
