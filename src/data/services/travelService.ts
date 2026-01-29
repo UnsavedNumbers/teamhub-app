@@ -40,12 +40,12 @@ import { fakeTravelPlans, type FakeTravelPlan, type MeetingLocation } from '../f
 import { isValidUUID } from '../../utils/uuid'
 import { safeParseJSONB } from '../../utils/featureDiscovery/jsonbUtils'
 import { getSeasonById, getTeamById } from '../fake/fakeTeams'
-import type {
-    TravelContactCategory,
-    ResolvedContact,
-    ResolvedTravelContacts,
+import {
+    TRAVEL_CONTACT_CATEGORIES,
+    type TravelContactCategory,
+    type ResolvedContact,
+    type ResolvedTravelContacts,
 } from '../../types/travelContacts'
-import { TRAVEL_CONTACT_CATEGORIES } from '../../types/travelContacts'
 
 // ============================================================================
 // Re-exports for convenience
