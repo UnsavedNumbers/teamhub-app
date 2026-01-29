@@ -120,12 +120,34 @@ function mapSupabaseLocationToEventLocation(location: any): EventLocation {
 // ============================================================================
 
 export interface EventsQueryParams {
+    // Existing params
     teamId?: string
     seasonId?: string
     startDate?: Date
     endDate?: Date
     includeCancelled?: boolean
     limit?: number
+
+    // New pagination params
+    offset?: number
+
+    // Search
+    search?: string
+
+    // Filters
+    teamIds?: string[]
+    seasonIds?: string[]
+    sportIds?: string[]
+    eventTypes?: EventType[]
+    status?: ('scheduled' | 'cancelled' | 'completed' | 'postponed')[]
+    locationSearch?: string
+
+    // Time context
+    timeContext?: 'upcoming' | 'past' | 'all'
+
+    // Sorting
+    orderBy?: string
+    order?: 'asc' | 'desc'
 }
 
 /**
@@ -205,9 +227,16 @@ export async function getEvents(
     // Real Supabase implementation - NO FALLBACK
     try {
         let query = buildEventQuery(supabase)
-            .order('start_time', { ascending: true })
 
-        // Apply filters
+        // Apply time context
+        const now = new Date()
+        if (params.timeContext === 'upcoming') {
+            query = query.gte('start_time', now.toISOString())
+        } else if (params.timeContext === 'past') {
+            query = query.lt('start_time', now.toISOString())
+        }
+
+        // Apply date range filters
         if (params.startDate) {
             query = query.gte('start_time', params.startDate.toISOString())
         }
@@ -216,23 +245,62 @@ export async function getEvents(
             query = query.lte('start_time', params.endDate.toISOString())
         }
 
+        // Apply team filters
         if (params.teamId) {
             query = query.eq('team_id', params.teamId)
         }
+        if (params.teamIds && params.teamIds.length > 0) {
+            query = query.in('team_id', params.teamIds)
+        }
 
+        // Apply season filters
         if (params.seasonId) {
             query = query.eq('season_id', params.seasonId)
         }
+        if (params.seasonIds && params.seasonIds.length > 0) {
+            query = query.in('season_id', params.seasonIds)
+        }
 
-        if (!params.includeCancelled) {
+        // Apply event type filter
+        if (params.eventTypes && params.eventTypes.length > 0) {
+            query = query.in('type', params.eventTypes)
+        }
+
+        // Apply status filter
+        if (params.status && params.status.length > 0) {
+            const hasScheduled = params.status.includes('scheduled')
+            const hasCancelled = params.status.includes('cancelled')
+            const hasCompleted = params.status.includes('completed')
+
+            if (hasCancelled && !hasScheduled && !hasCompleted) {
+                query = query.eq('is_cancelled', true)
+            } else if (!hasCancelled && (hasScheduled || hasCompleted)) {
+                query = query.eq('is_cancelled', false)
+            }
+            // If both or neither, don't filter by is_cancelled
+        } else if (!params.includeCancelled) {
             query = query.eq('is_cancelled', false)
         }
 
-        if (params.limit) {
+        // Apply search (title, notes, venue_name)
+        if (params.search && params.search.trim() !== '') {
+            const searchTerm = `%${params.search.trim()}%`
+            query = query.or(`title.ilike.${searchTerm},notes.ilike.${searchTerm}`)
+        }
+
+        // Apply sorting
+        const sortColumn = params.orderBy || 'start_time'
+        const sortOrder = params.order === 'desc' ? { ascending: false } : { ascending: true }
+        query = query.order(sortColumn, sortOrder)
+
+        // Apply pagination
+        if (params.offset !== undefined && params.limit) {
+            query = query.range(params.offset, params.offset + params.limit - 1)
+        } else if (params.limit) {
             query = query.limit(params.limit)
         }
 
-        const { data, error } = await query
+        const { data, error, count } = await query
 
         if (error) throw error
 
@@ -249,6 +317,107 @@ export async function getEvents(
         return { data: [], error: classifiedError }
     }
 }
+
+/**
+ * Get total count of events matching the query parameters (for pagination)
+ */
+export async function getEventsCount(
+    context: UserContext,
+    params: EventsQueryParams = {}
+): Promise<{ data: number; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+            const permissions = buildPermissions(context)
+            const childTeamMemberships = getChildTeamMemberships()
+
+            let events: CalendarEvent[]
+            if (params.startDate && params.endDate) {
+                events = getFakeEventsInDateRange(params.startDate, params.endDate)
+            } else if (params.teamId) {
+                events = getFakeEventsForTeam(params.teamId)
+            } else if (params.seasonId) {
+                events = getFakeEventsForSeason(params.seasonId)
+            } else {
+                events = getFakeAllEvents()
+            }
+
+            if (!params.includeCancelled) {
+                events = events.filter((e) => !e.is_cancelled)
+            }
+
+            events = filterEventsByRole(events, permissions, childTeamMemberships, context.orgId)
+
+            return { data: events.length, error: null }
+        } catch (err) {
+            console.error('getEventsCount error:', err)
+            return { data: 0, error: err instanceof Error ? err : new Error('Unknown error') }
+        }
+    }
+
+    // Real Supabase implementation
+    try {
+        let query = supabase.from('events').select('*', { count: 'exact', head: true })
+
+        // Apply same filters as getEvents
+        const now = new Date()
+        if (params.timeContext === 'upcoming') {
+            query = query.gte('start_time', now.toISOString())
+        } else if (params.timeContext === 'past') {
+            query = query.lt('start_time', now.toISOString())
+        }
+
+        if (params.startDate) {
+            query = query.gte('start_time', params.startDate.toISOString())
+        }
+        if (params.endDate) {
+            query = query.lte('start_time', params.endDate.toISOString())
+        }
+        if (params.teamId) {
+            query = query.eq('team_id', params.teamId)
+        }
+        if (params.teamIds && params.teamIds.length > 0) {
+            query = query.in('team_id', params.teamIds)
+        }
+        if (params.seasonId) {
+            query = query.eq('season_id', params.seasonId)
+        }
+        if (params.seasonIds && params.seasonIds.length > 0) {
+            query = query.in('season_id', params.seasonIds)
+        }
+        if (params.eventTypes && params.eventTypes.length > 0) {
+            query = query.in('type', params.eventTypes)
+        }
+        if (params.status && params.status.length > 0) {
+            const hasScheduled = params.status.includes('scheduled')
+            const hasCancelled = params.status.includes('cancelled')
+            const hasCompleted = params.status.includes('completed')
+
+            if (hasCancelled && !hasScheduled && !hasCompleted) {
+                query = query.eq('is_cancelled', true)
+            } else if (!hasCancelled && (hasScheduled || hasCompleted)) {
+                query = query.eq('is_cancelled', false)
+            }
+        } else if (!params.includeCancelled) {
+            query = query.eq('is_cancelled', false)
+        }
+        if (params.search && params.search.trim() !== '') {
+            const searchTerm = `%${params.search.trim()}%`
+            query = query.or(`title.ilike.${searchTerm},notes.ilike.${searchTerm}`)
+        }
+
+        const { count, error } = await query
+
+        if (error) throw error
+
+        return { data: count || 0, error: null }
+    } catch (err) {
+        console.error('getEventsCount error:', err)
+        const classifiedError = classifySupabaseError(err)
+        return { data: 0, error: classifiedError }
+    }
+}
+
 
 /**
  * Get a single event by ID

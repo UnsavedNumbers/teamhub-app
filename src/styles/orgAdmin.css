@@ -607,10 +607,155 @@ html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active:hover .mater
 }
 
 /* =====================================================================
-   ORG ADMIN BUTTONS - Uses org theme colors with hierarchy
-   Primary: org primary color for main actions
-   Secondary: org secondary color for supporting actions
-   Destructive: error color for delete/remove actions
+   ORG ADMIN BUTTONS (oa-btn) - Org theme only, no pa-* class usage in OA views
+   Primary: org primary for main actions; Secondary/Danger/Ghost for hierarchy
+   ===================================================================== */
+
+/* Base - layout only; colors come from variants */
+.oa-theme-active .oa-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    height: 44px;
+    padding: 0 1.5rem;
+    border: none;
+    border-radius: 9999px;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 200ms ease, color 200ms ease, transform 200ms ease;
+    text-decoration: none;
+    background: transparent;
+    color: inherit;
+}
+
+.oa-theme-active .oa-btn:focus-visible {
+    outline: 2px solid var(--org-btn-primary-bg);
+    outline-offset: 2px;
+}
+
+.oa-theme-active .oa-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.oa-theme-active .oa-btn .material-symbols-outlined {
+    font-size: 18px;
+}
+
+@keyframes oa-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.oa-theme-active .oa-btn-spinner {
+    width: 16px;
+    height: 16px;
+    border-width: 2px;
+    border-style: solid;
+    border-color: currentColor transparent transparent transparent;
+    border-radius: 50%;
+    animation: oa-spin 0.6s linear infinite;
+}
+
+/* Primary - org theme only */
+.oa-theme-active .oa-btn--primary {
+    background: var(--org-btn-primary-bg);
+    color: var(--org-btn-primary-text);
+}
+
+.oa-theme-active .oa-btn--primary:hover:not(:disabled) {
+    background: var(--org-btn-primary-hover);
+    color: var(--org-btn-primary-text);
+}
+
+.oa-theme-active .oa-btn--primary:active:not(:disabled) {
+    background: var(--org-btn-primary-active);
+    transform: translateY(1px);
+}
+
+/* Secondary */
+.oa-theme-active .oa-btn--secondary {
+    background: var(--org-btn-secondary-bg, #64748b);
+    color: var(--org-btn-secondary-text, #fff);
+}
+
+.oa-theme-active .oa-btn--secondary:hover:not(:disabled) {
+    background: var(--org-surface-tertiary, #475569);
+    color: var(--org-btn-secondary-text, #fff);
+}
+
+.oa-theme-active .oa-btn--secondary:active:not(:disabled) {
+    background: var(--org-btn-secondary-active, #334155);
+    transform: translateY(1px);
+}
+
+/* Danger */
+.oa-theme-active .oa-btn--danger {
+    background: var(--org-status-error-bg, #dc2626);
+    color: var(--org-status-error-text, #fff);
+}
+
+.oa-theme-active .oa-btn--danger:hover:not(:disabled) {
+    background: var(--org-status-error-hover, #b91c1c);
+    color: var(--org-status-error-text, #fff);
+}
+
+.oa-theme-active .oa-btn--danger:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+/* Ghost - transparent, inherits text color from parent */
+.oa-theme-active .oa-btn--ghost {
+    background: transparent;
+    color: inherit;
+}
+
+.oa-theme-active .oa-btn--ghost:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.oa-theme-active .oa-btn--ghost:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+html.dark .oa-theme-active .oa-btn--primary {
+    background: var(--org-btn-primary-bg) !important;
+    color: var(--org-btn-primary-text) !important;
+}
+
+html.dark .oa-theme-active .oa-btn--primary:hover:not(:disabled) {
+    background: var(--org-btn-primary-hover) !important;
+    color: var(--org-btn-primary-text) !important;
+}
+
+html.dark .oa-theme-active .oa-btn--secondary {
+    background: var(--org-btn-secondary-bg, #475569) !important;
+    color: var(--org-btn-secondary-text, #fff) !important;
+}
+
+html.dark .oa-theme-active .oa-btn--secondary:hover:not(:disabled) {
+    background: var(--org-surface-tertiary, #64748b) !important;
+    color: var(--org-btn-secondary-text, #fff) !important;
+}
+
+html.dark .oa-theme-active .oa-btn--danger {
+    background: var(--org-status-error-bg, #dc2626) !important;
+    color: var(--org-status-error-text, #fff) !important;
+}
+
+html.dark .oa-theme-active .oa-btn--danger:hover:not(:disabled) {
+    background: var(--org-status-error-hover, #b91c1c) !important;
+    color: var(--org-status-error-text, #fff) !important;
+}
+
+/* =====================================================================
+   Legacy: OA theme overrides for pa-btn when OA still used pa-* (deprecated)
+   Prefer oa-btn in new OA code. Kept for gradual migration of other OA views.
    ===================================================================== */
 
 /* Primary button - uses primary theme color (already configured via tokens) */
@@ -1029,11 +1174,11 @@ html.dark .oa-theme-active .pa-table tbody tr:hover {
     transition: transform 0.2s ease-out;
 }
 
-.oa-theme-active .pa-toggle-input:checked + .pa-toggle-track {
+.oa-theme-active .pa-toggle-input:checked+.pa-toggle-track {
     background: var(--org-btn-primary-bg, #137fec) !important;
 }
 
-.oa-theme-active .pa-toggle-input:checked ~ .pa-toggle-thumb {
+.oa-theme-active .pa-toggle-input:checked~.pa-toggle-thumb {
     transform: translateX(16px);
 }
 
@@ -1041,7 +1186,7 @@ html.dark .oa-theme-active .pa-toggle-track {
     background: var(--pa-n700);
 }
 
-html.dark .oa-theme-active .pa-toggle-input:checked + .pa-toggle-track {
+html.dark .oa-theme-active .pa-toggle-input:checked+.pa-toggle-track {
     background: var(--org-btn-primary-bg, #137fec) !important;
 }
 
@@ -1214,4 +1359,229 @@ html.dark .oa-default-preview {
         width: auto;
         /* Buttons constrained */
     }
+}
+
+/* =====================================================================
+   ORG ADMIN FORM SYSTEM (Nike Aesthetic)
+   Standalone classes to replace pa-* dependencies
+   ===================================================================== */
+
+/* Layout & Grid */
+.oa-form-layout {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-5);
+}
+
+.oa-form-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--pa-space-4);
+}
+
+@media (min-width: 768px) {
+    .oa-form-grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .oa-form-grid-4 {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .oa-form-grid-3 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Inputs */
+.oa-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-2);
+}
+
+.oa-input-group--mb-0 {
+    margin-bottom: 0;
+}
+
+.oa-label {
+    font-family: var(--pa-font-body);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--pa-n500);
+}
+
+.oa-input {
+    width: 100%;
+    height: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--pa-n200);
+    border-radius: 4px;
+    font-family: var(--pa-font-body);
+    font-size: 14px;
+    color: var(--pa-n900);
+    background: var(--pa-white);
+    transition: all var(--pa-motion-fast) var(--pa-ease-out);
+}
+
+.oa-input:focus {
+    border-color: var(--pa-n900);
+    outline: none;
+}
+
+.oa-input::placeholder {
+    color: var(--pa-n400);
+}
+
+/* Search Input */
+.oa-input-search-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.oa-input-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--pa-n500);
+    pointer-events: none;
+}
+
+.oa-input-search {
+    padding-left: 40px;
+}
+
+/* Filter Chips / Toggles */
+.oa-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Regular toggle buttons (like pills) */
+.oa-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    /* Pill shape */
+    font-family: var(--pa-font-body);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    background: var(--pa-white);
+    color: var(--pa-n600);
+    border: 1px solid var(--pa-n200);
+    cursor: pointer;
+    transition: all var(--pa-motion-fast) var(--pa-ease-out);
+}
+
+.oa-toggle-btn:hover {
+    border-color: var(--pa-n400);
+    color: var(--pa-n900);
+}
+
+.oa-toggle-btn.active {
+    background: var(--pa-n900);
+    color: var(--pa-white);
+    border-color: var(--pa-n900);
+}
+
+/* Active Filter Badges */
+.oa-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px 4px 12px;
+    background: var(--pa-n100);
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--pa-n900);
+}
+
+.oa-badge-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--pa-n300);
+    color: var(--pa-white);
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    font-size: 14px;
+}
+
+.oa-badge-remove:hover {
+    background: var(--pa-n500);
+}
+
+/* Section Headers */
+.oa-section-title {
+    font-family: var(--pa-font-display);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--pa-n900);
+    margin-bottom: var(--pa-space-3);
+    opacity: 0.6;
+}
+
+/* Card Overrides */
+.oa-filter-card {
+    background: var(--pa-white);
+    border: 1px solid var(--pa-n200);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.oa-filter-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    cursor: pointer;
+    background: var(--pa-n25);
+    transition: background 0.2s;
+}
+
+.oa-filter-card-header:hover {
+    background: var(--pa-n50);
+}
+
+.oa-filter-card-title {
+    font-family: var(--pa-font-display);
+    font-weight: 700;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--pa-n900);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.oa-filter-count {
+    background: var(--pa-n900);
+    color: var(--pa-white);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 99px;
+}
+
+.oa-filter-content {
+    padding: 24px;
+    border-top: 1px solid var(--pa-n200);
 }
