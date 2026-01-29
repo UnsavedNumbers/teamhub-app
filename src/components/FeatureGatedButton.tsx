@@ -71,6 +71,7 @@ export const FeatureGatedButton = forwardRef<HTMLButtonElement, FeatureGatedButt
       icon,
       iconRight,
       loading: externalLoading = false,
+      themeNamespace = 'pa',
       onClick, 
       className = '', 
       disabled,

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
@@ -15,7 +15,7 @@ import EventsCalendar from '../../components/admin/EventsCalendar'
 import EventsAgenda from '../../components/admin/EventsAgenda'
 import BulkActionsBar from '../../components/admin/BulkActionsBar'
 import EventDetailSlideOver from '../../components/admin/EventDetailSlideOver'
-import type { CalendarEvent, EventType } from '../../types/calendar'
+import type { CalendarEvent } from '../../types/calendar'
 import type { EventTimeContext, EventViewMode, EventsFilters as EventsFiltersType } from '../../types/eventsManagement'
 
 interface Team {
@@ -171,8 +171,8 @@ export default function Events() {
                 const month = calendarDate.getMonth()
                 queryParams.dateFrom = new Date(year, month, 1)
                 queryParams.dateTo = new Date(year, month + 1, 0, 23, 59, 59)
-                delete queryParams.offset
-                delete queryParams.limit
+                delete (queryParams as any).offset
+                delete (queryParams as any).limit
             }
 
             const [{ data: eventsData, error: eventsError }, { data: count, error: countError }] = await Promise.all([

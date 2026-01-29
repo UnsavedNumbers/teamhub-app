@@ -164,7 +164,7 @@ export default function TravelContactSection() {
                         <div className="pa-mb-3">
                             <h4 className="pa-h4 pa-mb-1 pa-flex pa-items-center pa-gap-2">
                                 {label}
-                                {field.category === 'default' && <Badge variant="primary" size="sm">Fallback</Badge>}
+                                {field.category === 'default' && <Badge variant="primary" size="small">Fallback</Badge>}
                             </h4>
                             <p className="pa-text-xs pa-text-muted">{desc}</p>
                         </div>

@@ -23,7 +23,7 @@ import type { StructuredAddress } from '../../types/location'
 import { useT } from '../../i18n/useI18n'
 import type { TranslationKey } from '../../i18n'
 import PlanTravelContacts from '../../components/admin/travel/PlanTravelContacts'
-import { getOrganizationTravelContacts, upsertOrganizationTravelContact } from '../../data/services/organizationTravelContactsService'
+import { getOrganizationTravelContacts } from '../../data/services/organizationTravelContactsService'
 import { TRAVEL_CONTACT_CATEGORIES, type TravelContactCategory, type OrganizationTravelContactRow, type TravelContactCategoryOrg } from '../../types/travelContacts'
 import { upsertTravelPlanContacts } from '../../data/services/travelService'
 
@@ -55,7 +55,6 @@ interface TravelFormData {
   hotel_lng: number | null
   hotel_phone: string
   hotel_confirmation: string
-  maps_url: string
   maps_url: string
   notes: string
   contacts: {

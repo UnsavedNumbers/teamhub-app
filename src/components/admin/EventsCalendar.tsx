@@ -1,4 +1,3 @@
-import React from 'react'
 import '../../styles/ios-events.css'
 import type { CalendarEvent, EventType } from '../../types/calendar'
 

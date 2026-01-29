@@ -12,7 +12,7 @@ import { USE_FAKE_DATA } from '../../data/config'
 import { getSports, deleteSport } from '../../data/services/sportsService'
 import { getPrograms } from '../../data/services/sportsService'
 import type { Sport } from '../../data/types/organization'
-import { AdminPageHeader, ConfirmDialog, Button, Card, EmptyState } from '../../components/platformAdmin'
+import { AdminPageHeader, ConfirmDialog, Button, Card, EmptyState, Badge } from '../../components/platformAdmin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { Tooltip } from '../../components/admin/Tooltip'
@@ -202,10 +202,12 @@ export default function Sports() {
                         {sport.name}
                       </span>
                       <div className="pa-flex pa-items-center pa-gap-2">
-                        <span
+                        <Badge
+                          variant="neutral"
                           role="button"
                           tabIndex={0}
-                          className="sports-program-count pa-text-xs pa-font-semibold sports-program-count-badge pa-cursor-pointer"
+                          className="pa-uppercase pa-text-[10px] pa-font-bold pa-cursor-pointer"
+                          style={{ padding: '2px 6px' }}
                           onClick={() => navigate(sport.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : `${programsRoute}?sport_id=${sport.id}`)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
@@ -215,7 +217,7 @@ export default function Sports() {
                           }}
                         >
                           {programCount} {programCount === 1 ? 'PROGRAM' : 'PROGRAMS'}
-                        </span>
+                        </Badge>
                       </div>
                     </div>
 

@@ -13,7 +13,7 @@ import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { UserContext, PermissionSet } from '../fake/userContext'
 import { calculatePermissions, filterEventsByRole } from '../fake/userContext'
-import type { CalendarEvent, EventRSVP, EventLocation, RSVPStatus } from '../../types/calendar'
+import type { CalendarEvent, EventRSVP, EventLocation, RSVPStatus, EventType } from '../../types/calendar'
 import {
     getEventById as getFakeEventById,
     getEventsForTeam as getFakeEventsForTeam,
@@ -300,7 +300,7 @@ export async function getEvents(
             query = query.limit(params.limit)
         }
 
-        const { data, error, count } = await query
+        const { data, error, count: _count } = await query
 
         if (error) throw error
 

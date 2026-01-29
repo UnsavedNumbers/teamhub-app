@@ -16,7 +16,7 @@ import type { Sport, Program, Level, Team } from '../../data/types/organization'
 import { AdminPageHeader, Select, ConfirmDialog, Button, Card, EmptyState, Badge } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
-import { cn } from '../../utils/cn'
+import './Programs.css'
 
 export default function Programs() {
   const { context, isReady } = useUserContext()
@@ -325,7 +325,7 @@ export default function Programs() {
 
   if (error) {
     return (
-      <div className="pa-root">
+      <div className="pa-root programs-page">
         <AdminPageHeader
           title="Programs"
           breadcrumbs={[{ label: 'Organizations', path: structureRoute }, { label: 'Programs' }]}
@@ -341,7 +341,7 @@ export default function Programs() {
   }
 
   return (
-    <div className="pa-root">
+    <div className="pa-root programs-page">
       <OfflineBanner />
       <AdminPageHeader
         title="Programs"
@@ -425,39 +425,41 @@ export default function Programs() {
               const levelCount = levelsList.length
 
               return (
-                <div key={program.id} className="pa-stacked-list-row">
+                <div key={program.id} className="pa-stacked-list-row programs-list-row">
                   <div className="pa-stacked-list-row-content">
                     <div className="pa-flex-1">
-                      <div className={cn('pa-flex', 'pa-items-baseline', 'pa-gap-2', 'pa-mb-1')}>
-                        <span 
-                            className="pa-stacked-list-row-title pa-cursor-pointer hover:pa-underline"
-                            onClick={() => handleNavigateToProgramDetail(program.id)}
+                      {sport && (
+                        <div className="pa-mb-1">
+                          <Badge variant="neutral" className="pa-uppercase pa-text-[10px] pa-font-bold" style={{ padding: '2px 6px' }}>
+                            {sport.name}
+                          </Badge>
+                        </div>
+                      )}
+                      <div className="pa-flex pa-items-baseline pa-gap-2 pa-mb-2">
+                        <span
+                          className="pa-stacked-list-row-title programs-program-name pa-cursor-pointer hover:pa-underline pa-block"
+                          onClick={() => handleNavigateToProgramDetail(program.id)}
                         >
                           {program.name}
                         </span>
-                        {sport && <span className="pa-text-xs pa-text-slate-400 pa-font-medium">({sport.name})</span>}
                       </div>
-                      
-                      <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-3')}>
-                        <Badge variant="neutral" className="pa-uppercase pa-text-[10px] pa-font-bold" style={{ padding: '2px 6px' }}>
-                            {program.gender_category}
-                        </Badge>
-                        <span className="pa-text-slate-200 pa-text-lg pa-font-light">|</span>
-                        <div className="pa-flex pa-items-center pa-gap-2">
-                             <span 
-                                className="pa-text-xs pa-font-semibold pa-text-slate-500 hover:pa-text-primary pa-cursor-pointer"
-                                onClick={() => handleNavigateToLevels(program.id)}
-                            >
-                                {levelCount} {levelCount === 1 ? 'LEVEL' : 'LEVELS'}
-                            </span>
-                            <span className="pa-text-slate-300">•</span>
-                            <span 
-                                className="pa-text-xs pa-font-semibold pa-text-slate-500 hover:pa-text-primary pa-cursor-pointer"
-                                onClick={() => handleNavigateToTeams(program.id)}
-                            >
-                                {totalTeams} {totalTeams === 1 ? 'TEAM' : 'TEAMS'}
-                            </span>
-                        </div>
+
+                      <div className="programs-meta">
+                        <span className="pa-text-xs pa-font-semibold pa-text-slate-500 pa-capitalize">
+                          {program.gender_category}
+                        </span>
+                        <span
+                          className="pa-text-xs pa-font-semibold pa-text-slate-500 hover:pa-text-primary pa-cursor-pointer"
+                          onClick={() => handleNavigateToLevels(program.id)}
+                        >
+                          {levelCount} {levelCount === 1 ? 'LEVEL' : 'LEVELS'}
+                        </span>
+                        <span
+                          className="pa-text-xs pa-font-semibold pa-text-slate-500 hover:pa-text-primary pa-cursor-pointer"
+                          onClick={() => handleNavigateToTeams(program.id)}
+                        >
+                          {totalTeams} {totalTeams === 1 ? 'TEAM' : 'TEAMS'}
+                        </span>
                       </div>
                     </div>
                     

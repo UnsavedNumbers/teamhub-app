@@ -27,7 +27,7 @@ export default function PlanTravelContacts({ control, name }: PlanTravelContacts
             </p>
             <div className="oa-category-list">
                 {fields.map((field, index) => {
-                    const category = field.category as TravelContactCategory
+                    const category = (field as { category?: TravelContactCategory }).category ?? 'general'
                     const label = TRAVEL_CONTACT_CATEGORY_LABELS[category] || category
                     const isCustom = useWatch({ control, name: `${name}.${index}.is_custom` })
 

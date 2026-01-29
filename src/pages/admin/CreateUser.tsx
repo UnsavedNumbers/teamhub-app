@@ -11,6 +11,7 @@ import {
   Input, 
   Select 
 } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { useT } from '../../i18n/useI18n'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
@@ -256,7 +257,7 @@ export default function CreateUser() {
                     {...field} 
                     label="Role" 
                     options={[
-                      { value: 'parent', label: 'Parent' },
+                      { value: 'parent', label: 'Guardian' },
                       { value: 'coach', label: 'Coach' },
                       { value: 'admin', label: 'Admin' },
                     ]} 
@@ -265,7 +266,7 @@ export default function CreateUser() {
               />
             </div>
 
-            <div className="pa-card pa-mb-6" style={{ background: 'var(--pa-info-bg)', border: 'none' }}>
+            <div className="pa-mb-6">
               <p className="pa-body-s">
                 <strong>Note:</strong> {watch('role') === 'admin' 
                   ? 'Only platform admins can create organization admin users. If you are not a platform admin, this will fail.'

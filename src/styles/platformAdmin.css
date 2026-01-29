@@ -3274,6 +3274,7 @@ html.dark .pa-table-footer-info {
     font: var(--pa-text-body-s);
     color: var(--pa-n500);
     margin-right: var(--pa-space-2);
+    white-space: nowrap;
 }
 
 html.dark .pa-table-pagination-label {

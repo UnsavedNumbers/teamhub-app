@@ -11,6 +11,7 @@ import {
   Input, 
   Select 
 } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { updateOrganizationUser } from '../../api/users'

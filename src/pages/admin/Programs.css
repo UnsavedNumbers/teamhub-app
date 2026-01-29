@@ -1,0 +1,22 @@
+/* Gender category: capitalize (e.g. "coed" → "Coed") */
+.programs-page .pa-capitalize {
+  text-transform: capitalize;
+}
+
+/* Programs list: title color matches Sports page */
+.programs-page .programs-list-row .programs-program-name {
+  color: var(--org-text-primary, var(--pa-text-primary));
+  transition: color var(--pa-motion-fast) ease;
+}
+
+.programs-page .programs-list-row:hover .programs-program-name {
+  color: var(--org-link-color, var(--pa-theme-text-accent, var(--org-btn-primary-bg)));
+}
+
+/* Metadata row: fixed columns so values align across list rows */
+.programs-page .programs-meta {
+  display: grid;
+  grid-template-columns: 5rem 7rem 6rem;
+  align-items: center;
+  gap: 0 0.5rem;
+}

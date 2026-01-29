@@ -606,6 +606,13 @@ html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active:hover .mater
     color: var(--org-btn-primary-text, var(--gn-text-primary));
 }
 
+/* Org status error tokens - defined here so danger/remove buttons use org only (theme may override) */
+.oa-theme-active {
+    --org-status-error-bg: #dc2626;
+    --org-status-error-text: #fff;
+    --org-status-error-hover: #b91c1c;
+}
+
 /* =====================================================================
    ORG ADMIN BUTTONS (oa-btn) - Org theme only, no pa-* class usage in OA views
    Primary: org primary for main actions; Secondary/Danger/Ghost for hierarchy
@@ -749,13 +756,13 @@ html.dark .oa-theme-active .oa-btn--secondary:hover:not(:disabled) {
 }
 
 html.dark .oa-theme-active .oa-btn--danger {
-    background: var(--org-status-error-bg, #dc2626) !important;
-    color: var(--org-status-error-text, #fff) !important;
+    background: var(--org-status-error-bg) !important;
+    color: var(--org-status-error-text) !important;
 }
 
 html.dark .oa-theme-active .oa-btn--danger:hover:not(:disabled) {
-    background: var(--org-status-error-hover, #b91c1c) !important;
-    color: var(--org-status-error-text, #fff) !important;
+    background: var(--org-status-error-hover) !important;
+    color: var(--org-status-error-text) !important;
 }
 
 /* =====================================================================
@@ -794,15 +801,20 @@ html.dark .oa-theme-active .oa-btn--danger:hover:not(:disabled) {
     background: var(--org-btn-secondary-active, var(--pa-n700));
 }
 
-/* Danger/Destructive button - uses error color */
+/* Danger/Destructive button - always visible; color from org tokens only */
 .oa-theme-active .pa-btn--danger {
-    background: var(--org-status-error-bg, var(--pa-error));
-    color: var(--org-status-error-text, var(--pa-white));
+    background: var(--org-status-error-bg) !important;
+    color: var(--org-status-error-text) !important;
+    border: none;
 }
 
 .oa-theme-active .pa-btn--danger:hover:not(:disabled) {
-    background: var(--org-status-error-hover, #C62828);
-    color: var(--org-status-error-text, var(--pa-white));
+    background: var(--org-status-error-hover) !important;
+    color: var(--org-status-error-text) !important;
+}
+
+.oa-theme-active .pa-btn--danger .material-symbols-outlined {
+    color: inherit;
 }
 
 /* Dark mode buttons */
@@ -827,13 +839,17 @@ html.dark .oa-theme-active .pa-btn--secondary:hover:not(:disabled) {
 }
 
 html.dark .oa-theme-active .pa-btn--danger {
-    background: var(--org-status-error-bg, var(--pa-error)) !important;
-    color: var(--org-status-error-text, var(--pa-white)) !important;
+    background: var(--org-status-error-bg) !important;
+    color: var(--org-status-error-text) !important;
 }
 
 html.dark .oa-theme-active .pa-btn--danger:hover:not(:disabled) {
-    background: var(--org-status-error-hover, #C62828) !important;
-    color: var(--org-status-error-text, var(--pa-white)) !important;
+    background: var(--org-status-error-hover) !important;
+    color: var(--org-status-error-text) !important;
+}
+
+html.dark .oa-theme-active .pa-btn--danger .material-symbols-outlined {
+    color: inherit;
 }
 
 /* =====================================================================
@@ -1370,6 +1386,76 @@ html.dark .oa-default-preview {
    ORG ADMIN FORM SYSTEM (Nike Aesthetic)
    Standalone classes to replace pa-* dependencies
    ===================================================================== */
+
+/* Page / layout (oa-only pages) */
+.oa-root {
+    font-family: var(--pa-font-body);
+    font-size: 14px;
+    line-height: 1.43;
+    color: var(--org-text-primary, var(--pa-text-primary));
+}
+
+.oa-skeleton {
+    background-color: var(--pa-n100);
+    border-radius: var(--pa-radius-xs);
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.oa-body-m {
+    font: var(--pa-text-body-m);
+    color: var(--org-text-secondary, var(--pa-n700));
+}
+
+html.dark .oa-body-m {
+    color: var(--pa-text-secondary);
+}
+
+.oa-text-danger {
+    color: var(--pa-danger);
+}
+
+html.dark .oa-text-danger {
+    color: #fca5a5;
+}
+
+.oa-mb-6 {
+    margin-bottom: var(--pa-space-6);
+}
+
+.oa-alert-card {
+    padding: var(--pa-space-3) var(--pa-space-4);
+    border-radius: var(--pa-radius-s);
+}
+
+.oa-alert-card--error {
+    background: var(--pa-danger-bg, #fef2f2);
+    border-left: 4px solid var(--pa-danger, #ef4444);
+}
+
+.oa-alert-card--error .oa-text-danger {
+    color: var(--pa-danger-dark, #991b1b);
+}
+
+.oa-form-container {
+    max-width: 960px;
+    margin: 0;
+    padding: var(--pa-space-6) 0;
+}
+
+.oa-form-group {
+    margin-bottom: var(--pa-space-4);
+}
+
+.oa-form-row-thirds {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: var(--pa-space-5);
+}
 
 /* Layout & Grid */
 .oa-form-layout {
@@ -2082,6 +2168,73 @@ html.dark .oa-icon-btn-lg:hover {
 .oa-footer-spacer {
     height: 96px;
 }
+
+/* =====================================================================
+   STACKED LIST (slideover / panels – 1 to 100+ items)
+   ===================================================================== */
+.oa-stacked-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-height: 0;
+}
+
+.oa-stacked-list-item {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-3);
+    padding: var(--pa-space-4) 0;
+    border-bottom: 1px solid var(--org-border-default);
+    text-decoration: none;
+    color: inherit;
+    transition: background-color var(--pa-motion-fast);
+    min-height: 56px;
+    box-sizing: border-box;
+}
+
+.oa-stacked-list-item:last-child {
+    border-bottom: none;
+}
+
+.oa-stacked-list-item:hover {
+    background: var(--org-surface-section);
+}
+
+.oa-stacked-list-item:focus-visible {
+    outline: 2px solid var(--org-focus-ring);
+    outline-offset: 2px;
+}
+
+.oa-stacked-list-item-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.oa-stacked-list-item-title {
+    font-family: var(--pa-font-body);
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1.3;
+    color: var(--org-text-primary);
+}
+
+.oa-stacked-list-item-meta {
+    font-size: 12px;
+    color: var(--org-text-muted);
+    margin-top: 2px;
+    line-height: 1.3;
+}
+
+.oa-stacked-list-item-chevron {
+    flex-shrink: 0;
+    color: var(--org-text-muted);
+    font-size: 20px;
+}
+
+.oa-stacked-list-item:hover .oa-stacked-list-item-chevron {
+    color: var(--org-btn-primary-bg);
+}
+
 /* =====================================================================
    ORG ADMIN FILTER COMPONENT
    Clean, grouped filter interface for AdminAnnouncements
@@ -2112,6 +2265,8 @@ html.dark .oa-icon-btn-lg:hover {
     gap: 8px;
     min-width: 200px;
     flex: 1;
+    align-items: stretch;
+    justify-content: flex-end;
 }
 
 .oa-filter-group--narrow {
@@ -2125,6 +2280,8 @@ html.dark .oa-icon-btn-lg:hover {
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--pa-n500);
+    line-height: 1.2;
+    min-height: 14px;
 }
 
 .oa-toggle-group {
@@ -2134,6 +2291,8 @@ html.dark .oa-icon-btn-lg:hover {
     border-radius: 8px;
     gap: 4px;
     border: 1px solid var(--org-border-default, var(--pa-n200));
+    min-height: 42px;
+    align-items: center;
 }
 
 .oa-toggle-btn {

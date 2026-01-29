@@ -7,6 +7,7 @@ import type { AttendanceRecord, AttendanceStatus } from '../../types/attendance'
 import {
   Card, 
   PlatformDataTable, 
+  Button,
   Badge,
   type ColumnConfig 
 } from '../../components/platformAdmin'
@@ -141,5 +142,4 @@ export default function AttendanceRoster() {
     </div>
   )
 }
-
 

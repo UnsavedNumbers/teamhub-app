@@ -10,6 +10,7 @@ import { getTeams, getActiveSeason, getTeamRoster } from '../../data/services/te
 import type { Level, Program, Sport, Team } from '../../data/types/organization'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { AdminPageHeader, Button, Card, Table, type TableColumn } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { getLink } from '../../utils/routes'
 import { getRandomSportImagePath } from '../../utils/sportImages'
 

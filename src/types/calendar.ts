@@ -233,6 +233,10 @@ export interface CalendarViewState {
 export interface EventFormData {
     title: string
     type: EventType
+    /** UI-only: drives Program dropdown (Sport → Program → Season → Team) */
+    sport_id?: string
+    /** UI-only: drives Season dropdown */
+    program_id?: string
     team_id: string
     season_id: string
     start_time: string // datetime-local format

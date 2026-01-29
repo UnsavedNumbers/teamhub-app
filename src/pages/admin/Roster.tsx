@@ -16,6 +16,7 @@ import {
   type ColumnConfig,
   ConfirmDialog
 } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 
 interface Season {
   id: string

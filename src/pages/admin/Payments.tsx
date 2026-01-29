@@ -644,17 +644,15 @@ export default function Payments() {
           label="COLLECTED" 
           value={`$${stats.collected.toLocaleString()}`}
           icon="check_circle"
-          style={{ background: 'var(--pa-success-surface, #f0fdf4)' }}
         />
         <StatCard 
           label="OUTSTANDING" 
           value={`$${stats.outstanding.toLocaleString()}`}
           icon="error"
-          style={{ background: 'var(--pa-danger-surface, #fef2f2)' }}
         />
       </div>
 
-      <div className={cn('pa-flex', 'pa-gap-2', 'pa-mb-6')}>
+      <div className={cn('pa-flex', 'pa-gap-2', 'pa-mb-6', 'pa-mt-2')}>
         {(['all', 'unpaid', 'partial', 'paid'] as const).map((f) => (
           <Button
             key={f}

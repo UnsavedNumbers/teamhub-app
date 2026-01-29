@@ -1,4 +1,3 @@
-import React from 'react'
 import '../../styles/ios-events.css'
 import { formatDateRange } from '../../data/services/travelService'
 import type { TravelPlanWithTeam } from './TravelList'
