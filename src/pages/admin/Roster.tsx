@@ -318,9 +318,9 @@ export default function Roster() {
             <Button onClick={() => navigate(`/admin/athletes/import?teamId=${teamId}&seasonId=${selectedSeason}`)} variant="secondary" icon="upload_file">
               Import Athletes
             </Button>
-            <Button onClick={() => navigate(getLink('admin.athletes.create'))} variant="blue" className="w-full sm:w-auto" icon="add">
+            <OrgAdminButton onClick={() => navigate(getLink('admin.athletes.create'))} variant="primary" className="w-full sm:w-auto" icon="add">
               Add Athlete
-            </Button>
+            </OrgAdminButton>
           </div>
         }
       />

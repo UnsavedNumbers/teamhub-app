@@ -15,6 +15,7 @@ import {
   TabsContent,
   ConfirmDialog,
 } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { getUserPreferences, updateUserPreferences, type UserPreferences } from '../../data/services/preferencesService'
 import { supabase } from '../../lib/supabase'
 import { showSuccess, showError } from '../../utils/toast'
@@ -660,12 +661,12 @@ export default function AdminSettings() {
               </div>
             </div>
             <div className="pa-modal-footer">
-              <Button
+              <OrgAdminButton
                 onClick={() => setShowPasswordModal(false)}
-                variant="blue"
+                variant="primary"
               >
                 Cancel
-              </Button>
+              </OrgAdminButton>
               <Button
                 onClick={handleChangePassword}
                 disabled={changingPassword || !newPassword || newPassword !== confirmPassword}
@@ -1085,12 +1086,12 @@ function SecuritySettings({ user, onShowPasswordModal, onSignOutAll, passwordSuc
       <div className="pa-card-content">
         <div className="pa-form-group">
           <label className="pa-label">Password</label>
-          <Button
+          <OrgAdminButton
             onClick={onShowPasswordModal}
-            variant="blue"
+            variant="primary"
           >
             Change Password
-          </Button>
+          </OrgAdminButton>
           {passwordSuccess && (
             <div className="pa-alert pa-alert-success" style={{ marginTop: '1rem' }}>
               <span className="material-symbols-outlined">check_circle</span>

@@ -11,6 +11,7 @@ import { getOrganizationUsers } from '../../data/services/usersService'
 import type { Level, Program, Sport, Team } from '../../data/types/organization'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { AdminPageHeader, Button, Card, Table, type TableColumn } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { getLink } from '../../utils/routes'
 import { getRandomSportImagePath } from '../../utils/sportImages'
 import { cn } from '../../utils/cn'
@@ -643,8 +644,8 @@ export default function ProgramDetail() {
                           }
                         }}
                       >
-                        <Button
-                          variant="blue"
+                        <OrgAdminButton
+                          variant="primary"
                           icon="add_circle"
                           disabled={loading || isOffline || USE_FAKE_DATA || !programId || !program.sport_id}
                           title={
@@ -660,7 +661,7 @@ export default function ProgramDetail() {
                           className="w-full sm:w-auto min-h-[44px]"
                         >
                           Add Level
-                        </Button>
+                        </OrgAdminButton>
                       </Link>
 
                       <Link

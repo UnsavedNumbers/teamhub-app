@@ -14,6 +14,7 @@ import { getSeasons } from '../../../data/services/seasonsService'
 import { getSports } from '../../../data/services/sportsService'
 import type { DefaultsSettings } from '../../../types/organizationSettings'
 import { Button, Select, Checkbox } from '../../../components/platformAdmin'
+import { OrgAdminButton } from '../../../components/admin/OrgAdminButton'
 import { showSuccess, showError } from '../../../utils/toast'
 
 const formSchema = z.object({
@@ -261,14 +262,14 @@ export default function DefaultsSection({
         </div>
 
         <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button
+          <OrgAdminButton
             type="button"
-            variant="blue"
+            variant="primary"
             onClick={() => reset()}
             disabled={!isDirty || isSaving}
           >
             Reset
-          </Button>
+          </OrgAdminButton>
           <Button type="submit" loading={saving} disabled={!isDirty || isSaving}>
             Save Changes
           </Button>

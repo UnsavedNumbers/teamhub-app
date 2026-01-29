@@ -12,6 +12,7 @@ import { useUserContext } from '../../../hooks/useUserContext'
 import { updateAdvancedSettings } from '../../../data/services/organizationSettingsService'
 import type { AdvancedSettings } from '../../../types/organizationSettings'
 import { Button, Input, Checkbox } from '../../../components/platformAdmin'
+import { OrgAdminButton } from '../../../components/admin/OrgAdminButton'
 import { showSuccess, showError } from '../../../utils/toast'
 
 const formSchema = z.object({
@@ -215,14 +216,14 @@ export default function AdvancedSection({
         </div>
 
         <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button
+          <OrgAdminButton
             type="button"
-            variant="blue"
+            variant="primary"
             onClick={() => reset()}
             disabled={!isDirty || isSaving}
           >
             Reset
-          </Button>
+          </OrgAdminButton>
           <Button type="submit" loading={saving} disabled={!isDirty || isSaving}>
             Save Changes
           </Button>

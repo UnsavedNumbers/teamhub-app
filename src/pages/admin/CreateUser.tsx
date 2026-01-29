@@ -274,7 +274,7 @@ export default function CreateUser() {
             </div>
 
             <div className="pa-flex pa-justify-end pa-gap-3">
-              <Button variant="blue" onClick={() => navigate('/admin/users')}>Cancel</Button>
+              <OrgAdminButton variant="primary" onClick={() => navigate('/admin/users')}>Cancel</OrgAdminButton>
               <Button type="submit" loading={saving}>Create User</Button>
             </div>
           </form>

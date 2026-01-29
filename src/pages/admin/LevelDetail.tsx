@@ -629,8 +629,8 @@ export default function LevelDetail() {
                         }
                       }}
                     >
-                      <Button
-                        variant="blue"
+                      <OrgAdminButton
+                        variant="primary"
                         icon="add_circle"
                         disabled={isOffline || USE_FAKE_DATA || !program.id || !program.sport_id || !levelId || loading}
                         title={
@@ -648,17 +648,17 @@ export default function LevelDetail() {
                         }
                       >
                         Add Team
-                      </Button>
+                      </OrgAdminButton>
                     </Link>
                   ) : (
-                    <Button
-                      variant="blue"
+                    <OrgAdminButton
+                      variant="primary"
                       icon="add_circle"
                       disabled
                       title="Program information is required to add teams"
                     >
                       Add Team
-                    </Button>
+                    </OrgAdminButton>
                   )}
                 </div>
               </div>

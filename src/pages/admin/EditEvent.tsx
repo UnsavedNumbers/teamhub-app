@@ -885,7 +885,7 @@ export default function EditEvent() {
               </div>
             </div>
             <div className="pa-form-actions">
-              <Button variant="blue" onClick={() => navigate(getLink('admin.events.list'))} disabled={saving || actionLoading} className="w-full sm:w-auto">Cancel</Button>
+              <OrgAdminButton variant="primary" onClick={() => navigate(getLink('admin.events.list'))} disabled={saving || actionLoading} className="w-full sm:w-auto">Cancel</OrgAdminButton>
               <Button 
                 type="submit" 
                 loading={saving}

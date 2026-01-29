@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AdminPageHeader, Card, Input, Button, Select, DatePicker, ErrorState } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { useUserContext } from '../../hooks/useUserContext'
 import { createAthleteBasic, getFamilyDetails } from '../../data/services/familyService'
@@ -179,14 +180,13 @@ export default function CreateChild() {
               </div>
 
               <div className="pa-flex pa-justify-end pa-gap-4 pa-mt-8">
-                <Button 
-                  type="button" 
-                  variant="blue" 
+                <OrgAdminButton
+                  variant="primary"
                   onClick={() => navigate(getLink('admin.guardians.detail', { id: familyId! }))}
                   disabled={loading}
                 >
                   Cancel
-                </Button>
+                </OrgAdminButton>
                 <Button 
                   type="submit" 
                   disabled={loading || !formData.first_name || !formData.last_name || !formData.date_of_birth}

@@ -16,6 +16,7 @@ import {
   DatePicker,
   Checkbox
 } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { useT } from '../../i18n/useI18n'
 import type { TranslationKey } from '../../i18n'
 
@@ -499,9 +500,9 @@ export default function CreateFee() {
         </Card>
 
         <div className="pa-form-actions pa-mb-12">
-            <Button variant="blue" onClick={() => navigate('/admin/payments')} type="button" className="w-full sm:w-auto">
+            <OrgAdminButton variant="primary" onClick={() => navigate('/admin/payments')} type="button" className="w-full sm:w-auto">
                 Cancel
-            </Button>
+            </OrgAdminButton>
             <Button type="submit" loading={saving} disabled={!watchTeamId || !watchSeasonId} className="pa-form-submit-btn w-full sm:w-auto">
                 Create Fee
             </Button>

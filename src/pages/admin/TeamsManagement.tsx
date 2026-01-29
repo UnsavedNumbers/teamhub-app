@@ -16,6 +16,7 @@ import { getSeasons } from '../../data/services/seasonsService'
 import type { Team, Sport, Program, Level, Season } from '../../data/types/organization'
 import { supabase } from '../../lib/supabase'
 import { AdminPageHeader, Button, ConfirmDialog, EmptyState, Card, Select, Badge, PlatformDataTable } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
@@ -402,7 +403,7 @@ export default function TeamsManagement() {
             noCard
           >
             <Link to={`${getLink('admin.organization.forms')}?type=program`}>
-              <Button variant="blue" className="w-full sm:w-auto">Add a Program</Button>
+              <OrgAdminButton variant="primary" className="w-full sm:w-auto">Add a Program</OrgAdminButton>
             </Link>
           </EmptyState>
         </Card>
@@ -430,7 +431,7 @@ export default function TeamsManagement() {
             noCard
           >
             <Link to={`${getLink('admin.organization.forms')}?type=level&returnUrl=${encodeURIComponent(getLink('admin.teams.list'))}`}>
-              <Button variant="blue" className="w-full sm:w-auto">Add a Level</Button>
+              <OrgAdminButton variant="primary" className="w-full sm:w-auto">Add a Level</OrgAdminButton>
             </Link>
           </EmptyState>
         </Card>

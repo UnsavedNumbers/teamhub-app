@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, PlatformDataTable, Button, Badge } from '../../../components/platformAdmin'
+import { OrgAdminButton } from '../../../components/admin/OrgAdminButton'
 import type { ColumnConfig } from '../../../components/platformAdmin/PlatformDataTable'
 import { useUserContext } from '../../../hooks/useUserContext'
 import { getAttendanceEvents } from '../../../data/services/attendanceService'
@@ -50,9 +51,9 @@ export default function AttendanceEvents() {
         id: 'actions',
         label: 'Actions',
         render: (row: AttendanceEventSummary & { id: string }) => (
-            <Button size="compact" variant="blue" onClick={() => navigate(`/admin/events/${row.event_id}/attendance`)}>
+            <OrgAdminButton size="compact" variant="primary" onClick={() => navigate(`/admin/events/${row.event_id}/attendance`)}>
                 View
-            </Button>
+            </OrgAdminButton>
         )
     }
   ]

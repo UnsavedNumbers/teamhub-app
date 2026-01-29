@@ -13,6 +13,7 @@ import { getSports, deleteSport } from '../../data/services/sportsService'
 import { getPrograms } from '../../data/services/sportsService'
 import type { Sport } from '../../data/types/organization'
 import { AdminPageHeader, ConfirmDialog, Button, Card, EmptyState } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { Tooltip } from '../../components/admin/Tooltip'
 import { getLink } from '../../utils/routes'
@@ -131,15 +132,15 @@ export default function Sports() {
           { label: 'Sports' },
         ]}
         actions={
-          <Button 
+          <OrgAdminButton
             icon="add"
+            variant="primary"
             onClick={() => navigate(`${formsRoute}?type=sport&returnUrl=${encodeURIComponent(sportsRoute)}`)}
             disabled={isOffline || USE_FAKE_DATA}
-            variant="blue"
             className="w-full sm:w-auto"
           >
             {USE_FAKE_DATA ? 'Sign in to Add Sport' : 'Add Sport'}
-          </Button>
+          </OrgAdminButton>
         }
       />
 
