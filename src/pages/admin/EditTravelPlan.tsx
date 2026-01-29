@@ -19,6 +19,10 @@ import {
 } from '../../components/platformAdmin'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
 import { FileUpload } from '../../components/common/FileUpload'
+import PlanTravelContacts from '../../components/admin/travel/PlanTravelContacts'
+import { getOrganizationTravelContacts, upsertOrganizationTravelContact } from '../../data/services/organizationTravelContactsService'
+import { TRAVEL_CONTACT_CATEGORIES, type TravelContactCategory, type OrganizationTravelContactRow, type TravelContactCategoryOrg } from '../../types/travelContacts'
+import { getTravelPlanContacts, upsertTravelPlanContacts } from '../../data/services/travelService'
 
 interface TravelFormData { 
   title: string
@@ -38,6 +42,14 @@ interface TravelFormData {
   hotel_confirmation: string
   maps_url: string
   notes: string
+  contacts: {
+    category: string
+    is_custom: boolean
+    first_name: string
+    last_name: string
+    email: string
+    phone: string
+  }[]
 }
 
 export default function EditTravelPlan() {
@@ -56,6 +68,7 @@ export default function EditTravelPlan() {
   const t = useT()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [orgContacts, setOrgContacts] = useState<Record<TravelContactCategoryOrg, OrganizationTravelContactRow | null> | null>(null)
 
   renderCountRef.current++
   console.log(`[EditTravelPlan:${componentIdRef.current}] RENDER #${renderCountRef.current}`, {
@@ -144,6 +157,12 @@ export default function EditTravelPlan() {
         return
       }
 
+      // Fetch contacts
+      const { data: contactsData, error: contactsError } = await getTravelPlanContacts(context, id)
+      if (contactsError) {
+          console.error('Error fetching plan contacts', contactsError)
+      }
+
       console.log(`[EditTravelPlan:${componentIdRef.current}] fetchPlan #${fetchId} - Resetting form with data`)
       // Populate form with existing data
       reset({
@@ -164,6 +183,17 @@ export default function EditTravelPlan() {
         hotel_confirmation: data.hotel_confirmation ?? '',
         maps_url: data.maps_url ?? '',
         notes: data.notes ?? '',
+        contacts: TRAVEL_CONTACT_CATEGORIES.map(cat => {
+            const existing = contactsData?.[cat]
+            return {
+                category: cat,
+                is_custom: existing?.is_custom ?? false,
+                first_name: existing?.first_name || '',
+                last_name: existing?.last_name || '',
+                email: existing?.email || '',
+                phone: existing?.phone || '',
+            }
+        })
       })
     } catch (err) {
       if (!isMountedRef.current) return
@@ -179,7 +209,16 @@ export default function EditTravelPlan() {
         setLoading(false)
       }
     }
-  }, [id, context.orgId, isReady, navigate, reset])
+  }, [id, context.orgId, isReady, navigate, reset, context])
+  
+  // Fetch org contacts for preview
+  useEffect(() => {
+    if (isReady && context) {
+        getOrganizationTravelContacts(context).then(res => {
+            if (res.data) setOrgContacts(res.data)
+        })
+    }
+  }, [isReady, context])
 
   useEffect(() => {
     effectRunCountRef.current++
@@ -281,6 +320,22 @@ export default function EditTravelPlan() {
           await fetchPlan()
         }
         return
+      }
+
+      // Save travel contacts
+      if (data.contacts && id) {
+         await upsertTravelPlanContacts(
+             context, 
+             id, 
+             data.contacts.map(c => ({
+                 category: c.category as TravelContactCategory,
+                 is_custom: c.is_custom,
+                 first_name: c.first_name,
+                 last_name: c.last_name,
+                 email: c.email,
+                 phone: c.phone
+             }))
+         )
       }
 
       console.log(`[EditTravelPlan:${componentIdRef.current}] onSubmit - Success, navigating away`)
@@ -452,9 +507,16 @@ export default function EditTravelPlan() {
                 replaceText="Replace file"
                 accept=".pdf,application/pdf"
                 maxSize={10 * 1024 * 1024}
+                maxSize={10 * 1024 * 1024}
                 fullWidth
               />
             </div>
+
+            <PlanTravelContacts 
+                control={control} 
+                name="contacts" 
+                orgContacts={orgContacts} 
+            />
 
             <div className="pa-form-actions">
               <Button variant="blue" onClick={() => navigate('/admin/travel')} disabled={saving} className="w-full sm:w-auto">Cancel</Button>

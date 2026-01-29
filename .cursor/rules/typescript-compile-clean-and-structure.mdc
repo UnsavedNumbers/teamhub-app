@@ -6,7 +6,7 @@ alwaysApply: true
 
 # TypeScript: Compile-Clean and Structural Correctness
 
-When writing or modifying code, you must continuously do a **mock validation of correctness** as you go. Treat TypeScript errors as **blockers**, not warnings, and keep the project in a **compile-clean state** at all times by mentally (or locally) validating that `tsc --noEmit` would pass at the end of every change. Do not proceed if the type system shows errors.
+When writing or modifying code, you must continuously do a **mock validation of correctness** as you go. Do not proceed if the type system shows errors. Treat TypeScript errors as **blockers**, not warnings, and keep the project in a **compile-clean state** at all times by mentally (or locally) validating that `tsc --noEmit` would pass at the end of every change.
 
 ## Imports
 
