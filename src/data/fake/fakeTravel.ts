@@ -60,6 +60,14 @@ export interface FakeTravelPlan {
     cancelled_at: string | null
     created_at: string
     updated_at: string
+    team?: {
+        id: string
+        name: string
+    }
+    season?: {
+        id: string
+        name: string
+    }
 }
 
 export interface MeetingLocation {

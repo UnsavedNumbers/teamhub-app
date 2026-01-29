@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import { CSSProperties, ReactNode } from 'react'
 import { Checkbox } from './Checkbox'
 import { cn } from '../../utils/cn'
 
@@ -26,6 +26,8 @@ interface PlatformDataTableProps<T extends { id: string }> {
   onPageChange: (page: number) => void
   onRowsPerPageChange: (rowsPerPage: number) => void
   onRowClick?: (row: T) => void
+  getRowClassName?: (row: T) => string
+  getRowStyle?: (row: T) => CSSProperties | undefined
   orderBy?: string
   order?: 'asc' | 'desc'
   onSort?: (column: string) => void
@@ -52,6 +54,8 @@ export default function PlatformDataTable<T extends { id: string }>({
   onPageChange,
   onRowsPerPageChange,
   onRowClick,
+  getRowClassName,
+  getRowStyle,
   orderBy,
   order = 'asc',
   onSort,
@@ -235,12 +239,20 @@ export default function PlatformDataTable<T extends { id: string }>({
             {safeRows.map((row) => (
               <tr
                 key={row.id}
-                className={onRowClick ? 'pa-clickable' : ''}
+                className={cn(onRowClick ? 'pa-clickable' : '', getRowClassName?.(row) ?? '')}
                 onClick={() => onRowClick?.(row)}
-                style={{
-                  cursor: onRowClick ? 'pointer' : 'default',
-                  backgroundColor: selectable && selectedIds.has(row.id) ? 'var(--pa-primary-bg)' : undefined,
-                }}
+                style={(() => {
+                  const baseStyle = getRowStyle?.(row)
+                  const selectedStyle = selectable && selectedIds.has(row.id)
+                    ? { backgroundColor: 'var(--pa-primary-bg)' }
+                    : null
+
+                  return {
+                    ...baseStyle,
+                    cursor: onRowClick ? 'pointer' : 'default',
+                    ...(selectedStyle || {}),
+                  }
+                })()}
               >
                 {/* Selection checkbox */}
                 {selectable && (
@@ -291,12 +303,21 @@ export default function PlatformDataTable<T extends { id: string }>({
               onClick={() => onRowClick?.(row)}
               className={cn(
                 'pa-card',
-                onRowClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''
+                onRowClick ? 'cursor-pointer hover:shadow-md transition-shadow' : '',
+                getRowClassName?.(row) ?? ''
               )}
-              style={{
-                padding: 'var(--pa-space-4)',
-                backgroundColor: selectable && selectedIds.has(row.id) ? 'var(--pa-primary-bg)' : undefined,
-              }}
+              style={(() => {
+                const baseStyle = getRowStyle?.(row)
+                const selectedStyle = selectable && selectedIds.has(row.id)
+                  ? { backgroundColor: 'var(--pa-primary-bg)' }
+                  : null
+
+                return {
+                  ...baseStyle,
+                  padding: 'var(--pa-space-4)',
+                  ...(selectedStyle || {}),
+                }
+              })()}
             >
               {/* Key field (first column) - prominent */}
               {keyColumn && (
