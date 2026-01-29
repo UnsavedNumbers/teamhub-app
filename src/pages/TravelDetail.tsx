@@ -829,12 +829,7 @@ export default function TravelDetail() {
                             {new Date(event.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}{' '}
                             • {formatEventTime(event.start_time)}–{formatEventTime(event.end_time)}
                           </p>
-                          {event.event_location?.venue_name && (
-                            <p className="text-sm font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1">
-                              <Icon name="location_on" size="text-sm" />
-                              {event.event_location.venue_name}
-                            </p>
-                          )}
+                          {/* venue row removed (duplicate shown in VenueInsights header) */}
                         </div>
                         {googleCalendarLink({
                           title: event.title,

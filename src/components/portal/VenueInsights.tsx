@@ -84,20 +84,20 @@ export default function VenueInsights({ placeId, className = '' }: VenueInsights
   return (
     <div className={className}>
       <div className="border-t border-slate-200 dark:border-slate-700 pt-4 mt-4">
-        {/* Collapsible Header */}
+        {/* Collapsible Header (shows venue name) */}
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
           className="w-full flex items-center justify-between text-left group"
         >
           <div className="flex items-center gap-2">
-            <Icon name="info" size="text-lg" className="text-slate-500 dark:text-slate-400" />
-            <span className="font-bold text-slate-900 dark:text-white">Venue Information</span>
+            <Icon name="place" size="text-lg" className="text-slate-500 dark:text-slate-400" />
+            <span className="font-bold text-slate-900 dark:text-white">{venueName}</span>
           </div>
-          <Icon 
-            name={isExpanded ? 'expand_less' : 'expand_more'} 
-            size="text-xl" 
-            className="text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" 
+          <Icon
+            name={isExpanded ? 'expand_less' : 'expand_more'}
+            size="text-xl"
+            className="text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors"
           />
         </button>
 
@@ -176,12 +176,7 @@ export default function VenueInsights({ placeId, className = '' }: VenueInsights
             {/* Basic venue info if AI failed */}
             {!aiSummary && !aiWhatToExpect && placeDetails && (
               <div className="space-y-2">
-                {placeDetails.name && (
-                  <div className="flex items-center gap-2">
-                    <Icon name="location_on" size="text-sm" className="text-slate-400" />
-                    <span className="font-bold text-slate-900 dark:text-white text-sm">{placeDetails.name}</span>
-                  </div>
-                )}
+                {/* venue name already shown in accordion header - omit duplicate here */}
                 {placeDetails.formatted_address && (
                   <div className="flex items-center gap-2">
                     <Icon name="place" size="text-sm" className="text-slate-400" />

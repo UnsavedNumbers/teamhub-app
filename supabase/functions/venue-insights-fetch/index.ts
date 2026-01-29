@@ -67,14 +67,48 @@ async function fetchAndUploadPhoto(
     return { url: null, error: 'Invalid photo_reference' }
   }
 
-  const googleUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxWidth}&photo_reference=${encodeURIComponent(photoReference)}&key=${apiKey}`
+  // Use Google Places API (New) Media endpoint
+  // Reference: https://places.googleapis.com/v1/{name}/media
+  // Resource name is the full photo name (e.g., "places/PLACE_ID/photos/PHOTO_RESOURCE")
+  const googleUrl = `https://places.googleapis.com/v1/${photoReference}/media?maxWidthPx=${maxWidth}&key=${apiKey}`
 
   try {
     // Fetch the photo from Google
-    const response = await fetchWithTimeout(googleUrl, {}, PHOTO_FETCH_TIMEOUT_MS)
+    // Note: The API redirects to the image URL by default, fetch follows redirects
+    const response = await fetchWithTimeout(
+      googleUrl, 
+      {
+        headers: {
+          'User-Agent': 'YouthSports.team/1.0',
+          'Referer': 'https://youthsports.team', // Help with API restrictions
+        }
+      }, 
+      PHOTO_FETCH_TIMEOUT_MS
+    )
     
     if (!response.ok) {
-      return { url: null, error: `Failed to fetch photo: ${response.status}` }
+      const status = response.status
+      const errorText = await response.text().catch(() => 'No error details')
+      
+      // Log fetch failure
+      try {
+        await supabaseClient.rpc('log_event', {
+          p_category: 'EVENT',
+          p_event_type: 'VENUE_INSIGHTS_PHOTO_FETCH_FAILED',
+          p_actor_user_id: null,
+          p_actor_role: 'system',
+          p_metadata: { 
+            place_id: placeId, 
+            photo_reference: photoReference, 
+            status: status,
+            error: errorText
+          },
+        } as any)
+      } catch (e) {
+        console.error('Failed to log fetch error:', e)
+      }
+      
+      return { url: null, error: `Failed to fetch photo: ${status}` }
     }
 
     const contentType = response.headers.get('content-type') || 'image/jpeg'
@@ -132,31 +166,6 @@ async function fetchAndUploadPhoto(
   } catch (err) {
     console.error('Photo fetch/upload error:', err)
     return { url: null, error: err instanceof Error ? err.message : 'Unknown error' }
-  }
-}
-
-/**
- * Generate photo URL from photo reference (legacy - for direct URLs)
- * Note: Direct URLs may fail due to Google referrer restrictions
- */
-function generatePhotoUrl(photoReference: string, maxWidth: number = 800): { url: string | null; error: string | null } {
-  const apiKey = Deno.env.get('GOOGLE_PLACES_API_KEY')
-  if (!apiKey) {
-    return { url: null, error: 'GOOGLE_PLACES_API_KEY not configured' }
-  }
-
-  if (!photoReference || typeof photoReference !== 'string' || photoReference.length === 0) {
-    return { url: null, error: 'Invalid photo_reference' }
-  }
-
-  const url = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxWidth}&photo_reference=${encodeURIComponent(photoReference)}&key=${apiKey}`
-
-  // Validate URL format
-  try {
-    new URL(url) // Throws if invalid
-    return { url, error: null }
-  } catch {
-    return { url: null, error: 'Generated invalid URL' }
   }
 }
 
@@ -245,28 +254,10 @@ serve(async (req) => {
           // Release lock and return cached data
           await supabaseClient.rpc('pg_advisory_unlock_wrapper', { key: Number(lockKey) })
 
-          // Use stored photo URLs from Supabase Storage, or fallback to Google URLs
+          // Use only stored photo URLs from Supabase Storage (never Google URLs - they 403 in browser)
           let photoUrls: string[] = []
           if (existing.photo_urls && Array.isArray(existing.photo_urls) && existing.photo_urls.length > 0) {
             photoUrls = existing.photo_urls
-          } else {
-            // Fallback to Google URLs
-            const photos = existing.photos_json
-              ? (Array.isArray(existing.photos_json)
-                  ? existing.photos_json
-                  : typeof existing.photos_json === 'string'
-                  ? JSON.parse(existing.photos_json)
-                  : [])
-              : []
-            photoUrls = photos
-              .map((photo: { reference?: string }) => {
-                if (photo.reference) {
-                  return generatePhotoUrl(photo.reference)
-                }
-                return { url: null, error: 'Missing photo reference' }
-              })
-              .filter((result: { url: string | null }) => result.url !== null)
-              .map((result: { url: string }) => result.url)
           }
 
           return new Response(
@@ -374,21 +365,14 @@ serve(async (req) => {
             const placeDetailsData = await response.json()
             
             // Transform to match our expected format
-            // Extract photo reference from photo name (format: "places/{place_id}/photos/{photo_reference}")
+            // Use the full photo resource name as the reference
             const transformPhotos = (photos: Array<{ name?: string; widthPx?: number; heightPx?: number; authorAttributions?: Array<{ displayName?: string }> }> | undefined) => {
               if (!photos) return []
               return photos.map((photo) => {
-                // Extract photo reference from name (e.g., "places/ChIJ.../photos/Aap_uED..." -> "Aap_uED...")
-                let photoReference = ''
-                if (photo.name) {
-                  const parts = photo.name.split('/photos/')
-                  if (parts.length > 1) {
-                    photoReference = parts[1]
-                  } else {
-                    // Fallback: use the last part of the name
-                    photoReference = photo.name.split('/').pop() || ''
-                  }
-                }
+                // Use the full resource name (e.g., "places/ChIJ.../photos/Aap_uED...")
+                // This is required for the New Places API Media endpoint
+                const photoReference = photo.name || ''
+                
                 return {
                   photo_reference: photoReference,
                   width: photo.widthPx || 0,
@@ -763,52 +747,18 @@ Output format: Markdown bullet list (each tip on a new line starting with -)`
         aiWhatToExpect = existing.ai_what_to_expect
       }
 
-      // Get photo URLs - prefer uploaded URLs from storage, fall back to Google URLs
+      // Get photo URLs - only use uploaded URLs from Supabase Storage (never Google URLs - they 403 in browser)
       let photoUrls: string[] = []
-      
-      // First, check if we have uploaded photo URLs in the database
       const { data: latestData } = await supabaseClient
         .from('venue_insights')
-        .select('photo_urls, photos_json')
+        .select('photo_urls')
         .eq('place_id', place_id)
         .single()
-      
+
       if (latestData?.photo_urls && Array.isArray(latestData.photo_urls) && latestData.photo_urls.length > 0) {
-        // Use cached photo URLs from Supabase Storage
         photoUrls = latestData.photo_urls
       } else if (existing?.photo_urls && Array.isArray(existing.photo_urls) && existing.photo_urls.length > 0) {
-        // Use existing photo URLs
         photoUrls = existing.photo_urls
-      } else {
-        // Fallback: generate Google URLs from photo references
-        let photosToProcess: Array<{ reference?: string; photo_reference?: string }> = []
-        
-        if (placeDetails) {
-          const placeDetailsPhotos = (placeDetails as { photos?: Array<{ photo_reference: string }> })?.photos || []
-          photosToProcess = placeDetailsPhotos.map((photo) => ({ photo_reference: photo.photo_reference }))
-        } else if (latestData?.photos_json || existing?.photos_json) {
-          const photosJson = latestData?.photos_json || existing?.photos_json
-          if (Array.isArray(photosJson)) {
-            photosToProcess = photosJson
-          } else if (typeof photosJson === 'string') {
-            try {
-              photosToProcess = JSON.parse(photosJson)
-            } catch {
-              photosToProcess = []
-            }
-          }
-        }
-        
-        photoUrls = photosToProcess
-          .map((photo: { reference?: string; photo_reference?: string }) => {
-            const ref = photo.reference || photo.photo_reference
-            if (ref) {
-              return generatePhotoUrl(ref)
-            }
-            return { url: null, error: 'Missing photo reference' }
-          })
-          .filter((result: { url: string | null }) => result.url !== null)
-          .map((result: { url: string }) => result.url)
       }
 
       // Return response
