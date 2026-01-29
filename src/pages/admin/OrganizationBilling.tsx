@@ -60,18 +60,8 @@ export default function OrganizationBilling() {
   }, [orgId, loadHistory])
 
   const currentPlanLabel = useMemo(() => {
-    if (!summary?.plan) return t('license.planLabel')
-    switch (summary.plan) {
-      case 'starter':
-        return t('license.planStarter')
-      case 'standard':
-        return t('license.planStandard')
-      case 'pro':
-        return t('license.planPro')
-      default:
-        return t('license.planLabel')
-    }
-  }, [summary?.plan])
+    return summary?.tierName ?? t('license.planLabel')
+  }, [summary?.tierName])
 
   const statusMessage = useMemo(() => {
     return getStatusMessage(summary)

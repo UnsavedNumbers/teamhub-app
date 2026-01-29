@@ -19,24 +19,24 @@ export const ROUTE_TO_FEATURE: Record<string, string> = {
     // Portal Routes
     // -------------------------------------------------------------------------
     'portal.dashboard': 'dashboard',
-    'portal.calendar': 'calendar',
-    'portal.travel': 'travel',
-    'portal.travel.detail': 'traveldetail',
-    'portal.messages': 'huddles',
-    'portal.messages.announcement': 'announcementdetail',
-    'portal.payments': 'payments',
-    'portal.payments.detail': 'paymentdetail',
-    'portal.payments.success': 'paymentsuccess',
-    'portal.athletes': 'athletes',
-    'portal.athletes.requestAttachment': 'requestattachment',
-    'portal.athletes.create': 'createathlete',
-    'portal.join': 'join',
+    'portal.calendar': 'event_scheduling',
+    'portal.travel': 'travel_planning',
+    'portal.travel.detail': 'travel_details',
+    'portal.messages': 'messaging',
+    'portal.messages.announcement': 'announcements',
+    'portal.payments': 'payment_processing',
+    'portal.payments.detail': 'payment_processing',
+    'portal.payments.success': 'payment_processing',
+    'portal.athletes': 'roster_management',
+    'portal.athletes.requestAttachment': 'roster_management',
+    'portal.athletes.create': 'roster_management',
+    'portal.join': 'registration_forms',
     'portal.tryouts': 'tryouts',
-    'portal.tryouts.detail': 'tryoutdetail',
-    'portal.uniforms': 'uniforms',
-    'portal.uniforms.detail': 'uniformkitdetail',
+    'portal.tryouts.detail': 'tryouts',
+    'portal.uniforms': 'uniform_orders',
+    'portal.uniforms.detail': 'uniform_orders',
     'portal.settings': 'settings',
-    'portal.preferences': 'preferences',
+    'portal.preferences': 'settings',
 
     // -------------------------------------------------------------------------
     // Admin Routes - Dashboard
@@ -46,70 +46,70 @@ export const ROUTE_TO_FEATURE: Record<string, string> = {
     // -------------------------------------------------------------------------
     // Admin Routes - Organization
     // -------------------------------------------------------------------------
-    'admin.organization.base': 'base',
+    'admin.organization.base': 'organization_settings',
     'admin.organization.structure': 'organization_settings',
-    'admin.organization.billing': 'billing',
-    'admin.organization.billing.planSelection': 'planselection',
-    'admin.organization.billing.checkoutSuccess': 'checkoutsuccess',
-    'admin.organization.billing.checkoutCancel': 'checkoutcancel',
-    'admin.organization.users': 'users',
+    'admin.organization.billing': 'stripe_integration',
+    'admin.organization.billing.planSelection': 'stripe_integration',
+    'admin.organization.billing.checkoutSuccess': 'stripe_integration',
+    'admin.organization.billing.checkoutCancel': 'stripe_integration',
+    'admin.organization.users': 'multi_role_support',
 
     // -------------------------------------------------------------------------
     // Admin Routes - Athletes & Guardians
     // -------------------------------------------------------------------------
-    'admin.athletes.list': 'athletes',
-    'admin.athletes.detail': 'athletes',
-    'admin.athletes.create': 'createathlete',
-    'admin.athletes.edit': 'athletes',
-    'admin.athletes.import': 'import',
-    'admin.guardians.list': 'guardian',
-    'admin.guardianRequests': 'guardianrequests',
+    'admin.athletes.list': 'roster_management',
+    'admin.athletes.detail': 'roster_management',
+    'admin.athletes.create': 'roster_management',
+    'admin.athletes.edit': 'roster_management',
+    'admin.athletes.import': 'roster_management',
+    'admin.guardians.list': 'roster_management',
+    'admin.guardianRequests': 'roster_management',
 
     // -------------------------------------------------------------------------
     // Admin Routes - Operations
     // -------------------------------------------------------------------------
-    'admin.payments.list': 'payments',
-    'admin.payments.detail': 'paymentdetail',
-    'admin.payments.fees': 'fees',
-    'admin.payments.fees.create': 'fees',
-    'admin.events.list': 'events',
-    'admin.events.detail': 'eventdetail',
-    'admin.events.create': 'events',
-    'admin.attendance': 'attendance',
-    'admin.uniforms.list': 'uniforms',
-    'admin.uniforms.detail': 'uniformkitdetail',
-    'admin.uniforms.create': 'uniforms',
+    'admin.payments.list': 'payment_processing',
+    'admin.payments.detail': 'payment_processing',
+    'admin.payments.fees': 'fee_management',
+    'admin.payments.fees.create': 'fee_management',
+    'admin.events.list': 'event_scheduling',
+    'admin.events.detail': 'event_scheduling',
+    'admin.events.create': 'event_scheduling',
+    'admin.attendance': 'event_scheduling',
+    'admin.uniforms.list': 'uniform_orders',
+    'admin.uniforms.detail': 'uniform_orders',
+    'admin.uniforms.create': 'uniform_orders',
     'admin.announcements.list': 'announcements',
-    'admin.announcements.detail': 'announcementdetail',
+    'admin.announcements.detail': 'announcements',
     'admin.announcements.create': 'announcements',
 
     // -------------------------------------------------------------------------
     // Admin Routes - Programs
     // -------------------------------------------------------------------------
-    'admin.travel.list': 'travel',
-    'admin.travel.detail': 'traveldetail',
-    'admin.travel.create': 'travel',
-    'admin.travel.edit': 'edit',
+    'admin.travel.list': 'travel_planning',
+    'admin.travel.detail': 'travel_details',
+    'admin.travel.create': 'travel_planning',
+    'admin.travel.edit': 'travel_planning',
     'admin.tryouts.list': 'tryouts',
-    'admin.tryouts.detail': 'tryoutdetail',
+    'admin.tryouts.detail': 'tryouts',
     'admin.tryouts.create': 'tryouts',
 
     // -------------------------------------------------------------------------
     // Admin Routes - Sports/Programs/Levels/Teams/Seasons
     // -------------------------------------------------------------------------
-    'admin.sports.list': 'sports',
-    'admin.sports.detail': 'sportdetail',
-    'admin.programs.list': 'programs',
-    'admin.programs.detail': 'programdetail',
-    'admin.programs.bySport': 'bysport',
-    'admin.levels.list': 'levels',
-    'admin.levels.detail': 'leveldetail',
-    'admin.teams.list': 'teams',
-    'admin.teams.detail': 'teamsmanagement',
-    'admin.teams.roster': 'roster',
-    'admin.seasons.list': 'seasons',
-    'admin.seasons.detail': 'seasondetail',
-    'admin.seasons.update': 'update',
+    'admin.sports.list': 'team_management',
+    'admin.sports.detail': 'team_management',
+    'admin.programs.list': 'team_management',
+    'admin.programs.detail': 'team_management',
+    'admin.programs.bySport': 'team_management',
+    'admin.levels.list': 'team_management',
+    'admin.levels.detail': 'team_management',
+    'admin.teams.list': 'team_management',
+    'admin.teams.detail': 'team_management',
+    'admin.teams.roster': 'roster_management',
+    'admin.seasons.list': 'team_management',
+    'admin.seasons.detail': 'team_management',
+    'admin.seasons.update': 'team_management',
 
     // -------------------------------------------------------------------------
     // Admin Routes - Settings & Onboarding
@@ -154,27 +154,27 @@ export const ROUTE_TO_FEATURE: Record<string, string> = {
  */
 export const ACTION_TO_FEATURE: Record<string, string> = {
     // Fee actions
-    'create_fee': 'fees',
-    'edit_fee': 'fees',
-    'delete_fee': 'fees',
-    'assign_fee': 'fee_assignments',
+    'create_fee': 'fee_management',
+    'edit_fee': 'fee_management',
+    'delete_fee': 'fee_management',
+    'assign_fee': 'fee_management',
 
     // Athlete actions
-    'create_athlete': 'createathlete',
-    'edit_athlete': 'athletes',
-    'import_athletes': 'import',
-    'delete_athlete': 'athletes',
+    'create_athlete': 'roster_management',
+    'edit_athlete': 'roster_management',
+    'import_athletes': 'roster_management',
+    'delete_athlete': 'roster_management',
 
     // Event actions
-    'create_event': 'events',
-    'edit_event': 'events',
-    'delete_event': 'events',
-    'take_attendance': 'attendance',
+    'create_event': 'event_scheduling',
+    'edit_event': 'event_scheduling',
+    'delete_event': 'event_scheduling',
+    'take_attendance': 'event_scheduling',
 
     // Travel actions
-    'create_travel_plan': 'travel',
-    'edit_travel_plan': 'edit',
-    'delete_travel_plan': 'travel',
+    'create_travel_plan': 'travel_planning',
+    'edit_travel_plan': 'travel_planning',
+    'delete_travel_plan': 'travel_planning',
 
     // Tryout actions
     'create_tryout': 'tryouts',
@@ -183,37 +183,37 @@ export const ACTION_TO_FEATURE: Record<string, string> = {
 
     // Announcement/Message actions
     'create_announcement': 'announcements',
-    'send_message': 'huddles',
+    'send_message': 'messaging',
     'delete_announcement': 'announcements',
 
     // Uniform actions
-    'create_uniform_kit': 'uniforms',
+    'create_uniform_kit': 'uniform_orders',
     'order_uniform': 'uniform_orders',
-    'edit_uniform_kit': 'uniforms',
+    'edit_uniform_kit': 'uniform_orders',
 
     // Team actions
-    'create_team': 'teams',
-    'edit_team': 'teams',
-    'delete_team': 'teams',
-    'manage_roster': 'roster',
+    'create_team': 'team_management',
+    'edit_team': 'team_management',
+    'delete_team': 'team_management',
+    'manage_roster': 'roster_management',
 
     // Season actions
-    'create_season': 'seasons',
-    'edit_season': 'seasons',
-    'delete_season': 'seasons',
+    'create_season': 'team_management',
+    'edit_season': 'team_management',
+    'delete_season': 'team_management',
 
     // Sport/Program/Level actions
-    'create_sport': 'sports',
-    'create_program': 'programs',
-    'create_level': 'levels',
+    'create_sport': 'team_management',
+    'create_program': 'team_management',
+    'create_level': 'team_management',
 
     // Payment actions
-    'record_offline_payment': 'offline_payments',
-    'issue_refund': 'refunds',
+    'record_offline_payment': 'payment_processing',
+    'issue_refund': 'payment_processing',
 
     // Guardian actions
-    'invite_guardian': 'parent_invites',
-    'approve_guardian_request': 'guardianrequests',
+    'invite_guardian': 'roster_management',
+    'approve_guardian_request': 'roster_management',
 };
 
 // ============================================================================
@@ -233,6 +233,15 @@ export const UNGATED_ROUTES: string[] = [
     'auth.unauthorized',
     'auth.verifyEmail',
 
+    // Dashboard (essential for all users)
+    'portal.dashboard',
+    'admin.dashboard',
+
+    // Organization base/structure (essential admin routes)
+    'admin.organization.base',
+    'admin.organization.structure',
+    'admin.organization.users',
+
     // Trial/billing routes (must be accessible to upgrade)
     'admin.trialExpired',
     'admin.organization.billing',
@@ -245,6 +254,7 @@ export const UNGATED_ROUTES: string[] = [
 
     // Settings (basic user functionality)
     'portal.settings',
+    'portal.preferences',
     'admin.settings',
 
     // Public/join routes

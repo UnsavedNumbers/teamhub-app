@@ -84,6 +84,7 @@ export default function FeatureCatalog() {
 
   // Enhanced Filter State
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState<string[]>([])
@@ -152,9 +153,9 @@ export default function FeatureCatalog() {
         .select('*', { count: 'exact' })
         .is('archived_at', null)
 
-      // Search
-      if (search) {
-        query = query.or(`feature_key.ilike.%${search}%,display_name.ilike.%${search}%,description.ilike.%${search}%`)
+      // Search (use debounced value, require at least 2 characters for search)
+      if (debouncedSearch && debouncedSearch.length >= 2) {
+        query = query.or(`feature_key.ilike.%${debouncedSearch}%,display_name.ilike.%${debouncedSearch}%,description.ilike.%${debouncedSearch}%`)
       }
 
       // Category filter
@@ -265,13 +266,26 @@ export default function FeatureCatalog() {
         setFeatures(normalized)
         setTotalCount(count || 0)
       }
-    } catch (err) {
+    } catch (err: any) {
+      // Ignore timeout/cancellation errors from rapid typing
+      if (err?.code === '57014' || err?.message?.includes('cancel')) {
+        console.log('Query cancelled or timed out, likely due to new search')
+        return
+      }
       console.error('Error:', err)
       setFeatures([])
     } finally {
       setLoading(false)
     }
-  }, [page, rowsPerPage, search, categoryFilter, typeFilter, statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter])
+  }, [page, rowsPerPage, debouncedSearch, categoryFilter, typeFilter, statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter])
+
+  // Debounce search input (400ms delay)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search)
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [search])
 
   // Auto-filter selections when results change
   const prevSelectionCountRef = useRef(0)
@@ -743,7 +757,7 @@ export default function FeatureCatalog() {
   // Reset to first page when any filter changes so results make sense
   useEffect(() => {
     setPage(0)
-  }, [search, categoryFilter, typeFilter, statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter])
+  }, [debouncedSearch, categoryFilter, typeFilter, statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter])
 
   // Initial data fetch on mount
   // Initial mount: fetch tiers and run discovery once

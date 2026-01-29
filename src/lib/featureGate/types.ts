@@ -27,6 +27,7 @@ export type ReasonCode =
     | 'disabled_by_override'  // Explicitly disabled by override
     | 'limit_set_by_override' // Has usage limit set by override
     | 'license_tier'          // Not included in current license tier
+    | 'license_tier_not_configured' // License tier not set up in system
     | 'role'                  // User role not permitted
     | 'platform_admin_only'   // Feature requires platform admin
     | 'not_found'             // Feature key doesn't exist
