@@ -466,7 +466,7 @@ export async function updateRSVP(
                 : {
                     id: `rsvp-${eventId}-${childId}`,
                     event_id: eventId,
-                    child_id: childId,
+                    athlete_id: childId,
                     status,
                     note: note ?? null,
                     responded_at: new Date().toISOString(),

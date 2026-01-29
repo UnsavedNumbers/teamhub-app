@@ -138,7 +138,7 @@ export default function AdminLayout() {
   }, [rawMenuItems, hasOrg])
 
   // Apply feature gate filtering
-  const { filteredSections, loading: navLoading } = useFilteredNavigation(navSections)
+  const { filteredSections } = useFilteredNavigation(navSections)
 
   // Convert filtered sections back to menu item format
   const menuItems = useMemo(() => {
@@ -151,13 +151,13 @@ export default function AdminLayout() {
       return {
         label: section.label,
         icon: originalItem.icon,
-        path: firstItem.path,
+        path: firstItem.path ?? '',
         requiresOrg: originalItem.requiresOrg,
         children: section.groups[0].items.length > 1 || section.groups[0].items[0].text !== section.label
           ? section.groups[0].items.map(item => ({
-              text: item.text,
+              text: item.text ?? '',
               icon: item.icon,
-              path: item.path,
+              path: item.path ?? '',
               requiresOrg: originalItem.requiresOrg,
               disabled: item.disabled || (item as any).isGated,
               gateMessage: (item as any).gateMessage,
@@ -166,7 +166,7 @@ export default function AdminLayout() {
         disabled: firstItem.disabled || (firstItem as any).isGated,
         gateMessage: (firstItem as any).gateMessage,
       }
-    }).filter(Boolean)
+    }).filter(Boolean) as any[]
   }, [filteredSections, rawMenuItems])
 
 
@@ -185,7 +185,7 @@ export default function AdminLayout() {
   }
 
   // Mobile nav sections already filtered by useFilteredNavigation
-  const mobileNavSections: NavSection[] = filteredSections
+  const mobileNavSections: NavSection[] = filteredSections as NavSection[]
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -245,8 +245,9 @@ export default function AdminLayout() {
         <nav className="pa-sidebar-nav">
           {menuItems.map((item) => {
             const isDisabled = item.requiresOrg && !hasOrg
-            const active = isActive(item.path)
-            const hasChildren = item.children && item.children.length > 0
+            const active = isActive(item.path ?? '')
+            const children = item.children ?? []
+            const hasChildren = children.length > 0
             const isExpanded = expandedSections.has(item.label)
 
             // If item has no children, render as direct link
@@ -273,7 +274,7 @@ export default function AdminLayout() {
               return (
                 <div key={item.label} className="pa-nav-item-top">
                   <Link
-                    to={item.path}
+                    to={item.path ?? ''}
                     className={`pa-nav-link-top ${shouldShowActive ? 'active' : ''} ${isDashboard ? 'pa-nav-dashboard' : ''}`}
                   >
                     <span className="material-symbols-outlined">{item.icon}</span>
@@ -284,7 +285,7 @@ export default function AdminLayout() {
             }
 
             // Item has children - render as expandable section
-            const visibleChildren = item.children.filter((child) => !child.requiresOrg || hasOrg)
+            const visibleChildren = children.filter((child) => !child.requiresOrg || hasOrg)
             if (visibleChildren.length === 0 && isDisabled) return null
 
             return (
@@ -305,13 +306,13 @@ export default function AdminLayout() {
 
                 {isExpanded && visibleChildren.length > 0 && (
                   <ul className="pa-nav-list">
-                    {item.children.map((child) => {
+                    {children.map((child) => {
                       const childDisabled = child.requiresOrg && !hasOrg
-                      const childActive = isActive(child.path)
+                      const childActive = isActive(child.path ?? '')
 
                       if (childDisabled) {
                         return (
-                          <li key={child.path} className="pa-nav-item">
+                          <li key={child.path ?? child.text} className="pa-nav-item">
                             <div
                               className="pa-nav-link"
                               style={{ opacity: 0.4, cursor: 'not-allowed' }}
@@ -325,9 +326,9 @@ export default function AdminLayout() {
                       }
 
                       return (
-                        <li key={child.path} className="pa-nav-item">
+                        <li key={child.path ?? child.text} className="pa-nav-item">
                           <Link
-                            to={child.path}
+                            to={child.path ?? ''}
                             className={`pa-nav-link ${childActive ? 'active' : ''}`}
                           >
                             <span className="material-symbols-outlined">{child.icon}</span>

@@ -598,7 +598,6 @@ export default function Payments() {
         actions={
           <FeatureGatedButton 
             actionKey="create_fee"
-            icon="add" 
             onClick={() => navigate(getLink(RouteKeys.ADMIN_CREATE_FEE))}
             disabled={isButtonDisabled}
             title={buttonTooltip}

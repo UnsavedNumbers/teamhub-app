@@ -11,7 +11,6 @@ import type {
   FeatureEntitlement,
   TierFeatureAssignment,
   StripePriceVerification,
-  LicenseTierKey,
   LicenseTierStatus,
 } from '../../types/licenseTiers.types'
 import type {

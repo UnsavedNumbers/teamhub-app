@@ -13,6 +13,7 @@ import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import VenueInsights from '../components/portal/VenueInsights' // eslint-disable-line @typescript-eslint/no-unused-vars
 import NearbyAmenities from '../components/portal/NearbyAmenities'
+import { useT } from '../i18n/useI18n'
 
 interface MeetingLocation {
   name: string
@@ -153,6 +154,7 @@ async function copyToClipboard(text: string): Promise<{ success: boolean; error?
 }
 
 export default function TravelDetail() {
+  const t = useT()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
@@ -564,7 +566,7 @@ export default function TravelDetail() {
           </div>
           {plan.status === 'cancelled' && (
             <span className="inline-block px-4 py-2 bg-red-500 text-white text-xs font-bold uppercase tracking-widest rounded">
-              Cancelled
+              {t('portal.travel.badges.cancelled')}
             </span>
           )}
         </div>

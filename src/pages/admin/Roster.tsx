@@ -24,7 +24,7 @@ interface Season {
 
 interface Membership {
   id: string
-  child_id: string
+  athlete_id: string
   child_name: string
   family_name: string
 }
@@ -142,16 +142,17 @@ export default function Roster() {
 
       // Transform to display format
       const displayRoster: Membership[] = data.map(member => {
-        const athlete = athleteMap.get(member.child_id)
+        const memberAthleteId = member.athlete_id ?? (member as { child_id?: string }).child_id ?? ''
+        const athlete = athleteMap.get(memberAthleteId)
         const athleteName = athlete 
           ? `${athlete.first_name} ${athlete.last_name}`.trim()
           : 'Unknown Player'
         // Use guardian's family name, or athlete's last name, or "No Family"
-        const familyName = familyMap.get(member.athlete_id ?? (member as { child_id?: string }).child_id) || athlete?.last_name || 'No Family'
+        const familyName = familyMap.get(memberAthleteId) || athlete?.last_name || 'No Family'
 
         return {
           id: member.id,
-          athlete_id: member.athlete_id ?? (member as { child_id?: string }).child_id,
+          athlete_id: memberAthleteId,
           child_name: athleteName,
           family_name: familyName,
         }

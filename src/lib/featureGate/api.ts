@@ -56,7 +56,7 @@ export async function fetchFeatureGate(
 
     try {
         const { data, error } = await supabase.rpc('get_feature_gate', {
-            p_org_id: context.org_id,
+            p_org_id: context.org_id ?? '',
             p_user_id: context.user_id,
             p_feature_key: featureKey,
         });
@@ -122,7 +122,7 @@ export async function fetchFeatureGates(
 
     try {
         const { data, error } = await supabase.rpc('get_feature_gates', {
-            p_org_id: context.org_id,
+            p_org_id: context.org_id ?? '',
             p_user_id: context.user_id,
             p_feature_keys: uncachedKeys,
         });

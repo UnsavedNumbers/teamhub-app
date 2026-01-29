@@ -283,7 +283,7 @@ export async function setAthleteRSVP(
 
     const insertData2 = {
       event_id: eventId,
-      child_id: childId,
+      athlete_id: childId,
       status,
       note: note || null,
       responded_at: status !== 'unknown' ? new Date().toISOString() : null,
@@ -292,7 +292,7 @@ export async function setAthleteRSVP(
     const { data, error } = await supabase
       .from('event_rsvps')
       .upsert(insertData2, {
-        onConflict: 'event_id,child_id'
+        onConflict: 'event_id,athlete_id'
       })
       .select()
       .single()

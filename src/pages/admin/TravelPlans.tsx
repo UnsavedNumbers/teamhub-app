@@ -6,6 +6,7 @@ import {
   getAllTravelPlansAdmin, 
   publishTravelPlan, 
   cancelTravelPlan,
+  formatDateRange,
   type FakeTravelPlan 
 } from '../../data/services/travelService'
 import { showSuccess, showError } from '../../utils/toast'
@@ -56,14 +57,12 @@ export default function TravelPlans() {
 
       setError(null)
 
-      // Transform data to include team name
-      // Service returns FakeTravelPlan which doesn't include team info directly
-      // In real data mode, the service query includes team join, but it's mapped to FakeTravelPlan
-      // For now, use the helper function (will be improved when service returns team info)
-      const plansWithTeam = data.map(plan => ({
-        ...plan,
-        team: { name: getTeamName(plan.team_id) }
-      }))
+      // Preserve joined team names from the service. Only fall back to demo mapping when missing.
+      const plansWithTeam = data.map(plan => (
+        plan.team?.name
+          ? plan
+          : { ...plan, team: { id: plan.team_id, name: getTeamName(plan.team_id) } }
+      ))
 
       setTotalCount(plansWithTeam.length)
       
@@ -174,7 +173,7 @@ export default function TravelPlans() {
     { id: 'title', label: 'Title' },
     { id: 'status', label: 'Status', render: (row) => <Badge variant={getStatusVariant(row.status)}>{row.status.toUpperCase()}</Badge> },
     { id: 'location', label: 'Location' },
-    { id: 'dates', label: 'Dates', render: (row) => `${new Date(row.start_date).toLocaleDateString()} - ${new Date(row.end_date).toLocaleDateString()}` },
+    { id: 'dates', label: 'Dates', render: (row) => formatDateRange(row.start_date, row.end_date) },
     { id: 'team_name', label: 'Team', render: (row) => row.team?.name },
     { id: 'actions', label: 'Actions', align: 'right', render: (row) => (
       <div className="pa-flex pa-gap-2 pa-justify-end">

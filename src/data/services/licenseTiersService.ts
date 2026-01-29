@@ -65,7 +65,7 @@ function mapFeatureRow(row: FeatureEntitlementRow): FeatureEntitlement {
     id: row.id,
     feature_key: row.feature_key,
     display_name: row.display_name ?? '',
-    category: row.category ?? '',
+    category: row.category ? (row.category as FeatureEntitlement['category']) : 'Admin & Permissions',
     feature_type: row.feature_type as FeatureEntitlement['feature_type'],
     description: row.description ?? null,
     rollout_status: (row.rollout_status ?? 'live') as FeatureEntitlement['rollout_status'],

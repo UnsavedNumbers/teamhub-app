@@ -292,7 +292,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
       : parentNavSections
 
   // Apply feature gate filtering
-  const { filteredSections: navSections, loading: navLoading } = useFilteredNavigation(rawNavSections)
+  const { filteredSections: navSections } = useFilteredNavigation(rawNavSections)
 
   // Logo based on theme
   // Light mode needs dark text logo, dark mode needs light text logo
@@ -517,7 +517,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
                     id={menuId}
                     isOpen={isOpen}
                     onClose={handleMenuClose}
-                    groups={section.groups}
+                    groups={section.groups as any}
                     wide={isWide}
                   />
                 </div>
@@ -567,7 +567,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
     <MobileMenu
       isOpen={mobileMenuOpen}
       onClose={handleMobileMenuClose}
-      sections={navSections}
+      sections={navSections as any}
       brandName="Youth Sports"
       brandSubtitle="Team Hub"
     />

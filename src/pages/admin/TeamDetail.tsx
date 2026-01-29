@@ -34,7 +34,7 @@ interface Season {
 
 interface RosterMember {
   id: string
-  child_id: string
+  athlete_id: string
   athlete?: {
     id: string
     first_name: string
@@ -213,7 +213,7 @@ export default function TeamDetail() {
         }))
 
         // Fetch athlete details for each member
-        const athleteIds = rosterMembers.map((m) => m.child_id).filter(Boolean)
+        const athleteIds = rosterMembers.map((m) => m.athlete_id).filter(Boolean)
         if (athleteIds.length > 0) {
           const { data: athletesData, error: athletesError } = await supabase
             .from('athletes')
@@ -226,7 +226,7 @@ export default function TeamDetail() {
             )
 
             rosterMembers.forEach((member) => {
-              const athlete = athleteMap.get(member.athlete_id ?? (member as { child_id?: string }).child_id)
+              const athlete = athleteMap.get(member.athlete_id)
               if (athlete) {
                 member.athlete = athlete
                 // Use jersey_number from athlete if not in membership
