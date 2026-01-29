@@ -15,6 +15,7 @@ import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import VenueInsights from '../components/portal/VenueInsights'
 import NearbyAmenities from '../components/portal/NearbyAmenities'
+import { useNeighborhoodSummaryDirect } from '../hooks/useVenueInsights'
 import { useT } from '../i18n/useI18n'
 
 interface MeetingLocation {
@@ -202,6 +203,10 @@ export default function TravelDetail() {
   const [emergencyContact, setEmergencyContact] = useState<{ name: string; phone: string; role: string } | null>(null)
   const [resolvedContacts, setResolvedContacts] = useState<ResolvedTravelContacts | null>(null)
   const isMountedRef = useRef(true)
+
+  // Direct Google Places API call for Area Summary (bypasses edge function)
+  const venuePlaceIdForSummary = plan?.venue_place_id ?? null
+  const { data: neighborhoodSummaryResult, isLoading: neighborhoodSummaryLoading } = useNeighborhoodSummaryDirect(venuePlaceIdForSummary)
 
   useEffect(() => {
     const mountTime = new Date().toISOString()
@@ -863,12 +868,15 @@ export default function TravelDetail() {
                           </Button>
                         )}
                       </div>
-                      {/* Venue Insights for this event */}
-                      {event.event_location?.place_id && (
-                        <div className="mt-4">
-                          <VenueInsights placeId={event.event_location.place_id} />
-                        </div>
-                      )}
+                      {/* Venue Information (Area Summary, etc.): use place_id from event_locations for this event */}
+                      {(() => {
+                        const eventVenuePlaceId = event.event_location?.place_id ?? null
+                        return eventVenuePlaceId ? (
+                          <div className="mt-4">
+                            <VenueInsights placeId={eventVenuePlaceId} />
+                          </div>
+                        ) : null
+                      })()}
                     </div>
                   ))}
                 </div>
@@ -981,6 +989,55 @@ export default function TravelDetail() {
                    )
                })}
             </div>
+          )}
+
+          {/* Area Summary (venue's place_id) - fetched directly from Google Places API */}
+          {plan?.venue_place_id && (
+            <Card className="p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <CardTitle className="flex items-center gap-2 mb-0">
+                  <Icon name="place" size="text-xl" />
+                  Area Overview
+                </CardTitle>
+                <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                  Google
+                </span>
+              </div>
+              {neighborhoodSummaryLoading ? (
+                <div className="animate-pulse space-y-3">
+                  <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-full" />
+                  <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-5/6" />
+                  <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-4/6" />
+                </div>
+              ) : (() => {
+                const summaryData = neighborhoodSummaryResult?.data
+                const blocks = summaryData?.area_summary?.content_blocks
+                if (!blocks || blocks.length === 0) {
+                  const venueName = plan?.venue_name || summaryData?.name || 'this venue'
+                  return (
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      {t('portal.travel.areaSummaryNotAvailable', { venueName })}
+                    </p>
+                  )
+                }
+                return (
+                  <div className="space-y-4">
+                    {blocks.map((block, idx) => (
+                      <div key={idx}>
+                        {block.topic !== 'overview' && (
+                          <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                            {block.topic}
+                          </p>
+                        )}
+                        <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                          {block.content}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
+            </Card>
           )}
 
           {/* Quick Calendar Actions */}
