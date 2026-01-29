@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { getUniformKits, getUniformSubmissions, getUniformKitItems, type UniformKit, type UniformItem } from '../data/services/uniformsService'
+import { getContactForCategory } from '../data/services/organizationContactsService'
 import { getAthletes } from '../data/services/familyService'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
@@ -24,6 +25,7 @@ export default function Uniforms() {
   const [kits, setKits] = useState<UniformKit[]>([])
   const [kitItems, setKitItems] = useState<Record<string, UniformItem[]>>({})
   const [loading, setLoading] = useState(true)
+  const [uniformContact, setUniformContact] = useState<{ name: string; email: string; phone?: string | null } | null>(null)
 
   const { context, isReady } = useUserContext()
 
@@ -62,6 +64,20 @@ export default function Uniforms() {
 
     // Fetch uniform submissions to show status
     await getUniformSubmissions(context)
+
+    // Fetch uniform contact
+    try {
+        const { data: contact } = await getContactForCategory(context.orgId, 'uniforms')
+        if (contact) {
+            setUniformContact({
+                name: `${contact.first_name} ${contact.last_name}`,
+                email: contact.email,
+                phone: contact.phone
+            })
+        }
+    } catch (err) {
+        console.warn('Failed to fetch uniform contact', err)
+    }
 
     setLoading(false)
   }, [context, isReady])
@@ -184,6 +200,32 @@ export default function Uniforms() {
                 </Button>
               </div>
             </Card>
+
+            {uniformContact && (
+              <Card className="mt-4 p-4 sm:p-6 border-l-4 border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50">
+                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3 sm:gap-4">
+                        <Icon name="support" size="text-3xl sm:text-4xl" className="text-slate-400 flex-shrink-0" />
+                        <div>
+                            <CardTitle className="text-base sm:text-lg mb-1">Uniform Questions?</CardTitle>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                                Contact <span className="font-bold text-slate-900 dark:text-white">{uniformContact.name}</span>
+                            </p>
+                            <div className="flex flex-col sm:flex-row gap-x-4 gap-y-1 mt-1">
+                                <a href={`mailto:${uniformContact.email}`} className="text-sm font-bold text-[var(--org-link-color)] hover:underline flex items-center gap-1">
+                                    <Icon name="email" size="text-xs" /> {uniformContact.email}
+                                </a>
+                                {uniformContact.phone && (
+                                    <a href={`tel:${uniformContact.phone}`} className="text-sm font-bold text-slate-500 hover:text-slate-700 flex items-center gap-1">
+                                        <Icon name="phone" size="text-xs" /> {uniformContact.phone}
+                                    </a>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+              </Card>
+            )}
           </div>
         )}
       </PortalLayout>

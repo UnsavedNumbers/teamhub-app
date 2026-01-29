@@ -54,15 +54,6 @@ export default function Travel() {
     const navigate = useNavigate()
     const { context, isReady } = useUserContext()
 
-    const showDateDebug = useMemo(() => {
-        if (import.meta.env.DEV) return true
-        try {
-            return localStorage.getItem('debugTravelDates') === '1'
-        } catch {
-            return false
-        }
-    }, [])
-
     const toLocalDateOnlyFromDate = (d: Date): string => {
         const y = String(d.getFullYear())
         const m = String(d.getMonth() + 1).padStart(2, '0')
@@ -527,10 +518,6 @@ export default function Travel() {
                                     {group.items.map(plan => {
                                         const status = getDisplayStatus(plan)
                                         const sport = planSports[plan.id]
-
-                                        const debugStart = toDateOnly(plan.start_date)
-                                        const debugEnd = toDateOnly(plan.end_date)
-                                        const debugToday = getTodayLocalDateOnly()
                                         
                                         return (
                                             <div 
@@ -567,13 +554,6 @@ export default function Travel() {
                                                         <Icon name="calendar_today" size="text-sm" className="text-slate-400" />
                                                         <span className="font-medium">{formatDateRange(plan.start_date, plan.end_date)}</span>
                                                     </div>
-                                                    {showDateDebug && (
-                                                        <div className="text-[10px] font-mono text-slate-400 leading-snug">
-                                                            <div>today={debugToday}</div>
-                                                            <div>start(raw)={String(plan.start_date)} start(norm)={debugStart}</div>
-                                                            <div>end(raw)={String(plan.end_date)} end(norm)={debugEnd}</div>
-                                                        </div>
-                                                    )}
                                                     <div className="flex items-center gap-2">
                                                         <Icon name="place" size="text-sm" className="text-slate-400" />
                                                         <span className="font-medium">

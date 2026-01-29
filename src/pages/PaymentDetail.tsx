@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { getFeeAssignmentById, formatCurrency, generateReceiptPDF } from '../data/services/paymentsService'
 import { getOrganizationDetails } from '../data/services/organizationService'
+import { getContactForCategory } from '../data/services/organizationContactsService'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, SectionHeader } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
@@ -246,8 +247,15 @@ export default function PaymentDetail() {
     if (actionLoading !== null) return
     setActionLoading('contact')
     try {
-      const { data: org } = await getOrganizationDetails(context.orgId)
-      const to = org?.email ?? ''
+      const { data: contact } = await getContactForCategory(context.orgId, 'billing')
+      
+      // Fallback to org email if no contact found (though service should handle fallback to default)
+      let to = contact?.email ?? ''
+      if (!to) {
+          const { data: org } = await getOrganizationDetails(context.orgId)
+          to = org?.email ?? ''
+      }
+
       const subject = encodeURIComponent(`Question about payment${assignment?.fee?.title ? `: ${assignment.fee.title}` : ''}`)
       const body = encodeURIComponent(
         `Payment reference: ${assignment?.id ?? id}\n\n[Your message here]`

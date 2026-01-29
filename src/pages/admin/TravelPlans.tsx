@@ -213,7 +213,7 @@ export default function TravelPlans() {
       <AdminPageHeader 
         title={t('admin.travel.title')} 
         subtitle={t('admin.travel.subtitle')} 
-        actions={<FeatureGatedButton actionKey="create_travel_plan" onClick={() => navigate('/admin/travel/new')}><span className="material-symbols-outlined">add</span>New Plan</FeatureGatedButton>} 
+        actions={<FeatureGatedButton actionKey="create_travel_plan" onClick={() => navigate('/admin/travel/new')} variant="blue" className="w-full sm:w-auto"><span className="material-symbols-outlined">add</span>New Plan</FeatureGatedButton>} 
       />
       {error && !loading && (
         <Card>

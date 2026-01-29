@@ -148,7 +148,7 @@ export default function UniformOrders() {
         subtitle={t('admin.uniforms.subtitle')} 
         actions={
           (sports?.length ?? 0) > 0 ? (
-            <Button onClick={() => navigate('/admin/uniforms/new')}>
+            <Button onClick={() => navigate('/admin/uniforms/new')} variant="blue" className="w-full sm:w-auto">
               <span className="material-symbols-outlined">add</span>
               Create Uniform
             </Button>

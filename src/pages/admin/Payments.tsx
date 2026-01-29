@@ -601,6 +601,8 @@ export default function Payments() {
             onClick={() => navigate(getLink(RouteKeys.ADMIN_CREATE_FEE))}
             disabled={isButtonDisabled}
             title={buttonTooltip}
+            variant="blue"
+            className="w-full sm:w-auto"
           >
             Assign Fee
           </FeatureGatedButton>

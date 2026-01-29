@@ -214,6 +214,8 @@ export default function SeasonsManagement() {
             <Button 
                 icon="add"
                 onClick={() => navigate(`${getLink('admin.organization.forms')}?type=season&returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`)}
+                variant="blue"
+                className="w-full sm:w-auto"
             >
                 Add Season
             </Button>

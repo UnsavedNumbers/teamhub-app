@@ -844,7 +844,7 @@ export default function OrganizationStructureForms() {
               {t('admin.structureForms.empty.noSportsForProgram')}
             </div>
             <Link to={`${getLink('admin.organization.forms')}?type=sport`}>
-              <Button>{t('admin.structureForms.empty.createSportFirst')}</Button>
+              <Button variant="blue" className="w-full sm:w-auto">{t('admin.structureForms.empty.createSportFirst')}</Button>
             </Link>
           </Card>
         </div>
@@ -871,7 +871,7 @@ export default function OrganizationStructureForms() {
               {t('admin.structureForms.empty.noProgramsForLevel')}
             </div>
             <Link to={`${getLink('admin.organization.forms')}?type=program`}>
-              <Button>{t('admin.structureForms.empty.createProgramFirst')}</Button>
+              <Button variant="blue" className="w-full sm:w-auto">{t('admin.structureForms.empty.createProgramFirst')}</Button>
             </Link>
           </Card>
         </div>
@@ -898,7 +898,7 @@ export default function OrganizationStructureForms() {
               {t('admin.structureForms.empty.noLevelsForTeam')}
             </div>
             <Link to={`${getLink('admin.organization.forms')}?type=level`}>
-              <Button>{t('admin.structureForms.empty.createLevelFirst')}</Button>
+              <Button variant="blue" className="w-full sm:w-auto">{t('admin.structureForms.empty.createLevelFirst')}</Button>
             </Link>
           </Card>
         </div>
@@ -924,7 +924,7 @@ export default function OrganizationStructureForms() {
             {t('admin.structureForms.empty.noSportsForProgram')}
           </div>
           <Link to={`${getLink('admin.organization.forms')}?type=sport`}>
-            <Button>{t('admin.structureForms.empty.createSportFirst')}</Button>
+            <Button variant="blue" className="w-full sm:w-auto">{t('admin.structureForms.empty.createSportFirst')}</Button>
           </Link>
         </Card>
       </div>
@@ -948,7 +948,7 @@ export default function OrganizationStructureForms() {
             {t('admin.structureForms.empty.noProgramsForLevel')}
           </div>
           <Link to={`${getLink('admin.organization.forms')}?type=program`}>
-            <Button>{t('admin.structureForms.empty.createProgramFirst')}</Button>
+            <Button variant="blue" className="w-full sm:w-auto">{t('admin.structureForms.empty.createProgramFirst')}</Button>
           </Link>
         </Card>
       </div>
@@ -972,7 +972,7 @@ export default function OrganizationStructureForms() {
             {t('admin.structureForms.empty.noLevelsForTeam')}
           </div>
           <Link to={`${getLink('admin.organization.forms')}?type=level`}>
-            <Button>{t('admin.structureForms.empty.createLevelFirst')}</Button>
+            <Button variant="blue" className="w-full sm:w-auto">{t('admin.structureForms.empty.createLevelFirst')}</Button>
           </Link>
         </Card>
       </div>
@@ -1023,16 +1023,16 @@ export default function OrganizationStructureForms() {
           <Card title={t('admin.structureForms.selector.title')} className="pa-mb-6">
             <div className="pa-flex pa-flex-col pa-gap-3">
               <Link to={`${getLink('admin.organization.forms')}?type=sport`}>
-                <Button>{t('admin.structureForms.actions.addItem', { item: formLabels.sport })}</Button>
+                <Button variant="blue" className="w-full sm:w-auto">{t('admin.structureForms.actions.addItem', { item: formLabels.sport })}</Button>
               </Link>
               <Link to={`${getLink('admin.organization.forms')}?type=program`}>
-                <Button variant="primary">{t('admin.structureForms.actions.addItem', { item: formLabels.program })}</Button>
+                <Button variant="blue" className="w-full sm:w-auto">{t('admin.structureForms.actions.addItem', { item: formLabels.program })}</Button>
               </Link>
               <Link to={`${getLink('admin.organization.forms')}?type=level`}>
-                <Button variant="primary">{t('admin.structureForms.actions.addItem', { item: formLabels.level })}</Button>
+                <Button variant="blue" className="w-full sm:w-auto">{t('admin.structureForms.actions.addItem', { item: formLabels.level })}</Button>
               </Link>
               <Link to={`${getLink('admin.organization.forms')}?type=team`}>
-                <Button variant="primary">{t('admin.structureForms.actions.addItem', { item: formLabels.team })}</Button>
+                <Button variant="blue" className="w-full sm:w-auto">{t('admin.structureForms.actions.addItem', { item: formLabels.team })}</Button>
               </Link>
               <Link to={`${getLink('admin.organization.forms')}?type=season`}>
                 <Button variant="primary">{t('admin.structureForms.actions.addItem', { item: formLabels.season })}</Button>

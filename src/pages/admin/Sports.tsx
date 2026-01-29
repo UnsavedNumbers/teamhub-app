@@ -135,6 +135,8 @@ export default function Sports() {
             icon="add"
             onClick={() => navigate(`${formsRoute}?type=sport&returnUrl=${encodeURIComponent(sportsRoute)}`)}
             disabled={isOffline || USE_FAKE_DATA}
+            variant="blue"
+            className="w-full sm:w-auto"
           >
             {USE_FAKE_DATA ? 'Sign in to Add Sport' : 'Add Sport'}
           </Button>

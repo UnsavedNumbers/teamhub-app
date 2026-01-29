@@ -9,6 +9,7 @@ import {
   isGeneralRSVP, 
   isAthleteRSVP 
 } from '../data/services'
+import { getContactForCategory } from '../data/services/organizationContactsService'
 import { 
     CalendarEvent, 
     CalendarViewMode, 
@@ -76,6 +77,7 @@ export default function Calendar() {
   const [error, setError] = useState<string | null>(null)
   const [rsvpLoading, setRsvpLoading] = useState<Record<string, boolean>>({})
   const [currentPage, setCurrentPage] = useState(1)
+  const [schedulingContact, setSchedulingContact] = useState<{ name: string; email: string; phone?: string | null } | null>(null)
   
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
@@ -148,6 +150,20 @@ export default function Calendar() {
       setEvents([])
     } finally {
       setLoading(false)
+    }
+
+    // Fetch scheduling contact (independent of events)
+    try {
+        const { data: contact } = await getContactForCategory(context.orgId, 'scheduling')
+        if (contact) {
+            setSchedulingContact({
+                name: `${contact.first_name} ${contact.last_name}`,
+                email: contact.email,
+                phone: contact.phone
+            })
+        }
+    } catch (err) {
+        console.warn('Failed to load scheduling contact', err)
     }
   }, [context, isReady, currentDate, viewMode, filters])
 
@@ -419,6 +435,22 @@ export default function Calendar() {
                          Jump to Today
                      </button>
                  </Card>
+
+                 {/* Scheduling Contact */}
+                 {schedulingContact && (
+                    <Card className="p-4 mt-6 bg-slate-50 dark:bg-slate-800/50">
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Schedule Questions?</h3>
+                        <p className="font-bold text-sm text-slate-900 dark:text-white mb-1">{schedulingContact.name}</p>
+                        <a href={`mailto:${schedulingContact.email}`} className="text-sm text-[var(--org-link-color)] hover:underline block break-all">
+                            {schedulingContact.email}
+                        </a>
+                        {schedulingContact.phone && (
+                            <a href={`tel:${schedulingContact.phone}`} className="text-sm text-slate-500 hover:text-slate-700 block mt-1">
+                                {schedulingContact.phone}
+                            </a>
+                        )}
+                    </Card>
+                 )}
             </div>
 
             <div className="lg:col-span-3 order-1 lg:order-2">

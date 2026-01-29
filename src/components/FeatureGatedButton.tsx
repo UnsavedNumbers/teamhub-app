@@ -18,6 +18,7 @@
  */
 
 import { forwardRef, useState } from 'react';
+import { cn } from '../utils/cn';
 import { 
   useFeatureGate, 
   getFeatureKeyForAction, 
@@ -37,6 +38,16 @@ interface FeatureGatedButtonProps extends React.ButtonHTMLAttributes<HTMLButtonE
   children: React.ReactNode;
   /** Show upgrade modal instead of just disabling */
   showUpgradeModal?: boolean;
+  /** Visual variant (like Button component) */
+  variant?: 'primary' | 'blue' | 'volt' | 'secondary' | 'ghost' | 'danger' | 'text';
+  /** Size variant */
+  size?: 'default' | 'compact' | 'dense' | 'small';
+  /** Icon (Material Symbols name) to show before label */
+  icon?: string;
+  /** Icon to show after label */
+  iconRight?: string;
+  /** Loading state - shows spinner */
+  loading?: boolean;
 }
 
 /**
@@ -50,6 +61,11 @@ export const FeatureGatedButton = forwardRef<HTMLButtonElement, FeatureGatedButt
       children, 
       onGatedClick,
       showUpgradeModal = false,
+      variant = 'primary',
+      size = 'default',
+      icon,
+      iconRight,
+      loading: externalLoading = false,
       onClick, 
       className = '', 
       disabled,
@@ -58,31 +74,58 @@ export const FeatureGatedButton = forwardRef<HTMLButtonElement, FeatureGatedButt
     ref
   ) => {
     const featureKey = explicitKey ?? getFeatureKeyForAction(actionKey);
-    const { allowed, gate_action, reason_code, loading } = useFeatureGate(featureKey);
+    const { allowed, gate_action, reason_code, loading: gateLoading } = useFeatureGate(featureKey);
     const [showModal, setShowModal] = useState(false);
+
+    // Combine loading states
+    const loading = externalLoading || gateLoading;
+
+    // Compute button classes like Button component
+    const sizeClass = size === 'compact' ? 'pa-btn--compact' : size === 'dense' ? 'pa-btn--dense' : '';
+    const variantClass = `pa-btn--${variant}`;
+    const buttonClassName = cn('pa-btn', variantClass, sizeClass, className);
 
     // If no feature key found, render as normal button
     if (!featureKey) {
       return (
         <button
           ref={ref}
-          className={className}
+          className={buttonClassName}
           disabled={disabled}
           onClick={onClick}
           {...props}
         >
+          {loading ? (
+            <span
+              className="pa-spinner"
+              style={{
+                width: '16px',
+                height: '16px',
+                borderWidth: '2px',
+              }}
+            />
+          ) : icon ? (
+            <span className={cn('material-symbols-outlined', 'pa-icon-sm')}>
+              {icon}
+            </span>
+          ) : null}
           {children}
+          {iconRight && !loading && (
+            <span className={cn('material-symbols-outlined', 'pa-icon-sm')}>
+              {iconRight}
+            </span>
+          )}
         </button>
       );
     }
 
-    const isGated = !loading && !allowed;
+    const isGated = !gateLoading && !allowed;
     const isDisabled = disabled || (isGated && gate_action !== 'hide');
     const tooltipText = isGated ? getReasonMessage(reason_code) : undefined;
     const showUpgrade = isGated && shouldShowUpgradePrompt(reason_code);
 
     // Hide completely if gate_action is 'hide'
-    if (!loading && !allowed && gate_action === 'hide') {
+    if (!gateLoading && !allowed && gate_action === 'hide') {
       return null;
     }
 
@@ -105,7 +148,7 @@ export const FeatureGatedButton = forwardRef<HTMLButtonElement, FeatureGatedButt
       <>
         <button
           ref={ref}
-          className={`${className} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`${buttonClassName} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           disabled={isDisabled || loading}
           title={tooltipText}
           onClick={handleClick}
@@ -113,12 +156,24 @@ export const FeatureGatedButton = forwardRef<HTMLButtonElement, FeatureGatedButt
           {...props}
         >
           {loading ? (
-            <span className="inline-flex items-center gap-2">
-              <span className="animate-spin material-symbols-rounded text-sm">progress_activity</span>
-              {children}
+            <span
+              className="pa-spinner"
+              style={{
+                width: '16px',
+                height: '16px',
+                borderWidth: '2px',
+              }}
+            />
+          ) : icon ? (
+            <span className={cn('material-symbols-outlined', 'pa-icon-sm')}>
+              {icon}
             </span>
-          ) : (
-            children
+          ) : null}
+          {children}
+          {iconRight && !loading && (
+            <span className={cn('material-symbols-outlined', 'pa-icon-sm')}>
+              {iconRight}
+            </span>
           )}
         </button>
 

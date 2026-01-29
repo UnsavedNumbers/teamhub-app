@@ -285,7 +285,7 @@ export default function AdminLayout() {
             }
 
             // Item has children - render as expandable section
-            const visibleChildren = children.filter((child) => !child.requiresOrg || hasOrg)
+            const visibleChildren = children.filter((child: any) => !child.requiresOrg || hasOrg)
             if (visibleChildren.length === 0 && isDisabled) return null
 
             return (
@@ -306,7 +306,7 @@ export default function AdminLayout() {
 
                 {isExpanded && visibleChildren.length > 0 && (
                   <ul className="pa-nav-list">
-                    {children.map((child) => {
+                    {children.map((child: any) => {
                       const childDisabled = child.requiresOrg && !hasOrg
                       const childActive = isActive(child.path ?? '')
 
