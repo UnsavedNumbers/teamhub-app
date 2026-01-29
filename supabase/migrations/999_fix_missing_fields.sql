@@ -143,8 +143,8 @@ BEGIN
       false,
       NOW(),
       NOW()
-    FROM child_guardians cg
-    JOIN children c ON c.id = cg.child_id
+    FROM athlete_guardians cg
+    JOIN athletes c ON c.id = cg.athlete_id
     WHERE cg.status = 'active'
       AND c.family_id IS NOT NULL
       AND NOT EXISTS (

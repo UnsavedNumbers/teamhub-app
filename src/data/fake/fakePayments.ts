@@ -66,7 +66,7 @@ export interface FakeFee {
 export interface FakeFeeAssignment {
     id: string
     fee_id: string
-    child_id: string
+    athlete_id: string
     status: FeeAssignmentStatus
     amount_due_cents: number
     amount_paid_cents: number
@@ -193,30 +193,30 @@ export const fakeFees: FakeFee[] = [
 
 export const fakeFeeAssignments: FakeFeeAssignment[] = [
     // Spring Soccer Registration - Various statuses
-    { id: 'fa-001', fee_id: FEE_SPRING_SOCCER_REG_ID, child_id: CHILD_EMMA_JOHNSON_ID, status: 'paid', amount_due_cents: 15000, amount_paid_cents: 15000, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: '2024-01-20T00:00:00Z', updated_at: getDateInCurrentYear(2, 10) },
-    { id: 'fa-002', fee_id: FEE_SPRING_SOCCER_REG_ID, child_id: CHILD_SOPHIA_CHEN_ID, status: 'paid', amount_due_cents: 15000, amount_paid_cents: 15000, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: '2024-01-20T00:00:00Z', updated_at: '2024-02-05T00:00:00Z' },
-    { id: 'fa-003', fee_id: FEE_SPRING_SOCCER_REG_ID, child_id: CHILD_AIDEN_PATEL_ID, status: 'partial', amount_due_cents: 15000, amount_paid_cents: 7500, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: '2024-01-20T00:00:00Z', updated_at: '2024-02-20T00:00:00Z' },
-    { id: 'fa-004', fee_id: FEE_SPRING_SOCCER_REG_ID, child_id: CHILD_OLIVIA_SMITH_ID, status: 'paid', amount_due_cents: 15000, amount_paid_cents: 15000, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: '2024-01-20T00:00:00Z', updated_at: '2024-02-12T00:00:00Z' },
-    { id: 'fa-005', fee_id: FEE_SPRING_SOCCER_REG_ID, child_id: CHILD_MASON_RODRIGUEZ_ID, status: 'paid', amount_due_cents: 12000, amount_paid_cents: 12000, discount_cents: 3000, discount_reason: 'Multi-child discount', waived_at: null, waived_reason: null, created_at: '2024-01-20T00:00:00Z', updated_at: '2024-02-08T00:00:00Z' },
-    { id: 'fa-006', fee_id: FEE_SPRING_SOCCER_REG_ID, child_id: CHILD_AVA_WILLIAMS_ID, status: 'overdue', amount_due_cents: 15000, amount_paid_cents: 0, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: '2024-01-20T00:00:00Z', updated_at: '2024-01-20T00:00:00Z' },
+    { id: 'fa-001', fee_id: FEE_SPRING_SOCCER_REG_ID, athlete_id: CHILD_EMMA_JOHNSON_ID, status: 'paid', amount_due_cents: 15000, amount_paid_cents: 15000, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: '2024-01-20T00:00:00Z', updated_at: getDateInCurrentYear(2, 10) },
+    { id: 'fa-002', fee_id: FEE_SPRING_SOCCER_REG_ID, athlete_id: CHILD_SOPHIA_CHEN_ID, status: 'paid', amount_due_cents: 15000, amount_paid_cents: 15000, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: '2024-01-20T00:00:00Z', updated_at: '2024-02-05T00:00:00Z' },
+    { id: 'fa-003', fee_id: FEE_SPRING_SOCCER_REG_ID, athlete_id: CHILD_AIDEN_PATEL_ID, status: 'partial', amount_due_cents: 15000, amount_paid_cents: 7500, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: '2024-01-20T00:00:00Z', updated_at: '2024-02-20T00:00:00Z' },
+    { id: 'fa-004', fee_id: FEE_SPRING_SOCCER_REG_ID, athlete_id: CHILD_OLIVIA_SMITH_ID, status: 'paid', amount_due_cents: 15000, amount_paid_cents: 15000, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: '2024-01-20T00:00:00Z', updated_at: '2024-02-12T00:00:00Z' },
+    { id: 'fa-005', fee_id: FEE_SPRING_SOCCER_REG_ID, athlete_id: CHILD_MASON_RODRIGUEZ_ID, status: 'paid', amount_due_cents: 12000, amount_paid_cents: 12000, discount_cents: 3000, discount_reason: 'Multi-child discount', waived_at: null, waived_reason: null, created_at: '2024-01-20T00:00:00Z', updated_at: '2024-02-08T00:00:00Z' },
+    { id: 'fa-006', fee_id: FEE_SPRING_SOCCER_REG_ID, athlete_id: CHILD_AVA_WILLIAMS_ID, status: 'overdue', amount_due_cents: 15000, amount_paid_cents: 0, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: '2024-01-20T00:00:00Z', updated_at: '2024-01-20T00:00:00Z' },
 
     // Spring Basketball Registration
-    { id: 'fa-007', fee_id: FEE_SPRING_BB_REG_ID, child_id: CHILD_LIAM_JOHNSON_ID, status: 'paid', amount_due_cents: 12500, amount_paid_cents: 12500, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: getDateInCurrentYear(1, 25), updated_at: getDateInCurrentYear(2, 15) },
-    { id: 'fa-008', fee_id: FEE_SPRING_BB_REG_ID, child_id: CHILD_NOAH_SMITH_ID, status: 'paid', amount_due_cents: 12500, amount_paid_cents: 12500, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: getDateInCurrentYear(1, 25), updated_at: getDateInCurrentYear(2, 18) },
-    { id: 'fa-009', fee_id: FEE_SPRING_BB_REG_ID, child_id: CHILD_ETHAN_WILLIAMS_ID, status: 'unpaid', amount_due_cents: 12500, amount_paid_cents: 0, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: getDateInCurrentYear(1, 25), updated_at: getDateInCurrentYear(1, 25) },
-    { id: 'fa-010', fee_id: FEE_SPRING_BB_REG_ID, child_id: CHILD_ISABELLA_RODRIGUEZ_ID, status: 'waived', amount_due_cents: 12500, amount_paid_cents: 0, discount_cents: 0, discount_reason: null, waived_at: getDateInCurrentYear(2, 1), waived_reason: 'Financial assistance program', created_at: getDateInCurrentYear(1, 25), updated_at: getDateInCurrentYear(2, 1) },
+    { id: 'fa-007', fee_id: FEE_SPRING_BB_REG_ID, athlete_id: CHILD_LIAM_JOHNSON_ID, status: 'paid', amount_due_cents: 12500, amount_paid_cents: 12500, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: getDateInCurrentYear(1, 25), updated_at: getDateInCurrentYear(2, 15) },
+    { id: 'fa-008', fee_id: FEE_SPRING_BB_REG_ID, athlete_id: CHILD_NOAH_SMITH_ID, status: 'paid', amount_due_cents: 12500, amount_paid_cents: 12500, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: getDateInCurrentYear(1, 25), updated_at: getDateInCurrentYear(2, 18) },
+    { id: 'fa-009', fee_id: FEE_SPRING_BB_REG_ID, athlete_id: CHILD_ETHAN_WILLIAMS_ID, status: 'unpaid', amount_due_cents: 12500, amount_paid_cents: 0, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: getDateInCurrentYear(1, 25), updated_at: getDateInCurrentYear(1, 25) },
+    { id: 'fa-010', fee_id: FEE_SPRING_BB_REG_ID, athlete_id: CHILD_ISABELLA_RODRIGUEZ_ID, status: 'waived', amount_due_cents: 12500, amount_paid_cents: 0, discount_cents: 0, discount_reason: null, waived_at: getDateInCurrentYear(2, 1), waived_reason: 'Financial assistance program', created_at: getDateInCurrentYear(1, 25), updated_at: getDateInCurrentYear(2, 1) },
 
     // Tournament Fee - U12 Soccer
-    { id: 'fa-011', fee_id: FEE_TOURNAMENT_U12_ID, child_id: CHILD_OLIVIA_SMITH_ID, status: 'unpaid', amount_due_cents: 4500, amount_paid_cents: 0, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: '2024-02-20T00:00:00Z', updated_at: '2024-02-20T00:00:00Z' },
-    { id: 'fa-012', fee_id: FEE_TOURNAMENT_U12_ID, child_id: CHILD_MASON_RODRIGUEZ_ID, status: 'paid', amount_due_cents: 4500, amount_paid_cents: 4500, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: '2024-02-20T00:00:00Z', updated_at: '2024-02-25T00:00:00Z' },
-    { id: 'fa-013', fee_id: FEE_TOURNAMENT_U12_ID, child_id: CHILD_AVA_WILLIAMS_ID, status: 'unpaid', amount_due_cents: 4500, amount_paid_cents: 0, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: '2024-02-20T00:00:00Z', updated_at: '2024-02-20T00:00:00Z' },
+    { id: 'fa-011', fee_id: FEE_TOURNAMENT_U12_ID, athlete_id: CHILD_OLIVIA_SMITH_ID, status: 'unpaid', amount_due_cents: 4500, amount_paid_cents: 0, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: '2024-02-20T00:00:00Z', updated_at: '2024-02-20T00:00:00Z' },
+    { id: 'fa-012', fee_id: FEE_TOURNAMENT_U12_ID, athlete_id: CHILD_MASON_RODRIGUEZ_ID, status: 'paid', amount_due_cents: 4500, amount_paid_cents: 4500, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: '2024-02-20T00:00:00Z', updated_at: '2024-02-25T00:00:00Z' },
+    { id: 'fa-013', fee_id: FEE_TOURNAMENT_U12_ID, athlete_id: CHILD_AVA_WILLIAMS_ID, status: 'unpaid', amount_due_cents: 4500, amount_paid_cents: 0, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: '2024-02-20T00:00:00Z', updated_at: '2024-02-20T00:00:00Z' },
 
     // Uniform Fee - Soccer
-    { id: 'fa-014', fee_id: FEE_UNIFORM_SOCCER_ID, child_id: CHILD_EMMA_JOHNSON_ID, status: 'paid', amount_due_cents: 7500, amount_paid_cents: 7500, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: getDateInCurrentYear(1, 25), updated_at: getDateInCurrentYear(2, 10) },
-    { id: 'fa-015', fee_id: FEE_UNIFORM_SOCCER_ID, child_id: CHILD_SOPHIA_CHEN_ID, status: 'paid', amount_due_cents: 7500, amount_paid_cents: 7500, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: getDateInCurrentYear(1, 25), updated_at: '2024-02-08T00:00:00Z' },
+    { id: 'fa-014', fee_id: FEE_UNIFORM_SOCCER_ID, athlete_id: CHILD_EMMA_JOHNSON_ID, status: 'paid', amount_due_cents: 7500, amount_paid_cents: 7500, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: getDateInCurrentYear(1, 25), updated_at: getDateInCurrentYear(2, 10) },
+    { id: 'fa-015', fee_id: FEE_UNIFORM_SOCCER_ID, athlete_id: CHILD_SOPHIA_CHEN_ID, status: 'paid', amount_due_cents: 7500, amount_paid_cents: 7500, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: getDateInCurrentYear(1, 25), updated_at: '2024-02-08T00:00:00Z' },
 
     // Equipment Fee - Basketball
-    { id: 'fa-016', fee_id: FEE_EQUIPMENT_BB_ID, child_id: CHILD_LIAM_JOHNSON_ID, status: 'paid', amount_due_cents: 2500, amount_paid_cents: 2500, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: '2024-01-28T00:00:00Z', updated_at: getDateInCurrentYear(2, 15) },
+    { id: 'fa-016', fee_id: FEE_EQUIPMENT_BB_ID, athlete_id: CHILD_LIAM_JOHNSON_ID, status: 'paid', amount_due_cents: 2500, amount_paid_cents: 2500, discount_cents: 0, discount_reason: null, waived_at: null, waived_reason: null, created_at: '2024-01-28T00:00:00Z', updated_at: getDateInCurrentYear(2, 15) },
 ]
 
 // ============================================================================
@@ -278,7 +278,7 @@ export function getFeeAssignmentById(assignmentId: string): FakeFeeAssignment | 
 }
 
 export function getFeeAssignmentsForChild(childId: string): FakeFeeAssignment[] {
-    return fakeFeeAssignments.filter((fa) => fa.child_id === childId)
+    return fakeFeeAssignments.filter((fa) => fa.athlete_id === childId)
 }
 
 export function getFeeAssignmentsForFee(feeId: string): FakeFeeAssignment[] {
@@ -287,12 +287,12 @@ export function getFeeAssignmentsForFee(feeId: string): FakeFeeAssignment[] {
 
 export function getUnpaidFeeAssignmentsForChild(childId: string): FakeFeeAssignment[] {
     return fakeFeeAssignments.filter(
-        (fa) => fa.child_id === childId && (fa.status === 'unpaid' || fa.status === 'partial' || fa.status === 'overdue')
+        (fa) => fa.athlete_id === childId && (fa.status === 'unpaid' || fa.status === 'partial' || fa.status === 'overdue')
     )
 }
 
 export function getPaidFeeAssignmentsForChild(childId: string): FakeFeeAssignment[] {
-    return fakeFeeAssignments.filter((fa) => fa.child_id === childId && fa.status === 'paid')
+    return fakeFeeAssignments.filter((fa) => fa.athlete_id === childId && fa.status === 'paid')
 }
 
 export function getPaymentsForAssignment(assignmentId: string): FakePayment[] {

@@ -221,7 +221,7 @@ export default function AcceptInvite() {
         }
 
         if (data && Array.isArray(data) && data.length > 0) {
-          const result = data[0] as { success: boolean; message?: string; organization_id?: string; child_id?: string }
+          const result = data[0] as { success: boolean; message?: string; organization_id?: string; athlete_id?: string; child_id?: string }
           if (result?.success) {
             if (isMountedRef.current) {
               setMessage('Successfully accepted invitation!')

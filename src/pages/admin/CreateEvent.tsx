@@ -5,7 +5,7 @@ import { useForm, Controller } from 'react-hook-form'
 
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
-import { getErrorMessage } from '../../utils/errorUtils'
+import { getErrorMessage, normalizeSupabaseError } from '../../utils/errorUtils'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { 
@@ -20,6 +20,7 @@ import {
   Badge
 } from '../../components/platformAdmin'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
+import type { StructuredAddress } from '../../types/location'
 import { startTransition } from 'react'
 import { 
     EventFormData, 
@@ -28,6 +29,14 @@ import {
 } from '../../types/calendar'
 
 const STORAGE_KEY = 'createEvent_formData'
+const DRAFT_TTL_MS = 2 * 60 * 60 * 1000 // 2 hours
+
+const validateCoordinate = (value: number | string | null | undefined): number | null => {
+  if (value === null || value === undefined) return null
+  const num = typeof value === 'string' ? parseFloat(value) : value
+  if (isNaN(num)) return null
+  return Math.round(num * 1e6) / 1e6
+}
 
 interface Team { id: string; name: string }
 interface Season { id: string; name: string; team_id: string; is_active?: boolean }
@@ -38,6 +47,7 @@ export default function CreateEvent() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [errorDetail, setErrorDetail] = useState<string | null>(null)
   const [showLocationDetails, setShowLocationDetails] = useState(false)
   const [showRecurring, setShowRecurring] = useState(false)
 
@@ -92,6 +102,14 @@ export default function CreateEvent() {
       const saved = sessionStorage.getItem(STORAGE_KEY)
       if (saved) {
         const savedData = JSON.parse(saved) as any
+
+        // Ignore stale drafts
+        const savedAt = typeof savedData._savedAt === 'number' ? savedData._savedAt : null
+        if (savedAt && Date.now() - savedAt > DRAFT_TTL_MS) {
+          sessionStorage.removeItem(STORAGE_KEY)
+          return getDefaultValues()
+        }
+
         // Remove UI state from saved data (we'll restore it in useEffect)
         const { _uiState, ...formData } = savedData
         // Merge saved data with defaults
@@ -110,6 +128,7 @@ export default function CreateEvent() {
 
   const { control, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm<EventFormData>({
     defaultValues: initialValues,
+    mode: 'onTouched',
   })
 
   // Restore UI state after form initialization
@@ -121,6 +140,14 @@ export default function CreateEvent() {
       const saved = sessionStorage.getItem(STORAGE_KEY)
       if (saved) {
         const savedData = JSON.parse(saved) as any
+
+        // Ignore stale drafts
+        const savedAt = typeof savedData._savedAt === 'number' ? savedData._savedAt : null
+        if (savedAt && Date.now() - savedAt > DRAFT_TTL_MS) {
+          sessionStorage.removeItem(STORAGE_KEY)
+          return
+        }
+
         if (savedData._uiState) {
           if (savedData._uiState.showLocationDetails) {
             setShowLocationDetails(true)
@@ -141,29 +168,17 @@ export default function CreateEvent() {
   // Watch all form values for persistence
   const formValues = watch()
 
-  // Save form data to sessionStorage whenever it changes
+  // Clear any saved draft when navigating away (route change/unmount)
+  // This keeps drafts only for tab switching / browser discard scenarios.
   useEffect(() => {
-    // Skip saving until we've restored initial state
-    if (!hasRestoredRef.current) return
-    
-    try {
-      // Only save if form has actual data (not just defaults)
-      const hasData = formValues.title || formValues.team_id || formValues.start_time
-      if (!hasData) return
-      
-      const dataToSave = {
-        ...formValues,
-        // Also save UI state
-        _uiState: {
-          showLocationDetails,
-          showRecurring
-        }
+    return () => {
+      try {
+        sessionStorage.removeItem(STORAGE_KEY)
+      } catch {
+        // Ignore cleanup errors
       }
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave))
-    } catch (err) {
-      console.error('Failed to save form data:', err)
     }
-  }, [formValues, showLocationDetails, showRecurring])
+  }, [])
 
   // Save form data when page visibility changes (user switches tabs)
   useEffect(() => {
@@ -171,12 +186,23 @@ export default function CreateEvent() {
       if (document.hidden) {
         // Save when user switches away
         try {
+          // Skip saving until we've restored initial state
+          if (!hasRestoredRef.current) return
+
+          // Only save if form has actual data (not just defaults)
+          const hasData = formValues.title || formValues.team_id || formValues.start_time
+          if (!hasData) {
+            sessionStorage.removeItem(STORAGE_KEY)
+            return
+          }
+
           const dataToSave = {
             ...formValues,
             _uiState: {
               showLocationDetails,
               showRecurring
-            }
+            },
+            _savedAt: Date.now()
           }
           sessionStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave))
         } catch (err) {
@@ -305,6 +331,7 @@ export default function CreateEvent() {
   const onSubmit = async (data: EventFormData) => {
     setSaving(true)
     setError(null)
+    setErrorDetail(null)
     
     try {
       // 1. Insert Event
@@ -378,7 +405,9 @@ export default function CreateEvent() {
     } catch (err: unknown) {
       // Parse database errors and show friendly messages
       const rawError = getErrorMessage(err) || ''
+      const displayMessage = normalizeSupabaseError(err)
       let friendlyError = t('admin.events.validation.titleRequired') // default fallback
+      let detail: string | null = null
       
       if (rawError.includes('end_time') && rawError.includes('not-null')) {
         friendlyError = t('admin.events.validation.endTimeRequired')
@@ -390,11 +419,17 @@ export default function CreateEvent() {
         friendlyError = t('admin.events.validation.teamRequired')
       } else if (rawError.includes('season_id') && rawError.includes('not-null')) {
         friendlyError = t('admin.events.validation.seasonRequired')
+      } else if (rawError.includes('row-level security') || rawError.includes('RLS') || rawError.includes('policy')) {
+        friendlyError = "You don't have permission to create this event. Check that you're in the right organization and have admin access."
+        detail = displayMessage
       } else if (rawError) {
         friendlyError = 'Failed to create event. Please check all required fields and try again.'
+        detail = displayMessage
       }
       
       setError(friendlyError)
+      setErrorDetail(detail)
+      trigger()
     } finally { 
       setSaving(false) 
     }
@@ -420,7 +455,12 @@ export default function CreateEvent() {
       <div className="pa-form-container">
         <Card>
           <form onSubmit={handleSubmit(onSubmit)}>
-            {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
+            {error && (
+              <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>
+                <div>{error}</div>
+                {errorDetail && <div className="pa-mt-2 pa-text-muted" style={{ fontSize: '0.875rem' }}>{errorDetail}</div>}
+              </div>
+            )}
             
             {/* SECTION 1: EVENT BASICS */}
             <div className="pa-mb-4">
@@ -610,7 +650,7 @@ export default function CreateEvent() {
             </div>
 
           {/* SECTION 3: LOCATION */}
-          {/* Mobile: Single column | Tablet: Venue + Address side-by-side | Desktop: Venue + Address side-by-side */}
+          {/* Venue Name: search like CreateTravelPlan; Address: plain input auto-filled from venue */}
           <div className="pa-mb-4">
             <div className="pa-mb-2">
               <Button type="button" variant="ghost" onClick={() => setShowLocationDetails(!showLocationDetails)}>{showLocationDetails ? 'Simple Location' : 'Detailed Location'}</Button>
@@ -618,30 +658,39 @@ export default function CreateEvent() {
             
             <div className="pa-space-y-4">
               <div className="pa-form-grid pa-form-grid-2 pa-form-grid-tablet-2col">
-                <Controller name="location.venue_name" control={control} render={({ field }) => <Input {...field} label="Venue Name" placeholder="e.g. Field 1" />} />
                 <Controller
-                  name="location.address_line1"
+                  name="location.venue_name"
                   control={control}
                   render={({ field }) => (
                     <LocationAutocomplete
                       value={field.value || ''}
                       onInputChange={field.onChange}
-                      onChange={(address) => {
+                      onChange={(address: StructuredAddress, placeResult?: google.maps.places.PlaceResult) => {
                         startTransition(() => {
-                          setValue('location.address_line1', address.address_line1, { shouldValidate: false, shouldDirty: true })
+                          const placeName = placeResult?.name && placeResult.name !== address.formatted_address
+                            ? placeResult.name
+                            : ''
+                          setValue('location.venue_name', placeName, { shouldValidate: false, shouldDirty: true })
+                          setValue('location.address_line1', address.formatted_address, { shouldValidate: false, shouldDirty: true })
                           setValue('location.city', address.city, { shouldValidate: false, shouldDirty: true })
                           setValue('location.state', address.state, { shouldValidate: false, shouldDirty: true })
                           setValue('location.postal_code', address.postal_code, { shouldValidate: false, shouldDirty: true })
                           setValue('location.place_id', address.place_id, { shouldValidate: false, shouldDirty: true })
-                          setValue('location.latitude', address.latitude.toString(), { shouldValidate: false, shouldDirty: true })
-                          setValue('location.longitude', address.longitude.toString(), { shouldValidate: false, shouldDirty: true })
-                          trigger(['location.address_line1', 'location.city', 'location.state', 'location.postal_code'])
+                          setValue('location.latitude', String(validateCoordinate(address.latitude) ?? ''), { shouldValidate: false, shouldDirty: true })
+                          setValue('location.longitude', String(validateCoordinate(address.longitude) ?? ''), { shouldValidate: false, shouldDirty: true })
+                          if (placeName) field.onChange(placeName)
                         })
                       }}
-                      label="Address"
-                      placeholder="Enter an address"
+                      label="Venue Name"
+                      placeholder="Search for venue..."
+                      types={['establishment', 'geocode']}
                     />
                   )}
+                />
+                <Controller
+                  name="location.address_line1"
+                  control={control}
+                  render={({ field }) => <Input {...field} label="Address" />}
                 />
               </div>
               

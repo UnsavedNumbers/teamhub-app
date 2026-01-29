@@ -158,6 +158,41 @@ export default function FeatureDetail() {
     }
   }
 
+  const updateAssignmentRoles = async (
+    tierId: string,
+    roles: { roleAdmin?: boolean; roleCoach?: boolean; roleParent?: boolean }
+  ) => {
+    if (isNew || !id) return
+    const assignment = assignments[tierId]
+    if (!assignment?.id) return
+
+    setSavingAssignment(prev => ({ ...prev, [tierId]: true }))
+    try {
+      const role_admin = roles.roleAdmin ?? assignment.roleAdmin ?? true
+      const role_coach = roles.roleCoach ?? assignment.roleCoach ?? true
+      const role_parent = roles.roleParent ?? assignment.roleParent ?? false
+
+      const { error: updateError } = await supabase
+        .from('tier_feature_assignments')
+        .update({
+          role_admin,
+          role_coach,
+          role_parent,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', assignment.id)
+
+      if (updateError) throw updateError
+      await fetchAssignments()
+      showSuccess('Role access updated')
+    } catch (err: any) {
+      console.error('Error updating role access:', err)
+      showError(err.message || 'Failed to update role access')
+    } finally {
+      setSavingAssignment(prev => ({ ...prev, [tierId]: false }))
+    }
+  }
+
   useEffect(() => {
     fetchFeature()
     fetchTiers()
@@ -725,17 +760,31 @@ export default function FeatureDetail() {
                       {feature.featureType === 'limit' && (
                         <span><strong>Limit:</strong> {assignment.limitValue ?? 'Not set'}</span>
                       )}
-                      {feature.featureType === 'permission' && (
-                        <span>
-                          <strong>Roles:</strong>{' '}
-                          {[assignment.roleAdmin && 'Admin', assignment.roleCoach && 'Coach', assignment.roleParent && 'Parent']
-                            .filter(Boolean)
-                            .join(', ') || 'None'}
-                        </span>
-                      )}
-                      {feature.featureType !== 'limit' && feature.featureType !== 'permission' && (
-                        <span>Configured for this tier</span>
-                      )}
+                      <div className="pa-form-group" style={{ marginBottom: 0, marginTop: feature.featureType === 'limit' ? 'var(--pa-space-3)' : 0 }}>
+                        <label className="pa-label" style={{ fontSize: '12px', marginBottom: 'var(--pa-space-2)' }}>
+                          Role Access
+                        </label>
+                        <div className="pa-flex pa-flex-wrap pa-gap-3">
+                          <Checkbox
+                            checked={assignment.roleAdmin ?? true}
+                            onChange={(e) => updateAssignmentRoles(tier.id, { roleAdmin: e.target.checked })}
+                            disabled={isSaving || isNew}
+                            label="Admin"
+                          />
+                          <Checkbox
+                            checked={assignment.roleCoach ?? true}
+                            onChange={(e) => updateAssignmentRoles(tier.id, { roleCoach: e.target.checked })}
+                            disabled={isSaving || isNew}
+                            label="Coach"
+                          />
+                          <Checkbox
+                            checked={assignment.roleParent ?? false}
+                            onChange={(e) => updateAssignmentRoles(tier.id, { roleParent: e.target.checked })}
+                            disabled={isSaving || isNew}
+                            label="Parent"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </>
                 )}

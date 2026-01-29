@@ -116,7 +116,7 @@ kit_items AS (
 ),
 src AS (
   SELECT
-    uo.child_id,
+    uo.athlete_id,
     uo.team_id,
     uo.season_id,
     uo.jersey_size,
@@ -130,9 +130,9 @@ src AS (
    AND k.name = 'Uniform Kit'
 ),
 subs AS (
-  SELECT s.id AS submission_id, s.kit_id, s.child_id
+  SELECT s.id AS submission_id, s.kit_id, s.athlete_id
   FROM uniform_submissions s
-  JOIN src ON src.kit_id = s.kit_id AND src.child_id = s.child_id
+  JOIN src ON src.kit_id = s.kit_id AND src.athlete_id = s.athlete_id
 ),
 rows_to_upsert AS (
   SELECT
@@ -145,7 +145,7 @@ rows_to_upsert AS (
       ELSE NULL
     END AS size
   FROM subs
-  JOIN src ON src.kit_id = subs.kit_id AND src.child_id = subs.child_id
+  JOIN src ON src.kit_id = subs.kit_id AND src.athlete_id = subs.athlete_id
   JOIN kit_items ON kit_items.kit_id = subs.kit_id
 )
 INSERT INTO uniform_submission_items (submission_id, item_id, size)

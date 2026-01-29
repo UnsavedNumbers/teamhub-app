@@ -215,8 +215,8 @@ SECURITY DEFINER
 AS $$
   SELECT DISTINCT u.email
   FROM users u
-  JOIN children c ON c.family_id = u.family_id
-  JOIN team_memberships tm ON tm.child_id = c.id
+  JOIN athletes c ON c.family_id = u.family_id
+  JOIN team_memberships tm ON tm.athlete_id = c.id
   WHERE u.role = 'parent'
     AND tm.team_id = p_team_id
     AND tm.status = 'active'

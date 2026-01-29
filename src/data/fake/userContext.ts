@@ -260,8 +260,9 @@ export function filterPaymentsByRole<T extends { child_id?: string; org_id?: str
         }
 
         // Parent sees own children's payments
-        if (permissions.canViewOwnChildrenData && payment.child_id) {
-            return permissions.ownedChildIds.includes(payment.child_id)
+        const paymentChildId = (payment as { athlete_id?: string; child_id?: string }).athlete_id ?? payment.child_id
+        if (permissions.canViewOwnChildrenData && paymentChildId) {
+            return permissions.ownedChildIds.includes(paymentChildId)
         }
 
         return false

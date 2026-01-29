@@ -115,8 +115,8 @@ CREATE POLICY "Parents can view their teams" ON teams
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      JOIN children c ON c.family_id = u.family_id
-      JOIN team_memberships tm ON tm.child_id = c.id
+      JOIN athletes c ON c.family_id = u.family_id
+      JOIN team_memberships tm ON tm.athlete_id = c.id
       WHERE u.id = auth.uid()
       AND u.role = 'parent'
       AND tm.team_id = teams.id
@@ -159,8 +159,8 @@ CREATE POLICY "Parents can view their seasons" ON seasons
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      JOIN children c ON c.family_id = u.family_id
-      JOIN team_memberships tm ON tm.child_id = c.id
+      JOIN athletes c ON c.family_id = u.family_id
+      JOIN team_memberships tm ON tm.athlete_id = c.id
       WHERE u.id = auth.uid()
       AND u.role = 'parent'
       AND tm.season_id = seasons.id
@@ -168,18 +168,18 @@ CREATE POLICY "Parents can view their seasons" ON seasons
   );
 
 -- ============================================
--- CHILDREN RLS Policies
+-- ATHLETES RLS Policies
 -- ============================================
 
--- Parents can CRUD their own family's children
-CREATE POLICY "Parents can manage their children" ON children
+-- Parents can CRUD their own family's athletes
+CREATE POLICY "Parents can manage their children" ON athletes
   FOR ALL
   USING (
     EXISTS (
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
       AND users.role = 'parent'
-      AND users.family_id = children.family_id
+      AND users.family_id = athletes.family_id
     )
   )
   WITH CHECK (
@@ -187,43 +187,43 @@ CREATE POLICY "Parents can manage their children" ON children
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
       AND users.role = 'parent'
-      AND users.family_id = children.family_id
+      AND users.family_id = athletes.family_id
     )
   );
 
--- Admins can view all children in their org
-CREATE POLICY "Admins can view children" ON children
+-- Admins can view all athletes in their org
+CREATE POLICY "Admins can view children" ON athletes
   FOR SELECT
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      JOIN families f ON f.id = children.family_id
+      JOIN families f ON f.id = athletes.family_id
       WHERE u.id = auth.uid()
       AND u.role = 'admin'
       AND u.org_id = f.org_id
     )
   );
 
--- Admins can manage children (for assignment purposes)
-CREATE POLICY "Admins can manage children" ON children
+-- Admins can manage athletes (for assignment purposes)
+CREATE POLICY "Admins can manage children" ON athletes
   FOR ALL
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      JOIN families f ON f.id = children.family_id
+      JOIN families f ON f.id = athletes.family_id
       WHERE u.id = auth.uid()
       AND u.role = 'admin'
       AND u.org_id = f.org_id
     )
   );
 
--- Coaches can view children on their teams
-CREATE POLICY "Coaches can view team children" ON children
+-- Coaches can view athletes on their teams
+CREATE POLICY "Coaches can view team children" ON athletes
   FOR SELECT
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      JOIN team_memberships tm ON tm.child_id = children.id
+      JOIN team_memberships tm ON tm.athlete_id = athletes.id
       JOIN teams t ON t.id = tm.team_id
       WHERE u.id = auth.uid()
       AND u.role = 'coach'
@@ -254,10 +254,10 @@ CREATE POLICY "Parents can view their memberships" ON team_memberships
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      JOIN children c ON c.family_id = u.family_id
+      JOIN athletes c ON c.family_id = u.family_id
       WHERE u.id = auth.uid()
       AND u.role = 'parent'
-      AND c.id = team_memberships.child_id
+      AND c.id = team_memberships.athlete_id
     )
   );
 
@@ -310,8 +310,8 @@ CREATE POLICY "Parents can view their events" ON events
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      JOIN children c ON c.family_id = u.family_id
-      JOIN team_memberships tm ON tm.child_id = c.id
+      JOIN athletes c ON c.family_id = u.family_id
+      JOIN team_memberships tm ON tm.athlete_id = c.id
       WHERE u.id = auth.uid()
       AND u.role = 'parent'
       AND tm.team_id = events.team_id
@@ -329,19 +329,19 @@ CREATE POLICY "Parents can manage their children's attendance" ON attendance
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      JOIN children c ON c.family_id = u.family_id
+      JOIN athletes c ON c.family_id = u.family_id
       WHERE u.id = auth.uid()
       AND u.role = 'parent'
-      AND c.id = attendance.child_id
+      AND c.id = attendance.athlete_id
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM users u
-      JOIN children c ON c.family_id = u.family_id
+      JOIN athletes c ON c.family_id = u.family_id
       WHERE u.id = auth.uid()
       AND u.role = 'parent'
-      AND c.id = attendance.child_id
+      AND c.id = attendance.athlete_id
     )
   );
 
@@ -383,10 +383,10 @@ CREATE POLICY "Parents can view their payments" ON payments
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      JOIN children c ON c.family_id = u.family_id
+      JOIN athletes c ON c.family_id = u.family_id
       WHERE u.id = auth.uid()
       AND u.role = 'parent'
-      AND c.id = payments.child_id
+      AND c.id = payments.athlete_id
     )
   );
 
@@ -426,19 +426,19 @@ CREATE POLICY "Parents can manage their uniform orders" ON uniform_orders
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      JOIN children c ON c.family_id = u.family_id
+      JOIN athletes c ON c.family_id = u.family_id
       WHERE u.id = auth.uid()
       AND u.role = 'parent'
-      AND c.id = uniform_orders.child_id
+      AND c.id = uniform_orders.athlete_id
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM users u
-      JOIN children c ON c.family_id = u.family_id
+      JOIN athletes c ON c.family_id = u.family_id
       WHERE u.id = auth.uid()
       AND u.role = 'parent'
-      AND c.id = uniform_orders.child_id
+      AND c.id = uniform_orders.athlete_id
     )
   );
 
@@ -491,8 +491,8 @@ CREATE POLICY "Parents can view travel plans" ON travel_plans
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      JOIN children c ON c.family_id = u.family_id
-      JOIN team_memberships tm ON tm.child_id = c.id
+      JOIN athletes c ON c.family_id = u.family_id
+      JOIN team_memberships tm ON tm.athlete_id = c.id
       WHERE u.id = auth.uid()
       AND u.role = 'parent'
       AND tm.team_id = travel_plans.team_id
@@ -632,11 +632,11 @@ CREATE POLICY "Team members can view announcements" ON announcements
       AND u.org_id = t.org_id
     )
     OR
-    -- Parents with children on team
+    -- Parents with athletes on team
     EXISTS (
       SELECT 1 FROM users u
-      JOIN children c ON c.family_id = u.family_id
-      JOIN team_memberships tm ON tm.child_id = c.id
+      JOIN athletes c ON c.family_id = u.family_id
+      JOIN team_memberships tm ON tm.athlete_id = c.id
       WHERE u.id = auth.uid()
       AND u.role = 'parent'
       AND tm.team_id = announcements.team_id
@@ -661,11 +661,11 @@ CREATE POLICY "Team members can send messages" ON messages
       AND u.org_id = t.org_id
     )
     OR
-    -- Parents with children on team
+    -- Parents with athletes on team
     EXISTS (
       SELECT 1 FROM users u
-      JOIN children c ON c.family_id = u.family_id
-      JOIN team_memberships tm ON tm.child_id = c.id
+      JOIN athletes c ON c.family_id = u.family_id
+      JOIN team_memberships tm ON tm.athlete_id = c.id
       WHERE u.id = auth.uid()
       AND u.role = 'parent'
       AND tm.team_id = messages.team_id
@@ -686,11 +686,11 @@ CREATE POLICY "Team members can view messages" ON messages
       AND u.org_id = t.org_id
     )
     OR
-    -- Parents with children on team
+    -- Parents with athletes on team
     EXISTS (
       SELECT 1 FROM users u
-      JOIN children c ON c.family_id = u.family_id
-      JOIN team_memberships tm ON tm.child_id = c.id
+      JOIN athletes c ON c.family_id = u.family_id
+      JOIN team_memberships tm ON tm.athlete_id = c.id
       WHERE u.id = auth.uid()
       AND u.role = 'parent'
       AND tm.team_id = messages.team_id

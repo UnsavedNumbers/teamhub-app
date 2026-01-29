@@ -271,6 +271,7 @@ type AdditionalFunctions = {
     Returns: Array<{
       success: boolean
       organization_id?: string
+      athlete_id?: string
       child_id?: string
       message?: string
     }>

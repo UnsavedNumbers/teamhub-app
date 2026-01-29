@@ -130,7 +130,7 @@ CREATE POLICY "Parents can view uniform submission items" ON uniform_submission_
       FROM uniform_submissions s
       JOIN uniform_kits k ON k.id = s.kit_id
       WHERE s.id = uniform_submission_items.submission_id
-        AND is_parent_of_child(auth.uid(), s.child_id)
+        AND is_parent_of_child(auth.uid(), s.athlete_id)
         AND parent_can_access_team_via_membership(auth.uid(), k.team_id, k.season_id)
     )
   );

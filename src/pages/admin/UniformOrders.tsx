@@ -47,7 +47,7 @@ export default function UniformOrders() {
     { 
       id: 'child_id', 
       label: 'Player',
-      render: (row) => `Child ${row.child_id.slice(0, 8)}`
+      render: (row) => `Child ${row.athlete_id ?? (row as { child_id?: string }).child_id.slice(0, 8)}`
     },
     { 
       id: 'kit_id', 

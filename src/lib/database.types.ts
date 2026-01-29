@@ -1880,7 +1880,7 @@ export type Database = {
       }
       event_rsvps: {
         Row: {
-          child_id: string
+          athlete_id: string
           created_at: string | null
           event_id: string
           id: string
@@ -1891,7 +1891,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          child_id: string
+          athlete_id: string
           created_at?: string | null
           event_id: string
           id?: string
@@ -1902,7 +1902,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          child_id?: string
+          athlete_id?: string
           created_at?: string | null
           event_id?: string
           id?: string
@@ -1914,15 +1914,15 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "event_rsvps_child_id_fkey"
-            columns: ["child_id"]
+            foreignKeyName: "event_rsvps_athlete_id_fkey"
+            columns: ["athlete_id"]
             isOneToOne: false
             referencedRelation: "admin_payments"
             referencedColumns: ["athlete_id"]
           },
           {
-            foreignKeyName: "event_rsvps_child_id_fkey"
-            columns: ["child_id"]
+            foreignKeyName: "event_rsvps_athlete_id_fkey"
+            columns: ["athlete_id"]
             isOneToOne: false
             referencedRelation: "athletes"
             referencedColumns: ["id"]
@@ -2366,6 +2366,7 @@ export type Database = {
           lock_reason: string | null
           platform_admin_only: boolean
           rollout_status: string | null
+          unavailable_gate_action: string | null
           updated_at: string | null
         }
         Insert: {
@@ -2383,6 +2384,7 @@ export type Database = {
           lock_reason?: string | null
           platform_admin_only?: boolean
           rollout_status?: string | null
+          unavailable_gate_action?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -2400,6 +2402,7 @@ export type Database = {
           lock_reason?: string | null
           platform_admin_only?: boolean
           rollout_status?: string | null
+          unavailable_gate_action?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -5604,6 +5607,7 @@ export type Database = {
           org_id: string
           paid_at: string | null
           parent_id: string
+          payment_type: Database["public"]["Enums"]["payment_type"]
           platform_fee_cents: number
           status: Database["public"]["Enums"]["payment_status_new"]
           stripe_charge_id: string | null
@@ -5618,6 +5622,7 @@ export type Database = {
           org_id: string
           paid_at?: string | null
           parent_id: string
+          payment_type?: Database["public"]["Enums"]["payment_type"]
           platform_fee_cents?: number
           status?: Database["public"]["Enums"]["payment_status_new"]
           stripe_charge_id?: string | null
@@ -5632,6 +5637,7 @@ export type Database = {
           org_id?: string
           paid_at?: string | null
           parent_id?: string
+          payment_type?: Database["public"]["Enums"]["payment_type"]
           platform_fee_cents?: number
           status?: Database["public"]["Enums"]["payment_status_new"]
           stripe_charge_id?: string | null
@@ -7537,7 +7543,7 @@ export type Database = {
       }
       uniform_submissions: {
         Row: {
-          child_id: string
+          athlete_id: string
           created_at: string | null
           fulfilled_at: string | null
           id: string
@@ -7548,7 +7554,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          child_id: string
+          athlete_id: string
           created_at?: string | null
           fulfilled_at?: string | null
           id?: string
@@ -7559,7 +7565,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          child_id?: string
+          athlete_id?: string
           created_at?: string | null
           fulfilled_at?: string | null
           id?: string
@@ -7572,14 +7578,14 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "uniform_submissions_child_id_fkey"
-            columns: ["child_id"]
+            columns: ["athlete_id"]
             isOneToOne: false
             referencedRelation: "admin_payments"
             referencedColumns: ["athlete_id"]
           },
           {
             foreignKeyName: "uniform_submissions_child_id_fkey"
-            columns: ["child_id"]
+            columns: ["athlete_id"]
             isOneToOne: false
             referencedRelation: "athletes"
             referencedColumns: ["id"]
@@ -8056,6 +8062,7 @@ export type Database = {
           platform_admin_only: boolean | null
           rollout_status: string | null
           tier_assignments_count: number | null
+          unavailable_gate_action: string | null
           updated_at: string | null
           visible_to_admin: boolean | null
           visible_to_coach: boolean | null
@@ -8082,6 +8089,7 @@ export type Database = {
           platform_admin_only?: boolean | null
           rollout_status?: string | null
           tier_assignments_count?: never
+          unavailable_gate_action?: string | null
           updated_at?: string | null
           visible_to_admin?: never
           visible_to_coach?: never
@@ -8108,6 +8116,7 @@ export type Database = {
           platform_admin_only?: boolean | null
           rollout_status?: string | null
           tier_assignments_count?: never
+          unavailable_gate_action?: string | null
           updated_at?: string | null
           visible_to_admin?: never
           visible_to_coach?: never
@@ -8728,6 +8737,10 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_reset_mock_organization: {
+        Args: { reason: string; target_org_id: string }
+        Returns: Json
+      }
       admin_restore_feature_flag: {
         Args: {
           p_environment: Database["public"]["Enums"]["feature_flag_environment"]
@@ -9034,6 +9047,14 @@ export type Database = {
           athlete_id: string
         }[]
       }
+      get_feature_gate: {
+        Args: { p_feature_key: string; p_org_id: string; p_user_id: string }
+        Returns: Json
+      }
+      get_feature_gates: {
+        Args: { p_feature_keys: string[]; p_org_id: string; p_user_id: string }
+        Returns: Json
+      }
       get_guardian_athletes: {
         Args: { p_org_id: string; p_user_id: string }
         Returns: {
@@ -9220,6 +9241,7 @@ export type Database = {
         }
         Returns: Json
       }
+      is_mock_organization: { Args: { org_id: string }; Returns: boolean }
       is_org_license_active: { Args: { org_id: string }; Returns: boolean }
       is_org_license_readonly_allowed: {
         Args: { org_id: string }
@@ -9464,6 +9486,7 @@ export type Database = {
         | "ADD_ORG_ROLE"
         | "REMOVE_ORG_ROLE"
         | "CHANGE_ORG_ROLE"
+        | "RESET_MOCK_ORGANIZATION"
       announcement_type:
         | "general"
         | "reminder"
@@ -9668,6 +9691,7 @@ export type Database = {
         | "failed"
         | "refunded"
         | "partially_refunded"
+      payment_type: "partial" | "full"
       payout_onboarding_status: "pending" | "completed" | "restricted"
       platform_admin_role:
         | "super_admin"
@@ -9907,6 +9931,7 @@ export const Constants = {
         "ADD_ORG_ROLE",
         "REMOVE_ORG_ROLE",
         "CHANGE_ORG_ROLE",
+        "RESET_MOCK_ORGANIZATION",
       ],
       announcement_type: [
         "general",
@@ -10132,6 +10157,7 @@ export const Constants = {
         "refunded",
         "partially_refunded",
       ],
+      payment_type: ["partial", "full"],
       payout_onboarding_status: ["pending", "completed", "restricted"],
       platform_admin_role: [
         "super_admin",

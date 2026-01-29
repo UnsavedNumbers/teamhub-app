@@ -146,7 +146,7 @@ export async function getUniformSubmissions(
     if (USE_FAKE_DATA) {
         let submissions = fakeUniformSubmissions
         if (childIds && childIds.length > 0) {
-            submissions = submissions.filter(s => childIds.includes(s.child_id))
+            submissions = submissions.filter(s => childIds.includes((s as { athlete_id?: string; child_id?: string }).athlete_id ?? s.child_id))
         }
         // Include items for fake data to match real data structure
         const submissionsWithItems = submissions.map(submission => ({

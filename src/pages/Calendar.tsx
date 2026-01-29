@@ -238,11 +238,11 @@ export default function Calendar() {
       setEvents(prev => prev.map(e => {
             if (e.id !== eventId) return e
             const newRSVPs = e.rsvps ? [...e.rsvps] : []
-            const idx = newRSVPs.findIndex(r => r.child_id === childId)
+            const idx = newRSVPs.findIndex(r => r.athlete_id === childId)
             const mockRSVP = { 
                 id: 'temp', 
                 event_id: eventId, 
-                child_id: childId, 
+                athlete_id: childId, 
                 status: newStatus, 
                 responded_at: new Date().toISOString(), 
                 responded_by_user_id: context.userId, 
@@ -264,14 +264,14 @@ export default function Calendar() {
           setSelectedEvent(prev => {
               if(!prev) return null
               const newRSVPs = prev.rsvps ? [...prev.rsvps] : []
-              const idx = newRSVPs.findIndex(r => r.child_id === childId)
+              const idx = newRSVPs.findIndex(r => r.athlete_id === childId)
               if (idx >= 0) {
                   newRSVPs[idx] = { ...newRSVPs[idx], status: newStatus, responded_at: new Date().toISOString() }
               } else {
                   newRSVPs.push({ 
                     id: 'temp', 
                     event_id: eventId, 
-                    child_id: childId, 
+                    athlete_id: childId, 
                     status: newStatus, 
                     responded_at: new Date().toISOString(), 
                     responded_by_user_id: context.userId, 
@@ -298,7 +298,7 @@ export default function Calendar() {
           setEvents(prev => prev.map(e => {
             if (e.id !== eventId) return e
             const newRSVPs = e.rsvps ? [...e.rsvps] : []
-            const idx = newRSVPs.findIndex(r => r.child_id === childId)
+            const idx = newRSVPs.findIndex(r => r.athlete_id === childId)
             if (idx >= 0) {
               newRSVPs[idx] = data
             } else {
@@ -311,7 +311,7 @@ export default function Calendar() {
             setSelectedEvent(prev => {
               if (!prev) return null
               const newRSVPs = prev.rsvps ? [...prev.rsvps] : []
-              const idx = newRSVPs.findIndex(r => r.child_id === childId)
+              const idx = newRSVPs.findIndex(r => r.athlete_id === childId)
               if (idx >= 0) {
                 newRSVPs[idx] = data
               } else {
@@ -583,7 +583,7 @@ export default function Calendar() {
                                     ) : (
                                         <div className="space-y-3">
                                             {children.map(child => {
-                                                const rsvp = selectedEvent.rsvps?.find(r => r.child_id === child.id)
+                                                const rsvp = selectedEvent.rsvps?.find(r => r.athlete_id === child.id)
                                                 const rsvpKey = `${selectedEvent.id}-${child.id}`
                                                 return (
                                                     <RSVPButton 

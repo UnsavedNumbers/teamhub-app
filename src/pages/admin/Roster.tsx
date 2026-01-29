@@ -72,7 +72,7 @@ export default function Roster() {
       }
 
       // Get athlete IDs
-      const athleteIds = data.map(m => m.child_id).filter(Boolean) as string[]
+      const athleteIds = data.map(m => m.athlete_id ?? (m as { child_id?: string }).child_id).filter(Boolean) as string[]
       
       if (athleteIds.length === 0) {
         setRoster([])
@@ -147,11 +147,11 @@ export default function Roster() {
           ? `${athlete.first_name} ${athlete.last_name}`.trim()
           : 'Unknown Player'
         // Use guardian's family name, or athlete's last name, or "No Family"
-        const familyName = familyMap.get(member.child_id) || athlete?.last_name || 'No Family'
+        const familyName = familyMap.get(member.athlete_id ?? (member as { child_id?: string }).child_id) || athlete?.last_name || 'No Family'
 
         return {
           id: member.id,
-          child_id: member.child_id,
+          athlete_id: member.athlete_id ?? (member as { child_id?: string }).child_id,
           child_name: athleteName,
           family_name: familyName,
         }

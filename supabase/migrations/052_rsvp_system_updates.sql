@@ -12,16 +12,16 @@ BEGIN
   -- Only create RSVPs if RSVP is enabled and type is 'athlete'
   IF NEW.rsvp_enabled = true AND NEW.rsvp_type = 'athlete' THEN
     -- Create RSVP records for all active team members
-    INSERT INTO event_rsvps (event_id, child_id, status)
+    INSERT INTO event_rsvps (event_id, athlete_id, status)
     SELECT 
       NEW.id,
-      tm.child_id,
+      tm.athlete_id,
       'unknown'
     FROM team_memberships tm
     WHERE tm.team_id = NEW.team_id
       AND tm.season_id = NEW.season_id
       AND tm.status = 'active'
-    ON CONFLICT (event_id, child_id) DO NOTHING;
+    ON CONFLICT (event_id, athlete_id) DO NOTHING;
   END IF;
   
   RETURN NEW;
@@ -41,10 +41,10 @@ BEGIN
   -- Only for active memberships
   IF NEW.status = 'active' THEN
     -- Create RSVPs for future events with athlete RSVP enabled
-    INSERT INTO event_rsvps (event_id, child_id, status)
+    INSERT INTO event_rsvps (event_id, athlete_id, status)
     SELECT 
       e.id,
-      NEW.child_id,
+      NEW.athlete_id,
       'unknown'
     FROM events e
     WHERE e.team_id = NEW.team_id
@@ -52,7 +52,7 @@ BEGIN
       AND e.rsvp_enabled = true
       AND e.rsvp_type = 'athlete'
       AND e.start_time > NOW()
-    ON CONFLICT (event_id, child_id) DO NOTHING;
+    ON CONFLICT (event_id, athlete_id) DO NOTHING;
   END IF;
   RETURN NEW;
 END;

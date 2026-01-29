@@ -434,7 +434,7 @@ AS $$
     WHERE k.id = p_kit_id
   ),
   roster AS (
-    SELECT tm.child_id, tm.team_id, tm.season_id
+    SELECT tm.athlete_id, tm.team_id, tm.season_id
     FROM kit
     JOIN team_memberships tm
       ON tm.team_id = kit.team_id
@@ -481,10 +481,10 @@ AS $$
     ) AS items
   FROM kit
   JOIN roster r ON true
-  JOIN children c ON c.id = r.child_id
+  JOIN athletes c ON c.id = r.athlete_id
   LEFT JOIN subs s
     ON s.kit_id = kit.id
-   AND s.child_id = c.id
+   AND s.athlete_id = c.id
   WHERE staff_can_access_team(auth.uid(), kit.team_id)
   ORDER BY c.last_name, c.first_name;
 $$;

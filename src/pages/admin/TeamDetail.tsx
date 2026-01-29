@@ -206,7 +206,7 @@ export default function TeamDetail() {
         // Transform roster data
         const rosterMembers: RosterMember[] = (data || []).map((member: FakeTeamMember) => ({
           id: member.id,
-          child_id: member.child_id,
+          athlete_id: member.athlete_id ?? (member as { child_id?: string }).child_id,
           jersey_number: member.jersey_number,
           position: member.position,
           status: member.status,
@@ -226,7 +226,7 @@ export default function TeamDetail() {
             )
 
             rosterMembers.forEach((member) => {
-              const athlete = athleteMap.get(member.child_id)
+              const athlete = athleteMap.get(member.athlete_id ?? (member as { child_id?: string }).child_id)
               if (athlete) {
                 member.athlete = athlete
                 // Use jersey_number from athlete if not in membership
@@ -770,7 +770,7 @@ export default function TeamDetail() {
                         const jerseyNumber = member.jersey_number || member.athlete?.jersey_number || '—'
                         const position = member.position || '—'
                         const isActive = member.status === 'active'
-                        const athleteId = member.athlete?.id || member.child_id
+                        const athleteId = member.athlete?.id || member.athlete_id || (member as { child_id?: string }).child_id
 
                         return (
                           <tr

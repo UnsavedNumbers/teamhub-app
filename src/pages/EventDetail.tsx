@@ -40,7 +40,7 @@ interface Child {
 
 interface Attendance {
   id: string
-  child_id: string
+  athlete_id: string
   status: RSVPStatus
   note: string | null
 }
@@ -107,9 +107,9 @@ export default function EventDetail() {
     if (eventData.rsvps) {
       const map: Record<string, Attendance> = {}
       eventData.rsvps.forEach((rsvp) => {
-        map[rsvp.child_id] = {
+        map[rsvp.athlete_id] = {
           id: rsvp.id,
-          child_id: rsvp.child_id,
+          athlete_id: rsvp.athlete_id,
           status: rsvp.status,
           note: rsvp.note,
         }
@@ -142,7 +142,7 @@ export default function EventDetail() {
         ...prev,
         [childId]: {
           id: data.id,
-          child_id: data.child_id,
+          athlete_id: data.athlete_id,
           status: data.status,
           note: data.note,
         }

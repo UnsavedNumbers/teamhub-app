@@ -27,7 +27,7 @@ AS $$
   SELECT EXISTS (
     SELECT 1
     FROM users u
-    JOIN children c ON c.family_id = u.family_id
+    JOIN athletes c ON c.family_id = u.family_id
     WHERE u.id = check_user_id
       AND c.id = check_child_id
   );
@@ -64,8 +64,8 @@ AS $$
   SELECT EXISTS (
     SELECT 1
     FROM users u
-    JOIN children c ON c.family_id = u.family_id
-    JOIN team_memberships tm ON tm.child_id = c.id
+    JOIN athletes c ON c.family_id = u.family_id
+    JOIN team_memberships tm ON tm.athlete_id = c.id
     WHERE u.id = check_user_id
       AND tm.team_id = check_team_id
       AND tm.season_id = check_season_id
@@ -105,14 +105,14 @@ CREATE TABLE IF NOT EXISTS uniform_kit_items (
 CREATE TABLE IF NOT EXISTS uniform_submissions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   kit_id UUID NOT NULL REFERENCES uniform_kits(id) ON DELETE CASCADE,
-  child_id UUID NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+  athlete_id UUID NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
   status uniform_submission_status NOT NULL DEFAULT 'not_submitted',
   submitted_at TIMESTAMPTZ,
   locked_at TIMESTAMPTZ,
   fulfilled_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  CONSTRAINT uq_uniform_submissions_kit_child UNIQUE (kit_id, child_id)
+  CONSTRAINT uq_uniform_submissions_kit_child UNIQUE (kit_id, athlete_id)
 );
 
 CREATE TABLE IF NOT EXISTS uniform_submission_items (
