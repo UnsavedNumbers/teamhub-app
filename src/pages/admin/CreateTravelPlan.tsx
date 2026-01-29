@@ -21,6 +21,10 @@ import { LocationAutocomplete } from '../../components/common/LocationAutocomple
 import type { StructuredAddress } from '../../types/location'
 import { useT } from '../../i18n/useI18n'
 import type { TranslationKey } from '../../i18n'
+import PlanTravelContacts from '../../components/admin/travel/PlanTravelContacts'
+import { getOrganizationTravelContacts, upsertOrganizationTravelContact } from '../../data/services/organizationTravelContactsService'
+import { TRAVEL_CONTACT_CATEGORIES, type TravelContactCategory, type OrganizationTravelContactRow, type TravelContactCategoryOrg } from '../../types/travelContacts'
+import { upsertTravelPlanContacts } from '../../data/services/travelService'
 
 interface Team { id: string; name: string }
 interface Season { id: string; name: string }
@@ -51,7 +55,16 @@ interface TravelFormData {
   hotel_phone: string
   hotel_confirmation: string
   maps_url: string
+  maps_url: string
   notes: string
+  contacts: {
+    category: string
+    is_custom: boolean
+    first_name: string
+    last_name: string
+    email: string
+    phone: string
+  }[]
 }
 
 // Helper to extract state code from Google Place result
@@ -98,6 +111,7 @@ export default function CreateTravelPlan() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [itineraryFile, setItineraryFile] = useState<File | null>(null)
+  const [orgContacts, setOrgContacts] = useState<Record<TravelContactCategoryOrg, OrganizationTravelContactRow | null> | null>(null)
   
   const t = useT()
 
@@ -134,7 +148,15 @@ export default function CreateTravelPlan() {
       venue_name: '', venue_address: '', venue_place_id: null, venue_lat: null, venue_lng: null,
       hotel_name: '', hotel_address: '', hotel_place_id: null, hotel_lat: null, hotel_lng: null,
       hotel_phone: '', hotel_confirmation: '', 
-      maps_url: '', notes: '' 
+      maps_url: '', notes: '',
+      contacts: TRAVEL_CONTACT_CATEGORIES.map(cat => ({
+        category: cat,
+        is_custom: false,
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: '',
+      }))
     },
   })
 
@@ -256,6 +278,15 @@ export default function CreateTravelPlan() {
     }
   }, [context, isReady])
 
+  // Fetch org contacts for preview
+  useEffect(() => {
+    if (isReady && context) {
+        getOrganizationTravelContacts(context).then(res => {
+            if (res.data) setOrgContacts(res.data)
+        })
+    }
+  }, [isReady, context])
+
   useEffect(() => { 
     console.log('[CreateTravelPlan] useEffect triggered:', { isReady, hasContext: !!context, orgId: context?.orgId })
     if (isReady && context) {
@@ -349,6 +380,23 @@ export default function CreateTravelPlan() {
         setError(errorMessage)
         showError(errorMessage)
         return
+      }
+
+      
+      // Save travel contacts
+      if (data.contacts && createdPlan?.id) {
+         await upsertTravelPlanContacts(
+             context, 
+             createdPlan.id, 
+             data.contacts.map(c => ({
+                 category: c.category as TravelContactCategory,
+                 is_custom: c.is_custom,
+                 first_name: c.first_name,
+                 last_name: c.last_name,
+                 email: c.email,
+                 phone: c.phone
+             }))
+         )
       }
 
       showSuccess('Travel plan created successfully!')
@@ -686,6 +734,12 @@ export default function CreateTravelPlan() {
               <textarea className="pa-input pa-textarea" placeholder="Trip Notes..." style={{ minHeight: '120px' }} value={watch('notes')} onChange={e => setValue('notes', e.target.value)} />
               <div className="pa-label">Notes</div>
             </div>
+
+            <PlanTravelContacts 
+                control={control} 
+                name="contacts" 
+                orgContacts={orgContacts} 
+            />
 
             <div className="pa-form-actions">
               <Button variant="blue" onClick={() => navigate('/admin/travel')} disabled={saving} className="w-full sm:w-auto">Cancel</Button>

@@ -12,6 +12,22 @@ export const TRAVEL_CONTACT_CATEGORIES = [
   'general',
 ] as const
 
+export const TRAVEL_CONTACT_CATEGORY_LABELS: Record<string, string> = {
+  transportation: 'Transportation',
+  lodging: 'Lodging',
+  venue: 'Venue / On-site Contact',
+  emergency: 'Emergency',
+  general: 'General Travel Contact',
+}
+
+export const TRAVEL_CONTACT_CATEGORY_DESCRIPTIONS: Record<string, string> = {
+  transportation: 'Bus, flight, or excessive travel coordination.',
+  lodging: 'Hotel and room block management.',
+  venue: 'Contact at the venue (e.g. facility manager).',
+  emergency: 'Urgent issues during the trip.',
+  general: 'General trip questions.',
+}
+
 /** Categories at org level (includes 'default' as fallback) */
 export const TRAVEL_CONTACT_CATEGORIES_ORG = [
   ...TRAVEL_CONTACT_CATEGORIES,

@@ -45,6 +45,8 @@ import {
     type TravelContactCategory,
     type ResolvedContact,
     type ResolvedTravelContacts,
+    type TravelPlanContactRow,
+    TRAVEL_CONTACT_CATEGORY_LABELS,
 } from '../../types/travelContacts'
 
 // ============================================================================
@@ -449,92 +451,6 @@ export interface TravelPlanRow {
     season: { id: string; name: string } | null
 }
 
-// ============================================================================
-// Travel contact resolution (single source of truth: DB RPC)
-// ============================================================================
-
-const EMPTY_CONTACT: ResolvedContact = {
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone: null,
-}
-
-function parseResolvedContact(raw: unknown): ResolvedContact {
-    if (raw && typeof raw === 'object' && 'email' in (raw as object)) {
-        const o = raw as Record<string, unknown>
-        return {
-            first_name: typeof o.first_name === 'string' ? o.first_name : '',
-            last_name: typeof o.last_name === 'string' ? o.last_name : '',
-            email: typeof o.email === 'string' ? o.email : '',
-            phone: typeof o.phone === 'string' ? o.phone : o.phone === null ? null : null,
-        }
-    }
-    return EMPTY_CONTACT
-}
-
-/**
- * Resolve travel contacts for all five categories for a plan.
- * Uses DB RPC resolve_travel_contacts_for_plan; never returns null for a category.
- */
-export async function resolveAllTravelContactsForPlan(
-    _context: UserContext,
-    planId: string
-): Promise<{ data: ResolvedTravelContacts; error: Error | null }> {
-    if (!isValidUUID(planId)) {
-        return {
-            data: TRAVEL_CONTACT_CATEGORIES.reduce(
-                (acc, cat) => ({ ...acc, [cat]: EMPTY_CONTACT }),
-                {} as ResolvedTravelContacts
-            ),
-            error: new Error('Invalid plan ID'),
-        }
-    }
-    if (USE_FAKE_DATA) {
-        await simulateDelay()
-        const fallback: ResolvedTravelContacts = TRAVEL_CONTACT_CATEGORIES.reduce(
-            (acc, cat) => ({ ...acc, [cat]: EMPTY_CONTACT }),
-            {} as ResolvedTravelContacts
-        )
-        return { data: fallback, error: null }
-    }
-    try {
-        const { data, error } = await supabase.rpc('resolve_travel_contacts_for_plan' as any, {
-            p_plan_id: planId,
-        })
-        if (error) throw error
-        const raw = data as Record<string, unknown> | null
-        const result = TRAVEL_CONTACT_CATEGORIES.reduce(
-            (acc, cat) => ({
-                ...acc,
-                [cat]: parseResolvedContact(raw?.[cat] ?? EMPTY_CONTACT),
-            }),
-            {} as ResolvedTravelContacts
-        )
-        return { data: result, error: null }
-    } catch (err) {
-        return {
-            data: TRAVEL_CONTACT_CATEGORIES.reduce(
-                (acc, cat) => ({ ...acc, [cat]: EMPTY_CONTACT }),
-                {} as ResolvedTravelContacts
-            ),
-            error: err instanceof Error ? err : new Error('Failed to resolve travel contacts'),
-        }
-    }
-}
-
-/**
- * Resolve a single category contact for a plan.
- */
-export async function resolveTravelContact(
-    context: UserContext,
-    planId: string,
-    category: TravelContactCategory
-): Promise<{ data: ResolvedContact; error: Error | null }> {
-    const { data: all, error } = await resolveAllTravelContactsForPlan(context, planId)
-    if (error) return { data: EMPTY_CONTACT, error }
-    return { data: all[category], error: null }
-}
 
 // ============================================================================
 // Travel Events Query Params
@@ -1716,6 +1632,187 @@ export async function getTravelPlanDetails(
     }
 }
 
+// ============================================================================
+// Travel Plan Contacts Management (Raw CRUD)
+// ============================================================================
+
+/**
+ * Get raw contacts for a travel plan (for editing).
+ * Returns the raw rows from travel_plan_contacts, indexed by category.
+ */
+export async function getTravelPlanContacts(
+    _context: UserContext,
+    planId: string
+): Promise<{ data: Record<TravelContactCategory, TravelPlanContactRow | null>; error: Error | null }> {
+    if (!isValidUUID(planId)) {
+        return { data: {} as any, error: new Error('Invalid plan ID') }
+    }
+
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+        // Return empty structure for fake mode until fake store is implemented
+        const result = TRAVEL_CONTACT_CATEGORIES.reduce((acc, cat) => {
+            acc[cat] = null
+            return acc
+        }, {} as Record<TravelContactCategory, TravelPlanContactRow | null>)
+        return { data: result, error: null }
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('travel_plan_contacts')
+            .select('*')
+            .eq('travel_plan_id', planId)
+
+        if (error) throw error
+
+        // Initialize with nulls
+        const result = TRAVEL_CONTACT_CATEGORIES.reduce((acc, cat) => {
+            acc[cat] = null
+            return acc
+        }, {} as Record<TravelContactCategory, TravelPlanContactRow | null>)
+
+        // Fill with data
+        data?.forEach((row: any) => {
+            if (TRAVEL_CONTACT_CATEGORIES.includes(row.category)) {
+                result[row.category as TravelContactCategory] = row as TravelPlanContactRow
+            }
+        })
+
+        return { data: result, error: null }
+    } catch (err) {
+        console.error('getTravelPlanContacts error:', err)
+        return { data: {} as any, error: err instanceof Error ? err : new Error('Unknown error fetching contacts') }
+    }
+}
+
+/**
+ * Upsert travel plan contacts.
+ */
+export async function upsertTravelPlanContacts(
+    _context: UserContext,
+    planId: string,
+    contacts: {
+        category: TravelContactCategory;
+        is_custom: boolean;
+        first_name?: string | null;
+        last_name?: string | null;
+        email?: string | null;
+        phone?: string | null
+    }[]
+): Promise<{ error: Error | null }> {
+    if (!isValidUUID(planId)) {
+        return { error: new Error('Invalid plan ID') }
+    }
+
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+        return { error: null }
+    }
+
+    try {
+        if (contacts.length === 0) return { error: null }
+
+        const rows = contacts.map(c => ({
+            travel_plan_id: planId,
+            category: c.category,
+            is_custom: c.is_custom,
+            first_name: c.first_name ?? null,
+            last_name: c.last_name ?? null,
+            email: c.email ?? null,
+            phone: c.phone ?? null,
+            updated_at: new Date().toISOString(),
+        }))
+
+        const { error } = await supabase
+            .from('travel_plan_contacts')
+            .upsert(rows, {
+                onConflict: 'travel_plan_id,category'
+            })
+
+        if (error) throw error
+
+        return { error: null }
+    } catch (err) {
+        console.error('upsertTravelPlanContacts error:', err)
+        return { error: err instanceof Error ? err : new Error('Unknown error saving contacts') }
+    }
+}
+
+/**
+ * Resolve all travel contacts for a plan.
+ */
+export async function resolveAllTravelContactsForPlan(
+    _context: UserContext,
+    planId: string
+): Promise<{ data: ResolvedTravelContacts; error: Error | null }> {
+    if (!isValidUUID(planId)) {
+        return { data: {} as any, error: new Error('Invalid plan ID') }
+    }
+
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+        // Return nulls/empties
+        const result = TRAVEL_CONTACT_CATEGORIES.reduce((acc, cat) => {
+            acc[cat] = { first_name: '', last_name: '', email: '', phone: null, source: 'org_default' }
+            return acc
+        }, {} as ResolvedTravelContacts)
+        return { data: result, error: null }
+    }
+
+    try {
+        const { data, error } = await supabase
+            .rpc('resolve_all_travel_contacts_for_plan', {
+                p_plan_id: planId
+            })
+
+        if (error) throw error
+
+        // Data is JSONB, cast to ResolvedTravelContacts
+        // Ensure all categories are present
+        const result = TRAVEL_CONTACT_CATEGORIES.reduce((acc, cat) => {
+            const contact = data?.[cat]
+            acc[cat] = contact ? {
+                first_name: contact.first_name || '',
+                last_name: contact.last_name || '',
+                email: contact.email || '',
+                phone: contact.phone || null,
+                source: contact.source
+            } : {
+                // Should not happen if RPC works as designed (always returns object), but safe fallback
+                first_name: '', last_name: '', email: '', phone: null
+            }
+            return acc
+        }, {} as ResolvedTravelContacts)
+
+        return { data: result, error: null }
+    } catch (err) {
+        console.error('resolveAllTravelContactsForPlan error:', err)
+        return { data: {} as any, error: err instanceof Error ? err : new Error('Unknown error resolving contacts') }
+    }
+}
+
+/**
+ * Resolve a single category contact for a plan.
+ */
+export async function resolveTravelContact(
+    context: UserContext,
+    planId: string,
+    category: TravelContactCategory
+): Promise<{ data: ResolvedContact; error: Error | null }> {
+    const { data: all, error } = await resolveAllTravelContactsForPlan(context, planId)
+    // If we have an error, return empty with error? Or just propagate.
+    // Logic: data is ResolvedTravelContacts = Record<Category, ResolvedContact>
+    if (error) {
+        return {
+            data: { first_name: '', last_name: '', email: '', phone: null },
+            error
+        }
+    }
+
+    return { data: all[category], error: null }
+}
+
 /**
  * Get a single travel plan by ID (convenience function for detail view)
  */
@@ -1756,6 +1853,42 @@ export async function getAllTravelPlansAdmin(
     context: UserContext
 ): Promise<{ data: FakeTravelPlan[]; error: Error | null }> {
     return getTravelPlans(context, {})
+}
+
+/**
+ * Publish a travel plan (change status from draft to published)
+ */
+/**
+ * Send notification for published travel plan
+ */
+async function notifyTravelPlanPublished(
+    context: UserContext,
+    plan: TravelPlanRow
+) {
+    try {
+        // Resolve contacts
+        const { data: contacts } = await resolveAllTravelContactsForPlan(context, plan.id)
+
+        // Format contacts for email
+        // We'll create a simple HTML list or text block
+        let contactDetails = ''
+        if (contacts) {
+            contactDetails = Object.entries(contacts)
+                .filter(([_, c]) => c.email || c.phone)
+                .map(([cat, c]) => {
+                    const label = TRAVEL_CONTACT_CATEGORY_LABELS[cat] || cat
+                    return `<strong>${label}:</strong> ${c.first_name} ${c.last_name} ` +
+                        `(${[c.email, c.phone].filter(Boolean).join(', ')})`
+                })
+                .join('<br/>')
+        }
+
+        // Email sending uses Node fs/Resend and cannot run in the browser.
+        // To notify on publish, invoke an Edge Function or backend job that uses
+        // the notification-worker emailService (or similar) with the plan and contactDetails.
+    } catch (err) {
+        console.error('Failed to send travel plan notification', err)
+    }
 }
 
 /**
@@ -1862,7 +1995,12 @@ export async function publishTravelPlan(
             return { data: null, error: new Error(`Failed to publish travel plan: ${updateError.message}`) }
         }
 
-        return { data: mapSupabaseTravelPlan(updated as TravelPlanRow), error: null }
+        const finalPlan = mapSupabaseTravelPlan(updated as TravelPlanRow)
+
+        // Send notification (fire and forget - but wait for simple errors)
+        await notifyTravelPlanPublished(context, updated as TravelPlanRow)
+
+        return { data: finalPlan, error: null }
     } catch (err) {
         console.error('publishTravelPlan error:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error publishing travel plan') }
