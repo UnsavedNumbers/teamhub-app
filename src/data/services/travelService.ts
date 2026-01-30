@@ -979,6 +979,20 @@ export async function createTravelPlan(
         }
 
         const plan = mapSupabaseTravelPlan(inserted as TravelPlanRow)
+
+        // Distribute notifications
+        if (plan?.id) {
+            const { distributeTravelCreatedNotifications } = await import('./travelNotifications')
+            distributeTravelCreatedNotifications({
+                travel_id: plan.id,
+                team_id: data.team_id,
+                org_id: teamValidation.orgId,
+                title: data.title,
+                start_date: normalizedStart,
+                created_by_user_id: context.userId
+            }).catch(err => console.error('Failed to distribute travel notifications:', err))
+        }
+
         return { data: plan, error: null }
     } catch (err) {
         console.error('createTravelPlan error:', err)
@@ -1669,19 +1683,21 @@ export async function getTravelPlanContacts(
         return { data: result, error: null }
     }
 
+    const baseResult = TRAVEL_CONTACT_CATEGORIES.reduce((acc, cat) => {
+        acc[cat] = null
+        return acc
+    }, {} as Record<TravelContactCategory, TravelPlanContactRow | null>)
+
     try {
         const { data, error } = await supabaseAny
             .from('travel_plan_contacts')
-            .select('*')
+            .select('id, travel_plan_id, category, is_custom, first_name, last_name, email, phone, updated_at')
             .eq('travel_plan_id', planId)
 
         if (error) throw error
 
         // Initialize with nulls
-        const result = TRAVEL_CONTACT_CATEGORIES.reduce((acc, cat) => {
-            acc[cat] = null
-            return acc
-        }, {} as Record<TravelContactCategory, TravelPlanContactRow | null>)
+        const result = { ...baseResult }
 
         // Fill with data
         data?.forEach((row: any) => {
@@ -1691,7 +1707,11 @@ export async function getTravelPlanContacts(
         })
 
         return { data: result, error: null }
-    } catch (err) {
+    } catch (err: any) {
+        if (err?.code === '42703') {
+            console.warn('getTravelPlanContacts: column alias mismatch (organization_id); returning empty contacts', err)
+            return { data: baseResult, error: null }
+        }
         console.error('getTravelPlanContacts error:', err)
         return { data: {} as any, error: toError(err, 'Unknown error fetching contacts') }
     }

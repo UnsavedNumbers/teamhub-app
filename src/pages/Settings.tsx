@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useUserContext } from '../hooks/useUserContext'
 import { getAthletes } from '../data/services/familyService'
 import { getTeamsForParent } from '../data/services/teamsService'
-import { getUserPreferences, updateUserPreferences } from '../data/services/preferencesService'
+import { getUserPreferences, updateUserPreferences, type UserPreferences } from '../data/services/preferencesService'
 import { 
   linkGuardianToAthlete, 
   validateGuardianEmail, 
@@ -18,12 +18,16 @@ import type { GuardianMatch, Guardian, PendingGuardianInvite } from '../types/fa
 import { useT, useLocale } from '../i18n/useI18n'
 import type { Locale } from '../i18n'
 import PortalLayout from '../components/portal/PortalLayout'
-import PortalHeader from '../components/portal/PortalHeader'
 import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import { ThemeSelector } from '../components/portal/ThemeToggle'
+import NotificationPreferences from '../components/common/NotificationPreferences'
+import type { NotificationGroup } from '../types/notificationPreferences'
+import type { NotificationRole } from '../types/notifications'
+import { mergeNotificationPreferences, setPreferencesForContext, canonicalRole } from '../utils/notificationPreferencesConfig'
+import { showSuccess, showError } from '../utils/toast'
 import { CheckCircle, Mail, Loader2, AlertCircle } from 'lucide-react'
 
 interface Child {
@@ -51,20 +55,14 @@ export default function Settings() {
   const { locale, setLocale } = useLocale()
   const isMountedRef = useRef(true)
   const emailInputRef = useRef<HTMLInputElement>(null)
+  const preferencesRef = useRef<UserPreferences | null>(null)
   
   const [children, setChildren] = useState<ChildWithGuardians[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
 
-  const [notifications, setNotifications] = useState({
-    schedule_changes: true,
-    announcements: true,
-    rsvp_reminders: true,
-    payment_reminders: true,
-    tryout_updates: false,
-    emergency_alerts: true,
-    quiet_hours: false,
-  })
+  const [notificationGroups, setNotificationGroups] = useState<NotificationGroup[]>([])
+  const [savingNotifications, setSavingNotifications] = useState(false)
 
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [newPassword, setNewPassword] = useState('')
@@ -82,6 +80,11 @@ export default function Settings() {
   const [inviteGuardianError, setInviteGuardianError] = useState<string | null>(null)
   const [emailTouched, setEmailTouched] = useState(false)
   const [inviteActionLoading, setInviteActionLoading] = useState<string | null>(null)
+
+  const activeRole: NotificationRole = useMemo(
+    () => canonicalRole((context.roles?.[0] as NotificationRole) || 'guardian'),
+    [context.roles]
+  )
 
   // Cleanup ref on unmount
   useEffect(() => {
@@ -134,15 +137,13 @@ export default function Settings() {
 
     // Load notification preferences
     const { data: prefs } = await getUserPreferences(user.id)
-    if (prefs?.notifications) {
-      setNotifications(prev => ({
-        ...prev,
-        ...prefs.notifications,
-      }))
-    }
+    preferencesRef.current = prefs || {}
+    const savedGroups = prefs?.notifications_v2?.[context.orgId]?.[activeRole]
+    const mergedGroups = mergeNotificationPreferences(savedGroups as NotificationGroup[] | undefined, activeRole, t)
+    setNotificationGroups(mergedGroups)
 
     setLoading(false)
-  }, [context, isReady, user?.id])
+  }, [context, isReady, user?.id, activeRole, t])
 
   useEffect(() => {
     if (isReady) fetchData()
@@ -332,16 +333,97 @@ export default function Settings() {
     navigate('/portal/login')
   }
 
-  async function toggleNotification(key: keyof typeof notifications) {
-    const updated = { ...notifications, [key]: !notifications[key] }
-    setNotifications(updated)
-    
-    if (user?.id) {
-      await updateUserPreferences(user.id, {
-        notifications: updated as any,
+  const persistNotificationGroups = useCallback(
+    async (nextGroups: NotificationGroup[], previousGroups?: NotificationGroup[]) => {
+      if (!user?.id) return
+      setSavingNotifications(true)
+      try {
+        const nextPrefs = setPreferencesForContext(
+          preferencesRef.current?.notifications_v2,
+          context.orgId,
+          activeRole,
+          nextGroups
+        )
+        const { error } = await updateUserPreferences(user.id, { notifications_v2: nextPrefs })
+        if (error) throw error
+        preferencesRef.current = { ...(preferencesRef.current || {}), notifications_v2: nextPrefs }
+        showSuccess(t('toast.success.notificationPreferencesUpdated'))
+      } catch (err) {
+        console.error('Error saving notification preferences:', err)
+        if (previousGroups) {
+          setNotificationGroups(previousGroups)
+        }
+        showError(t('toast.error.saveFailed'))
+      } finally {
+        setSavingNotifications(false)
+      }
+    },
+    [activeRole, context.orgId, t, updateUserPreferences, user?.id]
+  )
+
+  const handleToggleGroupAll = useCallback(
+    (groupId: NotificationGroup['id'], next: boolean) => {
+      setNotificationGroups((prev) => {
+        const updated = prev.map((group) =>
+          group.id === groupId
+            ? { ...group, allEnabled: next, actions: group.actions.map((a) => ({ ...a, enabled: next })) }
+            : group
+        )
+        void persistNotificationGroups(updated, prev)
+        return updated
       })
-    }
-  }
+    },
+    [persistNotificationGroups]
+  )
+
+  const handleToggleGroupDigest = useCallback(
+    (groupId: NotificationGroup['id'], next: boolean) => {
+      setNotificationGroups((prev) => {
+        const updated = prev.map((group) => (group.id === groupId ? { ...group, digestEnabled: next } : group))
+        void persistNotificationGroups(updated, prev)
+        return updated
+      })
+    },
+    [persistNotificationGroups]
+  )
+
+  const handleToggleAction = useCallback(
+    (groupId: NotificationGroup['id'], actionId: string, next: boolean) => {
+      setNotificationGroups((prev) => {
+        const updated = prev.map((group) =>
+          group.id === groupId
+            ? {
+                ...group,
+                actions: group.actions.map((a) => (a.id === actionId ? { ...a, enabled: next } : a)),
+              }
+            : group
+        )
+        void persistNotificationGroups(updated, prev)
+        return updated
+      })
+    },
+    [persistNotificationGroups]
+  )
+
+  const handleToggleChannel = useCallback(
+    (groupId: NotificationGroup['id'], channel: 'in_app' | 'email' | 'push', next: boolean) => {
+      setNotificationGroups((prev) => {
+        const updated = prev.map((group) =>
+          group.id === groupId
+            ? {
+                ...group,
+                channels: next
+                  ? Array.from(new Set([...group.channels, channel]))
+                  : group.channels.filter((ch) => ch !== channel),
+              }
+            : group
+        )
+        void persistNotificationGroups(updated, prev)
+        return updated
+      })
+    },
+    [persistNotificationGroups]
+  )
 
   async function handleChangePassword() {
     setPasswordError(null)
@@ -374,14 +456,11 @@ export default function Settings() {
 
   if (loading) {
     return (
-      <>
-        <PortalHeader />
-        <PortalLayout>
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
-          </div>
-        </PortalLayout>
-      </>
+      <PortalLayout>
+        <div className="flex justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+        </div>
+      </PortalLayout>
     )
   }
 
@@ -633,32 +712,16 @@ export default function Settings() {
           {/* Notifications */}
           <section>
             <SectionHeader className="mb-3 sm:mb-4">{t('portal.settings.notifications.title')}</SectionHeader>
-            <Card className="overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
-              {Object.entries(notifications).map(([key, value]) => {
-                const notificationLabels: Record<string, string> = {
-                  schedule_changes: t('portal.settings.notifications.scheduleChanges'),
-                  announcements: t('portal.settings.notifications.announcements'),
-                  rsvp_reminders: t('portal.settings.notifications.rsvpReminders'),
-                  payment_reminders: t('portal.settings.notifications.paymentReminders'),
-                  tryout_updates: t('portal.settings.notifications.tryoutUpdates'),
-                  emergency_alerts: t('portal.settings.notifications.emergencyAlerts'),
-                  quiet_hours: t('portal.settings.notifications.quietHours'),
-                }
-                
-                return (
-                  <div key={key} className="p-4 sm:p-6 flex items-center justify-between gap-4">
-                    <div>
-                      <p className="font-black text-slate-900 dark:text-white">{notificationLabels[key] || key}</p>
-                    </div>
-                    <button 
-                      onClick={() => toggleNotification(key as keyof typeof notifications)}
-                      className={`w-12 h-6 rounded-full transition-colors relative ${value ? 'bg-[var(--org-btn-primary-bg)]' : 'bg-slate-200 dark:bg-slate-700'}`}
-                    >
-                      <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-all ${value ? 'left-7' : 'left-1'}`} />
-                    </button>
-                  </div>
-                )
-              })}
+            <Card className="p-4 sm:p-6">
+              <NotificationPreferences
+                role={activeRole}
+                groups={notificationGroups}
+                onToggleGroupAll={handleToggleGroupAll}
+                onToggleGroupDigest={handleToggleGroupDigest}
+                onToggleAction={handleToggleAction}
+                onToggleChannel={handleToggleChannel}
+                saving={savingNotifications}
+              />
             </Card>
           </section>
 

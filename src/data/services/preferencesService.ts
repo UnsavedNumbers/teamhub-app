@@ -9,6 +9,7 @@ import { USE_FAKE_DATA } from '../config'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database, Json } from '../../lib/supabase.extended.types'
 import { getFakeUserPreferences } from '../fake/fakeSettings'
+import type { NotificationPreferencesByOrg } from '../../types/notificationPreferences'
 
 // ============================================================================
 // Types
@@ -33,6 +34,7 @@ export interface UserPreferences {
     remember_filters?: boolean
     auto_select_org?: boolean
   }
+  notifications_v2?: NotificationPreferencesByOrg
   profile?: {
     phone?: string
     timezone?: string

@@ -47,6 +47,7 @@ import TryoutDetail from './pages/TryoutDetail'
 import Huddles from './pages/Huddles'
 import AnnouncementDetail from './pages/AnnouncementDetail'
 import { RoleSelection } from './pages/RoleSelection'
+const Notifications = lazy(() => import('./pages/Notifications'))
 
 // Portal Pages - Lazy loaded
 const CreateAthletePortal = lazy(() => import('./pages/CreateAthletePortal'))
@@ -93,6 +94,7 @@ const OrganizationStructureOverview = lazy(() => import('./pages/admin/Organizat
 const Sports = lazy(() => import('./pages/admin/Sports'))
 const SportDetail = lazy(() => import('./pages/admin/SportDetail'))
 const SportUpdate = lazy(() => import('./pages/admin/SportUpdate'))
+const AdminNotifications = lazy(() => import('./pages/admin/AdminNotifications'))
 const Programs = lazy(() => import('./pages/admin/Programs'))
 const ProgramDetail = lazy(() => import('./pages/admin/ProgramDetail'))
 const ProgramUpdate = lazy(() => import('./pages/admin/ProgramUpdate'))
@@ -277,6 +279,7 @@ function AppWithTheme() {
             <Route path="huddles/chat" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.messages"><Huddles /></FeatureGateRoute></ProtectedRoute>} />
             
             {/* Redirect root portal to dashboard */}
+            <Route path="notifications" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.messages"><Suspense fallback={<AdminLoadingSpinner />}><Notifications /></Suspense></FeatureGateRoute></ProtectedRoute>} />
             <Route index element={<Navigate to={getLink(RouteKeys.PORTAL_DASHBOARD)} replace />} />
 
             {/* Catch-all to prevent blank/"blue" screens on unknown portal routes */}
@@ -415,7 +418,8 @@ function AppWithTheme() {
             
               {/* Users */}
               <Route path="users/new" element={<CreateUser />} />
-              <Route path="organization/users/:userId/edit" element={<EditUser />} />
+              <Route path="users/:id" element={<EditUser />} />
+              <Route path="notifications" element={<AdminNotifications />} />
             
               {/* Organization */}
               <Route path="organization" element={<OrganizationSettings />} />

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import ThemeSwitcher from './ThemeSwitcher'
 import UserContextDropdown from './UserContextDropdown'
+import NotificationBell from './NotificationBell'
 
 interface GlobalNavProps {
   variant: 'admin' | 'platform-admin'
@@ -27,14 +28,8 @@ export default function GlobalNav({ variant }: GlobalNavProps) {
 
       {/* Right section */}
       <div className="gn-right">
-        {/* Notifications (placeholder) */}
-        <button
-          className="gn-util-btn"
-          aria-label="Notifications"
-          title="Notifications"
-        >
-          <span className="material-symbols-outlined">notifications</span>
-        </button>
+        {/* Notifications */}
+        <NotificationBell viewAllPath={isAdmin ? '/admin/notifications' : '/platform-admin'} />
 
         <div className="gn-divider" />
 

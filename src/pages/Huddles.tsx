@@ -256,6 +256,7 @@ export default function Huddles() {
 
     try {
       const result = await createAnnouncement(
+        context,
         title,
         content,
         priority,

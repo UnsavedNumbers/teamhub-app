@@ -6,6 +6,12 @@
  */
 
 import { DEMO_ORG_A_ID, DEMO_USER_IDS } from '../config'
+import type {
+    NotificationAction,
+    NotificationEntityType,
+    NotificationPresentation,
+    NotificationRole,
+} from '../../types/notifications'
 import {
     TEAM_U10_SOCCER_ID,
     TEAM_U12_SOCCER_ID,
@@ -40,10 +46,19 @@ export interface FakeAnnouncement {
 export interface FakeNotification {
     id: string
     user_id: string
+    org_id: string
+    team_id: string | null
+    action: NotificationAction
+    role_context: NotificationRole
     title: string
     body: string
+    presentation_type: NotificationPresentation
+    entity_type: NotificationEntityType | null
+    entity_id: string | null
+    link_url: string | null
+    metadata: Record<string, unknown> | null
+    dedupe_key: string
     read_at: string | null
-    action_url: string | null
     created_at: string
 }
 
@@ -272,46 +287,91 @@ export const fakeNotifications: FakeNotification[] = [
     {
         id: 'notif-001',
         user_id: PARENT_ONLY_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: TEAM_U10_SOCCER_ID,
+        action: 'event_rsvp_required',
+        role_context: 'guardian',
         title: 'RSVP Reminder',
         body: "Please respond to Emma's upcoming soccer game this Saturday.",
+        presentation_type: 'info',
+        entity_type: 'event',
+        entity_id: 'event-001',
+        link_url: '/portal/calendar',
+        metadata: { severity: 'reminder' },
+        dedupe_key: 'demo:notif-001',
         read_at: null,
-        action_url: '/portal/calendar',
         created_at: hoursAgo(1),
     },
     {
         id: 'notif-002',
         user_id: PARENT_ONLY_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: TEAM_U10_SOCCER_ID,
+        action: 'fee_overdue',
+        role_context: 'guardian',
         title: 'Payment Due Soon',
         body: 'Tournament fee of $45 is due by March 15th.',
+        presentation_type: 'warning',
+        entity_type: 'fee',
+        entity_id: 'fee-001',
+        link_url: '/portal/payments',
+        metadata: { amount_cents: 4500 },
+        dedupe_key: 'demo:notif-002',
         read_at: null,
-        action_url: '/portal/payments',
         created_at: hoursAgo(6),
     },
     {
         id: 'notif-003',
         user_id: PARENT_ONLY_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: TEAM_U10_SOCCER_ID,
+        action: 'event_location_updated',
+        role_context: 'guardian',
         title: 'Practice Location Changed',
         body: "Today's practice moved to Lincoln Park due to field closure.",
+        presentation_type: 'warning',
+        entity_type: 'event',
+        entity_id: 'event-002',
+        link_url: '/portal/calendar',
+        metadata: { old_location: 'Central Field', new_location: 'Lincoln Park' },
+        dedupe_key: 'demo:notif-003',
         read_at: hoursAgo(3),
-        action_url: '/portal/calendar',
         created_at: hoursAgo(5),
     },
     {
         id: 'notif-004',
         user_id: PARENT_ONLY_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: TEAM_U10_SOCCER_ID,
+        action: 'announcement_created',
+        role_context: 'guardian',
         title: 'New Team Announcement',
         body: 'Coach Davis posted a new message for U10 Lightning.',
+        presentation_type: 'info',
+        entity_type: 'announcement',
+        entity_id: 'msg-002',
+        link_url: '/portal/messages',
+        metadata: null,
+        dedupe_key: 'demo:notif-004',
         read_at: hoursAgo(1),
-        action_url: '/portal/messages',
         created_at: hoursAgo(2),
     },
     {
         id: 'notif-005',
         user_id: PARENT_ONLY_ID,
+        org_id: DEMO_ORG_A_ID,
+        team_id: TEAM_U10_SOCCER_ID,
+        action: 'uniform_size_submitted',
+        role_context: 'guardian',
         title: 'Uniform Sizes Submitted',
         body: "Emma's uniform sizes have been confirmed.",
+        presentation_type: 'info',
+        entity_type: 'uniform',
+        entity_id: 'kit-001',
+        link_url: '/portal/uniforms',
+        metadata: null,
+        dedupe_key: 'demo:notif-005',
         read_at: daysAgo(2),
-        action_url: '/portal/uniforms',
         created_at: daysAgo(3),
     },
 ]

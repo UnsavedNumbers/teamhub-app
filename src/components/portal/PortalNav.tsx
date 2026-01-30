@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import MegaMenu from '../common/MegaMenu'
 import ThemeToggle from './ThemeToggle'
 import UserContextDropdown from '../common/UserContextDropdown'
+import NotificationBell from '../common/NotificationBell'
 import MobileMenu from '../common/MobileMenu'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
@@ -543,13 +544,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         )}
 
         {/* Notifications */}
-        <button
-          className="gn-util-btn"
-          aria-label="Notifications"
-          title="Notifications"
-        >
-          <span className="material-symbols-outlined">notifications</span>
-        </button>
+        <NotificationBell viewAllPath="/portal/notifications" />
 
         <div className="gn-divider" />
 

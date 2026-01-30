@@ -30,6 +30,7 @@ export { default as Checkbox } from './Checkbox'
 export { default as Switch } from './Switch'
 export { default as FilterBar } from './FilterBar'
 export { default as EnhancedFilterBar } from './EnhancedFilterBar'
+export { default as AdminFilterPanel } from './AdminFilterPanel'
 export { default as ThemePicker } from './ThemePicker'
 
 // Feedback
