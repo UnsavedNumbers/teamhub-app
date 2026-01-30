@@ -1045,6 +1045,11 @@ export const en = {
             subtitle: 'Manage travel itineraries and plans',
             createSubtitle: 'Create a new travel plan for the team',
             editSubtitle: 'Modify details of an existing travel plan',
+            tabs: {
+                current: 'Current',
+                past: 'Past',
+                all: 'All',
+            },
         },
         payments: {
             title: 'Payments',
@@ -2096,6 +2101,11 @@ export const es = {
             subtitle: 'Administrar itinerarios y planes de viaje',
             createSubtitle: 'Crear un nuevo plan de viaje para el equipo',
             editSubtitle: 'Modificar los detalles de un plan de viaje existente',
+            tabs: {
+                current: 'Actual',
+                past: 'Pasado',
+                all: 'Todos',
+            },
         },
         payments: {
             title: 'Pagos',

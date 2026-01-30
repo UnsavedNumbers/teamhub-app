@@ -2037,6 +2037,61 @@ html.dark .oa-detail-text {
     color: var(--pa-text-secondary);
 }
 
+/* Travel Contacts (Detail Slide Over) */
+.oa-contact-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0 8px;
+}
+
+.oa-contact-item {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--org-border-default, var(--pa-n200));
+}
+
+.oa-contact-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.oa-contact-category {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--pa-n400);
+}
+
+.oa-contact-name {
+    margin-top: 6px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--org-text-primary, var(--pa-n900));
+}
+
+.oa-contact-details {
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--pa-n600);
+}
+
+html.dark .oa-contact-item {
+    border-bottom-color: var(--pa-border-subtle);
+}
+
+html.dark .oa-contact-category {
+    color: var(--pa-n400);
+}
+
+html.dark .oa-contact-name {
+    color: var(--pa-n100);
+}
+
+html.dark .oa-contact-details {
+    color: var(--pa-n400);
+}
+
 /* Uniform Dot */
 .oa-uniform-dot {
     width: 16px;
@@ -2366,4 +2421,3 @@ html.dark .oa-filter-group .pa-select {
     border-color: var(--pa-border-subtle);
     color: var(--pa-n100);
 }
-

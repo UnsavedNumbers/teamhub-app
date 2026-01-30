@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Card, CardHeader, CardTitle, CardContent, Button, Input, Select } from '../platformAdmin'
 import { cn } from '../../utils/cn'
 import { 
@@ -49,8 +49,11 @@ export default function CreateAnnouncementModal({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Sort teams alphabetically
-  const sortedTeams = [...teams].sort((a, b) => a.name.localeCompare(b.name))
+  // Sort teams alphabetically (memoized to avoid render-loop resets)
+  const sortedTeams = useMemo(
+    () => [...teams].sort((a, b) => a.name.localeCompare(b.name)),
+    [teams]
+  )
   
   // Check if user can create org-wide announcements (org_admin only)
   const canCreateOrgWide = context.roles?.includes('org_admin') || false
@@ -261,35 +264,26 @@ export default function CreateAnnouncementModal({
                 <label className="pa-label">
                   {t('admin.announcements.priority')}
                 </label>
-                <div className="pa-flex pa-gap-3 pa-mt-2">
+                <div className="oa-toggle-group pa-mt-2">
                   <button
                     type="button"
                     onClick={() => setPriority('normal')}
                     disabled={loading}
                     className={cn(
-                      'pa-flex-1 pa-px-4 pa-py-3 pa-rounded-lg pa-border-2 pa-transition-all pa-font-bold pa-text-sm',
-                      priority === 'normal'
-                        ? 'pa-border-[var(--org-btn-primary-bg, #137fec)] pa-bg-[var(--org-btn-primary-bg, #137fec)]/10 dark:pa-bg-[var(--org-btn-primary-bg, #137fec)]/20 pa-text-[var(--org-btn-primary-bg, #137fec)]'
-                        : 'pa-border-slate-300 dark:pa-border-slate-600 pa-bg-white dark:pa-bg-slate-800 pa-text-slate-600 dark:pa-text-slate-400',
-                      !loading && priority === 'normal' && 'hover:pa-bg-[var(--org-btn-primary-bg, #137fec)]/20 dark:hover:pa-bg-[var(--org-btn-primary-bg, #137fec)]/30',
-                      !loading && priority !== 'normal' && 'hover:pa-border-slate-400 dark:hover:pa-border-slate-500 hover:pa-bg-slate-50 dark:hover:pa-bg-slate-700',
+                      'oa-toggle-btn',
+                      priority === 'normal' && 'active',
                       loading && 'pa-opacity-50 pa-cursor-not-allowed'
                     )}
                   >
                     {t('admin.announcements.priorityNormal')}
                   </button>
-
                   <button
                     type="button"
                     onClick={() => setPriority('urgent')}
                     disabled={loading}
                     className={cn(
-                      'pa-flex-1 pa-px-4 pa-py-3 pa-rounded-lg pa-border-2 pa-transition-all pa-font-bold pa-text-sm',
-                      priority === 'urgent'
-                        ? 'pa-border-red-500 pa-bg-red-500/10 dark:pa-bg-red-500/20 pa-text-red-600 dark:pa-text-red-400'
-                        : 'pa-border-slate-300 dark:pa-border-slate-600 pa-bg-white dark:pa-bg-slate-800 pa-text-slate-600 dark:pa-text-slate-400',
-                      !loading && priority === 'urgent' && 'hover:pa-bg-red-500/20 dark:hover:pa-bg-red-500/30',
-                      !loading && priority !== 'urgent' && 'hover:pa-border-slate-400 dark:hover:pa-border-slate-500 hover:pa-bg-slate-50 dark:hover:pa-bg-slate-700',
+                      'oa-toggle-btn',
+                      priority === 'urgent' && 'active',
                       loading && 'pa-opacity-50 pa-cursor-not-allowed'
                     )}
                   >
