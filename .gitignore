@@ -132,7 +132,7 @@ supabase/.temp
 
 # Docs
 designs/
-docs
+#docs
 *.md
 #*.sql
 *.txt
@@ -143,3 +143,4 @@ logs
 dist/index.html
 /emails/mjml/need-to-convert/
 .cursor/
+!docs/future/notifications

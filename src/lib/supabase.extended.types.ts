@@ -1,4 +1,10 @@
 import type { Database, Json } from './database.types'
+import type {
+  NotificationAction,
+  NotificationEntityType,
+  NotificationPresentation,
+  NotificationRole,
+} from '../types/notifications'
 
 // Re-export Json for use in other modules
 export type { Json }
@@ -84,6 +90,14 @@ type AdditionalTables = {
       body: string
       payload: Json | null
       dedupe_key: string
+      action: NotificationAction
+      presentation_type: NotificationPresentation
+      role_context: NotificationRole
+      entity_type: NotificationEntityType | null
+      entity_id: string | null
+      link_url: string | null
+      metadata: Json | null
+      actor_id: string | null
       read_at: string | null
       created_at: string
     }
@@ -94,6 +108,9 @@ type AdditionalTables = {
       body: string
       dedupe_key: string
       type: string
+      action: NotificationAction
+      role_context: NotificationRole
+      presentation_type?: NotificationPresentation
     }
     Update: Partial<AdditionalTables['user_notifications']['Row']>
     Relationships: [

@@ -210,7 +210,7 @@ function mapDatabaseError(error: unknown): Error {
                     return new Error('Selected season is not available for this team.')
                 }
                 return new Error('Invalid reference. Please check your selections and try again.')
-            
+
             case '23505': // Unique constraint violation
                 if (message.includes('team_memberships')) {
                     return new Error('This child is already a member of this team for this season.')
@@ -219,19 +219,19 @@ function mapDatabaseError(error: unknown): Error {
                     return new Error('Invite code conflict. Please contact support.')
                 }
                 return new Error('This record already exists.')
-            
+
             case '42501': // Insufficient privilege (RLS)
                 return new Error('You do not have permission to perform this action.')
-            
+
             case '42P01': // Undefined table
                 return new Error('Invite code feature is not available. Please contact support.')
-            
+
             case '42703': // Undefined column
                 if (message.includes('invite_code')) {
                     return new Error('Invite code feature is not available. Please contact support.')
                 }
                 return new Error('System configuration error. Please contact support.')
-            
+
             default:
                 // For network/timeout errors
                 if (message.includes('network') || message.includes('fetch') || message.includes('timeout')) {
@@ -245,11 +245,11 @@ function mapDatabaseError(error: unknown): Error {
     // Handle generic Error objects
     if (error instanceof Error) {
         const message = error.message.toLowerCase()
-        
+
         if (message.includes('network') || message.includes('fetch') || message.includes('timeout')) {
             return new Error('Network error. Please check your internet connection and try again.')
         }
-        
+
         // Log but don't expose the original message
         console.error('[teamsService] Error:', error)
         return new Error('An error occurred. Please try again.')
@@ -345,17 +345,17 @@ export async function getTeams(
         return { data: mappedTeams, error: null }
     } catch (err) {
         const classifiedError = classifySupabaseError(err)
-        
+
         // Log database query errors to event log with full details
         await logDatabaseError(context, 'getTeams', err, {
-            params: { 
-                sportId: params.sportId, 
-                programId: params.programId, 
-                levelId: params.levelId, 
-                activeOnly: params.activeOnly 
+            params: {
+                sportId: params.sportId,
+                programId: params.programId,
+                levelId: params.levelId,
+                activeOnly: params.activeOnly
             }
         })
-        
+
         return { data: [], error: classifiedError }
     }
 }
@@ -553,11 +553,11 @@ export async function getTeamDetails(
             .eq('id', teamId)
             .eq('org_id', context.orgId)
             .single()
-        
+
         console.log('[getTeamDetails] Query params:', { teamId, orgId: context.orgId })
-        
-        console.log('[getTeamDetails] Query result:', { 
-            hasData: !!data, 
+
+        console.log('[getTeamDetails] Query result:', {
+            hasData: !!data,
             error: error ? { code: error.code, message: error.message } : null,
             dataKeys: data ? Object.keys(data) : []
         })
@@ -565,9 +565,9 @@ export async function getTeamDetails(
         if (error) {
             if (error.code === 'PGRST116') {
                 // Team not found - could be RLS blocking or team doesn't exist
-                return { 
-                    data: null, 
-                    error: new Error('Team not found. The team may not exist or you may not have permission to view it.') 
+                return {
+                    data: null,
+                    error: new Error('Team not found. The team may not exist or you may not have permission to view it.')
                 }
             }
             throw error
@@ -576,9 +576,9 @@ export async function getTeamDetails(
         // Normalize and map response
         const normalizedData = normalizeSupabaseResponse(data, false)
         if (!normalizedData) {
-            return { 
-                data: null, 
-                error: new Error('Team data could not be normalized. The team may not exist or you may not have permission to view it.') 
+            return {
+                data: null,
+                error: new Error('Team data could not be normalized. The team may not exist or you may not have permission to view it.')
             }
         }
 
@@ -665,7 +665,7 @@ export async function getTeamByInviteCode(
     try {
         // Normalize invite code to uppercase and trim whitespace
         const normalizedCode = inviteCode.toUpperCase().trim()
-        
+
         if (!normalizedCode) {
             return { data: null, error: new Error('Invalid invite code. Please check and try again.') }
         }
@@ -793,9 +793,9 @@ export async function createTeamMembership(
                     throw updateError
                 }
 
-                return { 
-                    data: { id: updatedData.id, isNew: false }, 
-                    error: null 
+                return {
+                    data: { id: updatedData.id, isNew: false },
+                    error: null
                 }
             }
             throw membershipError
@@ -805,9 +805,27 @@ export async function createTeamMembership(
             return { data: null, error: new Error('Failed to create membership. Please try again.') }
         }
 
-        return { 
-            data: { id: membershipData.id, isNew }, 
-            error: null 
+        // Distribute notifications if this is a new membership
+        if (isNew) {
+            const { distributeAthleteAddedNotifications } = await import('./athleteNotifications')
+            const { data: athleteData } = await supabase.from('athletes').select('first_name, last_name').eq('id', athleteId).single()
+            const { data: teamData } = await supabase.from('teams').select('name, org_id').eq('id', teamId).single()
+
+            if (athleteData && teamData) {
+                distributeAthleteAddedNotifications({
+                    athlete_id: athleteId,
+                    team_id: teamId,
+                    org_id: teamData.org_id,
+                    athlete_name: `${athleteData.first_name} ${athleteData.last_name}`,
+                    team_name: teamData.name,
+                    action_by_user_id: context.userId
+                }).catch(err => console.error('Failed to distribute athlete-added notification:', err))
+            }
+        }
+
+        return {
+            data: { id: membershipData.id, isNew },
+            error: null
         }
     } catch (err) {
         return { data: null, error: mapDatabaseError(err) }
@@ -833,11 +851,11 @@ export async function addAthletesToTeam(
     if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
-            
+
             // Simulate some duplicates being skipped
             const added: string[] = []
             const skipped: string[] = []
-            
+
             athleteIds.forEach((id, idx) => {
                 if (idx % 5 === 0) {
                     skipped.push(id)
@@ -845,7 +863,7 @@ export async function addAthletesToTeam(
                     added.push(id)
                 }
             })
-            
+
             return {
                 data: {
                     added,
@@ -1051,7 +1069,7 @@ export async function getActiveSeason(
             .single()
 
         if (error) throw error
-        
+
         // Normalize and extract season from nested structure
         const normalizedData = normalizeSupabaseResponse(data, false)
         const season = normalizedData ? (normalizedData as Record<string, any>)?.season as FakeSeason | undefined : undefined
@@ -1230,7 +1248,7 @@ export async function getTeamsForParent(
             })
 
         if (athletesErr) throw athletesErr
-        
+
         const childIds = (athletes ?? []).map((a: any) => a.athlete_id)
         if (childIds.length === 0) {
             return { data: [], error: null }
@@ -1244,7 +1262,7 @@ export async function getTeamsForParent(
             .eq('status', 'active')
 
         if (memErr) throw memErr
-        
+
         const teamIds = Array.from(new Set((memberships ?? []).map((m) => m.team_id)))
         if (teamIds.length === 0) {
             return { data: [], error: null }

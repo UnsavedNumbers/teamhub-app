@@ -525,6 +525,20 @@ export default function EditEvent() {
         }
       }
 
+      // Distribute notifications
+      const { distributeEventUpdateNotifications } = await import('../../data/services/notificationDistribution')
+      const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', data.team_id).single()
+      if (teamData?.org_id) {
+          distributeEventUpdateNotifications({
+              id: eventId,
+              team_id: data.team_id,
+              org_id: teamData.org_id,
+              title: data.title,
+              start_time: new Date(data.start_time).toISOString(),
+              created_by_user_id: context.userId
+          }).catch(err => console.error('Failed to distribute event update notifications:', err))
+      }
+
       showSuccess('Event updated successfully!')
       navigate(getLink('admin.events.list'))
     } catch (err: unknown) {
@@ -969,6 +983,21 @@ export default function EditEvent() {
             
             if (error) throw error
             
+             // Distribute notifications for cancellation
+             const { distributeEventCancelNotifications } = await import('../../data/services/notificationDistribution')
+             const { data: eventData } = await supabase.from('events').select('title, team_id, org_id, start_time').eq('id', eventId).single()
+             
+             if (eventData) {
+               distributeEventCancelNotifications({
+                 id: eventId,
+                 team_id: eventData.team_id,
+                 org_id: eventData.org_id,
+                 title: eventData.title,
+                 start_time: eventData.start_time,
+                 created_by_user_id: context.userId
+               }).catch(err => console.error('Failed to distribute event cancel notifications:', err))
+             }
+
             showSuccess('Event cancelled successfully')
             navigate(getLink('admin.events.list'))
           } catch (err) {

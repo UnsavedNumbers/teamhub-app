@@ -261,6 +261,7 @@ export default function Messages() {
 
       try {
         const { data, error } = await createAnnouncement(
+          context,
           title, 
           content, 
           priority, 

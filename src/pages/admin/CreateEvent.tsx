@@ -474,6 +474,20 @@ export default function CreateEvent() {
         console.error('Failed to clear saved form data:', err)
       }
 
+      // Distribute notifications
+      const { distributeEventNotifications } = await import('../../data/services/notificationDistribution')
+      const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', data.team_id).single()
+      if (teamData?.org_id) {
+        distributeEventNotifications({
+          id: eventDataAny.id,
+          team_id: data.team_id,
+          org_id: teamData.org_id,
+          title: data.title,
+          start_time: new Date(data.start_time).toISOString(),
+          created_by_user_id: context.userId
+        }).catch(err => console.error('Failed to distribute event notifications:', err))
+      }
+
       navigate('/admin/events')
     } catch (err: unknown) {
       // Parse database errors and show friendly messages

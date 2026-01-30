@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
@@ -21,6 +21,11 @@ import { supabase } from '../../lib/supabase'
 import { showSuccess, showError } from '../../utils/toast'
 import { getLink } from '../../utils/routes'
 import { validatePhoneFormat } from '../../utils/phoneValidation'
+import NotificationPreferences from '../../components/common/NotificationPreferences'
+import { mergeNotificationPreferences, setPreferencesForContext, canonicalRole } from '../../utils/notificationPreferencesConfig'
+import type { NotificationGroup } from '../../types/notificationPreferences'
+import type { NotificationRole } from '../../types/notifications'
+import { useT } from '../../i18n/useI18n'
 
 // ============================================================================
 // Helper Functions
@@ -116,6 +121,7 @@ function useDebounce<T extends (...args: any[]) => any>(callback: T, delay: numb
 export default function AdminSettings() {
   const { user, profile, updatePassword, refreshProfile } = useAuth()
   const { currentOrganization } = useOrganization()
+  const t = useT()
   
   // URL Persistence
   const [searchParams, setSearchParams] = useSearchParams()
@@ -135,7 +141,6 @@ export default function AdminSettings() {
   
   // Success/error states
   const [profileSuccess, setProfileSuccess] = useState(false)
-  const [notificationSuccess, setNotificationSuccess] = useState(false)
   const [workflowSuccess, setWorkflowSuccess] = useState(false)
   const [advancedSuccess, setAdvancedSuccess] = useState(false)
   const [passwordSuccess, setPasswordSuccess] = useState(false)
@@ -149,6 +154,11 @@ export default function AdminSettings() {
   
   // Preferences state
   const [preferences, setPreferences] = useState<UserPreferences>({})
+  const [notificationGroups, setNotificationGroups] = useState<NotificationGroup[]>([])
+  const preferencesRef = useRef<UserPreferences | null>(null)
+  useEffect(() => {
+    preferencesRef.current = preferences
+  }, [preferences])
   
   // Password state
   const [showPasswordModal, setShowPasswordModal] = useState(false)
@@ -158,6 +168,13 @@ export default function AdminSettings() {
   
   // Timezone options
   const timezoneOptions = useRef(getTimezoneOptions())
+
+  const activeRole: NotificationRole = useMemo(() => {
+    const roles = currentOrganization?.roles ?? []
+    if (roles.includes('org_admin')) return 'org_admin'
+    if (roles.includes('coach')) return 'coach'
+    return 'guardian'
+  }, [currentOrganization?.roles])
   
   // Load initial data
   useEffect(() => {
@@ -181,6 +198,8 @@ export default function AdminSettings() {
           return
         }
         
+        preferencesRef.current = prefs || {}
+
         if (prefs) {
           // Validate and set preferences with type guards
           const validatedPrefs: UserPreferences = {
@@ -213,6 +232,16 @@ export default function AdminSettings() {
           setPreferences(validatedPrefs)
           setPhone(validatedPrefs.profile?.phone || '')
           setTimezone(validatedPrefs.profile?.timezone || '')
+
+          const orgId = currentOrganization?.id
+          const savedGroups = orgId
+            ? (prefs.notifications_v2?.[orgId]?.[canonicalRole(activeRole)] as NotificationGroup[] | undefined)
+            : undefined
+          const mergedGroups = mergeNotificationPreferences(savedGroups, activeRole, t)
+          setNotificationGroups(mergedGroups)
+        } else {
+          const mergedGroups = mergeNotificationPreferences(undefined, activeRole, t)
+          setNotificationGroups(mergedGroups)
         }
       } catch (err) {
         console.error('Error loading settings:', err)
@@ -223,7 +252,7 @@ export default function AdminSettings() {
     }
     
     loadSettings()
-  }, [user, profile, currentOrganization?.id]) // Watch currentOrganization changes
+  }, [user, profile, currentOrganization?.id, activeRole, t]) // Watch currentOrganization changes
   
   // Debounced save handlers to prevent race conditions
   const debouncedSaveProfile = useDebounce(async () => {
@@ -315,39 +344,98 @@ export default function AdminSettings() {
   const handleSaveProfile = () => {
     debouncedSaveProfile()
   }
-  
-  // Handle notifications save with debouncing
-  const debouncedSaveNotifications = useDebounce(async () => {
-    if (!user?.id) return
-    
-    setSavingNotifications(true)
-    setError(null)
-    setNotificationSuccess(false)
-    
-    try {
-      const { error: prefsError } = await updateUserPreferences(user.id, preferences)
-      if (prefsError) throw prefsError
-      
-      // Refetch to sync
-      const { data: refreshedPrefs } = await getUserPreferences(user.id)
-      if (refreshedPrefs) {
-        setPreferences(refreshedPrefs)
+
+  const persistNotificationGroups = useCallback(
+    async (nextGroups: NotificationGroup[], previousGroups?: NotificationGroup[]) => {
+      if (!user?.id || !currentOrganization?.id) return
+      setSavingNotifications(true)
+      try {
+        const nextPrefs = setPreferencesForContext(
+          preferencesRef.current?.notifications_v2,
+          currentOrganization.id,
+          activeRole,
+          nextGroups
+        )
+        const { error: prefsError } = await updateUserPreferences(user.id, { notifications_v2: nextPrefs })
+        if (prefsError) throw prefsError
+        preferencesRef.current = { ...(preferencesRef.current || {}), notifications_v2: nextPrefs }
+        showSuccess(t('toast.success.notificationPreferencesUpdated'))
+      } catch (err) {
+        console.error('Error saving notifications:', err)
+        if (previousGroups) setNotificationGroups(previousGroups)
+        const errorMessage = err instanceof Error ? err.message : 'Failed to save notification preferences'
+        setError(errorMessage)
+        showError(errorMessage)
+      } finally {
+        setSavingNotifications(false)
       }
-      
-      showSuccess('Notification preferences updated successfully!')
-    } catch (err) {
-      console.error('Error saving notifications:', err)
-      const errorMessage = err instanceof Error ? err.message : 'Failed to save notification preferences'
-      setError(errorMessage)
-      showError(errorMessage)
-    } finally {
-      setSavingNotifications(false)
-    }
-  }, 300)
-  
-  const handleSaveNotifications = () => {
-    debouncedSaveNotifications()
-  }
+    },
+    [activeRole, currentOrganization?.id, t, updateUserPreferences, user?.id]
+  )
+
+  const handleToggleGroupAll = useCallback(
+    (groupId: NotificationGroup['id'], next: boolean) => {
+      setNotificationGroups((prev) => {
+        const updated = prev.map((group) =>
+          group.id === groupId
+            ? { ...group, allEnabled: next, actions: group.actions.map((a) => ({ ...a, enabled: next })) }
+            : group
+        )
+        void persistNotificationGroups(updated, prev)
+        return updated
+      })
+    },
+    [persistNotificationGroups]
+  )
+
+  const handleToggleGroupDigest = useCallback(
+    (groupId: NotificationGroup['id'], next: boolean) => {
+      setNotificationGroups((prev) => {
+        const updated = prev.map((group) => (group.id === groupId ? { ...group, digestEnabled: next } : group))
+        void persistNotificationGroups(updated, prev)
+        return updated
+      })
+    },
+    [persistNotificationGroups]
+  )
+
+  const handleToggleAction = useCallback(
+    (groupId: NotificationGroup['id'], actionId: string, next: boolean) => {
+      setNotificationGroups((prev) => {
+        const updated = prev.map((group) =>
+          group.id === groupId
+            ? {
+                ...group,
+                actions: group.actions.map((a) => (a.id === actionId ? { ...a, enabled: next } : a)),
+              }
+            : group
+        )
+        void persistNotificationGroups(updated, prev)
+        return updated
+      })
+    },
+    [persistNotificationGroups]
+  )
+
+  const handleToggleChannel = useCallback(
+    (groupId: NotificationGroup['id'], channel: 'in_app' | 'email' | 'push', next: boolean) => {
+      setNotificationGroups((prev) => {
+        const updated = prev.map((group) =>
+          group.id === groupId
+            ? {
+                ...group,
+                channels: next
+                  ? Array.from(new Set([...group.channels, channel]))
+                  : group.channels.filter((ch) => ch !== channel),
+              }
+            : group
+        )
+        void persistNotificationGroups(updated, prev)
+        return updated
+      })
+    },
+    [persistNotificationGroups]
+  )
   
   // Handle workflow save with debouncing
   const debouncedSaveWorkflow = useDebounce(async () => {
@@ -548,13 +636,25 @@ export default function AdminSettings() {
         </TabsContent>
 
         <TabsContent value="notifications">
-          <NotificationSettings 
-            preferences={preferences} 
-            setPreferences={setPreferences}
-            onSave={handleSaveNotifications}
-            saving={savingNotifications}
-            success={notificationSuccess}
-          />
+          <Card className="p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">{t('portal.settings.notifications.title')}</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  {t('portal.settings.notifications.toggles.individual')}
+                </p>
+              </div>
+            </div>
+            <NotificationPreferences
+              role={activeRole}
+              groups={notificationGroups}
+              onToggleGroupAll={handleToggleGroupAll}
+              onToggleGroupDigest={handleToggleGroupDigest}
+              onToggleAction={handleToggleAction}
+              onToggleChannel={handleToggleChannel}
+              saving={savingNotifications}
+            />
+          </Card>
         </TabsContent>
 
         <TabsContent value="workflow">
@@ -860,138 +960,6 @@ function RoleSettings({ currentOrganization, profile }: any) {
                 Platform Administrator
               </span>
             </div>
-          )}
-        </div>
-      </div>
-    </Card>
-  )
-}
-
-function NotificationSettings({ preferences, setPreferences, onSave, saving, success }: any) {
-  return (
-    <Card>
-      <div className="pa-card-header">
-        <h3 className="pa-card-title">
-          <span className="material-symbols-outlined">notifications</span>
-          Notifications
-        </h3>
-      </div>
-      <div className="pa-card-content">
-        <div className="pa-form-section">
-          <h4 className="pa-form-section-title">Channels</h4>
-          <div className="pa-form-grid pa-form-grid-2">
-            <div className="pa-form-group">
-              <Checkbox
-                label="Email notifications"
-                checked={preferences.notifications?.email ?? true}
-                onChange={(e: any) => setPreferences({
-                  ...preferences,
-                  notifications: { ...preferences.notifications, email: e.target.checked }
-                })}
-              />
-            </div>
-            <div className="pa-form-group">
-              <Checkbox
-                label="Push notifications"
-                checked={preferences.notifications?.push ?? false}
-                onChange={(e: any) => setPreferences({
-                  ...preferences,
-                  notifications: { ...preferences.notifications, push: e.target.checked }
-                })}
-                helperText="Browser notifications (if supported)"
-              />
-            </div>
-          </div>
-        </div>
-        
-        <div className="pa-form-section">
-          <h4 className="pa-form-section-title">Events</h4>
-          <div className="pa-form-grid pa-form-grid-2">
-            <div className="pa-form-group">
-              <Checkbox
-                label="Attendance issues"
-                checked={preferences.notifications?.attendance_issues ?? true}
-                onChange={(e: any) => setPreferences({
-                  ...preferences,
-                  notifications: { ...preferences.notifications, attendance_issues: e.target.checked }
-                })}
-              />
-            </div>
-            <div className="pa-form-group">
-              <Checkbox
-                label="Schedule changes"
-                checked={preferences.notifications?.schedule_changes ?? true}
-                onChange={(e: any) => setPreferences({
-                  ...preferences,
-                  notifications: { ...preferences.notifications, schedule_changes: e.target.checked }
-                })}
-              />
-            </div>
-            <div className="pa-form-group">
-              <Checkbox
-                label="Payment issues"
-                checked={preferences.notifications?.payment_issues ?? true}
-                onChange={(e: any) => setPreferences({
-                  ...preferences,
-                  notifications: { ...preferences.notifications, payment_issues: e.target.checked }
-                })}
-              />
-            </div>
-            <div className="pa-form-group">
-              <Checkbox
-                label="Registration activity"
-                checked={preferences.notifications?.registration_activity ?? true}
-                onChange={(e: any) => setPreferences({
-                  ...preferences,
-                  notifications: { ...preferences.notifications, registration_activity: e.target.checked }
-                })}
-              />
-            </div>
-            <div className="pa-form-group">
-              <Checkbox
-                label="System announcements"
-                checked={preferences.notifications?.system_announcements ?? true}
-                onChange={(e: any) => setPreferences({
-                  ...preferences,
-                  notifications: { ...preferences.notifications, system_announcements: e.target.checked }
-                })}
-              />
-            </div>
-          </div>
-        </div>
-        
-        <div className="pa-form-section">
-          <h4 className="pa-form-section-title">Frequency</h4>
-          <div className="pa-form-group pa-max-w-md">
-            <Select
-              label="Notification Frequency"
-              value={preferences.notifications?.frequency || 'immediate'}
-              onChange={(e: any) => setPreferences({
-                ...preferences,
-                notifications: { ...preferences.notifications, frequency: e.target.value as 'immediate' | 'daily' | 'weekly' }
-              })}
-              options={[
-                { value: 'immediate', label: 'Immediate (as they happen)' },
-                { value: 'daily', label: 'Daily digest' },
-                { value: 'weekly', label: 'Weekly summary' },
-              ]}
-            />
-          </div>
-        </div>
-        
-        <div className="pa-form-actions">
-          <Button
-            onClick={onSave}
-            disabled={saving}
-            variant="primary"
-          >
-            {saving ? 'Saving...' : 'Save Notifications'}
-          </Button>
-          {success && (
-            <span className="pa-success-message">
-              <span className="material-symbols-outlined">check_circle</span>
-              Saved successfully
-            </span>
           )}
         </div>
       </div>

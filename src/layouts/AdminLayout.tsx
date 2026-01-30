@@ -89,6 +89,7 @@ export default function AdminLayout() {
         { routeKey: 'admin.payments.list', text: 'Payments', icon: 'credit_card', path: getPath(RouteKeys.ADMIN_PAYMENTS), requiresOrg: true },
         { routeKey: 'admin.events.list', text: 'Events', icon: 'event', path: getPath(RouteKeys.ADMIN_EVENTS), requiresOrg: true },
         { routeKey: 'admin.attendance', text: 'Attendance', icon: 'how_to_reg', path: getLink('admin.attendance'), requiresOrg: true },
+        { routeKey: 'admin.notifications', text: 'Notifications', icon: 'notifications', path: '/admin/notifications', requiresOrg: true },
         { routeKey: 'admin.announcements.list', text: 'Announcements', icon: 'campaign', path: getPath(RouteKeys.ADMIN_ANNOUNCEMENTS), requiresOrg: true },
         { routeKey: 'admin.travel.list', text: 'Travel', icon: 'flight', path: '/admin/travel', requiresOrg: true },
         { routeKey: 'admin.uniforms.list', text: 'Uniforms', icon: 'checkroom', path: getPath(RouteKeys.ADMIN_UNIFORMS), requiresOrg: true },

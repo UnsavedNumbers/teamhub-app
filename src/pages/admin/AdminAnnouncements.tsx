@@ -302,6 +302,7 @@ export default function AdminAnnouncements() {
 
     try {
       const { data, error: createError } = await createAnnouncement(
+        context,
         title, 
         content, 
         priority, 
