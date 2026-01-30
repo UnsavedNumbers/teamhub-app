@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../../styles/orgAdmin.css'
-import { getTravelPlanDetails, formatDateRange } from '../../data/services/travelService'
+import { getTravelPlanContacts, getTravelPlanDetails, formatDateRange } from '../../data/services/travelService'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getLink } from '../../utils/routes'
 import type { TravelPlanWithTeam } from './TravelList'
+import {
+    TRAVEL_CONTACT_CATEGORIES,
+    TRAVEL_CONTACT_CATEGORY_LABELS,
+    type TravelPlanContactRow,
+} from '../../types/travelContacts'
 
 interface TravelDetailSlideOverProps {
     planId: string | null
@@ -22,6 +27,7 @@ export default function TravelDetailSlideOver({
     onCancel,
 }: TravelDetailSlideOverProps) {
     const [plan, setPlan] = useState<TravelPlanWithTeam | null>(null)
+    const [customContacts, setCustomContacts] = useState<TravelPlanContactRow[]>([])
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const { context, isReady } = useUserContext()
@@ -30,6 +36,7 @@ export default function TravelDetailSlideOver({
     useEffect(() => {
         if (!planId || !isReady) {
             setPlan(null)
+            setCustomContacts([])
             return
         }
         const fetchPlan = async () => {
@@ -39,9 +46,24 @@ export default function TravelDetailSlideOver({
                 const { data, error: fetchError } = await getTravelPlanDetails(context, planId)
                 if (fetchError) throw fetchError
                 setPlan(data as TravelPlanWithTeam)
+                if (data) {
+                    const { data: contactsData, error: contactsError } = await getTravelPlanContacts(context, planId)
+                    if (contactsError) {
+                        console.error('Error fetching plan contacts:', contactsError)
+                        setCustomContacts([])
+                    } else {
+                        const ordered = TRAVEL_CONTACT_CATEGORIES
+                            .map((category) => contactsData?.[category] ?? null)
+                            .filter((row): row is TravelPlanContactRow => !!row && row.is_custom)
+                        setCustomContacts(ordered)
+                    }
+                } else {
+                    setCustomContacts([])
+                }
             } catch (err) {
                 console.error('Error fetching travel plan details:', err)
                 setError(err instanceof Error ? err.message : 'Failed to load travel plan')
+                setCustomContacts([])
             } finally {
                 setLoading(false)
             }
@@ -196,14 +218,37 @@ export default function TravelDetailSlideOver({
                                 )}
                             </div>
 
-                            {plan.notes && (
+                            {(customContacts.length > 0 || plan.notes) && (
                                 <div className="oa-details-stack">
-                                    <div className="oa-detail-group">
-                                        <label className="oa-detail-label">Notes</label>
-                                        <div className="oa-detail-box oa-detail-box--dashed">
-                                            <p className="oa-detail-text">{plan.notes}</p>
+                                    {customContacts.length > 0 && (
+                                        <div className="oa-detail-group">
+                                            <label className="oa-detail-label">Custom Contacts</label>
+                                            <div className="oa-contact-list">
+                                                {customContacts.map((contact) => {
+                                                    const name = `${contact.first_name ?? ''} ${contact.last_name ?? ''}`.trim()
+                                                    const label = TRAVEL_CONTACT_CATEGORY_LABELS[contact.category] ?? contact.category
+                                                    return (
+                                                        <div key={contact.id} className="oa-contact-item">
+                                                            <div className="oa-contact-category">{label}</div>
+                                                            <div className="oa-contact-name">{name || 'Contact'}</div>
+                                                            <div className="oa-contact-details">
+                                                                {contact.email}
+                                                                {contact.phone ? ` | ${contact.phone}` : ''}
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
+                                    {plan.notes && (
+                                        <div className="oa-detail-group">
+                                            <label className="oa-detail-label">Notes</label>
+                                            <div className="oa-detail-box oa-detail-box--dashed">
+                                                <p className="oa-detail-text">{plan.notes}</p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </>

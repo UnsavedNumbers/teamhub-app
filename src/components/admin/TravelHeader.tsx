@@ -1,4 +1,5 @@
 import { cn } from '../../utils/cn'
+import { useT } from '../../i18n/useI18n'
 import { OrgAdminButton } from './OrgAdminButton'
 import type { TravelTimeContext, TravelViewMode } from '../../types/travelManagement'
 
@@ -19,10 +20,11 @@ export default function TravelHeader({
     onCreateClick,
     upcomingCount,
 }: TravelHeaderProps) {
+    const t = useT()
     const timeContextOptions: { value: TravelTimeContext; label: string }[] = [
-        { value: 'upcoming', label: 'Upcoming' },
-        { value: 'past', label: 'Past' },
-        { value: 'all', label: 'All' },
+        { value: 'upcoming', label: t('admin.travel.tabs.current') },
+        { value: 'past', label: t('admin.travel.tabs.past') },
+        { value: 'all', label: t('admin.travel.tabs.all') },
     ]
 
     const viewModeOptions: { value: TravelViewMode; label: string; icon: string }[] = [

@@ -50,6 +50,7 @@ import {
     type TravelPlanContactRow,
     TRAVEL_CONTACT_CATEGORY_LABELS,
 } from '../../types/travelContacts'
+import { getErrorMessage } from '../../utils/errorUtils'
 
 // ============================================================================
 // Re-exports for convenience
@@ -102,6 +103,11 @@ function isValidFile(file: unknown): file is File {
         file.size > 0
 }
 
+function toError(err: unknown, fallbackMessage: string): Error {
+    if (err instanceof Error) return err
+    const message = getErrorMessage(err)
+    return new Error(message || fallbackMessage)
+}
 
 /**
  * Map Supabase travel plan row to FakeTravelPlan domain model
@@ -1687,7 +1693,7 @@ export async function getTravelPlanContacts(
         return { data: result, error: null }
     } catch (err) {
         console.error('getTravelPlanContacts error:', err)
-        return { data: {} as any, error: err instanceof Error ? err : new Error('Unknown error fetching contacts') }
+        return { data: {} as any, error: toError(err, 'Unknown error fetching contacts') }
     }
 }
 
@@ -1717,7 +1723,7 @@ export async function deleteTravelPlanContactsForPlan(
         return { error: null }
     } catch (err) {
         console.error('deleteTravelPlanContactsForPlan error:', err)
-        return { error: err instanceof Error ? err : new Error('Unknown error deleting travel plan contacts') }
+        return { error: toError(err, 'Unknown error deleting travel plan contacts') }
     }
 }
 
@@ -1766,7 +1772,7 @@ export async function insertTravelPlanContacts(
         return { error: null }
     } catch (err) {
         console.error('insertTravelPlanContacts error:', err)
-        return { error: err instanceof Error ? err : new Error('Unknown error saving travel plan contacts') }
+        return { error: toError(err, 'Unknown error saving travel plan contacts') }
     }
 }
 
@@ -1820,7 +1826,7 @@ export async function upsertTravelPlanContacts(
         return { error: null }
     } catch (err) {
         console.error('upsertTravelPlanContacts error:', err)
-        return { error: err instanceof Error ? err : new Error('Unknown error saving contacts') }
+        return { error: toError(err, 'Unknown error saving contacts') }
     }
 }
 
@@ -1871,7 +1877,7 @@ export async function resolveAllTravelContactsForPlan(
         return { data: result, error: null }
     } catch (err) {
         console.error('resolveAllTravelContactsForPlan error:', err)
-        return { data: {} as any, error: err instanceof Error ? err : new Error('Unknown error resolving contacts') }
+        return { data: {} as any, error: toError(err, 'Unknown error resolving contacts') }
     }
 }
 

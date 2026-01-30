@@ -105,7 +105,7 @@ export default function TravelFilters({
             </div>
 
             {isOpen && (
-                <div className="pt-0 p-4 border-t border-slate-200 dark:border-slate-600">
+                <div className="p-4 border-t border-slate-200 dark:border-slate-600">
                     <div className={cn('grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4')}>
                         <div className="mb-0">
                             <label className="block text-sm font-semibold mb-1" style={{ color: 'var(--org-text-secondary)' }}>Search</label>
@@ -131,9 +131,9 @@ export default function TravelFilters({
                             <label className="block text-sm font-semibold mb-1" style={{ color: 'var(--org-text-secondary)' }}>To Date</label>
                             <DatePicker value={filters.dateTo} onChange={(value) => onFiltersChange({ ...filters, dateTo: value })} minValue={filters.dateFrom} />
                         </div>
-                        <div className="mb-0">
+                        <div className="mb-0 flex flex-col h-full">
                             <label className="block text-sm font-semibold mb-1" style={{ color: 'var(--org-text-secondary)' }}>Status</label>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap items-center gap-2 flex-1">
                                 {(['draft', 'published', 'cancelled'] as const).map((status) => (
                                     <button
                                         key={status}
