@@ -6,6 +6,7 @@
  */
 
 import { supabase } from '../lib/supabase'
+import type { SupabaseExtended as Database } from '../lib/supabase.extended.types'
 import type { LicenseTier } from '../types/licenseTiers.types'
 
 /**
@@ -33,16 +34,18 @@ export async function logAuditEvent(params: {
   try {
     const user = await getCurrentUser()
 
-    const { error } = await supabase.from('entitlement_audit_log').insert({
+    type AuditInsert = Database['public']['Tables']['entitlement_audit_log']['Insert']
+    const insertData = {
       actor_id: user.id,
       actor_email: user.email || null,
       action: params.action,
       target_type: params.targetType,
       target_id: params.targetId,
-      before_state: params.beforeState || null,
-      after_state: params.afterState || null,
+      before_state: params.beforeState ? JSON.stringify(params.beforeState) : null,
+      after_state: params.afterState ? JSON.stringify(params.afterState) : null,
       reason: params.reason || null,
-    })
+    } as AuditInsert
+    const { error } = await supabase.from('entitlement_audit_log').insert(insertData)
 
     if (error) {
       console.error('Failed to log audit event:', error)
@@ -78,18 +81,20 @@ export async function saveTierWithLock(
       return { success: false, error: fetchError.message }
     }
 
-    if (currentTier.version !== expectedVersion) {
+    if ((currentTier as any).version !== expectedVersion) {
       return { success: false, conflict: true }
     }
 
+    type LicenseTierUpdate = Database['public']['Tables']['license_tiers']['Update']
+    const updateData = {
+      ...updates,
+      updated_at: new Date().toISOString(),
+    } as LicenseTierUpdate
     const { error: updateError } = await supabase
       .from('license_tiers')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', tierId)
-      .eq('version', expectedVersion) // Ensure version hasn't changed
+      .eq('version', expectedVersion)
 
     if (updateError) {
       // Check if it's a version conflict (0 rows affected)
@@ -142,8 +147,8 @@ export async function validateFeatureDependencies(
     const missing: string[] = []
 
     for (const dep of dependencies) {
-      const depFeatureId = dep.depends_on_feature_id
-      const depName = (dep.feature_entitlements as any)?.display_name || 'Unknown'
+      const depFeatureId = (dep as any).depends_on_feature_id
+      const depName = ((dep as any).feature_entitlements as any)?.display_name || 'Unknown'
 
       // Check if enabled via tier
       if (targetType === 'organization') {
@@ -157,7 +162,7 @@ export async function validateFeatureDependencies(
           const { data: tier } = await supabase
             .from('license_tiers')
             .select('id')
-            .eq('tier_key', org.license_plan)
+            .eq('tier_key', (org as any).license_plan)
             .or(`tier_key.eq.basic,license_plan.eq.starter`)
             .or(`tier_key.eq.power,license_plan.in.(standard,pro)`)
             .single()
@@ -166,7 +171,7 @@ export async function validateFeatureDependencies(
             const { data: assignment } = await supabase
               .from('tier_feature_assignments')
               .select('included')
-              .eq('license_tier_id', tier.id)
+              .eq('license_tier_id', (tier as any).id)
               .eq('feature_entitlement_id', depFeatureId)
               .eq('included', true)
               .single()
@@ -222,13 +227,43 @@ export function isStripeVerificationValid(verifiedAt: string | null): boolean {
  * Get archived features count for a tier
  */
 export async function getArchivedFeaturesCount(tierId: string): Promise<number> {
-  const { count, error } = await supabase
-    .from('tier_feature_assignments')
-    .select('*', { count: 'exact', head: true })
-    .eq('license_tier_id', tierId)
-    .eq('included', true)
-    .not('feature_entitlement_id', 'in',
-      `(SELECT id FROM feature_entitlements WHERE archived_at IS NULL)`)
+  try {
+    // First, get all assignments for this tier
+    const { data: assignments, error: assignmentsError } = await supabase
+      .from('tier_feature_assignments')
+      .select('feature_entitlement_id')
+      .eq('license_tier_id', tierId)
+      .eq('included', true)
 
-  return count || 0
+    if (assignmentsError) {
+      console.error('Error fetching assignments:', assignmentsError)
+      return 0
+    }
+
+    if (!assignments || assignments.length === 0) {
+      return 0
+    }
+
+    // Get all non-archived feature IDs
+    const { data: activeFeatures, error: featuresError } = await supabase
+      .from('feature_entitlements')
+      .select('id')
+      .is('archived_at', null)
+
+    if (featuresError) {
+      console.error('Error fetching features:', featuresError)
+      return 0
+    }
+
+    // Count assignments that reference archived features
+    const activeFeatureIds = new Set((activeFeatures || []).map(f => f.id))
+    const archivedCount = (assignments || []).filter(
+      assignment => !activeFeatureIds.has(assignment.feature_entitlement_id)
+    ).length
+
+    return archivedCount
+  } catch (err) {
+    console.error('Error getting archived features count:', err)
+    return 0
+  }
 }

@@ -6,6 +6,7 @@
 
 import { Button } from './Button'
 import type { ReactNode } from 'react'
+import { cn } from '../../utils/cn'
 
 interface EmptyStateProps {
   icon?: string
@@ -16,16 +17,23 @@ interface EmptyStateProps {
     onClick: () => void
   }
   children?: ReactNode
+  /** If true, renders without card styling (for use inside cards) */
+  noCard?: boolean
 }
 
-function EmptyState({ icon = 'inbox', title, description, action, children }: EmptyStateProps) {
+function EmptyState({ icon = 'inbox', title, description, action, children, noCard = false }: EmptyStateProps) {
   return (
     <div
-      className="pa-card"
+      className={cn(
+        !noCard && 'pa-card',
+        'pa-flex',
+        'pa-flex-col',
+        'pa-items-center',
+        'pa-justify-center'
+      )}
       style={{
-        textAlign: 'center',
         padding: 'var(--pa-space-8) var(--pa-space-5)',
-        background: 'var(--pa-n50)',
+        textAlign: 'center',
       }}
     >
       <span
@@ -38,11 +46,11 @@ function EmptyState({ icon = 'inbox', title, description, action, children }: Em
       >
         {icon}
       </span>
-      <h3 className="pa-h3" style={{ marginBottom: 'var(--pa-space-2)' }}>
+      <h3 className={cn('pa-h3', 'pa-mb-2')}>
         {title}
       </h3>
       {description && (
-        <p className="pa-body-m" style={{ color: 'var(--pa-n600)', marginBottom: action ? 'var(--pa-space-4)' : 0 }}>
+        <p className={cn('pa-body-m', 'pa-text-muted', action ? 'pa-mb-4' : 'pa-mb-0')}>
           {description}
         </p>
       )}

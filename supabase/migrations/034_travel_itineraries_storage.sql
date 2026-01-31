@@ -52,8 +52,8 @@ CREATE POLICY "Parents can read travel itineraries objects for their teams" ON s
     AND EXISTS (
       SELECT 1
       FROM public.users u
-      JOIN public.children c ON c.family_id = u.family_id
-      JOIN public.team_memberships tm ON tm.child_id = c.id
+      JOIN public.athletes c ON c.family_id = u.family_id
+      JOIN public.team_memberships tm ON tm.athlete_id = c.id
       JOIN public.travel_plans tp
         ON tp.team_id = tm.team_id
        AND tp.itinerary_file_path = storage.objects.name

@@ -2,14 +2,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
-import { StatCard, PageHeader, Card, Button } from '../../components/platformAdmin'
-import { mapLicenseMetrics } from '../../utils/domainMappers'
+import { StatCard, PageHeader, Card, Button, OfflineBanner } from '../../components/platformAdmin'
 import type { LicenseMetrics, LicenseAlert } from '../../types/licenseTiers.types'
 
 // Loading skeleton for stats
 function StatsSkeleton() {
   return (
-    <div className="pa-grid pa-grid-4">
+    <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-4 pa-gap-4">
       {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
         <div key={i} className="pa-kpi-card">
           <div className="pa-skeleton" style={{ width: '60%', height: '14px', marginBottom: '8px' }} />
@@ -55,34 +54,45 @@ export default function LicensesOverview() {
           setError('Failed to load license metrics')
         }
       } else {
-        setMetrics(metricsData)
+        setMetrics({
+          ...metricsData,
+          active_tiers: metricsData.active_tiers ?? 0,
+          total_features: metricsData.total_features ?? 0,
+          orgs_on_basic: metricsData.orgs_on_basic ?? 0,
+          orgs_on_power: metricsData.orgs_on_power ?? 0,
+          active_overrides: metricsData.active_overrides ?? 0,
+          tiers_missing_price_id: metricsData.tiers_missing_price_id ?? 0,
+          features_without_assignment: metricsData.features_without_assignment ?? 0,
+          archived_features: metricsData.archived_features ?? undefined,
+          tiers_with_archived_features: metricsData.tiers_with_archived_features ?? undefined,
+        })
       }
 
       // Check for alerts
       const newAlerts: LicenseAlert[] = []
       
       if (metrics) {
-        if (metrics.tiersMissingPriceId > 0) {
+        if (metrics.tiers_missing_price_id > 0) {
           newAlerts.push({
             type: 'error',
-            message: `${metrics.tiersMissingPriceId} license tier(s) missing Stripe Price ID`,
+            message: `${metrics.tiers_missing_price_id} license tier(s) missing Stripe Price ID`,
             details: 'Each tier must have a valid Stripe Price ID linked.',
           })
         }
 
-        if (metrics.featuresWithoutAssignment > 0) {
+        if (metrics.features_without_assignment > 0) {
           newAlerts.push({
             type: 'warning',
-            message: `${metrics.featuresWithoutAssignment} feature(s) not assigned to any tier`,
+            message: `${metrics.features_without_assignment} feature(s) not assigned to any tier`,
             details: 'Features should be assigned to at least one license tier.',
           })
         }
 
         // Check for tiers with archived features
-        if (metrics.tiersWithArchivedFeatures > 0) {
+        if (metrics.tiers_with_archived_features && metrics.tiers_with_archived_features > 0) {
           newAlerts.push({
             type: 'warning',
-            message: `${metrics.tiersWithArchivedFeatures} tier(s) include archived features`,
+            message: `${metrics.tiers_with_archived_features} tier(s) include archived features`,
             details: 'Consider removing archived features from tiers to avoid confusion.',
           })
         }
@@ -95,7 +105,7 @@ export default function LicensesOverview() {
           .neq('stripe_price_id', '')
 
         if (tiersData) {
-          const priceIdCounts = tiersData.reduce((acc, tier) => {
+          const priceIdCounts = tiersData.reduce((acc, tier: any) => {
             acc[tier.stripe_price_id] = (acc[tier.stripe_price_id] || 0) + 1
             return acc
           }, {} as Record<string, number>)
@@ -127,6 +137,7 @@ export default function LicensesOverview() {
   if (loading) {
     return (
       <div>
+        <OfflineBanner />
         <PageHeader
           title="Licenses & Entitlements"
           subtitle={`Signed in as ${profile?.email ?? 'unknown'}`}
@@ -138,6 +149,7 @@ export default function LicensesOverview() {
 
   return (
     <div>
+      <OfflineBanner />
       <PageHeader
         title="Licenses & Entitlements"
         subtitle={`Signed in as ${profile?.email ?? 'unknown'}`}
@@ -204,7 +216,7 @@ export default function LicensesOverview() {
       )}
 
       {/* Stats Row 1: Tiers & Features */}
-      <div className="pa-grid pa-grid-4">
+      <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-4 pa-gap-4">
         <StatCard
           label="Active License Tiers"
           value={metrics?.active_tiers ?? 0}
@@ -232,7 +244,7 @@ export default function LicensesOverview() {
       </div>
 
       {/* Stats Row 2: Organizations & Overrides */}
-      <div className="pa-grid pa-grid-4 pa-mt-5">
+      <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-4 pa-gap-4 pa-mt-5">
         <StatCard
           label="Organizations on Basic"
           value={metrics?.orgs_on_basic ?? 0}
@@ -273,7 +285,7 @@ export default function LicensesOverview() {
             </Button>
           }
         >
-          <div className="pa-grid pa-grid-3" style={{ gap: 'var(--pa-space-4)' }}>
+          <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-3" style={{ gap: 'var(--pa-space-4)' }}>
             <button
               className="pa-btn pa-btn--secondary"
               onClick={() => navigate('/platform-admin/licenses/features/new')}

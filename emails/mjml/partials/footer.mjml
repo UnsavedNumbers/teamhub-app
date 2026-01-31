@@ -1,0 +1,15 @@
+<!-- Standard footer: identical across all emails. -->
+<mj-section padding="24px 20px" background-color="#f1f5f9">
+  <mj-column>
+    <mj-text align="center" css-class="footer-text">
+      You're receiving this email because you're part of {{organization_name}} on YouthSports Team Hub.<br>
+      <a href="{{unsubscribe_url}}">Unsubscribe</a> | <a href="{{preferences_url}}">Email Preferences</a>
+    </mj-text>
+    <mj-text align="center" css-class="footer-text" padding-top="12px">
+      Need help? <a href="{{support_url}}">Contact Support</a>
+    </mj-text>
+    <mj-text align="center" css-class="footer-text" padding-top="8px">
+      © 2026 YouthSports Team Hub. All rights reserved.
+    </mj-text>
+  </mj-column>
+</mj-section>

@@ -6,13 +6,12 @@
  */
 
 import { supabase } from './supabase'
-import type { Database } from './database.types'
 
 // Type for organization member with user_id and role
 export interface OrgMember {
   user_id: string
   role: string
-  organization_id?: string
+  org_id?: string
 }
 
 // Type for team with org_id
@@ -56,8 +55,8 @@ export async function getOrgMembers(orgId: string, userIds: string[]): Promise<O
   
   const { data, error } = await supabase
     .from('organization_members')
-    .select('user_id, role, organization_id')
-    .eq('organization_id', orgId)
+    .select('user_id, role, org_id')
+    .eq('org_id', orgId)
     .in('user_id', userIds)
 
   if (error || !data) return []
@@ -77,8 +76,8 @@ export async function getOrgMembers(orgId: string, userIds: string[]): Promise<O
 export async function getOrgMember(orgId: string, userId: string): Promise<OrgMember | null> {
   const { data, error } = await supabase
     .from('organization_members')
-    .select('user_id, role, organization_id')
-    .eq('organization_id', orgId)
+    .select('user_id, role, org_id')
+    .eq('org_id', orgId)
     .eq('user_id', userId)
     .single()
 

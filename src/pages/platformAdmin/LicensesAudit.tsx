@@ -9,6 +9,8 @@ export default function LicensesAudit() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [actionFilter, setActionFilter] = useState('')
+  const [targetTypeFilter, setTargetTypeFilter] = useState<string>('')
+  const [targetIdFilter, setTargetIdFilter] = useState<string>('')
   const [dateFilter, setDateFilter] = useState<'30days' | 'all'>('30days')
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(50)
@@ -31,6 +33,14 @@ export default function LicensesAudit() {
         query = query.eq('action', actionFilter)
       }
 
+      if (targetTypeFilter) {
+        query = query.eq('target_type', targetTypeFilter)
+      }
+
+      if (targetIdFilter) {
+        query = query.eq('target_id', targetIdFilter)
+      }
+
       // Default to last 30 days unless "all" is selected
       if (dateFilter === '30days') {
         const thirtyDaysAgo = new Date()
@@ -51,7 +61,7 @@ export default function LicensesAudit() {
         setLogs([])
         setTotalCount(0)
       } else {
-        setLogs(data || [])
+        setLogs(data as EntitlementAuditLog[])
         setTotalCount(count || 0)
       }
     } catch (err) {
@@ -60,7 +70,7 @@ export default function LicensesAudit() {
     } finally {
       setLoading(false)
     }
-  }, [page, rowsPerPage, search, actionFilter, dateFilter])
+  }, [page, rowsPerPage, search, actionFilter, targetTypeFilter, targetIdFilter, dateFilter])
 
   useEffect(() => {
     fetchLogs()
@@ -163,6 +173,8 @@ export default function LicensesAudit() {
           onClearAll={() => {
             setSearch('')
             setActionFilter('')
+            setTargetTypeFilter('')
+            setTargetIdFilter('')
             setDateFilter('30days')
           }}
         />

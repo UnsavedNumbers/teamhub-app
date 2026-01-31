@@ -19,6 +19,7 @@ interface SportCardImageProps {
     children?: ReactNode
     className?: string
     height?: string
+    type?: 'card' | 'travel'
 }
 
 export function SportCardImage({
@@ -26,6 +27,7 @@ export function SportCardImage({
     children,
     className = '',
     height = 'h-48',
+    type = 'card',
 }: SportCardImageProps) {
     const [imageLoaded, setImageLoaded] = useState(false)
     const [imageError, setImageError] = useState(false)
@@ -44,11 +46,11 @@ export function SportCardImage({
             return
         }
 
-        const path = getRandomSportImagePath(sportName, 'card', false)
+        const path = getRandomSportImagePath(sportName, type, false)
         setSelectedImagePath(path)
         setImageLoaded(false) // Reset loaded state when path changes
         setImageError(false)
-    }, [sport?.name])
+    }, [sport?.name, type])
 
     const sportName = sport?.name || null
     const sportColor = sport?.color || null
@@ -64,7 +66,7 @@ export function SportCardImage({
                     <img
                         ref={imgRef}
                         src={selectedImagePath}
-                        alt={getSportImageAlt(sportName, 'card')}
+                        alt={getSportImageAlt(sportName, type)}
                         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
                             imageLoaded ? 'opacity-100' : 'opacity-0'
                         }`}
@@ -80,7 +82,7 @@ export function SportCardImage({
                 <div
                     className="absolute inset-0 w-full h-full"
                     style={{ background: gradientFallback }}
-                    aria-label={getSportImageAlt(sportName, 'card')}
+                    aria-label={getSportImageAlt(sportName, type)}
                 />
             )}
 

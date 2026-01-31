@@ -1,26 +1,43 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { supabase, isSupabaseConfigured } from '../../lib/supabase'
-import type { Database } from '../../lib/database.types'
-import { PageHeader, Card, Button, Input, Select, Badge, Checkbox, ConfirmDialog, ErrorState, EmptyState } from '../../components/platformAdmin'
-import { mapLicenseTier, mapFeatureEntitlement, mapTierFeatureAssignment } from '../../utils/domainMappers'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
+import { PageHeader, Card, Button, Input, Select, Badge, Checkbox, ConfirmDialog, ErrorState, Accordion } from '../../components/platformAdmin'
 import type { LicenseTier, FeatureEntitlement, TierFeatureAssignment, StripePriceVerification } from '../../types/licenseTiers.types'
-import { FEATURE_CATEGORIES, FEATURE_TYPES } from '../../utils/licenseTierConstants'
-import { logAuditEvent, isStripeVerificationValid, getArchivedFeaturesCount } from '../../utils/licenseEntitlementsHelpers'
+import { isStripeVerificationValid } from '../../utils/licenseEntitlementsHelpers'
+import {
+  getTierById,
+  getFeatures,
+  getAssignments,
+  getOrganizationsUsingTier,
+  getArchivedFeaturesCount,
+  createTier,
+  updateTier,
+  archiveOrActivateTier,
+  duplicateTier,
+  saveAssignments as saveAssignmentsService,
+  verifyStripePrice as verifyStripePriceService,
+} from '../../data/services/licenseTiersService'
+import { logAuditEvent } from '../../utils/licenseEntitlementsHelpers'
 import { isValidRouteId, getInvalidRouteIdError } from '../../utils/routeValidation'
 import { useOffline } from '../../hooks/useOffline'
-import { shouldBlockInDemoMode, getDemoModeError } from '../../utils/demoMode'
+import { showSuccess, showError } from '../../utils/toast'
+import { getLink } from '../../utils/routes'
+import { RouteKeys } from '../../utils/routes'
+import { useI18n } from '../../i18n/useI18n'
 
-const FEATURE_CATEGORIES_OPTIONS = FEATURE_CATEGORIES.map(cat => ({ value: cat, label: cat }))
-const FEATURE_TYPES_OPTIONS = FEATURE_TYPES.map(type => ({ value: type, label: type }))
+// Unused - keep for future use
+// const FEATURE_CATEGORIES_OPTIONS = FEATURE_CATEGORIES.map(cat => ({ value: cat, label: cat }))
+// const FEATURE_TYPES_OPTIONS = FEATURE_TYPES.map(type => ({ value: type, label: type }))
 
 export default function LicenseTierDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const hashFeatureId = location.hash?.startsWith('#feature-') ? location.hash.slice('#feature-'.length) : null
   const { isOffline } = useOffline()
+  const { t } = useI18n()
   const isNew = id === 'new'
 
-  const [tier, setTier] = useState<Partial<LicenseTier & { version?: number }>>({
+  const [tier, setTier] = useState<Partial<LicenseTier>>({
     tier_key: 'basic',
     tier_name: '',
     description: '',
@@ -39,6 +56,12 @@ export default function LicenseTierDetail() {
   const [archivedFeaturesCount, setArchivedFeaturesCount] = useState(0)
   const [notFound, setNotFound] = useState(false)
   const [invalidRoute, setInvalidRoute] = useState(false)
+  const [organizationsUsingTier, setOrganizationsUsingTier] = useState<Array<{ id: string; name: string; license_plan: string }>>([])
+  const [loadingOrgs, setLoadingOrgs] = useState(false)
+  const [archiveDialog, setArchiveDialog] = useState(false)
+  const [duplicating, setDuplicating] = useState(false)
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null)
+  const [refreshingConflict, setRefreshingConflict] = useState(false)
 
   // Validate route parameter
   useEffect(() => {
@@ -49,49 +72,49 @@ export default function LicenseTierDetail() {
 
   const fetchTier = useCallback(async () => {
     if (isNew) return
+    if (!id) return
 
     setLoading(true)
+    setError(null)
     try {
-      const { data, error: tierError } = await supabase
-        .from('license_tiers')
-        .select('*')
-        .eq('id', id!)
-        .single()
-
-      if (tierError) {
-        if (tierError.code === 'PGRST116' || tierError.message?.includes('not found')) {
-          setNotFound(true)
-          return
-        }
-        throw tierError
+      const data = await getTierById(id)
+      if (!data) {
+        setNotFound(true)
+        return
       }
       setTier(data)
 
-      // Check for archived features
-      if (data?.id) {
-        const count = await getArchivedFeaturesCount(data.id)
-        setArchivedFeaturesCount(count)
-      }
+      const count = await getArchivedFeaturesCount(data.id)
+      setArchivedFeaturesCount(count)
 
-      // Use cached Stripe verification if valid, otherwise verify
-      if (data?.stripePriceId) {
-        if (data.stripeVerifiedAt && isStripeVerificationValid(data.stripeVerifiedAt)) {
-          // Use cached data
+      if (data.stripe_price_id) {
+        if (data.stripe_verified_at && isStripeVerificationValid(data.stripe_verified_at)) {
           setStripeVerification({
             valid: true,
-            product_name: data.stripeProductName || undefined,
-            amount_cents: data.stripeAmountCents || undefined,
-            interval: data.stripeInterval || undefined,
-            currency: data.stripeCurrency || undefined,
-            active: data.stripeActive || undefined,
+            product_name: data.stripe_product_name ?? undefined,
+            amount_cents: data.stripe_amount_cents ?? undefined,
+            interval: data.stripe_interval ?? undefined,
+            currency: data.stripe_currency ?? undefined,
+            active: data.stripe_active ?? undefined,
           })
         } else {
-          // Verify fresh
-          verifyStripePrice(data.stripePriceId, true)
+          const result = await verifyStripePriceService(data.stripe_price_id, true)
+          setStripeVerification(result)
+          if (result.valid && result.product_name) {
+            setTier((prev) => ({
+              ...prev,
+              stripe_product_name: result.product_name ?? null,
+              stripe_amount_cents: result.amount_cents ?? null,
+              stripe_interval: result.interval ?? null,
+              stripe_currency: result.currency ?? null,
+              stripe_active: result.active ?? null,
+              stripe_verified_at: new Date().toISOString(),
+            }))
+          }
         }
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to load tier')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load tier')
     } finally {
       setLoading(false)
     }
@@ -99,41 +122,39 @@ export default function LicenseTierDetail() {
 
   const fetchFeatures = useCallback(async () => {
     try {
-      const { data, error: featuresError } = await supabase
-        .from('feature_entitlements')
-        .select('*')
-        .is('archived_at', null)
-        .order('category', { ascending: true })
-        .order('display_name', { ascending: true })
-
-      if (featuresError) throw featuresError
-      setFeatures(data || [])
-    } catch (err: any) {
+      const data = await getFeatures()
+      setFeatures(data)
+    } catch (err) {
       console.error('Error fetching features:', err)
     }
   }, [])
 
   const fetchAssignments = useCallback(async () => {
-    if (isNew) return
+    if (isNew || !id) return
 
     try {
-      const { data, error: assignmentsError } = await supabase
-        .from('tier_feature_assignments')
-        .select('*')
-        .eq('license_tier_id', id!)
-
-      if (assignmentsError) throw assignmentsError
-
-      const assignmentsMap: Record<string, TierFeatureAssignment> = {}
-      ;(data || []).forEach((assignment) => {
-        const mapped = mapTierFeatureAssignment(assignment)
-        assignmentsMap[mapped.featureEntitlementId] = mapped
-      })
+      const assignmentsMap = await getAssignments(id)
       setAssignments(assignmentsMap)
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching assignments:', err)
     }
   }, [id, isNew])
+
+  const fetchOrganizationsUsingTier = useCallback(async () => {
+    if (isNew || !tier.tier_key) return
+
+    setLoadingOrgs(true)
+    setError(null)
+    try {
+      const data = await getOrganizationsUsingTier(tier.tier_key)
+      setOrganizationsUsingTier(data)
+    } catch (err) {
+      console.error('Error fetching organizations:', err)
+      setOrganizationsUsingTier([])
+    } finally {
+      setLoadingOrgs(false)
+    }
+  }, [isNew, tier.tier_key])
 
   useEffect(() => {
     fetchTier()
@@ -141,70 +162,62 @@ export default function LicenseTierDetail() {
     fetchAssignments()
   }, [fetchTier, fetchFeatures, fetchAssignments])
 
+  useEffect(() => {
+    if (!isNew && tier.tier_key) {
+      fetchOrganizationsUsingTier()
+    }
+  }, [fetchOrganizationsUsingTier])
+
+  // Update last refreshed time when tier data is loaded
+  useEffect(() => {
+    if (!loading && tier.id) {
+      setLastRefreshed(new Date())
+    }
+  }, [loading, tier.id])
+
   const verifyStripePrice = async (priceId: string, forceRefresh = false) => {
     if (!priceId || !priceId.startsWith('price_')) {
       setStripeVerification({ valid: false, error: 'Invalid Price ID format' })
       return
     }
 
-    // Check cache first unless forcing refresh
-    if (!forceRefresh && tier.stripeVerifiedAt && isStripeVerificationValid(tier.stripeVerifiedAt)) {
+    if (!forceRefresh && tier.stripe_verified_at && isStripeVerificationValid(tier.stripe_verified_at)) {
       setStripeVerification({
         valid: true,
-        product_name: tier.stripeProductName || undefined,
-        amount_cents: tier.stripeAmountCents || undefined,
-        interval: tier.stripeInterval || undefined,
-        currency: tier.stripeCurrency || undefined,
-        active: tier.stripeActive || undefined,
+        product_name: tier.stripe_product_name ?? undefined,
+        amount_cents: tier.stripe_amount_cents ?? undefined,
+        interval: tier.stripe_interval ?? undefined,
+        currency: tier.stripe_currency ?? undefined,
+        active: tier.stripe_active ?? undefined,
       })
       return
     }
 
     setVerifying(true)
+    setError(null)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error('Not authenticated')
-
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      const response = await fetch(`${supabaseUrl}/functions/v1/stripe-verify-price`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ price_id: priceId }),
-      })
-
-      const result: StripePriceVerification = await response.json()
+      const result = await verifyStripePriceService(priceId, forceRefresh)
       setStripeVerification(result)
 
-      // Update tier with verification data if valid
       if (result.valid && result.product_name) {
         setTier((prev) => ({
           ...prev,
-          stripe_product_name: result.product_name || null,
-          stripe_amount_cents: result.amount_cents || null,
-          stripe_interval: result.interval || null,
-          stripe_currency: result.currency || null,
-          stripe_active: result.active || null,
+          stripe_product_name: result.product_name ?? null,
+          stripe_amount_cents: result.amount_cents ?? null,
+          stripe_interval: result.interval ?? null,
+          stripe_currency: result.currency ?? null,
+          stripe_active: result.active ?? null,
           stripe_verified_at: new Date().toISOString(),
         }))
       }
-    } catch (err: any) {
-      setStripeVerification({ valid: false, error: err.message || 'Verification failed' })
+    } catch (err) {
+      setStripeVerification({ valid: false, error: err instanceof Error ? err.message : 'Verification failed' })
     } finally {
       setVerifying(false)
     }
   }
 
   const handleSave = async (reason?: string) => {
-    // Check demo mode
-    if (shouldBlockInDemoMode('write')) {
-      setError(getDemoModeError('save license tier'))
-      return
-    }
-
-    // Check offline
     if (isOffline) {
       setError('Cannot save while offline. Please check your internet connection.')
       return
@@ -215,7 +228,6 @@ export default function LicenseTierDetail() {
       return
     }
 
-    // Validate limit values
     for (const assignment of Object.values(assignments)) {
       if (assignment.limit_value !== null && assignment.limit_value <= 0) {
         setError('Limit values must be positive integers')
@@ -230,112 +242,104 @@ export default function LicenseTierDetail() {
       const beforeState = isNew ? null : { ...tier }
 
       if (isNew) {
-        const { data, error: createError } = await supabase
-          .from('license_tiers')
-          .insert({
-            tier_key: tier.tierKey,
-            tier_name: tier.tierName,
-            description: tier.description || null,
-            stripe_price_id: tier.stripePriceId,
-            stripe_product_name: tier.stripeProductName || null,
-            stripe_amount_cents: tier.stripeAmountCents || null,
-            stripe_interval: tier.stripeInterval || null,
-            stripe_currency: tier.stripeCurrency || null,
-            stripe_active: tier.stripeActive || null,
-            stripe_verified_at: tier.stripeVerifiedAt || null,
-            status: tier.status || 'active',
-          })
-          .select()
-          .single()
+        const created = await createTier({
+          tier_key: tier.tier_key!,
+          tier_name: tier.tier_name!,
+          description: tier.description ?? null,
+          stripe_price_id: tier.stripe_price_id!,
+          stripe_product_name: tier.stripe_product_name ?? null,
+          stripe_amount_cents: tier.stripe_amount_cents ?? null,
+          stripe_interval: tier.stripe_interval ?? null,
+          stripe_currency: tier.stripe_currency ?? null,
+          stripe_active: tier.stripe_active ?? null,
+          stripe_verified_at: tier.stripe_verified_at ?? null,
+          status: tier.status ?? 'active',
+        })
 
-        if (createError) throw createError
+        try {
+          await saveAssignmentsService(created.id, features.map((f) => f.id), assignments)
+        } catch (assignmentError) {
+          console.error('Error saving assignments:', assignmentError)
+          showError(t('toast.error.tierCreatedButAssignmentsFailed'))
+        }
 
-        // Save feature assignments
-        if (data) {
-          await saveAssignments(data.id)
-          
-          // Log audit event
+        try {
           await logAuditEvent({
             action: 'tier_created',
             targetType: 'tier',
-            targetId: data.id,
-            afterState: data,
-            reason: reason || 'Tier created',
+            targetId: created.id,
+            afterState: created as unknown as Record<string, unknown>,
+            reason: reason ?? 'Tier created',
           })
-          
-          navigate(`/platform-admin/licenses/tiers/${data.id}`)
+        } catch (auditError) {
+          console.error('Error logging audit event:', auditError)
         }
+
+        showSuccess(t('toast.success.licenseTierCreated'))
+        navigate(`/platform-admin/licenses/tiers/${created.id}`)
       } else {
-        // Optimistic locking: check version
-        const expectedVersion = tier.version || 1
-        
-        const { data: currentTier, error: fetchError } = await supabase
-          .from('license_tiers')
-          .select('version')
-          .eq('id', id!)
-          .single()
+        const expectedVersion = tier.version ?? 1
+        const result = await updateTier(
+          id!,
+          {
+            tier_name: tier.tier_name,
+            description: tier.description ?? null,
+            stripe_price_id: tier.stripe_price_id,
+            stripe_product_name: tier.stripe_product_name ?? null,
+            stripe_amount_cents: tier.stripe_amount_cents ?? null,
+            stripe_interval: tier.stripe_interval ?? null,
+            stripe_currency: tier.stripe_currency ?? null,
+            stripe_active: tier.stripe_active ?? null,
+            stripe_verified_at: tier.stripe_verified_at ?? null,
+            status: tier.status,
+          },
+          expectedVersion
+        )
 
-        if (fetchError) throw fetchError
-
-        if (currentTier.version !== expectedVersion) {
+        if (result.conflict) {
           setConflictDialog(true)
           setSaving(false)
           return
         }
 
-        const { data: updatedTier, error: updateError } = await supabase
-          .from('license_tiers')
-          .update({
-            tier_name: tier.tier_name,
-            description: tier.description || null,
-            stripe_price_id: tier.stripe_price_id,
-            stripe_product_name: tier.stripe_product_name || null,
-            stripe_amount_cents: tier.stripe_amount_cents || null,
-            stripe_interval: tier.stripe_interval || null,
-            stripe_currency: tier.stripe_currency || null,
-            stripe_active: tier.stripe_active || null,
-            stripe_verified_at: tier.stripe_verified_at || null,
-            status: tier.status,
-          })
-          .eq('id', id!)
-          .eq('version', expectedVersion) // Ensure version hasn't changed
-          .select()
-          .single()
-
-        if (updateError) {
-          // Check if it's a version conflict
-          if (updateError.code === 'PGRST116' || updateError.message?.includes('0 rows')) {
-            setConflictDialog(true)
-            setSaving(false)
-            return
-          }
-          throw updateError
+        try {
+          await saveAssignmentsService(id!, features.map((f) => f.id), assignments)
+        } catch (assignmentError) {
+          console.error('Error saving assignments:', assignmentError)
+          showError(t('toast.error.tierUpdatedButAssignmentsFailed'))
+          await fetchAssignments()
         }
 
-        await saveAssignments(id!)
+        try {
+          await logAuditEvent({
+            action: 'tier_updated',
+            targetType: 'tier',
+            targetId: id!,
+            beforeState: beforeState as unknown as Record<string, unknown>,
+            afterState: result.tier as unknown as Record<string, unknown>,
+            reason: reason ?? 'Tier updated',
+          })
+        } catch (auditError) {
+          console.error('Error logging audit event:', auditError)
+        }
 
-        // Log audit event
-        await logAuditEvent({
-          action: 'tier_updated',
-          targetType: 'tier',
-          targetId: id!,
-          beforeState,
-          afterState: updatedTier,
-          reason: reason || 'Tier updated',
-        })
+        setTier(result.tier)
+        setLastRefreshed(new Date())
+        showSuccess(t('toast.success.licenseTierUpdated'))
       }
-    } catch (err: any) {
-      // Provide user-friendly error messages
-      let errorMessage = 'Failed to save tier'
-      if (err.code === '23505') {
-        errorMessage = 'A tier with this Stripe Price ID already exists'
-      } else if (err.code === '23503') {
-        errorMessage = 'Invalid reference. Please refresh and try again.'
-      } else if (err.code === '42501') {
-        errorMessage = 'Permission denied. You do not have access to modify license tiers.'
-      } else if (err.message) {
-        errorMessage = err.message
+    } catch (err: unknown) {
+      const e = err as { code?: string; message?: string }
+      let errorMessage = t('toast.error.saveFailed')
+      if (e?.code === '23505') {
+        errorMessage = t('toast.error.tierStripePriceIdExists')
+      } else if (e?.code === '23503') {
+        errorMessage = t('toast.error.tierInvalidReference')
+      } else if (e?.code === '42501') {
+        errorMessage = t('toast.error.tierPermissionDenied')
+      } else if (e?.message) {
+        errorMessage = e.message
       }
+      showError(errorMessage)
       setError(errorMessage)
     } finally {
       setSaving(false)
@@ -343,32 +347,135 @@ export default function LicenseTierDetail() {
   }
 
   const handleReloadAfterConflict = async () => {
+    setRefreshingConflict(true)
     setConflictDialog(false)
-    await fetchTier()
-    await fetchAssignments()
+    setError(null)
+    try {
+      await fetchTier()
+      await fetchAssignments()
+      setLastRefreshed(new Date())
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reload')
+    } finally {
+      setRefreshingConflict(false)
+    }
   }
 
-  const saveAssignments = async (tierId: string) => {
-    const assignmentEntries = Object.entries(assignments).filter(([_, assignment]) => assignment.included)
+  const handleArchive = async () => {
+    if (isOffline) {
+      showError('Cannot archive while offline. Please check your internet connection.')
+      return
+    }
+    if (!id) return
 
-    for (const [featureId, assignment] of assignmentEntries) {
-      const { error } = await supabase
-        .from('tier_feature_assignments')
-        .upsert({
-          license_tier_id: tierId,
-          feature_entitlement_id: featureId,
-          included: assignment.included,
-          limit_value: assignment.limit_value || null,
-          role_admin: assignment.role_admin ?? true,
-          role_coach: assignment.role_coach ?? true,
-          role_parent: assignment.role_parent ?? false,
-        }, {
-          onConflict: 'license_tier_id,feature_entitlement_id',
-        })
+    setSaving(true)
+    setError(null)
 
-      if (error) {
-        console.error('Error saving assignment:', error)
+    try {
+      const expectedVersion = tier.version ?? 1
+      const currentStatus = (tier.status ?? 'active') as 'active' | 'archived'
+      const result = await archiveOrActivateTier(id, expectedVersion, currentStatus)
+
+      if (result.conflict) {
+        setArchiveDialog(false)
+        setConflictDialog(true)
+        setSaving(false)
+        return
       }
+
+      await logAuditEvent({
+        action: currentStatus === 'active' ? 'tier_archived' : 'tier_activated',
+        targetType: 'tier',
+        targetId: id,
+        beforeState: tier as unknown as Record<string, unknown>,
+        afterState: result.tier as unknown as Record<string, unknown>,
+        reason: currentStatus === 'active' ? 'Tier archived' : 'Tier activated',
+      })
+
+      showSuccess(
+        currentStatus === 'active'
+          ? t('toast.success.licenseTierArchived')
+          : t('toast.success.licenseTierActivated')
+      )
+      setArchiveDialog(false)
+      setTier(result.tier)
+      await fetchOrganizationsUsingTier()
+    } catch (err: unknown) {
+      const e = err as { code?: string; message?: string }
+      let errorMessage = 'Failed to update tier status'
+      if (e?.code === '42501') {
+        errorMessage = 'Permission denied. You do not have access to modify license tiers.'
+      } else if (e?.message) {
+        errorMessage = e.message
+      }
+      showError(errorMessage)
+      setError(errorMessage)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDuplicate = async () => {
+    if (isOffline) {
+      showError('Cannot duplicate while offline. Please check your internet connection.')
+      return
+    }
+    if (!id || !tier.tier_key) return
+
+    setDuplicating(true)
+    setError(null)
+
+    try {
+      const fullTier: LicenseTier = {
+        ...tier,
+        id: tier.id!,
+        tier_key: tier.tier_key,
+        tier_name: tier.tier_name ?? '',
+        description: tier.description ?? null,
+        stripe_price_id: tier.stripe_price_id ?? '',
+        stripe_verified_at: tier.stripe_verified_at ?? null,
+        stripe_product_name: tier.stripe_product_name ?? null,
+        stripe_amount_cents: tier.stripe_amount_cents ?? null,
+        stripe_interval: tier.stripe_interval ?? null,
+        stripe_currency: tier.stripe_currency ?? null,
+        stripe_active: tier.stripe_active ?? null,
+        status: (tier.status ?? 'active') as 'active' | 'archived',
+        version: tier.version ?? 1,
+        created_at: tier.created_at ?? new Date().toISOString(),
+        updated_at: tier.updated_at ?? new Date().toISOString(),
+      }
+      const newTier = await duplicateTier(id, fullTier, assignments)
+      showSuccess(t('toast.success.licenseTierDuplicated'))
+      navigate(`/platform-admin/licenses/tiers/${newTier.id}`)
+    } catch (err: unknown) {
+      const e = err as { code?: string; message?: string }
+      let errorMessage = 'Failed to duplicate tier'
+      if (e?.code === '23505') {
+        errorMessage = 'A tier with this Stripe Price ID already exists'
+      } else if (e?.code === '42501') {
+        errorMessage = 'Permission denied. You do not have access to create license tiers.'
+      } else if (e?.message) {
+        errorMessage = e.message
+      }
+      showError(errorMessage)
+      setError(errorMessage)
+    } finally {
+      setDuplicating(false)
+    }
+  }
+
+  const handleRefresh = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      await fetchTier()
+      await fetchAssignments()
+      await fetchOrganizationsUsingTier()
+      setLastRefreshed(new Date())
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to refresh')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -411,6 +518,17 @@ export default function LicenseTierDetail() {
     acc[feature.category].push(feature)
     return acc
   }, {} as Record<string, FeatureEntitlement[]>)
+
+  // When navigating with #feature-{id}, expand the accordion and scroll to the feature
+  useEffect(() => {
+    if (!hashFeatureId || features.length === 0) return
+    const el = document.getElementById(`feature-${hashFeatureId}`)
+    if (!el) return
+    const timer = setTimeout(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [hashFeatureId, features.length])
 
   if (invalidRoute) {
     return (
@@ -456,17 +574,78 @@ export default function LicenseTierDetail() {
       <PageHeader
         title={isNew ? 'Create License Tier' : tier.tier_name || 'License Tier'}
         subtitle={isNew ? 'Define a new license tier' : `Manage ${tier.tier_name}`}
+        breadcrumbs={[
+          { label: 'Licenses', path: getLink(RouteKeys.PLATFORM_LICENSES) },
+          { label: 'License Tiers', path: getLink('platformAdmin.licenses.tiers') },
+          { label: isNew ? 'Create' : tier.tier_name || 'Tier' },
+        ]}
         actions={
-          <div style={{ display: 'flex', gap: 'var(--pa-space-3)' }}>
-            <Button variant="secondary" onClick={() => navigate('/platform-admin/licenses/tiers')}>
-              Cancel
+          <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2" style={{ flexWrap: 'wrap' }}>
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate(getLink('platformAdmin.licenses.tiers'))}
+              className="w-full sm:w-auto min-h-[44px]"
+              style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>arrow_back</span>
+              Back to Tiers
             </Button>
+            {!isNew && (
+              <>
+                <Button
+                  variant="ghost"
+                  onClick={handleRefresh}
+                  disabled={loading || refreshingConflict}
+                  className="w-full sm:w-auto min-h-[44px]"
+                  style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>refresh</span>
+                  Refresh
+                </Button>
+                <Button
+                  variant="blue"
+                  onClick={handleDuplicate}
+                  disabled={duplicating || isOffline}
+                  className="w-full sm:w-auto min-h-[44px]"
+                  style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>content_copy</span>
+                  {duplicating ? 'Duplicating...' : 'Duplicate'}
+                </Button>
+                <Button
+                  variant={tier.status === 'active' ? 'blue' : 'primary'}
+                  onClick={() => setArchiveDialog(true)}
+                  disabled={saving || isOffline}
+                  className="w-full sm:w-auto min-h-[44px]"
+                  style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                    {tier.status === 'active' ? 'archive' : 'unarchive'}
+                  </span>
+                  {tier.status === 'active' ? 'Archive' : 'Activate'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate(`/platform-admin/licenses/audit?target_type=tier&target_id=${id}`)}
+                  className="w-full sm:w-auto min-h-[44px]"
+                  style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>history</span>
+                  Audit History
+                </Button>
+              </>
+            )}
+            {isNew && (
+              <Button variant="blue" onClick={() => navigate(getLink('platformAdmin.licenses.tiers'))}>
+                Cancel
+              </Button>
+            )}
             <Button 
               variant="primary" 
               onClick={() => handleSave()} 
-              disabled={saving || isOffline || shouldBlockInDemoMode('write')}
+              disabled={saving || duplicating || isOffline}
             >
-              {saving ? 'Saving...' : shouldBlockInDemoMode('write') ? 'Demo Mode' : 'Save Changes'}
+              {saving ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
         }
@@ -499,21 +678,21 @@ export default function LicenseTierDetail() {
               })
             } else if (id) {
               // Reload data
-              window.location.reload()
+              handleRefresh()
             }
           }}
           retryLabel={isNew ? 'Reset Form' : 'Reload'}
         />
       )}
 
-      <div className="pa-grid pa-grid-2" style={{ gap: 'var(--pa-space-5)' }}>
+      <div className="pa-grid pa-grid-cols-1 lg:pa-grid-cols-2" style={{ gap: 'var(--pa-space-5)' }}>
         {/* Tier Settings */}
         <Card title="Tier Settings">
           <div className="pa-form-group">
             <label className="pa-label pa-label--required">Tier Key</label>
             <Select
-              value={tier.tierKey || 'basic'}
-              onChange={(e) => setTier({ ...tier, tierKey: e.target.value as 'basic' | 'power' })}
+              value={tier.tier_key || 'basic'}
+              onChange={(e) => setTier({ ...tier, tier_key: e.target.value as 'basic' | 'power' })}
               disabled={!isNew}
               options={[
                 { value: 'basic', label: 'Basic' },
@@ -555,7 +734,7 @@ export default function LicenseTierDetail() {
                 style={{ flex: 1 }}
               />
                 <Button
-                variant="secondary"
+                variant="blue"
                 onClick={() => tier.stripe_price_id && verifyStripePrice(tier.stripe_price_id, true)}
                 disabled={verifying || !tier.stripe_price_id}
                 size="dense"
@@ -566,38 +745,161 @@ export default function LicenseTierDetail() {
             {stripeVerification && (
               <div className="pa-mt-3">
                 {stripeVerification.valid ? (
-                  <div className="pa-card" style={{ background: 'var(--pa-success-bg)', border: '1px solid var(--pa-success)' }}>
-                    <div className="pa-flex pa-items-center pa-gap-2 pa-mb-2">
-                      <span className="material-symbols-outlined" style={{ color: 'var(--pa-success)' }}>check_circle</span>
-                      <span className="pa-body-m" style={{ fontWeight: 600 }}>Verified</span>
-                      {tier.stripe_verified_at && isStripeVerificationValid(tier.stripe_verified_at) && (
-                        <Badge variant="neutral" style={{ marginLeft: 'auto' }}>Cached</Badge>
+                  <div 
+                    className="pa-card" 
+                    style={{ 
+                      background: 'linear-gradient(135deg, var(--pa-success-bg) 0%, rgba(34, 197, 94, 0.05) 100%)',
+                      border: '1px solid var(--pa-success)',
+                      borderRadius: 'var(--pa-radius-lg)',
+                      padding: 'var(--pa-space-5)',
+                      boxShadow: '0 2px 8px rgba(34, 197, 94, 0.1)',
+                    }}
+                  >
+                    {/* Header */}
+                    <div className="pa-flex pa-items-center pa-justify-between pa-mb-4">
+                      <div className="pa-flex pa-items-center pa-gap-3">
+                        <div 
+                          style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            background: 'var(--pa-success)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <span className="material-symbols-outlined" style={{ color: 'white', fontSize: '24px' }}>
+                            check_circle
+                          </span>
+                        </div>
+                        <div>
+                          <div className="pa-body-m" style={{ fontWeight: 600, color: 'var(--pa-n900)' }}>
+                            Stripe Price Verified
+                          </div>
+                          {tier.stripe_verified_at && isStripeVerificationValid(tier.stripe_verified_at) && (
+                            <div className="pa-body-s" style={{ color: 'var(--pa-n600)', marginTop: '2px' }}>
+                              Using cached data
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {tier.stripe_price_id && (
+                        <a
+                          href={`https://dashboard.stripe.com/prices/${tier.stripe_price_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="pa-flex pa-items-center pa-gap-2"
+                          style={{
+                            color: 'var(--pa-success)',
+                            textDecoration: 'none',
+                            fontWeight: 600,
+                            fontSize: '13px',
+                            padding: 'var(--pa-space-2) var(--pa-space-3)',
+                            borderRadius: 'var(--pa-radius-md)',
+                            border: '1px solid var(--pa-success)',
+                            background: 'white',
+                            transition: 'all 0.2s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'var(--pa-success)'
+                            e.currentTarget.style.color = 'white'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'white'
+                            e.currentTarget.style.color = 'var(--pa-success)'
+                          }}
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>open_in_new</span>
+                          View in Stripe
+                        </a>
                       )}
                     </div>
-                    {stripeVerification.product_name && (
-                      <div className="pa-body-s">Product: {stripeVerification.product_name}</div>
-                    )}
-                    {stripeVerification.amount_cents && stripeVerification.currency && (
-                      <div className="pa-body-s">
-                        Amount: {new Intl.NumberFormat('en-US', {
-                          style: 'currency',
-                          currency: stripeVerification.currency.toUpperCase(),
-                        }).format(stripeVerification.amount_cents / 100)}
-                        {stripeVerification.interval && ` / ${stripeVerification.interval}`}
+
+                    {/* Details Grid */}
+                    <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-4" style={{ 
+                      gap: 'var(--pa-space-4)',
+                      paddingTop: 'var(--pa-space-4)',
+                      borderTop: '1px solid rgba(34, 197, 94, 0.2)',
+                    }}>
+                      {stripeVerification.product_name && (
+                        <div>
+                          <div className="pa-body-s" style={{ color: 'var(--pa-n600)', marginBottom: 'var(--pa-space-1)' }}>
+                            Product Name
+                          </div>
+                          <div className="pa-body-m" style={{ fontWeight: 600, color: 'var(--pa-n900)' }}>
+                            {stripeVerification.product_name}
+                          </div>
+                        </div>
+                      )}
+                      {stripeVerification.amount_cents && stripeVerification.currency && (
+                        <div>
+                          <div className="pa-body-s" style={{ color: 'var(--pa-n600)', marginBottom: 'var(--pa-space-1)' }}>
+                            Price
+                          </div>
+                          <div className="pa-body-m" style={{ fontWeight: 600, color: 'var(--pa-n900)' }}>
+                            {new Intl.NumberFormat('en-US', {
+                              style: 'currency',
+                              currency: stripeVerification.currency.toUpperCase(),
+                            }).format(stripeVerification.amount_cents / 100)}
+                            {stripeVerification.interval && (
+                              <span style={{ color: 'var(--pa-n600)', fontWeight: 400, marginLeft: '4px' }}>
+                                / {stripeVerification.interval}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      <div>
+                        <div className="pa-body-s" style={{ color: 'var(--pa-n600)', marginBottom: 'var(--pa-space-1)' }}>
+                          Status
+                        </div>
+                        <div>
+                          <Badge variant={stripeVerification.active ? 'success' : 'neutral'}>
+                            {stripeVerification.active ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </div>
                       </div>
-                    )}
-                    <div className="pa-body-s">Status: {stripeVerification.active ? 'Active' : 'Inactive'}</div>
-                    {tier.stripe_verified_at && (
-                      <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
-                        Verified: {new Date(tier.stripe_verified_at).toLocaleString()}
-                      </div>
-                    )}
+                      {tier.stripe_verified_at && (
+                        <div>
+                          <div className="pa-body-s" style={{ color: 'var(--pa-n600)', marginBottom: 'var(--pa-space-1)' }}>
+                            Last Verified
+                          </div>
+                          <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
+                            {new Date(tier.stripe_verified_at).toLocaleString()}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ) : (
-                  <div className="pa-card" style={{ background: 'var(--pa-danger-bg)', border: '1px solid var(--pa-danger)' }}>
-                    <div className="pa-flex pa-items-center pa-gap-2">
-                      <span className="material-symbols-outlined" style={{ color: 'var(--pa-danger)' }}>error</span>
-                      <span className="pa-body-s">{stripeVerification.error || 'Verification failed'}</span>
+                  <div 
+                    className="pa-card" 
+                    style={{ 
+                      background: 'var(--pa-danger-bg)', 
+                      border: '1px solid var(--pa-danger)',
+                      borderRadius: 'var(--pa-radius-lg)',
+                      padding: 'var(--pa-space-4)',
+                    }}
+                  >
+                    <div className="pa-flex pa-items-center pa-gap-3">
+                      <span 
+                        className="material-symbols-outlined" 
+                        style={{ 
+                          color: 'var(--pa-danger)',
+                          fontSize: '24px',
+                        }}
+                      >
+                        error
+                      </span>
+                      <div style={{ flex: 1 }}>
+                        <div className="pa-body-m" style={{ fontWeight: 600, color: 'var(--pa-n900)' }}>
+                          Verification Failed
+                        </div>
+                        <div className="pa-body-s" style={{ color: 'var(--pa-n700)', marginTop: '2px' }}>
+                          {stripeVerification.error || 'Unable to verify Stripe Price ID'}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -624,65 +926,99 @@ export default function LicenseTierDetail() {
             Select features to include in this tier. Use limits and role toggles for granular control.
           </div>
 
-          {Object.entries(featuresByCategory).map(([category, categoryFeatures]) => (
-            <div key={category} className="pa-mb-5">
-              <div className="pa-overline" style={{ marginBottom: 'var(--pa-space-3)' }}>
-                {category}
-              </div>
-              {categoryFeatures.map((feature) => {
-                const assignment = assignments[feature.id]
-                const included = assignment?.included ?? false
+          <Accordion
+            items={Object.entries(featuresByCategory).map(([category, categoryFeatures]) => {
+              const includedCount = categoryFeatures.filter(f => assignments[f.id]?.included).length
+              const totalCount = categoryFeatures.length
+              const categoryContainsHashFeature = hashFeatureId != null && categoryFeatures.some(f => f.id === hashFeatureId)
+              return {
+                title: category,
+                count: `${includedCount} / ${totalCount}`,
+                defaultExpanded: categoryContainsHashFeature,
+                children: (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-3)' }}>
+                    {categoryFeatures.map((feature) => {
+                      const assignment = assignments[feature.id]
+                      const included = assignment?.included ?? false
 
-                return (
-                  <div
-                    key={feature.id}
-                    className="pa-card pa-mb-3"
-                    style={{ padding: 'var(--pa-space-3)' }}
-                  >
-                    <div className="pa-flex pa-items-start pa-gap-3">
-                      <Checkbox
-                        checked={included}
-                        onChange={(e) => toggleFeature(feature.id, e.target.checked)}
-                        label={feature.display_name}
-                      />
-                      <div style={{ flex: 1 }}>
-                        {feature.description && (
-                          <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
-                            {feature.description}
-                          </div>
-                        )}
-                        <div className="pa-flex pa-items-center pa-gap-2 pa-mt-2">
-                          <Badge variant="neutral">{feature.feature_type}</Badge>
-                          <Badge variant="info">{feature.rollout_status}</Badge>
-                        </div>
-
-                        {included && (
-                          <div className="pa-mt-3" style={{ paddingTop: 'var(--pa-space-3)', borderTop: '1px solid var(--pa-n100)' }}>
-                            {feature.feature_type === 'limit' && (
-                              <div className="pa-form-group">
-                                <label className="pa-label">Limit Value</label>
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  step="1"
-                                  value={assignment?.limit_value || ''}
-                                  onChange={(e) => {
-                                    const value = e.target.value
-                                    const numValue = value ? parseInt(value, 10) : null
-                                    if (numValue === null || numValue > 0) {
-                                      updateAssignment(feature.id, {
-                                        limit_value: numValue,
-                                      })
-                                    }
-                                  }}
-                                  placeholder="Enter limit"
-                                />
+                      return (
+                        <div
+                          key={feature.id}
+                          id={`feature-${feature.id}`}
+                          style={{
+                            padding: 'var(--pa-space-4)',
+                            border: '1px solid var(--pa-n100)',
+                            borderRadius: 'var(--pa-radius-md)',
+                            background: 'var(--pa-n50)',
+                          }}
+                        >
+                          {/* Feature Header - Always visible, consistent height */}
+                          <div className="pa-flex pa-items-start pa-gap-3">
+                            <div style={{ marginTop: '2px' }}>
+                              <Checkbox
+                                checked={included}
+                                onChange={(e) => toggleFeature(feature.id, e.target.checked)}
+                                label=""
+                              />
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div className="pa-flex pa-items-center pa-gap-2 pa-mb-2">
+                                <span className="pa-body-m" style={{ fontWeight: 600 }}>
+                                  {feature.display_name}
+                                </span>
+                                <Badge variant="neutral" style={{ fontSize: '11px', padding: '2px 8px' }}>
+                                  {feature.feature_type.toUpperCase()}
+                                </Badge>
+                                <Badge variant="info" style={{ fontSize: '11px', padding: '2px 8px' }}>
+                                  {feature.rollout_status.toUpperCase()}
+                                </Badge>
                               </div>
-                            )}
+                              {feature.description && (
+                                <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
+                                  {feature.description}
+                                </div>
+                              )}
+                            </div>
+                          </div>
 
-                            {feature.feature_type === 'permission' && (
-                              <div className="pa-form-group">
-                                <label className="pa-label">Role Access</label>
+                          {/* Feature Configuration - Only shown when included */}
+                          {included && (
+                            <div
+                              style={{
+                                marginTop: 'var(--pa-space-4)',
+                                paddingTop: 'var(--pa-space-4)',
+                                borderTop: '1px solid var(--pa-n100)',
+                              }}
+                            >
+                              {feature.feature_type === 'limit' && (
+                                <div className="pa-form-group" style={{ marginBottom: 0 }}>
+                                  <label className="pa-label" style={{ fontSize: '12px', marginBottom: 'var(--pa-space-2)' }}>
+                                    Limit Value
+                                  </label>
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    value={assignment?.limit_value || ''}
+                                    onChange={(e) => {
+                                      const value = e.target.value
+                                      const numValue = value ? parseInt(value, 10) : null
+                                      if (numValue === null || numValue > 0) {
+                                        updateAssignment(feature.id, {
+                                          limit_value: numValue,
+                                        })
+                                      }
+                                    }}
+                                    placeholder="Enter limit"
+                                    style={{ maxWidth: '200px' }}
+                                  />
+                                </div>
+                              )}
+
+                              <div className="pa-form-group" style={{ marginBottom: 0 }}>
+                                <label className="pa-label" style={{ fontSize: '12px', marginBottom: 'var(--pa-space-2)' }}>
+                                  Role Access
+                                </label>
                                 <div className="pa-flex pa-flex-col pa-gap-2">
                                   <Checkbox
                                     checked={assignment?.role_admin ?? true}
@@ -701,18 +1037,80 @@ export default function LicenseTierDetail() {
                                   />
                                 </div>
                               </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
-                )
-              })}
-            </div>
-          ))}
+                ),
+              }
+            })}
+          />
         </Card>
       </div>
+
+      {/* Tier Usage Details */}
+      {!isNew && tier.id && (
+        <Card 
+          title="Organizations Using This Tier" 
+          style={{ marginTop: 'var(--pa-space-5)' }}
+          actions={
+            <Button
+              variant="ghost"
+              size="dense"
+              onClick={fetchOrganizationsUsingTier}
+              disabled={loadingOrgs}
+            >
+              {loadingOrgs ? 'Loading...' : 'Refresh'}
+            </Button>
+          }
+        >
+          {loadingOrgs ? (
+            <div className="pa-skeleton" style={{ height: '100px', width: '100%' }} />
+          ) : organizationsUsingTier.length > 0 ? (
+            <div>
+              <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginBottom: 'var(--pa-space-3)' }}>
+                {organizationsUsingTier.length} organization{organizationsUsingTier.length === 1 ? '' : 's'} currently using this tier
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-2)', maxHeight: '300px', overflowY: 'auto' }}>
+                {organizationsUsingTier.map((org) => (
+                  <div
+                    key={org.id}
+                    className="pa-card"
+                    style={{
+                      padding: 'var(--pa-space-3)',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => navigate(`/platform-admin/organizations/${org.id}`)}
+                  >
+                    <div className="pa-flex pa-items-center pa-justify-between">
+                      <div>
+                        <div className="pa-body-m" style={{ fontWeight: 600 }}>{org.name}</div>
+                        <div className="pa-body-s" style={{ color: 'var(--pa-n500)' }}>
+                          License Plan: {org.license_plan}
+                        </div>
+                      </div>
+                      <span className="material-symbols-outlined" style={{ color: 'var(--pa-n500)' }}>chevron_right</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="pa-body-s" style={{ color: 'var(--pa-n500)' }}>
+              No organizations are currently using this tier.
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Last Updated Indicator */}
+      {!isNew && lastRefreshed && (
+        <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: 'var(--pa-space-3)', textAlign: 'right' }}>
+          Last refreshed: {lastRefreshed.toLocaleTimeString()}
+        </div>
+      )}
 
       {archivedFeaturesCount > 0 && (
         <Card style={{ marginTop: 'var(--pa-space-5)', borderLeft: '3px solid var(--pa-warning)' }}>
@@ -736,8 +1134,24 @@ export default function LicenseTierDetail() {
         description="Another admin has modified this tier since you loaded it. Please reload to see the latest changes, then make your edits again."
         confirmLabel="Reload"
         variant="warning"
+        loading={refreshingConflict}
         onConfirm={handleReloadAfterConflict}
         onCancel={() => setConflictDialog(false)}
+      />
+
+      <ConfirmDialog
+        open={archiveDialog}
+        title={tier.status === 'active' ? 'Archive License Tier' : 'Activate License Tier'}
+        description={
+          tier.status === 'active'
+            ? `Are you sure you want to archive "${tier.tier_name}"? This will mark the tier as archived but will not affect organizations currently using it.`
+            : `Are you sure you want to activate "${tier.tier_name}"? This will make the tier available for new organizations.`
+        }
+        confirmLabel={tier.status === 'active' ? 'Archive' : 'Activate'}
+        variant={tier.status === 'active' ? 'warning' : 'info'}
+        loading={saving}
+        onConfirm={handleArchive}
+        onCancel={() => setArchiveDialog(false)}
       />
     </div>
   )

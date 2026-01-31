@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, Badge, FilterBar, PlatformDataTable, type ColumnConfig } from '../../components/platformAdmin'
+import { PageHeader, Badge, FilterBar, PlatformDataTable, type ColumnConfig, OfflineBanner, ErrorState } from '../../components/platformAdmin'
 import { formatCurrency } from '../../utils/platformAdminMasking'
 import { mapAdminFeeStatus } from '../../utils/typeAdapters'
 import type { AdminFeeStatus } from '../../types/platformAdmin.types'
@@ -8,6 +8,7 @@ import type { AdminFeeStatus } from '../../types/platformAdmin.types'
 export default function Fees() {
   const [fees, setFees] = useState<AdminFeeStatus[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(50)
   const [totalCount, setTotalCount] = useState(0)
@@ -17,6 +18,7 @@ export default function Fees() {
 
   const fetchFees = useCallback(async () => {
     setLoading(true)
+    setError(null)
 
     try {
       let query = supabase
@@ -37,16 +39,22 @@ export default function Fees() {
 
       if (error) {
         console.error('Error fetching fees:', error)
+        setError(error.message || 'Failed to load fees')
         setFees([])
         setTotalCount(0)
       } else {
-        // Map rows to include id field
-        const mapped = (data || []).map(row => mapAdminFeeStatus(row as any))
-        setFees(mapped)
+        // Filter out rows with null required fields, then map
+        const validData = (data || []).filter((row): row is typeof row & { fee_id: string } => 
+          row.fee_id !== null
+        )
+        const mapped = validData.map(row => mapAdminFeeStatus(row))
+        setFees(mapped as AdminFeeStatus[])
         setTotalCount(count || 0)
+        setError(null)
       }
     } catch (err) {
       console.error('Error:', err)
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
       setFees([])
     } finally {
       setLoading(false)
@@ -194,6 +202,7 @@ export default function Fees() {
 
   return (
     <div>
+      <OfflineBanner />
       <PageHeader
         title="Fees Status"
         subtitle="Overview of fee assignments and payment status across all organizations."
@@ -209,20 +218,30 @@ export default function Fees() {
         }}
       />
 
-      <PlatformDataTable
-        columns={columns as ColumnConfig<{ id: string }>[]}
-        rows={fees as ({ id: string })[]}
-        loading={loading}
-        emptyMessage="No fees found."
-        page={page}
-        rowsPerPage={rowsPerPage}
-        totalCount={totalCount}
-        onPageChange={setPage}
-        onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0) }}
-        orderBy={orderBy}
-        order={order}
-        onSort={handleSort}
-      />
+      {error && !loading && (
+        <ErrorState
+          message={error}
+          onRetry={fetchFees}
+          retryLabel="Retry"
+        />
+      )}
+
+      {!error && (
+        <PlatformDataTable
+          columns={columns as ColumnConfig<{ id: string }>[]}
+          rows={fees as ({ id: string })[]}
+          loading={loading}
+          emptyMessage="No fees found. Try adjusting your filters."
+          page={page}
+          rowsPerPage={rowsPerPage}
+          totalCount={totalCount}
+          onPageChange={setPage}
+          onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0) }}
+          orderBy={orderBy}
+          order={order}
+          onSort={handleSort}
+        />
+      )}
     </div>
   )
 }

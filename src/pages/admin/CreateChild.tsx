@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { PageHeader, Card, Input, Button, Select, ErrorState } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Input, Button, Select, DatePicker, ErrorState } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { useUserContext } from '../../hooks/useUserContext'
-import { createChild, getFamilyDetails } from '../../data/services/familyService'
+import { createAthleteBasic, getFamilyDetails } from '../../data/services/familyService'
 import { useT } from '../../i18n/useI18n'
 import type { Gender } from '../../types/family'
+import { getLink } from '../../utils/routes'
 
 export default function CreateChild() {
   const navigate = useNavigate()
@@ -55,7 +57,7 @@ export default function CreateChild() {
     setError(null)
 
     try {
-      const { error: createError } = await createChild(context, {
+      const { error: createError } = await createAthleteBasic(context, {
         family_id: familyId,
         first_name: formData.first_name,
         last_name: formData.last_name,
@@ -69,7 +71,7 @@ export default function CreateChild() {
       })
 
       if (createError) throw createError
-      navigate(`/admin/families/${familyId}`)
+      navigate(getLink('admin.guardians.detail', { id: familyId }))
     } catch (err) {
       setError(err instanceof Error ? err : new Error(t('admin.createChild.errorCreate')))
       setLoading(false)
@@ -84,9 +86,9 @@ export default function CreateChild() {
 
   return (
     <div className="pa-root">
-      <PageHeader
+      <AdminPageHeader
         title={t('admin.createChild.title')}
-        subtitle={familyName ? `For ${familyName}` : ''}
+        subtitle={familyName ? t('admin.createChild.subtitle', { familyName }) : ''}
         breadcrumbs={[
           { label: 'Families', path: '/admin/families' },
           { label: familyName || 'Family', path: `/admin/families/${familyId}` },
@@ -94,8 +96,7 @@ export default function CreateChild() {
         ]}
       />
 
-      <div className="pa-grid pa-grid-12">
-        <div className="pa-col-8 pa-offset-2">
+      <div className="pa-form-container">
           <form onSubmit={handleSubmit}>
             <Card>
               <h2 className="pa-h2 pa-mb-6">Player Details</h2>
@@ -118,11 +119,10 @@ export default function CreateChild() {
               </div>
 
               <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
-                <Input
+                <DatePicker
                   label="Date of Birth"
-                  type="date"
                   value={formData.date_of_birth}
-                  onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+                  onChange={(value) => setFormData({ ...formData, date_of_birth: value })}
                   required
                 />
                 <Select
@@ -138,7 +138,7 @@ export default function CreateChild() {
               </div>
 
               <div className="pa-mb-6">
-                 <Input
+                  <Input
                     label="Jersey Number (Optional)"
                     value={formData.jersey_number}
                     onChange={(e) => setFormData({ ...formData, jersey_number: e.target.value })}
@@ -167,7 +167,7 @@ export default function CreateChild() {
               </div>
 
               <div className="pa-grid pa-grid-2 pa-gap-4 pa-mb-4">
-                 <Input
+                  <Input
                     label="Emergency Contact Name"
                     value={formData.emergency_contact_name}
                     onChange={(e) => setFormData({ ...formData, emergency_contact_name: e.target.value })}
@@ -180,14 +180,13 @@ export default function CreateChild() {
               </div>
 
               <div className="pa-flex pa-justify-end pa-gap-4 pa-mt-8">
-                <Button 
-                  type="button" 
-                  variant="secondary" 
-                  onClick={() => navigate(`/admin/families/${familyId}`)}
+                <OrgAdminButton
+                  variant="primary"
+                  onClick={() => navigate(getLink('admin.guardians.detail', { id: familyId! }))}
                   disabled={loading}
                 >
                   Cancel
-                </Button>
+                </OrgAdminButton>
                 <Button 
                   type="submit" 
                   disabled={loading || !formData.first_name || !formData.last_name || !formData.date_of_birth}
@@ -197,7 +196,6 @@ export default function CreateChild() {
               </div>
             </Card>
           </form>
-        </div>
       </div>
     </div>
   )

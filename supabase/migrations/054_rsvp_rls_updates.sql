@@ -66,20 +66,20 @@ CREATE POLICY "Parents can manage their children's RSVPs" ON event_rsvps
   USING (
     EXISTS (
       SELECT 1 FROM users u
-      JOIN children c ON c.family_id = u.family_id
+      JOIN athletes c ON c.family_id = u.family_id
       WHERE u.id = auth.uid()
         AND u.role = 'parent'
-        AND c.id = event_rsvps.child_id
+        AND c.id = event_rsvps.athlete_id
         AND is_child_eligible_for_event(c.id, event_rsvps.event_id)
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM users u
-      JOIN children c ON c.family_id = u.family_id
+      JOIN athletes c ON c.family_id = u.family_id
       WHERE u.id = auth.uid()
         AND u.role = 'parent'
-        AND c.id = event_rsvps.child_id
+        AND c.id = event_rsvps.athlete_id
         AND is_child_eligible_for_event(c.id, event_rsvps.event_id)
     )
   );

@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, Badge, Card, Button, PlatformDataTable, type ColumnConfig } from '../../components/platformAdmin'
+import { PageHeader, Badge, Card, Button, PlatformDataTable, type ColumnConfig, OfflineBanner, ErrorState } from '../../components/platformAdmin'
+import { isValidUUID } from '../../utils/uuid'
+import { isNotFoundError } from '../../utils/errorUtils'
 import { mapFeatureFlag, mapFeatureFlagOverride, mapFeatureFlagAuditLog } from '../../utils/domainMappers'
 import type { FeatureFlag, FeatureFlagOverride, FeatureFlagAuditLog } from '../../types/domain/FeatureFlag'
 
@@ -12,12 +14,29 @@ export default function FeatureFlagDetail() {
   const [overrides, setOverrides] = useState<FeatureFlagOverride[]>([])
   const [auditLog, setAuditLog] = useState<FeatureFlagAuditLog[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [notFound, setNotFound] = useState(false)
   const [activeTab, setActiveTab] = useState<'overrides' | 'audit'>('overrides')
   
+  // Validate route parameter
+  const isValidId = useMemo(() => {
+    if (!id) return false
+    return isValidUUID(id)
+  }, [id])
+  
   const fetchFlag = useCallback(async () => {
-    if (!id) return
+    if (!id || !isValidId) {
+      if (!isValidId && id) {
+        setError('Invalid feature flag ID format')
+      }
+      setLoading(false)
+      return
+    }
     
     setLoading(true)
+    setError(null)
+    setNotFound(false)
+    
     try {
       const { data, error } = await supabase
         .from('admin_feature_flags_list')
@@ -26,18 +45,28 @@ export default function FeatureFlagDetail() {
         .single()
       
       if (error) {
-        console.error('Error fetching feature flag:', error)
-        setFlag(null)
+        if (isNotFoundError(error)) {
+          setNotFound(true)
+          setFlag(null)
+        } else {
+          setError(error.message || 'Failed to load feature flag')
+          setFlag(null)
+        }
       } else if (data) {
         setFlag(mapFeatureFlag(data))
+        setError(null)
+      } else {
+        setNotFound(true)
+        setFlag(null)
       }
     } catch (err) {
       console.error('Error:', err)
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
       setFlag(null)
     } finally {
       setLoading(false)
     }
-  }, [id])
+  }, [id, isValidId])
   
   const fetchOverrides = useCallback(async () => {
     if (!id) return
@@ -54,7 +83,7 @@ export default function FeatureFlagDetail() {
         setOverrides([])
       } else {
         // Map rows to include id field
-        const mapped = (data || []).map(row => mapFeatureFlagOverride(row as any))
+        const mapped = (data || []).map(row => mapFeatureFlagOverride(row))
         setOverrides(mapped)
       }
     } catch (err) {
@@ -200,9 +229,35 @@ export default function FeatureFlagDetail() {
     },
   ]
   
+  // Invalid ID
+  if (!isValidId && id) {
+    return (
+      <div>
+        <OfflineBanner />
+        <button
+          className="pa-btn pa-btn--ghost pa-mb-4"
+          onClick={() => navigate('/platform-admin/feature-flags')}
+        >
+          <span className="material-symbols-outlined">arrow_back</span>
+          Back to Feature Flags
+        </button>
+        <Card>
+          <div className="pa-empty">
+            <div className="pa-empty-icon">
+              <span className="material-symbols-outlined">error</span>
+            </div>
+            <h3 className="pa-empty-title">INVALID FEATURE FLAG ID</h3>
+            <p className="pa-empty-text">The feature flag ID in the URL is invalid.</p>
+          </div>
+        </Card>
+      </div>
+    )
+  }
+  
   if (loading) {
     return (
       <div>
+        <OfflineBanner />
         <PageHeader title="Feature Flag Detail" subtitle="Loading..." />
         <div className="pa-grid pa-grid-3 pa-gap-4">
           {[1, 2, 3].map((i) => (
@@ -216,21 +271,50 @@ export default function FeatureFlagDetail() {
     )
   }
   
-  if (!flag) {
+  // Error state with retry
+  if (error && !flag) {
     return (
       <div>
-        <PageHeader title="Feature Flag Not Found" subtitle="The requested feature flag could not be found." />
+        <OfflineBanner />
+        <button
+          className="pa-btn pa-btn--ghost pa-mb-4"
+          onClick={() => navigate('/platform-admin/feature-flags')}
+        >
+          <span className="material-symbols-outlined">arrow_back</span>
+          Back to Feature Flags
+        </button>
+        <ErrorState
+          message={error}
+          onRetry={fetchFlag}
+          retryLabel="Retry"
+        />
+      </div>
+    )
+  }
+  
+  // Not found state
+  if (notFound || !flag) {
+    return (
+      <div>
+        <OfflineBanner />
+        <button
+          className="pa-btn pa-btn--ghost pa-mb-4"
+          onClick={() => navigate('/platform-admin/feature-flags')}
+        >
+          <span className="material-symbols-outlined">arrow_back</span>
+          Back to Feature Flags
+        </button>
         <Card>
           <div className="pa-empty">
             <div className="pa-empty-icon">
-              <span className="material-symbols-outlined" style={{ fontSize: '48px' }}>error</span>
+              <span className="material-symbols-outlined">flag</span>
             </div>
-            <h3 className="pa-empty-title">FLAG NOT FOUND</h3>
+            <h3 className="pa-empty-title">FEATURE FLAG NOT FOUND</h3>
             <p className="pa-empty-text">
               The feature flag you're looking for doesn't exist or has been deleted.
             </p>
             <Button variant="primary" onClick={() => navigate('/platform-admin/feature-flags')}>
-              Back to Flags
+              Back to Feature Flags
             </Button>
           </div>
         </Card>
@@ -240,13 +324,14 @@ export default function FeatureFlagDetail() {
   
   return (
     <div>
+      <OfflineBanner />
       <PageHeader
         title={`Feature Flag: ${flag.key}`}
         subtitle={flag.description || 'No description'}
       />
       
-      <div style={{ display: 'flex', gap: '16px', marginBottom: 'var(--pa-space-4)' }}>
-        <Button variant="ghost" onClick={() => navigate('/platform-admin/feature-flags')}>
+      <div className="pa-flex pa-flex-col sm:pa-flex-row pa-items-stretch sm:pa-items-center pa-gap-2 pa-mb-4" style={{ flexWrap: 'wrap' }}>
+        <Button variant="ghost" onClick={() => navigate('/platform-admin/feature-flags')} className="w-full sm:w-auto min-h-[44px]">
           ← Back to Flags
         </Button>
         <Badge variant={flag.deletedAt ? 'danger' : 'success'}>
@@ -258,7 +343,7 @@ export default function FeatureFlagDetail() {
       
       {/* Flag Info */}
       <Card title="Flag Information" style={{ marginBottom: 'var(--pa-space-4)' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--pa-space-4)' }}>
+        <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2" style={{ gap: 'var(--pa-space-4)' }}>
           <div>
             <div className="pa-body-s" style={{ color: 'var(--pa-n700)', marginBottom: '4px' }}>Key</div>
             <div className="pa-body-m" style={{ fontWeight: 600 }}>{flag.key}</div>
@@ -295,9 +380,10 @@ export default function FeatureFlagDetail() {
       </Card>
       
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: 'var(--pa-space-4)', borderBottom: '2px solid var(--pa-n100)' }}>
+      <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2 pa-mb-4" style={{ borderBottom: '2px solid var(--pa-n100)' }}>
         <button
           onClick={() => setActiveTab('overrides')}
+          className="w-full sm:w-auto min-h-[44px]"
           style={{
             padding: '12px 24px',
             background: 'none',
@@ -312,6 +398,7 @@ export default function FeatureFlagDetail() {
         </button>
         <button
           onClick={() => setActiveTab('audit')}
+          className="w-full sm:w-auto min-h-[44px]"
           style={{
             padding: '12px 24px',
             background: 'none',

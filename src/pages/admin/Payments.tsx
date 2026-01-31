@@ -1,16 +1,24 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import { useT } from '../../i18n/useI18n'
 import { getFeeAssignmentsForUser, getOrgPaymentSummary, formatCurrency } from '../../data/services/paymentsService'
+import { getStripeConnectStatus } from '../../data/services/paymentSettingsService'
+import { supabase } from '../../lib/supabase'
+import { getLink, RouteKeys } from '../../utils/routes'
 import { 
-  PageHeader, 
+  AdminPageHeader, 
   Badge, 
   StatCard, 
   PlatformDataTable, 
+  Button,
+  Card,
   type ColumnConfig 
 } from '../../components/platformAdmin'
+import { FeatureGatedButton } from '../../components/FeatureGatedButton'
+import { cn } from '../../utils/cn'
 
 interface PaymentDisplay {
   id: string
@@ -18,6 +26,7 @@ interface PaymentDisplay {
   fee_title: string
   total_display: string
   paid_display: string
+  remaining_display: string
   status: 'unpaid' | 'partial' | 'paid' | 'waived' | 'overdue'
   created_at: string
 }
@@ -33,16 +42,27 @@ export default function Payments() {
     outstanding: 0,
     collected: 0,
   })
+  const [hasAthletes, setHasAthletes] = useState<boolean | null>(null)
+  const [athleteCheckError, setAthleteCheckError] = useState<string | null>(null)
+  const [paymentsError, setPaymentsError] = useState<string | null>(null)
+  const [stripeConnected, setStripeConnected] = useState<boolean | null>(null)
+  const [stripeCheckLoading, setStripeCheckLoading] = useState(true)
 
-
+  const isMountedRef = useRef(true)
 
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
+  const t = useT()
+  
+  // Extract primitive values to avoid infinite loops in useEffect dependencies
+  const orgId = context.orgId
 
   const fetchPayments = useCallback(async () => {
     if (!isReady) return
 
     setLoading(true)
+    setPaymentsError(null)
 
     try {
       // Fetch fee assignments
@@ -50,20 +70,37 @@ export default function Payments() {
 
       if (error) {
         console.error('Error fetching payments:', error)
+        const errorMessage = error instanceof Error ? error.message : 'Failed to load payments'
+        setPaymentsError(errorMessage)
         setLoading(false)
         return
       }
 
       // Transform to display format
-      const displayPayments: PaymentDisplay[] = data.map(assignment => ({
-        id: assignment.id,
-        child_name: assignment.child_id ? getChildName(assignment.child_id) : 'Unknown',
-        fee_title: assignment.fee?.title ?? 'Fee',
-        total_display: formatCurrency(assignment.amount_due_cents),
-        paid_display: formatCurrency(assignment.amount_paid_cents),
-        status: assignment.status as PaymentDisplay['status'],
-        created_at: assignment.created_at,
-      }))
+      const displayPayments: PaymentDisplay[] = data.map(assignment => {
+        // Get athlete name from the joined athlete data
+        const athlete = (assignment as any).athlete
+        const athleteName = athlete 
+          ? `${athlete.first_name || ''} ${athlete.last_name || ''}`.trim() || 'Unknown'
+          : 'Unknown'
+        
+        // Handle both fake data (amount_due_cents) and real data (amount_cents) field names
+        const raw = assignment as any
+        const totalCents = raw.amount_due_cents ?? raw.amount_cents ?? 0
+        const paidCents = raw.amount_paid_cents ?? raw.paid_cents_total ?? 0
+        const balanceCents = raw.balance_cents ?? Math.max(0, totalCents - paidCents)
+        
+        return {
+          id: assignment.id,
+          child_name: athleteName,
+          fee_title: assignment.fee?.title ?? 'Fee',
+          total_display: formatCurrency(totalCents),
+          paid_display: formatCurrency(paidCents),
+          remaining_display: formatCurrency(balanceCents),
+          status: assignment.status as PaymentDisplay['status'],
+          created_at: assignment.created_at,
+        }
+      })
 
       // Apply filter
       let filtered = displayPayments
@@ -101,22 +138,141 @@ export default function Payments() {
     fetchPayments()
   }, [fetchPayments])
 
-  // Helper to get child name (in real implementation, comes from joined data)
-  const getChildName = (childId: string): string => {
-    const names: Record<string, string> = {
-      'child-emma-001': 'Emma Johnson',
-      'child-liam-002': 'Liam Williams',
-      'child-sophia-003': 'Sophia Brown',
-      'child-jackson-004': 'Jackson Davis',
+  // Check Stripe Connect status
+  useEffect(() => {
+    async function checkStripeStatus() {
+      if (!currentOrganization?.id) {
+        setStripeCheckLoading(false)
+        return
+      }
+      
+      try {
+        const { data: status, error } = await getStripeConnectStatus(currentOrganization.id)
+        if (error) {
+          console.error('Error checking Stripe status:', error)
+        }
+        if (isMountedRef.current) {
+          setStripeConnected(status?.connected ?? false)
+        }
+      } catch (err) {
+        console.error('Error checking Stripe status:', err)
+        if (isMountedRef.current) {
+          setStripeConnected(false)
+        }
+      } finally {
+        if (isMountedRef.current) {
+          setStripeCheckLoading(false)
+        }
+      }
     }
-    return names[childId] ?? 'Child'
-  }
+    
+    checkStripeStatus()
+  }, [currentOrganization?.id])
+
+  // Cleanup effect to prevent state updates after unmount
+  useEffect(() => {
+    // Reset to true on mount (handles StrictMode remounts)
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  // Check if organization has athletes with guardians (who can receive fees)
+  // This matches the logic in admin-create-fee function
+  const checkAthletesExists = useCallback(async () => {
+    if (!isReady || !orgId) {
+      if (isMountedRef.current) {
+        setHasAthletes(null)
+      }
+      return
+    }
+
+    try {
+      if (isMountedRef.current) {
+        setAthleteCheckError(null)
+      }
+      
+      // Check athlete_guardians table - fees can only be assigned to athletes with guardians
+      const { count, error } = await supabase
+        .from('athlete_guardians')
+        .select('athlete_id', { count: 'exact', head: true })
+        .eq('org_id', orgId)
+        .eq('status', 'active')
+        .limit(1)
+
+      if (error) {
+        throw error
+      }
+
+      // Count queries return { count: number | null }
+      const hasAny = (count ?? 0) > 0
+
+      // Check mounted before state update
+      if (isMountedRef.current) {
+        setHasAthletes(hasAny)
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      console.error('Error checking athletes:', errorMsg)
+
+      // Fail closed - disable button on error
+      if (isMountedRef.current) {
+        setAthleteCheckError('Unable to verify athletes. Please refresh or contact support.')
+        setHasAthletes(false)
+      }
+    }
+  }, [isReady, orgId])
+
+  // Effect to check athletes when dependencies change
+  useEffect(() => {
+    checkAthletesExists()
+  }, [checkAthletesExists])
+
+  // Re-check athletes when page becomes visible (user returns from adding athlete)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isReady && orgId) {
+        checkAthletesExists()
+      }
+    }
+
+    const handleFocus = () => {
+      if (isReady && orgId) {
+        checkAthletesExists()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [isReady, orgId, checkAthletesExists])
+
 
   const columns: ColumnConfig<PaymentDisplay>[] = [
-    { id: 'child_name', label: 'Athlete' },
+    { 
+        id: 'child_name', 
+        label: 'Athlete',
+        render: (row) => <span className="pa-font-bold pa-text-slate-900">{row.child_name}</span>
+    },
     { id: 'fee_title', label: 'Fee' },
-    { id: 'total_display', label: 'Total', align: 'right' },
+    { 
+        id: 'total_display', 
+        label: 'Total', 
+        align: 'right',
+        render: (row) => <span className="pa-font-semibold">{row.total_display}</span>
+    },
     { id: 'paid_display', label: 'Paid', align: 'right' },
+    { 
+      id: 'remaining_display', 
+      label: 'Remaining', 
+      align: 'right',
+      render: (row) => <span className="pa-font-semibold">{row.remaining_display}</span>
+    },
     { 
       id: 'status', 
       label: 'Status',
@@ -124,29 +280,366 @@ export default function Payments() {
         const variant = 
           row.status === 'paid' ? 'success' : 
           row.status === 'partial' ? 'warning' : 'danger'
-        return <Badge variant={variant}>{row.status.toUpperCase()}</Badge>
+        const statusLabel = 
+          row.status === 'paid' ? 'Paid in Full' :
+          row.status === 'partial' ? 'Partially Paid' :
+          row.status === 'waived' ? 'Waived' :
+          row.status === 'overdue' ? 'Overdue' :
+          'Unpaid'
+        return <Badge variant={variant}>{statusLabel}</Badge>
       }
     },
     { 
       id: 'created_at', 
       label: 'Assigned',
-      render: (row) => new Date(row.created_at).toLocaleDateString()
+      render: (row) => <span className="pa-text-sm pa-text-slate-500">{new Date(row.created_at).toLocaleDateString()}</span>
     },
   ]
 
+  const isButtonDisabled = hasAthletes === false || hasAthletes === null
+  const buttonTooltip = hasAthletes === false 
+    ? "No athletes with guardians found. Athletes must have a guardian linked before fees can be assigned."
+    : hasAthletes === null 
+    ? "Checking athletes..."
+    : ""
+
+  // Show loading state while checking Stripe
+  if (stripeCheckLoading) {
+    return (
+      <div className="pa-root">
+        <AdminPageHeader 
+          title={t('admin.payments.title')}
+          subtitle={t('admin.payments.subtitle')} 
+        />
+        <Card>
+          <div style={{ padding: '48px', textAlign: 'center' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--pa-n400)', animation: 'spin 1s linear infinite' }}>progress_activity</span>
+            <p style={{ marginTop: '16px', color: 'var(--pa-n500)' }}>{t('common.loading')}</p>
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
+  // Show onboarding wall if Stripe Connect is not set up
+  if (!stripeConnected) {
+    return (
+      <div className="pa-root">
+        <AdminPageHeader 
+          title={t('admin.payments.title')}
+          subtitle={t('admin.payments.subtitle')} 
+        />
+
+        {/* Introduction to Payments - Nike-style Hero with Onboarding */}
+        <Card noPadding>
+          {/* Hero Section with Background Image and Dark Overlay */}
+          <div style={{
+            position: 'relative',
+            backgroundImage: 'url(/images/payments.png)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            borderRadius: '12px',
+            overflow: 'hidden',
+          }}>
+            {/* Dark overlay */}
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.8) 100%)',
+            }} />
+            
+            {/* All Content on top of hero */}
+            <div style={{
+              position: 'relative',
+              zIndex: 10,
+              padding: '56px 48px',
+            }}>
+              {/* Hero Text */}
+              <div style={{ maxWidth: '720px', marginBottom: '40px' }}>
+                {/* Badge */}
+                <div style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  padding: '6px 14px',
+                  borderRadius: '9999px',
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  backdropFilter: 'blur(8px)',
+                  marginBottom: '20px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                }}>
+                  <span style={{ 
+                    position: 'relative',
+                    display: 'inline-flex',
+                    height: '8px',
+                    width: '8px'
+                  }}>
+                    <span style={{
+                      position: 'absolute',
+                      display: 'inline-flex',
+                      height: '100%',
+                      width: '100%',
+                      borderRadius: '50%',
+                      background: '#fff',
+                      opacity: 0.75,
+                      animation: 'ping 1s cubic-bezier(0, 0, 0.2, 1) infinite'
+                    }}></span>
+                    <span style={{
+                      position: 'relative',
+                      display: 'inline-flex',
+                      borderRadius: '50%',
+                      height: '8px',
+                      width: '8px',
+                      background: '#fff'
+                    }}></span>
+                  </span>
+                  <span style={{ 
+                    color: '#fff',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em'
+                  }}>{t('admin.payments.onboarding.badge')}</span>
+                </div>
+
+                {/* Title */}
+                <h1 style={{ 
+                  fontSize: '64px', 
+                  fontWeight: 900, 
+                  color: '#fff',
+                  marginBottom: '16px',
+                  fontFamily: 'var(--pa-font-display, Oswald, sans-serif)',
+                  letterSpacing: '-0.03em',
+                  lineHeight: 1.1,
+                  textTransform: 'uppercase',
+                  textShadow: '0 2px 12px rgba(0,0,0,0.3)',
+                }}>
+                  {t('admin.payments.onboarding.title')}
+                </h1>
+                
+                {/* Description */}
+                <p style={{ 
+                  fontSize: '20px', 
+                  color: 'rgba(255,255,255,0.9)',
+                  lineHeight: 1.6,
+                  fontWeight: 500,
+                  maxWidth: '560px',
+                }}>
+                  {t('admin.payments.onboarding.description')}
+                </p>
+              </div>
+
+              {/* Cards Grid - Translucent on hero */}
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gap: '20px',
+                marginBottom: '28px',
+              }}>
+                {/* Payment Setup Card */}
+                <div style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  borderRadius: '16px',
+                  padding: '24px',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                }}>
+                  <h3 style={{ 
+                    fontSize: '16px', 
+                    fontWeight: 800, 
+                    color: '#fff', 
+                    fontFamily: 'var(--pa-font-display, Oswald, sans-serif)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.02em',
+                    marginBottom: '12px',
+                  }}>
+                    {t('admin.payments.onboarding.setup.title')}
+                  </h3>
+                  <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', lineHeight: 1.7 }}>
+                    {t('admin.payments.onboarding.setup.description')}
+                  </p>
+                </div>
+
+                {/* Withdrawals Card */}
+                <div style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  borderRadius: '16px',
+                  padding: '24px',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                }}>
+                  <h3 style={{ 
+                    fontSize: '16px', 
+                    fontWeight: 800, 
+                    color: '#fff', 
+                    fontFamily: 'var(--pa-font-display, Oswald, sans-serif)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.02em',
+                    marginBottom: '12px',
+                  }}>
+                    {t('admin.payments.onboarding.withdrawals.title')}
+                  </h3>
+                  <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', lineHeight: 1.7 }}>
+                    {t('admin.payments.onboarding.withdrawals.description')}
+                  </p>
+                </div>
+
+                {/* Assigning Fees Card */}
+                <div style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  borderRadius: '16px',
+                  padding: '24px',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                }}>
+                  <h3 style={{ 
+                    fontSize: '16px', 
+                    fontWeight: 800, 
+                    color: '#fff', 
+                    fontFamily: 'var(--pa-font-display, Oswald, sans-serif)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.02em',
+                    marginBottom: '12px',
+                  }}>
+                    {t('admin.payments.onboarding.fees.title')}
+                  </h3>
+                  <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', lineHeight: 1.7 }}>
+                    {t('admin.payments.onboarding.fees.description')}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Example and CTA Row */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '24px', marginTop: '24px' }}>
+          {/* Real-world Example */}
+          <div style={{
+            background: 'rgba(251, 191, 36, 0.15)',
+            border: '1px solid rgba(251, 191, 36, 0.3)',
+            borderRadius: '12px',
+            padding: '18px 22px',
+            alignSelf: 'start',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#fbbf24', marginTop: '2px' }}>lightbulb</span>
+              <div>
+                <h4 style={{ 
+                  fontSize: '12px', 
+                  fontWeight: 700, 
+                  color: '#fbbf24', 
+                  marginBottom: '6px', 
+                  fontFamily: 'var(--pa-font-display, Oswald, sans-serif)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}>
+                  {t('admin.payments.onboarding.example.title')}
+                </h4>
+                <p style={{ fontSize: '14px', color: '#374151', lineHeight: 1.6 }}>
+                  {t('admin.payments.onboarding.example.description')}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Complete Payment Setup CTA */}
+          <Card>
+            <div style={{
+              background: '#fff',
+              borderRadius: '16px',
+              padding: '36px',
+              textAlign: 'center',
+            }}>
+              <h3 style={{ 
+                fontSize: '24px', 
+                fontWeight: 900, 
+                color: '#0B0F14', 
+                marginBottom: '10px',
+                fontFamily: 'var(--pa-font-display, Oswald, sans-serif)',
+                textTransform: 'uppercase',
+                letterSpacing: '-0.01em',
+              }}>
+                {t('admin.payments.onboarding.cta.title')}
+              </h3>
+              <p style={{ 
+                fontSize: '15px', 
+                color: '#4A5568', 
+                lineHeight: 1.6,
+                maxWidth: '440px',
+                margin: '0 auto 24px'
+              }}>
+                {t('admin.payments.onboarding.cta.description')}
+              </p>
+              <Button 
+                variant="primary"
+                icon="arrow_forward"
+                onClick={() => navigate('/admin/organization?tab=payments')}
+                style={{
+                  padding: '16px 36px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                {t('admin.payments.onboarding.cta.button')}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  // Show full payments UI when Stripe is connected
   return (
     <div className="pa-root">
-      <PageHeader 
-        title="Payments" 
+      <AdminPageHeader 
+        title={t('admin.payments.title')}
+        subtitle={t('admin.payments.subtitle')} 
         actions={
-          <button className="pa-btn pa-btn--primary" onClick={() => navigate('/admin/payments/create')}>
-            <span className="material-symbols-outlined">add</span>
+          <FeatureGatedButton
+            actionKey="create_fee"
+            onClick={() => navigate(getLink(RouteKeys.ADMIN_CREATE_FEE))}
+            disabled={isButtonDisabled}
+            title={buttonTooltip}
+            themeNamespace="oa"
+            variant="primary"
+            className="w-full sm:w-auto"
+          >
             Assign Fee
-          </button>
+          </FeatureGatedButton>
         }
       />
 
-      <div className="pa-grid pa-grid-2 pa-mb-5">
+      {/* Show error message if athlete check failed */}
+      {athleteCheckError && (
+        <Card className="pa-mb-4" noPadding>
+          <div className="pa-p-4" style={{ background: 'var(--pa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--pa-danger, #ef4444)' }}>
+            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-danger-dark, #991b1b)' }}>{athleteCheckError}</div>
+          </div>
+        </Card>
+      )}
+
+      {/* Show error message if payments fetch failed */}
+      {paymentsError && (
+        <Card className="pa-mb-4" noPadding>
+          <div className="pa-p-4" style={{ background: 'var(--pa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--pa-danger, #ef4444)' }}>
+            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-danger-dark, #991b1b)' }}>{paymentsError}</div>
+          </div>
+        </Card>
+      )}
+
+      {/* Show info message when no athletes with guardians found */}
+      {hasAthletes === false && !athleteCheckError && (
+        <Card className="pa-mb-4" noPadding>
+          <div className="pa-p-4" style={{ background: 'var(--pa-info-bg, #eff6ff)', borderLeft: '4px solid var(--pa-info, #3b82f6)' }}>
+            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-info-dark, #1e40af)' }}>
+                No athletes with guardians found. To assign fees, athletes must have a guardian linked to them (the guardian is responsible for payment).
+            </div>
+          </div>
+        </Card>
+      )}
+
+      <div className={cn('pa-grid', 'pa-grid-2', 'pa-gap-6', 'pa-mb-8')}>
         <StatCard 
           label="COLLECTED" 
           value={`$${stats.collected.toLocaleString()}`}
@@ -159,18 +652,19 @@ export default function Payments() {
         />
       </div>
 
-      <div className="pa-flex pa-gap-2 pa-mb-4">
+      <div className={cn('pa-flex', 'pa-gap-2', 'pa-mb-6', 'pa-mt-2')}>
         {(['all', 'unpaid', 'partial', 'paid'] as const).map((f) => (
-          <button
+          <Button
             key={f}
-            className={`pa-btn pa-btn--compact ${filter === f ? 'pa-btn--primary' : 'pa-btn--secondary'}`}
+            variant={filter === f ? 'primary' : 'secondary'}
+            size="compact"
             onClick={() => {
               setFilter(f)
               setPage(0)
             }}
           >
             {f.toUpperCase()}
-          </button>
+          </Button>
         ))}
       </div>
 

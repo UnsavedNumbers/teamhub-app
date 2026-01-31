@@ -1,46 +1,78 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm, Controller, useFieldArray } from 'react-hook-form'
+import { startTransition } from 'react'
 import { useUserContext } from '../../hooks/useUserContext'
-import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
+import { useOffline } from '../../hooks/useOffline'
+import { USE_FAKE_DATA } from '../../data/config'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { supabase } from '../../lib/supabase'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
+import { getLink } from '../../utils/routes'
+import { showSuccess, showError } from '../../utils/toast'
+import { useFeatureGate } from '../../lib/featureGate'
 import { 
-  PageHeader, 
+  AdminPageHeader, 
   Card, 
   Button, 
   Input, 
   Select,
+  DatePicker,
+  TimePicker,
   Checkbox
 } from '../../components/platformAdmin'
+import { ConfirmDialog } from '../../components/platformAdmin/ConfirmDialog'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
+import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
 import { 
     EventFormData, 
     EVENT_TYPE_LABELS, 
     EventType,
+    isValidEventTimeOrder,
+    RecurringEditMode,
 } from '../../types/calendar'
 
 interface Team { id: string; name: string }
 interface Season { id: string; name: string; team_id: string }
 
+const supabaseAny = supabase as any
+
+/** Format Date for datetime-local input (YYYY-MM-DDTHH:mm) */
+function toDatetimeLocal(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 export default function EditEvent() {
-  const { eventId } = useParams<{ eventId: string }>()
+  const { id: eventId } = useParams<{ id: string }>()
   const [teams, setTeams] = useState<Team[]>([])
   const [seasons, setSeasons] = useState<Season[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showRsvpChangeDialog, setShowRsvpChangeDialog] = useState(false)
+  const [pendingRsvpChange, setPendingRsvpChange] = useState<EventFormData | null>(null)
   const [showLocationDetails, setShowLocationDetails] = useState(false)
   const [showRecurring, setShowRecurring] = useState(false)
-
   const [hasExistingRSVPs, setHasExistingRSVPs] = useState(false)
-
+  const [notFound, setNotFound] = useState(false)
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [recurringEditMode, setRecurringEditMode] = useState<RecurringEditMode>('this_only')
+  const [deleteDialog, setDeleteDialog] = useState(false)
+  const [cancelDialog, setCancelDialog] = useState(false)
+  const [actionLoading, setActionLoading] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [hasPaidOrders, setHasPaidOrders] = useState(false)
+  const [ticketedEventId, setTicketedEventId] = useState<string | null>(null)
 
   const { context, isReady } = useUserContext()
+  const { allowed: ticketingAllowed, loading: ticketingGateLoading } = useFeatureGate('ticketing')
   const navigate = useNavigate()
   const t = useT()
+  const { isOffline } = useOffline()
 
-  const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<EventFormData>({
+  const { control, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm<EventFormData>({
     defaultValues: { 
       title: '', 
       type: 'practice', 
@@ -82,19 +114,37 @@ export default function EditEvent() {
 
   const watchTeamId = watch('team_id')
   const watchRSVPEnabled = watch('rsvp_enabled')
-  const watchRecurringEnabled = watch('recurring.enabled')
+  const watchTicketingEnabled = watch('ticketing.is_ticketed')
+
+  const { fields: ticketTypeFields, append: appendTicketType, remove: removeTicketType } = useFieldArray({
+    control,
+    name: 'ticketing.ticket_types',
+  })
 
 
   const fetchEvent = useCallback(async () => {
     if (!isReady || !eventId) return
     
+    // Validate eventId format (UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(eventId)) {
+      setError('Invalid event ID format')
+      setNotFound(true)
+      setLoading(false)
+      return
+    }
+    
     setLoading(true)
+    setError(null)
+    setNotFound(false)
+    
     try {
       const { data: event, error: eventError } = await supabase
         .from('events')
         .select(`
           *,
-          event_location:event_locations(*)
+          event_location:event_locations(*),
+          recurring_pattern:recurring_event_patterns(*)
         `)
         .eq('id', eventId)
         .single() as { data: {
@@ -121,14 +171,42 @@ export default function EditEvent() {
             city: string | null
             state: string | null
             postal_code: string | null
+            place_id: string | null
+            latitude: number | null
+            longitude: number | null
             is_tbd: boolean | null
             is_virtual: boolean | null
             virtual_link: string | null
           }
-        } | null; error: { message?: string } | null }
+          recurring_pattern?: {
+            id: string
+            frequency: string
+            days_of_week: number[]
+            end_date: string | null
+            max_occurrences: number | null
+          } | null
+        } | null; error: { message?: string; code?: string } | null }
 
-      if (eventError) throw eventError
-      if (!event) throw new Error('Event not found')
+      if (eventError) {
+        // Check if it's a permission error or not found
+        if (eventError.code === 'PGRST116' || eventError.message?.includes('No rows')) {
+          setNotFound(true)
+          setError('Event not found')
+        } else if (eventError.message?.includes('permission') || eventError.message?.includes('RLS')) {
+          setError('You do not have permission to view this event')
+        } else {
+          throw eventError
+        }
+        setLoading(false)
+        return
+      }
+      
+      if (!event) {
+        setNotFound(true)
+        setError('Event not found')
+        setLoading(false)
+        return
+      }
 
       // Check for existing RSVPs with safe error handling
       let generalCount = 0
@@ -161,7 +239,7 @@ export default function EditEvent() {
       const endDate = event.end_time ? new Date(event.end_time) : new Date()
       
       setValue('title', event.title || '')
-      setValue('type', event.type || 'practice')
+      setValue('type', (event.type as any) || 'practice')
       setValue('team_id', event.team_id || '')
       setValue('season_id', event.season_id || '')
       setValue('start_time', new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000).toISOString().slice(0, 16))
@@ -174,7 +252,7 @@ export default function EditEvent() {
       setValue('weather_dependent', event.weather_dependent ?? false)
       setValue('external_link', event.external_link || '')
       setValue('rsvp_enabled', event.rsvp_enabled ?? false)
-      setValue('rsvp_type', (event.rsvp_enabled && event.rsvp_type) ? event.rsvp_type : null)
+      setValue('rsvp_type', (event.rsvp_enabled && event.rsvp_type) ? (event.rsvp_type as any) : null)
 
       if (event.event_location) {
         setValue('location.venue_name', event.event_location.venue_name || '')
@@ -189,13 +267,77 @@ export default function EditEvent() {
         setShowLocationDetails(true)
       }
 
+      // Load recurring pattern if it exists
+      if (event.recurring_pattern) {
+        setIsRecurring(true)
+        setValue('recurring.enabled', true)
+        setValue('recurring.frequency', (event.recurring_pattern.frequency as any) || 'weekly')
+        setValue('recurring.days_of_week', event.recurring_pattern.days_of_week || [])
+        setValue('recurring.end_date', event.recurring_pattern.end_date || '')
+        setValue('recurring.max_occurrences', event.recurring_pattern.max_occurrences?.toString() || '')
+        setShowRecurring(true)
+      }
+
+      // Load ticketing if linked
+      const { data: ticketedEvent } = await supabase
+        .from('ticketed_events')
+        .select('id, event_type, sales_start_at, sales_end_at, status')
+        .eq('event_id', eventId)
+        .maybeSingle() as { data: { id: string; event_type: string; sales_start_at: string | null; sales_end_at: string | null; status: string } | null }
+
+      if (ticketedEvent) {
+        setTicketedEventId(ticketedEvent.id)
+        setValue('ticketing.is_ticketed', true)
+        setValue('ticketing.event_type', ticketedEvent.event_type || 'other')
+        setValue('ticketing.sales_start_at', ticketedEvent.sales_start_at
+          ? new Date(new Date(ticketedEvent.sales_start_at).getTime() - new Date(ticketedEvent.sales_start_at).getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+          : '')
+        setValue('ticketing.sales_end_at', ticketedEvent.sales_end_at
+          ? new Date(new Date(ticketedEvent.sales_end_at).getTime() - new Date(ticketedEvent.sales_end_at).getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+          : '')
+        setValue('ticketing.status', ticketedEvent.status || 'draft')
+
+        const { data: ticketTypes } = await supabase
+          .from('ticket_types')
+          .select('id, name, price_cents, capacity_total, capacity_remaining, sort_order')
+          .eq('ticketed_event_id', ticketedEvent.id)
+          .order('sort_order') as { data: { id: string; name: string; price_cents: number; capacity_total: number | null; capacity_remaining: number | null; sort_order: number }[] | null }
+
+        if (ticketTypes?.length) {
+          const formTicketTypes = ticketTypes.map(tt => {
+            const sold = (tt.capacity_total != null && tt.capacity_remaining != null)
+              ? tt.capacity_total - tt.capacity_remaining
+              : 0
+            return {
+              id: tt.id,
+              soldCount: sold,
+              name: tt.name,
+              price_dollars: (tt.price_cents / 100).toFixed(2),
+              capacity: tt.capacity_total != null ? String(tt.capacity_total) : ''
+            }
+          })
+          setValue('ticketing.ticket_types', formTicketTypes)
+        }
+
+        const { count: paidCount } = await supabase
+          .from('ticket_orders')
+          .select('*', { count: 'exact', head: true })
+          .eq('ticketed_event_id', ticketedEvent.id)
+          .eq('status', 'paid')
+        setHasPaidOrders((paidCount ?? 0) > 0)
+      }
+
       // Fetch teams and seasons
       await fetchTeams()
       if (event.team_id) {
         await fetchSeasons(event.team_id)
       }
     } catch (err) {
-      setError(getErrorMessage(err) || 'Failed to load event')
+      const errorMessage = getErrorMessage(err) || 'Failed to load event'
+      setError(errorMessage)
+      if (err instanceof Error && (err.message.includes('permission') || err.message.includes('RLS'))) {
+        setError('You do not have permission to view this event')
+      }
     } finally {
       setLoading(false)
     }
@@ -208,7 +350,7 @@ export default function EditEvent() {
         .from('teams')
         .select('id, name')
         .eq('org_id', context.orgId!)
-        .eq('status', 'active')
+        .eq('is_active', true)
         .order('name')
     
     if (!error && data) {
@@ -228,7 +370,8 @@ export default function EditEvent() {
     
     if (!error && data) {
        // Map season_id to id
-       const mappedSeasons = data.map(s => ({
+       const dataAny = data as any[]
+       const mappedSeasons = dataAny.map((s: any) => ({
           id: s.season_id,
           name: s.name,
           team_id: teamId
@@ -245,8 +388,51 @@ export default function EditEvent() {
     if (watchTeamId && isReady) fetchSeasons(watchTeamId) 
   }, [watchTeamId, isReady, fetchSeasons])
 
+  const handleConfirmRsvpChange = async () => {
+    if (!pendingRsvpChange) return
+    setShowRsvpChangeDialog(false)
+    // Continue with the submission
+    await onSubmit(pendingRsvpChange)
+    setPendingRsvpChange(null)
+  }
+
   const onSubmit = async (data: EventFormData) => {
-    if (!eventId) return
+    if (!eventId) {
+      setError('Event ID is required')
+      return
+    }
+
+    // Validate event ID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(eventId)) {
+      setError('Invalid event ID format')
+      return
+    }
+
+    // Check offline mode
+    if (isOffline) {
+      setError('Cannot save changes while offline. Please check your connection and try again.')
+      showError('You are currently offline. Changes cannot be saved.')
+      return
+    }
+
+    // Check demo mode
+    if (USE_FAKE_DATA) {
+      showError('Demo mode: Changes are not saved to the database.')
+      // Still allow navigation to show the flow works
+      setTimeout(() => {
+        navigate(getLink('admin.events.list'))
+      }, 1500)
+      return
+    }
+
+    // Validate time order
+    if (data.start_time && data.end_time) {
+      if (!isValidEventTimeOrder(data.start_time, data.end_time, data.arrival_time || null)) {
+        setError('Invalid time order: End time must be after start time, and arrival time must be before start time.')
+        return
+      }
+    }
     
     setSaving(true)
     setError(null)
@@ -261,13 +447,11 @@ export default function EditEvent() {
           .single() as { data: { rsvp_type: string | null } | null; error: { message?: string } | null }
 
         if (!currentEventError && currentEvent?.rsvp_type && currentEvent.rsvp_type !== data.rsvp_type) {
-          const confirmChange = window.confirm(
-            'Changing RSVP type will delete existing RSVP responses. Are you sure?'
-          )
-          if (!confirmChange) {
-            setSaving(false)
-            return
-          }
+          // Store the data to save after confirmation
+          setPendingRsvpChange(data)
+          setShowRsvpChangeDialog(true)
+          setSaving(false)
+          return
         }
       }
 
@@ -279,7 +463,7 @@ export default function EditEvent() {
             p_rsvp_enabled: data.rsvp_enabled ?? false,
             p_rsvp_type: data.rsvp_type || null,
             p_clear_existing: true // User confirmed if needed
-          })
+          } as any)
 
         if (configError) {
           const configData = (configResult as unknown as { error?: string; has_data?: boolean }) || {}
@@ -293,23 +477,25 @@ export default function EditEvent() {
       }
 
       // Update event
+      type EventUpdate = Database['public']['Tables']['events']['Update']
+      const eventUpdateData = {
+        title: data.title,
+        type: data.type,
+        team_id: data.team_id,
+        season_id: data.season_id,
+        start_time: new Date(data.start_time).toISOString(),
+        end_time: data.end_time ? new Date(data.end_time).toISOString() : undefined,
+        arrival_time: data.arrival_time ? new Date(data.arrival_time).toISOString() : null,
+        timezone: data.timezone,
+        notes: data.notes || null,
+        uniform_notes: data.uniform_notes || null,
+        equipment_notes: data.equipment_notes || null,
+        weather_dependent: data.weather_dependent,
+        external_link: data.external_link || null,
+      } satisfies EventUpdate
       const { error: updateError } = await supabase
         .from('events')
-        .update({
-          title: data.title,
-          type: data.type,
-          team_id: data.team_id,
-          season_id: data.season_id,
-          start_time: new Date(data.start_time).toISOString(),
-          end_time: data.end_time ? new Date(data.end_time).toISOString() : null,
-          arrival_time: data.arrival_time ? new Date(data.arrival_time).toISOString() : null,
-          timezone: data.timezone,
-          notes: data.notes || null,
-          uniform_notes: data.uniform_notes || null,
-          equipment_notes: data.equipment_notes || null,
-          weather_dependent: data.weather_dependent,
-          external_link: data.external_link || null,
-        } as Database['public']['Tables']['events']['Update'])
+        .update(eventUpdateData)
         .eq('id', eventId)
 
       if (updateError) throw updateError
@@ -322,36 +508,286 @@ export default function EditEvent() {
         .single()
 
       if (locationData) {
+        type LocationUpdate = Database['public']['Tables']['event_locations']['Update']
+        const locUpdateData = {
+          venue_name: data.location.venue_name || null,
+          address_line1: data.location.address_line1 || null,
+          city: data.location.city || null,
+          state: data.location.state || null,
+          postal_code: data.location.postal_code || null,
+          place_id: data.location.place_id || null,
+          latitude: data.location.latitude ? parseFloat(data.location.latitude) : null,
+          longitude: data.location.longitude ? parseFloat(data.location.longitude) : null,
+          is_tbd: data.location.is_tbd,
+          is_virtual: data.location.is_virtual,
+          virtual_link: data.location.virtual_link || null
+        } as LocationUpdate & { place_id: string | null }
         await supabase
           .from('event_locations')
-          .update({
-            venue_name: data.location.venue_name || null,
-            address_line1: data.location.address_line1 || null,
-            city: data.location.city || null,
-            state: data.location.state || null,
-            postal_code: data.location.postal_code || null,
-            is_tbd: data.location.is_tbd,
-            is_virtual: data.location.is_virtual,
-            virtual_link: data.location.virtual_link || null
-          })
-          .eq('id', locationData.id)
+          .update(locUpdateData)
+          .eq('id', (locationData as any).id)
       } else {
-        await supabase.from('event_locations').insert({
+        type LocationInsert = Database['public']['Tables']['event_locations']['Insert']
+        const locInsertData = {
           event_id: eventId,
           venue_name: data.location.venue_name || null,
           address_line1: data.location.address_line1 || null,
           city: data.location.city || null,
           state: data.location.state || null,
           postal_code: data.location.postal_code || null,
+          place_id: data.location.place_id || null,
+          latitude: data.location.latitude ? parseFloat(data.location.latitude) : null,
+          longitude: data.location.longitude ? parseFloat(data.location.longitude) : null,
           is_tbd: data.location.is_tbd,
           is_virtual: data.location.is_virtual,
           virtual_link: data.location.virtual_link || null
-        } as Database['public']['Tables']['event_locations']['Insert'])
+        } as LocationInsert & { place_id: string | null }
+        const { error: locInsertError } = await supabase.from('event_locations').insert(locInsertData)
+        if (locInsertError) {
+          console.error('Location insert error:', locInsertError)
+          // Don't fail the whole update if location insert fails
+        }
       }
 
-      navigate('/admin/events')
-    } catch (err: unknown) { 
-      setError(getErrorMessage(err) || 'Failed to update event') 
+      // Update recurring pattern if needed
+      if (data.recurring?.enabled) {
+        const { data: existingPattern } = await supabase
+          .from('recurring_event_patterns')
+          .select('id')
+          .eq('parent_event_id', eventId)
+          .single()
+
+        if (existingPattern) {
+          type RecurringPatternUpdate = Database['public']['Tables']['recurring_event_patterns']['Update']
+          const patternUpdate: RecurringPatternUpdate = {
+            frequency: data.recurring.frequency as Database['public']['Enums']['recurrence_frequency'],
+            days_of_week: data.recurring.days_of_week.length > 0 ? data.recurring.days_of_week : [new Date(data.start_time).getDay()],
+            end_date: data.recurring.end_date || null,
+            max_occurrences: data.recurring.max_occurrences ? parseInt(data.recurring.max_occurrences) : null
+          }
+          const { error: patternError } = await supabase
+            .from('recurring_event_patterns')
+            .update(patternUpdate)
+            .eq('id', (existingPattern as any).id)
+          if (patternError) {
+            console.error('Recurring pattern update error:', patternError)
+            // Don't fail the whole update
+          }
+        } else if (data.recurring.enabled) {
+          type RecurringPatternInsert = Database['public']['Tables']['recurring_event_patterns']['Insert']
+          const patternInsert: RecurringPatternInsert = {
+            parent_event_id: eventId,
+            frequency: data.recurring.frequency as Database['public']['Enums']['recurrence_frequency'],
+            days_of_week: data.recurring.days_of_week.length > 0 ? data.recurring.days_of_week : [new Date(data.start_time).getDay()],
+            end_date: data.recurring.end_date || null,
+            max_occurrences: data.recurring.max_occurrences ? parseInt(data.recurring.max_occurrences) : null
+          }
+          const { error: patternError } = await supabase
+            .from('recurring_event_patterns')
+            .insert(patternInsert)
+          if (patternError) {
+            console.error('Recurring pattern insert error:', patternError)
+            // Don't fail the whole update
+          }
+        }
+      }
+
+      // Handle ticketing: create or update ticketed_events and ticket_types
+      if (data.ticketing?.is_ticketed) {
+        const { data: teamDataForTicketing } = await supabase.from('teams').select('org_id').eq('id', data.team_id).single()
+        if (!teamDataForTicketing?.org_id) {
+          throw new Error('Failed to get organization ID from team')
+        }
+        const orgId = teamDataForTicketing.org_id
+
+        if (!ticketedEventId) {
+          // Create ticketed_events and ticket_types
+          type TicketedEventInsert = Database['public']['Tables']['ticketed_events']['Insert']
+          const ticketedEventData: TicketedEventInsert = {
+            event_id: eventId,
+            org_id: orgId,
+            team_id: data.team_id,
+            event_type: data.ticketing.event_type as Database['public']['Enums']['ticketed_event_type'],
+            title: data.title,
+            description: data.notes || null,
+            starts_at: new Date(data.start_time).toISOString(),
+            ends_at: new Date(data.end_time).toISOString(),
+            timezone: data.timezone,
+            venue_name: data.location.venue_name?.trim() || null,
+            venue_address_line1: data.location.address_line1?.trim() || null,
+            venue_city: data.location.city?.trim() || null,
+            venue_state: data.location.state?.trim() || null,
+            venue_postal_code: data.location.postal_code?.trim() || null,
+            venue_country: 'US',
+            venue_is_virtual: data.location.is_virtual,
+            venue_virtual_link: data.location.virtual_link?.trim() || null,
+            sales_start_at: data.ticketing.sales_start_at ? new Date(data.ticketing.sales_start_at).toISOString() : null,
+            sales_end_at: data.ticketing.sales_end_at ? new Date(data.ticketing.sales_end_at).toISOString() : null,
+            status: data.ticketing.status as Database['public']['Enums']['ticketed_event_status'],
+          }
+          const { data: createdTe, error: teError } = await supabase
+            .from('ticketed_events')
+            .insert(ticketedEventData)
+            .select('id')
+            .single()
+          if (teError) throw new Error(`Ticketing setup failed: ${teError.message}`)
+          if (!createdTe) throw new Error('Failed to create ticketed event')
+          const newTeId = createdTe.id
+
+          if (data.ticketing.ticket_types?.length) {
+            type TicketTypeInsert = Database['public']['Tables']['ticket_types']['Insert']
+            const inserts: TicketTypeInsert[] = data.ticketing.ticket_types
+              .filter(tt => tt.name.trim() !== '')
+              .map((tt, index) => {
+                const priceCents = Math.round((parseFloat(tt.price_dollars) || 0) * 100)
+                const capStr = tt.capacity.trim()
+                const capacityTotal = capStr === '' ? null : (parseInt(capStr, 10) || null)
+                const capacityRemaining = capacityTotal
+                return {
+                  org_id: orgId,
+                  ticketed_event_id: newTeId,
+                  name: tt.name.trim(),
+                  price_cents: priceCents,
+                  currency: 'USD',
+                  capacity_total: capacityTotal && capacityTotal > 0 ? capacityTotal : null,
+                  capacity_remaining: capacityRemaining && capacityRemaining > 0 ? capacityRemaining : null,
+                  sort_order: index,
+                  is_active: true,
+                } satisfies TicketTypeInsert
+              })
+            if (inserts.length > 0) {
+              const { error: ttError } = await supabase.from('ticket_types').insert(inserts)
+              if (ttError) throw new Error(`Failed to create ticket types: ${ttError.message}`)
+            }
+          }
+        } else {
+          // Update ticketed_events
+          type TicketedEventUpdate = Database['public']['Tables']['ticketed_events']['Update']
+          const teUpdate: TicketedEventUpdate = {
+            title: data.title,
+            description: data.notes || null,
+            starts_at: new Date(data.start_time).toISOString(),
+            ends_at: new Date(data.end_time).toISOString(),
+            timezone: data.timezone,
+            venue_name: data.location.venue_name?.trim() || null,
+            venue_address_line1: data.location.address_line1?.trim() || null,
+            venue_city: data.location.city?.trim() || null,
+            venue_state: data.location.state?.trim() || null,
+            venue_postal_code: data.location.postal_code?.trim() || null,
+            venue_country: 'US',
+            venue_is_virtual: data.location.is_virtual,
+            venue_virtual_link: data.location.virtual_link?.trim() || null,
+            sales_start_at: data.ticketing.sales_start_at ? new Date(data.ticketing.sales_start_at).toISOString() : null,
+            sales_end_at: data.ticketing.sales_end_at ? new Date(data.ticketing.sales_end_at).toISOString() : null,
+            status: data.ticketing.status as Database['public']['Enums']['ticketed_event_status'],
+          }
+          if (!hasPaidOrders) {
+            (teUpdate as Record<string, unknown>).event_type = data.ticketing.event_type
+          }
+          const { error: teUpdateError } = await supabase
+            .from('ticketed_events')
+            .update(teUpdate)
+            .eq('id', ticketedEventId)
+          if (teUpdateError) throw teUpdateError
+
+          // Reconcile ticket_types
+          const formTypes = data.ticketing.ticket_types ?? []
+          const existingIds = formTypes.filter(tt => tt.id).map(tt => tt.id as string)
+
+          if (!hasPaidOrders) {
+            const { data: existingTypes } = await supabase
+              .from('ticket_types')
+              .select('id')
+              .eq('ticketed_event_id', ticketedEventId)
+            const toRemove = (existingTypes ?? []).filter(et => !existingIds.includes(et.id)).map(et => et.id)
+            for (const id of toRemove) {
+              await supabase.from('ticket_types').delete().eq('id', id)
+            }
+          }
+
+          type TicketTypeUpdate = Database['public']['Tables']['ticket_types']['Update']
+          for (let index = 0; index < formTypes.length; index++) {
+            const tt = formTypes[index]
+            if (!tt.name.trim()) continue
+            const priceCents = Math.round((parseFloat(tt.price_dollars) || 0) * 100)
+            const capStr = tt.capacity.trim()
+            const capacityTotal = capStr === '' ? null : (parseInt(capStr, 10) || null)
+            const soldCount = tt.soldCount ?? 0
+            const capacityRemaining = capacityTotal != null && capacityTotal > 0
+              ? Math.max(0, capacityTotal - soldCount)
+              : null
+
+            if (tt.id) {
+              const updatePayload: TicketTypeUpdate = {
+                name: tt.name.trim(),
+                sort_order: index,
+              }
+              if (!hasPaidOrders) {
+                updatePayload.price_cents = priceCents
+                updatePayload.capacity_total = capacityTotal && capacityTotal > 0 ? capacityTotal : null
+                updatePayload.capacity_remaining = capacityRemaining
+              } else {
+                if (capacityTotal != null && capacityTotal > 0) {
+                  updatePayload.capacity_total = capacityTotal
+                  updatePayload.capacity_remaining = capacityRemaining
+                }
+              }
+              const { error: uErr } = await supabase
+                .from('ticket_types')
+                .update(updatePayload)
+                .eq('id', tt.id)
+              if (uErr) throw uErr
+            } else {
+              type TicketTypeInsert = Database['public']['Tables']['ticket_types']['Insert']
+              const insertPayload: TicketTypeInsert = {
+                org_id: orgId,
+                ticketed_event_id: ticketedEventId,
+                name: tt.name.trim(),
+                price_cents: priceCents,
+                currency: 'USD',
+                capacity_total: capacityTotal && capacityTotal > 0 ? capacityTotal : null,
+                capacity_remaining: capacityRemaining,
+                sort_order: index,
+                is_active: true,
+              }
+              const { error: iErr } = await supabase.from('ticket_types').insert(insertPayload)
+              if (iErr) throw iErr
+            }
+          }
+        }
+      }
+
+      // Distribute notifications
+      const { distributeEventUpdateNotifications } = await import('../../data/services/notificationDistribution')
+      const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', data.team_id).single()
+      if (teamData?.org_id) {
+          distributeEventUpdateNotifications({
+              id: eventId,
+              team_id: data.team_id,
+              org_id: teamData.org_id,
+              title: data.title,
+              start_time: new Date(data.start_time).toISOString(),
+              created_by_user_id: context.userId
+          }).catch(err => console.error('Failed to distribute event update notifications:', err))
+      }
+
+      showSuccess('Event updated successfully!')
+      navigate(getLink('admin.events.list'))
+    } catch (err: unknown) {
+      const errorMessage = getErrorMessage(err) || 'Failed to update event'
+      setError(errorMessage)
+      showError(errorMessage)
+      
+      // Handle specific error cases
+      if (err instanceof Error) {
+        if (err.message.includes('permission') || err.message.includes('RLS')) {
+          setError('You do not have permission to update this event')
+        } else if (err.message.includes('violates foreign key')) {
+          setError('Invalid team or season selected. Please verify your selections.')
+        } else if (err.message.includes('violates check constraint')) {
+          setError('Invalid data provided. Please check all fields and try again.')
+        }
+      }
     } finally { 
       setSaving(false) 
     }
@@ -364,32 +800,152 @@ export default function EditEvent() {
 
   if (loading) return <div className="pa-skeleton" style={{ height: '500px' }} />
 
+  if (notFound) {
+    return (
+      <div className="pa-root">
+        <AdminPageHeader 
+          title="Event Not Found" 
+          breadcrumbs={[
+            { label: 'Events', path: getLink('admin.events.list') },
+            { label: 'Edit Event' },
+          ]}
+        />
+        <Card>
+          <div className="pa-text-center pa-py-8">
+            <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--pa-warning)', marginBottom: 'var(--pa-space-4)' }}>
+              event_busy
+            </span>
+            <h2 className="pa-heading-2 pa-mb-2">Event Not Found</h2>
+            <p className="pa-body pa-mb-6">{error || 'The event you are looking for does not exist or has been deleted.'}</p>
+            <Button onClick={() => navigate(getLink('admin.events.list'))}>Back to Events</Button>
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="pa-root">
-      <PageHeader title="Edit Event" />
-      <Card>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
-          {hasExistingRSVPs && watchRSVPEnabled && (
-            <div className="pa-card pa-mb-4 pa-text-warning" style={{ background: 'var(--pa-warning-bg)', border: 'none' }}>
-              Warning: This event has existing RSVP responses. Changing RSVP type will delete them.
+      <AdminPageHeader 
+        title="Edit Event" 
+        subtitle={t('admin.events.editSubtitle')}
+        breadcrumbs={[
+          { label: 'Events', path: getLink('admin.events.list') },
+          { label: 'Edit Event' },
+        ]}
+      />
+      <div className="pa-form-container">
+        {/* Offline indicator */}
+        {isOffline && (
+          <Card className="pa-mb-4" style={{ background: 'var(--pa-warning-bg)', border: '1px solid var(--pa-warning)' }}>
+            <div className="pa-flex pa-items-center pa-gap-2">
+              <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>wifi_off</span>
+              <span className="pa-body-s">You are offline. Changes cannot be saved until you reconnect.</span>
             </div>
-          )}
-          
-          {/* SECTION 1: EVENT BASICS */}
-          <div className="pa-grid pa-grid-2 pa-mb-4 pa-gap-4">
-            <Controller name="title" control={control} rules={{ required: 'Title is required' }} render={({ field }) => <Input {...field} label="Event Title" required error={errors.title?.message || undefined} />} />
-            <Controller name="type" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label="Event Type" options={eventTypeOptions} />} />
-            <Controller name="team_id" control={control} rules={{ required: 'Team is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label="Team" options={teams.map(t => ({value:t.id, label:t.name}))} required error={errors.team_id?.message || undefined} />} />
-            <Controller name="season_id" control={control} rules={{ required: 'Season is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label="Season" options={seasons.map(s => ({value:s.id, label:s.name}))} required disabled={!watchTeamId} />} />
-          </div>
+          </Card>
+        )}
 
-          {/* SECTION 2: DATE + TIME */}
-          <div className="pa-grid pa-grid-3 pa-mb-4 pa-gap-4">
-            <Controller name="start_time" control={control} rules={{ required: 'Start time is required' }} render={({ field }) => <Input {...field} label="Start Time" type="datetime-local" required />} />
-            <Controller name="end_time" control={control} render={({ field }) => <Input {...field} label="End Time" type="datetime-local" />} />
-            <Controller name="arrival_time" control={control} render={({ field }) => <Input {...field} label="Arrival Time" type="datetime-local" />} />
-          </div>
+        {/* Demo mode indicator */}
+        {USE_FAKE_DATA && (
+          <Card className="pa-mb-4" style={{ background: 'var(--pa-info-bg)', border: '1px solid var(--pa-info)' }}>
+            <div className="pa-flex pa-items-center pa-gap-2">
+              <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>info</span>
+              <span className="pa-body-s">Demo mode: Changes will not be saved to the database.</span>
+            </div>
+          </Card>
+        )}
+
+        <Card>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
+            {hasExistingRSVPs && watchRSVPEnabled && (
+              <div className="pa-card pa-mb-4 pa-text-warning" style={{ background: 'var(--pa-warning-bg)', border: 'none' }}>
+                Warning: This event has existing RSVP responses. Changing RSVP type will delete them.
+              </div>
+            )}
+            
+            {/* SECTION 1: EVENT BASICS */}
+            <div className="pa-mb-4">
+              <Controller name="title" control={control} rules={{ required: 'Title is required' }} render={({ field }) => <Input {...field} label="Event Title" required error={errors.title?.message || undefined} />} />
+            </div>
+
+            <div className="pa-form-grid pa-form-grid-3 pa-mb-4 pa-gap-4">
+              <Controller name="type" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label="Event Type" options={eventTypeOptions} />} />
+              <Controller name="team_id" control={control} rules={{ required: 'Team is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label="Team" options={teams.map(t => ({value:t.id, label:t.name}))} required error={errors.team_id?.message || undefined} />} />
+              <Controller name="season_id" control={control} rules={{ required: 'Season is required' }} render={({ field }) => <Select {...field} value={field.value || ''} label="Season" options={seasons.map(s => ({value:s.id, label:s.name}))} required disabled={!watchTeamId} />} />
+            </div>
+
+            {/* SECTION 2: DATE + TIME */}
+            <div className="pa-mb-4">
+              <div className="pa-form-grid pa-form-grid-4 pa-form-grid-tablet-2col">
+                <Controller 
+                  name="start_time" 
+                  control={control} 
+                  rules={{ required: 'Start date and time are required' }} 
+                  render={({ field }) => (
+                    <DatePicker 
+                      label="Event Date" 
+                      value={field.value ? field.value.split('T')[0] : ''}
+                      onChange={(date) => {
+                        const time = field.value?.split('T')[1] || '09:00'
+                        field.onChange(`${date}T${time}`)
+                      }}
+                      required
+                      error={errors.start_time?.message}
+                    />
+                  )} 
+                />
+                <div className="pa-max-w-xs">
+                  <Controller 
+                    name="start_time" 
+                    control={control} 
+                    render={({ field }) => (
+                      <TimePicker 
+                        label="Start Time" 
+                        value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                        onChange={(time) => {
+                          const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
+                          field.onChange(`${date}T${time}`)
+                        }}
+                        required
+                      />
+                    )} 
+                  />
+                </div>
+                <div className="pa-max-w-xs">
+                  <Controller 
+                    name="end_time" 
+                    control={control} 
+                    render={({ field }) => (
+                      <TimePicker 
+                        label="End Time" 
+                        value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                        onChange={(time) => {
+                          const startDate = watch('start_time')?.split('T')[0] || new Date().toISOString().split('T')[0]
+                          field.onChange(time ? `${startDate}T${time}` : '')
+                        }}
+                      />
+                    )} 
+                  />
+                </div>
+                <div className="pa-max-w-xs">
+                  <Controller 
+                    name="arrival_time" 
+                    control={control} 
+                    render={({ field }) => (
+                      <TimePicker 
+                        label="Arrival Time" 
+                        value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                        onChange={(time) => {
+                          const startDate = watch('start_time')?.split('T')[0] || new Date().toISOString().split('T')[0]
+                          field.onChange(time ? `${startDate}T${time}` : '')
+                        }}
+                      />
+                    )} 
+                  />
+                </div>
+              </div>
+            </div>
 
           {/* SECTION 3: LOCATION */}
           <div className="pa-mb-4">
@@ -399,19 +955,42 @@ export default function EditEvent() {
             </div>
             
             <div className="pa-space-y-4">
-              <div className="pa-grid pa-grid-2 pa-gap-4">
+              <div className="pa-form-grid pa-form-grid-2 pa-gap-4">
                 <Controller name="location.venue_name" control={control} render={({ field }) => <Input {...field} label="Venue Name" placeholder="e.g. Field 1" />} />
-                <Controller name="location.address_line1" control={control} render={({ field }) => <Input {...field} label="Address" placeholder="123 Main St" />} />
+                <Controller
+                  name="location.address_line1"
+                  control={control}
+                  render={({ field }) => (
+                    <LocationAutocomplete
+                      value={field.value || ''}
+                      onInputChange={field.onChange}
+                      onChange={(address) => {
+                        startTransition(() => {
+                          setValue('location.address_line1', address.address_line1, { shouldValidate: false, shouldDirty: true })
+                          setValue('location.city', address.city, { shouldValidate: false, shouldDirty: true })
+                          setValue('location.state', address.state, { shouldValidate: false, shouldDirty: true })
+                          setValue('location.postal_code', address.postal_code, { shouldValidate: false, shouldDirty: true })
+                          setValue('location.place_id', address.place_id, { shouldValidate: false, shouldDirty: true })
+                          setValue('location.latitude', address.latitude.toString(), { shouldValidate: false, shouldDirty: true })
+                          setValue('location.longitude', address.longitude.toString(), { shouldValidate: false, shouldDirty: true })
+                          trigger(['location.address_line1', 'location.city', 'location.state', 'location.postal_code'])
+                        })
+                      }}
+                      label="Address"
+                      placeholder="Enter an address"
+                    />
+                  )}
+                />
               </div>
               
               {showLocationDetails && (
                 <>
-                  <div className="pa-grid pa-grid-3 pa-gap-4">
+                  <div className="pa-form-grid pa-form-grid-3 pa-form-grid-tablet-2col pa-gap-4">
                     <Controller name="location.city" control={control} render={({ field }) => <Input {...field} label="City" />} />
                     <Controller name="location.state" control={control} render={({ field }) => <Input {...field} label="State" />} />
                     <Controller name="location.postal_code" control={control} render={({ field }) => <Input {...field} label="Zip Code" />} />
                   </div>
-                  <div className="pa-flex pa-gap-4">
+                  <div className="pa-checkbox-group pa-gap-4">
                     <Controller name="location.is_tbd" control={control} render={({ field: { value, onChange } }) => <Checkbox checked={value} onChange={(e) => onChange(e.target.checked)} label="Location TBD" />} />
                     <Controller name="location.is_virtual" control={control} render={({ field: { value, onChange } }) => <Checkbox checked={value} onChange={(e) => onChange(e.target.checked)} label="Virtual Event" />} />
                   </div>
@@ -469,28 +1048,472 @@ export default function EditEvent() {
             {showRecurring && (
               <div className="pa-space-y-4">
                 <Controller name="recurring.frequency" control={control} render={({ field }) => <Select {...field} label="Frequency" options={[{value:'weekly', label:'Weekly'}]} />} />
-                <Controller name="recurring.end_date" control={control} render={({ field }) => <Input {...field} label="Recurs Until" type="date" />} />
+                <Controller name="recurring.end_date" control={control} render={({ field }) => <DatePicker {...field} label="Recurs Until" />} />
               </div>
             )}
           </div>
 
+          {/* SECTION 4.5: TICKETING */}
+          {!ticketingGateLoading && ticketingAllowed && (ticketedEventId || watchTicketingEnabled) && (
+            <div className="pa-mb-4">
+              <div className="pa-checkbox-group pa-checkbox-group--inline pa-mb-4">
+                <div className="pa-flex pa-items-center pa-gap-2">
+                  <span className="pa-label">{t('admin.events.ticketing.isTicketed')}</span>
+                  <Controller
+                    name="ticketing.is_ticketed"
+                    control={control}
+                    render={({ field: { value, onChange } }) => (
+                      <Checkbox
+                        checked={!!value}
+                        onChange={(e) => onChange(e.target.checked)}
+                        label=""
+                        disabled={!!ticketedEventId}
+                      />
+                    )}
+                  />
+                </div>
+              </div>
+
+              {watchTicketingEnabled && (
+                <div className="pa-card pa-mb-4" style={{ background: 'var(--pa-card-bg)', border: '1px solid var(--pa-border)' }}>
+                  {hasPaidOrders && (
+                    <div className="pa-mb-4 pa-p-3" style={{ background: 'var(--pa-warning-bg)', border: '1px solid var(--pa-warning)', borderRadius: 'var(--pa-radius)' }}>
+                      <span className="pa-body-s">{t('admin.events.ticketing.editBanner')}</span>
+                    </div>
+                  )}
+                  <h3 className="pa-heading-3 pa-mb-4">{t('admin.events.ticketing.title')}</h3>
+
+                  <div className="pa-mb-4">
+                    <Controller
+                      name="ticketing.event_type"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          {...field}
+                          value={field.value || 'other'}
+                          label={t('admin.events.ticketing.eventType.label')}
+                          options={[
+                            { value: 'game', label: t('admin.events.ticketing.eventType.game') },
+                            { value: 'tournament', label: t('admin.events.ticketing.eventType.tournament') },
+                            { value: 'concert', label: t('admin.events.ticketing.eventType.concert') },
+                            { value: 'fundraiser', label: t('admin.events.ticketing.eventType.fundraiser') },
+                            { value: 'other', label: t('admin.events.ticketing.eventType.other') },
+                          ]}
+                          disabled={hasPaidOrders}
+                        />
+                      )}
+                    />
+                    <p className="pa-text-xs pa-text-muted pa-mt-1">{t('admin.events.ticketing.eventType.helper')}</p>
+                  </div>
+
+                  <div className="pa-form-grid pa-form-grid-2 pa-mb-4">
+                    <Controller
+                      name="ticketing.sales_start_at"
+                      control={control}
+                      rules={{
+                        validate: (value) => {
+                          if (value && new Date(value) < new Date()) {
+                            return t('admin.events.ticketing.salesWindow.startNotBeforeNow')
+                          }
+                          return true
+                        }
+                      }}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          type="datetime-local"
+                          label={t('admin.events.ticketing.salesWindow.start')}
+                          placeholder={t('admin.events.ticketing.salesWindow.optional')}
+                          min={toDatetimeLocal(new Date())}
+                          error={errors.ticketing?.sales_start_at?.message}
+                        />
+                      )}
+                    />
+                    <Controller
+                      name="ticketing.sales_end_at"
+                      control={control}
+                      rules={{
+                        validate: (value) => {
+                          const startAt = watch('ticketing.sales_start_at')
+                          if (startAt && value && new Date(value) <= new Date(startAt)) {
+                            return t('admin.events.ticketing.salesWindow.endAfterStart')
+                          }
+                          const eventStart = watch('start_time')
+                          if (eventStart && value && new Date(value) > new Date(eventStart)) {
+                            return t('admin.events.ticketing.salesWindow.endNotAfterEventStart')
+                          }
+                          return true
+                        }
+                      }}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          type="datetime-local"
+                          label={t('admin.events.ticketing.salesWindow.end')}
+                          placeholder={t('admin.events.ticketing.salesWindow.optional')}
+                          max={watch('start_time') || undefined}
+                          error={errors.ticketing?.sales_end_at?.message}
+                        />
+                      )}
+                    />
+                  </div>
+
+                  <div className="pa-mb-4">
+                    <Controller
+                      name="ticketing.status"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          {...field}
+                          value={field.value || 'draft'}
+                          label={t('admin.events.ticketing.status.label')}
+                          options={[
+                            { value: 'draft', label: t('admin.events.ticketing.status.draft') },
+                            { value: 'published', label: t('admin.events.ticketing.status.published') },
+                          ]}
+                        />
+                      )}
+                    />
+                  </div>
+
+                  <div className="pa-mb-4">
+                    <div className="pa-flex pa-items-center pa-justify-between pa-mb-2">
+                      <label className="pa-label">{t('admin.events.ticketing.ticketTypes.label')}</label>
+                      {!hasPaidOrders && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => appendTicketType({ name: '', price_dollars: '', capacity: '' })}
+                        >
+                          {t('admin.events.ticketing.ticketTypes.add')}
+                        </Button>
+                      )}
+                    </div>
+                    {ticketTypeFields.length === 0 ? (
+                      <p className="pa-text-sm pa-text-muted">{t('admin.events.ticketing.ticketTypes.none')}</p>
+                    ) : (
+                      <div className="pa-space-y-3">
+                        {ticketTypeFields.map((field, index) => {
+                          const soldCount = watch(`ticketing.ticket_types.${index}.soldCount`) ?? 0
+                          const canRemove = !hasPaidOrders || soldCount === 0
+                          return (
+                            <div key={field.id} className="pa-card pa-p-3" style={{ background: 'var(--pa-card-bg)', border: '1px solid var(--pa-border)' }}>
+                              <div className="pa-form-grid pa-form-grid-3 pa-mb-2">
+                                <Controller
+                                  name={`ticketing.ticket_types.${index}.name`}
+                                  control={control}
+                                  rules={{
+                                    validate: (value) => {
+                                      const price = watch(`ticketing.ticket_types.${index}.price_dollars`)
+                                      const capacity = watch(`ticketing.ticket_types.${index}.capacity`)
+                                      if (price || capacity) {
+                                        return value?.trim() ? true : t('admin.events.ticketing.ticketTypes.name.required')
+                                      }
+                                      return true
+                                    }
+                                  }}
+                                  render={({ field: f }) => (
+                                    <Input
+                                      {...f}
+                                      label={t('admin.events.ticketing.ticketTypes.name.label')}
+                                      placeholder={t('admin.events.ticketing.ticketTypes.name.placeholder')}
+                                      error={errors.ticketing?.ticket_types?.[index]?.name?.message}
+                                      disabled={hasPaidOrders}
+                                    />
+                                  )}
+                                />
+                                <Controller
+                                  name={`ticketing.ticket_types.${index}.price_dollars`}
+                                  control={control}
+                                  rules={{
+                                    validate: (value) => {
+                                      const name = watch(`ticketing.ticket_types.${index}.name`)
+                                      if (name?.trim()) {
+                                        const parsed = parseFloat(value || '0')
+                                        if (isNaN(parsed) || parsed < 0) {
+                                          return t('admin.events.ticketing.ticketTypes.price.invalid')
+                                        }
+                                      }
+                                      return true
+                                    }
+                                  }}
+                                  render={({ field: f }) => (
+                                    <Input
+                                      {...f}
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      label={t('admin.events.ticketing.ticketTypes.price.label')}
+                                      placeholder={t('admin.events.ticketing.ticketTypes.price.placeholder')}
+                                      error={errors.ticketing?.ticket_types?.[index]?.price_dollars?.message}
+                                      disabled={hasPaidOrders}
+                                    />
+                                  )}
+                                />
+                                <div className="pa-flex pa-items-end pa-gap-2">
+                                  <Controller
+                                    name={`ticketing.ticket_types.${index}.capacity`}
+                                    control={control}
+                                    rules={{
+                                      validate: (value) => {
+                                        if (value?.trim()) {
+                                          const parsed = parseInt(value, 10)
+                                          if (isNaN(parsed) || parsed <= 0) {
+                                            return t('admin.events.ticketing.ticketTypes.capacity.invalid')
+                                          }
+                                          if (soldCount > 0 && parsed < soldCount) {
+                                            return t('admin.events.ticketing.ticketTypes.capacity.minSold')
+                                          }
+                                        }
+                                        return true
+                                      }
+                                    }}
+                                    render={({ field: f }) => (
+                                      <Input
+                                        {...f}
+                                        type="number"
+                                        min={soldCount > 0 ? soldCount : 1}
+                                        label={t('admin.events.ticketing.ticketTypes.capacity.label')}
+                                        placeholder={t('admin.events.ticketing.ticketTypes.capacity.placeholder')}
+                                        error={errors.ticketing?.ticket_types?.[index]?.capacity?.message}
+                                      />
+                                    )}
+                                  />
+                                  {soldCount > 0 && (
+                                    <span className="pa-body-s pa-text-muted" style={{ marginBottom: 'var(--pa-space-2)' }}>
+                                      Sold: {soldCount}
+                                    </span>
+                                  )}
+                                  {canRemove && (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      onClick={() => removeTicketType(index)}
+                                      style={{ marginBottom: '0' }}
+                                    >
+                                      {t('admin.events.ticketing.ticketTypes.remove')}
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* SECTION 5: NOTES + PREP */}
-          <div className="pa-grid pa-grid-2 pa-mb-6 pa-gap-4">
+          <div className="pa-form-grid pa-form-grid-2 pa-mb-6 pa-gap-4">
             <Controller name="notes" control={control} render={({ field }) => <textarea className="pa-input pa-textarea" {...field} placeholder="General Notes..." style={{ minHeight: '80px' }} />} />
             <div className="pa-space-y-2">
               <Controller name="uniform_notes" control={control} render={({ field }) => <Input {...field} label="Uniform Notes" placeholder="e.g. Home Kit" />} />
               <Controller name="equipment_notes" control={control} render={({ field }) => <Input {...field} label="Equipment Notes" placeholder="e.g. Bring water" />} />
+              <Controller name="external_link" control={control} render={({ field }) => <Input {...field} label="External Link" placeholder="https://..." type="url" />} />
+              <Controller name="weather_dependent" control={control} render={({ field: { value, onChange } }) => (
+                <Checkbox checked={value} onChange={(e) => onChange(e.target.checked)} label="Weather Dependent" />
+              )} />
             </div>
           </div>
 
+          {/* Recurring Event Edit Mode Selection */}
+          {isRecurring && (
+            <div className="pa-mb-4 pa-card" style={{ background: 'var(--pa-info-bg)', border: '1px solid var(--pa-info)', padding: 'var(--pa-space-4)' }}>
+              <div className="pa-label pa-mb-2">This is a recurring event. What would you like to edit?</div>
+              <div className="pa-flex pa-gap-3">
+                <label className="pa-flex pa-items-center pa-gap-2">
+                  <input
+                    type="radio"
+                    name="recurringEditMode"
+                    value="this_only"
+                    checked={recurringEditMode === 'this_only'}
+                    onChange={(e) => setRecurringEditMode(e.target.value as RecurringEditMode)}
+                  />
+                  <span className="pa-body-s">This occurrence only</span>
+                </label>
+                <label className="pa-flex pa-items-center pa-gap-2">
+                  <input
+                    type="radio"
+                    name="recurringEditMode"
+                    value="this_and_future"
+                    checked={recurringEditMode === 'this_and_future'}
+                    onChange={(e) => setRecurringEditMode(e.target.value as RecurringEditMode)}
+                  />
+                  <span className="pa-body-s">This and future occurrences</span>
+                </label>
+                <label className="pa-flex pa-items-center pa-gap-2">
+                  <input
+                    type="radio"
+                    name="recurringEditMode"
+                    value="all"
+                    checked={recurringEditMode === 'all'}
+                    onChange={(e) => setRecurringEditMode(e.target.value as RecurringEditMode)}
+                  />
+                  <span className="pa-body-s">All occurrences</span>
+                </label>
+              </div>
+            </div>
+          )}
+
           {/* SECTION 6: ACTIONS */}
-          <div className="pa-flex pa-justify-end pa-gap-3">
-            <Button variant="secondary" onClick={() => navigate(-1)}>Cancel</Button>
-            <Button type="submit" loading={saving}>Update Event</Button>
+          <div className="pa-mb-4">
+            <div className="pa-flex pa-flex-col sm:pa-flex-row pa-justify-between pa-items-stretch sm:pa-items-center pa-gap-3 pa-mb-4">
+              <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => setCancelDialog(true)}
+                  disabled={saving || actionLoading}
+                  style={{ color: 'var(--pa-warning)' }}
+                  className="w-full sm:w-auto min-h-[44px]"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px', marginRight: '4px' }}>cancel</span>
+                  Cancel Event
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setDeleteDialog(true)}
+                  disabled={saving || actionLoading}
+                  style={{ color: 'var(--pa-danger)' }}
+                  className="w-full sm:w-auto min-h-[44px]"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px', marginRight: '4px' }}>delete</span>
+                  Delete Event
+                </Button>
+              </div>
+            </div>
+            <div className="pa-form-actions">
+              <OrgAdminButton variant="primary" onClick={() => navigate(getLink('admin.events.list'))} disabled={saving || actionLoading} className="w-full sm:w-auto">Cancel</OrgAdminButton>
+              <Button 
+                type="submit" 
+                loading={saving}
+                disabled={isOffline || USE_FAKE_DATA || saving || actionLoading}
+                title={isOffline ? 'Cannot save while offline' : USE_FAKE_DATA ? 'Demo mode: changes not saved' : undefined}
+                className="pa-form-submit-btn w-full sm:w-auto"
+              >
+                Update Event
+              </Button>
+            </div>
           </div>
         </form>
       </Card>
+      </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDialog}
+        title="Delete Event"
+        description={`Are you sure you want to delete this event? This action cannot be undone and will delete all associated data (RSVPs, attendance, etc.).`}
+        confirmLabel="Delete"
+        variant="danger"
+        requireReason
+        loading={actionLoading}
+        error={actionError}
+        onConfirm={async (_reason: string) => {
+          if (!eventId) return
+          setActionLoading(true)
+          setActionError(null)
+          
+          try {
+            const { error } = await supabase
+              .from('events')
+              .delete()
+              .eq('id', eventId)
+            
+            if (error) throw error
+            
+            showSuccess('Event deleted successfully')
+            navigate(getLink('admin.events.list'))
+          } catch (err) {
+            const errorMessage = getErrorMessage(err) || 'Failed to delete event'
+            setActionError(errorMessage)
+            showError(errorMessage)
+          } finally {
+            setActionLoading(false)
+          }
+        }}
+        onCancel={() => {
+          setDeleteDialog(false)
+          setActionError(null)
+        }}
+      />
+
+      {/* Cancel Event Dialog */}
+      <ConfirmDialog
+        open={cancelDialog}
+        title="Cancel Event"
+        description={`Are you sure you want to cancel this event? This will mark the event as cancelled and notify participants.`}
+        confirmLabel="Cancel Event"
+        variant="warning"
+        requireReason
+        loading={actionLoading}
+        error={actionError}
+        onConfirm={async (reason: string) => {
+          if (!eventId) return
+          setActionLoading(true)
+          setActionError(null)
+          
+          try {
+            const { error } = await supabase
+              .from('events')
+              .update({
+                is_cancelled: true,
+                cancellation_reason: reason || null,
+                cancelled_at: new Date().toISOString(),
+                cancelled_by_user_id: context.userId
+              })
+              .eq('id', eventId)
+            
+            if (error) throw error
+            
+             // Distribute notifications for cancellation
+             const { distributeEventCancelNotifications } = await import('../../data/services/notificationDistribution')
+             const { data: eventData } = await supabaseAny.from('events').select('title, team_id, org_id, start_time').eq('id', eventId).single()
+             
+             if (eventData) {
+               distributeEventCancelNotifications({
+                 id: eventId,
+                 team_id: eventData.team_id,
+                 org_id: eventData.org_id,
+                 title: eventData.title,
+                 start_time: eventData.start_time,
+                 created_by_user_id: context.userId
+               }).catch(err => console.error('Failed to distribute event cancel notifications:', err))
+             }
+
+            showSuccess('Event cancelled successfully')
+            navigate(getLink('admin.events.list'))
+          } catch (err) {
+            const errorMessage = getErrorMessage(err) || 'Failed to cancel event'
+            setActionError(errorMessage)
+            showError(errorMessage)
+          } finally {
+            setActionLoading(false)
+          }
+        }}
+        onCancel={() => {
+          setCancelDialog(false)
+          setActionError(null)
+        }}
+      />
+
+      {/* RSVP Change Confirmation Dialog */}
+      <ConfirmDialog
+        open={showRsvpChangeDialog}
+        title="Change RSVP Type"
+        description="Changing RSVP type will delete existing RSVP responses. Are you sure?"
+        confirmLabel="Continue"
+        cancelLabel="Cancel"
+        variant="warning"
+        onConfirm={handleConfirmRsvpChange}
+        onCancel={() => {
+          setShowRsvpChangeDialog(false)
+          setPendingRsvpChange(null)
+        }}
+      />
     </div>
   )
 }
-

@@ -12,7 +12,7 @@ END $$;
 -- Create the team_memberships table
 CREATE TABLE IF NOT EXISTS team_memberships (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  child_id UUID NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+  athlete_id UUID NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
   team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
   season_id UUID NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
   status membership_status NOT NULL DEFAULT 'active',
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS team_memberships (
 );
 
 -- Add indexes for common lookups
-CREATE INDEX idx_memberships_child_id ON team_memberships(child_id);
+CREATE INDEX idx_memberships_athlete_id ON team_memberships(athlete_id);
 CREATE INDEX idx_memberships_team_id ON team_memberships(team_id);
 CREATE INDEX idx_memberships_season_id ON team_memberships(season_id);
 

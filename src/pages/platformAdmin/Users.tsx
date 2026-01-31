@@ -1,21 +1,31 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, Badge, FilterBar, PlatformDataTable, ConfirmDialog, type ColumnConfig } from '../../components/platformAdmin'
+import { showSuccess, showError } from '../../utils/toast'
+import { PageHeader, Badge, FilterBar, PlatformDataTable, ConfirmDialog, type ColumnConfig, Button, OfflineBanner, ErrorState } from '../../components/platformAdmin'
 import { canPerformAction, getDeniedMessage } from '../../utils/platformAdminPermissions'
 import { getDisplayEmail } from '../../utils/platformAdminMasking'
 import { isRpcSuccessResponse } from '../../utils/typeAdapters'
-import type { AdminUser, PlatformAdminRole } from '../../types/platformAdmin.types'
+import { useQueryParams } from '../../hooks/useQueryParams'
+import { useAuth } from '../../hooks/useAuth'
+import type { AdminUser, AdminRpcResponse } from '../../types/platformAdmin.types'
+import { cn } from '../../utils/cn'
 
 export default function Users() {
   const [users, setUsers] = useState<AdminUser[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(50)
   const [totalCount, setTotalCount] = useState(0)
   const [search, setSearch] = useState('')
   const [orderBy, setOrderBy] = useState('created_at')
   const [order, setOrder] = useState<'asc' | 'desc'>('desc')
+  
+  // Deep link support: org_id query param
+  const { getUUID } = useQueryParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const orgFilter = getUUID('org_id')
   
   // Dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -26,20 +36,21 @@ export default function Users() {
   const [dialogLoading, setDialogLoading] = useState(false)
   const [dialogError, setDialogError] = useState<string | null>(null)
   
-  // Toast state
-  const [toast, setToast] = useState<{ show: boolean; message: string; variant: 'success' | 'danger' }>({
-    show: false,
-    message: '',
-    variant: 'success',
-  })
-  
-  // TODO: Fetch actual role
-  const [adminRole] = useState<PlatformAdminRole>('super_admin')
+  const { profile } = useAuth()
+  const adminRole = profile?.platformAdminRole ?? null
   
   const navigate = useNavigate()
 
+  const clearOrgFilter = () => {
+    const newParams = new URLSearchParams(searchParams)
+    newParams.delete('org_id')
+    setSearchParams(newParams)
+    setPage(0) // Reset to first page
+  }
+
   const fetchUsers = useCallback(async () => {
     setLoading(true)
+    setError(null)
 
     try {
       let query = supabase
@@ -48,6 +59,12 @@ export default function Users() {
 
       if (search) {
         query = query.ilike('email', `%${search}%`)
+      }
+
+      // Apply org filter if present (filter by organizations JSON array)
+      if (orgFilter) {
+        // Filter users where organizations array contains the org_id
+        query = query.filter('organizations', 'cs', JSON.stringify([{ org_id: orgFilter }]))
       }
 
       query = query.order(orderBy, { ascending: order === 'asc' })
@@ -60,31 +77,34 @@ export default function Users() {
 
       if (error) {
         console.error('Error fetching users:', error)
+        setError(error.message || 'Failed to load users')
         setUsers([])
         setTotalCount(0)
       } else {
-        setUsers(data || [])
-        setTotalCount(count || 0)
+        // If org filter is active, further filter client-side (JSON array filtering is limited)
+        let filteredUsers = (data as AdminUser[] || [])
+        if (orgFilter) {
+          filteredUsers = filteredUsers.filter(user => {
+            if (!user.organizations || !Array.isArray(user.organizations)) return false
+            return user.organizations.some((org: any) => org.org_id === orgFilter)
+          })
+        }
+        setUsers(filteredUsers)
+        setTotalCount(orgFilter ? filteredUsers.length : (count || 0))
+        setError(null)
       }
     } catch (err) {
       console.error('Error:', err)
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
       setUsers([])
     } finally {
       setLoading(false)
     }
-  }, [page, rowsPerPage, search, orderBy, order])
+  }, [page, rowsPerPage, search, orderBy, order, orgFilter])
 
   useEffect(() => {
     fetchUsers()
   }, [fetchUsers])
-
-  // Auto-hide toast
-  useEffect(() => {
-    if (toast.show) {
-      const timer = setTimeout(() => setToast({ ...toast, show: false }), 5000)
-      return () => clearTimeout(timer)
-    }
-  }, [toast])
 
   const handleSort = (column: string) => {
     const isAsc = orderBy === column && order === 'asc'
@@ -93,12 +113,16 @@ export default function Users() {
   }
 
   const handleRowClick = (user: AdminUser) => {
+    if (!user.id) {
+      console.error('Cannot navigate: user ID is null')
+      return
+    }
     navigate(`/platform-admin/users/${user.id}`)
   }
 
   const handleDisable = (user: AdminUser) => {
     if (!canPerformAction(adminRole, 'disable_user')) {
-      setToast({ show: true, message: getDeniedMessage('disable_user'), variant: 'danger' })
+      showError(getDeniedMessage('disable_user'))
       return
     }
     setDialogError(null)
@@ -119,24 +143,20 @@ export default function Users() {
       const { data, error } = await supabase.rpc(rpcName, {
         target_user_id: confirmDialog.user.id,
         reason,
-      })
+      } as any)
 
       if (error) {
         setDialogError(error.message)
         return
       }
 
-      if (!isRpcSuccessResponse(data) || !data.success) {
-        setDialogError(data?.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !(data as AdminRpcResponse).success) {
+        setDialogError((data as AdminRpcResponse)?.error || 'Unknown error')
         return
       }
 
       setConfirmDialog({ open: false, type: 'disable', user: null })
-      setToast({
-        show: true,
-        message: `User ${confirmDialog.type === 'enable' ? 'enabled' : 'disabled'} successfully`,
-        variant: 'success',
-      })
+      showSuccess(`User ${confirmDialog.type === 'enable' ? 'enabled' : 'disabled'} successfully`)
       fetchUsers()
     } catch (err) {
       setDialogError(err instanceof Error ? err.message : 'Unknown error')
@@ -163,7 +183,7 @@ export default function Users() {
       id: 'roles',
       label: 'Roles',
       render: (row) => (
-        <div className="pa-flex pa-gap-1" style={{ flexWrap: 'wrap' }}>
+        <div className={cn('pa-flex', 'pa-gap-1', 'pa-flex-wrap')}>
           {row.roles && row.roles.length > 0 ? (
             <>
               {row.roles.slice(0, 3).map((role: string) => (
@@ -219,15 +239,14 @@ export default function Users() {
       label: '',
       align: 'right',
       render: (row) => (
-        <div className="pa-table-actions" style={{ opacity: 1 }}>
+        <div className={cn('pa-table-actions', 'pa-opacity-100')}>
           {canPerformAction(adminRole, 'disable_user') && (
             <button
-              className="pa-btn pa-btn--ghost pa-btn--dense"
+              className="pa-btn pa-btn--ghost pa-btn--dense pa-text-danger"
               onClick={(e) => { e.stopPropagation(); handleDisable(row) }}
               title="Disable User"
-              style={{ color: 'var(--pa-danger)' }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>block</span>
+              <span className={cn('material-symbols-outlined', 'pa-icon-md')}>block</span>
               Disable
             </button>
           )}
@@ -236,12 +255,62 @@ export default function Users() {
     },
   ]
 
+  // Fetch organization name for filter badge
+  const [orgFilterName, setOrgFilterName] = useState<string | null>(null)
+  useEffect(() => {
+    if (orgFilter) {
+      supabase
+        .from('admin_organizations')
+        .select('name')
+        .eq('id', orgFilter)
+        .single()
+        .then(({ data }) => {
+          if (data) setOrgFilterName((data as any).name)
+        })
+    } else {
+      setOrgFilterName(null)
+    }
+  }, [orgFilter])
+
   return (
     <div>
+      <OfflineBanner />
       <PageHeader
         title="Users"
         subtitle={`${totalCount} users total`}
       />
+
+      {/* Org Filter Indicator */}
+      {orgFilter && (
+        <div 
+          className={cn(
+            'pa-card', 
+            'pa-mb-4',
+            'pa-border-l-3'
+          )}
+          style={{
+            backgroundColor: 'var(--pa-n50)',
+            borderLeftColor: 'var(--pa-n900)',
+          }}
+        >
+          <div className={cn('pa-flex', 'pa-items-center', 'pa-justify-between')}>
+            <div className={cn('pa-flex', 'pa-items-center', 'pa-gap-2')}>
+              <span 
+                className={cn('material-symbols-outlined', 'pa-icon-md')}
+                style={{ color: 'var(--pa-n900)' }}
+              >
+                filter_alt
+              </span>
+              <span className="pa-body-m">
+                Filtered by organization: <strong>{orgFilterName || orgFilter}</strong>
+              </span>
+            </div>
+            <Button variant="ghost" size="dense" onClick={clearOrgFilter}>
+              Clear Filter
+            </Button>
+          </div>
+        </div>
+      )}
 
       <FilterBar
         searchValue={search}
@@ -253,21 +322,31 @@ export default function Users() {
         }}
       />
 
-      <PlatformDataTable
-        columns={columns}
-        rows={users}
-        loading={loading}
-        emptyMessage="No users found."
-        page={page}
-        rowsPerPage={rowsPerPage}
-        totalCount={totalCount}
-        onPageChange={setPage}
-        onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0) }}
-        onRowClick={handleRowClick}
-        orderBy={orderBy}
-        order={order}
-        onSort={handleSort}
-      />
+      {error && !loading && (
+        <ErrorState
+          message={error}
+          onRetry={fetchUsers}
+          retryLabel="Retry"
+        />
+      )}
+
+      {!error && (
+        <PlatformDataTable
+          columns={columns as ColumnConfig<{ id: string }>[]}
+          rows={users as { id: string }[]}
+          loading={loading}
+          emptyMessage="No users found. Try adjusting your search or filters."
+          page={page}
+          rowsPerPage={rowsPerPage}
+          totalCount={totalCount}
+          onPageChange={setPage}
+          onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0) }}
+          onRowClick={handleRowClick as (row: { id: string }) => void}
+          orderBy={orderBy}
+          order={order}
+          onSort={handleSort}
+        />
+      )}
 
       {/* Confirm Dialog */}
       <ConfirmDialog
@@ -288,42 +367,6 @@ export default function Users() {
       />
 
       {/* Toast */}
-      {toast.show && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 'var(--pa-space-5)',
-            right: 'var(--pa-space-5)',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            className="pa-card"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--pa-space-3)',
-              padding: 'var(--pa-space-3) var(--pa-space-4)',
-              borderLeft: `3px solid var(--pa-${toast.variant})`,
-              boxShadow: 'var(--pa-shadow-2)',
-            }}
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{ color: `var(--pa-${toast.variant})`, fontSize: '20px' }}
-            >
-              {toast.variant === 'success' ? 'check_circle' : 'error'}
-            </span>
-            <span className="pa-body-m">{toast.message}</span>
-            <button
-              className="pa-btn pa-btn--ghost pa-btn--dense"
-              onClick={() => setToast({ ...toast, show: false })}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>close</span>
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

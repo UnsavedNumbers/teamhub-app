@@ -121,18 +121,18 @@ export function ThemeSelector({ className = '' }: { className?: string }) {
             onClick={() => setTheme(option.value)}
             className={`w-full p-4 rounded-lg border-2 transition-all text-left flex items-center justify-between ${
               mode === option.value
-                ? 'border-[#137fec] bg-[#137fec]/10 dark:bg-[#137fec]/20'
+                ? 'border-[var(--org-btn-primary-bg, #137fec)] bg-[var(--org-btn-primary-bg)]/10 dark:bg-[var(--org-btn-primary-bg)]/20'
                 : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900/50'
             }`}
           >
             <div className="flex items-center gap-3">
               <Icon 
                 name={option.icon} 
-                className={mode === option.value ? 'text-[#137fec]' : 'text-slate-600 dark:text-slate-400'} 
+                className={mode === option.value ? 'text-[var(--org-link-color)]' : 'text-slate-600 dark:text-slate-400'} 
               />
               <div>
                 <span className={`font-black block ${
-                  mode === option.value ? 'text-[#137fec]' : 'text-slate-900 dark:text-white'
+                  mode === option.value ? 'text-[var(--org-link-color)]' : 'text-slate-900 dark:text-white'
                 }`}>
                   {option.label}
                 </span>
@@ -142,7 +142,7 @@ export function ThemeSelector({ className = '' }: { className?: string }) {
               </div>
             </div>
             {mode === option.value && (
-              <Icon name="check_circle" className="text-[#137fec]" />
+              <Icon name="check_circle" className="text-[var(--org-link-color)]" />
             )}
           </button>
         ))}

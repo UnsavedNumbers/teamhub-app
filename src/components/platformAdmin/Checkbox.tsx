@@ -5,57 +5,82 @@
  */
 
 import React from 'react'
+import { cn } from '../../utils/cn'
 
 export interface CheckboxProps {
   checked: boolean
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void
   label?: string
   disabled?: boolean
+  helperText?: string
   className?: string
+  indeterminate?: boolean
+  style?: React.CSSProperties
 }
 
-export default function Checkbox({ 
+export function Checkbox({ 
   checked, 
   onChange, 
   label, 
   disabled = false,
-  className = ''
+  helperText,
+  className = '',
+  indeterminate = false,
+  style
 }: CheckboxProps) {
+  const inputRef = React.useRef<HTMLInputElement>(null)
+
+  // Set indeterminate state
+  React.useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.indeterminate = indeterminate
+    }
+  }, [indeterminate])
+
   return (
-    <label 
-      className={`pa-checkbox ${disabled ? 'pa-checkbox-disabled' : ''} ${className}`}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 'var(--pa-space-2)',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        userSelect: 'none'
-      }}
-    >
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onChange}
-        disabled={disabled}
-        style={{
-          width: '18px',
-          height: '18px',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          accentColor: 'var(--pa-n900)'
-        }}
-      />
-      {label && (
-        <span 
-          className="pa-label"
-          style={{
-            fontSize: '13px',
-            fontWeight: 600,
-            color: disabled ? 'var(--pa-text-muted)' : 'var(--pa-text-primary)'
-          }}
-        >
-          {label}
-        </span>
+    <div className={className} style={style}>
+      <label 
+        className={cn(
+          'pa-checkbox',
+          disabled && 'pa-checkbox-disabled',
+          'pa-inline-flex',
+          'pa-items-center',
+          'pa-gap-2',
+          disabled ? 'pa-cursor-not-allowed' : 'pa-cursor-pointer',
+          'pa-select-none'
+        )}
+      >
+        <input
+          ref={inputRef}
+          type="checkbox"
+          checked={checked}
+          onChange={onChange}
+          disabled={disabled}
+          className={cn(
+            'pa-checkbox-input',
+            disabled ? 'pa-cursor-not-allowed' : 'pa-cursor-pointer'
+          )}
+        />
+        {label && (
+          <span 
+            className={cn(
+              'pa-label',
+              'pa-font-xs',
+              'pa-font-semibold',
+              disabled ? 'pa-text-muted' : 'pa-text-primary'
+            )}
+          >
+            {label}
+          </span>
+        )}
+      </label>
+      {helperText && (
+        <p className={cn('pa-helper-text', 'pa-mt-1', 'pa-checkbox-helper-offset')}>
+          {helperText}
+        </p>
       )}
-    </label>
+    </div>
   )
 }
+
+export default Checkbox

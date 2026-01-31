@@ -1,6 +1,8 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { useI18n } from '../i18n/useI18n'
+import { mapAuthError } from '../utils/authErrorMapper'
 
 export default function ResetPassword() {
   const [password, setPassword] = useState('')
@@ -14,6 +16,7 @@ export default function ResetPassword() {
 
   const { updatePassword, session } = useAuth()
   const navigate = useNavigate()
+  const { t } = useI18n()
 
   useEffect(() => {
     // Check if we have a valid session from the reset link
@@ -48,7 +51,7 @@ export default function ResetPassword() {
     const { error } = await updatePassword(password)
     
     if (error) {
-      setError(error.message)
+      setError(mapAuthError(error, t))
       setLoading(false)
     } else {
       setSuccess(true)
@@ -92,7 +95,7 @@ export default function ResetPassword() {
             Secure Your Account
           </h2>
           <p className="text-xl text-slate-200 max-w-lg leading-relaxed">
-            Choose a strong password to keep your TeamHub account safe and secure.
+            Choose a strong password to keep your Youth Sports account safe and secure.
           </p>
         </div>
       </div>
@@ -105,7 +108,7 @@ export default function ResetPassword() {
             <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
               <span className="material-symbols-outlined text-white text-xl">sports_score</span>
             </div>
-            <span className="font-display text-2xl tracking-tight text-slate-900 dark:text-white">TEAMHUB</span>
+            <span className="font-display text-2xl tracking-tight text-slate-900 dark:text-white">YOUTH SPORTS</span>
           </div>
 
           {!tokenValid ? (
@@ -272,7 +275,7 @@ export default function ResetPassword() {
           {/* Footer */}
           <div className="mt-auto pt-10 text-center">
             <p className="text-[11px] text-slate-400 dark:text-slate-600 uppercase tracking-widest">
-              © 2024 TeamHub Professional Sports Management
+              © 2024 Youth Sports Professional Sports Management
             </p>
           </div>
         </div>

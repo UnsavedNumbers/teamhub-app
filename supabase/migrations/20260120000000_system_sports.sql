@@ -9,6 +9,12 @@
 ALTER TABLE sports 
   ADD COLUMN IF NOT EXISTS is_system BOOLEAN DEFAULT false;
 
+-- Add icon and color columns if they don't exist
+ALTER TABLE sports
+  ADD COLUMN IF NOT EXISTS icon TEXT,
+  ADD COLUMN IF NOT EXISTS color TEXT,
+  ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+
 CREATE INDEX IF NOT EXISTS idx_sports_is_system ON sports(is_system) WHERE is_system = true;
 
 -- -----------------------------------------------------------------
@@ -19,7 +25,10 @@ ALTER TABLE sports
   ALTER COLUMN org_id DROP NOT NULL;
 
 -- Update the unique constraint to allow system sports (org_id can be NULL)
+-- First drop the constraint, then the index
+ALTER TABLE sports DROP CONSTRAINT IF EXISTS sports_org_id_name_key;
 DROP INDEX IF EXISTS sports_org_id_name_key;
+
 CREATE UNIQUE INDEX IF NOT EXISTS sports_org_id_name_key 
   ON sports(org_id, name) 
   WHERE org_id IS NOT NULL;
@@ -80,7 +89,7 @@ VALUES
   ('Golf', true, NULL, 'sports_golf', '#065f46', NOW(), NOW()),
   ('Swimming', true, NULL, 'pool', '#0c4a6e', NOW(), NOW()),
   ('Diving', true, NULL, 'pool', '#075985', NOW(), NOW())
-ON CONFLICT (name) WHERE is_system = true AND org_id IS NULL 
+ON CONFLICT (name) WHERE is_system = true AND org_id IS NULL
 DO NOTHING;
 
 -- -----------------------------------------------------------------
@@ -89,14 +98,14 @@ DO NOTHING;
 -- This allows organizations to "enable" system sports
 CREATE TABLE IF NOT EXISTS organization_sports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   sport_id UUID NOT NULL REFERENCES sports(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (organization_id, sport_id)
+  UNIQUE (org_id, sport_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_organization_sports_org_id ON organization_sports(organization_id);
+CREATE INDEX IF NOT EXISTS idx_organization_sports_org_id ON organization_sports(org_id);
 CREATE INDEX IF NOT EXISTS idx_organization_sports_sport_id ON organization_sports(sport_id);
 
 DROP TRIGGER IF EXISTS update_organization_sports_updated_at ON organization_sports;
@@ -109,7 +118,7 @@ CREATE TRIGGER update_organization_sports_updated_at
 -- 6. Migrate existing org sports to organization_sports
 -- -----------------------------------------------------------------
 -- For existing organizations that have created sports, link them to system sports if they match
-INSERT INTO organization_sports (organization_id, sport_id, created_at, updated_at)
+INSERT INTO organization_sports (org_id, sport_id, created_at, updated_at)
 SELECT DISTINCT
   s.org_id,
   ss.id,
@@ -121,9 +130,9 @@ WHERE s.is_system = false
   AND s.org_id IS NOT NULL
   AND NOT EXISTS (
     SELECT 1 FROM organization_sports os 
-    WHERE os.organization_id = s.org_id AND os.sport_id = ss.id
+    WHERE os.org_id = s.org_id AND os.sport_id = ss.id
   )
-ON CONFLICT (organization_id, sport_id) DO NOTHING;
+ON CONFLICT (org_id, sport_id) DO NOTHING;
 
 -- -----------------------------------------------------------------
 -- 7. RLS Policies for organization_sports
@@ -136,8 +145,8 @@ CREATE POLICY "Org members can view organization sports"
   ON organization_sports
   FOR SELECT
   USING (
-    organization_id IN (
-      SELECT organization_id 
+    org_id IN (
+      SELECT org_id 
       FROM organization_members 
       WHERE user_id = auth.uid()
     )
@@ -149,11 +158,11 @@ CREATE POLICY "Org admins can link system sports"
   ON organization_sports
   FOR INSERT
   WITH CHECK (
-    organization_id IN (
-      SELECT organization_id 
+    org_id IN (
+      SELECT org_id 
       FROM organization_members 
       WHERE user_id = auth.uid() 
-      AND role IN ('org_admin', 'admin')
+      AND role = 'org_admin'
     )
     AND sport_id IN (
       SELECT id FROM sports WHERE is_system = true
@@ -166,16 +175,50 @@ CREATE POLICY "Org admins can unlink sports"
   ON organization_sports
   FOR DELETE
   USING (
-    organization_id IN (
-      SELECT organization_id 
+    org_id IN (
+      SELECT org_id 
       FROM organization_members 
       WHERE user_id = auth.uid() 
-      AND role IN ('org_admin', 'admin')
+      AND role = 'org_admin'
     )
   );
 
 -- -----------------------------------------------------------------
--- 8. Comments
+-- 8. Update RLS Policies for sports to allow viewing system sports
+-- -----------------------------------------------------------------
+-- Update the existing policy to allow viewing system sports
+DROP POLICY IF EXISTS "Org members can view sports" ON sports;
+CREATE POLICY "Org members can view sports"
+  ON sports
+  FOR SELECT
+  USING (
+    deleted_at IS NULL 
+    AND (
+      -- System sports are visible to everyone
+      (is_system = true AND org_id IS NULL)
+      OR
+      -- Org-specific sports are visible to org members
+      org_id IN (
+        SELECT org_id 
+        FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
+    )
+  );
+
+-- Update insert policy to prevent creating new sports (only system sports allowed)
+DROP POLICY IF EXISTS "Org admins can create sports" ON sports;
+CREATE POLICY "Org admins can create sports"
+  ON sports
+  FOR INSERT
+  WITH CHECK (
+    -- Only allow system sports to be created (via migration/seeding)
+    -- Organizations should link to system sports via organization_sports
+    is_system = true AND org_id IS NULL
+  );
+
+-- -----------------------------------------------------------------
+-- 9. Comments
 -- -----------------------------------------------------------------
 COMMENT ON COLUMN sports.is_system IS 'True for system-wide predefined sports that all organizations can use';
 COMMENT ON COLUMN sports.org_id IS 'NULL for system sports, set for organization-specific sports (legacy)';

@@ -22,7 +22,7 @@ CREATE POLICY "Members can view their orgs" ON organizations
     EXISTS (
       SELECT 1 FROM organization_members 
       WHERE user_id = auth.uid() 
-      AND organization_id = organizations.id
+      AND org_id = organizations.id
     )
     OR is_platform_admin(auth.uid())
   );

@@ -8,7 +8,6 @@
 import { supabase } from '../../lib/supabase'
 import { t } from '../../i18n'
 import type { UserContext } from '../fake/userContext'
-import type { Database } from '../../lib/database.types'
 import type { 
   EventRSVPConfig, 
   GeneralRSVP, 
@@ -18,6 +17,13 @@ import type {
   RSVPSummary,
   CalendarEvent
 } from '../../types/calendar'
+
+type EventWithRSVP = {
+  rsvp_enabled?: boolean
+  rsvp_type?: string
+  team_id?: string
+  season_id?: string
+}
 
 // Type guard functions with safe null checks
 export function isGeneralRSVP(event: CalendarEvent | null | undefined): boolean {
@@ -51,10 +57,16 @@ export async function getEventRSVPConfig(
 
     if (error) throw error
 
+    type EventRow = {
+      rsvp_enabled: boolean
+      rsvp_type: 'general' | 'athlete' | null
+    }
+
+    const eventData = data as EventRow
     return {
-      data: data ? {
-        enabled: data.rsvp_enabled ?? false,
-        type: (data.rsvp_enabled && data.rsvp_type) ? (data.rsvp_type as 'general' | 'athlete') : null
+      data: eventData ? {
+        enabled: eventData.rsvp_enabled ?? false,
+        type: (eventData.rsvp_enabled && eventData.rsvp_type) ? (eventData.rsvp_type as 'general' | 'athlete') : null
       } : { enabled: false, type: null },
       error: null
     }
@@ -88,7 +100,8 @@ export async function getGeneralRSVP(
     }
 
     if (eventError) throw eventError
-    if (!event || !event.rsvp_enabled || event.rsvp_type !== 'general') {
+    const eventData = event as EventWithRSVP
+    if (!eventData || !eventData.rsvp_enabled || eventData.rsvp_type !== 'general') {
       return {
         data: null,
         error: new Error('Event does not have general RSVP enabled')
@@ -140,22 +153,24 @@ export async function setGeneralRSVP(
       .single()
 
     if (eventError) throw eventError
-    if (!event || !event.rsvp_enabled || event.rsvp_type !== 'general') {
+    const eventData2 = event as EventWithRSVP
+    if (!eventData2 || !eventData2.rsvp_enabled || eventData2.rsvp_type !== 'general') {
       return {
         data: null,
         error: new Error('Event does not have general RSVP enabled')
       }
     }
 
+    const insertData = {
+      event_id: eventId,
+      user_id: userId,
+      status,
+      note: note || null,
+      responded_at: new Date().toISOString()
+    }
     const { data, error } = await supabase
       .from('event_general_rsvps')
-      .upsert({
-        event_id: eventId,
-        user_id: userId,
-        status,
-        note: note || null,
-        responded_at: new Date().toISOString()
-      } as Database['public']['Tables']['event_general_rsvps']['Insert'], {
+      .upsert(insertData, {
         onConflict: 'event_id,user_id'
       })
       .select()
@@ -189,7 +204,8 @@ export async function getAthleteRSVPs(
       .single()
 
     if (eventError) throw eventError
-    if (!event?.rsvp_enabled || event.rsvp_type !== 'athlete') {
+    const eventData3 = event as EventWithRSVP
+    if (!eventData3?.rsvp_enabled || eventData3.rsvp_type !== 'athlete') {
       return {
         data: [],
         error: new Error('Event does not have athlete RSVP enabled')
@@ -200,7 +216,7 @@ export async function getAthleteRSVPs(
       .from('event_rsvps')
       .select(`
         *,
-        child:children(id, first_name, last_name)
+        athlete:athletes(id, first_name, last_name)
       `)
       .eq('event_id', eventId)
       .order('created_at', { ascending: true })
@@ -243,14 +259,14 @@ export async function setAthleteRSVP(
       .single()
 
     if (eventError) throw eventError
-    if (!event || !event.rsvp_enabled || event.rsvp_type !== 'athlete') {
+    const eventData4 = event as EventWithRSVP
+    if (!eventData4 || !eventData4.rsvp_enabled || eventData4.rsvp_type !== 'athlete') {
       return {
         data: null,
         error: new Error('Event does not have athlete RSVP enabled')
       }
     }
 
-    // Check eligibility using database function
     const { data: eligible, error: eligibilityError } = await supabase
       .rpc('is_child_eligible_for_event', {
         p_child_id: childId,
@@ -265,17 +281,18 @@ export async function setAthleteRSVP(
       }
     }
 
+    const insertData2 = {
+      event_id: eventId,
+      athlete_id: childId,
+      status,
+      note: note || null,
+      responded_at: status !== 'unknown' ? new Date().toISOString() : null,
+      responded_by_user_id: context.userId
+    }
     const { data, error } = await supabase
       .from('event_rsvps')
-      .upsert({
-        event_id: eventId,
-        child_id: childId,
-        status,
-        note: note || null,
-        responded_at: status !== 'unknown' ? new Date().toISOString() : null,
-        responded_by_user_id: context.userId
-      } as Database['public']['Tables']['event_rsvps']['Insert'], {
-        onConflict: 'event_id,child_id'
+      .upsert(insertData2, {
+        onConflict: 'event_id,athlete_id'
       })
       .select()
       .single()
@@ -294,8 +311,8 @@ export async function setAthleteRSVP(
   }
 }
 
-// Validate child eligibility for event
-export async function validateChildEventEligibility(
+// Validate athlete eligibility for event
+export async function validateAthleteEventEligibility(
   _context: UserContext,
   childId: string,
   eventId: string
@@ -342,14 +359,15 @@ export async function getRSVPSummary(
       .single()
 
     if (eventError) throw eventError
-    if (!event || !event.rsvp_enabled) {
+    const eventData5 = event as EventWithRSVP
+    if (!eventData5 || !eventData5.rsvp_enabled) {
       return {
         data: null,
         error: new Error('RSVP is not enabled for this event')
       }
     }
 
-    if (event.rsvp_type === 'general') {
+    if (eventData5.rsvp_type === 'general') {
       // Get general RSVP summary
       const { data: rsvps, error: rsvpError } = await supabase
         .from('event_general_rsvps')
@@ -358,7 +376,8 @@ export async function getRSVPSummary(
 
       if (rsvpError) throw rsvpError
 
-      const rsvpsArray = rsvps || []
+      type RsvpRecord = { status: string }
+      const rsvpsArray = (rsvps as RsvpRecord[]) || []
       const going_count = rsvpsArray.filter(r => r.status === 'going').length
       const not_going_count = rsvpsArray.filter(r => r.status === 'not_going').length
       const maybe_count = rsvpsArray.filter(r => r.status === 'maybe').length
@@ -379,14 +398,14 @@ export async function getRSVPSummary(
 
       if (eventDataError) throw eventDataError
 
-      // Count eligible parents (simplified - could be more precise)
+      const eventDataWithTeam = eventData as EventWithRSVP
       let totalEligible = 0
-      if (eventData?.team_id && eventData?.season_id) {
+      if (eventDataWithTeam?.team_id && eventDataWithTeam?.season_id) {
         const { count } = await supabase
           .from('team_memberships')
           .select('*', { count: 'exact', head: true })
-          .eq('team_id', eventData.team_id)
-          .eq('season_id', eventData.season_id)
+          .eq('team_id', eventDataWithTeam.team_id)
+          .eq('season_id', eventDataWithTeam.season_id)
           .eq('status', 'active')
         totalEligible = count ?? 0
       }
@@ -403,8 +422,25 @@ export async function getRSVPSummary(
         },
         error: null
       }
-    } else if (event.rsvp_type === 'athlete') {
+    } else if (eventData5.rsvp_type === 'athlete') {
       // Get athlete RSVP summary using existing function
+      type SummaryData = {
+        athlete_going?: number
+        athlete_not_going?: number
+        athlete_maybe?: number
+        athlete_no_response?: number
+        general_going?: number
+        general_not_going?: number
+        general_maybe?: number
+        general_no_response?: number
+        going_count?: number
+        late_count?: number
+        not_going_count?: number
+        unknown_count?: number
+        total_children?: number
+        response_rate?: number
+      }
+      
       const { data: summary, error: summaryError } = await supabase
         .rpc('get_event_rsvp_summary', {
           p_event_id: eventId
@@ -412,7 +448,7 @@ export async function getRSVPSummary(
 
       if (summaryError) throw summaryError
 
-      const summaryData = summary || {}
+      const summaryData = (summary as SummaryData) || {}
       return {
         data: {
           athlete: {
@@ -461,7 +497,8 @@ export async function sendRSVPReminder(
       .single()
 
     if (eventError) throw eventError
-    if (!event || !event.rsvp_enabled) {
+    const eventData6 = event as EventWithRSVP
+    if (!eventData6 || !eventData6.rsvp_enabled) {
       return {
         data: false,
         error: new Error('RSVP is not enabled for this event')

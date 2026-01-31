@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, Badge, Card, FilterBar, EmptyState } from '../../components/platformAdmin'
+import { PageHeader, Badge, Card, FilterBar, EmptyState, Button, OfflineBanner, ErrorState } from '../../components/platformAdmin'
 import type { AdminStructure } from '../../types/platformAdmin.types'
 
 interface OrganizationWithStructure {
@@ -22,11 +22,20 @@ export default function Structure() {
   const [structures, setStructures] = useState<AdminStructure[]>([])
   const [organizedData, setOrganizedData] = useState<OrganizationWithStructure[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [orgFilter, setOrgFilter] = useState<string | null>(null)
+  const [orgFilterName, setOrgFilterName] = useState<string | null>(null)
   const [expandedOrgs, setExpandedOrgs] = useState<Set<string>>(new Set())
+
+  const clearOrgFilter = () => {
+    setOrgFilter(null)
+    setOrgFilterName(null)
+  }
 
   const fetchStructure = useCallback(async () => {
     setLoading(true)
+    setError(null)
 
     try {
       let query = supabase
@@ -34,6 +43,10 @@ export default function Structure() {
         .select('*')
         .order('organization_name', { ascending: true })
         .order('team_name', { ascending: true })
+
+      if (orgFilter) {
+        query = query.eq('org_id', orgFilter)
+      }
 
       if (search) {
         query = query.ilike('organization_name', `%${search}%`)
@@ -43,17 +56,20 @@ export default function Structure() {
 
       if (error) {
         console.error('Error fetching structure:', error)
+        setError(error.message || 'Failed to load structure')
         setStructures([])
       } else {
-        setStructures(data || [])
+        setStructures(data as AdminStructure[])
+        setError(null)
       }
     } catch (err) {
       console.error('Error:', err)
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
       setStructures([])
     } finally {
       setLoading(false)
     }
-  }, [search])
+  }, [search, orgFilter])
 
   useEffect(() => {
     fetchStructure()
@@ -64,15 +80,15 @@ export default function Structure() {
     const orgMap = new Map<string, OrganizationWithStructure>()
 
     for (const row of structures) {
-      if (!orgMap.has(row.organization_id)) {
-        orgMap.set(row.organization_id, {
-          id: row.organization_id,
+      if (!orgMap.has(row.org_id)) {
+        orgMap.set(row.org_id, {
+          id: row.org_id,
           name: row.organization_name,
           teams: [],
         })
       }
 
-      const org = orgMap.get(row.organization_id)!
+      const org = orgMap.get(row.org_id)!
       
       if (row.team_id) {
         let team = org.teams.find(t => t.id === row.team_id)
@@ -114,6 +130,7 @@ export default function Structure() {
   if (loading) {
     return (
       <div>
+        <OfflineBanner />
         <PageHeader
           title="Structure"
           subtitle="Hierarchical view of all organizations, teams, and seasons. Read-only."
@@ -132,10 +149,30 @@ export default function Structure() {
 
   return (
     <div>
+      <OfflineBanner />
       <PageHeader
         title="Structure"
         subtitle="Hierarchical view of all organizations, teams, and seasons. Read-only."
       />
+
+      {/* Org Filter Indicator */}
+      {orgFilter && (
+        <div className="pa-card pa-mb-4" style={{ background: 'var(--pa-primary-bg)', borderLeft: '3px solid var(--pa-primary)' }}>
+          <div className="pa-flex pa-items-center pa-justify-between">
+            <div className="pa-flex pa-items-center pa-gap-2">
+              <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-primary)' }}>
+                filter_alt
+              </span>
+              <span className="pa-body-m">
+                Filtered by organization: <strong>{orgFilterName || orgFilter}</strong>
+              </span>
+            </div>
+            <Button variant="ghost" size="dense" onClick={clearOrgFilter}>
+              Clear Filter
+            </Button>
+          </div>
+        </div>
+      )}
 
       <FilterBar
         searchValue={search}
@@ -144,15 +181,26 @@ export default function Structure() {
         onClearAll={() => setSearch('')}
       />
 
-      {organizedData.length === 0 ? (
+      {error && !loading && (
+        <ErrorState
+          message={error}
+          onRetry={fetchStructure}
+          retryLabel="Retry"
+        />
+      )}
+
+      {!error && organizedData.length === 0 && !loading && (
         <Card>
           <EmptyState
             icon="account_tree"
             title="No Structure Data"
-            description="No organizations, teams, or seasons found."
+            description="No organizations, teams, or seasons found. Try adjusting your filters."
+            noCard
           />
         </Card>
-      ) : (
+      )}
+
+      {!error && organizedData.length > 0 && (
         <div className="pa-flex pa-flex-col pa-gap-3">
           {organizedData.map((org) => {
             const isExpanded = expandedOrgs.has(org.id)

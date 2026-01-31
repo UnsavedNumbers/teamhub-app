@@ -1,16 +1,21 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganizationSports } from '../../hooks/useOrganizationSports'
+import { useT } from '../../i18n/useI18n'
 import { getAllUniformSubmissions, type UniformSubmission } from '../../data/services/uniformsService'
+import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import { 
-  PageHeader, 
+  AdminPageHeader, 
   Card, 
-  Button, 
   PlatformDataTable, 
   Badge,
+  Button,
   EmptyState,
   type ColumnConfig 
 } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
+import { getLink } from '../../utils/routes'
 
 export default function UniformOrders() {
   const [submissions, setSubmissions] = useState<UniformSubmission[]>([])
@@ -19,7 +24,9 @@ export default function UniformOrders() {
   const [rowsPerPage, setRowsPerPage] = useState(25)
 
   const { context, isReady } = useUserContext()
+  const { sports, loading: sportsLoading, error: sportsError, refetch: refetchSports } = useOrganizationSports()
   const navigate = useNavigate()
+  const t = useT()
 
   const fetchSubmissions = useCallback(async () => {
     if (!isReady) return
@@ -41,7 +48,10 @@ export default function UniformOrders() {
     { 
       id: 'child_id', 
       label: 'Player',
-      render: (row) => `Child ${row.child_id.slice(0, 8)}`
+      render: (row) => {
+        const athleteId = row.athlete_id ?? (row as { child_id?: string }).child_id
+        return athleteId ? `Child ${athleteId.slice(0, 8)}` : 'Child'
+      }
     },
     { 
       id: 'kit_id', 
@@ -78,15 +88,71 @@ export default function UniformOrders() {
     },
   ]
 
+  // Guard: Check if context is ready
+  if (!isReady || !context?.orgId) {
+    return <AdminLoadingSpinner />
+  }
+
+  // Show loading state while sports are loading
+  if (sportsLoading) {
+    return (
+      <div className="pa-root">
+        <AdminPageHeader title="Uniforms" actions={null} />
+        <AdminLoadingSpinner />
+      </div>
+    )
+  }
+
+  // Show error state if sports failed to load
+  if (sportsError) {
+    return (
+      <div className="pa-root">
+        <AdminPageHeader title="Uniforms" actions={null} />
+        <Card>
+          <div className="pa-p-8 pa-text-center">
+            <p className="pa-text-danger pa-mb-4">{t('admin.uniforms.prerequisite.loadError', { message: sportsError.message })}</p>
+            <Button onClick={refetchSports} variant="primary">
+              {t('admin.uniforms.prerequisite.retry')}
+            </Button>
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
+  // Show empty state if no sports exist
+  if ((sports?.length ?? 0) === 0) {
+    const returnUrl = encodeURIComponent('/admin/uniforms')
+    return (
+      <div className="pa-root">
+        <AdminPageHeader title="Uniforms" actions={null} />
+        <Card>
+          <EmptyState
+            icon="checkroom"
+            title={t('admin.uniforms.prerequisite.noSportsTitle')}
+            description={t('admin.uniforms.prerequisite.noSportsDescription')}
+            noCard
+          >
+            <Link to={`${getLink('admin.organization.forms')}?type=sport&returnUrl=${returnUrl}`}>
+              <Button variant="primary">{t('admin.uniforms.prerequisite.addSport')}</Button>
+            </Link>
+          </EmptyState>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="pa-root">
-      <PageHeader 
-        title="Uniform Orders" 
+      <AdminPageHeader 
+        title={t('admin.uniforms.title')}
+        subtitle={t('admin.uniforms.subtitle')} 
         actions={
-          <Button onClick={() => navigate('/admin/uniforms/new')}>
-            <span className="material-symbols-outlined">add</span>
-            Create Kit
-          </Button>
+          (sports?.length ?? 0) > 0 ? (
+            <OrgAdminButton onClick={() => navigate('/admin/uniforms/new')} variant="primary" icon="add" className="w-full sm:w-auto">
+              Create Uniform
+            </OrgAdminButton>
+          ) : null
         }
       />
 
@@ -94,7 +160,8 @@ export default function UniformOrders() {
         <Card>
           <EmptyState 
             icon="checkroom" 
-            title="NO UNIFORM ORDERS" 
+            title="NO UNIFORM ORDERS"
+            noCard 
             description="Uniform orders will appear here when families submit their sizes." 
           />
         </Card>

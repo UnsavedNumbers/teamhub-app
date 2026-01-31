@@ -1,16 +1,45 @@
-import { useState, useRef, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
+import { getLink, RouteKeys } from '@/utils/routes'
+import { formatRoleName, hasRole } from '@/utils/roleHelpers'
+import { isDemoMode } from '@/utils/demoMode'
+import { useOffline } from '@/hooks/useOffline'
+import { useMobile } from '@/hooks/useMobile'
+import MobileBottomSheet from './MobileBottomSheet'
+import type { OrgMemberRole } from '@/contexts/OrganizationContext'
 
 export default function UserContextDropdown() {
   const { user, profile, signOut } = useAuth()
-  const { currentOrganization, organizations, switchOrganization } = useOrganization()
+  const { currentOrganization, organizations, setCurrentOrganization } = useOrganization()
+  const { isOffline } = useOffline()
   const navigate = useNavigate()
+  const location = useLocation()
   const t = useT()
   const [isOpen, setIsOpen] = useState(false)
+  const [switching, setSwitching] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const isMobile = useMobile()
+
+  // Infer active role from current route
+  // Admin routes (starting with /admin) indicate org_admin or coach role
+  // Portal routes indicate parent role
+  const inferredActiveRole = useMemo((): OrgMemberRole | null => {
+    if (!currentOrganization) return null
+    const isAdminRoute = location.pathname.startsWith('/admin')
+    if (isAdminRoute) {
+      // Prefer org_admin if available, otherwise coach
+      if (hasRole(currentOrganization, 'org_admin')) return 'org_admin'
+      if (hasRole(currentOrganization, 'coach')) return 'coach'
+    } else {
+      // Portal route - prefer parent role
+      if (hasRole(currentOrganization, 'parent')) return 'parent'
+    }
+    // Fallback to first available role
+    return currentOrganization.roles?.[0] || null
+  }, [location.pathname, currentOrganization])
 
   // Close on outside click
   useEffect(() => {
@@ -34,16 +63,66 @@ export default function UserContextDropdown() {
 
   const handleLogout = async () => {
     await signOut()
-    navigate('/portal/login')
+    navigate(getLink(RouteKeys.AUTH_LOGIN))
   }
 
-  const handleSwitchOrg = (orgId: string) => {
-    switchOrganization(orgId)
+  // Handle role switching using the same logic as RoleSelection
+  const handleSwitchRole = useCallback(async (orgId: string, role: OrgMemberRole) => {
+    if (switching) return
+
+    if (!profile) {
+      console.error('No profile available for role switch')
+      return
+    }
+
+    // Check offline mode
+    if (isOffline) {
+      console.error('Cannot switch roles while offline')
+      return
+    }
+
+    // Check demo mode
+    if (isDemoMode()) {
+      console.error('Demo mode: Role selection is not available')
+      return
+    }
+
+    // Find the organization
+    const org = profile.organizations.find(o => o.id === orgId)
+    
+    if (!org) {
+      console.error('Organization not found:', orgId)
+      return
+    }
+
+    // Verify user has this role in this org
+    if (!hasRole(org, role)) {
+      console.error('User does not have role', role, 'in organization', orgId)
+      return
+    }
+
+    setSwitching(true)
     setIsOpen(false)
-    // Avoid full page reload (keeps SPA routing + avoids \"blue screen\" on bad paths)
-    // Navigate to a known-good portal route after switching org.
-    navigate('/portal/dashboard')
-  }
+
+    try {
+      // Set the current organization
+      setCurrentOrganization(org)
+      
+      // Determine navigation destination (same logic as RoleSelection)
+      let destination: string
+      if (role === 'org_admin' || role === 'coach') {
+        destination = getLink(RouteKeys.ADMIN_DASHBOARD)
+      } else {
+        destination = getLink(RouteKeys.PORTAL_DASHBOARD)
+      }
+
+      // Navigate to destination
+      navigate(destination, { replace: true })
+    } catch (err: any) {
+      console.error('Error during role switch:', err)
+      setSwitching(false)
+    }
+  }, [switching, profile, isOffline, navigate, setCurrentOrganization])
 
   const initials = profile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'
   const displayName = profile?.display_name || user?.email || 'User'
@@ -54,137 +133,165 @@ export default function UserContextDropdown() {
   
   // Role-based links configuration
   const roleLinks = [
-    { role: 'parent', label: t('portal.navigation.myChildren'), path: '/portal/children', icon: 'family_restroom' as const },
-    { role: 'parent', label: 'Payments', path: '/portal/payments', icon: 'receipt_long' as const },
-    { role: 'coach', label: 'Teams', path: '/portal/children', icon: 'sports_soccer' as const },
-    { role: 'org_admin', label: 'Organization Settings', path: '/admin/organization', icon: 'admin_panel_settings' as const },
+    { role: 'parent', label: t('portal.navigation.myChildren'), path: getLink(RouteKeys.PORTAL_ATHLETES), icon: 'family_restroom' as const },
+    { role: 'parent', label: 'Payments', path: getLink(RouteKeys.PORTAL_PAYMENTS), icon: 'receipt_long' as const },
+    { role: 'coach', label: 'My Athletes', path: getLink(RouteKeys.PORTAL_ATHLETES), icon: 'sports_soccer' as const },
+    { role: 'org_admin', label: 'Organization Settings', path: getLink(RouteKeys.ADMIN_ORGANIZATION), icon: 'admin_panel_settings' as const },
   ]
 
   // Filter links based on current roles
   const visibleRoleLinks = roleLinks.filter(link => currentRoles.includes(link.role as any))
 
-  const hasMultipleOrgs = organizations.length > 1
-  const singleOrgName = organizations.length > 0 ? organizations[0].name : null
+  const hasAnyOrgs = organizations.length > 0
+
+  // Close handler
+  const handleClose = useCallback(() => {
+    setIsOpen(false)
+  }, [])
+
+  // Menu content component (reused for both desktop dropdown and mobile sheet)
+  const menuContent = (
+    <>
+      {/* 1. User Identity */}
+      <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700">
+        <p className="text-sm font-medium text-slate-900 dark:text-white truncate" title={displayName}>{displayName}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 truncate" title={email}>{email}</p>
+        {currentOrganization && (
+          <span className="mt-1 inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300">
+            {currentOrganization.name}
+          </span>
+        )}
+      </div>
+
+      {/* 2. Organization Context - Role Switcher */}
+      <div className="py-1 border-b border-slate-100 dark:border-slate-700">
+        <div className="px-4 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+          Organization
+        </div>
+        {hasAnyOrgs ? (
+          organizations.flatMap(org => 
+            org.roles?.map(role => {
+              const isActive = currentOrganization?.id === org.id && role === inferredActiveRole
+              return (
+                <button
+                  key={`${org.id}-${role}`}
+                  onClick={() => handleSwitchRole(org.id, role)}
+                  disabled={switching}
+                  className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between group transition-colors min-h-[44px] ${
+                    isActive 
+                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium' 
+                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                  } ${switching ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <div className="flex flex-col">
+                    <span>{org.name}</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">
+                      {formatRoleName(role)}
+                    </span>
+                  </div>
+                  {isActive && (
+                    <span className="material-symbols-outlined text-lg text-blue-600 dark:text-blue-400">check</span>
+                  )}
+                </button>
+              )
+            }) || []
+          )
+        ) : (
+          <div className="px-4 py-2 text-sm text-slate-700 dark:text-slate-300" title="You are not a member of any organization">
+            No Organization
+          </div>
+        )}
+      </div>
+
+      {/* 3. Personal Settings */}
+      <div className="py-1 border-b border-slate-100 dark:border-slate-700">
+        <Link 
+          to={getLink(RouteKeys.PORTAL_SETTINGS)}
+          onClick={handleClose}
+          className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors min-h-[44px] no-underline hover:no-underline"
+        >
+          <span className="material-symbols-outlined mr-3 text-lg text-slate-400 dark:text-slate-500">settings</span>
+          My Settings
+        </Link>
+      </div>
+
+      {/* 4. Role-Specific Links */}
+      {visibleRoleLinks.length > 0 && (
+        <div className="py-1 border-b border-slate-100 dark:border-slate-700">
+          {visibleRoleLinks.map(link => (
+            <Link 
+              key={link.path}
+              to={link.path} 
+              onClick={handleClose} 
+              className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors min-h-[44px] no-underline hover:no-underline"
+            >
+              <span className="material-symbols-outlined mr-3 text-lg text-slate-400 dark:text-slate-500">{link.icon}</span>
+              {link.label}
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {/* 5. Support */}
+      <div className="py-1 border-b border-slate-100 dark:border-slate-700">
+        <Link 
+          to={getLink(RouteKeys.PORTAL_SETTINGS)} 
+          onClick={handleClose} 
+          className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors min-h-[44px] no-underline hover:no-underline"
+        >
+          <span className="material-symbols-outlined mr-3 text-lg text-slate-400 dark:text-slate-500">help</span>
+          Help & Support
+        </Link>
+      </div>
+
+      {/* 6. Logout */}
+      <div className="py-1">
+        <button
+          onClick={handleLogout}
+          className="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 min-h-[44px]"
+        >
+          <span className="material-symbols-outlined mr-3 text-lg text-red-500">logout</span>
+          Log out
+        </button>
+      </div>
+    </>
+  )
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <>
+      <div className="relative" ref={dropdownRef}>
         {/* Trigger */}
         <button 
-            onClick={() => setIsOpen(!isOpen)}
-            className="flex items-center justify-center p-0 border-none bg-transparent cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-full"
-            aria-expanded={isOpen}
-            aria-haspopup="true"
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center justify-center p-0 border-none bg-transparent cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-full"
+          aria-expanded={isOpen}
+          aria-haspopup="true"
         >
-            <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-700 bg-cover bg-center border border-slate-100 dark:border-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold transition-transform hover:scale-105 active:scale-95">
-                {initials}
-            </div>
+          <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-700 bg-cover bg-center border border-slate-100 dark:border-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold transition-transform hover:scale-105 active:scale-95">
+            {initials}
+          </div>
         </button>
 
-        {/* Menu */}
-        {isOpen && (
-            <div 
-                className="absolute right-0 mt-2 w-72 origin-top-right rounded-xl overflow-hidden z-50"
-                style={{
-                    background: 'var(--pa-glass-bg, rgba(255, 255, 255, 0.85))',
-                    backdropFilter: 'var(--pa-glass-blur, blur(20px))',
-                    WebkitBackdropFilter: 'var(--pa-glass-blur, blur(20px))',
-                    border: '1px solid var(--pa-glass-border, rgba(0, 0, 0, 0.06))',
-                    boxShadow: 'var(--pa-shadow-3, 0 16px 40px rgba(0, 0, 0, 0.18))',
-                }}
-            >
-                
-                {/* 1. User Identity */}
-                <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
-                    <p className="text-sm font-medium text-slate-900 dark:text-white truncate" title={displayName}>{displayName}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate" title={email}>{email}</p>
-                    {currentOrganization && (
-                         <span className="mt-1 inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300">
-                            {currentOrganization.name}
-                         </span>
-                    )}
-                </div>
-
-                {/* 2. Organization Context */}
-                <div className="py-1 border-b border-slate-100 dark:border-slate-800">
-                    <div className="px-4 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                        Organization
-                    </div>
-                    {hasMultipleOrgs ? (
-                        organizations.map(org => {
-                            const isActive = currentOrganization?.id === org.id
-                            return (
-                                <button
-                                    key={org.id}
-                                    onClick={() => handleSwitchOrg(org.id)}
-                                    className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between group ${isActive ? 'bg-slate-50 dark:bg-slate-800/50 text-blue-600 dark:text-blue-400 font-medium' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-                                >
-                                    <div className="flex flex-col">
-                                        <span>{org.name}</span>
-                                        <span className="text-xs text-slate-400 font-normal">
-                                            {org.roles.join(', ')}
-                                        </span>
-                                    </div>
-                                    {isActive && <span className="material-symbols-outlined text-lg">check</span>}
-                                </button>
-                            )
-                        })
-                    ) : (
-                        <div className="px-4 py-2 text-sm text-slate-700 dark:text-slate-300" title="You are a member of only one organization">
-                            {singleOrgName || "No Organization"}
-                        </div>
-                    )}
-                </div>
-
-                {/* 3. Personal Settings */}
-                <div className="py-1 border-b border-slate-100 dark:border-slate-800">
-                     <Link 
-                        to="/portal/settings"
-                        onClick={() => setIsOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
-                    >
-                        <span className="material-symbols-outlined mr-3 text-lg text-slate-400">settings</span>
-                        My Settings
-                    </Link>
-                </div>
-
-                {/* 4. Role-Specific Links */}
-                {visibleRoleLinks.length > 0 && (
-                    <div className="py-1 border-b border-slate-100 dark:border-slate-800">
-                         {visibleRoleLinks.map(link => (
-                            <Link 
-                                key={link.path}
-                                to={link.path} 
-                                onClick={() => setIsOpen(false)} 
-                                className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
-                            >
-                                <span className="material-symbols-outlined mr-3 text-lg text-slate-400">{link.icon}</span>
-                                {link.label}
-                            </Link>
-                         ))}
-                    </div>
-                )}
-
-                {/* 5. Support */}
-                <div className="py-1 border-b border-slate-100 dark:border-slate-800">
-                    <Link to="/portal/settings" onClick={() => setIsOpen(false)} className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
-                        <span className="material-symbols-outlined mr-3 text-lg text-slate-400">help</span>
-                        Help & Support
-                    </Link>
-                </div>
-
-                {/* 6. Logout */}
-                <div className="py-1">
-                    <button
-                        onClick={handleLogout}
-                        className="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-                    >
-                        <span className="material-symbols-outlined mr-3 text-lg text-red-500">logout</span>
-                        Log out
-                    </button>
-                </div>
-
-            </div>
+        {/* Desktop Menu - absolute dropdown */}
+        {!isMobile && isOpen && (
+          <div 
+            className="absolute right-0 mt-2 w-72 origin-top-right rounded-xl overflow-hidden z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg"
+          >
+            {menuContent}
+          </div>
         )}
-    </div>
+      </div>
+
+      {/* Mobile Menu - bottom sheet */}
+      {isMobile && (
+        <MobileBottomSheet
+          isOpen={isOpen}
+          onClose={handleClose}
+          title="Account"
+        >
+          {menuContent}
+        </MobileBottomSheet>
+      )}
+    </>
   )
 }

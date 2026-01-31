@@ -7,6 +7,22 @@
 
 import { DEMO_USER_IDS, DEMO_ORG_A_ID, DEMO_ORG_B_ID } from '../config'
 import type { OrgMemberRole } from '../../contexts/OrganizationContext'
+import { getOrganizationById } from './fakeOrganizations'
+
+// Dynamic year helpers
+const getCurrentYear = () => new Date().getFullYear()
+const getPreviousYear = () => getCurrentYear() - 1
+
+// Helper functions for date generation relative to current year
+const getDateInCurrentYear = (month: number, day: number, hour: number = 0, minute: number = 0): string => {
+    const year = getCurrentYear()
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00Z`
+}
+
+const getDateInPreviousYear = (month: number, day: number, hour: number = 0, minute: number = 0): string => {
+    const year = getPreviousYear()
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00Z`
+}
 
 // ============================================================================
 // Types
@@ -116,8 +132,8 @@ export const fakeUsers: FakeUser[] = [
         email: 'parent-only@example.com',
         phone: '+1 (555) 123-4567',
         display_name: 'Jennifer Johnson',
-        created_at: '2024-01-15T10:00:00Z',
-        updated_at: '2024-01-15T10:00:00Z',
+        created_at: getDateInCurrentYear(1, 15, 10),
+        updated_at: getDateInCurrentYear(1, 15, 10),
     },
     {
         id: COACH_ONLY_ID,
@@ -132,8 +148,8 @@ export const fakeUsers: FakeUser[] = [
         email: 'admin-only@example.com',
         phone: '+1 (555) 345-6789',
         display_name: 'Admin Sarah Wilson',
-        created_at: '2023-12-01T08:00:00Z',
-        updated_at: '2023-12-01T08:00:00Z',
+        created_at: getDateInPreviousYear(12, 1, 8),
+        updated_at: getDateInPreviousYear(12, 1, 8),
     },
     {
         id: PARENT_ADMIN_ID,
@@ -148,8 +164,8 @@ export const fakeUsers: FakeUser[] = [
         email: 'parent-coach@example.com',
         phone: '+1 (555) 567-8901',
         display_name: 'Maria Rodriguez',
-        created_at: '2024-02-01T11:00:00Z',
-        updated_at: '2024-02-01T11:00:00Z',
+        created_at: getDateInCurrentYear(2, 1, 11),
+        updated_at: getDateInCurrentYear(2, 1, 11),
     },
     // Additional users in system
     {
@@ -157,8 +173,8 @@ export const fakeUsers: FakeUser[] = [
         email: 'sarah.johnson@email.com',
         phone: '+1 (555) 111-2222',
         display_name: 'Sarah Johnson',
-        created_at: '2024-01-15T10:30:00Z',
-        updated_at: '2024-01-15T10:30:00Z',
+        created_at: getDateInCurrentYear(1, 15, 10, 30),
+        updated_at: getDateInCurrentYear(1, 15, 10, 30),
     },
     {
         id: USER_MIKE_SMITH_ID,
@@ -173,8 +189,8 @@ export const fakeUsers: FakeUser[] = [
         email: 'coach.martinez@email.com',
         phone: '+1 (555) 555-6666',
         display_name: 'Coach Alex Martinez',
-        created_at: '2023-09-01T09:00:00Z',
-        updated_at: '2023-09-01T09:00:00Z',
+        created_at: getDateInPreviousYear(9, 1, 9),
+        updated_at: getDateInPreviousYear(9, 1, 9),
     },
     {
         id: USER_COACH_THOMPSON_ID,
@@ -196,8 +212,8 @@ export const fakeFamilies: FakeFamily[] = [
         name: 'Johnson Family',
         created_by_user_id: PARENT_ONLY_ID,
         org_id: DEMO_ORG_A_ID,
-        created_at: '2024-01-15T10:00:00Z',
-        updated_at: '2024-01-15T10:00:00Z',
+        created_at: getDateInCurrentYear(1, 15, 10),
+        updated_at: getDateInCurrentYear(1, 15, 10),
     },
     {
         id: FAMILY_SMITH_ID,
@@ -212,8 +228,8 @@ export const fakeFamilies: FakeFamily[] = [
         name: 'Williams Family',
         created_by_user_id: PARENT_ADMIN_ID, // Parent-admin has a different family too
         org_id: DEMO_ORG_A_ID,
-        created_at: '2024-01-20T11:00:00Z',
-        updated_at: '2024-01-20T11:00:00Z',
+        created_at: getDateInCurrentYear(1, 20, 11),
+        updated_at: getDateInCurrentYear(1, 20, 11),
     },
     {
         id: FAMILY_CHEN_ID,
@@ -228,8 +244,8 @@ export const fakeFamilies: FakeFamily[] = [
         name: 'Rodriguez Family',
         created_by_user_id: PARENT_COACH_ID,
         org_id: DEMO_ORG_A_ID,
-        created_at: '2024-02-01T11:00:00Z',
-        updated_at: '2024-02-01T11:00:00Z',
+        created_at: getDateInCurrentYear(2, 1, 11),
+        updated_at: getDateInCurrentYear(2, 1, 11),
     },
     {
         id: FAMILY_PATEL_ID,
@@ -259,8 +275,8 @@ export const fakeChildren: FakeChild[] = [
         allergies: 'Peanuts',
         emergency_contact_name: 'Jennifer Johnson',
         emergency_contact_phone: '+1 (555) 123-4567',
-        created_at: '2024-01-15T10:00:00Z',
-        updated_at: '2024-01-15T10:00:00Z',
+        created_at: getDateInCurrentYear(1, 15, 10),
+        updated_at: getDateInCurrentYear(1, 15, 10),
     },
     {
         id: CHILD_LIAM_JOHNSON_ID,
@@ -274,8 +290,8 @@ export const fakeChildren: FakeChild[] = [
         allergies: null,
         emergency_contact_name: 'Jennifer Johnson',
         emergency_contact_phone: '+1 (555) 123-4567',
-        created_at: '2024-01-15T10:00:00Z',
-        updated_at: '2024-01-15T10:00:00Z',
+        created_at: getDateInCurrentYear(1, 15, 10),
+        updated_at: getDateInCurrentYear(1, 15, 10),
     },
     // Smith Family
     {
@@ -321,8 +337,8 @@ export const fakeChildren: FakeChild[] = [
         allergies: null,
         emergency_contact_name: 'Robert Chen',
         emergency_contact_phone: '+1 (555) 456-7890',
-        created_at: '2024-01-20T11:00:00Z',
-        updated_at: '2024-01-20T11:00:00Z',
+        created_at: getDateInCurrentYear(1, 20, 11),
+        updated_at: getDateInCurrentYear(1, 20, 11),
     },
     {
         id: CHILD_ETHAN_WILLIAMS_ID,
@@ -336,8 +352,8 @@ export const fakeChildren: FakeChild[] = [
         allergies: 'Dairy',
         emergency_contact_name: 'Robert Chen',
         emergency_contact_phone: '+1 (555) 456-7890',
-        created_at: '2024-01-20T11:00:00Z',
-        updated_at: '2024-01-20T11:00:00Z',
+        created_at: getDateInCurrentYear(1, 20, 11),
+        updated_at: getDateInCurrentYear(1, 20, 11),
     },
     // Chen Family (parent-admin@example.com - primary family)
     {
@@ -368,8 +384,8 @@ export const fakeChildren: FakeChild[] = [
         allergies: null,
         emergency_contact_name: 'Maria Rodriguez',
         emergency_contact_phone: '+1 (555) 567-8901',
-        created_at: '2024-02-01T11:00:00Z',
-        updated_at: '2024-02-01T11:00:00Z',
+        created_at: getDateInCurrentYear(2, 1, 11),
+        updated_at: getDateInCurrentYear(2, 1, 11),
     },
     {
         id: CHILD_ISABELLA_RODRIGUEZ_ID,
@@ -383,8 +399,8 @@ export const fakeChildren: FakeChild[] = [
         allergies: null,
         emergency_contact_name: 'Maria Rodriguez',
         emergency_contact_phone: '+1 (555) 567-8901',
-        created_at: '2024-02-01T11:00:00Z',
-        updated_at: '2024-02-01T11:00:00Z',
+        created_at: getDateInCurrentYear(2, 1, 11),
+        updated_at: getDateInCurrentYear(2, 1, 11),
     },
     // Patel Family (another parent)
     {
@@ -416,7 +432,7 @@ export const fakeFamilyMembers: FakeFamilyMember[] = [
         user_id: PARENT_ONLY_ID,
         role: 'owner',
         permissions: ['rsvp', 'payments', 'edit_children'],
-        created_at: '2024-01-15T10:00:00Z',
+        created_at: getDateInCurrentYear(1, 15, 10),
     },
     {
         id: 'fm-johnson-002',
@@ -424,7 +440,7 @@ export const fakeFamilyMembers: FakeFamilyMember[] = [
         user_id: USER_SARAH_JOHNSON_ID,
         role: 'guardian',
         permissions: ['rsvp', 'payments'],
-        created_at: '2024-01-15T10:30:00Z',
+        created_at: getDateInCurrentYear(1, 15, 10, 30),
     },
     // Smith Family
     {
@@ -451,7 +467,7 @@ export const fakeFamilyMembers: FakeFamilyMember[] = [
         user_id: PARENT_ADMIN_ID,
         role: 'guardian',
         permissions: ['rsvp'],
-        created_at: '2024-01-20T11:00:00Z',
+        created_at: getDateInCurrentYear(1, 20, 11),
     },
     // Rodriguez Family
     {
@@ -460,7 +476,7 @@ export const fakeFamilyMembers: FakeFamilyMember[] = [
         user_id: PARENT_COACH_ID,
         role: 'owner',
         permissions: ['rsvp', 'payments', 'edit_children'],
-        created_at: '2024-02-01T11:00:00Z',
+        created_at: getDateInCurrentYear(2, 1, 11),
     },
     // Patel Family
     {
@@ -485,8 +501,8 @@ export const fakeOrganizationMembers: FakeOrganizationMember[] = [
         user_id: PARENT_ONLY_ID,
         roles: ['parent'],
         status: 'active',
-        created_at: '2024-01-15T10:00:00Z',
-        updated_at: '2024-01-15T10:00:00Z',
+        created_at: getDateInCurrentYear(1, 15, 10),
+        updated_at: getDateInCurrentYear(1, 15, 10),
     },
     {
         id: 'om-002',
@@ -503,8 +519,8 @@ export const fakeOrganizationMembers: FakeOrganizationMember[] = [
         user_id: ADMIN_ONLY_ID,
         roles: ['org_admin'],
         status: 'active',
-        created_at: '2023-12-01T08:00:00Z',
-        updated_at: '2023-12-01T08:00:00Z',
+        created_at: getDateInPreviousYear(12, 1, 8),
+        updated_at: getDateInPreviousYear(12, 1, 8),
     },
     {
         id: 'om-004',
@@ -521,8 +537,8 @@ export const fakeOrganizationMembers: FakeOrganizationMember[] = [
         user_id: PARENT_COACH_ID,
         roles: ['parent', 'coach'],
         status: 'active',
-        created_at: '2024-02-01T11:00:00Z',
-        updated_at: '2024-02-01T11:00:00Z',
+        created_at: getDateInCurrentYear(2, 1, 11),
+        updated_at: getDateInCurrentYear(2, 1, 11),
     },
     // Organization A - Other users
     {
@@ -540,8 +556,8 @@ export const fakeOrganizationMembers: FakeOrganizationMember[] = [
         user_id: USER_COACH_MARTINEZ_ID,
         roles: ['coach'],
         status: 'active',
-        created_at: '2023-09-01T09:00:00Z',
-        updated_at: '2023-09-01T09:00:00Z',
+        created_at: getDateInPreviousYear(9, 1, 9),
+        updated_at: getDateInPreviousYear(9, 1, 9),
     },
     {
         id: 'om-008',
@@ -618,6 +634,40 @@ export function getOrganizationMembershipForUser(
 export function getUserRolesInOrg(userId: string, orgId: string): OrgMemberRole[] {
     const membership = getOrganizationMembershipForUser(userId, orgId)
     return membership?.roles ?? []
+}
+
+/**
+ * Get all organizations for a user (mimics get_user_organizations RPC)
+ * Returns organizations with their roles, matching the RPC return type
+ */
+export function getUserOrganizations(userId: string): Array<{
+    org_id: string
+    org_name: string
+    roles: OrgMemberRole[]
+}> {
+    const memberships = fakeOrganizationMembers.filter((om) => om.user_id === userId)
+    
+    // Group by org_id and aggregate roles
+    const orgMap = new Map<string, OrgMemberRole[]>()
+    
+    for (const membership of memberships) {
+        const existing = orgMap.get(membership.org_id) || []
+        // Merge roles, avoiding duplicates
+        const combined = [...new Set([...existing, ...membership.roles])]
+        orgMap.set(membership.org_id, combined)
+    }
+    
+    // Get organization names from fakeOrganizations
+    return Array.from(orgMap.entries())
+        .map(([orgId, roles]) => {
+            const org = getOrganizationById(orgId)
+            return {
+                org_id: orgId,
+                org_name: org?.name || 'Unknown Organization',
+                roles: roles.sort(), // Sort for consistency
+            }
+        })
+        .sort((a, b) => a.org_name.localeCompare(b.org_name)) // Sort by name
 }
 
 export function getAllChildIds(): string[] {

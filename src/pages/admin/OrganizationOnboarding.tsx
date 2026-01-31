@@ -2,11 +2,11 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { supabase } from '../../lib/supabase'
-import type { Database } from '../../lib/database.types'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization, Organization } from '../../contexts/OrganizationContext'
 import OrganizationIdentityStep from '../../components/admin/onboarding/OrganizationIdentityStep'
 import LicenseActivationStep from '../../components/admin/onboarding/LicenseActivationStep'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import {
   getSetupOrganizationFlag,
   clearSetupOrganizationFlag,
@@ -27,12 +27,12 @@ export default function OrganizationOnboarding() {
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   const hasRedirected = useRef(false)
   const hasLoadedOrgData = useRef<string | null>(null)
-  
+
   const navigate = useNavigate()
-  const { profile, loading: authLoading, user } = useAuth()
+  const { profile, loading: authLoading, user, refreshProfile } = useAuth()
   const { currentOrganization, setCurrentOrganization, setOrganizations } = useOrganization()
 
   const { control, handleSubmit, watch, formState: { errors }, setValue } = useForm<OrganizationFormData>({
@@ -51,8 +51,18 @@ export default function OrganizationOnboarding() {
       if (data) {
         if (data.slug && data.org_type) {
           if (!hasRedirected.current) {
-            hasRedirected.current = true; clearSetupOrganizationFlag()
-            try { if (profile?.requiresOrgSetup) await supabase.from('users').update({ requires_org_setup: false }).eq('id', profile.id) } catch (err) { console.error('Error clearing DB flag:', err) }
+            hasRedirected.current = true
+            clearSetupOrganizationFlag()
+            try {
+              if (profile?.requiresOrgSetup) {
+                type UsersUpdate = Database['public']['Tables']['users']['Update']
+                await supabase.from('users').update({ requires_org_setup: false } satisfies UsersUpdate).eq('id', profile.id)
+                // Refresh profile to update requiresOrgSetup flag
+                await refreshProfile()
+              }
+            } catch (err) {
+              console.error('Error clearing DB flag:', err)
+            }
             navigate('/admin', { replace: true })
           }
           return
@@ -75,7 +85,7 @@ export default function OrganizationOnboarding() {
     }
     if (!profile) return
     if (profile.email) setValue('contact_email', profile.email)
-    
+
     if (currentOrganization) {
       if (hasLoadedOrgData.current !== currentOrganization.id) {
         hasLoadedOrgData.current = currentOrganization.id; loadOrganizationData()
@@ -95,34 +105,76 @@ export default function OrganizationOnboarding() {
         const { data: existingOrg } = await supabase.from('organizations').select('id').eq('slug', data.slug).maybeSingle()
         if (existingOrg) { setError('This URL slug is already taken. Please choose a different one.'); setCreating(false); return }
 
-        const { data: newOrg, error: createError } = await supabase.from('organizations').insert({ name: data.name, slug: data.slug, org_type: data.org_type || undefined, contact_email: data.contact_email } as Database['public']['Tables']['organizations']['Insert']).select().single() as { data: { id: string; name: string; slug: string | null } | null; error: { message?: string } | null }
+        type OrgInsert = Database['public']['Tables']['organizations']['Insert']
+        const orgInsertData = {
+          name: data.name,
+          slug: data.slug,
+          org_type: data.org_type || undefined,
+          contact_email: data.contact_email,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        } satisfies OrgInsert
+
+        console.log(orgInsertData);
+
+        const { data: newOrg, error: createError } = await supabase
+          .from('organizations')
+          .insert(orgInsertData)
+          .select()
+          .single() as { data: { id: string; name: string; slug: string | null } | null; error: { message?: string } | null }
+
         if (createError || !newOrg) throw createError || new Error('Failed to create organization')
+        
         orgId = newOrg.id
-        const { error: memberError } = await supabase.from('organization_members').insert({ organization_id: orgId, user_id: profile.id, role: 'org_admin' } as Database['public']['Tables']['organization_members']['Insert'])
+        type MemberInsert = Database['public']['Tables']['organization_members']['Insert']
+        const memberInsertData = { org_id: orgId, user_id: profile.id, role: 'org_admin' } satisfies MemberInsert
+        const { error: memberError } = await supabase.from('organization_members').insert(memberInsertData)
         if (memberError) { await supabase.from('organizations').delete().eq('id', orgId); throw memberError }
 
-        const nextOrg: Organization = { 
-          id: newOrg.id, 
-          name: newOrg.name, 
-          slug: newOrg.slug ?? undefined, 
+        const nextOrg: Organization = {
+          id: newOrg.id,
+          name: newOrg.name,
+          slug: newOrg.slug ?? undefined,
           roles: ['org_admin'],
           get role() { return this.roles[0] ?? 'parent' }
         }
         setCurrentOrganization(nextOrg); setOrganizations([nextOrg])
       } else {
-        const { error: updateError } = await supabase.from('organizations').update({ name: data.name, slug: data.slug, org_type: data.org_type || undefined, contact_email: data.contact_email } as Database['public']['Tables']['organizations']['Update']).eq('id', orgId)
+        type OrgUpdate = Database['public']['Tables']['organizations']['Update']
+        const orgUpdateData = { name: data.name, slug: data.slug, org_type: data.org_type || undefined, contact_email: data.contact_email } satisfies OrgUpdate
+        const { error: updateError } = await supabase.from('organizations').update(orgUpdateData).eq('id', orgId)
         if (updateError) throw updateError
       }
       clearSetupOrganizationFlag()
-      try { await supabase.from('users').update({ requires_org_setup: false }).eq('id', profile.id) } catch (err) { console.error('Error clearing DB flag:', err) }
+      try {
+        type UsersUpdate = Database['public']['Tables']['users']['Update']
+        await supabase.from('users').update({ requires_org_setup: false } satisfies UsersUpdate).eq('id', profile.id)
+        // Refresh profile to update requiresOrgSetup flag and organizations
+        await refreshProfile()
+        // Wait a moment for state to update, then verify
+        await new Promise(resolve => setTimeout(resolve, 300))
+        await refreshProfile()
+      } catch (err) {
+        console.error('Error clearing DB flag:', err)
+        // Don't throw here - let the step proceed, ProtectedRoute will handle if flag isn't cleared
+      }
       setCurrentStep(2)
     } catch (err: unknown) { setError(getErrorMessage(err) || 'Failed to save organization') } finally { setCreating(false) }
   }
 
-  if (loading || authLoading) return <div className="pa-root pa-flex pa-justify-center pa-items-center" style={{ minHeight: '100vh' }}><div className="pa-skeleton" style={{ width: '400px', height: '300px' }} /></div>
+  if (loading || authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-slate-900 mx-auto"></div>
+          <p className="mt-4 text-slate-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="pa-root" style={{ background: 'var(--pa-bg)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="min-h-screen bg-white overflow-x-hidden">
       {currentStep === 1 ? (
         <OrganizationIdentityStep
           control={control}
@@ -136,7 +188,15 @@ export default function OrganizationOnboarding() {
       ) : (
         <LicenseActivationStep
           organizationId={currentOrganization?.id}
-          onComplete={() => navigate('/admin')}
+          onComplete={async () => {
+            // Refresh profile to ensure latest state
+            await refreshProfile()
+            // Wait a moment for state to update
+            await new Promise(resolve => setTimeout(resolve, 300))
+            await refreshProfile()
+            // Navigate - ProtectedRoute will redirect back to onboarding if flag is still set
+            navigate('/admin', { replace: true })
+          }}
           onBack={() => setCurrentStep(1)}
         />
       )}

@@ -4,27 +4,59 @@
  * Table view with filtering by season, sport, program, level, and status.
  */
 
-import { useEffect, useState, useMemo } from 'react'
-import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
-import { getTeams } from '../../data/services/teamsService'
+import { useOffline } from '../../hooks/useOffline'
+import { USE_FAKE_DATA } from '../../data/config'
+import { getTeams, deleteTeam } from '../../data/services/teamsService'
 import { getSports, getPrograms } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
 import { getSeasons } from '../../data/services/seasonsService'
 import type { Team, Sport, Program, Level, Season } from '../../data/types/organization'
+import { supabase } from '../../lib/supabase'
+import { AdminPageHeader, Button, ConfirmDialog, EmptyState, Card, Select, Badge, PlatformDataTable, InlineNotice } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
+import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
 import OfflineBanner from '../../components/admin/OfflineBanner'
+import { getLink } from '../../utils/routes'
 
 export default function TeamsManagement() {
   const { context, isReady } = useUserContext()
+  const { isOffline } = useOffline()
+  const location = useLocation()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [deletingTeamId, setDeletingTeamId] = useState<string | null>(null)
+  const [teamToDelete, setTeamToDelete] = useState<{ id: string; name: string } | null>(null)
+  const [navigating, setNavigating] = useState(false)
+  const isMountedRef = useRef(true)
+
+  // Check for success message from navigation state
+  useEffect(() => {
+    if (location.state?.successMessage) {
+      setSuccessMessage(location.state.successMessage)
+      // Clear the state to prevent showing it again on refresh
+      window.history.replaceState({}, document.title)
+    }
+  }, [location.state])
+
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
 
   const [teams, setTeams] = useState<Team[]>([])
   const [sports, setSports] = useState<Sport[]>([])
   const [programs, setPrograms] = useState<Program[]>([])
   const [levels, setLevels] = useState<Level[]>([])
   const [seasons, setSeasons] = useState<Season[]>([])
+  const [teamSeasonsMap, setTeamSeasonsMap] = useState<Map<string, string[]>>(new Map())
 
   const [filterSeasonId, setFilterSeasonId] = useState<string>('')
   const [filterSportId, setFilterSportId] = useState<string>('')
@@ -32,40 +64,203 @@ export default function TeamsManagement() {
   const [filterLevelId, setFilterLevelId] = useState<string>('')
   const [filterStatus, setFilterStatus] = useState<string>('all')
 
-  useEffect(() => {
-    if (!isReady) return
+  const fetchData = useCallback(async () => {
+    if (!isReady) {
+      setLoading(false)
+      return
+    }
 
-    const load = async () => {
-      setLoading(true)
-      setError(null)
+    setLoading(true)
+    setError(null)
 
-      try {
-        const [teamsResult, sportsResult, programsResult, levelsResult, seasonsResult] = await Promise.all([
-          getTeams(context),
-          getSports(context),
-          getPrograms(context),
-          getLevels(context),
-          getSeasons(context),
-        ])
+    try {
+      const teamsResult = await getTeams(context)
+      const sportsResult = await getSports(context)
+      const programsResult = await getPrograms(context)
+      const levelsResult = await getLevels(context)
+      const seasonsResult = await getSeasons(context)
 
-        setTeams(teamsResult.data as Team[])
-        setSports(sportsResult.data as Sport[])
-        setPrograms(programsResult.data as Program[])
-        setLevels(levelsResult.data as Level[])
-        setSeasons(seasonsResult.data as Season[])
-      } catch (err) {
+      if (!isMountedRef.current) {
+        return
+      }
+
+      // Check for critical errors that should stop the page from loading
+      if (teamsResult.error || sportsResult.error || programsResult.error || levelsResult.error || seasonsResult.error) {
+        const errors: string[] = []
+        
+        if (teamsResult.error) {
+          errors.push(`Teams: ${teamsResult.error.message || teamsResult.error.toString()}`)
+        }
+        if (sportsResult.error) {
+          errors.push(`Sports: ${sportsResult.error.message || sportsResult.error.toString()}`)
+        }
+        if (programsResult.error) {
+          errors.push(`Programs: ${programsResult.error.message || programsResult.error.toString()}`)
+        }
+        if (levelsResult.error) {
+          errors.push(`Levels: ${levelsResult.error.message || levelsResult.error.toString()}`)
+        }
+        if (seasonsResult.error) {
+          errors.push(`Seasons: ${seasonsResult.error.message || seasonsResult.error.toString()}`)
+        }
+        
+        console.error('[TeamsManagement] Load errors:', { teamsResult, sportsResult, programsResult, levelsResult, seasonsResult })
+        setError(errors.join('; ') || 'Failed to load data')
+        setLoading(false)
+        return
+      }
+
+      // Set data if no errors
+      setTeams(Array.isArray(teamsResult.data) ? teamsResult.data : [])
+      setSports(Array.isArray(sportsResult.data) ? sportsResult.data : [])
+      setPrograms(Array.isArray(programsResult.data) ? programsResult.data : [])
+      setLevels(Array.isArray(levelsResult.data) ? levelsResult.data : [])
+      setSeasons(Array.isArray(seasonsResult.data) ? seasonsResult.data : [])
+
+      // Fetch team_seasons mapping for season filtering
+      if (Array.isArray(teamsResult.data) && teamsResult.data.length > 0) {
+        try {
+          const teamIds = teamsResult.data.map(t => t.id)
+          const { data: teamSeasonsData, error: tsError } = await supabase
+            .from('team_seasons')
+            .select('team_id, season_id')
+            .in('team_id', teamIds)
+
+          if (!tsError && teamSeasonsData) {
+            const map = new Map<string, string[]>()
+            for (const ts of teamSeasonsData) {
+              const existing = map.get(ts.team_id) || []
+              existing.push(ts.season_id)
+              map.set(ts.team_id, existing)
+            }
+            setTeamSeasonsMap(map)
+          }
+        } catch (err) {
+          console.warn('[TeamsManagement] Error fetching team_seasons:', err)
+          // Continue without season filter - teams will still be shown
+        }
+      }
+      
+      // Data loaded successfully
+    } catch (err) {
+      if (isMountedRef.current) {
         setError(err instanceof Error ? err.message : 'Failed to load data')
-      } finally {
+      }
+    } finally {
+      if (isMountedRef.current) {
         setLoading(false)
       }
     }
-
-    load()
   }, [context, isReady])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   const sportById = useMemo(() => new Map(sports.map((s) => [s.id, s])), [sports])
   const programById = useMemo(() => new Map(programs.map((p) => [p.id, p])), [programs])
   const levelById = useMemo(() => new Map(levels.map((l) => [l.id, l])), [levels])
+
+  // Compute prerequisite flag using useMemo for consistency
+  const canCreateTeam = useMemo(
+    () => !loading && Array.isArray(levels) && levels.length > 0,
+    [loading, levels.length]
+  )
+
+  const handleDeleteTeam = useCallback(
+    (teamId: string, teamName: string, e?: React.MouseEvent) => {
+      if (e) {
+        e.stopPropagation()
+      }
+
+      // Block if offline
+      if (isOffline) {
+        setActionError('You appear to be offline. Please reconnect and try again.')
+        return
+      }
+
+      // Block if in demo mode
+      if (USE_FAKE_DATA) {
+        setActionError('This action is not available in demo mode. Please sign in to remove teams from your organization.')
+        return
+      }
+
+      // Block if already deleting
+      if (deletingTeamId) {
+        return
+      }
+
+      setTeamToDelete({ id: teamId, name: teamName })
+    },
+    [isOffline, deletingTeamId]
+  )
+
+  const confirmDeleteTeam = useCallback(
+    async () => {
+      if (!teamToDelete || deletingTeamId) return
+
+      setDeletingTeamId(teamToDelete.id)
+      setActionError(null)
+      setSuccessMessage(null)
+
+      try {
+        const result = await deleteTeam(context, teamToDelete.id)
+
+        if (!isMountedRef.current) return
+
+        if (result.error) {
+          setActionError(result.error.message || 'Failed to remove team. Please try again.')
+        } else {
+          // Remove from local state
+          setTeams((prev) => prev.filter((t) => t.id !== teamToDelete.id))
+          setSuccessMessage(`"${teamToDelete.name}" has been removed from your organization.`)
+
+          // Clear success message after 5 seconds
+          setTimeout(() => {
+            if (isMountedRef.current) {
+              setSuccessMessage(null)
+            }
+          }, 5000)
+        }
+      } catch (err) {
+        console.error('[TeamsManagement] Unexpected error deleting team:', err)
+        if (isMountedRef.current) {
+          setActionError(err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.')
+        }
+      } finally {
+        if (isMountedRef.current) {
+          setDeletingTeamId(null)
+          setTeamToDelete(null)
+        }
+      }
+    },
+    [teamToDelete, deletingTeamId, context]
+  )
+
+  const handleTeamClick = useCallback(
+    (teamId: string) => {
+      if (!teamId || navigating || deletingTeamId) return
+
+      setNavigating(true)
+      navigate(getLink('admin.teams.detail', { id: teamId }))
+    },
+    [navigate, navigating, deletingTeamId]
+  )
+
+  const handleAddTeam = useCallback(() => {
+    if (navigating || !canCreateTeam) return
+
+    setNavigating(true)
+    navigate(`${getLink('admin.organization.forms')}?type=team&returnUrl=${encodeURIComponent(getLink('admin.teams.list'))}`)
+  }, [navigate, navigating, canCreateTeam])
+
+  const handleDismissError = useCallback(() => {
+    setActionError(null)
+  }, [])
+
+  const handleDismissSuccess = useCallback(() => {
+    setSuccessMessage(null)
+  }, [])
 
   // Filter available programs based on selected sport
   const availablePrograms = filterSportId ? programs.filter((p) => p.sport_id === filterSportId) : programs
@@ -73,247 +268,334 @@ export default function TeamsManagement() {
   // Filter available levels based on selected program
   const availableLevels = filterProgramId ? levels.filter((l) => l.program_id === filterProgramId) : levels
 
-  const filteredTeams = teams.filter((team) => {
-    if (filterSeasonId && !team.id.includes(filterSeasonId)) return false // TODO: Check actual season association
+  const filteredTeams = useMemo(() => teams.filter((team) => {
+    // Filter by season: check if team has team_seasons entry for this season
+    if (filterSeasonId) {
+      const teamSeasonIds = teamSeasonsMap.get(team.id) || []
+      if (!teamSeasonIds.includes(filterSeasonId)) {
+        return false
+      }
+    }
     if (filterSportId && team.sport_id !== filterSportId) return false
     if (filterProgramId && team.program_id !== filterProgramId) return false
     if (filterLevelId && team.level_id !== filterLevelId) return false
     if (filterStatus === 'active' && !team.is_active) return false
     if (filterStatus === 'inactive' && team.is_active) return false
     return true
-  })
+  }), [teams, filterSeasonId, filterSportId, filterProgramId, filterLevelId, filterStatus, teamSeasonsMap])
 
-  // --- UI Components ---
-
-  const Header = () => (
-    <div className="mb-10">
-      <nav className="flex items-center gap-2 text-xs font-medium text-slate-400 mb-3">
-        <Link to="/admin" className="hover:text-slate-600 transition-colors">Admin</Link>
-        <span>/</span>
-        <Link to="/admin/organization/structure" className="hover:text-slate-600 transition-colors">Structure</Link>
-        <span>/</span>
-        <span className="text-slate-600">Teams</span>
-      </nav>
-      <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 mb-2">
-        Teams
-      </h1>
-      <p className="text-lg text-slate-500 max-w-2xl font-light">
-        Manage your rostered competition units and their assignments.
-      </p>
-    </div>
-  )
-
-  const FilterLabel = ({ children }: { children: ReactNode }) => (
-    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-      {children}
-    </label>
-  )
-
-  const SelectInput = ({ ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) => (
-    <div className="relative">
-      <select
-        className="w-full h-11 pl-3 pr-10 text-sm font-medium text-slate-900 bg-white border border-slate-200 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all hover:border-slate-300"
-        {...props}
-      />
-      <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-400">
-        <span className="material-symbols-outlined text-lg">expand_more</span>
-      </div>
-    </div>
-  )
-
-  const PrimaryButton = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
-    <button className={`inline-flex items-center justify-center h-11 px-6 font-semibold text-sm text-white bg-slate-900 rounded-full hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 ${className}`}>
-      {children}
-    </button>
-  )
-
-  const StatusBadge = ({ active }: { active: boolean }) => (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-      active 
-        ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
-        : 'bg-slate-100 text-slate-600 border border-slate-200'
-    }`}>
-      {active ? 'Active' : 'Inactive'}
-    </span>
-  )
+  const columns: ColumnConfig<Team>[] = useMemo(() => [
+    {
+        id: 'name',
+        label: 'Team Name',
+        sortable: true,
+        render: (row) => <div className="pa-font-bold pa-text-slate-900">{row.name}</div>
+    },
+    {
+        id: 'details',
+        label: 'Details',
+        render: (row) => {
+            const sport = sportById.get(row.sport_id ?? '')
+            const program = programById.get(row.program_id || '')
+            return (
+                <div className="pa-flex pa-flex-col">
+                    <span className="pa-text-sm pa-font-medium pa-text-slate-700">{program?.name || '—'}</span>
+                    <span className="pa-text-xs pa-text-slate-400">{sport?.name || '—'}</span>
+                </div>
+            )
+        }
+    },
+    {
+        id: 'level_id',
+        label: 'Level',
+        sortable: true,
+        render: (row) => {
+            const level = levelById.get(row.level_id ?? '')
+            return (
+                <Badge variant="neutral">
+                    {level?.name || '—'}
+                </Badge>
+            )
+        }
+    },
+    {
+        id: 'max_roster_size',
+        label: 'Size',
+        sortable: true,
+        render: (row) => (
+            <span className="pa-text-sm pa-text-slate-500 pa-font-medium">
+                {row.max_roster_size ? `${row.max_roster_size} max` : '—'}
+            </span>
+        )
+    },
+    {
+        id: 'is_active',
+        label: 'Status',
+        sortable: true,
+        render: (row) => (
+            <Badge variant={row.is_active ? 'success' : 'neutral'}>
+                {row.is_active ? 'Active' : 'Inactive'}
+            </Badge>
+        )
+    },
+    {
+        id: 'actions',
+        label: 'Action',
+        align: 'right',
+        render: (row) => (
+            <Button
+                variant="danger"
+                size="dense"
+                icon="delete"
+                onClick={(e: React.MouseEvent) => handleDeleteTeam(row.id, row.name, e)}
+                disabled={deletingTeamId === row.id || isOffline || USE_FAKE_DATA || navigating}
+                loading={deletingTeamId === row.id}
+                title={
+                    USE_FAKE_DATA
+                        ? 'Sign in to remove team'
+                        : isOffline
+                        ? 'Offline - cannot remove team'
+                        : navigating
+                        ? 'Please wait...'
+                        : 'Remove team from organization'
+                }
+            >
+                {deletingTeamId === row.id ? 'Removing...' : 'Remove'}
+            </Button>
+        )
+    }
+  ], [sportById, programById, levelById, deletingTeamId, isOffline, navigating, handleDeleteTeam])
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto p-8 animate-pulse">
-        <div className="h-8 bg-slate-200 rounded w-1/4 mb-4"></div>
-        <div className="h-4 bg-slate-100 rounded w-1/3 mb-12"></div>
-        <div className="h-40 bg-slate-100 rounded-xl mb-8"></div>
-        <div className="space-y-2">
-          {[1, 2, 3, 4, 5].map(i => (
-             <div key={i} className="h-16 bg-slate-100 rounded-lg"></div>
+      <div className="pa-root">
+        <div className="pa-skeleton pa-mb-4" style={{ width: '25%', height: '32px' }} />
+        <div className="pa-skeleton pa-mb-12" style={{ width: '33%', height: '16px' }} />
+        <div className="pa-skeleton pa-mb-8" style={{ width: '100%', height: '160px' }} />
+        <div className="pa-flex pa-flex-col pa-gap-2">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="pa-skeleton" style={{ width: '100%', height: '64px' }} />
           ))}
         </div>
       </div>
     )
   }
 
+  // Show empty state if prerequisites don't exist (check full chain: programs → levels → teams)
+  if (programs.length === 0) {
+    return (
+      <div className="pa-root">
+        <OfflineBanner />
+        <AdminPageHeader
+          title="Teams"
+          subtitle="Manage your rostered competition units and their assignments."
+          breadcrumbs={[
+            { label: 'Organizations', path: getLink('admin.organization.structure') },
+            { label: 'Teams' },
+          ]}
+        />
+        <Card>
+          <EmptyState
+            icon="groups"
+            title="No programs yet"
+            description="You need to create at least one program before you can add teams. Teams require levels, and levels require programs."
+            noCard
+          >
+            <Link to={`${getLink('admin.organization.forms')}?type=program`}>
+              <OrgAdminButton variant="primary" className="w-full sm:w-auto">Add a Program</OrgAdminButton>
+            </Link>
+          </EmptyState>
+        </Card>
+      </div>
+    )
+  }
+
+  if (levels.length === 0) {
+    return (
+      <div className="pa-root">
+        <OfflineBanner />
+        <AdminPageHeader
+          title="Teams"
+          subtitle="Manage your rostered competition units and their assignments."
+          breadcrumbs={[
+            { label: 'Organizations', path: getLink('admin.organization.structure') },
+            { label: 'Teams' },
+          ]}
+        />
+        <Card>
+          <EmptyState
+            icon="groups"
+            title="No levels yet"
+            description="You need to create at least one level before you can add teams."
+            noCard
+          >
+            <Link to={`${getLink('admin.organization.forms')}?type=level&returnUrl=${encodeURIComponent(getLink('admin.teams.list'))}`}>
+              <OrgAdminButton variant="primary" className="w-full sm:w-auto">Add a Level</OrgAdminButton>
+            </Link>
+          </EmptyState>
+        </Card>
+      </div>
+    )
+  }
+
   return (
-    <div className="max-w-7xl mx-auto p-8">
+    <div className="pa-root">
       <OfflineBanner />
-      <Header />
+      <AdminPageHeader
+        title="Teams"
+        subtitle="Manage your rostered competition units and their assignments."
+        breadcrumbs={[
+          { label: 'Organizations', path: getLink('admin.organization.structure') },
+          { label: 'Teams' },
+        ]}
+      />
 
       {error && (
-        <div className="p-4 mb-6 bg-red-50 text-red-700 rounded-xl border border-red-100">
-          {error}
-        </div>
+        <InlineNotice
+          tone="error"
+          title="We couldn't load teams"
+          message={error}
+          actions={
+            <Button
+              variant="ghost"
+              size="dense"
+              icon="refresh"
+              onClick={fetchData}
+              disabled={loading}
+            >
+              Retry
+            </Button>
+          }
+          onClose={() => setError(null)}
+          className="pa-mb-6"
+        />
+      )}
+
+      {successMessage && (
+        <InlineNotice
+          tone="success"
+          title={successMessage}
+          onClose={handleDismissSuccess}
+          className="pa-mb-4"
+        />
+      )}
+
+      {actionError && (
+        <InlineNotice
+          tone="error"
+          title={actionError}
+          onClose={handleDismissError}
+          className="pa-mb-4"
+        />
       )}
 
       {/* Filter Bar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
-          
-          {/* Row 1 */}
-          <div>
-            <FilterLabel>Season</FilterLabel>
-            <SelectInput 
+      <Card className="pa-mb-6 pa-filter-section">
+        <div className="pa-filter-row">
+          <div className="pa-filter-control">
+            <Select
+              label="Filter by season"
               value={filterSeasonId}
               onChange={(e) => setFilterSeasonId(e.target.value)}
-            >
-              <option value="">All seasons</option>
-              {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </SelectInput>
+              disabled={loading || navigating}
+              options={[
+                { value: '', label: 'All seasons' },
+                ...seasons.map((s) => ({ value: s.id, label: s.name })),
+              ]}
+            />
           </div>
-
-          <div>
-            <FilterLabel>Sport</FilterLabel>
-            <SelectInput
+          <div className="pa-filter-control">
+            <Select
+              label="Filter by sport"
               value={filterSportId}
               onChange={(e) => {
                 setFilterSportId(e.target.value)
                 setFilterProgramId('')
                 setFilterLevelId('')
               }}
-            >
-              <option value="">All sports</option>
-              {sports.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </SelectInput>
+              disabled={loading || navigating}
+              options={[
+                { value: '', label: 'All sports' },
+                ...sports.map((s) => ({ value: s.id, label: s.name })),
+              ]}
+            />
           </div>
-
-          <div className="flex items-end justify-end md:col-span-2 lg:col-span-1">
-             {/* Desktop: Button aligns to the right. Mobile: Button will be full width below filters using CSS if we wanted, but grid flow handles it reasonably. 
-                 To follow rule "Primary action ... aligned to the right of the filter bar", we place it in the grid flow but aligned. 
-                 For now, let's keep it structurally here but maybe visually separate if needed. 
-                 Actually, simpler to have filters in one block and button floating or right-aligned. 
-                 Let's stick to placing it in the grid for responsive alignment. 
-             */}
-             <Link to="/admin/organization/structure/forms?type=team" className="w-full lg:w-auto">
-                <PrimaryButton className="w-full lg:w-auto">Add Team</PrimaryButton>
-             </Link>
-          </div>
-
-          {/* Row 2 - Hidden if no sport selected? No, showing all filters as per typical dashboard */}
-          <div>
-            <FilterLabel>Program</FilterLabel>
-            <SelectInput
+          <div className="pa-filter-control">
+            <Select
+              label="Filter by program"
               value={filterProgramId}
               onChange={(e) => {
                 setFilterProgramId(e.target.value)
                 setFilterLevelId('')
               }}
-              disabled={!filterSportId && availablePrograms.length === programs.length} // Optional UI hint
-            >
-              <option value="">All programs</option>
-              {availablePrograms.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </SelectInput>
+              disabled={(!filterSportId && availablePrograms.length === programs.length) || loading || navigating}
+              options={[
+                { value: '', label: 'All programs' },
+                ...availablePrograms.map((p) => ({ value: p.id, label: p.name })),
+              ]}
+            />
           </div>
-
-          <div>
-            <FilterLabel>Level</FilterLabel>
-            <SelectInput
+          <div className="pa-filter-control">
+            <Select
+              label="Filter by level"
               value={filterLevelId}
               onChange={(e) => setFilterLevelId(e.target.value)}
-            >
-              <option value="">All levels</option>
-              {availableLevels.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-            </SelectInput>
+              disabled={loading || navigating}
+              options={[
+                { value: '', label: 'All levels' },
+                ...availableLevels.map((l) => ({ value: l.id, label: l.name })),
+              ]}
+            />
           </div>
-
-           <div>
-            <FilterLabel>Status</FilterLabel>
-            <SelectInput
+          <div className="pa-filter-control">
+            <Select
+              label="Filter by status"
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-            >
-              <option value="all">All statuses</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </SelectInput>
+              disabled={loading || navigating}
+              options={[
+                { value: 'all', label: 'All statuses' },
+                { value: 'active', label: 'Active' },
+                { value: 'inactive', label: 'Inactive' },
+              ]}
+            />
           </div>
-
+          <div className="pa-filter-actions">
+            <Button
+              className="pa-w-full sm:pa-w-auto"
+              disabled={!canCreateTeam || navigating || loading}
+              title={!canCreateTeam ? 'Add a Level first' : undefined}
+              onClick={handleAddTeam}
+            >
+              Add Team
+            </Button>
+          </div>
         </div>
-      </div>
+      </Card>
 
       {/* Teams List */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-        {filteredTeams.length === 0 ? (
-          <div className="p-12 text-center">
-            <span className="material-symbols-outlined text-5xl text-slate-200 mb-4">groups</span>
-            <p className="text-slate-500 font-medium">No teams match your filters.</p>
-            {teams.length === 0 && (
-               <p className="text-sm text-slate-400 mt-2">Start by adding your first team to the organization.</p>
-            )}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Team Name</th>
-                  <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Details</th>
-                  <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Level</th>
-                  <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Size</th>
-                  <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                  <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredTeams.map((team) => {
-                  const sport = sportById.get(team.sport_id)
-                  const program = programById.get(team.program_id || '')
-                  const level = levelById.get(team.level_id)
+      <PlatformDataTable
+        rows={filteredTeams}
+        columns={columns}
+        loading={loading}
+        onRowClick={(row) => handleTeamClick(row.id)}
+        emptyMessage={teams.length === 0 ? 'Start by adding your first team to the organization.' : 'Try adjusting your filters to see more teams.'}
+        page={0}
+        rowsPerPage={filteredTeams.length || 10}
+        totalCount={filteredTeams.length}
+        onPageChange={() => {}}
+        onRowsPerPageChange={() => {}}
+      />
 
-                  return (
-                    <tr key={team.id} className="hover:bg-slate-50/80 transition-colors group">
-                      <td className="py-4 px-6">
-                        <div className="font-bold text-slate-900">{team.name}</div>
-                      </td>
-                      <td className="py-4 px-6">
-                         <div className="flex flex-col">
-                            <span className="text-sm font-medium text-slate-700">{program?.name || '—'}</span>
-                            <span className="text-xs text-slate-400">{sport?.name || '—'}</span>
-                         </div>
-                      </td>
-                       <td className="py-4 px-6">
-                        <span className="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-xs font-medium text-slate-600">
-                          {level?.name || '—'}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 text-sm text-slate-500 font-medium">
-                        {team.max_roster_size ? `${team.max_roster_size} max` : '—'}
-                      </td>
-                      <td className="py-4 px-6">
-                        <StatusBadge active={team.is_active} />
-                      </td>
-                      <td className="py-4 px-6 text-right">
-                        <Link to={`/admin/teams/${team.id}`} className="invisible group-hover:visible focus:visible">
-                          <button className="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors">
-                            Manage
-                          </button>
-                        </Link>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      <ConfirmDialog
+        open={Boolean(teamToDelete)}
+        title="Remove team?"
+        description={teamToDelete ? `Are you sure you want to remove "${teamToDelete.name}" from your organization? This action cannot be undone.` : ''}
+        confirmLabel="Remove"
+        variant="danger"
+        onConfirm={confirmDeleteTeam}
+        onCancel={() => setTeamToDelete(null)}
+      />
     </div>
   )
 }

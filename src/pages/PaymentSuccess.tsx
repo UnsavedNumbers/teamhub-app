@@ -40,6 +40,17 @@ export default function PaymentSuccess() {
     if (sessionId) fetchSession(sessionId)
   }, [sessionId])
 
+  // Refetch session on window focus to get updated balance
+  useEffect(() => {
+    const handleFocus = () => {
+      if (sessionId) {
+        fetchSession(sessionId)
+      }
+    }
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [sessionId])
+
   async function fetchSession(id: string) {
     setLoading(true)
     const { data } = await supabase
@@ -54,7 +65,7 @@ export default function PaymentSuccess() {
           amount_cents,
           fee_assignment:fee_assignments (
             fee:fees ( title ),
-            child:children ( first_name, last_name )
+            athlete:athletes ( first_name, last_name )
           )
         )
       `)
@@ -81,6 +92,9 @@ export default function PaymentSuccess() {
             <PageTitle>Payment received</PageTitle>
             <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide mt-2">
               Payment processed successfully.
+            </p>
+            <p className="text-sm text-slate-400 dark:text-slate-500 mt-3">
+              Your balance will update shortly.
             </p>
           </div>
 

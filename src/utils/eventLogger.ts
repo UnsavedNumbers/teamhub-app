@@ -109,7 +109,7 @@ export async function logEvent<C extends EventCategory>(
       p_ip_address: params.ipAddress ?? undefined,
       p_user_agent: params.userAgent ?? undefined,
       p_idempotency_key: params.idempotencyKey ?? undefined,
-    })
+    } as any)
 
     if (error) {
       console.error('Event logging failed:', error)
@@ -243,6 +243,29 @@ export async function logSystemEvent(
     category: 'SYSTEM',
     eventType,
     actorRole: 'system',
+    metadata,
+  })
+}
+
+/**
+ * Helper: Log sport events
+ */
+export async function logSportEvent(
+  eventType: 'SPORT_LINKED' | 'SPORT_UNLINKED' | 'SPORT_CUSTOMIZED' | 'SPORT_CUSTOMIZATION_UPDATED' | 'SPORT_CUSTOMIZATION_REMOVED' | 'SPORT_ICON_UPLOADED' | 'SPORT_ICON_DELETED',
+  orgId: string,
+  targetEntityId: string,
+  actorUserId?: string,
+  actorRole: EventActorRole = 'org_admin',
+  metadata?: Record<string, unknown>
+): Promise<EventLogResponse> {
+  return logEvent({
+    category: 'SPORT',
+    eventType,
+    actorUserId,
+    actorRole,
+    orgId,
+    targetEntityType: 'sport',
+    targetEntityId,
     metadata,
   })
 }

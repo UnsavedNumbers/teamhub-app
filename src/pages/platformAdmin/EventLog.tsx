@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, Badge, FilterBar, PlatformDataTable, JsonViewer, type ColumnConfig } from '../../components/platformAdmin'
+import { PageHeader, Badge, FilterBar, PlatformDataTable, type ColumnConfig, Button, OfflineBanner } from '../../components/platformAdmin'
 import { EventLogDetailModal } from '../../components/platformAdmin/EventLogDetailModal'
+import { useQueryParams } from '../../hooks/useQueryParams'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { AdminEventLog, EventCategory } from '../../types/eventLog.types'
 
 // Category options for filtering
@@ -30,9 +33,47 @@ export default function EventLog() {
   const [rowsPerPage, setRowsPerPage] = useState(50)
   const [totalCount, setTotalCount] = useState(0)
   const [search, setSearch] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState<Database["public"]["Enums"]["event_category"] | null>(null)
   const [eventTypeFilter, setEventTypeFilter] = useState('')
-  const [orgFilter, setOrgFilter] = useState('')
+  
+  // Deep link support: org_id query param
+  const { getUUID } = useQueryParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const orgFilterFromQuery = getUUID('org_id')
+  const [orgFilter, setOrgFilter] = useState(orgFilterFromQuery || '')
+  const [orgFilterName, setOrgFilterName] = useState<string | null>(null)
+
+  // Sync orgFilter with query param
+  useEffect(() => {
+    if (orgFilterFromQuery) {
+      setOrgFilter(orgFilterFromQuery)
+    } else {
+      setOrgFilter('')
+    }
+  }, [orgFilterFromQuery])
+
+  useEffect(() => {
+    if (orgFilter) {
+      supabase
+        .from('admin_organizations')
+        .select('name')
+        .eq('id', orgFilter)
+        .single()
+        .then(({ data }) => {
+          if (data) setOrgFilterName((data as any).name)
+        })
+    } else {
+      setOrgFilterName(null)
+    }
+  }, [orgFilter])
+
+  const clearOrgFilter = () => {
+    const newParams = new URLSearchParams(searchParams)
+    newParams.delete('org_id')
+    setSearchParams(newParams)
+    setOrgFilter('')
+    setPage(0)
+  }
   const [dateFrom, setDateFrom] = useState(() => {
     // Default to 90 days ago
     const date = new Date()
@@ -87,7 +128,7 @@ export default function EventLog() {
         setLogs([])
         setTotalCount(0)
       } else {
-        setLogs(data || [])
+        setLogs(data as AdminEventLog[])
         setTotalCount(count || 0)
       }
     } catch (err) {
@@ -248,10 +289,30 @@ export default function EventLog() {
 
   return (
     <div>
+      <OfflineBanner />
       <PageHeader
         title="Event Log"
         subtitle="Comprehensive audit trail of all platform actions. Default view: last 90 days."
       />
+
+      {/* Org Filter Indicator */}
+      {orgFilter && (
+        <div className="pa-card pa-mb-4" style={{ background: 'var(--pa-primary-bg)', borderLeft: '3px solid var(--pa-primary)' }}>
+          <div className="pa-flex pa-items-center pa-justify-between">
+            <div className="pa-flex pa-items-center pa-gap-2">
+              <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-primary)' }}>
+                filter_alt
+              </span>
+              <span className="pa-body-m">
+                Filtered by organization: <strong>{orgFilterName || orgFilter}</strong>
+              </span>
+            </div>
+            <Button variant="ghost" size="dense" onClick={clearOrgFilter}>
+              Clear Filter
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', alignItems: 'center' }}>
         <FilterBar
@@ -259,8 +320,8 @@ export default function EventLog() {
           onSearchChange={(value) => { setSearch(value); setPage(0) }}
           searchPlaceholder="Search by actor email or name..."
           statusOptions={categoryOptions}
-          statusValue={categoryFilter}
-          onStatusChange={(value) => { setCategoryFilter(value); setPage(0) }}
+          statusValue={categoryFilter as string}
+          onStatusChange={(value) => { setCategoryFilter(value as Database["public"]["Enums"]["event_category"] | null); setPage(0) }}
           statusLabel="Category"
           showDateRange
           dateFrom={dateFrom}
@@ -269,9 +330,9 @@ export default function EventLog() {
           onDateToChange={(value) => { setDateTo(value); setPage(0) }}
           onClearAll={() => {
             setSearch('')
-            setCategoryFilter('')
+            setCategoryFilter(null)
             setEventTypeFilter('')
-            setOrgFilter('')
+            clearOrgFilter()
             const date = new Date()
             date.setDate(date.getDate() - 90)
             setDateFrom(date.toISOString().split('T')[0])

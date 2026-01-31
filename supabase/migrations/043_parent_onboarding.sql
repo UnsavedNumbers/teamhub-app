@@ -5,16 +5,16 @@
 -- membership. Children can now be attached to organizations independent of the
 -- legacy family table.
 
--- Allow children to exist outside of a legacy family so new flows can create
--- children before any family linkage.
-ALTER TABLE children
+-- Allow athletes to exist outside of a legacy family so new flows can create
+-- athletes before any family linkage.
+ALTER TABLE athletes
   ALTER COLUMN family_id DROP NOT NULL;
 
 -- ======================
 -- Enums / Status types
 -- ======================
 DO $$ BEGIN
-  CREATE TYPE child_guardian_status AS ENUM ('active', 'pending', 'removed');
+  CREATE TYPE athlete_guardian_status AS ENUM ('active', 'pending', 'removed');
 EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
@@ -32,37 +32,37 @@ EXCEPTION
 END $$;
 
 -- ======================
--- Child Guardians
+-- Athlete Guardians
 -- ======================
-CREATE TABLE IF NOT EXISTS child_guardians (
+CREATE TABLE IF NOT EXISTS athlete_guardians (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  child_id UUID NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+  athlete_id UUID NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  status child_guardian_status NOT NULL DEFAULT 'pending',
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  status athlete_guardian_status NOT NULL DEFAULT 'pending',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (child_id, user_id, organization_id)
+  UNIQUE (athlete_id, user_id, org_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_child_guardians_child_user ON child_guardians(child_id, user_id);
-CREATE INDEX IF NOT EXISTS idx_child_guardians_user_org ON child_guardians(user_id, organization_id);
-CREATE INDEX IF NOT EXISTS idx_child_guardians_org_child ON child_guardians(organization_id, child_id);
+CREATE INDEX IF NOT EXISTS idx_athlete_guardians_athlete_user ON athlete_guardians(athlete_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_athlete_guardians_user_org ON athlete_guardians(user_id, org_id);
+CREATE INDEX IF NOT EXISTS idx_athlete_guardians_org_athlete ON athlete_guardians(org_id, athlete_id);
 
-CREATE TRIGGER update_child_guardians_updated_at
-  BEFORE UPDATE ON child_guardians
+CREATE TRIGGER update_athlete_guardians_updated_at
+  BEFORE UPDATE ON athlete_guardians
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
-ALTER TABLE child_guardians ENABLE ROW LEVEL SECURITY;
+ALTER TABLE athlete_guardians ENABLE ROW LEVEL SECURITY;
 
 -- ======================
 -- Parent Invites (Flow A)
 -- ======================
 CREATE TABLE IF NOT EXISTS parent_invites (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  child_id UUID REFERENCES children(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  athlete_id UUID REFERENCES athletes(id) ON DELETE CASCADE,
   team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
   email TEXT NOT NULL,
   status parent_invite_status NOT NULL DEFAULT 'pending',
@@ -75,8 +75,8 @@ CREATE TABLE IF NOT EXISTS parent_invites (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_parent_invites_org_email ON parent_invites(organization_id, LOWER(email));
-CREATE INDEX IF NOT EXISTS idx_parent_invites_child_id ON parent_invites(child_id);
+CREATE INDEX IF NOT EXISTS idx_parent_invites_org_email ON parent_invites(org_id, LOWER(email));
+CREATE INDEX IF NOT EXISTS idx_parent_invites_athlete_id ON parent_invites(athlete_id);
 
 CREATE TRIGGER update_parent_invites_updated_at
   BEFORE UPDATE ON parent_invites
@@ -90,7 +90,7 @@ ALTER TABLE parent_invites ENABLE ROW LEVEL SECURITY;
 -- ======================
 CREATE TABLE IF NOT EXISTS join_links (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
   token TEXT UNIQUE NOT NULL DEFAULT gen_random_uuid()::text,
   auto_approve BOOLEAN NOT NULL DEFAULT FALSE,
@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS join_links (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_join_links_org ON join_links(organization_id);
+CREATE INDEX IF NOT EXISTS idx_join_links_org ON join_links(org_id);
 CREATE INDEX IF NOT EXISTS idx_join_links_team ON join_links(team_id);
 
 CREATE TRIGGER update_join_links_updated_at
@@ -115,10 +115,10 @@ ALTER TABLE join_links ENABLE ROW LEVEL SECURITY;
 -- ======================
 CREATE TABLE IF NOT EXISTS join_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
   season_id UUID NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
-  child_id UUID NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+  athlete_id UUID NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
   requested_by_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   join_link_id UUID REFERENCES join_links(id) ON DELETE SET NULL,
   status join_request_status NOT NULL DEFAULT 'pending',
@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS join_requests (
 );
 
 CREATE INDEX IF NOT EXISTS idx_join_requests_requester ON join_requests(requested_by_user_id);
-CREATE INDEX IF NOT EXISTS idx_join_requests_child_team ON join_requests(child_id, team_id);
+CREATE INDEX IF NOT EXISTS idx_join_requests_athlete_team ON join_requests(athlete_id, team_id);
 CREATE INDEX IF NOT EXISTS idx_join_requests_team_status ON join_requests(team_id, status);
 CREATE INDEX IF NOT EXISTS idx_join_requests_season ON join_requests(season_id);
 
@@ -146,9 +146,9 @@ ALTER TABLE join_requests ENABLE ROW LEVEL SECURITY;
 -- ======================
 CREATE TABLE IF NOT EXISTS child_claim_tokens (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
-  child_id UUID NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+  athlete_id UUID NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
   season_id UUID NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
   token TEXT UNIQUE NOT NULL DEFAULT gen_random_uuid()::text,
   expires_at TIMESTAMPTZ NOT NULL,
@@ -159,7 +159,7 @@ CREATE TABLE IF NOT EXISTS child_claim_tokens (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_child_claims_child_org ON child_claim_tokens(child_id, organization_id);
+CREATE INDEX IF NOT EXISTS idx_child_claims_athlete_org ON child_claim_tokens(athlete_id, org_id);
 CREATE INDEX IF NOT EXISTS idx_child_claims_token ON child_claim_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_child_claims_season ON child_claim_tokens(season_id);
 

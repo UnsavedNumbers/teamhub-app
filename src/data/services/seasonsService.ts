@@ -10,6 +10,7 @@ import { supabase } from '../../lib/supabase'
 import type { UserContext } from '../fake/userContext'
 import type { Season, CreateSeasonDTO, UpdateSeasonDTO } from '../types/organization'
 import { getSeasonById, getSeasonsForOrg } from '../fake/fakeTeams'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 
 async function simulateDelay(): Promise<void> {
   if (FAKE_DATA_DELAY_MS > 0) {
@@ -17,25 +18,48 @@ async function simulateDelay(): Promise<void> {
   }
 }
 
+export interface GetSeasonsOptions {
+  activeOnly?: boolean
+}
+
 export async function getSeasons(
-  context: UserContext
+  context: UserContext,
+  options: GetSeasonsOptions = {}
 ): Promise<{ data: Season[]; error: Error | null }> {
   if (USE_FAKE_DATA) {
     await simulateDelay()
-    return { data: getSeasonsForOrg(context.orgId), error: null }
+    const allSeasons = getSeasonsForOrg(context.orgId)
+    if (options.activeOnly) {
+      return { data: allSeasons.filter(s => s.is_active), error: null }
+    }
+    return { data: allSeasons, error: null }
   }
 
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('seasons')
       .select('*')
-      .eq('organization_id', context.orgId)
-      .order('start_date', { ascending: false })
+      .eq('org_id', context.orgId)
 
-    if (error) throw error
+    // Filter by active status if requested
+    if (options.activeOnly) {
+      query = query.eq('is_active', true)
+    }
+
+    const { data, error } = await query.order('start_date', { ascending: false })
+
+    if (error) {
+      console.error('[seasonsService] Supabase error getting seasons:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      })
+      throw error
+    }
     const mapped = (data || []).map((row: any) => ({
       id: row.id,
-      org_id: row.organization_id,
+      org_id: row.org_id,
       team_id: row.team_id ?? null,
       name: row.name,
       start_date: row.start_date,
@@ -47,7 +71,12 @@ export async function getSeasons(
     return { data: mapped, error: null }
   } catch (err) {
     console.error('[seasonsService] Error getting seasons:', err)
-    return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+    const errorDetails = err && typeof err === 'object' && 'details' in err ? (err as any).details : undefined
+    return { 
+      data: [], 
+      error: err instanceof Error ? err : new Error(errorMessage + (errorDetails ? `: ${errorDetails}` : ''))
+    }
   }
 }
 
@@ -65,22 +94,23 @@ export async function getSeason(
       .from('seasons')
       .select('*')
       .eq('id', seasonId)
-      .eq('organization_id', context.orgId)
+      .eq('org_id', context.orgId)
       .single()
 
     if (error) throw error
-    const row = data as any
+    type SeasonRow = Database['public']['Tables']['seasons']['Row'] & { id: string; name: string; start_date: string; end_date: string; is_active: boolean; org_id: string }
+    const row = data as SeasonRow
     return {
       data: {
         id: row.id,
-        org_id: row.organization_id,
+        org_id: row.org_id,
         team_id: row.team_id ?? null,
         name: row.name,
         start_date: row.start_date,
         end_date: row.end_date,
         is_active: row.is_active ?? false,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
+        created_at: row.created_at || '',
+        updated_at: row.updated_at || '',
       },
       error: null,
     }
@@ -91,7 +121,7 @@ export async function getSeason(
 }
 
 export async function createSeason(
-  context: UserContext,
+  _context: UserContext,
   dto: CreateSeasonDTO
 ): Promise<{ data: Season | null; error: Error | null }> {
   if (USE_FAKE_DATA) {
@@ -113,27 +143,37 @@ export async function createSeason(
   }
 
   try {
+    const insertData = {
+      org_id: dto.org_id,
+      name: dto.name,
+      start_date: dto.start_date,
+      end_date: dto.end_date,
+      is_active: dto.is_active ?? false,
+      sport_id: dto.sport_id ?? null,
+      program_id: dto.program_id ?? null,
+      team_id: null,
+    }
     const { data, error } = await supabase
       .from('seasons')
-      .insert({
-        organization_id: dto.org_id,
-        name: dto.name,
-        start_date: dto.start_date,
-        end_date: dto.end_date,
-        is_active: dto.is_active ?? false,
-        sport_id: dto.sport_id ?? null,
-        program_id: dto.program_id ?? null,
-      })
+      .insert(insertData as any) // Type will be fixed after migration
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('[seasonsService] Supabase error creating season:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      })
+      throw error
+    }
 
     const row = data as any
     return {
       data: {
         id: row.id,
-        org_id: row.organization_id,
+        org_id: row.org_id,
         team_id: row.team_id ?? null,
         name: row.name,
         start_date: row.start_date,
@@ -145,7 +185,13 @@ export async function createSeason(
       error: null,
     }
   } catch (err) {
-    return { data: null, error: err instanceof Error ? err : new Error('Create season failed') }
+    console.error('[seasonsService] Error creating season:', err)
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+    const errorDetails = err && typeof err === 'object' && 'details' in err ? (err as any).details : undefined
+    return { 
+      data: null, 
+      error: err instanceof Error ? err : new Error(errorMessage + (errorDetails ? `: ${errorDetails}` : ''))
+    }
   }
 }
 
@@ -160,19 +206,21 @@ export async function updateSeason(
   }
 
   try {
+    type SeasonUpdate = Database['public']['Tables']['seasons']['Update']
+    const updateData = {
+      name: dto.name,
+      start_date: dto.start_date,
+      end_date: dto.end_date,
+      is_active: dto.is_active,
+      sport_id: dto.sport_id ?? null,
+      program_id: dto.program_id ?? null,
+      updated_at: new Date().toISOString(),
+    } satisfies SeasonUpdate
     const { data, error } = await supabase
       .from('seasons')
-      .update({
-        name: dto.name,
-        start_date: dto.start_date,
-        end_date: dto.end_date,
-        is_active: dto.is_active,
-        sport_id: dto.sport_id ?? null,
-        program_id: dto.program_id ?? null,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', seasonId)
-      .eq('organization_id', context.orgId)
+      .eq('org_id', context.orgId)
       .select()
       .single()
 
@@ -182,7 +230,7 @@ export async function updateSeason(
     return {
       data: {
         id: row.id,
-        org_id: row.organization_id,
+        org_id: row.org_id,
         team_id: row.team_id ?? null,
         name: row.name,
         start_date: row.start_date,
@@ -195,6 +243,30 @@ export async function updateSeason(
     }
   } catch (err) {
     return { data: null, error: err instanceof Error ? err : new Error('Update season failed') }
+  }
+}
+
+export async function isSeasonEmpty(
+  _context: UserContext,
+  seasonId: string
+): Promise<{ isEmpty: boolean; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    // For fake data, assume seasons are empty
+    return { isEmpty: true, error: null }
+  }
+
+  try {
+    const { count, error } = await supabase
+      .from('team_seasons')
+      .select('*', { count: 'exact', head: true })
+      .eq('season_id', seasonId)
+
+    if (error) throw error
+    return { isEmpty: (count ?? 0) === 0, error: null }
+  } catch (err) {
+    console.error('[seasonsService] Error checking if season is empty:', err)
+    return { isEmpty: false, error: err instanceof Error ? err : new Error('Failed to check if season is empty') }
   }
 }
 
@@ -212,7 +284,7 @@ export async function deleteSeason(
       .from('seasons')
       .delete()
       .eq('id', seasonId)
-      .eq('organization_id', context.orgId)
+      .eq('org_id', context.orgId)
 
     if (error) throw error
     return { error: null }

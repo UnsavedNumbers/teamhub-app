@@ -1,0 +1,31 @@
+---
+description: TypeScript compile-clean state, no unused imports, declare-before-use, types as blockers
+globs: "**/*.ts,**/*.tsx"
+alwaysApply: true
+---
+
+# TypeScript: Compile-Clean and Structural Correctness
+
+When writing or modifying code, you must continuously do a **mock validation of correctness** as you go. Do not proceed if the type system shows errors. Treat TypeScript errors as **blockers**, not warnings, and keep the project in a **compile-clean state** at all times by mentally (or locally) validating that `tsc --noEmit` would pass at the end of every change.
+
+## Imports
+
+- **Do not introduce imports** unless they are immediately used.
+- **Remove unused imports** as soon as they appear (or as soon as you remove the only usage).
+
+## Declaration order and references
+
+- **Never reference** a variable, hook, or function before it is explicitly declared and initialized.
+- **Define and import TypeScript types at the same time** they are introduced; do not use types before they exist.
+
+## Hooks, utilities, and helpers
+
+When adding hooks, utilities, or helpers:
+
+1. **Instantiate, invoke, and wire them correctly** before referencing them elsewhere.
+2. **Confirm all of their dependencies are present** before moving on.
+3. Do not reference a hook/utility/helper from another file or component until it is fully implemented and its dependencies are in place.
+
+## Goal
+
+**Prevent** structural and type errors from ever entering the codebase—not to clean them up later.

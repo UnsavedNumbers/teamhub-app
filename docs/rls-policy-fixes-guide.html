@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RLS Policy Fixes Guide - YouthSports.team</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+        
+        h2 {
+            color: #34495e;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-left: 10px;
+            border-left: 4px solid #3498db;
+        }
+        
+        h3 {
+            color: #555;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+        
+        .toc {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        
+        .toc ul {
+            list-style: none;
+            padding-left: 20px;
+        }
+        
+        .toc li {
+            margin: 8px 0;
+        }
+        
+        .toc a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            border-left: 4px solid;
+        }
+        
+        .alert-danger {
+            background: #fee;
+            border-color: #e74c3c;
+            color: #c0392b;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            border-color: #17a2b8;
+            color: #0c5460;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #e83e8c;
+        }
+        
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 15px 0;
+            border-left: 4px solid #3498db;
+        }
+        
+        pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        th {
+            background: #34495e;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .badge-danger {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .badge-warning {
+            background: #f39c12;
+            color: white;
+        }
+        
+        .badge-info {
+            background: #3498db;
+            color: white;
+        }
+        
+        .file-path {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        
+        .step {
+            background: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .step-number {
+            display: inline-block;
+            background: #3498db;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        ul, ol {
+            margin-left: 30px;
+            margin-top: 10px;
+        }
+        
+        li {
+            margin: 8px 0;
+        }
+        
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 2px solid #dee2e6;
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 RLS Policy Fixes Guide</h1>
+        <p><strong>Last Updated:</strong> January 22, 2026</p>
+        <p><strong>Status:</strong> <span class="badge badge-danger">Critical Issues Identified</span></p>
+        
+        <div class="alert alert-danger">
+            <strong>⚠️ Critical:</strong> This guide addresses broken RLS policies and trigger issues that are causing 
+            <code>organization_id missing</code> errors and preventing proper access control.
+        </div>
+        
+        <div class="toc">
+            <h3>Table of Contents</h3>
+            <ul>
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#issue1">Issue 1: organization_id Missing Error</a></li>
+                <li><a href="#issue2">Issue 2: Can't Insert First Organization Member</a></li>
+                <li><a href="#issue3">Issue 3: Unnecessary Triggers</a></li>
+                <li><a href="#root-causes">Root Causes Summary</a></li>
+                <li><a href="#fixes">Recommended Fixes</a></li>
+                <li><a href="#migration">Migration Steps</a></li>
+                <li><a href="#verification">Verification Steps</a></li>
+            </ul>
+        </div>
+        
+        <h2 id="overview">Overview</h2>
+        <p>
+            This guide documents critical issues in the Supabase RLS (Row Level Security) policies that were introduced 
+            during policy consolidation migrations. The issues affect multiple tables and prevent proper access control.
+        </p>
+        
+        <h3>Affected Migrations</h3>
+        <ul>
+            <li><code class="file-path">20260127000001_fix_auth_rls_initplan.sql</code></li>
+            <li><code class="file-path">20260127000002_consolidate_permissive_policies.sql</code></li>
+            <li><code class="file-path">048_audit_logging.sql</code></li>
+            <li><code class="file-path">040_event_logger_triggers.sql</code></li>
+        </ul>
+        
+        <h2 id="issue1">Issue 1: organization_id Missing Error</h2>
+        
+        <div class="alert alert-danger">
+            <strong>Problem:</strong> RLS policies reference <code>organization_id</code> column that doesn't exist in scope, 
+            causing errors or overly permissive policies.
+        </div>
+        
+        <h3>Problematic Code Pattern</h3>
+        <p>
+            Multiple policies contain broken patterns where <code>organization_id</code> was supposed to be referenced 
+            but was commented out with FIXME notes:
+        </p>
+        
+        <pre><code>-- From 20260127000002_consolidate_permissive_policies.sql
+CREATE POLICY "families_select_policy" ON families
+  FOR SELECT
+  USING (
+    -- Parents can view their own family
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = (select auth.uid()) 
+      AND users.family_id = families.id
+    )
+    -- Coaches can view families
+    OR EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = (select auth.uid())  
+      -- AND user_has_org_role((select auth.uid()), organization_id, 'coach') 
+      -- FIXME: organization_id not in scope
+    )
+    -- Admins can view families
+    OR is_platform_admin((select auth.uid()))
+  );</code></pre>
+        
+        <h3>Why This Is Broken</h3>
+        <ul>
+            <li>The <code>EXISTS</code> clause now only checks if the user exists (always true for authenticated users)</li>
+            <li>The coach role check was removed, making the policy overly permissive</li>
+            <li>There are <strong>12+ occurrences</strong> of this pattern across multiple tables</li>
+        </ul>
+        
+        <h3>Affected Tables</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Table</th>
+                    <th>Policy Name</th>
+                    <th>Issue</th>
+                    <th>Severity</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>families</code></td>
+                    <td><code>families_select_policy</code></td>
+                    <td>Coach check removed</td>
+                    <td><span class="badge badge-warning">Medium</span></td>
+                </tr>
+                <tr>
+                    <td><code>teams</code></td>
+                    <td><code>teams_select_policy</code></td>
+                    <td>Coach check removed</td>
+                    <td><span class="badge badge-warning">Medium</span></td>
+                </tr>
+                <tr>
+                    <td><code>events</code></td>
+                    <td><code>events_select_policy</code></td>
+                    <td>Coach check removed</td>
+                    <td><span class="badge badge-warning">Medium</span></td>
+                </tr>
+                <tr>
+                    <td><code>attendance</code></td>
+                    <td><code>attendance_select_policy</code></td>
+                    <td>Coach check removed</td>
+                    <td><span class="badge badge-warning">Medium</span></td>
+                </tr>
+                <tr>
+                    <td><code>team_memberships</code></td>
+                    <td><code>team_memberships_select_policy</code></td>
+                    <td>Coach check removed</td>
+                    <td><span class="badge badge-warning">Medium</span></td>
+                </tr>
+                <tr>
+                    <td><code>seasons</code></td>
+                    <td><code>seasons_select_policy</code></td>
+                    <td>Coach check removed</td>
+                    <td><span class="badge badge-warning">Medium</span></td>
+                </tr>
+                <tr>
+                    <td><code>fees</code></td>
+                    <td><code>Coaches can view published fees</code></td>
+                    <td>Coach check removed</td>
+                    <td><span class="badge badge-warning">Medium</span></td>
+                </tr>
+                <tr>
+                    <td><code>fee_assignments</code></td>
+                    <td><code>Coaches can view fee assignment status</code></td>
+                    <td>Coach check removed</td>
+                    <td><span class="badge badge-warning">Medium</span></td>
+                </tr>
+                <tr>
+                    <td><code>athletes</code></td>
+                    <td><code>Coaches can view team athletes</code></td>
+                    <td>Coach check removed</td>
+                    <td><span class="badge badge-warning">Medium</span></td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h2 id="issue2">Issue 2: Can't Insert First Organization Member</h2>
+        
+        <div class="alert alert-danger">
+            <strong>Problem:</strong> When creating a brand new organization, no one can insert the first member because 
+            the INSERT policy requires being an org admin, but no admins exist yet (chicken-and-egg problem).
+        </div>
+        
+        <h3>Current Policy</h3>
+        <pre><code>-- From 20260127000001_fix_auth_rls_initplan.sql
+CREATE POLICY "Org admins can manage org memberships" ON organization_members
+  FOR INSERT
+  WITH CHECK (user_is_org_admin((select auth.uid()), org_id));</code></pre>
+        
+        <h3>Why This Fails</h3>
+        <ol>
+            <li>New organization is created (empty, no members)</li>
+            <li>User tries to insert first member (themselves as org_admin)</li>
+            <li>Policy checks: <code>user_is_org_admin(auth.uid(), org_id)</code></li>
+            <li>Function returns <code>false</code> because no membership exists yet</li>
+            <li>INSERT is rejected ❌</li>
+        </ol>
+        
+        <h3>Solution</h3>
+        <p>
+            Add a bootstrap policy that allows inserting the first member when the organization is empty:
+        </p>
+        
+        <pre><code>CREATE POLICY "Allow bootstrap member insert" ON organization_members
+  FOR INSERT
+  WITH CHECK (
+    -- Platform admins can always insert
+    is_platform_admin((select auth.uid()))
+    -- Org admins can insert into their org
+    OR user_is_org_admin((select auth.uid()), org_id)
+    -- Allow insert if org has no members (bootstrap case)
+    OR NOT EXISTS (
+      SELECT 1 FROM organization_members om2 
+      WHERE om2.org_id = organization_members.org_id
+    )
+  );</code></pre>
+        
+        <div class="alert alert-info">
+            <strong>Note:</strong> You mentioned adding 2 new policies for this. Make sure they don't conflict with 
+            existing policies. Consider consolidating them into a single policy with OR conditions.
+        </div>
+        
+        <h2 id="issue3">Issue 3: Trigger Review & Analysis</h2>
+        
+        <div class="alert alert-info">
+            <strong>Analysis Complete:</strong> After reviewing all triggers in the codebase, here's what's actually needed 
+            vs. what can be removed or optimized.
+        </div>
+        
+        <h3>Trigger Architecture Overview</h3>
+        <p>
+            Your system uses a unified <code>event_logs</code> table (from <code>039_global_event_logger.sql</code>) that 
+            all logging triggers write to. There are three categories of triggers:
+        </p>
+        <ol>
+            <li><strong>updated_at triggers</strong> - Standard timestamp maintenance (all needed)</li>
+            <li><strong>Event logger triggers</strong> - Auto-logs core business entities (needed)</li>
+            <li><strong>Audit logger triggers</strong> - Logs onboarding/role management (needed, different purpose)</li>
+            <li><strong>Business logic triggers</strong> - Functional requirements (needed)</li>
+        </ol>
+        
+        <h3>✅ Triggers That Are NEEDED</h3>
+        
+        <h4>1. Updated_at Triggers (All Required)</h4>
+        <p>These maintain <code>updated_at</code> timestamps automatically. <strong>Keep all of them.</strong></p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Trigger Pattern</th>
+                    <th>Purpose</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>update_*_updated_at</code></td>
+                    <td>Auto-update <code>updated_at</code> column on UPDATE</td>
+                    <td><span class="badge badge-success">Keep</span></td>
+                </tr>
+            </tbody>
+        </table>
+        <p><strong>Examples:</strong> <code>update_org_members_updated_at</code>, <code>update_athletes_updated_at</code>, 
+        <code>update_fees_updated_at</code>, etc. (50+ triggers, all needed)</p>
+        
+        <h4>2. Event Logger Triggers (Core Business Entities)</h4>
+        <p>These auto-log changes to core business entities. <strong>All needed.</strong></p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Trigger</th>
+                    <th>Table</th>
+                    <th>Logs To</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>trigger_log_organization_changes</code></td>
+                    <td><code>organizations</code></td>
+                    <td><code>event_logs</code></td>
+                    <td><span class="badge badge-success">Keep</span></td>
+                </tr>
+                <tr>
+                    <td><code>trigger_log_user_changes</code></td>
+                    <td><code>users</code></td>
+                    <td><code>event_logs</code></td>
+                    <td><span class="badge badge-success">Keep</span></td>
+                </tr>
+                <tr>
+                    <td><code>trigger_log_payment_changes</code></td>
+                    <td><code>payments</code></td>
+                    <td><code>event_logs</code></td>
+                    <td><span class="badge badge-success">Keep</span></td>
+                </tr>
+                <tr>
+                    <td><code>trigger_log_fee_changes</code></td>
+                    <td><code>fees</code></td>
+                    <td><code>event_logs</code></td>
+                    <td><span class="badge badge-success">Keep</span></td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h4>3. Audit Logger Triggers (Onboarding & Role Management)</h4>
+        <p>These log onboarding and role management events. <strong>All needed</strong> - they serve a different purpose 
+        than event logger triggers.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Trigger</th>
+                    <th>Table</th>
+                    <th>Events Logged</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>organization_members_audit_log</code></td>
+                    <td><code>organization_members</code></td>
+                    <td>ROLE_ADDED, ROLE_REMOVED, ORG_JOINED, ORG_LEFT</td>
+                    <td><span class="badge badge-success">Keep</span></td>
+                </tr>
+                <tr>
+                    <td><code>parent_invites_audit_log</code></td>
+                    <td><code>parent_invites</code></td>
+                    <td>PARENT_INVITED, PARENT_ATTACHED</td>
+                    <td><span class="badge badge-success">Keep</span></td>
+                </tr>
+                <tr>
+                    <td><code>join_links_audit_log</code></td>
+                    <td><code>join_links</code></td>
+                    <td>JOIN_LINK_CREATED</td>
+                    <td><span class="badge badge-success">Keep</span></td>
+                </tr>
+                <tr>
+                    <td><code>join_requests_audit_log</code></td>
+                    <td><code>join_requests</code></td>
+                    <td>JOIN_REQUEST_SUBMITTED, APPROVED, DENIED</td>
+                    <td><span class="badge badge-success">Keep</span></td>
+                </tr>
+                <tr>
+                    <td><code>child_claim_tokens_audit_log</code></td>
+                    <td><code>child_claim_tokens</code></td>
+                    <td>CHILD_CLAIM_TOKEN_CREATED, CHILD_CLAIMED</td>
+                    <td><span class="badge badge-success">Keep</span></td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="alert alert-info">
+            <strong>Note:</strong> These don't duplicate event logger triggers - they log different event types 
+            (onboarding flows vs. core entity changes).
+        </div>
+        
+        <h4>4. Business Logic Triggers (Functional Requirements)</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Trigger</th>
+                    <th>Table</th>
+                    <th>Purpose</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>on_org_member_created_clear_flag</code></td>
+                    <td><code>organization_members</code></td>
+                    <td>Clears <code>requires_org_setup</code> flag when user joins org</td>
+                    <td><span class="badge badge-success">Keep</span></td>
+                </tr>
+                <tr>
+                    <td><code>create_rsvps_on_event_insert</code></td>
+                    <td><code>events</code></td>
+                    <td>Auto-creates RSVP records for new events</td>
+                    <td><span class="badge badge-success">Keep</span></td>
+                </tr>
+                <tr>
+                    <td><code>create_rsvps_on_team_membership_insert</code></td>
+                    <td><code>team_memberships</code></td>
+                    <td>Auto-creates RSVPs for existing events when athlete joins team</td>
+                    <td><span class="badge badge-success">Keep</span></td>
+                </tr>
+                <tr>
+                    <td><code>rsvp_responded_at_trigger</code></td>
+                    <td><code>event_rsvps</code></td>
+                    <td>Auto-sets <code>responded_at</code> timestamp</td>
+                    <td><span class="badge badge-success">Keep</span></td>
+                </tr>
+                <tr>
+                    <td><code>trigger_refresh_derived_families</code></td>
+                    <td><code>athlete_guardians</code></td>
+                    <td>Refreshes materialized view when guardian relationships change</td>
+                    <td><span class="badge badge-success">Keep</span></td>
+                </tr>
+                <tr>
+                    <td><code>enqueue_rsvp_notification_trigger</code></td>
+                    <td><code>events</code></td>
+                    <td>Enqueues notifications when RSVP is enabled</td>
+                    <td><span class="badge badge-success">Keep</span></td>
+                </tr>
+                <tr>
+                    <td><code>trigger_increment_tier_version</code></td>
+                    <td><code>license_tiers</code></td>
+                    <td>Increments version on tier updates</td>
+                    <td><span class="badge badge-success">Keep</span></td>
+                </tr>
+                <tr>
+                    <td><code>check_tier_deletion</code></td>
+                    <td><code>license_tiers</code></td>
+                    <td>Prevents deletion of tiers in use</td>
+                    <td><span class="badge badge-success">Keep</span></td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h4>5. Feature Flag Audit Triggers</h4>
+        <p>These log feature flag changes for audit purposes. <strong>Keep if you need feature flag audit trails.</strong></p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Trigger</th>
+                    <th>Table</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>trigger_log_feature_flag_changes</code></td>
+                    <td><code>feature_flags</code></td>
+                    <td><span class="badge badge-warning">Optional</span></td>
+                </tr>
+                <tr>
+                    <td><code>trigger_log_platform_default_changes</code></td>
+                    <td><code>feature_flag_platform_defaults</code></td>
+                    <td><span class="badge badge-warning">Optional</span></td>
+                </tr>
+                <tr>
+                    <td><code>trigger_log_org_override_changes</code></td>
+                    <td><code>feature_flag_org_overrides</code></td>
+                    <td><span class="badge badge-warning">Optional</span></td>
+                </tr>
+                <tr>
+                    <td><code>trigger_log_user_override_changes</code></td>
+                    <td><code>feature_flag_user_overrides</code></td>
+                    <td><span class="badge badge-warning">Optional</span></td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="alert alert-warning">
+            <strong>Decision Required:</strong> If you don't need detailed audit trails for feature flag changes, 
+            these can be removed to reduce trigger overhead. However, they're lightweight and provide valuable 
+            debugging information.
+        </div>
+        
+        <h3>⚠️ Potential Issues Found</h3>
+        
+        <h4>1. Duplicate Feature Flag Trigger</h4>
+        <p>
+            There are <strong>two</strong> <code>update_feature_flags_updated_at</code> triggers:
+        </p>
+        <ul>
+            <li>One in <code>037_feature_flags_system.sql</code> (line 259)</li>
+            <li>One in <code>20260115120000_platform_admin.sql</code> (line 124)</li>
+        </ul>
+        <div class="alert alert-warning">
+            <strong>Action Required:</strong> One of these is redundant. The migration system should handle this 
+            with <code>DROP TRIGGER IF EXISTS</code>, but verify only one exists in production.
+        </div>
+        
+        <h4>2. Duplicate RSVP Creation Trigger</h4>
+        <p>
+            There are <strong>two</strong> <code>create_rsvps_on_event_insert</code> triggers:
+        </p>
+        <ul>
+            <li>One in <code>030_rsvp_system.sql</code> (line 173)</li>
+            <li>One in <code>052_rsvp_system_updates.sql</code> (line 32)</li>
+        </ul>
+        <div class="alert alert-warning">
+            <strong>Action Required:</strong> The second migration should drop the first one. Verify the later 
+            migration properly replaces the earlier trigger.
+        </div>
+        
+        <h3>📊 Summary & Recommendations</h3>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Count</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>updated_at triggers</td>
+                    <td>~50+</td>
+                    <td><span class="badge badge-success">Keep All</span></td>
+                </tr>
+                <tr>
+                    <td>Event logger triggers</td>
+                    <td>4</td>
+                    <td><span class="badge badge-success">Keep All</span></td>
+                </tr>
+                <tr>
+                    <td>Audit logger triggers</td>
+                    <td>5</td>
+                    <td><span class="badge badge-success">Keep All</span></td>
+                </tr>
+                <tr>
+                    <td>Business logic triggers</td>
+                    <td>~8</td>
+                    <td><span class="badge badge-success">Keep All</span></td>
+                </tr>
+                <tr>
+                    <td>Feature flag audit triggers</td>
+                    <td>4</td>
+                    <td><span class="badge badge-warning">Optional - Keep if audit needed</span></td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="alert alert-success">
+            <strong>✅ Conclusion:</strong> <strong>Most triggers are needed!</strong> The system is well-architected 
+            with clear separation of concerns. The only optional triggers are feature flag audit logs, and there are 
+            a couple of duplicate triggers that should be verified/cleaned up.
+        </div>
+        
+        <h3>🔧 Recommended Actions</h3>
+        <ol>
+            <li><strong>Verify duplicate triggers are handled:</strong> Check that <code>create_rsvps_on_event_insert</code> 
+            and <code>update_feature_flags_updated_at</code> don't exist twice in production.</li>
+            <li><strong>Decide on feature flag audit:</strong> If you don't need detailed feature flag change logs, 
+            consider removing those 4 triggers to reduce overhead.</li>
+            <li><strong>Monitor trigger performance:</strong> If you experience performance issues, the audit triggers 
+            are the most likely candidates for optimization (they write to <code>event_logs</code> on every change).</li>
+        </ol>
+        
+        <h2 id="root-causes">Root Causes Summary</h2>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Issue</th>
+                    <th>Cause</th>
+                    <th>Location</th>
+                    <th>Impact</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>organization_id missing</code> error</td>
+                    <td>RLS policies reference non-existent column</td>
+                    <td><code>20260127000001_fix_auth_rls_initplan.sql</code><br><code>20260127000002_consolidate_permissive_policies.sql</code></td>
+                    <td><span class="badge badge-danger">High</span></td>
+                </tr>
+                <tr>
+                    <td>Can't insert first member</td>
+                    <td>No bootstrap policy for empty orgs</td>
+                    <td><code>organization_members</code> INSERT policies</td>
+                    <td><span class="badge badge-danger">High</span></td>
+                </tr>
+                <tr>
+                    <td>FIXME comments in production</td>
+                    <td>Incomplete policy fixes pushed to production</td>
+                    <td>Multiple consolidation migrations</td>
+                    <td><span class="badge badge-warning">Medium</span></td>
+                </tr>
+                <tr>
+                    <td>Overly permissive policies</td>
+                    <td><code>EXISTS (SELECT 1 FROM users WHERE id = auth.uid())</code> always true</td>
+                    <td>Coach-related SELECT policies</td>
+                    <td><span class="badge badge-warning">Medium</span></td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h2 id="fixes">Recommended Fixes</h2>
+        
+        <h3>Fix 1: Correct Broken Coach Policies</h3>
+        <p>
+            For tables that need coach access checks, join through <code>teams</code> or <code>organization_members</code> 
+            to get the <code>org_id</code>:
+        </p>
+        
+        <pre><code>-- Example: Fix families_select_policy
+DROP POLICY IF EXISTS "families_select_policy" ON families;
+
+CREATE POLICY "families_select_policy" ON families
+  FOR SELECT
+  USING (
+    -- Parents can view their own family
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = (select auth.uid()) 
+      AND users.family_id = families.id
+    )
+    -- Coaches can view families in their org
+    OR EXISTS (
+      SELECT 1 FROM athletes a
+      JOIN team_memberships tm ON tm.athlete_id = a.id
+      JOIN teams t ON t.id = tm.team_id
+      WHERE a.family_id = families.id
+      AND user_has_any_org_roles((select auth.uid()), t.org_id, ARRAY['coach', 'org_admin']::org_member_role[])
+    )
+    -- Admins can view families
+    OR is_platform_admin((select auth.uid()))
+  );</code></pre>
+        
+        <h3>Fix 2: Add Bootstrap Policy for organization_members</h3>
+        <pre><code>-- Drop existing restrictive INSERT policy
+DROP POLICY IF EXISTS "Org admins can manage org memberships" ON organization_members;
+
+-- Create consolidated INSERT policy with bootstrap support
+CREATE POLICY "org_members_insert_policy" ON organization_members
+  FOR INSERT
+  WITH CHECK (
+    -- Platform admins can always insert
+    is_platform_admin((select auth.uid()))
+    -- Org admins can insert into their org
+    OR user_is_org_admin((select auth.uid()), org_id)
+    -- Allow insert if org has no members (bootstrap case)
+    OR NOT EXISTS (
+      SELECT 1 FROM organization_members om2 
+      WHERE om2.org_id = organization_members.org_id
+    )
+  );</code></pre>
+        
+        <h3>Fix 3: Verify & Clean Up Duplicate Triggers</h3>
+        <p>
+            Based on the analysis, most triggers are needed. However, verify and clean up any duplicates:
+        </p>
+        
+        <pre><code>-- Check for duplicate triggers
+SELECT 
+    trigger_name,
+    event_object_table,
+    COUNT(*) as count
+FROM information_schema.triggers
+WHERE event_object_schema = 'public'
+GROUP BY trigger_name, event_object_table
+HAVING COUNT(*) > 1;
+
+-- If duplicates found, drop the older one
+-- Example: If create_rsvps_on_event_insert exists twice
+DROP TRIGGER IF EXISTS create_rsvps_on_event_insert ON events;
+-- Then recreate the correct one from the latest migration
+
+-- Optional: Remove feature flag audit triggers if not needed
+-- DROP TRIGGER IF EXISTS trigger_log_feature_flag_changes ON feature_flags;
+-- DROP TRIGGER IF EXISTS trigger_log_platform_default_changes ON feature_flag_platform_defaults;
+-- DROP TRIGGER IF EXISTS trigger_log_org_override_changes ON feature_flag_org_overrides;
+-- DROP TRIGGER IF EXISTS trigger_log_user_override_changes ON feature_flag_user_overrides;</code></pre>
+        
+        <div class="alert alert-info">
+            <strong>Note:</strong> Most triggers are needed for functionality. Only remove feature flag audit triggers 
+            if you don't need detailed audit trails for feature flag changes.
+        </div>
+        
+        <h2 id="migration">Migration Steps</h2>
+        
+        <div class="step">
+            <span class="step-number">1</span>
+            <strong>Create New Migration File</strong>
+            <p>Create a new migration file: <code class="file-path">supabase/migrations/YYYYMMDDHHMMSS_fix_rls_policies.sql</code></p>
+        </div>
+        
+        <div class="step">
+            <span class="step-number">2</span>
+            <strong>Drop Broken Policies</strong>
+            <p>Drop all policies with FIXME comments or broken coach checks:</p>
+            <pre><code>-- Drop broken policies
+DROP POLICY IF EXISTS "families_select_policy" ON families;
+DROP POLICY IF EXISTS "teams_select_policy" ON teams;
+DROP POLICY IF EXISTS "events_select_policy" ON events;
+-- ... etc for all affected tables</code></pre>
+        </div>
+        
+        <div class="step">
+            <span class="step-number">3</span>
+            <strong>Recreate Fixed Policies</strong>
+            <p>Recreate policies with proper joins to get <code>org_id</code>:</p>
+            <ul>
+                <li>Join through <code>teams</code> for team-related tables</li>
+                <li>Join through <code>organization_members</code> for org-related checks</li>
+                <li>Use <code>user_has_any_org_roles()</code> helper function</li>
+            </ul>
+        </div>
+        
+        <div class="step">
+            <span class="step-number">4</span>
+            <strong>Fix organization_members INSERT Policy</strong>
+            <p>Add bootstrap support for empty organizations:</p>
+            <pre><code>DROP POLICY IF EXISTS "Org admins can manage org memberships" ON organization_members;
+
+CREATE POLICY "org_members_insert_policy" ON organization_members
+  FOR INSERT
+  WITH CHECK (
+    is_platform_admin((select auth.uid()))
+    OR user_is_org_admin((select auth.uid()), org_id)
+    OR NOT EXISTS (
+      SELECT 1 FROM organization_members om2 
+      WHERE om2.org_id = organization_members.org_id
+    )
+  );</code></pre>
+        </div>
+        
+        <div class="step">
+            <span class="step-number">5</span>
+            <strong>Test Locally</strong>
+            <p>Test the migration on your local Supabase instance:</p>
+            <pre><code># Apply migration
+supabase migration up
+
+# Test creating new organization
+# Test inserting first member
+# Test coach access to various tables</code></pre>
+        </div>
+        
+        <div class="step">
+            <span class="step-number">6</span>
+            <strong>Deploy to Production</strong>
+            <p>Once verified, deploy to production:</p>
+            <pre><code># Push migration
+supabase db push
+
+# Or apply via Supabase dashboard</code></pre>
+        </div>
+        
+        <h2 id="verification">Verification Steps</h2>
+        
+        <h3>1. Verify Policies Are Fixed</h3>
+        <pre><code>-- Check that policies exist and don't have FIXME comments
+SELECT 
+    schemaname,
+    tablename,
+    policyname,
+    cmd,
+    qual
+FROM pg_policies
+WHERE schemaname = 'public'
+  AND (qual LIKE '%FIXME%' OR qual LIKE '%organization_id not in scope%')
+ORDER BY tablename, policyname;</code></pre>
+        
+        <p>This query should return <strong>0 rows</strong> after the fix.</p>
+        
+        <h3>2. Test Bootstrap Member Insert</h3>
+        <pre><code>-- Create a test organization
+INSERT INTO organizations (name, org_type) 
+VALUES ('Test Org', 'youth_sports')
+RETURNING id;
+
+-- Try to insert first member (should succeed)
+INSERT INTO organization_members (org_id, user_id, role)
+VALUES (
+  '&lt;org_id_from_above&gt;',
+  auth.uid(),
+  'org_admin'
+);</code></pre>
+        
+        <h3>3. Test Coach Access</h3>
+        <pre><code>-- As a coach user, verify you can access:
+-- - Teams in your org
+-- - Events for your teams
+-- - Athletes on your teams
+-- - Attendance records
+
+-- Example query (should return rows for coach)
+SELECT * FROM teams 
+WHERE org_id IN (
+  SELECT org_id FROM organization_members 
+  WHERE user_id = auth.uid() 
+  AND role IN ('coach', 'org_admin')
+);</code></pre>
+        
+        <h3>4. Check Trigger Count</h3>
+        <pre><code>-- List all triggers on organization_members
+SELECT 
+    trigger_name,
+    event_manipulation,
+    action_statement
+FROM information_schema.triggers
+WHERE event_object_table = 'organization_members'
+ORDER BY trigger_name;</code></pre>
+        
+        <div class="alert alert-success">
+            <strong>✅ Success Criteria:</strong>
+            <ul>
+                <li>No FIXME comments in policies</li>
+                <li>Can insert first member into empty organization</li>
+                <li>Coaches can access appropriate resources</li>
+                <li>No duplicate or unnecessary triggers</li>
+            </ul>
+        </div>
+        
+        <h2>Additional Resources</h2>
+        <ul>
+            <li><a href="https://supabase.com/docs/guides/auth/row-level-security">Supabase RLS Documentation</a></li>
+            <li><a href="https://www.postgresql.org/docs/current/ddl-rowsecurity.html">PostgreSQL RLS Documentation</a></li>
+            <li>Helper Functions: <code>user_is_org_admin()</code>, <code>user_has_any_org_roles()</code>, <code>is_platform_admin()</code></li>
+        </ul>
+        
+        <div class="footer">
+            <p><strong>Questions or Issues?</strong> Review the migration files and test thoroughly before deploying to production.</p>
+            <p>This guide was generated on January 22, 2026 based on analysis of the current codebase.</p>
+        </div>
+    </div>
+</body>
+</html>

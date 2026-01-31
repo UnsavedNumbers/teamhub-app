@@ -70,7 +70,7 @@ export default function TryoutDetail() {
         </div>
 
         <Card className="p-8">
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
             <div>
               <h3 className="text-lg font-bold mb-4">Details</h3>
               <div className="space-y-4">

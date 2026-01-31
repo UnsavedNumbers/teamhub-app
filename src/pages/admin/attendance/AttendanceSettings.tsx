@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent, Button } from '../../../compo
 import { useUserContext } from '../../../hooks/useUserContext'
 import { getAttendanceSettings, updateAttendanceSettings } from '../../../data/services/attendanceService'
 import type { AttendanceSettings } from '../../../types/attendance'
+import { showSuccess, showError } from '../../../utils/toast'
 
 export default function AttendanceSettingsTab() {
   const [settings, setSettings] = useState<AttendanceSettings | null>(null)
@@ -14,7 +15,7 @@ export default function AttendanceSettingsTab() {
   useEffect(() => {
     if (!isReady) return
     getAttendanceSettings(context).then(res => {
-        if (res.data) setSettings(res.data)
+        if (res.data) setSettings(res.data as AttendanceSettings)
         setLoading(false)
     })
   }, [isReady, context])
@@ -22,8 +23,18 @@ export default function AttendanceSettingsTab() {
   const handleSave = async () => {
     if (!settings) return
     setSaving(true)
-    await updateAttendanceSettings(context, settings)
-    setSaving(false)
+    try {
+      const { error } = await updateAttendanceSettings(context, settings)
+      if (error) {
+        showError(error.message || 'Failed to save attendance settings')
+      } else {
+        showSuccess('Attendance settings updated successfully!')
+      }
+    } catch (err: any) {
+      showError(err.message || 'Failed to save attendance settings')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const toggle = (key: keyof AttendanceSettings) => {
@@ -39,18 +50,18 @@ export default function AttendanceSettingsTab() {
       <Card>
         <CardHeader><CardTitle>General Configuration</CardTitle></CardHeader>
         <CardContent className="pa-space-y-4">
-           <div className="pa-flex pa-items-center pa-justify-between">
+             <div className="pa-flex pa-items-center pa-justify-between">
              <label>Enable Coach Reminders</label>
-             <input type="checkbox" checked={settings.reminder_enabled} onChange={() => toggle('reminder_enabled')} />
+             <input type="checkbox" checked={settings.enable_coach_reminders} onChange={() => toggle('enable_coach_reminders')} />
            </div>
            
            <div className="pa-flex pa-items-center pa-justify-between">
-             <label>Lock Attendance Record After (hours)</label>
+             <label>Submission Deadline (Hours)</label>
              <input 
                 type="number" 
                 className="pa-input pa-w-24" 
-                value={settings.lock_after_hours}
-                onChange={(e) => setSettings({...settings, lock_after_hours: parseInt(e.target.value) || 0})}
+                value={settings.submission_deadline_hours}
+                onChange={(e) => setSettings({...settings, submission_deadline_hours: parseInt(e.target.value) || 0})}
              />
            </div>
         </CardContent>

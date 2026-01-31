@@ -5,48 +5,106 @@ import { useLicense } from '../../hooks/useLicense'
 import { t } from '../../i18n'
 import { formatDate } from '../../utils/licenseUtils'
 import { createCustomerPortalSession, getBillingHistory, BillingEvent } from '../../api/billing'
-import { LicenseStatusBadge } from '../../components/admin/LicenseStatusBadge'
-import { LicenseWarningBanner } from '../../components/admin/LicenseWarningBanner'
+import { BillingHistoryTimeline } from '../../components/admin/BillingHistoryTimeline'
 import { getErrorMessage } from '../../utils/errorUtils'
-import { 
-  PageHeader, 
-  Card, 
-  Button, 
+import {
+  getStatusMessage,
+} from '../../utils/billingHelpers'
+import { useIsMounted } from '../../hooks/useIsMounted'
+import {
+  AdminPageHeader,
+  Card,
+  Button,
+  Badge,
 } from '../../components/platformAdmin'
+import '../../styles/orgAdmin.css'
 
 export default function OrganizationBilling() {
   const navigate = useNavigate()
   const { currentOrganization } = useOrganization()
   const orgId = currentOrganization?.id
+  const isMounted = useIsMounted()
 
-  const { summary, loading, error, refresh } = useLicense(orgId)
+  const { summary, loading, error } = useLicense(orgId)
 
   const [history, setHistory] = useState<BillingEvent[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
   const [historyError, setHistoryError] = useState<string | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
 
   const loadHistory = useCallback(async (organizationId: string) => {
+    if (!organizationId) return
+
+    setHistoryLoading(true)
+    setHistoryError(null)
+
     try {
       const events = await getBillingHistory(organizationId)
-      setHistory(events)
+      // Check if component is still mounted before updating state
+      if (isMounted.current) {
+        setHistory(events)
+      }
     } catch (err: unknown) {
-      setHistoryError(getErrorMessage(err))
+      if (isMounted.current) {
+        setHistoryError(getErrorMessage(err))
+      }
+    } finally {
+      if (isMounted.current) {
+        setHistoryLoading(false)
+      }
     }
-  }, [])
+  }, [isMounted])
 
   useEffect(() => {
-    if (orgId) loadHistory(orgId)
+    if (orgId) {
+      loadHistory(orgId)
+    }
   }, [orgId, loadHistory])
 
   const currentPlanLabel = useMemo(() => {
-    if (!summary?.plan) return t('license.planLabel').toUpperCase()
-    switch (summary.plan) {
-      case 'starter': return t('license.planStarter')
-      case 'standard': return t('license.planStandard')
-      case 'pro': return t('license.planPro')
-      default: return t('license.planLabel').toUpperCase()
+    return summary?.tierName ?? t('license.planLabel')
+  }, [summary?.tierName])
+
+  const statusMessage = useMemo(() => {
+    return getStatusMessage(summary)
+  }, [summary])
+
+  const statusBadgeText = useMemo(() => {
+    if (!summary?.status) return 'Unknown'
+    switch (summary.status) {
+      case 'active':
+        return 'Active'
+      case 'trial':
+        return 'Trial'
+      case 'past_due':
+        return 'Past Due'
+      case 'canceled':
+        return 'Canceled'
+      case 'expired':
+        return 'Expired'
+      default:
+        return String(summary.status).replace('_', ' ').toUpperCase()
     }
-  }, [summary?.plan])
+  }, [summary?.status])
+
+  const statusBadgeVariant = useMemo(() => {
+    switch (summary?.status) {
+      case 'active':
+        return 'success'
+      case 'trial':
+        return 'info'
+      case 'past_due':
+        return 'warning'
+      case 'expired':
+        return 'danger'
+      case 'canceled':
+        return 'neutral'
+      default:
+        return 'neutral'
+    }
+  }, [summary?.status])
+
+  const isAutoRenewing = summary ? !summary.cancelAtPeriodEnd : false
 
   async function handleOpenPortal() {
     if (!orgId) return
@@ -56,133 +114,215 @@ export default function OrganizationBilling() {
         organizationId: orgId,
         returnUrl: `${window.location.origin}/admin/organization/billing`,
       })
-      if (portal_url) window.location.href = portal_url
+      if (portal_url) {
+        // Don't set state after navigation - window.location.href will navigate away
+        window.location.href = portal_url
+      }
     } catch (err: unknown) {
-      setHistoryError(getErrorMessage(err) || t('billing.errorCreatingPortal'))
+      if (isMounted.current) {
+        setHistoryError(getErrorMessage(err) || t('billing.errorCreatingPortal'))
+      }
     } finally {
-      setPortalLoading(false)
+      if (isMounted.current) {
+        setPortalLoading(false)
+      }
     }
+  }
+
+  function handleSelectPlan() {
+    navigate('/admin/organization/billing/plan-selection')
+  }
+
+  function handleDownloadStatement() {
+    // Open customer portal for invoice downloads
+    handleOpenPortal()
   }
 
   if (!orgId) {
     return (
       <div className="pa-root">
-        <div className="pa-card pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>
+        <Card className="oa-card pa-text-danger">
           {t('errors.missingOrganization')}
-        </div>
+        </Card>
       </div>
     )
   }
 
   return (
     <div className="pa-root">
-      <PageHeader title={t('billing.pageTitle')} />
-
-      {summary && (
-        <LicenseWarningBanner summary={summary} />
-      )}
+      <AdminPageHeader title={t('billing.pageTitle')} />
 
       {error && (
-        <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>
+        <div
+          className="pa-card pa-mb-4 pa-text-danger"
+          style={{ background: 'var(--pa-danger-bg)', border: 'none' }}
+        >
           {error}
         </div>
       )}
 
-      <div className="pa-grid pa-grid-12 pa-gap-6">
-        <div className="pa-col-8">
-          <Card className="pa-mb-6">
-            <div className="pa-flex pa-justify-between pa-items-center pa-mb-6">
-              <h3 className="pa-h3">{t('billing.statusSectionTitle').toUpperCase()}</h3>
-              <LicenseStatusBadge status={summary?.status ?? 'unknown'} />
+      <div className="oa-form-container" style={{ maxWidth: '896px', margin: '0 auto' }}>
+        {/* Organization Subscription */}
+        <Card className="oa-card pa-mb-6">
+          <div className="pa-flex pa-flex-col md:pa-flex-row md:pa-items-center pa-justify-between pa-gap-6">
+            <div>
+              <div className="pa-flex pa-items-center pa-gap-3 pa-mb-2">
+                <span className="pa-body-s pa-text-slate-500 pa-font-medium">
+                  Organization Subscription
+                </span>
+                <Badge variant={statusBadgeVariant}>{statusBadgeText}</Badge>
+              </div>
+              <h1 className="pa-h1 pa-mb-4 pa-uppercase">
+                Annual Organization License
+              </h1>
+              <p className="pa-body-s pa-text-slate-600 pa-mb-1">
+                <span className="pa-font-semibold">Tier:</span> {currentPlanLabel}
+              </p>
             </div>
+            <div className="pa-shrink-0">
+              <Button
+                variant="primary"
+                onClick={handleOpenPortal}
+                loading={portalLoading}
+                disabled={loading || portalLoading}
+                className="pa-uppercase pa-font-semibold"
+              >
+                Manage Billing
+              </Button>
+            </div>
+          </div>
+        </Card>
 
-            <div className="pa-grid pa-grid-2 pa-gap-6 pa-mb-6">
+        {/* Billing Summary */}
+        <Card className="oa-card pa-mb-6">
+          <div className="pa-flex pa-items-center pa-justify-between pa-mb-4">
+            <h2 className="pa-h3 pa-font-semibold">
+              Billing Summary
+            </h2>
+            <Button
+              variant="ghost"
+              size="compact"
+              icon="download"
+              onClick={handleDownloadStatement}
+            >
+              Download Statement
+            </Button>
+          </div>
+          <div className="pa-flex pa-flex-wrap pa-gap-6">
+            <div>
+              <p className="pa-body-xs pa-text-slate-500 pa-mb-1">
+                Base Plan
+              </p>
+              <p className="pa-body-s pa-font-medium">
+                {summary?.plan ? `${currentPlanLabel} / yr` : '—'}
+              </p>
+            </div>
+            <div>
+              <p className="pa-body-xs pa-text-slate-500 pa-mb-1">
+                Next Payment Due
+              </p>
+              <p className="pa-body-s pa-font-medium">
+                {summary?.currentPeriodEnd ? formatDate(summary.currentPeriodEnd) : '—'}
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        {/* Renewal & Payment */}
+        <Card className="oa-card pa-mb-6">
+          <h2 className="pa-h3 pa-font-semibold pa-mb-4">
+            Renewal & Payment
+          </h2>
+          <div className="pa-flex pa-flex-col pa-gap-4">
+            <div className="pa-flex pa-items-center pa-justify-between">
               <div>
-                <div className="pa-text-overline pa-mb-1">{t('license.planLabel')}</div>
-                <div className="pa-h4">{currentPlanLabel}</div>
+                <p className="pa-body-s pa-font-semibold pa-mb-0">
+                  Payment method managed in Stripe
+                </p>
+                <p className="pa-body-xs pa-text-slate-500">
+                  Update payment method in customer portal
+                </p>
               </div>
+              <Button variant="secondary" onClick={handleOpenPortal} disabled={portalLoading || loading}>
+                Update
+              </Button>
+            </div>
+            <div className="pa-flex pa-items-center pa-justify-between">
               <div>
-                <div className="pa-text-overline pa-mb-1">{t('billing.renewalDate')}</div>
-                <div className="pa-body-m">{formatDate(summary?.currentPeriodEnd)}</div>
+                <p className="pa-body-s pa-font-semibold pa-mb-0">
+                  {isAutoRenewing ? 'Auto-Renewal is On' : 'Auto-Renewal is Off'}
+                </p>
+                <p className="pa-body-xs pa-text-slate-500">
+                  {isAutoRenewing
+                    ? summary?.currentPeriodEnd
+                      ? `Renews on ${formatDate(summary.currentPeriodEnd)}.`
+                      : 'Your license will automatically renew.'
+                    : `Cancels on ${summary?.currentPeriodEnd ? formatDate(summary.currentPeriodEnd) : 'renewal date'}.`}
+                </p>
               </div>
-              {summary?.trialEndsAt && (
-                <div>
-                  <div className="pa-text-overline pa-mb-1">{t('billing.trialEnds')}</div>
-                  <div className="pa-body-m">{formatDate(summary.trialEndsAt)}</div>
-                </div>
-              )}
-              {summary?.graceEndsAt && (
-                <div>
-                  <div className="pa-text-overline pa-mb-1">{t('billing.graceEnds')}</div>
-                  <div className="pa-body-m">{formatDate(summary.graceEndsAt)}</div>
-                </div>
-              )}
+              <Badge variant={isAutoRenewing ? 'info' : 'neutral'}>
+                {isAutoRenewing ? 'Auto' : 'Manual'}
+              </Badge>
             </div>
-
-            <div className="pa-divider pa-mb-6" />
-
-            <div className="pa-flex pa-gap-3 pa-flex-wrap">
-              <Button onClick={() => navigate('/admin/organization/billing/plan-selection')} disabled={loading}>
-                {t('billing.changePlan')}
+            {!summary?.cancelAtPeriodEnd && summary?.stripeSubscriptionId && (
+              <Button
+                variant="ghost"
+                size="compact"
+                onClick={handleOpenPortal}
+                className="pa-text-danger pa-self-start"
+              >
+                Cancel Subscription
               </Button>
-              <Button variant="secondary" onClick={handleOpenPortal} loading={portalLoading}>
-                {t('billing.portalCta')}
-              </Button>
-              <Button variant="secondary" onClick={() => refresh()} disabled={loading} loading={loading}>
-                {t('common.retry')}
-              </Button>
-            </div>
-          </Card>
-
-          <Card>
-            <div className="pa-flex pa-justify-between pa-items-center pa-mb-6">
-              <h3 className="pa-h3">{t('billing.viewBillingHistory').toUpperCase()}</h3>
-              {loading && <div className="pa-skeleton" style={{ width: '24px', height: '24px' }} />}
-            </div>
-
-            {historyError && (
-              <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>
-                {historyError}
-              </div>
             )}
+          </div>
+        </Card>
 
-            {history.length === 0 && !historyError ? (
-              <div className="pa-body-m pa-text-muted">{t('billing.billingHistoryEmpty')}</div>
-            ) : (
-              <div className="pa-flex pa-flex-col pa-gap-3">
-                {history.map(event => (
-                  <div key={event.id} className="pa-flex pa-justify-between pa-items-center pa-py-2" style={{ borderBottom: '1px solid var(--pa-n100)' }}>
-                    <div className="pa-body-m" style={{ fontWeight: 600 }}>{event.event_type?.replace(/_/g, ' ').toUpperCase()}</div>
-                    <div className="pa-body-s pa-text-muted">{formatDate(event.created_at)}</div>
-                  </div>
-                ))}
+        {/* Status Message */}
+        {statusMessage && (
+          <Card
+            className="oa-card pa-mb-8"
+            style={{
+              background:
+                summary?.status === 'past_due' || summary?.status === 'expired'
+                  ? 'var(--pa-warning-bg)'
+                  : 'var(--pa-info-bg)',
+            }}
+          >
+            <div className="pa-flex pa-items-start pa-gap-3">
+              <span
+                className="material-symbols-outlined"
+                style={{
+                  color:
+                    summary?.status === 'past_due' || summary?.status === 'expired'
+                      ? 'var(--pa-warning)'
+                      : 'var(--pa-info)',
+                  fontSize: '20px',
+                  flexShrink: 0,
+                }}
+              >
+                {summary?.status === 'past_due' || summary?.status === 'expired'
+                  ? 'warning'
+                  : 'info'}
+              </span>
+              <div className="pa-body-m pa-font-medium">
+                {statusMessage}
               </div>
-            )}
-          </Card>
-        </div>
-
-        <div className="pa-col-4">
-          <Card>
-            <h3 className="pa-h3 pa-mb-6">{t('billing.detailsSectionTitle').toUpperCase()}</h3>
-            <div className="pa-flex pa-flex-col pa-gap-4">
-              <DetailRow label={t('license.statusLabel')} value={summary?.status ? t(`license.status.${summary.status}` as const) : '-'} />
-              <DetailRow label={t('license.planLabel')} value={currentPlanLabel} />
-              <DetailRow label={t('billing.renewalDate')} value={formatDate(summary?.currentPeriodEnd)} />
-              {summary?.trialEndsAt && <DetailRow label={t('billing.trialEnds')} value={formatDate(summary.trialEndsAt)} />}
-              {summary?.graceEndsAt && <DetailRow label={t('billing.graceEnds')} value={formatDate(summary.graceEndsAt)} />}
             </div>
           </Card>
-        </div>
+        )}
+
+        {/* Billing History */}
+        <Card className="oa-card">
+          <h3 className="pa-h3 pa-mb-6">{t('billing.viewBillingHistory')}</h3>
+          <BillingHistoryTimeline
+            events={history}
+            loading={historyLoading}
+            error={historyError}
+            hasSubscription={!!summary?.stripeSubscriptionId}
+            onSelectPlan={handleSelectPlan}
+          />
+        </Card>
       </div>
-    </div>
-  )
-}
-
-function DetailRow({ label, value }: { label: string; value: string | null | undefined }) {
-  return (
-    <div className="pa-flex pa-justify-between">
-      <div className="pa-body-s pa-text-muted">{label}</div>
-      <div className="pa-body-s" style={{ fontWeight: 600 }}>{value || '-'}</div>
     </div>
   )
 }

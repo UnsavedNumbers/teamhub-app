@@ -21,6 +21,31 @@ export interface BillingEvent {
   stripe_object_id: string | null
   processed_at: string | null
   created_at: string | null
+  payload?: {
+    data?: {
+      object?: {
+        amount_paid?: number
+        amount_due?: number
+        currency?: string
+        hosted_invoice_url?: string
+        invoice_pdf?: string
+        status?: string
+        description?: string
+        lines?: {
+          data?: Array<{
+            description?: string
+            amount?: number
+          }>
+        }
+      }
+    }
+  }
+  // Computed fields for easier access
+  amount?: number
+  currency?: string
+  invoice_url?: string
+  payment_status?: string
+  description?: string
 }
 
 function ensureConfigured() {
@@ -80,13 +105,51 @@ export async function getBillingHistory(organizationId: string): Promise<Billing
 
   const { data, error } = await supabase
     .from('billing_events')
-    .select('id, event_type, stripe_event_id, stripe_object_id, processed_at, created_at')
-    .eq('organization_id', organizationId)
+    .select('id, event_type, stripe_event_id, stripe_object_id, processed_at, created_at, payload')
+    .eq('org_id', organizationId)
     .order('created_at', { ascending: false })
 
   if (error) {
     throw new Error(error.message)
   }
 
-  return (data ?? []) as BillingEvent[]
+  // Map raw events to include computed fields from payload
+  return (data ?? [])
+    .filter((event: any) => {
+      // Filter out checkout.session.* events
+      return !event.event_type?.startsWith('checkout.session')
+    })
+    .map((event: any) => {
+      const stripeObject = event.payload?.data?.object
+
+      // Extract amount (prefer amount_paid, fallback to amount_due, then amount)
+      const amount = stripeObject?.amount_paid ?? stripeObject?.amount_due ?? stripeObject?.amount
+
+      // Extract description - try multiple sources
+      let description = stripeObject?.description
+
+      // For invoices, try to get description from line items
+      if (!description && stripeObject?.lines?.data?.length > 0) {
+        const lineDescriptions = stripeObject.lines.data
+          .map((line: any) => line.description)
+          .filter(Boolean)
+        if (lineDescriptions.length > 0) {
+          description = lineDescriptions.join(', ')
+        }
+      }
+
+      // For payment intents, try metadata or statement descriptor
+      if (!description) {
+        description = stripeObject?.metadata?.description ?? stripeObject?.statement_descriptor
+      }
+
+      return {
+        ...event,
+        amount: amount ? amount / 100 : undefined, // Convert from cents to dollars
+        currency: stripeObject?.currency?.toUpperCase(),
+        invoice_url: stripeObject?.hosted_invoice_url ?? stripeObject?.invoice_pdf,
+        payment_status: stripeObject?.status,
+        description,
+      } as BillingEvent
+    })
 }

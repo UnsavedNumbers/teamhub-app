@@ -10,6 +10,15 @@ export interface Organization {
   slug?: string
   org_type?: 'school' | 'club' | 'league' | 'academy' | 'aau' | null
   
+  // Contact information
+  website?: string | null
+  phone?: string | null
+  email?: string | null
+  address?: string | null
+  city?: string | null
+  state?: string | null
+  zip?: string | null
+  
   /** @deprecated Use roles array instead. Returns roles[0] or 'parent'. Will be removed in v2.0. */
   get role(): OrgMemberRole
 }
@@ -89,16 +98,20 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
       refreshTimeout = setTimeout(async () => {
         // Fetch updated organizations from RPC
-        const { data } = await supabase.rpc('get_user_organizations', { check_user_id: userId }) as { data: Array<{ organization_id: string; org_name: string; roles: OrgMemberRole[] }> | null; error: unknown }
+        const { data } = await supabase.rpc('get_user_organizations', { check_user_id: userId } as any) as { data: Array<{ org_id: string; org_name: string; roles: OrgMemberRole[] }> | null; error: unknown }
         if (data) {
-          const updatedOrgs: Organization[] = data.map((org) => ({
-            id: org.organization_id,
-            name: org.org_name,
-            roles: org.roles,
-            get role() {
-              return this.roles[0] ?? 'parent'
-            },
-          }))
+          const updatedOrgs: Organization[] = data.map((org) => {
+            // Normalize roles to always be an array
+            const roles = org.roles || []
+            return {
+              id: org.org_id,
+              name: org.org_name,
+              roles: Array.isArray(roles) ? roles : [],
+              get role() {
+                return this.roles[0] ?? 'parent'
+              },
+            }
+          })
           setOrganizationsState(updatedOrgs)
         }
         refreshTimeout = null

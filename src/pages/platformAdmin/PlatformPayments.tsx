@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, StatCard, Badge, FilterBar, PlatformDataTable, type ColumnConfig } from '../../components/platformAdmin'
+import { PageHeader, StatCard, Badge, FilterBar, PlatformDataTable, type ColumnConfig, OfflineBanner, ErrorState } from '../../components/platformAdmin'
+import { useQueryParams } from '../../hooks/useQueryParams'
 import { 
   formatCurrency, 
   getDisplayEmail, 
@@ -9,6 +11,8 @@ import {
   copyStripeIdToClipboard,
 } from '../../utils/platformAdminMasking'
 import type { AdminPayment, PlatformAdminRole } from '../../types/platformAdmin.types'
+import { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
+import { showSuccess, showInfo } from '../../utils/toast'
 
 // Status filter options
 const statusOptions = [
@@ -21,6 +25,7 @@ const statusOptions = [
 export default function PlatformPayments() {
   const [payments, setPayments] = useState<AdminPayment[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(50)
   const [totalCount, setTotalCount] = useState(0)
@@ -36,18 +41,24 @@ export default function PlatformPayments() {
     failedCount: 0,
   })
   
-  // Toast state
-  const [toast, setToast] = useState<{ show: boolean; message: string; variant: 'success' | 'info' }>({
-    show: false,
-    message: '',
-    variant: 'success',
-  })
-  
+  // Deep link support: org_id query param
+  const { getUUID } = useQueryParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const orgFilter = getUUID('org_id')
+
+  const clearOrgFilter = () => {
+    const newParams = new URLSearchParams(searchParams)
+    newParams.delete('org_id')
+    setSearchParams(newParams)
+    setPage(0)
+  }
+
   // TODO: Fetch actual role
   const [adminRole] = useState<PlatformAdminRole>('super_admin')
 
   const fetchPayments = useCallback(async () => {
     setLoading(true)
+    setError(null)
 
     try {
       let query = supabase
@@ -59,7 +70,7 @@ export default function PlatformPayments() {
       }
 
       if (statusFilter) {
-        query = query.eq('status', statusFilter)
+        query = query.eq('status', statusFilter as Database["public"]["Enums"]["payment_status_new"])
       }
 
       query = query.order(orderBy, { ascending: order === 'asc' })
@@ -72,11 +83,13 @@ export default function PlatformPayments() {
 
       if (error) {
         console.error('Error fetching payments:', error)
+        setError(error.message || 'Failed to load payments')
         setPayments([])
         setTotalCount(0)
       } else {
-        setPayments(data || [])
+        setPayments((data || []) as unknown as AdminPayment[])
         setTotalCount(count || 0)
+        setError(null)
       }
 
       // Fetch stats
@@ -85,33 +98,26 @@ export default function PlatformPayments() {
         .select('amount_cents, status')
 
       if (allPayments) {
-        const succeeded = allPayments.filter(p => p.status === 'succeeded')
-        const failed = allPayments.filter(p => p.status === 'failed')
+        const succeeded = allPayments.filter((p: any) => p.status === 'succeeded')
+        const failed = allPayments.filter((p: any) => p.status === 'failed')
         setStats({
-          totalVolume: succeeded.reduce((sum, p) => sum + (p.amount_cents || 0), 0),
+          totalVolume: succeeded.reduce((sum, p: any) => sum + (p.amount_cents || 0), 0),
           successCount: succeeded.length,
           failedCount: failed.length,
         })
       }
     } catch (err) {
       console.error('Error:', err)
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
       setPayments([])
     } finally {
       setLoading(false)
     }
-  }, [page, rowsPerPage, search, statusFilter, orderBy, order])
+  }, [page, rowsPerPage, search, statusFilter, orderBy, order, orgFilter])
 
   useEffect(() => {
     fetchPayments()
   }, [fetchPayments])
-
-  // Auto-hide toast
-  useEffect(() => {
-    if (toast.show) {
-      const timer = setTimeout(() => setToast({ ...toast, show: false }), 3000)
-      return () => clearTimeout(timer)
-    }
-  }, [toast])
 
   const handleSort = (column: string) => {
     const isAsc = orderBy === column && order === 'asc'
@@ -123,13 +129,11 @@ export default function PlatformPayments() {
     if (!stripeId) return
     
     const { wasTruncated } = await copyStripeIdToClipboard(stripeId, adminRole)
-    setToast({
-      show: true,
-      message: wasTruncated 
-        ? 'Copied truncated ID (full ID requires finance role)' 
-        : 'Copied to clipboard',
-      variant: wasTruncated ? 'info' : 'success',
-    })
+    if (wasTruncated) {
+      showInfo('Copied truncated ID (full ID requires finance role)')
+    } else {
+      showSuccess('Copied to clipboard')
+    }
   }
 
   const getStatusVariant = (status: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' => {
@@ -216,13 +220,14 @@ export default function PlatformPayments() {
 
   return (
     <div>
+      <OfflineBanner />
       <PageHeader
         title="Payments"
         subtitle="Platform-wide payment activity"
       />
 
       {/* Stats */}
-      <div className="pa-grid pa-grid-3 pa-mb-4">
+      <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-3 pa-gap-4 pa-mb-4">
         <StatCard
           label="Total Volume"
           value={formatCurrency(stats.totalVolume)}
@@ -252,55 +257,36 @@ export default function PlatformPayments() {
           setSearch('')
           setStatusFilter('')
           setPage(0)
+          clearOrgFilter()
         }}
       />
 
-      <PlatformDataTable
-        columns={columns}
-        rows={payments}
-        loading={loading}
-        emptyMessage="No payments found."
-        page={page}
-        rowsPerPage={rowsPerPage}
-        totalCount={totalCount}
-        onPageChange={setPage}
-        onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0) }}
-        orderBy={orderBy}
-        order={order}
-        onSort={handleSort}
-      />
+      {error && !loading && (
+        <ErrorState
+          message={error}
+          onRetry={fetchPayments}
+          retryLabel="Retry"
+        />
+      )}
+
+      {!error && (
+        <PlatformDataTable
+          columns={columns}
+          rows={payments}
+          loading={loading}
+          emptyMessage="No payments found for the selected criteria."
+          page={page}
+          rowsPerPage={rowsPerPage}
+          totalCount={totalCount}
+          onPageChange={setPage}
+          onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0) }}
+          orderBy={orderBy}
+          order={order}
+          onSort={handleSort}
+        />
+      )}
 
       {/* Toast */}
-      {toast.show && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 'var(--pa-space-5)',
-            right: 'var(--pa-space-5)',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            className="pa-card"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--pa-space-3)',
-              padding: 'var(--pa-space-3) var(--pa-space-4)',
-              borderLeft: `3px solid var(--pa-${toast.variant})`,
-              boxShadow: 'var(--pa-shadow-2)',
-            }}
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{ color: `var(--pa-${toast.variant})`, fontSize: '20px' }}
-            >
-              {toast.variant === 'success' ? 'check_circle' : 'info'}
-            </span>
-            <span className="pa-body-m">{toast.message}</span>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

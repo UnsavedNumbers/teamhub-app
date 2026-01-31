@@ -7,7 +7,9 @@
 
 import { USE_FAKE_DATA } from '../config'
 import { supabase } from '../../lib/supabase'
-import type { Json } from '../../lib/database.types'
+import type { SupabaseExtended as Database, Json } from '../../lib/supabase.extended.types'
+import { getFakeUserPreferences } from '../fake/fakeSettings'
+import type { NotificationPreferencesByOrg } from '../../types/notificationPreferences'
 
 // ============================================================================
 // Types
@@ -16,7 +18,31 @@ import type { Json } from '../../lib/database.types'
 export interface UserPreferences {
   theme?: 'light' | 'dark' | 'system'
   language?: string
-  notifications?: Record<string, boolean>
+  notifications?: {
+    email?: boolean
+    push?: boolean
+    attendance_issues?: boolean
+    schedule_changes?: boolean
+    payment_issues?: boolean
+    registration_activity?: boolean
+    system_announcements?: boolean
+    frequency?: 'immediate' | 'daily' | 'weekly'
+  }
+  workflow?: {
+    default_landing_page?: string
+    default_season_id?: string
+    remember_filters?: boolean
+    auto_select_org?: boolean
+  }
+  notifications_v2?: NotificationPreferencesByOrg
+  profile?: {
+    phone?: string
+    timezone?: string
+  }
+  advanced?: {
+    beta_features?: boolean
+    ui_density?: 'comfortable' | 'compact'
+  }
   [key: string]: unknown // Allow other preferences
 }
 
@@ -31,8 +57,9 @@ export async function getUserPreferences(
   userId: string
 ): Promise<{ data: UserPreferences | null; error: Error | null }> {
   if (USE_FAKE_DATA) {
-    // Demo mode: return empty preferences (use localStorage)
-    return { data: null, error: null }
+    // Demo mode: return fake preferences
+    const fakePrefs = getFakeUserPreferences(userId)
+    return { data: fakePrefs || {}, error: null }
   }
 
   try {
@@ -51,7 +78,8 @@ export async function getUserPreferences(
     }
 
     // Parse preferences JSONB (default to empty object)
-    const preferences = (data?.preferences as UserPreferences) || {}
+    const dataAny = data as UserPreferences
+    const preferences = (dataAny?.preferences as UserPreferences) || {}
     return { data: preferences, error: null }
   } catch (err) {
     return {
@@ -88,17 +116,20 @@ export async function updateUserPreference(
       [key]: value,
     }
 
-    // Update in Supabase
+    type UsersUpdate = Database['public']['Tables']['users']['Update']
+    const updateData = { preferences: updatedPreferences as Json } satisfies UsersUpdate
     const { data, error } = await supabase
       .from('users')
-      .update({ preferences: updatedPreferences as Json })
+      .update(updateData)
       .eq('id', userId)
       .select('preferences')
       .single()
 
     if (error) throw error
 
-    const preferences = (data?.preferences as UserPreferences) || {}
+    type UserData = { preferences?: UserPreferences }
+    const userData = data as UserData
+    const preferences = userData?.preferences || {}
     return { data: preferences, error: null }
   } catch (err) {
     return {
@@ -134,17 +165,20 @@ export async function updateUserPreferences(
       ...preferences,
     }
 
-    // Update in Supabase
+    type UsersUpdate = Database['public']['Tables']['users']['Update']
+    const updateData = { preferences: updatedPreferences as Json } satisfies UsersUpdate
     const { data, error } = await supabase
       .from('users')
-      .update({ preferences: updatedPreferences as Json })
+      .update(updateData)
       .eq('id', userId)
       .select('preferences')
       .single()
 
     if (error) throw error
 
-    const prefs = (data?.preferences as UserPreferences) || {}
+    type UserData = { preferences?: UserPreferences }
+    const userData = data as UserData
+    const prefs = userData?.preferences || {}
     return { data: prefs, error: null }
   } catch (err) {
     return {
@@ -176,16 +210,20 @@ export async function clearUserPreference(
     const updatedPreferences = { ...(currentData || {}) }
     delete updatedPreferences[key]
 
+    type UsersUpdate = Database['public']['Tables']['users']['Update']
+    const updateData = { preferences: updatedPreferences as Json } satisfies UsersUpdate
     const { data, error } = await supabase
       .from('users')
-      .update({ preferences: updatedPreferences as Json })
+      .update(updateData)
       .eq('id', userId)
       .select('preferences')
       .single()
 
     if (error) throw error
 
-    const prefs = (data?.preferences as UserPreferences) || {}
+    type UserData = { preferences?: UserPreferences }
+    const userData = data as UserData
+    const prefs = userData?.preferences || {}
     return { data: prefs, error: null }
   } catch (err) {
     return {

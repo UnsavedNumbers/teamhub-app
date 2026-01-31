@@ -217,9 +217,19 @@ SELECT
   lt.status,
   lt.created_at,
   lt.updated_at,
-  (SELECT COUNT(*) FROM tier_feature_assignments tfa WHERE tfa.license_tier_id = lt.id AND tfa.included = true) AS included_features_count,
-  (SELECT COUNT(*) FROM organizations o WHERE (o.license_plan = lt.tier_key OR (lt.tier_key = 'basic' AND o.license_plan = 'starter') OR (lt.tier_key = 'power' AND o.license_plan IN ('standard', 'pro')))) AS orgs_using_count
+  (SELECT COUNT(*)
+   FROM tier_feature_assignments tfa
+   WHERE tfa.license_tier_id = lt.id
+     AND tfa.included = true) AS included_features_count,
+  (SELECT COUNT(*)
+   FROM organizations o
+   WHERE (
+     o.license_plan::text = lt.tier_key
+     OR (lt.tier_key = 'basic' AND o.license_plan::text = 'starter')
+     OR (lt.tier_key = 'power' AND o.license_plan::text IN ('standard', 'pro'))
+   )) AS orgs_using_count
 FROM license_tiers lt;
+
 
 -- Feature entitlements with tier assignments
 CREATE OR REPLACE VIEW admin_feature_entitlements_list AS

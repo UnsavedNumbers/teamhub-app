@@ -1,0 +1,3 @@
+athlete_first_name,athlete_last_name,athlete_date_of_birth,athlete_gender,athlete_jersey_number,athlete_grade,athlete_email,athlete_phone,notes_medical,notes_allergies,guardian1_first_name,guardian1_last_name,guardian1_email,guardian1_phone,guardian2_first_name,guardian2_last_name,guardian2_email,guardian2_phone,team_name,season_name,membership_role
+John,Doe,2012-05-14,male,10,6,,,,Peanuts,Jane,Doe,jane.doe@email.com,5551234567,,,,,U12 Lightning,Spring 2025,player
+Emily,Smith,2011-09-02,female,7,7,,,Asthma,,Robert,Smith,robert.smith@email.com,5559876543,,,,,U13 Thunder,Spring 2025,player

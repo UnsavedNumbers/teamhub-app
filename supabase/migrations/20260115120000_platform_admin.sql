@@ -105,18 +105,18 @@ CREATE POLICY "Deny delete on audit logs" ON audit_logs
 -- Create feature_flags table for per-org feature toggles
 CREATE TABLE IF NOT EXISTS feature_flags (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   feature_key TEXT NOT NULL,
   enabled BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   
   -- Unique constraint: one flag per feature per org
-  CONSTRAINT uq_feature_flag_org_key UNIQUE (organization_id, feature_key)
+  CONSTRAINT uq_feature_flag_org_key UNIQUE (org_id, feature_key)
 );
 
 -- Create indexes
-CREATE INDEX IF NOT EXISTS idx_feature_flags_org ON feature_flags(organization_id);
+CREATE INDEX IF NOT EXISTS idx_feature_flags_org ON feature_flags(org_id);
 CREATE INDEX IF NOT EXISTS idx_feature_flags_key ON feature_flags(feature_key);
 
 -- Add updated_at trigger
@@ -143,7 +143,7 @@ CREATE POLICY "Org admins can view own feature flags" ON feature_flags
     EXISTS (
       SELECT 1 FROM organization_members om 
       WHERE om.user_id = auth.uid() 
-      AND om.organization_id = feature_flags.organization_id
+      AND om.org_id = feature_flags.org_id
       AND om.role = 'org_admin'
     )
   );
@@ -172,8 +172,8 @@ SELECT
   o.created_at,
   o.updated_at,
   (SELECT COUNT(*) FROM teams t WHERE t.org_id = o.id) AS team_count,
-  (SELECT COUNT(DISTINCT s.id) FROM teams t JOIN seasons s ON s.organization_id = o.id WHERE t.org_id = o.id) AS sport_count,
-  (SELECT COUNT(DISTINCT om.user_id) FROM organization_members om WHERE om.organization_id = o.id) AS user_count,
+      (SELECT COUNT(DISTINCT s.id) FROM teams t JOIN seasons s ON s.org_id = o.id WHERE t.org_id = o.id) AS sport_count,
+      (SELECT COUNT(DISTINCT om.user_id) FROM organization_members om WHERE om.org_id = o.id) AS user_count,
   o.stripe_customer_id IS NOT NULL AS stripe_connected
 FROM organizations o
 WHERE EXISTS (SELECT 1 FROM platform_admins pa WHERE pa.user_id = auth.uid());
@@ -190,12 +190,12 @@ SELECT
   u.updated_at,
   (
     SELECT COALESCE(json_agg(json_build_object(
-      'organization_id', om.organization_id,
+      'org_id', om.org_id,
       'org_name', org.name,
       'role', om.role
     )), '[]'::json)
     FROM organization_members om
-    JOIN organizations org ON org.id = om.organization_id
+    JOIN organizations org ON org.id = om.org_id
     WHERE om.user_id = u.id
   ) AS organizations,
   (
@@ -213,7 +213,7 @@ WHERE EXISTS (SELECT 1 FROM platform_admins pa WHERE pa.user_id = auth.uid());
 DROP VIEW IF EXISTS admin_structure;
 CREATE OR REPLACE VIEW admin_structure AS
 SELECT 
-  o.id AS organization_id,
+  o.id AS org_id,
   o.name AS organization_name,
   t.id AS team_id,
   t.name AS team_name,
@@ -223,7 +223,7 @@ SELECT
   (SELECT COUNT(*) FROM team_memberships tm WHERE tm.team_id = t.id) AS player_count
 FROM organizations o
 LEFT JOIN teams t ON t.org_id = o.id
-LEFT JOIN seasons s ON s.organization_id = o.id
+LEFT JOIN seasons s ON s.org_id = o.id
 WHERE EXISTS (SELECT 1 FROM platform_admins pa WHERE pa.user_id = auth.uid())
 ORDER BY o.name, t.name, s.name;
 
@@ -237,7 +237,7 @@ SELECT
   p.stripe_payment_intent_id,
   p.status,
   p.created_at,
-  p.organization_id,
+  p.org_id,
   o.name AS organization_name,
   fa.id AS fee_assignment_id,
   fa.fee_id,
@@ -247,11 +247,11 @@ SELECT
   u.email AS parent_email,
   u.display_name AS parent_name
 FROM payments p
-JOIN organizations o ON o.id = p.organization_id
+JOIN organizations o ON o.id = p.org_id
 LEFT JOIN payment_allocations pa ON pa.payment_id = p.id
 LEFT JOIN fee_assignments fa ON fa.id = pa.fee_assignment_id
 LEFT JOIN fees f ON f.id = fa.fee_id
-LEFT JOIN children c ON c.id = fa.child_id
+LEFT JOIN athletes c ON c.id = fa.athlete_id
 LEFT JOIN users u ON u.id = fa.parent_id
 WHERE EXISTS (SELECT 1 FROM platform_admins pla WHERE pla.user_id = auth.uid());
 
@@ -265,7 +265,7 @@ SELECT
   f.currency,
   f.due_date,
   f.status AS fee_status,
-  o.id AS organization_id,
+  o.id AS org_id,
   o.name AS organization_name,
   (SELECT COUNT(*) FROM fee_assignments fa WHERE fa.fee_id = f.id) AS assigned_count,
   (SELECT COUNT(*) FROM fee_assignments fa WHERE fa.fee_id = f.id AND fa.status = 'paid') AS paid_count,
@@ -280,7 +280,7 @@ SELECT
     ELSE 0 
   END AS payment_rate_percent
 FROM fees f
-JOIN organizations o ON o.id = f.organization_id
+JOIN organizations o ON o.id = f.org_id
 WHERE EXISTS (SELECT 1 FROM platform_admins pa WHERE pa.user_id = auth.uid());
 
 -- 5.6 admin_audit_log - Audit log with actor information
@@ -314,7 +314,7 @@ SELECT
   (SELECT COUNT(*) FROM payments WHERE status = 'failed') AS failed_payments,
   (SELECT COALESCE(SUM(amount_cents), 0) FROM payments WHERE status = 'succeeded') AS total_payment_volume_cents,
   (SELECT COUNT(*) FROM teams) AS total_teams,
-  (SELECT COUNT(*) FROM children) AS total_children
+  (SELECT COUNT(*) FROM athletes) AS total_children
 WHERE EXISTS (SELECT 1 FROM platform_admins pa WHERE pa.user_id = auth.uid());
 
 -- 5.8 admin_feature_flags - Feature flags per organization
@@ -322,14 +322,14 @@ DROP VIEW IF EXISTS admin_feature_flags;
 CREATE OR REPLACE VIEW admin_feature_flags AS
 SELECT 
   ff.id,
-  ff.organization_id,
+  ff.org_id,
   o.name AS organization_name,
   ff.feature_key,
   ff.enabled,
   ff.created_at,
   ff.updated_at
 FROM feature_flags ff
-JOIN organizations o ON o.id = ff.organization_id
+JOIN organizations o ON o.id = ff.org_id
 WHERE EXISTS (SELECT 1 FROM platform_admins pa WHERE pa.user_id = auth.uid())
 ORDER BY o.name, ff.feature_key;
 
@@ -615,9 +615,9 @@ BEGIN
   END IF;
   
   -- Upsert feature flag
-  INSERT INTO feature_flags (organization_id, feature_key, enabled)
+  INSERT INTO feature_flags (org_id, feature_key, enabled)
   VALUES (target_org_id, target_feature_key, target_enabled)
-  ON CONFLICT (organization_id, feature_key)
+  ON CONFLICT (org_id, feature_key)
   DO UPDATE SET enabled = target_enabled, updated_at = NOW();
   
   -- Log audit entry

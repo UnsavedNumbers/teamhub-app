@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useT } from '../../i18n/useI18n'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { getTryouts } from '../../data/services/tryoutsService'
 import type { Tryout } from '../../data/services/tryoutsService'
 import { 
-  PageHeader, 
+  AdminPageHeader, 
   Button, 
   PlatformDataTable, 
   Badge,
@@ -20,6 +21,7 @@ export default function AdminTryouts() {
   const { context, isReady } = useUserContext()
   const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
+  const t = useT()
 
   const fetchTryouts = useCallback(async () => {
     if (!isReady || !currentOrganization) return
@@ -52,9 +54,15 @@ export default function AdminTryouts() {
 
   return (
     <div className="pa-root">
-      <PageHeader 
-        title="Tryouts" 
-        actions={<Button onClick={() => navigate('/admin/tryouts/new')}><span className="material-symbols-outlined">add</span>Create Tryout</Button>}
+      <AdminPageHeader 
+        title={t('admin.tryouts.title')}
+        subtitle={t('admin.tryouts.subtitle')}
+        actions={
+          <Button variant="primary" onClick={() => navigate('/admin/tryouts/new')}>
+            <span className="material-symbols-outlined">add</span>
+            Create Tryout
+          </Button>
+        }
       />
       <PlatformDataTable
         columns={columns}

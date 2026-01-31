@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import {
@@ -6,9 +6,14 @@ import {
   ROLE_LABELS,
   type PlatformAdminAction,
 } from '../utils/platformAdminPermissions'
-import type { PlatformAdminRole } from '../types/platformAdmin.types'
 import { usePlatformAdminTheme } from '../hooks/usePlatformAdminTheme'
+import { useTheme } from '../hooks/useTheme'
+import { useMobile } from '@/hooks/useMobile'
+import { useScrollLock } from '@/hooks/useScrollLock'
 import GlobalNav from '../components/common/GlobalNav'
+import MobileMenu from '../components/common/MobileMenu'
+import type { NavSection as MobileNavSection } from '@/types/menu'
+import { getLink, getPath, RouteKeys } from '@/utils/routes'
 
 // Navigation structure per design spec
 type NavSection = {
@@ -25,50 +30,64 @@ const navSections: NavSection[] = [
   {
     label: 'Overview',
     items: [
-      { text: 'Dashboard', icon: 'dashboard', path: '/platform-admin', requiredAction: 'view_dashboard' },
+      { text: 'Dashboard', icon: 'dashboard', path: getPath(RouteKeys.PLATFORM_DASHBOARD), requiredAction: 'view_dashboard' },
     ],
   },
   {
     label: 'Organizations',
     items: [
-      { text: 'Organizations', icon: 'apartment', path: '/platform-admin/organizations', requiredAction: 'view_organizations' },
+      { text: 'Organizations', icon: 'apartment', path: getPath(RouteKeys.PLATFORM_ORGANIZATIONS), requiredAction: 'view_organizations' },
     ],
   },
   {
     label: 'Users',
     items: [
-      { text: 'Users', icon: 'group', path: '/platform-admin/users', requiredAction: 'view_users' },
-      { text: 'Platform Admins', icon: 'admin_panel_settings', path: '/platform-admin/admins', requiredAction: 'view_platform_admins' },
+      { text: 'Users', icon: 'group', path: getPath(RouteKeys.PLATFORM_USERS), requiredAction: 'view_users' },
+      { text: 'Platform Admins', icon: 'admin_panel_settings', path: getPath(RouteKeys.PLATFORM_ADMINS), requiredAction: 'view_platform_admins' },
     ],
   },
   {
     label: 'Payments',
     items: [
-      { text: 'Payments', icon: 'credit_card', path: '/platform-admin/payments', requiredAction: 'view_payments' },
-      { text: 'Fees', icon: 'receipt_long', path: '/platform-admin/fees', requiredAction: 'view_fees' },
+      { text: 'Payments', icon: 'credit_card', path: getPath(RouteKeys.PLATFORM_PAYMENTS), requiredAction: 'view_payments' },
+      { text: 'Fees', icon: 'receipt_long', path: getPath(RouteKeys.PLATFORM_FEES), requiredAction: 'view_fees' },
     ],
   },
   {
     label: 'Compliance',
     items: [
-      { text: 'Event Log', icon: 'history', path: '/platform-admin/audit', requiredAction: 'view_audit_log' },
-      { text: 'Feature Flags', icon: 'flag', path: '/platform-admin/feature-flags', requiredAction: 'view_feature_flags' },
+      { text: 'Event Log', icon: 'history', path: getPath(RouteKeys.PLATFORM_AUDIT), requiredAction: 'view_audit_log' },
+      { text: 'Feature Flags', icon: 'flag', path: getPath(RouteKeys.PLATFORM_FEATURE_FLAGS), requiredAction: 'view_feature_flags' },
+    ],
+  },
+  {
+    label: 'Emails',
+    items: [
+      { text: 'Email Preview', icon: 'email', path: getLink('platformAdmin.emailPreview'), requiredAction: 'view_email_preview' },
+    ],
+  },
+  {
+    label: 'Photos',
+    items: [
+      { text: 'Gallery Overview', icon: 'photo_library', path: getLink('platformAdmin.photos.overview'), requiredAction: 'view_photo_overview' },
+      { text: 'Content Review', icon: 'flag', path: getLink('platformAdmin.photos.contentReview'), requiredAction: 'view_content_review' },
+      { text: 'Storage Management', icon: 'storage', path: getLink('platformAdmin.photos.storage'), requiredAction: 'view_storage_management' },
     ],
   },
   {
     label: 'Licenses & Entitlements',
     items: [
-      { text: 'Overview', icon: 'dashboard', path: '/platform-admin/licenses', requiredAction: 'view_licenses' },
-      { text: 'License Tiers', icon: 'workspace_premium', path: '/platform-admin/licenses/tiers', requiredAction: 'manage_license_tiers' },
-      { text: 'Feature Catalog', icon: 'inventory_2', path: '/platform-admin/licenses/features', requiredAction: 'manage_features' },
-      { text: 'Rules & Overrides', icon: 'rule', path: '/platform-admin/licenses/overrides', requiredAction: 'manage_overrides' },
-      { text: 'Audit & History', icon: 'history', path: '/platform-admin/licenses/audit', requiredAction: 'view_licenses_audit' },
+      { text: 'Overview', icon: 'dashboard', path: getPath(RouteKeys.PLATFORM_LICENSES), requiredAction: 'view_licenses' },
+      { text: 'License Tiers', icon: 'workspace_premium', path: getLink('platformAdmin.licenses.tiers'), requiredAction: 'manage_license_tiers' },
+      { text: 'Feature Catalog', icon: 'inventory_2', path: getLink('platformAdmin.licenses.features'), requiredAction: 'manage_features' },
+      { text: 'Rules & Overrides', icon: 'rule', path: getLink('platformAdmin.licenses.overrides'), requiredAction: 'manage_overrides' },
+      { text: 'Audit & History', icon: 'history', path: getLink('platformAdmin.licenses.audit'), requiredAction: 'view_licenses_audit' },
     ],
   },
   {
     label: 'System',
     items: [
-      { text: 'Structure', icon: 'account_tree', path: '/platform-admin/structure', requiredAction: 'view_structure' },
+      { text: 'Structure', icon: 'account_tree', path: getLink('platformAdmin.structure'), requiredAction: 'view_structure' },
     ],
   },
 ]
@@ -102,49 +121,144 @@ function LoadingSpinner() {
 
 export default function PlatformAdminLayout() {
   const { loaded: themeLoaded } = usePlatformAdminTheme()
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [adminRole, setAdminRole] = useState<PlatformAdminRole | null>(null)
+  const { resolvedTheme } = useTheme()
+  const isMobile = useMobile()
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
   const { profile, signOut } = useAuth()
 
-  // Fetch the admin's role
+  // Get admin role from profile (Bug Prevention #1, Technical Bug #4)
+  const adminRole = profile?.platformAdminRole ?? null
+
+  // Close mobile sidebar on route change
+  const handleMobileSidebarClose = useCallback(() => {
+    setMobileSidebarOpen(false)
+  }, [])
+
+  // Scroll lock when mobile sidebar is open
+  useScrollLock(mobileSidebarOpen && isMobile)
+
+  // Close mobile sidebar on route change
   useEffect(() => {
-    if (profile?.isPlatformAdmin) {
-      // Default to super_admin for backwards compatibility
-      // TODO: Fetch actual role from platform_admins table after migration
-      setAdminRole('super_admin')
+    if (mobileSidebarOpen) {
+      setMobileSidebarOpen(false)
     }
-  }, [profile])
+  }, [location.pathname, mobileSidebarOpen])
 
   const handleSignOut = async () => {
     await signOut()
-    navigate('/portal/login')
+    navigate(getLink(RouteKeys.AUTH_LOGIN))
   }
 
+  const platformDashboardPath = getPath(RouteKeys.PLATFORM_DASHBOARD)
+  
+  // Find all matching paths in the same section, return the most specific one
+  const getActivePathInSection = (section: NavSection): string | null => {
+    const matchingPaths = section.items
+      .filter(item => {
+        // Dashboard requires exact match
+        if (item.path === platformDashboardPath) {
+          return location.pathname === item.path
+        }
+        // Exact match
+        if (location.pathname === item.path) {
+          return true
+        }
+        // Current path starts with item path followed by '/' (parent path matches child route)
+        return location.pathname.startsWith(item.path + '/')
+      })
+      .map(item => item.path)
+      .sort((a, b) => b.length - a.length) // Sort by length descending (most specific first)
+    
+    return matchingPaths[0] || null
+  }
+  
   const isActive = (path: string) => {
-    if (path === '/platform-admin') {
+    // Exact match for dashboard
+    if (path === platformDashboardPath) {
       return location.pathname === path
     }
-    return location.pathname.startsWith(path)
+    
+    // Find the section containing this path
+    const section = navSections.find(s => s.items.some(item => item.path === path))
+    if (!section) return false
+    
+    // Get the most specific active path in this section
+    const activePath = getActivePathInSection(section)
+    
+    // This path is active only if it's the most specific match
+    return activePath === path
   }
 
-  // Show loading while theme loads
-  if (!themeLoaded) {
+  // Convert navSections to MobileNavSection format for mobile drawer
+  const mobileNavSections: MobileNavSection[] = useMemo(() => {
+    return navSections
+      .filter(section => {
+        // Filter sections based on permissions
+        const visibleItems = section.items.filter((item) =>
+          canPerformAction(adminRole, item.requiredAction)
+        )
+        return visibleItems.length > 0
+      })
+      .map(section => {
+        const visibleItems = section.items.filter((item) =>
+          canPerformAction(adminRole, item.requiredAction)
+        )
+        return {
+          label: section.label,
+          route: undefined,
+          groups: [
+            {
+              label: '',
+              items: visibleItems.map(item => ({
+                text: item.text,
+                icon: item.icon,
+                path: item.path,
+                disabled: false,
+              }))
+            }
+          ]
+        }
+      })
+  }, [adminRole])
+
+  // Show loading while theme loads or profile is loading
+  if (!themeLoaded || !profile) {
     return <LoadingSpinner />
   }
 
   return (
     <div className="pa-root pa-app">
-      {/* Sidebar */}
-      <aside className={`pa-sidebar ${mobileOpen ? 'open' : ''}`}>
+      {/* Mobile hamburger button */}
+      {isMobile && (
+        <button
+          className="pa-mobile-sidebar-toggle"
+          onClick={() => {
+            setMobileSidebarOpen(prev => !prev)
+          }}
+          aria-expanded={mobileSidebarOpen}
+          aria-label="Toggle sidebar"
+          type="button"
+        >
+          <span className="material-symbols-outlined">
+            {mobileSidebarOpen ? 'close' : 'menu'}
+          </span>
+        </button>
+      )}
+
+      {/* Sidebar - hidden on mobile */}
+      {!isMobile && (
+        <aside className="pa-sidebar">
         {/* Brand */}
         <div className="pa-sidebar-header">
-          <Link to="/platform-admin" className="pa-sidebar-brand" onClick={() => setMobileOpen(false)}>
-            <div className="pa-sidebar-logo">
-              <span className="material-symbols-outlined">shield_person</span>
-            </div>
-            <span className="pa-sidebar-title">ADMIN</span>
+          <Link to={getLink(RouteKeys.PLATFORM_DASHBOARD)} className="pa-sidebar-brand">
+            <img 
+              src={resolvedTheme === 'dark' ? '/images/logo-light.png' : '/images/logo-dark.png'} 
+              alt="Youth Sports" 
+              className="pa-sidebar-logo-img"
+              style={{ height: '32px', width: 'auto' }}
+            />
           </Link>
           {adminRole && (
             <span className="pa-badge pa-badge--info pa-mt-2" style={{ fontSize: '10px' }}>
@@ -172,7 +286,6 @@ export default function PlatformAdminLayout() {
                       <Link
                         to={item.path}
                         className={`pa-nav-link ${isActive(item.path) ? 'active' : ''}`}
-                        onClick={() => setMobileOpen(false)}
                       >
                         <span className="material-symbols-outlined">{item.icon}</span>
                         <span>{item.text}</span>
@@ -204,6 +317,7 @@ export default function PlatformAdminLayout() {
           </div>
         </div>
       </aside>
+      )}
 
       {/* Main */}
       <div className="pa-main">
@@ -216,16 +330,14 @@ export default function PlatformAdminLayout() {
         </main>
       </div>
 
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div
-          onClick={() => setMobileOpen(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(11, 15, 20, 0.5)',
-            zIndex: 99,
-          }}
+      {/* Mobile sidebar drawer */}
+      {isMobile && (
+        <MobileMenu
+          isOpen={mobileSidebarOpen}
+          onClose={handleMobileSidebarClose}
+          sections={mobileNavSections}
+          brandName="Platform Admin"
+          brandSubtitle="Youth Sports"
         />
       )}
     </div>

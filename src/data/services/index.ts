@@ -34,5 +34,14 @@ export * from './preferencesService'
 // RSVP Services
 export * from './rsvpService'
 
+// Organization Settings Services
+export * from './organizationSettingsService'
+
+// License Tiers Services
+export * from './licenseTiersService'
+
+// Ticketing Services
+export * from './ticketingService'
+
 // Re-export types from fake data that services use
 export type { UserContext, PermissionSet } from '../fake/userContext'

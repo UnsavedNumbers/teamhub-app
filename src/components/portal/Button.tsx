@@ -10,7 +10,7 @@ export default function Button<E extends ElementType = 'button'>({ variant = 'pr
   const baseClasses = 'px-8 py-3 rounded font-bold text-sm tracking-wide transition-all'
   
   const variantClasses = {
-    primary: 'bg-[#137fec] hover:bg-[#137fec]/90 text-white',
+    primary: 'org-btn-primary',
     secondary: 'border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-900 dark:text-white',
   }
 

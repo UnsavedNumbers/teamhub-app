@@ -3,6 +3,9 @@
 -- ============================================================================
 -- This migration updates all admin RPC functions to use the new log_event
 -- function instead of directly inserting into audit_logs.
+--
+-- REQUIRES: Migration 20260115120000_platform_admin.sql must run first
+-- This migration updates RPCs to use the role column added in that migration
 -- ============================================================================
 
 -- ============================================================================
@@ -50,8 +53,8 @@ BEGIN
   PERFORM log_event(
     'ADMIN'::event_category,
     'ACTIVATE_ORGANIZATION',
-    auth.uid(),
     'platform_admin'::event_actor_role,
+    auth.uid(),
     target_org_id,
     'organization',
     target_org_id,
@@ -110,8 +113,8 @@ BEGIN
   PERFORM log_event(
     'ADMIN'::event_category,
     'SUSPEND_ORGANIZATION',
-    auth.uid(),
     'platform_admin'::event_actor_role,
+    auth.uid(),
     target_org_id,
     'organization',
     target_org_id,
@@ -170,8 +173,8 @@ BEGIN
   PERFORM log_event(
     'ADMIN'::event_category,
     'DISABLE_USER',
-    auth.uid(),
     'platform_admin'::event_actor_role,
+    auth.uid(),
     NULL,
     'user',
     target_user_id,
@@ -184,6 +187,9 @@ BEGIN
   RETURN jsonb_build_object('success', true);
 END;
 $$;
+
+-- Grant execute permission
+GRANT EXECUTE ON FUNCTION admin_disable_user(UUID, TEXT) TO authenticated;
 
 -- ============================================================================
 -- Update admin_enable_user
@@ -230,8 +236,8 @@ BEGIN
   PERFORM log_event(
     'ADMIN'::event_category,
     'ENABLE_USER',
-    auth.uid(),
     'platform_admin'::event_actor_role,
+    auth.uid(),
     NULL,
     'user',
     target_user_id,
@@ -290,17 +296,17 @@ BEGIN
   END IF;
   
   -- Upsert feature flag
-  INSERT INTO feature_flags (organization_id, feature_key, enabled)
+  INSERT INTO feature_flags (org_id, feature_key, enabled)
   VALUES (target_org_id, target_feature_key, target_enabled)
-  ON CONFLICT (organization_id, feature_key)
+  ON CONFLICT (org_id, feature_key)
   DO UPDATE SET enabled = target_enabled, updated_at = NOW();
   
   -- Log event using new system
   PERFORM log_event(
     'ADMIN'::event_category,
     'SET_FEATURE_FLAG',
-    auth.uid(),
     'platform_admin'::event_actor_role,
+    auth.uid(),
     target_org_id,
     'feature_flag',
     target_org_id, -- Using org_id as entity_id since feature flags are per-org
@@ -380,8 +386,8 @@ BEGIN
   PERFORM log_event(
     'ADMIN'::event_category,
     CASE WHEN already_admin THEN 'UPDATE_PLATFORM_ADMIN' ELSE 'ADD_PLATFORM_ADMIN' END,
-    auth.uid(),
     'platform_admin'::event_actor_role,
+    auth.uid(),
     NULL,
     'platform_admin',
     target_user_id,
@@ -460,8 +466,8 @@ BEGIN
   PERFORM log_event(
     'ADMIN'::event_category,
     'REMOVE_PLATFORM_ADMIN',
-    auth.uid(),
     'platform_admin'::event_actor_role,
+    auth.uid(),
     NULL,
     'platform_admin',
     target_user_id,
@@ -478,6 +484,19 @@ BEGIN
   RETURN jsonb_build_object('success', true);
 END;
 $$;
+
+-- ============================================================================
+-- Grant Execute Permissions
+-- ============================================================================
+
+-- Grant execute on all updated functions
+GRANT EXECUTE ON FUNCTION admin_activate_organization(UUID, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION admin_suspend_organization(UUID, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION admin_disable_user(UUID, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION admin_enable_user(UUID, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION admin_set_feature_flag(UUID, TEXT, BOOLEAN, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION admin_add_platform_admin(TEXT, platform_admin_role, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION admin_remove_platform_admin(UUID, TEXT) TO authenticated;
 
 -- ============================================================================
 -- Comments

@@ -7,14 +7,12 @@
  * All UI components should use domain models, not Supabase row types.
  */
 
-import type { Database } from '../lib/database.types'
-import type { SupabaseExtended } from '../lib/supabase.extended.types'
+import type { SupabaseExtended as Database, SupabaseExtended, Json } from '../lib/supabase.extended.types'
 import type { Event, EventLocation, RSVPConfig, RecurringPattern } from '../types/domain/Event'
 import type { Organization } from '../types/domain/Organization'
 import type { User, UserOrganization } from '../types/domain/User'
 import type { LicenseTier, FeatureEntitlement, TierFeatureAssignment, LicenseMetrics } from '../types/domain/License'
 import type { FeatureFlag, FeatureFlagOverride, FeatureFlagAuditLog, RpcResponse } from '../types/domain/FeatureFlag'
-import type { Json } from '../lib/database.types'
 
 // Re-export domain models for convenience
 export type { Event, Organization, User, LicenseTier, FeatureEntitlement, FeatureFlag } from '../types/domain'
@@ -38,9 +36,9 @@ export function mapEvent(row: EventRow): Event {
 
   // Map RSVP config - handle both old and new schema
   const rsvpConfig: RSVPConfig = {
-    enabled: (row as any).rsvp_enabled ?? false,
-    type: (row as any).rsvp_enabled && (row as any).rsvp_type
-      ? (row as any).rsvp_type as 'general' | 'athlete'
+    enabled: row.rsvp_enabled ?? false,
+    type: row.rsvp_enabled && row.rsvp_type
+      ? row.rsvp_type as 'general' | 'athlete'
       : null
   }
 
@@ -49,13 +47,13 @@ export function mapEvent(row: EventRow): Event {
     title: row.title,
     type: row.type as Event['type'],
     startTime: row.start_time,
-    endTime: row.end_time,
+    endTime: row.end_time ?? new Date().toISOString(),
     arrivalTime: row.arrival_time,
-    isCancelled: row.is_cancelled,
+    isCancelled: row.is_cancelled ?? false,
     cancelledAt: row.cancelled_at,
     cancelledByUserId: row.cancelled_by_user_id,
     cancellationReason: row.cancellation_reason,
-    createdByUserId: row.created_by_user_id,
+    createdByUserId: row.created_by_user_id ?? '',
     createdAt: row.created_at ?? new Date().toISOString(),
     updatedAt: row.updated_at ?? new Date().toISOString(),
     teamId: row.team_id,
@@ -82,14 +80,14 @@ export function mapEventLocation(row: Database['public']['Tables']['event_locati
   return {
     id: row.id,
     venueName: row.venue_name,
-    address: row.address,
+    address: row.address_line1 || null,
     city: row.city,
     state: row.state,
-    zip: row.zip,
+    zip: row.postal_code || null,
     country: row.country,
-    latitude: row.latitude,
-    longitude: row.longitude,
-    mapsUrl: row.maps_url,
+    latitude: row.latitude || null,
+    longitude: row.longitude || null,
+    mapsUrl: row.maps_url || null,
     isVirtual: row.is_virtual ?? false,
     isTbd: row.is_tbd ?? false,
   }
@@ -99,10 +97,10 @@ function mapRecurringPattern(row: Database['public']['Tables']['recurring_event_
   return {
     id: row.id,
     frequency: row.frequency as RecurringPattern['frequency'],
-    interval: row.interval,
+    interval: row.interval || 1,
     daysOfWeek: row.days_of_week as number[] | null,
     endDate: row.end_date,
-    occurrenceCount: row.occurrence_count,
+    occurrenceCount: row.max_occurrences || null,
     exceptionDates: row.exception_dates ?? [],
   }
 }
@@ -116,11 +114,10 @@ type OrganizationRow = SupabaseExtended['public']['Views']['admin_organizations'
 
 export function mapOrganization(row: OrganizationRow): Organization {
   // Handle both admin view and table row
-  const isAdminView = 'license_status' in row || 'team_count' in row
   
   return {
-    id: row.id,
-    name: row.name,
+    id: row.id ?? '',
+    name: row.name ?? '',
     orgType: 'org_type' in row ? row.org_type : null,
     status: ('status' in row && row.status) ? row.status as Organization['status'] : 'active',
     createdAt: row.created_at ?? new Date().toISOString(),
@@ -131,17 +128,17 @@ export function mapOrganization(row: OrganizationRow): Organization {
     licenseCurrentPeriodEnd: 'license_current_period_end' in row ? row.license_current_period_end : null,
     payoutAccountId: 'payout_account_id' in row ? row.payout_account_id : null,
     payoutsEnabled: 'payouts_enabled' in row ? (row.payouts_enabled ?? false) : false,
-    stripeConnected: 'stripe_connected' in row ? row.stripe_connected : false,
-    teamCount: 'team_count' in row ? row.team_count : 0,
-    sportCount: 'sport_count' in row ? row.sport_count : 0,
-    userCount: 'user_count' in row ? row.user_count : 0,
-    website: 'website' in row ? row.website : null,
-    phone: 'phone' in row ? row.phone : null,
-    email: 'email' in row ? row.email : null,
-    address: 'address' in row ? row.address : null,
-    city: 'city' in row ? row.city : null,
-    state: 'state' in row ? row.state : null,
-    zip: 'zip' in row ? row.zip : null,
+    stripeConnected: 'stripe_connected' in row ? (row.stripe_connected ?? false) : false,
+    teamCount: 'team_count' in row ? (row.team_count ?? 0) : 0,
+    sportCount: 'sport_count' in row ? (row.sport_count ?? 0) : 0,
+    userCount: 'user_count' in row ? (row.user_count ?? 0) : 0,
+    website: 'website' in row ? (row.website as string | null) : null,
+    phone: 'phone' in row ? (row.phone as string | null) : null,
+    email: 'email' in row ? (row.email as string | null) : null,
+    address: 'address' in row ? (row.address as string | null) : null,
+    city: 'city' in row ? (row.city as string | null) : null,
+    state: 'state' in row ? (row.state as string | null) : null,
+    zip: 'zip' in row ? (row.zip as string | null) : null,
   }
 }
 
@@ -158,7 +155,7 @@ export function mapUser(row: UserRow): User {
   if ('organizations' in row) {
     if (Array.isArray(row.organizations)) {
       organizations = row.organizations.map((org: any) => ({
-        organizationId: org.organization_id ?? org.id,
+        organizationId: org.org_id ?? org.id,
         orgName: org.org_name ?? org.name,
         role: org.role ?? '',
       }))
@@ -167,7 +164,7 @@ export function mapUser(row: UserRow): User {
       const orgs = row.organizations as Json
       if (Array.isArray(orgs)) {
         organizations = orgs.map((org: any) => ({
-          organizationId: org.organization_id ?? org.id,
+          organizationId: org.org_id ?? org.id,
           orgName: org.org_name ?? org.name,
           role: org.role ?? '',
         }))
@@ -175,11 +172,30 @@ export function mapUser(row: UserRow): User {
     }
   }
 
+  // Bug 1 & 2 Prevention: Use existence checks and type guards before access
+  // Bug 3 Prevention: Always trim() values to prevent whitespace-only strings
+  const firstName = 'first_name' in row && row.first_name && typeof row.first_name === 'string' 
+    ? row.first_name.trim() 
+    : ''
+  const lastName = 'last_name' in row && row.last_name && typeof row.last_name === 'string' 
+    ? row.last_name.trim() 
+    : ''
+  const phone = 'phone' in row && row.phone && typeof row.phone === 'string' 
+    ? row.phone.trim() 
+    : ''
+  
+  // Derive displayName from first+last if display_name is null/empty (Issue 4 solution)
+  const displayName = 'display_name' in row && row.display_name 
+    ? row.display_name 
+    : (firstName && lastName ? `${firstName} ${lastName}` : null)
+
   return {
-    id: row.id,
+    id: row.id ?? '',
     email: row.email ?? '',
-    phone: 'phone' in row ? row.phone : null,
-    displayName: 'display_name' in row ? row.display_name : null,
+    phone,
+    firstName,
+    lastName,
+    displayName,
     createdAt: row.created_at ?? new Date().toISOString(),
     updatedAt: row.updated_at ?? new Date().toISOString(),
     lastSignInAt: 'last_sign_in_at' in row ? row.last_sign_in_at : null,
@@ -198,12 +214,12 @@ export function mapLicenseTier(row: SupabaseExtended['public']['Tables']['licens
   return {
     id: row.id,
     tierKey: row.tier_key,
-    tierName: row.tier_name,
-    description: row.description,
-    status: row.status,
-    version: row.version,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    tierName: row.tier_name ?? '',
+    description: row.description ?? '',
+    status: (row.status ?? 'active') as 'active' | 'archived',
+    version: row.version ?? 1,
+    createdAt: row.created_at ?? new Date().toISOString(),
+    updatedAt: row.updated_at ?? new Date().toISOString(),
     stripePriceId: row.stripe_price_id,
     stripeVerifiedAt: row.stripe_verified_at,
     stripeProductName: row.stripe_product_name,
@@ -218,14 +234,19 @@ export function mapFeatureEntitlement(row: SupabaseExtended['public']['Tables'][
   return {
     id: row.id,
     featureKey: row.feature_key,
-    displayName: row.display_name,
-    category: row.category,
-    featureType: row.feature_type,
-    description: row.description,
-    rolloutStatus: row.rollout_status,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    displayName: row.display_name ?? '',
+    category: row.category ?? '',
+    featureType: (row.feature_type ?? 'module') as 'module' | 'permission' | 'limit' | 'visibility' | 'integration',
+    description: row.description ?? '',
+    rolloutStatus: (row.rollout_status ?? 'hidden') as 'live' | 'beta' | 'hidden',
+    createdAt: row.created_at ?? new Date().toISOString(),
+    updatedAt: row.updated_at ?? new Date().toISOString(),
     archivedAt: row.archived_at,
+    isToggleable: (row as any).is_toggleable ?? true,
+    isRemovable: (row as any).is_removable ?? true,
+    lockReason: (row as any).lock_reason ?? null,
+    isSystemFeature: (row as any).is_system_feature ?? false,
+    platformAdminOnly: (row as any).platform_admin_only ?? false,
   }
 }
 
@@ -234,13 +255,13 @@ export function mapTierFeatureAssignment(row: SupabaseExtended['public']['Tables
     id: row.id,
     licenseTierId: row.license_tier_id,
     featureEntitlementId: row.feature_entitlement_id,
-    included: row.included,
+    included: row.included ?? false,
     limitValue: row.limit_value,
-    roleAdmin: row.role_admin,
-    roleCoach: row.role_coach,
-    roleParent: row.role_parent,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    roleAdmin: row.role_admin ?? false,
+    roleCoach: row.role_coach ?? false,
+    roleParent: row.role_parent ?? false,
+    createdAt: row.created_at ?? new Date().toISOString(),
+    updatedAt: row.updated_at ?? new Date().toISOString(),
   }
 }
 

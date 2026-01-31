@@ -69,6 +69,18 @@ export function isRpcSuccessResponse(data: unknown): data is { success: boolean;
 }
 
 /**
+ * Type guard to check if data is AdminRpcResponse (Technical Bug #1)
+ */
+export function isAdminRpcResponse(data: unknown): data is { success: boolean; error?: string; action?: string } {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'success' in data &&
+    typeof (data as { success: unknown }).success === 'boolean'
+  )
+}
+
+/**
  * Validate and extract RPC response, throwing if unsuccessful
  */
 export function assertRpcSuccess<T extends { success: boolean; error?: string }>(

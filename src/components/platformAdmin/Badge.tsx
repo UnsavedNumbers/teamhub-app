@@ -1,10 +1,13 @@
 import type { HTMLAttributes, ReactNode } from 'react'
+import { cn } from '../../utils/cn'
 
-type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'error'
+type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'error' | 'accent' | 'primary'
 
 interface BadgeProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'children'> {
   /** Visual variant based on semantic meaning */
   variant?: BadgeVariant
+  /** Size variant */
+  size?: 'small' | 'medium' | 'large'
   /** Badge content */
   children: ReactNode
   /** Optional icon (Material Symbols name) */
@@ -20,16 +23,19 @@ interface BadgeProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'children'> {
  * - danger: Red tint
  * - info: Blue tint
  * - neutral: Gray tint
+ * - accent/primary: Theme color tint
  */
 export function Badge({
   variant = 'neutral',
+  size,
   children,
   icon,
   className = '',
   ...attrs
 }: BadgeProps) {
+  const sizeClass = size === 'small' ? 'pa-badge--small' : size === 'large' ? 'pa-badge--large' : ''
   return (
-    <span className={`pa-badge pa-badge--${variant} ${className}`.trim()} {...attrs}>
+    <span className={cn(`pa-badge pa-badge--${variant}`, sizeClass, className)} {...attrs}>
       {icon && (
         <span className="material-symbols-outlined" style={{ fontSize: '12px' }}>
           {icon}

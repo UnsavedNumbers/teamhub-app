@@ -7,16 +7,31 @@
 
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
+const supabaseAny = supabase as any
 import { getTeamWithOrg, getOrgMembers, getOrgMember, getUserEmail } from '../../lib/supabase-helpers'
-import type { Database } from '../../lib/database.types'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { UserContext } from '../fake/userContext'
+import {
+    defaultPresentationForAction,
+    isRoleAllowedForAction,
+    ACTION_ROLE_MAP,
+    type NotificationAction,
+    type NotificationCreateInput,
+    type NotificationCreateResult,
+    type NotificationEntityType,
+    type NotificationPresentation,
+    type NotificationRecord,
+    type NotificationRole,
+} from '../../types/notifications'
 import {
     getAnnouncementById as getFakeAnnouncementById,
     getAnnouncementsForOrg,
     getAnnouncementsForTeam,
     getOrgWideAnnouncements,
+    fakeNotifications,
     getNotificationsForUser,
     getUnreadNotificationCount,
+    deleteAnnouncementById as deleteFakeAnnouncementById,
     type FakeAnnouncement,
     type FakeNotification,
 } from '../fake/fakeMessages'
@@ -24,10 +39,12 @@ import {
 export interface Announcement {
     id: string
     team_id: string | null
+    org_id: string | null
     author_id: string
     title: string
     content: string
     priority: 'normal' | 'urgent'
+    type: 'general' | 'reminder' | 'schedule_change' | 'urgent' | 'payment' | 'travel'
     created_at: string
     updated_at: string
     author?: {
@@ -51,17 +68,6 @@ export interface Message {
     }
 }
 
-export interface Notification {
-    id: string
-    user_id: string
-    title: string
-    body: string
-    type: string
-    read_at: string | null
-    created_at: string
-    payload?: any
-}
-
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -70,6 +76,81 @@ async function simulateDelay(): Promise<void> {
     if (FAKE_DATA_DELAY_MS > 0) {
         await new Promise((resolve) => setTimeout(resolve, FAKE_DATA_DELAY_MS))
     }
+}
+
+type DbNotificationRow = Database['public']['Tables']['user_notifications']['Row']
+
+const VALID_ACTIONS = new Set<NotificationAction>(Object.keys(ACTION_ROLE_MAP) as NotificationAction[])
+const VALID_PRESENTATIONS: NotificationPresentation[] = ['info', 'warning', 'urgent']
+const VALID_ROLES: NotificationRole[] = ['guardian', 'parent', 'coach', 'org_admin']
+
+function normalizeAction(action: unknown): NotificationAction {
+    if (typeof action === 'string' && VALID_ACTIONS.has(action as NotificationAction)) {
+        return action as NotificationAction
+    }
+    return 'system_generated_notice'
+}
+
+function normalizePresentation(value: unknown): NotificationPresentation {
+    if (typeof value === 'string' && VALID_PRESENTATIONS.includes(value as NotificationPresentation)) {
+        return value as NotificationPresentation
+    }
+    return 'info'
+}
+
+function normalizeRole(value: unknown): NotificationRole {
+    if (typeof value === 'string' && VALID_ROLES.includes(value as NotificationRole)) {
+        return value === 'parent' ? 'guardian' : (value as NotificationRole)
+    }
+    return 'guardian'
+}
+
+function mapDbNotification(row: DbNotificationRow): NotificationRecord {
+    return {
+        id: row.id,
+        user_id: row.user_id,
+        org_id: row.org_id,
+        team_id: row.team_id ?? null,
+        action: normalizeAction((row as any).action ?? (row as any).type),
+        presentation_type: normalizePresentation((row as any).presentation_type ?? 'info'),
+        role_context: normalizeRole((row as any).role_context),
+        entity_type: ((row as any).entity_type ?? null) as NotificationEntityType | null,
+        entity_id: ((row as any).entity_id ?? null) as string | null,
+        title: row.title,
+        body: row.body,
+        link_url: ((row as any).link_url ?? null) as string | null,
+        metadata: (row as any).metadata as Record<string, unknown> | null,
+        dedupe_key: row.dedupe_key,
+        read_at: row.read_at,
+        created_at: row.created_at,
+    }
+}
+
+function mapFakeNotification(fake: FakeNotification): NotificationRecord {
+    return {
+        id: fake.id,
+        user_id: fake.user_id,
+        org_id: fake.org_id,
+        team_id: fake.team_id,
+        action: fake.action,
+        presentation_type: fake.presentation_type,
+        role_context: fake.role_context,
+        entity_type: fake.entity_type,
+        entity_id: fake.entity_id,
+        title: fake.title,
+        body: fake.body,
+        link_url: fake.link_url,
+        metadata: fake.metadata,
+        dedupe_key: fake.dedupe_key,
+        read_at: fake.read_at,
+        created_at: fake.created_at,
+    }
+}
+
+function buildDedupeKey(input: NotificationCreateInput): string {
+    if (input.dedupeKey) return input.dedupeKey
+    const entityPart = input.entityId ?? input.entityType ?? 'none'
+    return `${input.action}:${input.userId}:${entityPart}`
 }
 
 // ============================================================================
@@ -105,10 +186,12 @@ export async function getAnnouncements(
         const mappedAnnouncements: Announcement[] = announcements.map(fake => ({
             id: fake.id,
             team_id: fake.team_id,
+            org_id: context.orgId || null,
             author_id: fake.created_by_user_id,
             title: fake.title,
             content: fake.body,
             priority: fake.type === 'emergency' ? 'urgent' : 'normal',
+            type: 'general' as const,
             created_at: fake.created_at,
             updated_at: fake.updated_at,
             author: {
@@ -138,8 +221,16 @@ export async function getAnnouncements(
             `)
             .order('created_at', { ascending: false })
 
-        if (params.teamId) {
-            query = query.eq('team_id', params.teamId)
+        if (params.teamId && orgId) {
+            // Get team-specific announcements OR org-wide announcements for this org
+            // Use separate queries and combine, or use a filter function
+            // For now, filter by org and then filter in JS, or use PostgREST or syntax
+            query = query
+                .eq('org_id', orgId)
+                .or(`team_id.eq.${params.teamId},team_id.is.null`)
+        } else if (orgId) {
+            // Get all announcements for the org (team-specific + org-wide)
+            query = query.eq('org_id', orgId)
         }
 
         const { data, error } = await query
@@ -148,7 +239,6 @@ export async function getAnnouncements(
 
         const announcements = data as any[]
 
-        // 3. Fetch Roles Manually
         if (announcements.length > 0 && orgId) {
             const authorIds = [...new Set(announcements.map(a => a.author_id))]
             const members = await getOrgMembers(orgId, authorIds)
@@ -186,10 +276,12 @@ export async function getAnnouncementById(
         const announcement: Announcement = {
             id: fakeAnn.id,
             team_id: fakeAnn.team_id,
+            org_id: null,
             author_id: fakeAnn.created_by_user_id,
             title: fakeAnn.title,
             content: fakeAnn.body,
             priority: fakeAnn.type === 'emergency' ? 'urgent' : 'normal',
+            type: 'general' as const,
             created_at: fakeAnn.created_at,
             updated_at: fakeAnn.updated_at,
             author: {
@@ -215,15 +307,20 @@ export async function getAnnouncementById(
         if (error) throw error
 
         // Provide safe defaults for author and team
-        if (!data.author) {
-            data.author = { email: '', role: 'parent' }
+        const dataAny = data as unknown as {
+            team?: { org_id?: string; name?: string }
+            author_id?: string
+            author?: { email?: string; role?: string }
+            team_id?: string
         }
-        if (!data.team && data.team_id) {
-            data.team = { name: 'Team' }
+        if (!dataAny.author) {
+            dataAny.author = { email: '', role: 'parent' }
+        }
+        if (!dataAny.team && dataAny.team_id) {
+            dataAny.team = { name: 'Team' }
         }
 
         // Fetch author role from organization_members
-        const dataAny = data as unknown as { team?: { org_id?: string }; author_id?: string; author?: { email?: string; role?: string } }
         if (dataAny && dataAny.team?.org_id && dataAny.author_id) {
             const memberData = await getOrgMember(dataAny.team.org_id, dataAny.author_id)
 
@@ -241,12 +338,11 @@ export async function getAnnouncementById(
             }
         }
 
-        return { data: data as Announcement, error: null }
+        return { data: dataAny as unknown as Announcement, error: null }
     } catch (err) {
-        // Check error type for better handling
         const error = err instanceof Error ? err : new Error('Unknown error')
-        if (error.message?.includes('No rows') || (err as any)?.code === 'PGRST116') {
-            // 404 - announcement not found
+        type PostgrestError = { code?: string }
+        if (error.message?.includes('No rows') || (err as PostgrestError)?.code === 'PGRST116') {
             return { data: null, error: new Error('Announcement not found') }
         }
         console.error('Error fetching announcement:', err)
@@ -255,49 +351,360 @@ export async function getAnnouncementById(
 }
 
 export async function createAnnouncement(
+    context: UserContext,
     title: string,
     content: string,
     priority: 'normal' | 'urgent',
-    teamId: string,
-    authorId: string
+    teamId: string | null,
+    authorId: string,
+    orgId: string,
+    type: 'general' | 'reminder' | 'schedule_change' | 'urgent' | 'payment' | 'travel' = 'general',
+    isOrgWide: boolean = false
 ): Promise<{ data: Announcement | null; error: Error | null }> {
+    // Input validation
+    if (!title || !title.trim()) {
+        return { data: null, error: new Error('Announcement title is required') }
+    }
+    if (!content || !content.trim()) {
+        return { data: null, error: new Error('Announcement content is required') }
+    }
+    if (!priority || (priority !== 'normal' && priority !== 'urgent')) {
+        return { data: null, error: new Error('Priority must be "normal" or "urgent"') }
+    }
+    if (!isOrgWide && !teamId) {
+        return { data: null, error: new Error('Team ID is required for team-specific announcements') }
+    }
+    if (isOrgWide && !orgId) {
+        return { data: null, error: new Error('Organization ID is required for org-wide announcements') }
+    }
+    if (!authorId) {
+        return { data: null, error: new Error('Author ID is required') }
+    }
+
     if (USE_FAKE_DATA) {
         await simulateDelay()
-        return { data: null, error: null }
+        return {
+            data: {
+                id: Date.now().toString(),
+                team_id: isOrgWide ? null : teamId,
+                org_id: orgId,
+                author_id: authorId,
+                title: title.trim(),
+                content: content.trim(),
+                priority,
+                type,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                author: {
+                    email: '',
+                    role: 'coach'
+                }
+            } as Announcement,
+            error: null
+        }
     }
 
     try {
-        // Fetch Org ID from team first to ensure we know where to book creation (if needed) but DB handles Insert.
-        // We just insert.
+        // Build insert data - team_id can be null for org-wide announcements
+        // Type assertion needed because Database types may not reflect nullable team_id
+        const insertData = {
+            title: title.trim(),
+            content: content.trim(),
+            priority,
+            type,
+            org_id: orgId,
+            author_id: authorId,
+            team_id: isOrgWide ? null : (teamId as string | null)
+        } as Database['public']['Tables']['announcements']['Insert']
+
         const { data, error } = await supabase
             .from('announcements')
-            .insert({
-                title,
-                content,
-                priority,
-                team_id: teamId,
-                author_id: authorId
-            } as any)
-            .select(`*, author:users(email)`) // Can't easily get role in one shot if it's in another table
+            .insert(insertData)
+            .select(`*, author:users(email), team:teams(name, org_id)`)
             .single()
 
         if (error) throw error
 
-        // Manually fetch role for consistent return
-        if (data) {
-            const teamData = await getTeamWithOrg(teamId)
-            let role = 'parent'
-            if (teamData) {
-                const memberData = await getOrgMember(teamData.org_id, authorId)
-                if (memberData) role = memberData.role
-            }
-            const dataAny = data as unknown as { author?: { email?: string; role?: string } }
-            dataAny.author = { ...dataAny.author, role }
+        if (!data) {
+            return { data: null, error: new Error('Failed to create announcement') }
         }
 
-        return { data: data as any as Announcement, error: null }
+        // Manually fetch role for consistent return
+        let result = data as unknown as { author?: { email?: string; role?: string }; org_id?: string }
+        if (result) {
+            const targetOrgId = result.org_id || orgId
+            let role = 'parent'
+            if (targetOrgId) {
+                const memberData = await getOrgMember(targetOrgId, authorId)
+                if (memberData) role = memberData.role
+            }
+            result.author = { ...result.author, role }
+        }
+
+        const newAnnouncement = result as unknown as Announcement
+
+        // WIRE NOTIFICATIONS (END-TO-END)
+        // Explicitly resolve audience and create notifications
+        // This ensures the action produces side-effects as requested
+        if (newAnnouncement) {
+            // We run this *without* awaiting to avoid blocking the UI response
+            // Log errors internally
+            distributeAnnouncementNotifications(newAnnouncement, context)
+                .catch(err => console.error('[NotificationService] Failed to distribute announcement notifications:', err))
+        }
+
+        return { data: newAnnouncement, error: null }
     } catch (err) {
-        return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        const error = err instanceof Error ? err : new Error('Unknown error')
+        console.error('Error creating announcement:', error)
+        return { data: null, error }
+    }
+}
+
+/**
+ * Resolves audience and distributes notifications for a new announcement
+ */
+async function distributeAnnouncementNotifications(announcement: Announcement, context: UserContext): Promise<void> {
+    if (USE_FAKE_DATA) return
+
+    try {
+        const recipients = new Set<string>()
+        const orgId = announcement.org_id
+
+        if (!orgId) {
+            console.warn('[NotificationService] Cannot distribute announcement without org_id')
+            return
+        }
+
+        // 1. AUDIENCE RESOLUTION
+        if (announcement.team_id) {
+            // TEAM ANNOUNCEMENT: Parents of athletes on this team
+            const { data: members, error: memberError } = await supabase
+                .from('team_memberships')
+                .select(`
+                    athlete_id,
+                    athlete:athletes!athlete_id(family_id)
+                `)
+                .eq('team_id', announcement.team_id)
+                .eq('status', 'active')
+
+            if (!memberError && members) {
+                const familyIds = members
+                    .map(m => (m.athlete as any)?.family_id)
+                    .filter(Boolean) as string[]
+
+                if (familyIds.length > 0) {
+                    const { data: users, error: userError } = await supabase
+                        .from('users')
+                        .select('id, preferences')
+                        .in('family_id', familyIds)
+
+                    if (!userError && users) {
+                        users.forEach(u => {
+                            // Check Preferences
+                            const prefs = u.preferences as any
+                            const notifications = prefs?.notifications
+                            // Default to TRUE if not set
+                            const isEnabled = notifications?.system_announcements !== false
+
+                            if (isEnabled) {
+                                recipients.add(u.id)
+                            }
+                        })
+                    }
+                }
+            }
+
+            // Also include Coaches for this team
+            const { data: coaches, error: coachError } = await supabaseAny
+                .from('coach_assignments')
+                .select('user_id')
+                .eq('team_id', announcement.team_id)
+
+            if (!coachError && coaches) {
+                coaches.forEach((c: any) => recipients.add(c.user_id))
+            }
+        } else {
+            // ORG-WIDE ANNOUNCEMENT
+            const recipientRoles = ['guardian', 'parent', 'coach', 'org_admin']
+            const { data: members, error: memberError } = await supabase
+                .from('organization_members')
+                .select('user_id')
+                .eq('org_id', orgId)
+                .in('role', recipientRoles as any)
+
+            if (!memberError && members) {
+                const userIds = members.map(m => m.user_id)
+                if (userIds.length > 0) {
+                    // Fetch users to check preferences
+                    const { data: users, error: userError } = await supabase
+                        .from('users')
+                        .select('id, preferences')
+                        .in('id', userIds)
+
+                    if (!userError && users) {
+                        users.forEach(u => {
+                            // Check Preferences
+                            const prefs = u.preferences as any
+                            const notifications = prefs?.notifications
+                            // Default to TRUE if not set
+                            const isEnabled = notifications?.system_announcements !== false
+
+                            if (isEnabled) {
+                                recipients.add(u.id)
+                            }
+                        })
+                    }
+                }
+            }
+        }
+
+        // Remove the author from receiving their own notification
+        recipients.delete(announcement.author_id)
+        recipients.delete(context.userId)
+
+        if (recipients.size === 0) return
+
+        // 2. ACTION & CONTENT MAPPING
+        const action: NotificationAction = announcement.priority === 'urgent'
+            ? 'announcement_urgent'
+            : 'announcement_created'
+
+        // 3. PERSIST NOTIFICATIONS
+        const notificationsToInsert = Array.from(recipients).map(userId => ({
+            user_id: userId,
+            org_id: orgId,
+            team_id: announcement.team_id,
+            action: action,
+            title: announcement.title,
+            body: announcement.content, // Could truncate if too long
+            link_url: `/announcements/${announcement.id}`, // Deep link
+            role_context: 'guardian', // Target audience role
+            entity_type: 'announcement',
+            entity_id: announcement.id,
+            created_at: new Date().toISOString(),
+            // Metadata for smarter rendering later
+            metadata: {
+                priority: announcement.priority,
+                type: announcement.type
+            }
+        }))
+
+        // Batch insert
+        const { error: insertError } = await supabaseAny
+            .from('user_notifications')
+            .insert(notificationsToInsert as any)
+
+        if (insertError) throw insertError
+
+        console.log(`[NotificationService] Distributed ${notificationsToInsert.length} notifications for announcement ${announcement.id}`)
+
+    } catch (err) {
+        console.error('[NotificationService] Error distributing notifications:', err)
+    }
+}
+
+export async function deleteAnnouncement(
+    context: UserContext,
+    announcementId: string
+): Promise<{ success: boolean; error: Error | null }> {
+    // Input validation
+    const trimmedId = (announcementId ?? '').trim()
+    if (!trimmedId) {
+        return { success: false, error: new Error('Announcement ID is required') }
+    }
+    if (!context.orgId) {
+        return { success: false, error: new Error('Organization context is required') }
+    }
+    if (!context.userId) {
+        return { success: false, error: new Error('User ID is required') }
+    }
+
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+
+        // First, check if announcement exists and get it for permission check
+        const announcement = getFakeAnnouncementById(announcementId)
+        if (!announcement) {
+            return { success: false, error: new Error('Announcement not found') }
+        }
+
+        // Check permission: must be org_admin or author
+        const isAuthor = announcement.created_by_user_id === context.userId
+        const isOrgAdmin = context.roles?.includes('org_admin') ?? false
+
+        if (!isAuthor && !isOrgAdmin) {
+            return { success: false, error: new Error('You do not have permission to delete this announcement') }
+        }
+
+        // Check org ownership
+        if (announcement.org_id !== context.orgId) {
+            return { success: false, error: new Error('Announcement does not belong to your organization') }
+        }
+
+        // Delete using helper function
+        const deleted = deleteFakeAnnouncementById(announcementId)
+        if (!deleted) {
+            return { success: false, error: new Error('Failed to delete announcement') }
+        }
+
+        return { success: true, error: null }
+    }
+
+    try {
+        // First, fetch the announcement to check permissions and ownership
+        const { data: announcement, error: fetchError } = await supabase
+            .from('announcements')
+            .select('id, author_id, org_id')
+            .eq('id', trimmedId)
+            .single()
+
+        if (fetchError) {
+            if (fetchError.code === 'PGRST116') {
+                return { success: false, error: new Error('Announcement not found') }
+            }
+            throw fetchError
+        }
+
+        if (!announcement || typeof announcement !== 'object' || !('id' in announcement)) {
+            return { success: false, error: new Error('Announcement not found') }
+        }
+
+        // Type guard for announcement data
+        const announcementData = announcement as { id: string; author_id: string; org_id: string | null }
+
+        // Check org ownership
+        if (announcementData.org_id !== context.orgId) {
+            return { success: false, error: new Error('Announcement does not belong to your organization') }
+        }
+
+        // Check permission: must be org_admin or author
+        const isAuthor = announcementData.author_id === context.userId
+        const isOrgAdmin = context.roles?.includes('org_admin') ?? false
+
+        if (!isAuthor && !isOrgAdmin) {
+            // Double-check by querying organization_members
+            const memberData = await getOrgMember(context.orgId, context.userId)
+            const hasOrgAdminRole = memberData?.role === 'org_admin'
+
+            if (!hasOrgAdminRole && !isAuthor) {
+                return { success: false, error: new Error('You do not have permission to delete this announcement') }
+            }
+        }
+
+        // Delete the announcement
+        const { error: deleteError } = await supabase
+            .from('announcements')
+            .delete()
+            .eq('id', trimmedId)
+
+        if (deleteError) throw deleteError
+
+        return { success: true, error: null }
+    } catch (err) {
+        const error = err instanceof Error ? err : new Error('Unknown error')
+        console.error('Error deleting announcement:', error)
+        return { success: false, error }
     }
 }
 
@@ -314,7 +721,7 @@ export async function getMessages(
 
     try {
         const { data, error } = await supabase
-            .from('messages')
+            .from('messages' as any)
             .select(`
                 *,
                 author:users(email),
@@ -327,7 +734,6 @@ export async function getMessages(
 
         const messages = data as any[]
 
-        // Fetch Roles
         if (messages.length > 0) {
             // All messages in same team -> same org
             const firstMessage = messages[0] as unknown as { team?: { org_id?: string }; author_id?: string; author?: { email?: string; role?: string } }
@@ -362,11 +768,23 @@ export async function createMessage(
     teamId: string,
     authorId: string
 ): Promise<{ data: Message | null; error: Error | null }> {
+    // Input validation
+    if (!content || !content.trim()) {
+        return { data: null, error: new Error('Message content is required') }
+    }
+    if (!teamId) {
+        return { data: null, error: new Error('Team ID is required') }
+    }
+    if (!authorId) {
+        return { data: null, error: new Error('Author ID is required') }
+    }
+
     if (USE_FAKE_DATA) {
+        await simulateDelay()
         return {
             data: {
                 id: Date.now().toString(),
-                content,
+                content: content.trim(),
                 team_id: teamId,
                 author_id: authorId,
                 created_at: new Date().toISOString()
@@ -375,36 +793,50 @@ export async function createMessage(
     }
 
     try {
+        // Note: messages table was archived in migration 061, using type assertion for compatibility
+        type MessageInsert = {
+            content: string
+            team_id: string
+            author_id: string
+        }
+        const insertData: MessageInsert = {
+            content: content.trim(),
+            team_id: teamId,
+            author_id: authorId
+        }
         const { data, error } = await supabase
-            .from('messages')
-            .insert({
-                content,
-                team_id: teamId,
-                author_id: authorId
-            })
+            .from('messages' as any)
+            .insert(insertData)
             .select(`*, author:users(email)`)
             .single()
 
         if (error) throw error
 
-        if (data) {
-            const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', teamId).single() as { data: any; error: any }
+        if (!data) {
+            return { data: null, error: new Error('Failed to create message') }
+        }
+
+        let result = data as unknown as { author?: { email?: string; role?: string } }
+        if (result) {
+            const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', teamId).single()
             let role = 'parent'
             if (teamData) {
                 const { data: memberData } = await supabase
                     .from('organization_members')
                     .select('role')
-                    .eq('organization_id', teamData.org_id)
+                    .eq('org_id', teamData.org_id)
                     .eq('user_id', authorId)
-                    .single() as { data: any; error: any }
-                if (memberData) role = memberData.role
+                    .single()
+                if (memberData) role = memberData.role as string
             }
-            (data as any).author = { ...(data as any).author, role }
+            result.author = { ...result.author, role }
         }
 
-        return { data: data as any as Message, error: null }
+        return { data: result as unknown as Message, error: null }
     } catch (err) {
-        return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+        const error = err instanceof Error ? err : new Error('Unknown error')
+        console.error('Error creating message:', error)
+        return { data: null, error }
     }
 }
 
@@ -464,10 +896,12 @@ export function subscribeToMessages(
 export async function getNotifications(
     context: UserContext,
     limit?: number
-): Promise<{ data: Notification[] | FakeNotification[]; error: Error | null }> {
+): Promise<{ data: NotificationRecord[]; error: Error | null }> {
     if (USE_FAKE_DATA) {
         await simulateDelay()
-        return { data: getNotificationsForUser(context.userId), error: null }
+        const data = getNotificationsForUser(context.userId).map(mapFakeNotification)
+        const sliced = typeof limit === 'number' ? data.slice(0, limit) : data
+        return { data: sliced, error: null }
     }
 
     try {
@@ -482,9 +916,25 @@ export async function getNotifications(
         }
 
         const { data, error } = await query
-        if (error) throw error
-        return { data: data as Notification[], error: null }
+
+        // Handle 404 (table doesn't exist) or other errors gracefully
+        if (error) {
+            // If table doesn't exist (404), return empty array instead of error
+            if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+                console.warn('[getNotifications] user_notifications table not found, returning empty array')
+                return { data: [], error: null }
+            }
+            throw error
+        }
+
+        const records = (data ?? []).map(mapDbNotification)
+        return { data: records, error: null }
     } catch (err) {
+        // Handle PostgrestError with code PGRST116 (relation does not exist)
+        if (err && typeof err === 'object' && 'code' in err && err.code === 'PGRST116') {
+            console.warn('[getNotifications] user_notifications table not found, returning empty array')
+            return { data: [], error: null }
+        }
         return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
     }
 }
@@ -503,9 +953,21 @@ export async function getUnreadCount(
             .eq('user_id', context.userId)
             .is('read_at', null)
 
-        if (error) throw error
+        // Handle 404 (table doesn't exist) gracefully
+        if (error) {
+            if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+                console.warn('[getUnreadCount] user_notifications table not found, returning 0')
+                return { data: 0, error: null }
+            }
+            throw error
+        }
         return { data: count || 0, error: null }
     } catch (err) {
+        // Handle PostgrestError with code PGRST116 (relation does not exist)
+        if (err && typeof err === 'object' && 'code' in err && err.code === 'PGRST116') {
+            console.warn('[getUnreadCount] user_notifications table not found, returning 0')
+            return { data: 0, error: null }
+        }
         return { data: 0, error: err instanceof Error ? err : new Error('Unknown error') }
     }
 }
@@ -519,9 +981,11 @@ export async function markNotificationRead(
     }
 
     try {
+        type NotificationUpdate = Database['public']['Tables']['user_notifications']['Update']
+        const updateData = { read_at: new Date().toISOString() } satisfies NotificationUpdate
         const { error } = await supabase
             .from('user_notifications')
-            .update({ read_at: new Date().toISOString() } as Database['public']['Tables']['user_notifications']['Update'])
+            .update(updateData)
             .eq('id', notificationId)
             .eq('user_id', context.userId)
 
@@ -540,9 +1004,11 @@ export async function markAllNotificationsRead(
     }
 
     try {
+        type NotificationUpdate = Database['public']['Tables']['user_notifications']['Update']
+        const updateData = { read_at: new Date().toISOString() } satisfies NotificationUpdate
         const { error } = await supabase
             .from('user_notifications')
-            .update({ read_at: new Date().toISOString() } as any)
+            .update(updateData)
             .eq('user_id', context.userId)
             .is('read_at', null)
 
@@ -550,5 +1016,93 @@ export async function markAllNotificationsRead(
         return { success: true, error: null }
     } catch (err) {
         return { success: false, error: err instanceof Error ? err : new Error('Unknown error') }
+    }
+}
+
+// ============================================================================
+// Notification Creation (typed actions)
+// ============================================================================
+
+export async function createNotification(
+    _context: UserContext,
+    input: NotificationCreateInput
+): Promise<NotificationCreateResult> {
+    // Validate required params
+    if (!input.userId || !input.orgId) {
+        return { success: false, error: new Error('Missing userId or orgId for notification creation') }
+    }
+
+    if (!VALID_ACTIONS.has(input.action)) {
+        return { success: false, error: new Error(`Unsupported notification action: ${input.action}`) }
+    }
+
+    const normalizedRole = input.roleContext === 'parent' ? 'guardian' : input.roleContext
+
+    if (!isRoleAllowedForAction(input.action, input.roleContext)) {
+        return {
+            success: false,
+            error: new Error(`Action ${input.action} is not allowed for role ${input.roleContext}`),
+        }
+    }
+
+    const presentation = input.presentation ?? defaultPresentationForAction(input.action)
+    const dedupeKey = buildDedupeKey(input)
+
+    if (USE_FAKE_DATA) {
+        const nowIso = new Date().toISOString()
+        const fake: FakeNotification = {
+            id: `fake-notification-${Date.now()}`,
+            user_id: input.userId,
+            org_id: input.orgId,
+            team_id: input.teamId ?? null,
+            action: input.action,
+            role_context: normalizedRole,
+            title: input.title,
+            body: input.body,
+            presentation_type: presentation,
+            entity_type: input.entityType ?? null,
+            entity_id: input.entityId ?? null,
+            link_url: input.linkUrl ?? null,
+            metadata: input.metadata ?? null,
+            dedupe_key: dedupeKey,
+            read_at: null,
+            created_at: nowIso,
+        }
+        // Avoid duplicate based on dedupe_key
+        const exists = fakeNotifications.some((n) => n.dedupe_key === dedupeKey && n.user_id === input.userId)
+        if (!exists) {
+            fakeNotifications.push(fake)
+        }
+        return { success: true, error: null }
+    }
+
+    try {
+        type NotificationInsert = Database['public']['Tables']['user_notifications']['Insert']
+        const insertData: NotificationInsert = {
+            user_id: input.userId,
+            org_id: input.orgId,
+            team_id: input.teamId ?? null,
+            action: input.action,
+            role_context: normalizedRole,
+            presentation_type: presentation,
+            entity_type: (input.entityType ?? null) as NotificationEntityType | null,
+            entity_id: input.entityId ?? null,
+            link_url: input.linkUrl ?? null,
+            metadata: (input.metadata ?? null) as any,
+            payload: (input.metadata ?? null) as any,
+            title: input.title,
+            body: input.body,
+            dedupe_key: dedupeKey,
+            type: input.action, // keep legacy column populated for compatibility
+        }
+
+        const { error } = await supabase.from('user_notifications').insert(insertData)
+        if (error) throw error
+        return { success: true, error: null }
+    } catch (err) {
+        return {
+            success: false,
+            error: err instanceof Error ? err : new Error('Unknown error creating notification'),
+        }
     }
 }

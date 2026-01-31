@@ -751,6 +751,12 @@ END $$;
 -- STEP 8: Create RLS Policies
 -- ============================================================================
 
+-- Drop existing policies if they exist (for idempotency)
+DROP POLICY IF EXISTS "Platform admins can view all event logs" ON event_logs;
+DROP POLICY IF EXISTS "Authenticated users can insert event logs" ON event_logs;
+DROP POLICY IF EXISTS "Deny update on event logs" ON event_logs;
+DROP POLICY IF EXISTS "Deny delete on event logs" ON event_logs;
+
 -- Platform admins can view all events
 CREATE POLICY "Platform admins can view all event logs" ON event_logs
   FOR SELECT

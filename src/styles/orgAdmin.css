@@ -1,0 +1,2894 @@
+/* Import base Platform Admin styles */
+@import './platformAdmin.css';
+
+/* =====================================================================
+   ORGANIZATION ADMIN DESIGN SYSTEM
+   Organization-branded styling for org_admin role
+   
+   This file contains ONLY org-specific overrides (oa-* classes).
+   The base layout uses platformAdmin.css (pa-* classes).
+   ===================================================================== */
+
+/* =====================================================================
+   ORG ADMIN PAGE HEADER - Uses org theme colors
+   ===================================================================== */
+
+.oa-page-header {
+    margin-bottom: var(--pa-space-6);
+}
+
+.oa-breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--pa-text-muted);
+    margin-bottom: var(--pa-space-4);
+}
+
+.oa-breadcrumb-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+}
+
+.oa-breadcrumb-chevron {
+    font-size: 12px;
+    color: var(--pa-text-muted);
+}
+
+.oa-breadcrumb-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.oa-breadcrumb-link:hover {
+    color: var(--org-text-tertiary, var(--pa-theme-text-accent));
+}
+
+.oa-breadcrumb-current {
+    color: var(--org-btn-primary-bg, var(--pa-theme-action-primary, var(--pa-n900)));
+    background: none !important;
+    font-weight: 700;
+}
+
+.oa-page-header-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--pa-space-4);
+}
+
+.oa-page-header-content {
+    flex: 1;
+}
+
+.oa-page-title {
+    font-family: var(--pa-font-display);
+    font-weight: 900;
+    font-size: 4.5rem;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    color: var(--org-btn-primary-bg, var(--pa-theme-action-primary, var(--pa-n900)));
+    margin: 0 0 var(--pa-space-2) 0;
+}
+
+.oa-page-subtitle {
+    font-size: 1.125rem;
+    color: var(--pa-text-secondary);
+    font-weight: 500;
+    margin: 0;
+}
+
+.oa-page-description {
+    font-size: 1rem;
+    color: var(--pa-text-secondary);
+    font-weight: 400;
+    margin: var(--pa-space-2) 0 0 0;
+}
+
+.oa-page-actions {
+    display: flex;
+    gap: var(--pa-space-3);
+    flex-shrink: 0;
+}
+
+/* Mobile: < 768px */
+@media (max-width: 767px) {
+    .oa-page-title {
+        font-size: 2rem;
+    }
+
+    .oa-page-header-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--pa-space-3);
+    }
+
+    .oa-page-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .oa-page-actions>* {
+        width: 100%;
+    }
+
+    .oa-breadcrumbs {
+        font-size: 10px;
+        margin-bottom: var(--pa-space-3);
+        flex-wrap: wrap;
+    }
+}
+
+/* Tablet: 768px - 1023px */
+@media (min-width: 768px) and (max-width: 1023px) {
+    .oa-page-title {
+        font-size: 3rem;
+    }
+
+    .oa-page-header-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--pa-space-4);
+    }
+
+    .oa-page-actions {
+        width: 100%;
+    }
+}
+
+/* Dark mode overrides */
+html.dark .oa-breadcrumbs {
+    color: var(--pa-text-primary);
+    opacity: 0.85;
+}
+
+html.dark .oa-breadcrumb-chevron {
+    color: var(--pa-text-primary);
+    opacity: 0.6;
+}
+
+html.dark .oa-breadcrumb-link:hover {
+    opacity: 1;
+}
+
+html.dark .oa-breadcrumb-current {
+    color: var(--org-btn-primary-bg, var(--pa-theme-action-primary, var(--pa-text-primary))) !important;
+    background: none !important;
+    font-weight: 700;
+    opacity: 1;
+}
+
+html.dark .oa-page-title {
+    color: var(--org-btn-primary-bg, var(--pa-theme-action-primary, var(--pa-text-primary)));
+}
+
+html.dark .oa-page-subtitle {
+    color: var(--pa-text-secondary);
+}
+
+/* =====================================================================
+   ORG ADMIN CARDS - Premium Nike + Google Aesthetic
+   Secondary colors for headers, Tertiary for hover states
+   ===================================================================== */
+
+.oa-card {
+    background: #ffffff;
+    border: 1px solid var(--org-border-default, var(--pa-n100));
+    border-radius: 14px;
+    padding: var(--pa-space-6);
+    transition: all var(--pa-motion-normal) var(--pa-ease-out);
+    overflow: hidden;
+    /* Fix for children bleeding over corners */
+    position: relative;
+}
+
+.oa-card:hover {
+    border-color: var(--org-border-tertiary, var(--pa-n200));
+}
+
+/* Dark mode overrides */
+html.dark .oa-card {
+    background: var(--pa-surface) !important;
+    border: 1px solid var(--org-border-default, var(--pa-border-subtle)) !important;
+}
+
+html.dark .oa-card:hover {
+    border-color: var(--pa-theme-border-accent) !important;
+}
+
+/* Specific fix for card headers in org admin - use secondary background */
+.oa-card-header,
+.oa-card .pa-card-header {
+    padding: var(--pa-space-5) var(--pa-space-6);
+    border-bottom: 1px solid var(--org-border-default, var(--pa-n100));
+    margin: calc(var(--pa-space-6) * -1) calc(var(--pa-space-6) * -1) var(--pa-space-6) calc(var(--pa-space-6) * -1);
+    background: #f9fafb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+html.dark .oa-card-header,
+html.dark .oa-card .pa-card-header {
+    border-bottom-color: var(--pa-border-default) !important;
+    background: var(--pa-surface-panel) !important;
+}
+
+/* If card has no padding, header needs to handle its own layout */
+.oa-card--no-padding {
+    padding: 0 !important;
+}
+
+.oa-card--no-padding .oa-card-header,
+.oa-card--no-padding .pa-card-header {
+    margin: 0;
+    /* Ensure consistent header styling - same as regular oa-card headers */
+    background: #f9fafb;
+    border-bottom: 1px solid var(--org-border-default, var(--pa-n100));
+    padding: var(--pa-space-5) var(--pa-space-6);
+}
+
+html.dark .oa-card--no-padding .oa-card-header,
+html.dark .oa-card--no-padding .pa-card-header {
+    background: var(--pa-surface-panel) !important;
+    border-bottom-color: var(--pa-border-default) !important;
+}
+
+.oa-card--no-padding .oa-card-title,
+.oa-card--no-padding .pa-card-title {
+    /* Ensure title color matches regular oa-card titles */
+    color: var(--pa-n900);
+}
+
+html.dark .oa-card--no-padding .oa-card-title,
+html.dark .oa-card--no-padding .pa-card-title {
+    color: var(--pa-text-primary) !important;
+}
+
+.oa-card-title,
+.oa-card .pa-card-title {
+    font-size: 1.125rem;
+    font-weight: 800;
+    font-family: var(--pa-font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--pa-n900);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+}
+
+/* Dark mode card title color */
+html.dark .oa-card-title,
+html.dark .oa-card .pa-card-title {
+    color: var(--pa-text-primary) !important;
+}
+
+.oa-card-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+}
+
+/* Empty State / Table integration in cards */
+.oa-card .pa-table-container,
+.oa-card .pa-stacked-list {
+    margin: 0;
+    border: none;
+    border-radius: 0;
+}
+
+/* Tables inside oa-cards should not have rounded corners */
+.oa-card .pa-table-card,
+.oa-card .pa-table-wrapper {
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+}
+
+/* Remove top rounded corners from tables under section headers */
+.oa-card-header+.pa-table-wrapper .pa-table,
+.oa-card-title+.pa-table-wrapper .pa-table {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+/* Remove shadows from nested components in oa-cards */
+.oa-card .pa-table-card:hover {
+    box-shadow: none;
+}
+
+html.dark .oa-card .pa-table-card {
+    box-shadow: none;
+}
+
+html.dark .oa-card .pa-table-card:hover {
+    box-shadow: none;
+}
+
+/* Empty states inside oa-cards should not have card styling */
+.oa-card .pa-card,
+.oa-card .pa-empty,
+.oa-card .pa-table-empty {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
+html.dark .oa-card .pa-card,
+html.dark .oa-card .pa-empty,
+html.dark .oa-card .pa-table-empty {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+}
+
+/* =====================================================================
+   ORG ADMIN FORMS - Consistent Responsive Layouts
+   Focus uses tertiary color, active states use secondary indicators
+   ===================================================================== */
+
+/* Input focus states use tertiary color for ring */
+.oa-theme-active .pa-input:focus {
+    border-color: var(--org-border-tertiary, var(--pa-n700));
+    outline: 2px solid var(--org-surface-tertiary, rgba(43, 52, 61, 0.25));
+}
+
+.oa-theme-active .pa-select:focus {
+    border-color: var(--org-border-tertiary, var(--pa-n700));
+    outline: 2px solid var(--org-surface-tertiary, rgba(43, 52, 61, 0.25));
+}
+
+.oa-theme-active textarea:focus {
+    border-color: var(--org-border-tertiary, var(--pa-n700));
+    outline: 2px solid var(--org-surface-tertiary, rgba(43, 52, 61, 0.25));
+}
+
+html.dark .oa-theme-active .pa-input:focus,
+html.dark .oa-theme-active .pa-select:focus,
+html.dark .oa-theme-active textarea:focus {
+    border-color: var(--org-border-tertiary, #6b7280);
+    outline: 2px solid var(--org-surface-tertiary, rgba(107, 114, 128, 0.25));
+}
+
+/* Error states - use theme color for visibility */
+.oa-theme-active .pa-input--error,
+.oa-theme-active .pa-select--error,
+.oa-theme-active .pa-input:invalid,
+.oa-theme-active .pa-select:invalid {
+    border-color: var(--org-action-primary, var(--pa-danger));
+    border-width: 2px;
+    outline: 2px solid color-mix(in srgb, var(--org-action-primary, var(--pa-danger)) 25%, transparent);
+    outline-offset: 0;
+}
+
+.oa-theme-active .pa-input--error:focus,
+.oa-theme-active .pa-select--error:focus {
+    outline-color: var(--org-action-primary, var(--pa-danger));
+    outline-width: 3px;
+}
+
+.oa-theme-active .pa-helper--error {
+    color: var(--org-action-primary, var(--pa-danger));
+    font-weight: 600;
+    font-size: 13px;
+    margin-top: var(--pa-space-2);
+}
+
+.oa-theme-active .pa-form-container {
+    width: 100%;
+    max-width: 960px;
+    margin: 0;
+    padding: var(--pa-space-6) 0;
+    display: grid;
+    gap: var(--pa-space-6);
+}
+
+.oa-theme-active .pa-form-grid {
+    grid-template-columns: 1fr;
+    gap: var(--pa-space-4);
+    align-items: start;
+}
+
+.oa-theme-active .pa-form-grid>* {
+    width: 100%;
+}
+
+.oa-theme-active .pa-form-grid .pa-form-actions,
+.oa-theme-active .pa-form-grid .pa-checkbox-group,
+.oa-theme-active .pa-form-grid .pa-radio-group,
+.oa-theme-active .pa-form-grid .pa-checkbox,
+.oa-theme-active .pa-form-grid .pa-radio {
+    grid-column: 1 / -1;
+}
+
+.oa-theme-active .pa-form-actions {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-3);
+    margin-top: var(--pa-space-5);
+    align-items: stretch;
+}
+
+.oa-theme-active .pa-form-actions button,
+.oa-theme-active .pa-form-submit-btn {
+    width: 100%;
+}
+
+.oa-theme-active .pa-checkbox,
+.oa-theme-active .pa-radio {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+}
+
+@media (max-width: 639px) {
+    .oa-theme-active .pa-form-container {
+        padding: var(--pa-space-5) 0;
+    }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+    .oa-theme-active .pa-form-container {
+        padding: var(--pa-space-6) 0;
+    }
+
+    .oa-theme-active .pa-form-grid-2.pa-form-grid-tablet-2col {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--pa-space-4) var(--pa-space-5);
+    }
+}
+
+/* =====================================================================
+   ORG ADMIN SIDEBAR NAVIGATION - Uses org theme colors
+   Secondary colors for structure, Tertiary for hover, Primary for active
+   ===================================================================== */
+
+.oa-theme-active .pa-nav-link-top {
+    background: var(--org-surface-default, var(--pa-n50));
+    color: var(--org-text-secondary, var(--pa-n700));
+}
+
+.oa-theme-active .pa-nav-link-top:hover {
+    background: var(--org-surface-tertiary, var(--pa-n100));
+    color: var(--org-text-tertiary, var(--pa-n900));
+}
+
+.oa-theme-active .pa-nav-link-top.active,
+.oa-theme-active .pa-nav-link-top.expanded {
+    background: var(--org-btn-primary-bg, var(--pa-n200));
+    color: var(--org-btn-primary-text, var(--pa-n900));
+}
+
+.oa-theme-active .pa-nav-link-top .material-symbols-outlined {
+    color: var(--org-text-secondary, var(--pa-n700));
+}
+
+.oa-theme-active .pa-nav-link-top:hover .material-symbols-outlined {
+    color: var(--org-text-tertiary, var(--pa-n900));
+}
+
+.oa-theme-active .pa-nav-link-top.active .material-symbols-outlined,
+.oa-theme-active .pa-nav-link-top.expanded .material-symbols-outlined {
+    color: var(--org-btn-primary-text, var(--pa-n900));
+}
+
+/* Dark mode sidebar navigation */
+html.dark .oa-theme-active .pa-nav-link-top {
+    background: var(--org-surface-default, rgba(255, 255, 255, 0.06));
+    color: var(--org-text-secondary, var(--pa-white));
+}
+
+html.dark .oa-theme-active .pa-nav-link-top:hover {
+    background: var(--org-surface-tertiary, rgba(255, 255, 255, 0.1));
+    color: var(--org-text-tertiary, var(--pa-white));
+}
+
+html.dark .oa-theme-active .pa-nav-link-top.active,
+html.dark .oa-theme-active .pa-nav-link-top.expanded {
+    background: var(--org-btn-primary-bg, var(--pa-white));
+    color: var(--org-btn-primary-text, var(--pa-n900));
+}
+
+html.dark .oa-theme-active .pa-nav-link-top .material-symbols-outlined {
+    color: var(--org-text-secondary, var(--pa-white));
+}
+
+html.dark .oa-theme-active .pa-nav-link-top:hover .material-symbols-outlined {
+    color: var(--org-text-tertiary, var(--pa-white));
+}
+
+html.dark .oa-theme-active .pa-nav-link-top.active .material-symbols-outlined,
+html.dark .oa-theme-active .pa-nav-link-top.expanded .material-symbols-outlined {
+    color: var(--org-btn-primary-text, var(--pa-n900));
+}
+
+/* Dashboard link should use secondary colors to match structure */
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard,
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active {
+    background: var(--org-surface-default, var(--pa-n50)) !important;
+    color: var(--org-text-secondary, var(--pa-n700)) !important;
+}
+
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard:hover,
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active:hover {
+    background: var(--org-surface-tertiary, var(--pa-n100)) !important;
+    color: var(--org-text-tertiary, var(--pa-n900)) !important;
+}
+
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard .material-symbols-outlined,
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active .material-symbols-outlined {
+    color: var(--org-text-secondary, var(--pa-n700)) !important;
+}
+
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard:hover .material-symbols-outlined,
+.oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active:hover .material-symbols-outlined {
+    color: var(--org-text-tertiary, var(--pa-n900)) !important;
+}
+
+/* Dark mode dashboard */
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard,
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active {
+    background: var(--org-surface-default, rgba(255, 255, 255, 0.06)) !important;
+    color: var(--org-text-secondary, var(--pa-white)) !important;
+}
+
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard:hover,
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active:hover {
+    background: var(--org-surface-tertiary, rgba(255, 255, 255, 0.1)) !important;
+    color: var(--org-text-tertiary, var(--pa-white)) !important;
+}
+
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard .material-symbols-outlined,
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active .material-symbols-outlined {
+    color: var(--org-btn-primary-text, var(--pa-n900)) !important;
+}
+
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard:hover .material-symbols-outlined,
+html.dark .oa-theme-active .pa-nav-link-top.pa-nav-dashboard.active:hover .material-symbols-outlined {
+    color: var(--org-link-hover, var(--pa-white)) !important;
+}
+
+/* =====================================================================
+   ORG ADMIN TABS - Uses org theme colors
+   ===================================================================== */
+
+.oa-theme-active .pa-tabs-trigger {
+    color: var(--org-link-color, var(--pa-n500));
+}
+
+.oa-theme-active .pa-tabs-trigger:hover {
+    color: var(--org-link-hover, var(--pa-n700));
+}
+
+.oa-theme-active .pa-tabs-trigger.active {
+    color: var(--org-btn-primary-bg, var(--pa-n900));
+    border-bottom-color: var(--org-btn-primary-bg, var(--pa-n900));
+}
+
+/* =====================================================================
+   ORG ADMIN BREADCRUMBS - Already themed in existing oa-breadcrumbs
+   ===================================================================== */
+
+/* =====================================================================
+   ORG ADMIN GLOBAL NAV - Uses org theme colors
+   ===================================================================== */
+
+.oa-theme-active .gn-nav-trigger {
+    color: var(--org-link-color, var(--gn-text-secondary));
+}
+
+.oa-theme-active .gn-nav-trigger:hover {
+    background: var(--org-highlight-bg, var(--gn-hover-bg));
+    color: var(--org-link-hover, var(--gn-text-primary));
+}
+
+.oa-theme-active .gn-nav-trigger[aria-expanded="true"] {
+    background: var(--org-btn-primary-bg, var(--gn-active-bg));
+    color: var(--org-btn-primary-text, var(--gn-text-primary));
+}
+
+.oa-theme-active .gn-nav-trigger .material-symbols-outlined {
+    color: var(--org-link-color, var(--gn-text-secondary));
+}
+
+.oa-theme-active .gn-nav-trigger:hover .material-symbols-outlined {
+    color: var(--org-link-hover, var(--gn-text-primary));
+}
+
+.oa-theme-active .gn-nav-trigger[aria-expanded="true"] .material-symbols-outlined {
+    color: var(--org-btn-primary-text, var(--gn-text-primary));
+}
+
+/* Org status error tokens - defined here so danger/remove buttons use org only (theme may override) */
+.oa-theme-active {
+    --org-status-error-bg: #dc2626;
+    --org-status-error-text: #fff;
+    --org-status-error-hover: #b91c1c;
+}
+
+/* =====================================================================
+   ORG ADMIN BUTTONS (oa-btn) - Org theme only, no pa-* class usage in OA views
+   Primary: org primary for main actions; Secondary/Danger/Ghost for hierarchy
+   ===================================================================== */
+
+/* Base - layout only; colors come from variants */
+.oa-theme-active .oa-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    height: 44px;
+    padding: 0 1.5rem;
+    border: none;
+    border-radius: 9999px;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 200ms ease, color 200ms ease, transform 200ms ease;
+    text-decoration: none;
+    background: transparent;
+    color: inherit;
+}
+
+.oa-theme-active .oa-btn:focus-visible {
+    outline: 2px solid var(--org-btn-primary-bg);
+    outline-offset: 2px;
+}
+
+.oa-theme-active .oa-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.oa-theme-active .oa-btn .material-symbols-outlined {
+    font-size: 18px;
+}
+
+@keyframes oa-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Standalone spinner icon (e.g. in slide-overs) - org admin only */
+.oa-spin {
+    animation: oa-spin 0.6s linear infinite;
+}
+
+.oa-theme-active .oa-btn-spinner {
+    width: 16px;
+    height: 16px;
+    border-width: 2px;
+    border-style: solid;
+    border-color: currentColor transparent transparent transparent;
+    border-radius: 50%;
+    animation: oa-spin 0.6s linear infinite;
+}
+
+/* Primary - org theme only */
+.oa-theme-active .oa-btn--primary {
+    background: var(--org-btn-primary-bg);
+    color: var(--org-btn-primary-text);
+}
+
+.oa-theme-active .oa-btn--primary:hover:not(:disabled) {
+    background: var(--org-btn-primary-hover);
+    color: var(--org-btn-primary-text);
+}
+
+.oa-theme-active .oa-btn--primary:active:not(:disabled) {
+    background: var(--org-btn-primary-active);
+    transform: translateY(1px);
+}
+
+/* Secondary */
+.oa-theme-active .oa-btn--secondary {
+    background: var(--org-btn-secondary-bg, #64748b);
+    color: var(--org-btn-secondary-text, #fff);
+}
+
+.oa-theme-active .oa-btn--secondary:hover:not(:disabled) {
+    background: var(--org-surface-tertiary, #475569);
+    color: var(--org-btn-secondary-text, #fff);
+}
+
+.oa-theme-active .oa-btn--secondary:active:not(:disabled) {
+    background: var(--org-btn-secondary-active, #334155);
+    transform: translateY(1px);
+}
+
+/* Danger */
+.oa-theme-active .oa-btn--danger {
+    background: var(--org-status-error-bg, #dc2626);
+    color: var(--org-status-error-text, #fff);
+}
+
+.oa-theme-active .oa-btn--danger:hover:not(:disabled) {
+    background: var(--org-status-error-hover, #b91c1c);
+    color: var(--org-status-error-text, #fff);
+}
+
+.oa-theme-active .oa-btn--danger:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+/* Ghost - transparent, inherits text color from parent */
+.oa-theme-active .oa-btn--ghost {
+    background: transparent;
+    color: inherit;
+}
+
+.oa-theme-active .oa-btn--ghost:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.oa-theme-active .oa-btn--ghost:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+html.dark .oa-theme-active .oa-btn--primary {
+    background: var(--org-btn-primary-bg) !important;
+    color: var(--org-btn-primary-text) !important;
+}
+
+html.dark .oa-theme-active .oa-btn--primary:hover:not(:disabled) {
+    background: var(--org-btn-primary-hover) !important;
+    color: var(--org-btn-primary-text) !important;
+}
+
+html.dark .oa-theme-active .oa-btn--secondary {
+    background: var(--org-btn-secondary-bg, #475569) !important;
+    color: var(--org-btn-secondary-text, #fff) !important;
+}
+
+html.dark .oa-theme-active .oa-btn--secondary:hover:not(:disabled) {
+    background: var(--org-surface-tertiary, #64748b) !important;
+    color: var(--org-btn-secondary-text, #fff) !important;
+}
+
+html.dark .oa-theme-active .oa-btn--danger {
+    background: var(--org-status-error-bg) !important;
+    color: var(--org-status-error-text) !important;
+}
+
+html.dark .oa-theme-active .oa-btn--danger:hover:not(:disabled) {
+    background: var(--org-status-error-hover) !important;
+    color: var(--org-status-error-text) !important;
+}
+
+/* =====================================================================
+   Legacy: OA theme overrides for pa-btn when OA still used pa-* (deprecated)
+   Prefer oa-btn in new OA code. Kept for gradual migration of other OA views.
+   ===================================================================== */
+
+/* Primary button - uses primary theme color (already configured via tokens) */
+.oa-theme-active .pa-btn--primary {
+    background: var(--org-btn-primary-bg);
+    color: var(--org-btn-primary-text);
+}
+
+.oa-theme-active .pa-btn--primary:hover:not(:disabled) {
+    background: var(--org-btn-primary-hover);
+    color: var(--org-btn-primary-text);
+}
+
+.oa-theme-active .pa-btn--primary:active:not(:disabled) {
+    background: var(--org-btn-primary-active);
+}
+
+/* Secondary button - uses secondary theme color */
+.oa-theme-active .pa-btn--secondary {
+    background: var(--org-btn-secondary-bg, var(--pa-n600));
+    color: var(--org-btn-secondary-text, var(--pa-white));
+    border: none;
+}
+
+.oa-theme-active .pa-btn--secondary:hover:not(:disabled) {
+    background: var(--org-surface-tertiary, var(--pa-n500));
+    color: var(--org-btn-secondary-text, var(--pa-white));
+}
+
+.oa-theme-active .pa-btn--secondary:active:not(:disabled) {
+    background: var(--org-btn-secondary-active, var(--pa-n700));
+}
+
+/* Danger/Destructive button - always visible; color from org tokens only */
+.oa-theme-active .pa-btn--danger {
+    background: var(--org-status-error-bg) !important;
+    color: var(--org-status-error-text) !important;
+    border: none;
+}
+
+.oa-theme-active .pa-btn--danger:hover:not(:disabled) {
+    background: var(--org-status-error-hover) !important;
+    color: var(--org-status-error-text) !important;
+}
+
+.oa-theme-active .pa-btn--danger .material-symbols-outlined {
+    color: inherit;
+}
+
+/* Dark mode buttons */
+html.dark .oa-theme-active .pa-btn--primary {
+    background: var(--org-btn-primary-bg) !important;
+    color: var(--org-btn-primary-text) !important;
+}
+
+html.dark .oa-theme-active .pa-btn--primary:hover:not(:disabled) {
+    background: var(--org-btn-primary-hover) !important;
+    color: var(--org-btn-primary-text) !important;
+}
+
+html.dark .oa-theme-active .pa-btn--secondary {
+    background: var(--org-btn-secondary-bg, var(--pa-n800)) !important;
+    color: var(--org-btn-secondary-text, var(--pa-white)) !important;
+}
+
+html.dark .oa-theme-active .pa-btn--secondary:hover:not(:disabled) {
+    background: var(--org-surface-tertiary, var(--pa-n600)) !important;
+    color: var(--org-btn-secondary-text, var(--pa-white)) !important;
+}
+
+html.dark .oa-theme-active .pa-btn--danger {
+    background: var(--org-status-error-bg) !important;
+    color: var(--org-status-error-text) !important;
+}
+
+html.dark .oa-theme-active .pa-btn--danger:hover:not(:disabled) {
+    background: var(--org-status-error-hover) !important;
+    color: var(--org-status-error-text) !important;
+}
+
+html.dark .oa-theme-active .pa-btn--danger .material-symbols-outlined {
+    color: inherit;
+}
+
+/* =====================================================================
+   ORG ADMIN UTILITY BUTTONS - Uses org theme colors
+   ===================================================================== */
+
+.oa-theme-active .gn-util-btn {
+    color: var(--org-text-secondary, var(--gn-text-secondary));
+}
+
+.oa-theme-active .gn-util-btn:hover {
+    background: var(--org-surface-tertiary, var(--gn-hover-bg));
+    color: var(--org-text-tertiary, var(--gn-text-primary));
+}
+
+.oa-theme-active .gn-util-btn .material-symbols-outlined {
+    color: var(--org-text-secondary, var(--gn-text-secondary));
+}
+
+.oa-theme-active .gn-util-btn:hover .material-symbols-outlined {
+    color: var(--org-text-tertiary, var(--gn-text-primary));
+}
+
+/* =====================================================================
+   ORG ADMIN BADGES AND STATUS INDICATORS - Uses org theme colors
+   Secondary for grouping, Primary for active/selected states
+   ===================================================================== */
+
+/* Active/In-season badges use secondary color */
+.oa-theme-active .pa-badge--primary {
+    background: var(--org-badge-secondary-bg, var(--pa-success-bg));
+    color: var(--org-badge-secondary-text, var(--pa-success));
+}
+
+/* Warning badges use tertiary color */
+.oa-theme-active .pa-badge--accent {
+    background: var(--org-badge-tertiary-bg, var(--pa-warning-bg));
+    color: var(--org-badge-tertiary-text, var(--pa-warning));
+}
+
+/* Selected/featured badges use primary color */
+.oa-theme-active .pa-badge--selected {
+    background: var(--org-btn-primary-bg);
+    color: var(--org-btn-primary-text);
+}
+
+/* =====================================================================
+   ORG ADMIN TABS - Uses org theme colors with hierarchy
+   Default: secondary text, Hover: tertiary color, Active: primary text with secondary underline
+   ===================================================================== */
+
+.oa-theme-active .pa-tabs-trigger {
+    color: var(--org-text-secondary, var(--pa-n500));
+    border-bottom-color: transparent;
+}
+
+.oa-theme-active .pa-tabs-trigger:hover {
+    color: var(--org-text-tertiary, var(--pa-n700));
+    background: var(--org-surface-tertiary, var(--pa-n50));
+}
+
+.oa-theme-active .pa-tabs-trigger:focus-visible {
+    color: var(--org-text-primary, var(--pa-n900));
+    background: var(--org-surface-tertiary, var(--pa-n50));
+}
+
+.oa-theme-active .pa-tabs-trigger.active {
+    color: var(--org-btn-primary-bg);
+    font-weight: 600;
+    border-bottom-color: var(--org-border-secondary, var(--pa-n900));
+}
+
+html.dark .oa-theme-active .pa-tabs-trigger {
+    color: var(--org-text-secondary, var(--pa-white));
+}
+
+html.dark .oa-theme-active .pa-tabs-trigger:hover {
+    color: var(--org-text-tertiary, var(--pa-white));
+    background: var(--org-surface-tertiary, rgba(255, 255, 255, 0.1));
+}
+
+html.dark .oa-theme-active .pa-tabs-trigger.active {
+    color: var(--org-btn-primary-bg);
+    border-bottom-color: var(--org-border-secondary, var(--pa-white));
+}
+
+/* =====================================================================
+   ORG ADMIN TABLES - Uses org theme colors with hierarchy
+   Headers: secondary background, Row hover: tertiary tint
+   ===================================================================== */
+
+.oa-theme-active .pa-table thead {
+    background: var(--org-surface-secondary, var(--pa-n50));
+}
+
+.oa-theme-active .pa-table th {
+    color: var(--org-text-primary, var(--pa-n900));
+}
+
+.oa-theme-active .pa-table tbody tr:hover {
+    background: var(--org-surface-tertiary, var(--pa-n50));
+}
+
+html.dark .oa-theme-active .pa-table thead {
+    background: var(--org-surface-secondary, var(--pa-surface-panel));
+}
+
+html.dark .oa-theme-active .pa-table th {
+    color: var(--org-text-primary, var(--pa-white));
+}
+
+html.dark .oa-theme-active .pa-table tbody tr:hover {
+    background: var(--org-surface-tertiary, var(--pa-border-default));
+}
+
+/* =====================================================================
+   ORG ADMIN INLINE ACTION LINKS - Uses org theme colors
+   Secondary for default, Tertiary for hover, Primary for primary actions
+   ===================================================================== */
+
+.oa-theme-active .pa-link {
+    color: var(--org-text-secondary);
+}
+
+.oa-theme-active .pa-link:hover {
+    color: var(--org-text-tertiary);
+}
+
+.oa-theme-active .pa-link-primary {
+    color: var(--org-btn-primary-bg);
+}
+
+.oa-theme-active .pa-link-primary:hover {
+    color: var(--org-btn-primary-hover);
+}
+
+/* =====================================================================
+   ORG ADMIN MOBILE DRAWER - Uses org theme colors
+   Secondary for default, Tertiary for hover states
+   ===================================================================== */
+
+.oa-theme-active .mobile-drawer-link {
+    color: var(--org-text-secondary, var(--pa-n600));
+}
+
+.oa-theme-active .mobile-drawer-link:hover {
+    background: var(--org-surface-tertiary, var(--pa-n50));
+    color: var(--org-text-tertiary, var(--pa-n900));
+}
+
+.oa-theme-active .mobile-drawer-link .material-symbols-outlined {
+    color: var(--org-text-secondary, var(--pa-n500));
+}
+
+.oa-theme-active .mobile-drawer-link:hover .material-symbols-outlined {
+    color: var(--org-text-tertiary, var(--pa-n600));
+}
+
+.oa-theme-active .mobile-drawer-section-link {
+    color: var(--org-link-color, var(--pa-n600));
+}
+
+.oa-theme-active .mobile-drawer-section-link:hover {
+    background: var(--org-highlight-bg, var(--pa-n50));
+    color: var(--org-link-hover, var(--pa-n900));
+}
+
+.oa-theme-active .mobile-drawer-section-label {
+    color: var(--org-link-color, var(--pa-n700));
+}
+
+.oa-theme-active .mobile-drawer-group-label {
+    color: var(--org-link-color, var(--pa-n600));
+}
+
+@media (min-width: 1024px) {
+    .oa-theme-active .pa-form-container {
+        padding: var(--pa-space-7) 0;
+    }
+
+    .oa-theme-active .pa-form-grid-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--pa-space-4) var(--pa-space-6);
+    }
+
+    .oa-theme-active .pa-form-grid-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .oa-theme-active .pa-form-grid-4 {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .oa-theme-active .pa-form-actions {
+        flex-direction: row;
+        justify-content: flex-end;
+        align-items: center;
+        gap: var(--pa-space-4);
+    }
+
+    .oa-theme-active .pa-form-actions button,
+    .oa-theme-active .pa-form-submit-btn {
+        width: auto;
+        min-width: 156px;
+    }
+}
+
+/* =====================================================================
+   FILTER SECTIONS - Constrained width on desktop
+   ===================================================================== */
+
+/* Filter sections should not be full width on desktop */
+.oa-theme-active .pa-filter-section {
+    width: 100%;
+}
+
+@media (min-width: 1024px) {
+    .oa-theme-active .pa-filter-section {
+        max-width: 640px;
+        width: auto;
+    }
+}
+
+/* Filter row - flex container for filter controls */
+.oa-theme-active .pa-filter-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-4);
+    align-items: stretch;
+}
+
+@media (min-width: 768px) {
+    .oa-theme-active .pa-filter-row {
+        flex-direction: row;
+        align-items: flex-end;
+        gap: var(--pa-space-4);
+    }
+}
+
+@media (min-width: 1024px) {
+    .oa-theme-active .pa-filter-row {
+        align-items: center;
+        gap: var(--pa-space-4);
+    }
+}
+
+/* Filter control wrapper - individual filter inputs */
+.oa-theme-active .pa-filter-control {
+    flex: 1;
+    min-width: 0;
+}
+
+@media (min-width: 1024px) {
+    .oa-theme-active .pa-filter-control {
+        flex: 0 0 auto;
+        min-width: 200px;
+        max-width: 300px;
+    }
+}
+
+/* Filter actions - buttons in filter row */
+.oa-theme-active .pa-filter-actions {
+    display: flex;
+    gap: var(--pa-space-3);
+    align-items: center;
+}
+
+@media (min-width: 768px) {
+    .oa-theme-active .pa-filter-actions {
+        flex-shrink: 0;
+    }
+}
+
+/* =====================================================================
+   CHECKBOX ROWS - Always on own row, vertically aligned
+   ===================================================================== */
+
+.oa-theme-active .pa-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+    width: 100%;
+    margin-bottom: var(--pa-space-3);
+}
+
+.oa-theme-active .pa-checkbox-row:last-child {
+    margin-bottom: 0;
+}
+
+.oa-theme-active .pa-checkbox-row .pa-checkbox {
+    flex-shrink: 0;
+    margin: 0;
+}
+
+.oa-theme-active .pa-checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-3);
+    width: 100%;
+}
+
+/* Ensure checkboxes align with inputs vertically */
+.oa-theme-active .pa-checkbox-row .pa-checkbox input[type="checkbox"] {
+    margin-top: 0;
+    vertical-align: middle;
+}
+
+/* Checkbox label alignment */
+.oa-theme-active .pa-checkbox-row .pa-checkbox label {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+    margin: 0;
+    cursor: pointer;
+}
+
+/* Toggle/Switch - Use org theme color and ensure visibility */
+.oa-theme-active .pa-toggle {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+}
+
+.oa-theme-active .pa-toggle-track {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: var(--pa-n200);
+    border-radius: 999px;
+    transition: background 0.2s ease-out;
+}
+
+.oa-theme-active .pa-toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: var(--pa-white);
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s ease-out;
+}
+
+.oa-theme-active .pa-toggle-input:checked+.pa-toggle-track {
+    background: var(--org-btn-primary-bg, #137fec) !important;
+}
+
+.oa-theme-active .pa-toggle-input:checked~.pa-toggle-thumb {
+    transform: translateX(16px);
+}
+
+html.dark .oa-theme-active .pa-toggle-track {
+    background: var(--pa-n700);
+}
+
+html.dark .oa-theme-active .pa-toggle-input:checked+.pa-toggle-track {
+    background: var(--org-btn-primary-bg, #137fec) !important;
+}
+
+/* =====================================================================
+   CONTACT SECTION LAYOUT - Responsive & Semantic
+   ===================================================================== */
+
+.oa-contact-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-6);
+}
+
+.oa-contact-form-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    /* Mobile: 1 col */
+    gap: var(--pa-space-4);
+}
+
+.oa-category-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-6);
+}
+
+.oa-category-row {
+    border-bottom: 1px solid var(--org-border-default, var(--pa-n100));
+    padding-bottom: var(--pa-space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-4);
+}
+
+.oa-category-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+html.dark .oa-category-row {
+    border-bottom-color: var(--pa-border-default);
+}
+
+.oa-category-header {
+    display: flex;
+    flex-direction: column;
+    /* Mobile: Stacked */
+    gap: var(--pa-space-2);
+}
+
+.oa-category-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--pa-n900);
+    margin: 0;
+    text-transform: capitalize;
+}
+
+html.dark .oa-category-title {
+    color: var(--pa-text-primary);
+}
+
+.oa-category-toggle {
+    display: flex;
+    align-items: center;
+}
+
+.oa-default-preview {
+    background: var(--org-surface-secondary, var(--pa-n50));
+    padding: var(--pa-space-4);
+    border-radius: var(--pa-radius-sm);
+    font-size: 0.875rem;
+    color: var(--pa-text-secondary);
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-2);
+}
+
+html.dark .oa-default-preview {
+    background: var(--pa-surface-panel);
+    color: var(--pa-text-secondary);
+}
+
+.oa-default-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--pa-text-secondary);
+}
+
+.oa-default-badge .material-symbols-outlined {
+    font-size: 18px;
+    opacity: 0.8;
+}
+
+.oa-default-contact {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.oa-default-name {
+    font-weight: 700;
+    color: var(--pa-text-primary);
+}
+
+.oa-default-email {
+    color: var(--pa-text-secondary);
+    word-break: break-word;
+}
+
+.oa-form-actions {
+    display: flex;
+    flex-direction: column;
+    /* Mobile: stacked/full width */
+    gap: var(--pa-space-3);
+    margin-top: var(--pa-space-2);
+}
+
+.oa-form-actions button {
+    width: 100%;
+    /* Mobile: full width */
+}
+
+/* TABLET & UP (>= 640px) */
+@media (min-width: 640px) {
+    .oa-default-preview {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--pa-space-4);
+    }
+
+    .oa-default-contact {
+        text-align: right;
+        align-items: flex-end;
+    }
+
+    .oa-category-header {
+        flex-direction: row;
+        /* Row layout */
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    /* Tablet: Limited two-column rows where clarity improves */
+    .oa-contact-form-grid {
+        grid-template-columns: repeat(2, 1fr);
+        column-gap: var(--pa-space-5);
+    }
+}
+
+/* DESKTOP (>= 1024px) */
+@media (min-width: 1024px) {
+    .oa-contact-form-grid {
+        column-gap: var(--pa-space-6);
+        /* Wider gap */
+    }
+
+    .oa-form-actions {
+        flex-direction: row;
+        justify-content: flex-end;
+    }
+
+    .oa-form-actions button {
+        width: auto;
+        /* Buttons constrained */
+    }
+}
+
+/* =====================================================================
+   ORG ADMIN FORM SYSTEM (Nike Aesthetic)
+   Standalone classes to replace pa-* dependencies
+   ===================================================================== */
+
+/* Page / layout (oa-only pages) */
+.oa-root {
+    font-family: var(--pa-font-body);
+    font-size: 14px;
+    line-height: 1.43;
+    color: var(--org-text-primary, var(--pa-text-primary));
+}
+
+.oa-skeleton {
+    background-color: var(--pa-n100);
+    border-radius: var(--pa-radius-xs);
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.oa-body-m {
+    font: var(--pa-text-body-m);
+    color: var(--org-text-secondary, var(--pa-n700));
+}
+
+html.dark .oa-body-m {
+    color: var(--pa-text-secondary);
+}
+
+.oa-text-danger {
+    color: var(--pa-danger);
+}
+
+html.dark .oa-text-danger {
+    color: #fca5a5;
+}
+
+.oa-mb-6 {
+    margin-bottom: var(--pa-space-6);
+}
+
+.oa-alert-card {
+    padding: var(--pa-space-3) var(--pa-space-4);
+    border-radius: var(--pa-radius-s);
+}
+
+.oa-alert-card--error {
+    background: var(--pa-danger-bg, #fef2f2);
+    border-left: 4px solid var(--pa-danger, #ef4444);
+}
+
+.oa-alert-card--error .oa-text-danger {
+    color: var(--pa-danger-dark, #991b1b);
+}
+
+.oa-form-container {
+    max-width: 960px;
+    margin: 0;
+    padding: var(--pa-space-6) 0;
+}
+
+.oa-form-group {
+    margin-bottom: var(--pa-space-4);
+}
+
+.oa-form-row-thirds {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: var(--pa-space-5);
+}
+
+/* Layout & Grid */
+.oa-form-layout {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-5);
+}
+
+.oa-form-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--pa-space-4);
+}
+
+@media (min-width: 768px) {
+    .oa-form-grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .oa-form-grid-4 {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .oa-form-grid-3 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Inputs */
+.oa-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-2);
+}
+
+.oa-input-group--mb-0 {
+    margin-bottom: 0;
+}
+
+.oa-label {
+    font-family: var(--pa-font-body);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--pa-n500);
+}
+
+.oa-input {
+    width: 100%;
+    height: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--pa-n200);
+    border-radius: 4px;
+    font-family: var(--pa-font-body);
+    font-size: 14px;
+    color: var(--pa-n900);
+    background: var(--pa-white);
+    transition: all var(--pa-motion-fast) var(--pa-ease-out);
+}
+
+.oa-input:focus {
+    border-color: var(--pa-n900);
+    outline: none;
+}
+
+.oa-input::placeholder {
+    color: var(--pa-n400);
+}
+
+/* Search Input */
+.oa-input-search-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.oa-input-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--pa-n500);
+    pointer-events: none;
+}
+
+.oa-input-search {
+    padding-left: 40px;
+}
+
+/* Filter Chips / Toggles */
+.oa-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Regular toggle buttons (like pills) */
+.oa-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    /* Pill shape */
+    font-family: var(--pa-font-body);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    background: var(--pa-white);
+    color: var(--pa-n600);
+    border: 1px solid var(--pa-n200);
+    cursor: pointer;
+    transition: all var(--pa-motion-fast) var(--pa-ease-out);
+}
+
+.oa-toggle-btn:hover {
+    border-color: var(--pa-n400);
+    color: var(--pa-n900);
+}
+
+.oa-toggle-btn.active {
+    background: var(--pa-n900);
+    color: var(--pa-white);
+    border-color: var(--pa-n900);
+}
+
+/* Active Filter Badges */
+.oa-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px 4px 12px;
+    background: var(--pa-n100);
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--pa-n900);
+}
+
+.oa-badge-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--pa-n300);
+    color: var(--pa-white);
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    font-size: 14px;
+}
+
+.oa-badge-remove:hover {
+    background: var(--pa-n500);
+}
+
+/* Section Headers */
+.oa-section-title {
+    font-family: var(--pa-font-display);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--pa-n900);
+    margin-bottom: var(--pa-space-3);
+    opacity: 0.6;
+}
+
+/* Card Overrides */
+.oa-filter-card {
+    background: var(--pa-white);
+    border: 1px solid var(--pa-n200);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.oa-filter-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    cursor: pointer;
+    background: var(--pa-n25);
+    transition: background 0.2s;
+}
+
+.oa-filter-card-header:hover {
+    background: var(--pa-n50);
+}
+
+.oa-filter-card-title {
+    font-family: var(--pa-font-display);
+    font-weight: 700;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--pa-n900);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.oa-filter-count {
+    background: var(--pa-n900);
+    color: var(--pa-white);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 99px;
+}
+
+.oa-filter-content {
+    padding: 24px;
+    border-top: 1px solid var(--pa-n200);
+}
+
+/* =====================================================================
+   EVENT DETAIL SLIDEOUT (Athletic Dark V1)
+   "Nike Aesthetic" implementation
+   ===================================================================== */
+
+/* Container & Layout */
+.oa-slideout-container {
+    width: 100%;
+    max-width: 500px;
+    /* lg in Tailwind is ~32rem = 512px */
+    height: 100%;
+    background: var(--pa-white);
+    border-left: 1px solid var(--pa-n200);
+    box-shadow: var(--pa-shadow-3);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+html.dark .oa-slideout-container {
+    background: var(--pa-surface);
+    /* surface-dark */
+    border-color: var(--pa-border-subtle);
+}
+
+/* Header */
+.oa-slideout-header {
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--org-border-default, var(--pa-n200));
+    background: rgba(255, 255, 255, 0.85);
+    /* backdrop-blur equivalent */
+    backdrop-filter: blur(12px);
+    z-index: 10;
+    position: sticky;
+    top: 0;
+}
+
+html.dark .oa-slideout-header {
+    background: rgba(26, 31, 38, 0.85);
+    border-color: var(--pa-border-subtle);
+}
+
+.oa-slideout-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.oa-slideout-pill {
+    width: 8px;
+    height: 32px;
+    background: var(--org-btn-primary-bg, var(--pa-n900));
+    border-radius: 999px;
+}
+
+.oa-slideout-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: var(--pa-n500);
+    text-transform: uppercase;
+    font-family: var(--pa-font-body);
+}
+
+.oa-slideout-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.oa-header-btn {
+    padding: 8px;
+    border-radius: 50%;
+    color: var(--pa-n600);
+    transition: background-color 0.2s;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.oa-header-btn:hover {
+    background: var(--pa-n100);
+}
+
+html.dark .oa-header-btn {
+    color: var(--pa-n400);
+}
+
+html.dark .oa-header-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.oa-user-avatar-sm {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--org-btn-primary-bg, var(--pa-n900));
+    color: var(--org-btn-primary-text, var(--pa-white));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+/* Body Content */
+.oa-slideout-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Scrollbar styling */
+.oa-slideout-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.oa-slideout-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.oa-slideout-body::-webkit-scrollbar-thumb {
+    background: var(--pa-n200);
+    border-radius: 10px;
+}
+
+html.dark .oa-slideout-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Hero Section */
+.oa-slideout-hero {
+    padding: 32px;
+    border-radius: 24px;
+    /* rounded-3xl */
+    background: var(--pa-n50);
+    border: 1px solid var(--org-border-default, var(--pa-n200));
+    position: relative;
+    overflow: hidden;
+}
+
+html.dark .oa-slideout-hero {
+    background: rgba(37, 43, 53, 0.5);
+    border-color: var(--pa-border-subtle);
+}
+
+.oa-pattern-mesh {
+    background-image: radial-gradient(circle at 2px 2px, rgba(0, 0, 0, 0.05) 1px, transparent 0);
+    background-size: 24px 24px;
+}
+
+html.dark .oa-pattern-mesh {
+    background-image: radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.05) 1px, transparent 0);
+}
+
+.oa-event-tag {
+    display: inline-block;
+    padding: 4px 12px;
+    background: rgba(var(--org-btn-primary-bg-rgb, 11, 15, 20), 0.1);
+    color: var(--org-btn-primary-bg, var(--pa-n900));
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+}
+
+html.dark .oa-event-tag {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--pa-white);
+}
+
+.oa-hero-title {
+    font-family: var(--pa-font-display);
+    font-weight: 900;
+    font-size: 36px;
+    /* text-4xl */
+    line-height: 1.1;
+    text-transform: uppercase;
+    color: var(--pa-n900);
+}
+
+html.dark .oa-hero-title {
+    color: var(--pa-white);
+}
+
+@media (min-width: 1024px) {
+    .oa-hero-title {
+        font-size: 48px;
+        /* text-5xl */
+    }
+}
+
+/* Mandatory / Arrival Card */
+.oa-arrival-card {
+    padding: 32px;
+    border-radius: 24px;
+    background: var(--org-btn-primary-bg, var(--pa-n900));
+    color: var(--org-btn-primary-text, var(--pa-white));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.oa-arrival-label {
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.3em;
+    opacity: 0.8;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.oa-arrival-time {
+    font-family: var(--pa-font-display);
+    font-weight: 900;
+    font-size: 30px;
+    /* text-3xl */
+    text-transform: uppercase;
+}
+
+@media (min-width: 1024px) {
+    .oa-arrival-time {
+        font-size: 36px;
+        /* text-4xl */
+    }
+}
+
+/* Info Grid */
+.oa-info-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+.oa-info-card {
+    padding: 24px;
+    border-radius: 16px;
+    background: var(--pa-white);
+    border: 1px solid var(--org-border-default, var(--pa-n200));
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+html.dark .oa-info-card {
+    background: rgba(39, 39, 42, 0.4);
+    /* zinc-900/40 approx */
+    border-color: var(--pa-border-subtle);
+}
+
+.oa-info-icon-box {
+    padding: 12px;
+    border-radius: 12px;
+    background: var(--pa-n50);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+html.dark .oa-info-icon-box {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.oa-info-icon-box .material-symbols-outlined {
+    color: var(--org-btn-primary-bg, var(--pa-n900));
+}
+
+html.dark .oa-info-icon-box .material-symbols-outlined {
+    color: var(--org-btn-primary-bg, var(--pa-white));
+}
+
+.oa-info-content {
+    flex: 1;
+}
+
+.oa-info-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--pa-n900);
+    line-height: 1.25;
+}
+
+html.dark .oa-info-title {
+    color: var(--pa-text-primary);
+}
+
+.oa-info-subtitle {
+    font-size: 14px;
+    color: var(--pa-n500);
+    margin-top: 4px;
+}
+
+html.dark .oa-info-subtitle {
+    color: var(--pa-n400);
+}
+
+/* Details Section */
+.oa-details-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 16px;
+}
+
+.oa-detail-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.oa-detail-label {
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    color: var(--pa-n400);
+    text-transform: uppercase;
+    padding: 0 8px;
+}
+
+.oa-detail-box {
+    padding: 24px;
+    border-radius: 16px;
+    background: var(--pa-n25);
+    border: 1px solid var(--org-border-default, var(--pa-n200));
+}
+
+html.dark .oa-detail-box {
+    background: rgba(39, 39, 42, 0.2);
+    border-color: var(--pa-border-subtle);
+}
+
+.oa-detail-box--dashed {
+    border-style: dashed;
+}
+
+.oa-detail-text {
+    font-size: 14px;
+    color: var(--pa-n700);
+    line-height: 1.5;
+}
+
+html.dark .oa-detail-text {
+    color: var(--pa-text-secondary);
+}
+
+/* Travel Contacts (Detail Slide Over) */
+.oa-contact-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0 8px;
+}
+
+.oa-contact-item {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--org-border-default, var(--pa-n200));
+}
+
+.oa-contact-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.oa-contact-category {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--pa-n400);
+}
+
+.oa-contact-name {
+    margin-top: 6px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--org-text-primary, var(--pa-n900));
+}
+
+.oa-contact-details {
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--pa-n600);
+}
+
+html.dark .oa-contact-item {
+    border-bottom-color: var(--pa-border-subtle);
+}
+
+html.dark .oa-contact-category {
+    color: var(--pa-n400);
+}
+
+html.dark .oa-contact-name {
+    color: var(--pa-n100);
+}
+
+html.dark .oa-contact-details {
+    color: var(--pa-n400);
+}
+
+/* Uniform Dot */
+.oa-uniform-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin-right: 12px;
+    box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.05);
+    /* Simplified shadow to avoid rgba nesting issues */
+    background: var(--org-btn-primary-bg, var(--pa-n900));
+}
+
+/* Equipment List */
+.oa-equip-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.oa-equip-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--pa-n700);
+}
+
+html.dark .oa-equip-item {
+    color: var(--pa-text-secondary);
+}
+
+.oa-equip-item .material-symbols-outlined {
+    font-size: 16px;
+    color: var(--pa-success);
+}
+
+/* Footer Actions */
+.oa-slideout-footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 24px;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--org-border-default, var(--pa-n200));
+    display: flex;
+    gap: 16px;
+    z-index: 20;
+}
+
+html.dark .oa-slideout-footer {
+    background: rgba(26, 31, 38, 0.9);
+    border-color: var(--pa-border-subtle);
+}
+
+.oa-action-primary-lg {
+    flex: 1;
+    background: var(--org-btn-primary-bg, var(--pa-n900));
+    color: var(--org-btn-primary-text, var(--pa-white));
+    font-family: var(--pa-font-display);
+    font-weight: 900;
+    font-size: 14px;
+    padding: 16px;
+    border-radius: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border: none;
+    cursor: pointer;
+    transition: all var(--pa-motion-fast);
+    box-shadow: 0 4px 0 0 var(--org-btn-primary-active, var(--pa-n700));
+}
+
+.oa-action-primary-lg:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 0 var(--org-btn-primary-active, var(--pa-n700));
+}
+
+.oa-action-primary-lg:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 0 0 var(--org-btn-primary-active, var(--pa-n700));
+}
+
+.oa-action-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.oa-icon-btn-lg {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    border: 1px solid var(--org-border-default, var(--pa-n200));
+    background: transparent;
+    color: var(--pa-n600);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+html.dark .oa-icon-btn-lg {
+    border-color: var(--pa-border-subtle);
+    color: var(--pa-text-muted);
+}
+
+.oa-icon-btn-lg:hover {
+    background: var(--pa-n50);
+}
+
+html.dark .oa-icon-btn-lg:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.oa-icon-btn-lg.destructive {
+    border-color: var(--pa-danger-bg);
+    color: var(--pa-danger);
+}
+
+.oa-icon-btn-lg.destructive:hover {
+    background: var(--pa-danger-bg);
+}
+
+/* Spacer for footer */
+.oa-footer-spacer {
+    height: 96px;
+}
+
+/* =====================================================================
+   STACKED LIST (slideover / panels – 1 to 100+ items)
+   ===================================================================== */
+.oa-stacked-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-height: 0;
+}
+
+.oa-stacked-list-item {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-3);
+    padding: var(--pa-space-4) 0;
+    border-bottom: 1px solid var(--org-border-default);
+    text-decoration: none;
+    color: inherit;
+    transition: background-color var(--pa-motion-fast);
+    min-height: 56px;
+    box-sizing: border-box;
+}
+
+.oa-stacked-list-item:last-child {
+    border-bottom: none;
+}
+
+.oa-stacked-list-item:hover {
+    background: var(--org-surface-section);
+}
+
+.oa-stacked-list-item:focus-visible {
+    outline: 2px solid var(--org-focus-ring);
+    outline-offset: 2px;
+}
+
+.oa-stacked-list-item-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.oa-stacked-list-item-title {
+    font-family: var(--pa-font-body);
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1.3;
+    color: var(--org-text-primary);
+}
+
+.oa-stacked-list-item-meta {
+    font-size: 12px;
+    color: var(--org-text-muted);
+    margin-top: 2px;
+    line-height: 1.3;
+}
+
+.oa-stacked-list-item-chevron {
+    flex-shrink: 0;
+    color: var(--org-text-muted);
+    font-size: 20px;
+}
+
+.oa-stacked-list-item:hover .oa-stacked-list-item-chevron {
+    color: var(--org-btn-primary-bg);
+}
+
+/* =====================================================================
+   ORG ADMIN FILTER COMPONENT
+   Clean, grouped filter interface for AdminAnnouncements
+   ===================================================================== */
+
+.oa-filter-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 24px;
+    background: var(--pa-white);
+    border: 1px solid var(--org-border-default, var(--pa-n200));
+    border-radius: 12px;
+    margin-bottom: 24px;
+    align-items: flex-start;
+}
+
+@media (min-width: 768px) {
+    .oa-filter-grid {
+        flex-direction: row;
+        align-items: flex-end;
+        /* Align inputs to bottom */
+    }
+}
+
+.oa-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 200px;
+    flex: 1;
+    align-items: stretch;
+    justify-content: flex-end;
+}
+
+.oa-filter-group--narrow {
+    flex: 0 0 auto;
+    min-width: auto;
+}
+
+.oa-filter-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--pa-n500);
+    line-height: 1.2;
+    min-height: 14px;
+}
+
+.oa-toggle-group {
+    display: flex;
+    background: var(--pa-n50);
+    padding: 4px;
+    border-radius: 8px;
+    gap: 4px;
+    border: 1px solid var(--org-border-default, var(--pa-n200));
+    min-height: 42px;
+    align-items: center;
+}
+
+.oa-toggle-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--pa-n600);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.oa-toggle-btn:hover {
+    color: var(--pa-n900);
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.oa-toggle-btn.active {
+    background: var(--pa-white);
+    color: var(--org-btn-primary-bg, var(--pa-n900));
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    font-weight: 600;
+}
+
+/* Specific select styling override for inside filter group */
+.oa-filter-group .pa-select {
+    height: 42px;
+    /* Match typical button height */
+    background-color: var(--pa-white);
+    width: 100%;
+}
+
+/* Dark mode overrides */
+html.dark .oa-filter-grid {
+    background: var(--pa-surface);
+    border-color: var(--pa-border-subtle);
+}
+
+html.dark .oa-filter-label {
+    color: var(--pa-n400);
+}
+
+html.dark .oa-toggle-group {
+    background: var(--pa-surface-panel);
+    border-color: var(--pa-border-subtle);
+}
+
+html.dark .oa-toggle-btn {
+    color: var(--pa-n400);
+}
+
+html.dark .oa-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--pa-n100);
+}
+
+html.dark .oa-toggle-btn.active {
+    background: var(--pa-n700);
+    color: var(--org-btn-primary-text, var(--pa-white));
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+html.dark .oa-filter-group .pa-select {
+    background-color: var(--pa-surface-panel);
+    border-color: var(--pa-border-subtle);
+    color: var(--pa-n100);
+}
+
+/* =====================================================================
+   ORG ADMIN NOTIFICATION FILTER PANEL (AdminNotifications)
+   Pure OA classes (no pa- utilities)
+   ===================================================================== */
+
+.oa-notif-panel {
+    position: relative;
+    background: var(--org-surface-default, #ffffff);
+    border: 1px solid var(--org-border-default, #e5e7eb);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    color: var(--org-text-primary, #0f172a);
+}
+
+.oa-notif-panel__glow {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--org-btn-primary-bg, #137fec) 16%, transparent),
+      transparent 70%);
+    pointer-events: none;
+}
+
+.oa-notif-header {
+    position: relative;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--org-border-default, #e5e7eb);
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    background: rgba(248, 250, 252, 0.75);
+    backdrop-filter: blur(6px);
+}
+
+.oa-notif-header__left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.oa-notif-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: rgba(var(--org-btn-primary-bg-rgb, 19, 127, 236), 0.12);
+    color: var(--org-btn-primary-bg, #137fec);
+    display: grid;
+    place-items: center;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.oa-notif-eyebrow {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--org-text-muted, #6b7280);
+}
+
+.oa-notif-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.oa-notif-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--org-text-primary, #0f172a);
+}
+
+.oa-notif-counter {
+    background: var(--org-btn-primary-bg, #137fec);
+    color: var(--org-btn-primary-text, #fff);
+    font-size: 11px;
+    font-weight: 900;
+    padding: 4px 10px;
+    border-radius: 999px;
+    box-shadow: 0 6px 18px rgba(19, 127, 236, 0.28);
+}
+
+.oa-notif-meta {
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+}
+
+.oa-notif-header__right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.oa-notif-quickset {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+    padding: 4px 6px;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+@media (min-width: 1024px) {
+    .oa-notif-quickset { display: inline-flex; }
+}
+
+.oa-notif-quick-btn {
+    font-size: 12px;
+    font-weight: 800;
+    padding: 6px 10px;
+    border: none;
+    background: rgba(19, 127, 236, 0.08);
+    color: var(--org-btn-primary-bg, #137fec);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 150ms ease, color 150ms ease;
+}
+
+.oa-notif-quick-btn--ghost {
+    background: transparent;
+    color: #475569;
+}
+
+.oa-notif-quick-btn:hover {
+    background: rgba(19, 127, 236, 0.14);
+}
+
+.oa-notif-quick-divider {
+    width: 1px;
+    height: 18px;
+    background: #e5e7eb;
+}
+
+.oa-notif-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    color: #475569;
+    cursor: pointer;
+    transition: color 120ms ease, border-color 120ms ease;
+}
+
+.oa-notif-clear:hover {
+    color: #dc2626;
+    border-color: #fecdd3;
+}
+
+.oa-notif-sections {
+    border-top: 1px solid #f1f5f9;
+}
+
+.oa-notif-section + .oa-notif-section {
+    border-top: 1px solid #f1f5f9;
+}
+
+.oa-notif-section__toggle {
+    width: 100%;
+    border: none;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    cursor: pointer;
+    transition: background 150ms ease;
+}
+
+.oa-notif-section__toggle:hover {
+    background: #f8fafc;
+}
+
+.oa-notif-section__title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.oa-notif-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: rgba(var(--org-btn-primary-bg-rgb, 19, 127, 236), 0.8);
+    box-shadow: 0 0 0 6px rgba(19, 127, 236, 0.12);
+}
+
+.oa-notif-section__title {
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    color: var(--org-text-primary, #0f172a);
+}
+
+.oa-notif-section__pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--org-btn-primary-bg, #137fec);
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: rgba(19, 127, 236, 0.12);
+}
+
+.oa-notif-chevron {
+    color: #cbd5e1;
+    transition: transform 150ms ease;
+}
+
+.oa-notif-chevron.is-open {
+    transform: rotate(180deg);
+}
+
+.oa-notif-body {
+    padding: 4px 20px 18px;
+    animation: oa-fade-in 180ms ease;
+}
+
+.oa-notif-search {
+    position: relative;
+    margin-bottom: 12px;
+}
+
+.oa-notif-search > span {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #cbd5e1;
+}
+
+.oa-notif-search__input {
+    width: 100%;
+    padding: 10px 12px 10px 36px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    font-size: 14px;
+    color: #0f172a;
+    background: #fff;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.oa-notif-search__input:focus {
+    outline: none;
+    border-color: var(--org-btn-primary-bg, #137fec);
+    box-shadow: 0 0 0 3px rgba(19, 127, 236, 0.18);
+}
+
+.oa-notif-chip-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.oa-notif-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    font-size: 12px;
+    font-weight: 800;
+    background: #ffffff;
+    color: #475569;
+    cursor: pointer;
+    transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.oa-notif-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    border-color: var(--org-btn-primary-bg, #137fec);
+    color: var(--org-btn-primary-bg, #137fec);
+}
+
+.oa-notif-chip.is-selected {
+    background: linear-gradient(120deg, var(--org-btn-primary-bg, #137fec), #7dd3fc);
+    color: #fff;
+    border-color: var(--org-btn-primary-bg, #137fec);
+    box-shadow: 0 10px 26px rgba(19, 127, 236, 0.32);
+    transform: translateY(-1px);
+}
+
+.oa-notif-chip__count {
+    font-size: 10px;
+    font-weight: 900;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.oa-notif-chip__count.is-selected {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+}
+
+.oa-notif-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.oa-notif-select-all {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px dashed #e2e8f0;
+    background: #fff;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+
+.oa-notif-select-all:hover {
+    background: #f8fafc;
+    border-color: var(--org-btn-primary-bg, #137fec);
+    transform: translateY(-1px);
+}
+
+.oa-notif-select-all__label {
+    font-size: 13px;
+    font-weight: 800;
+    color: #1e293b;
+}
+
+.oa-notif-empty {
+    text-align: center;
+    padding: 12px 0;
+    font-size: 12px;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.oa-notif-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid transparent;
+    background: #ffffff;
+    transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+    cursor: pointer;
+}
+
+.oa-notif-row:hover {
+    border-color: rgba(19, 127, 236, 0.25);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    transform: translateY(-1px);
+}
+
+.oa-notif-row.is-selected {
+    background: rgba(19, 127, 236, 0.08);
+    border-color: rgba(19, 127, 236, 0.4);
+    box-shadow: 0 10px 26px rgba(19, 127, 236, 0.18);
+}
+
+.oa-notif-row__left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.oa-notif-row__label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #475569;
+}
+
+.oa-notif-row__label.is-selected {
+    color: var(--org-btn-primary-bg, #137fec);
+}
+
+.oa-notif-count {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.oa-notif-count.is-selected {
+    background: var(--org-btn-primary-bg, #137fec);
+    color: #fff;
+}
+
+.oa-notif-check {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    display: grid;
+    place-items: center;
+    background: #fff;
+    color: transparent;
+    transition: border-color 120ms ease, background 120ms ease, color 120ms ease, box-shadow 120ms ease;
+}
+
+.oa-notif-check.is-selected {
+    background: var(--org-btn-primary-bg, #137fec);
+    border-color: var(--org-btn-primary-bg, #137fec);
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(19, 127, 236, 0.25);
+}
+
+/* Dark mode */
+html.dark .oa-notif-panel {
+    background: var(--pa-surface, #111827);
+    border-color: var(--pa-border-subtle, #1f2937);
+    color: var(--pa-text-primary, #e5e7eb);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+html.dark .oa-notif-header {
+    background: rgba(30, 41, 59, 0.7);
+    border-color: var(--pa-border-subtle, #1f2937);
+}
+
+html.dark .oa-notif-meta { background: rgba(255, 255, 255, 0.08); color: #cbd5e1; }
+html.dark .oa-notif-quickset { background: rgba(17, 24, 39, 0.7); border-color: #1f2937; }
+html.dark .oa-notif-quick-btn--ghost { color: #cbd5e1; }
+html.dark .oa-notif-section__toggle:hover { background: rgba(255, 255, 255, 0.03); }
+html.dark .oa-notif-search__input { background: #111827; border-color: #1f2937; color: #e5e7eb; }
+html.dark .oa-notif-search__input:focus { box-shadow: 0 0 0 3px rgba(19, 127, 236, 0.32); }
+html.dark .oa-notif-chip { background: #0f172a; border-color: #1f2937; color: #cbd5e1; }
+html.dark .oa-notif-chip__count { background: rgba(255, 255, 255, 0.08); color: #cbd5e1; }
+html.dark .oa-notif-list { scrollbar-color: rgba(255, 255, 255, 0.2) transparent; }
+html.dark .oa-notif-row { background: #0f172a; border-color: #1f2937; }
+html.dark .oa-notif-row.is-selected { background: rgba(19, 127, 236, 0.14); }
+html.dark .oa-notif-row__label { color: #cbd5e1; }
+html.dark .oa-notif-count { background: rgba(255, 255, 255, 0.08); color: #cbd5e1; }
+
+@keyframes oa-fade-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}

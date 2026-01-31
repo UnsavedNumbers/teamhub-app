@@ -46,7 +46,7 @@ function getStoredTheme(): ThemeMode | null {
       return stored as ThemeMode
     }
   } catch (error) {
-    console.warn('Failed to read theme from localStorage:', error)
+    // Silently fail
   }
   
   return null
@@ -61,7 +61,7 @@ function setStoredTheme(theme: ThemeMode): void {
   try {
     localStorage.setItem('theme-preference', theme)
   } catch (error) {
-    console.warn('Failed to store theme to localStorage:', error)
+    // Silently fail
   }
 }
 
@@ -111,6 +111,7 @@ export function useTheme() {
   })
 
   // Load from Supabase on mount (if authenticated)
+  // CRITICAL: localStorage is the source of truth - only use Supabase if localStorage is empty
   useEffect(() => {
     if (!user || !profile) {
       // Not authenticated - use localStorage only
@@ -122,17 +123,32 @@ export function useTheme() {
 
     const loadFromSupabase = async () => {
       try {
+        // Check localStorage first - it's the source of truth for user's current preference
+        const storedLocal = getStoredTheme()
+        
+        // If localStorage has a value, use it and sync to Supabase (localStorage wins)
+        if (storedLocal) {
+          // Sync localStorage value to Supabase in background (non-blocking)
+          updateUserPreference(user.id, 'theme', storedLocal).catch(() => {
+            // Silently fail - non-critical
+          })
+          
+          // Keep using localStorage value
+          setState(prev => ({ ...prev, loading: false }))
+          return
+        }
+
+        // localStorage is empty - try Supabase (first-time user or cleared storage)
         const { data, error } = await getUserPreferences(user.id)
         
         if (cancelled) return
 
         if (error) {
-          console.warn('Failed to load theme from Supabase, using localStorage:', error)
           setState(prev => ({ ...prev, loading: false }))
           return
         }
 
-        // If Supabase has a preference, use it (but keep localStorage in sync)
+        // If Supabase has a preference and localStorage is empty, use Supabase
         if (data?.theme) {
           const supabaseTheme = data.theme as ThemeMode
           if (supabaseTheme === 'light' || supabaseTheme === 'dark' || supabaseTheme === 'system') {
@@ -149,11 +165,10 @@ export function useTheme() {
           }
         }
 
-        // No Supabase preference - keep localStorage value
+        // No preference anywhere - keep current state (system default)
         setState(prev => ({ ...prev, loading: false }))
       } catch (err) {
         if (cancelled) return
-        console.warn('Error loading theme from Supabase:', err)
         setState(prev => ({ ...prev, loading: false, error: err instanceof Error ? err : new Error('Unknown error') }))
       }
     }
@@ -207,7 +222,6 @@ export function useTheme() {
       try {
         await updateUserPreference(user.id, 'theme', mode)
       } catch (error) {
-        console.warn('Failed to sync theme to Supabase:', error)
         // Don't update state - localStorage is already updated
         setState(prev => ({ ...prev, error: error instanceof Error ? error : new Error('Unknown error') }))
       }

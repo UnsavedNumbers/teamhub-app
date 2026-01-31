@@ -89,6 +89,46 @@ export interface CalendarEvent {
     general_rsvps?: GeneralRSVP[]
     recurring_pattern?: RecurringEventPattern | null
     change_history?: EventChangeHistory[]
+    venue_insights?: {
+      place_id: string
+      photos: string[]
+      ai_summary: string | null
+      ai_what_to_expect: string | null
+    } | null
+
+    // Ticketing (optional, present when ticketing is enabled)
+    ticketed_event?: TicketedEventSummary | null
+}
+
+export interface TicketedEventSummary {
+    id: string
+    org_id: string
+    team_id: string | null
+    event_type: string | null
+    title: string
+    description: string | null
+    starts_at: string
+    ends_at: string
+    timezone: string | null
+    venue_name: string | null
+    venue_city: string | null
+    venue_state: string | null
+    venue_postal_code: string | null
+    sales_start_at: string | null
+    sales_end_at: string | null
+    status: 'draft' | 'published' | 'archived' | string
+    ticket_types?: TicketTypeSummary[]
+}
+
+export interface TicketTypeSummary {
+    id: string
+    name: string
+    price_cents: number
+    currency: string
+    capacity_total: number | null
+    capacity_remaining: number | null
+    sort_order?: number | null
+    is_active?: boolean | null
 }
 
 // Meeting location for travel events
@@ -111,15 +151,18 @@ export interface TravelOverride {
 export interface EventLocation {
     id: string
     event_id: string
+    name?: string | null
     venue_name: string | null
     address_line1: string | null
     address_line2: string | null
     city: string | null
     state: string | null
     postal_code: string | null
+    place_id: string | null // Google Place ID
     country: string
     latitude: number | null
     longitude: number | null
+    maps_url?: string | null
     is_tbd: boolean
     is_virtual: boolean
     virtual_link: string | null
@@ -130,7 +173,7 @@ export interface EventLocation {
 export interface EventRSVP {
     id: string
     event_id: string
-    child_id: string
+    athlete_id: string
     status: RSVPStatus
     responded_at: string | null
     responded_by_user_id: string | null
@@ -224,6 +267,10 @@ export interface CalendarViewState {
 export interface EventFormData {
     title: string
     type: EventType
+    /** UI-only: drives Program dropdown (Sport → Program → Season → Team) */
+    sport_id?: string
+    /** UI-only: drives Season dropdown */
+    program_id?: string
     team_id: string
     season_id: string
     start_time: string // datetime-local format
@@ -239,7 +286,30 @@ export interface EventFormData {
     recurring: RecurringEventFormData | null
     rsvp_enabled: boolean
     rsvp_type: RSVPType | null
+    ticketing?: TicketingFormData
 }
+
+export interface TicketingFormData {
+    is_ticketed: boolean
+    event_type: string
+    sales_start_at: string
+    sales_end_at: string
+    status: string
+    ticket_types: TicketTypeFormData[]
+}
+
+export interface TicketTypeFormData {
+    /** Present when editing an existing ticket type */
+    id?: string
+    /** Sold count for display/validation; from DB (capacity_total - capacity_remaining) */
+    soldCount?: number
+    name: string
+    price_dollars: string
+    capacity: string
+}
+
+// Re-export ticketing types from ticketing.ts
+export type { TicketedEventType, TicketedEventStatus } from './ticketing'
 
 export interface EventLocationFormData {
     venue_name: string
@@ -248,6 +318,7 @@ export interface EventLocationFormData {
     city: string
     state: string
     postal_code: string
+    place_id: string // Google Place ID
     latitude: string // String for form input
     longitude: string // String for form input
     is_tbd: boolean
@@ -292,7 +363,7 @@ export interface RSVPSummary {
 export interface EventConflict {
     event1: CalendarEvent
     event2: CalendarEvent
-    child_id: string
+    athlete_id: string
     overlap_minutes: number
 }
 
@@ -389,7 +460,7 @@ export function detectEventConflicts(
 ): EventConflict[] {
     const conflicts: EventConflict[] = []
     const childEvents = events.filter(e =>
-        e.rsvps?.some(r => r.child_id === childId && r.status !== 'not_going')
+        e.rsvps?.some(r => r.athlete_id === childId && r.status !== 'not_going')
     )
 
     for (let i = 0; i < childEvents.length; i++) {
@@ -411,7 +482,7 @@ export function detectEventConflicts(
                 conflicts.push({
                     event1,
                     event2,
-                    child_id: childId,
+                    athlete_id: childId,
                     overlap_minutes: overlapMinutes,
                 })
             }

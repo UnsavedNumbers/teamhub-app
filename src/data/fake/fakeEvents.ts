@@ -13,8 +13,19 @@ import {
     TEAM_U10_BASKETBALL_ID,
     TEAM_U12_BASKETBALL_ID,
     TEAM_U14_SOCCER_ELITE_ID,
-    SEASON_SPRING_2024_ID,
+    SEASON_SPRING_CURRENT_ID,
 } from './fakeTeams'
+
+// Dynamic year helpers
+const getCurrentYear = () => new Date().getFullYear()
+const getSpringSeasonName = () => `Spring ${getCurrentYear()}`
+
+// Helper functions for date generation relative to current year
+const getDateInCurrentYear = (month: number, day: number): string => {
+    const year = getCurrentYear()
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00Z`
+}
+
 import {
     CHILD_EMMA_JOHNSON_ID,
     CHILD_LIAM_JOHNSON_ID,
@@ -72,7 +83,7 @@ export const fakeEvents: CalendarEvent[] = [
     {
         id: EVENT_U10_SOCCER_PRACTICE_1_ID,
         team_id: TEAM_U10_SOCCER_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'U10 Soccer Practice',
         type: 'practice' as EventType,
         start_time: setTime(today, 17, 0), // 5:00 PM today
@@ -90,16 +101,16 @@ export const fakeEvents: CalendarEvent[] = [
         cancelled_at: null,
         cancelled_by_user_id: null,
         created_by_user_id: null,
-        created_at: '2024-03-01T00:00:00Z',
-        updated_at: '2024-03-01T00:00:00Z',
+        created_at: getDateInCurrentYear(3, 1),
+        updated_at: getDateInCurrentYear(3, 1),
         team: { id: TEAM_U10_SOCCER_ID, name: 'U10 Lightning', org_id: DEMO_ORG_A_ID },
-        season: { id: SEASON_SPRING_2024_ID, name: 'Spring 2024' },
+        season: { id: SEASON_SPRING_CURRENT_ID, name: getSpringSeasonName() },
     },
     // U10 Soccer - Practice in 2 days
     {
         id: EVENT_U10_SOCCER_PRACTICE_2_ID,
         team_id: TEAM_U10_SOCCER_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'U10 Soccer Practice',
         type: 'practice' as EventType,
         start_time: setTime(addDays(today, 2), 17, 0),
@@ -117,16 +128,16 @@ export const fakeEvents: CalendarEvent[] = [
         cancelled_at: null,
         cancelled_by_user_id: null,
         created_by_user_id: null,
-        created_at: '2024-03-01T00:00:00Z',
-        updated_at: '2024-03-01T00:00:00Z',
+        created_at: getDateInCurrentYear(3, 1),
+        updated_at: getDateInCurrentYear(3, 1),
         team: { id: TEAM_U10_SOCCER_ID, name: 'U10 Lightning', org_id: DEMO_ORG_A_ID },
-        season: { id: SEASON_SPRING_2024_ID, name: 'Spring 2024' },
+        season: { id: SEASON_SPRING_CURRENT_ID, name: getSpringSeasonName() },
     },
     // U10 Soccer - Game this weekend
     {
         id: EVENT_U10_SOCCER_GAME_1_ID,
         team_id: TEAM_U10_SOCCER_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'Game vs. Eastside Eagles',
         type: 'game' as EventType,
         start_time: setTime(addDays(today, 5), 10, 0), // Saturday 10 AM
@@ -144,16 +155,16 @@ export const fakeEvents: CalendarEvent[] = [
         cancelled_at: null,
         cancelled_by_user_id: null,
         created_by_user_id: null,
-        created_at: '2024-03-01T00:00:00Z',
-        updated_at: '2024-03-01T00:00:00Z',
+        created_at: getDateInCurrentYear(3, 1),
+        updated_at: getDateInCurrentYear(3, 1),
         team: { id: TEAM_U10_SOCCER_ID, name: 'U10 Lightning', org_id: DEMO_ORG_A_ID },
-        season: { id: SEASON_SPRING_2024_ID, name: 'Spring 2024' },
+        season: { id: SEASON_SPRING_CURRENT_ID, name: getSpringSeasonName() },
     },
     // U12 Soccer - Practice tomorrow
     {
         id: EVENT_U12_SOCCER_PRACTICE_1_ID,
         team_id: TEAM_U12_SOCCER_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'U12 Soccer Practice',
         type: 'practice' as EventType,
         start_time: setTime(addDays(today, 1), 18, 0),
@@ -171,16 +182,16 @@ export const fakeEvents: CalendarEvent[] = [
         cancelled_at: null,
         cancelled_by_user_id: null,
         created_by_user_id: null,
-        created_at: '2024-03-01T00:00:00Z',
-        updated_at: '2024-03-01T00:00:00Z',
+        created_at: getDateInCurrentYear(3, 1),
+        updated_at: getDateInCurrentYear(3, 1),
         team: { id: TEAM_U12_SOCCER_ID, name: 'U12 Thunder', org_id: DEMO_ORG_A_ID },
-        season: { id: SEASON_SPRING_2024_ID, name: 'Spring 2024' },
+        season: { id: SEASON_SPRING_CURRENT_ID, name: getSpringSeasonName() },
     },
     // U12 Soccer - Tournament next week
     {
         id: EVENT_U12_SOCCER_TOURNAMENT_ID,
         team_id: TEAM_U12_SOCCER_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'Spring Cup Tournament',
         type: 'tournament' as EventType,
         start_time: setTime(addDays(today, 10), 8, 0),
@@ -201,13 +212,13 @@ export const fakeEvents: CalendarEvent[] = [
         created_at: '2024-02-15T00:00:00Z',
         updated_at: '2024-02-15T00:00:00Z',
         team: { id: TEAM_U12_SOCCER_ID, name: 'U12 Thunder', org_id: DEMO_ORG_A_ID },
-        season: { id: SEASON_SPRING_2024_ID, name: 'Spring 2024' },
+        season: { id: SEASON_SPRING_CURRENT_ID, name: getSpringSeasonName() },
     },
     // U10 Basketball - Practice
     {
         id: EVENT_U10_BB_PRACTICE_1_ID,
         team_id: TEAM_U10_BASKETBALL_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'U10 Hawks Practice',
         type: 'practice' as EventType,
         start_time: setTime(addDays(today, 1), 16, 30),
@@ -225,16 +236,16 @@ export const fakeEvents: CalendarEvent[] = [
         cancelled_at: null,
         cancelled_by_user_id: null,
         created_by_user_id: null,
-        created_at: '2024-03-01T00:00:00Z',
-        updated_at: '2024-03-01T00:00:00Z',
+        created_at: getDateInCurrentYear(3, 1),
+        updated_at: getDateInCurrentYear(3, 1),
         team: { id: TEAM_U10_BASKETBALL_ID, name: 'U10 Hawks', org_id: DEMO_ORG_A_ID },
-        season: { id: SEASON_SPRING_2024_ID, name: 'Spring 2024' },
+        season: { id: SEASON_SPRING_CURRENT_ID, name: getSpringSeasonName() },
     },
     // U10 Basketball - Game
     {
         id: EVENT_U10_BB_GAME_1_ID,
         team_id: TEAM_U10_BASKETBALL_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'Game vs. Valley Vipers',
         type: 'game' as EventType,
         start_time: setTime(addDays(today, 6), 14, 0), // Sunday 2 PM
@@ -252,16 +263,16 @@ export const fakeEvents: CalendarEvent[] = [
         cancelled_at: null,
         cancelled_by_user_id: null,
         created_by_user_id: null,
-        created_at: '2024-03-01T00:00:00Z',
-        updated_at: '2024-03-01T00:00:00Z',
+        created_at: getDateInCurrentYear(3, 1),
+        updated_at: getDateInCurrentYear(3, 1),
         team: { id: TEAM_U10_BASKETBALL_ID, name: 'U10 Hawks', org_id: DEMO_ORG_A_ID },
-        season: { id: SEASON_SPRING_2024_ID, name: 'Spring 2024' },
+        season: { id: SEASON_SPRING_CURRENT_ID, name: getSpringSeasonName() },
     },
     // U12 Basketball - Practice
     {
         id: EVENT_U12_BB_PRACTICE_1_ID,
         team_id: TEAM_U12_BASKETBALL_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'U12 Eagles Practice',
         type: 'practice' as EventType,
         start_time: setTime(addDays(today, 3), 17, 0),
@@ -279,16 +290,16 @@ export const fakeEvents: CalendarEvent[] = [
         cancelled_at: null,
         cancelled_by_user_id: null,
         created_by_user_id: null,
-        created_at: '2024-03-01T00:00:00Z',
-        updated_at: '2024-03-01T00:00:00Z',
+        created_at: getDateInCurrentYear(3, 1),
+        updated_at: getDateInCurrentYear(3, 1),
         team: { id: TEAM_U12_BASKETBALL_ID, name: 'U12 Eagles', org_id: DEMO_ORG_A_ID },
-        season: { id: SEASON_SPRING_2024_ID, name: 'Spring 2024' },
+        season: { id: SEASON_SPRING_CURRENT_ID, name: getSpringSeasonName() },
     },
     // U14 Elite Soccer - Travel event
     {
         id: EVENT_U14_SOCCER_TRAVEL_ID,
         team_id: TEAM_U14_SOCCER_ELITE_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'State Championship - Travel',
         type: 'travel' as EventType,
         start_time: setTime(addDays(today, 14), 6, 0),
@@ -306,16 +317,16 @@ export const fakeEvents: CalendarEvent[] = [
         cancelled_at: null,
         cancelled_by_user_id: null,
         created_by_user_id: null,
-        created_at: '2024-02-01T00:00:00Z',
-        updated_at: '2024-02-01T00:00:00Z',
+        created_at: getDateInCurrentYear(2, 1),
+        updated_at: getDateInCurrentYear(2, 1),
         team: { id: TEAM_U14_SOCCER_ELITE_ID, name: 'U14 Elite Storm', org_id: DEMO_ORG_A_ID },
-        season: { id: SEASON_SPRING_2024_ID, name: 'Spring 2024' },
+        season: { id: SEASON_SPRING_CURRENT_ID, name: getSpringSeasonName() },
     },
     // Team Meeting
     {
         id: EVENT_TEAM_MEETING_ID,
         team_id: TEAM_U10_SOCCER_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'Parent Meeting - Season Overview',
         type: 'meeting' as EventType,
         start_time: setTime(addDays(today, 7), 19, 0),
@@ -333,16 +344,16 @@ export const fakeEvents: CalendarEvent[] = [
         cancelled_at: null,
         cancelled_by_user_id: null,
         created_by_user_id: null,
-        created_at: '2024-03-01T00:00:00Z',
-        updated_at: '2024-03-01T00:00:00Z',
+        created_at: getDateInCurrentYear(3, 1),
+        updated_at: getDateInCurrentYear(3, 1),
         team: { id: TEAM_U10_SOCCER_ID, name: 'U10 Lightning', org_id: DEMO_ORG_A_ID },
-        season: { id: SEASON_SPRING_2024_ID, name: 'Spring 2024' },
+        season: { id: SEASON_SPRING_CURRENT_ID, name: getSpringSeasonName() },
     },
     // Cancelled Event
     {
         id: EVENT_CANCELLED_ID,
         team_id: TEAM_U10_SOCCER_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'U10 Soccer Practice (CANCELLED)',
         type: 'practice' as EventType,
         start_time: setTime(addDays(today, -2), 17, 0), // 2 days ago
@@ -363,7 +374,7 @@ export const fakeEvents: CalendarEvent[] = [
         created_at: '2024-03-01T00:00:00Z',
         updated_at: addDays(today, -2).toISOString(),
         team: { id: TEAM_U10_SOCCER_ID, name: 'U10 Lightning', org_id: DEMO_ORG_A_ID },
-        season: { id: SEASON_SPRING_2024_ID, name: 'Spring 2024' },
+        season: { id: SEASON_SPRING_CURRENT_ID, name: getSpringSeasonName() },
     },
 ]
 
@@ -381,14 +392,15 @@ export const fakeEventLocations: EventLocation[] = [
         city: 'Riverside',
         state: 'CA',
         postal_code: '92501',
+        place_id: null,
         country: 'US',
         latitude: 33.9533,
         longitude: -117.3962,
         is_tbd: false,
         is_virtual: false,
         virtual_link: null,
-        created_at: '2024-03-01T00:00:00Z',
-        updated_at: '2024-03-01T00:00:00Z',
+        created_at: getDateInCurrentYear(3, 1),
+        updated_at: getDateInCurrentYear(3, 1),
     },
     {
         id: 'loc-002',
@@ -399,14 +411,15 @@ export const fakeEventLocations: EventLocation[] = [
         city: 'Riverside',
         state: 'CA',
         postal_code: '92506',
+        place_id: null,
         country: 'US',
         latitude: 33.9672,
         longitude: -117.3754,
         is_tbd: false,
         is_virtual: false,
         virtual_link: null,
-        created_at: '2024-03-01T00:00:00Z',
-        updated_at: '2024-03-01T00:00:00Z',
+        created_at: getDateInCurrentYear(3, 1),
+        updated_at: getDateInCurrentYear(3, 1),
     },
 ]
 
@@ -416,30 +429,30 @@ export const fakeEventLocations: EventLocation[] = [
 
 export const fakeEventRSVPs: EventRSVP[] = [
     // U10 Soccer Practice 1 - RSVPs
-    { id: 'rsvp-001', event_id: EVENT_U10_SOCCER_PRACTICE_1_ID, child_id: CHILD_EMMA_JOHNSON_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T10:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T10:00:00Z', child: { id: CHILD_EMMA_JOHNSON_ID, first_name: 'Emma', last_name: 'Johnson' } },
-    { id: 'rsvp-002', event_id: EVENT_U10_SOCCER_PRACTICE_1_ID, child_id: CHILD_SOPHIA_CHEN_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T11:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T11:00:00Z', child: { id: CHILD_SOPHIA_CHEN_ID, first_name: 'Sophia', last_name: 'Chen' } },
-    { id: 'rsvp-003', event_id: EVENT_U10_SOCCER_PRACTICE_1_ID, child_id: CHILD_AIDEN_PATEL_ID, status: 'late' as RSVPStatus, responded_at: '2024-03-01T12:00:00Z', responded_by_user_id: null, note: 'Will arrive 15 min late from school pickup', created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T12:00:00Z', child: { id: CHILD_AIDEN_PATEL_ID, first_name: 'Aiden', last_name: 'Patel' } },
+    { id: 'rsvp-001', event_id: EVENT_U10_SOCCER_PRACTICE_1_ID, athlete_id: CHILD_EMMA_JOHNSON_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T10:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T10:00:00Z', child: { id: CHILD_EMMA_JOHNSON_ID, first_name: 'Emma', last_name: 'Johnson' } },
+    { id: 'rsvp-002', event_id: EVENT_U10_SOCCER_PRACTICE_1_ID, athlete_id: CHILD_SOPHIA_CHEN_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T11:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T11:00:00Z', child: { id: CHILD_SOPHIA_CHEN_ID, first_name: 'Sophia', last_name: 'Chen' } },
+    { id: 'rsvp-003', event_id: EVENT_U10_SOCCER_PRACTICE_1_ID, athlete_id: CHILD_AIDEN_PATEL_ID, status: 'late' as RSVPStatus, responded_at: '2024-03-01T12:00:00Z', responded_by_user_id: null, note: 'Will arrive 15 min late from school pickup', created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T12:00:00Z', child: { id: CHILD_AIDEN_PATEL_ID, first_name: 'Aiden', last_name: 'Patel' } },
 
     // U10 Soccer Game 1 - RSVPs
-    { id: 'rsvp-004', event_id: EVENT_U10_SOCCER_GAME_1_ID, child_id: CHILD_EMMA_JOHNSON_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-02T10:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-02T00:00:00Z', updated_at: '2024-03-02T10:00:00Z', child: { id: CHILD_EMMA_JOHNSON_ID, first_name: 'Emma', last_name: 'Johnson' } },
-    { id: 'rsvp-005', event_id: EVENT_U10_SOCCER_GAME_1_ID, child_id: CHILD_SOPHIA_CHEN_ID, status: 'unknown' as RSVPStatus, responded_at: null, responded_by_user_id: null, note: null, created_at: '2024-03-02T00:00:00Z', updated_at: '2024-03-02T00:00:00Z', child: { id: CHILD_SOPHIA_CHEN_ID, first_name: 'Sophia', last_name: 'Chen' } },
-    { id: 'rsvp-006', event_id: EVENT_U10_SOCCER_GAME_1_ID, child_id: CHILD_AIDEN_PATEL_ID, status: 'not_going' as RSVPStatus, responded_at: '2024-03-02T14:00:00Z', responded_by_user_id: null, note: 'Family commitment - out of town', created_at: '2024-03-02T00:00:00Z', updated_at: '2024-03-02T14:00:00Z', child: { id: CHILD_AIDEN_PATEL_ID, first_name: 'Aiden', last_name: 'Patel' } },
+    { id: 'rsvp-004', event_id: EVENT_U10_SOCCER_GAME_1_ID, athlete_id: CHILD_EMMA_JOHNSON_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-02T10:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-02T00:00:00Z', updated_at: '2024-03-02T10:00:00Z', child: { id: CHILD_EMMA_JOHNSON_ID, first_name: 'Emma', last_name: 'Johnson' } },
+    { id: 'rsvp-005', event_id: EVENT_U10_SOCCER_GAME_1_ID, athlete_id: CHILD_SOPHIA_CHEN_ID, status: 'unknown' as RSVPStatus, responded_at: null, responded_by_user_id: null, note: null, created_at: '2024-03-02T00:00:00Z', updated_at: '2024-03-02T00:00:00Z', child: { id: CHILD_SOPHIA_CHEN_ID, first_name: 'Sophia', last_name: 'Chen' } },
+    { id: 'rsvp-006', event_id: EVENT_U10_SOCCER_GAME_1_ID, athlete_id: CHILD_AIDEN_PATEL_ID, status: 'not_going' as RSVPStatus, responded_at: '2024-03-02T14:00:00Z', responded_by_user_id: null, note: 'Family commitment - out of town', created_at: '2024-03-02T00:00:00Z', updated_at: '2024-03-02T14:00:00Z', child: { id: CHILD_AIDEN_PATEL_ID, first_name: 'Aiden', last_name: 'Patel' } },
 
     // U12 Soccer Practice - RSVPs
-    { id: 'rsvp-007', event_id: EVENT_U12_SOCCER_PRACTICE_1_ID, child_id: CHILD_OLIVIA_SMITH_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T09:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T09:00:00Z', child: { id: CHILD_OLIVIA_SMITH_ID, first_name: 'Olivia', last_name: 'Smith' } },
-    { id: 'rsvp-008', event_id: EVENT_U12_SOCCER_PRACTICE_1_ID, child_id: CHILD_MASON_RODRIGUEZ_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T09:30:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T09:30:00Z', child: { id: CHILD_MASON_RODRIGUEZ_ID, first_name: 'Mason', last_name: 'Rodriguez' } },
-    { id: 'rsvp-009', event_id: EVENT_U12_SOCCER_PRACTICE_1_ID, child_id: CHILD_AVA_WILLIAMS_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T10:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T10:00:00Z', child: { id: CHILD_AVA_WILLIAMS_ID, first_name: 'Ava', last_name: 'Williams' } },
+    { id: 'rsvp-007', event_id: EVENT_U12_SOCCER_PRACTICE_1_ID, athlete_id: CHILD_OLIVIA_SMITH_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T09:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T09:00:00Z', child: { id: CHILD_OLIVIA_SMITH_ID, first_name: 'Olivia', last_name: 'Smith' } },
+    { id: 'rsvp-008', event_id: EVENT_U12_SOCCER_PRACTICE_1_ID, athlete_id: CHILD_MASON_RODRIGUEZ_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T09:30:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T09:30:00Z', child: { id: CHILD_MASON_RODRIGUEZ_ID, first_name: 'Mason', last_name: 'Rodriguez' } },
+    { id: 'rsvp-009', event_id: EVENT_U12_SOCCER_PRACTICE_1_ID, athlete_id: CHILD_AVA_WILLIAMS_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T10:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T10:00:00Z', child: { id: CHILD_AVA_WILLIAMS_ID, first_name: 'Ava', last_name: 'Williams' } },
 
     // U10 Basketball Practice - RSVPs
-    { id: 'rsvp-010', event_id: EVENT_U10_BB_PRACTICE_1_ID, child_id: CHILD_LIAM_JOHNSON_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T08:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T08:00:00Z', child: { id: CHILD_LIAM_JOHNSON_ID, first_name: 'Liam', last_name: 'Johnson' } },
-    { id: 'rsvp-011', event_id: EVENT_U10_BB_PRACTICE_1_ID, child_id: CHILD_NOAH_SMITH_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T08:30:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T08:30:00Z', child: { id: CHILD_NOAH_SMITH_ID, first_name: 'Noah', last_name: 'Smith' } },
-    { id: 'rsvp-012', event_id: EVENT_U10_BB_PRACTICE_1_ID, child_id: CHILD_ETHAN_WILLIAMS_ID, status: 'unknown' as RSVPStatus, responded_at: null, responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T00:00:00Z', child: { id: CHILD_ETHAN_WILLIAMS_ID, first_name: 'Ethan', last_name: 'Williams' } },
+    { id: 'rsvp-010', event_id: EVENT_U10_BB_PRACTICE_1_ID, athlete_id: CHILD_LIAM_JOHNSON_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T08:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T08:00:00Z', child: { id: CHILD_LIAM_JOHNSON_ID, first_name: 'Liam', last_name: 'Johnson' } },
+    { id: 'rsvp-011', event_id: EVENT_U10_BB_PRACTICE_1_ID, athlete_id: CHILD_NOAH_SMITH_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T08:30:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T08:30:00Z', child: { id: CHILD_NOAH_SMITH_ID, first_name: 'Noah', last_name: 'Smith' } },
+    { id: 'rsvp-012', event_id: EVENT_U10_BB_PRACTICE_1_ID, athlete_id: CHILD_ETHAN_WILLIAMS_ID, status: 'unknown' as RSVPStatus, responded_at: null, responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T00:00:00Z', child: { id: CHILD_ETHAN_WILLIAMS_ID, first_name: 'Ethan', last_name: 'Williams' } },
 
     // U10 Basketball Game - RSVPs
-    { id: 'rsvp-013', event_id: EVENT_U10_BB_GAME_1_ID, child_id: CHILD_LIAM_JOHNSON_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-02T09:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-02T00:00:00Z', updated_at: '2024-03-02T09:00:00Z', child: { id: CHILD_LIAM_JOHNSON_ID, first_name: 'Liam', last_name: 'Johnson' } },
+    { id: 'rsvp-013', event_id: EVENT_U10_BB_GAME_1_ID, athlete_id: CHILD_LIAM_JOHNSON_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-02T09:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-02T00:00:00Z', updated_at: '2024-03-02T09:00:00Z', child: { id: CHILD_LIAM_JOHNSON_ID, first_name: 'Liam', last_name: 'Johnson' } },
 
     // U12 Basketball Practice - RSVPs
-    { id: 'rsvp-014', event_id: EVENT_U12_BB_PRACTICE_1_ID, child_id: CHILD_ISABELLA_RODRIGUEZ_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T07:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T07:00:00Z', child: { id: CHILD_ISABELLA_RODRIGUEZ_ID, first_name: 'Isabella', last_name: 'Rodriguez' } },
+    { id: 'rsvp-014', event_id: EVENT_U12_BB_PRACTICE_1_ID, athlete_id: CHILD_ISABELLA_RODRIGUEZ_ID, status: 'going' as RSVPStatus, responded_at: '2024-03-01T07:00:00Z', responded_by_user_id: null, note: null, created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T07:00:00Z', child: { id: CHILD_ISABELLA_RODRIGUEZ_ID, first_name: 'Isabella', last_name: 'Rodriguez' } },
 ]
 
 // ============================================================================
@@ -492,11 +505,11 @@ export function getRSVPsForEvent(eventId: string): EventRSVP[] {
 }
 
 export function getRSVPsForChild(childId: string): EventRSVP[] {
-    return fakeEventRSVPs.filter((r) => r.child_id === childId)
+    return fakeEventRSVPs.filter((r) => r.athlete_id === childId)
 }
 
 export function getChildRSVPForEvent(eventId: string, childId: string): EventRSVP | undefined {
-    return fakeEventRSVPs.find((r) => r.event_id === eventId && r.child_id === childId)
+    return fakeEventRSVPs.find((r) => r.event_id === eventId && r.athlete_id === childId)
 }
 
 export function getEventsForChildTeams(childId: string, teamMemberships: Array<{ childId: string; teamId: string }>): CalendarEvent[] {

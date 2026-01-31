@@ -6,11 +6,12 @@ import { getEventAttendance, updateAttendance } from '../../data/services/attend
 import type { AttendanceRecord, AttendanceStatus } from '../../types/attendance'
 import {
   Card, 
-  Button, 
   PlatformDataTable, 
+  Button,
   Badge,
   type ColumnConfig 
 } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 
 export default function AttendanceRoster() {
   const { id } = useParams<{ id: string }>() // Route is events/:id/attendance, so param is :id? Wait App.tsx said :id
@@ -49,7 +50,7 @@ export default function AttendanceRoster() {
     await updateAttendance(context, id, childId, status)
     
     // Optimistic update locally
-    setRecords(prev => prev.map(r => r.child_id === childId ? { ...r, status } : r))
+    setRecords(prev => prev.map(r => (r.athlete_id ?? (r as { child_id?: string }).child_id) === childId ? { ...r, status } : r))
     setUpdating(null)
   }
 
@@ -80,32 +81,32 @@ export default function AttendanceRoster() {
           <Button 
             size="compact" 
             variant={row.status === 'present' ? 'primary' : 'secondary'}
-            onClick={() => handleUpdate(row.child_id, 'present')}
-            disabled={updating === row.child_id}
+            onClick={() => handleUpdate(row.athlete_id ?? (row as { child_id?: string }).child_id, 'present')}
+            disabled={updating === (row.athlete_id ?? (row as { child_id?: string }).child_id)}
           >
             Present
           </Button>
           <Button 
             size="compact" 
             variant={row.status === 'absent' ? 'primary' : 'secondary'}
-            onClick={() => handleUpdate(row.child_id, 'absent')}
-            disabled={updating === row.child_id}
+            onClick={() => handleUpdate(row.athlete_id ?? (row as { child_id?: string }).child_id, 'absent')}
+            disabled={updating === (row.athlete_id ?? (row as { child_id?: string }).child_id)}
           >
             Absent
           </Button>
           <Button 
             size="compact" 
             variant={row.status === 'late' ? 'primary' : 'secondary'}
-            onClick={() => handleUpdate(row.child_id, 'late')}
-            disabled={updating === row.child_id}
+            onClick={() => handleUpdate(row.athlete_id ?? (row as { child_id?: string }).child_id, 'late')}
+            disabled={updating === (row.athlete_id ?? (row as { child_id?: string }).child_id)}
           >
             Late
           </Button>
           <Button 
             size="compact" 
             variant={row.status === 'excused' ? 'primary' : 'secondary'}
-            onClick={() => handleUpdate(row.child_id, 'excused')}
-            disabled={updating === row.child_id}
+            onClick={() => handleUpdate(row.athlete_id ?? (row as { child_id?: string }).child_id, 'excused')}
+            disabled={updating === (row.athlete_id ?? (row as { child_id?: string }).child_id)}
           >
             Excused
           </Button>
@@ -117,9 +118,9 @@ export default function AttendanceRoster() {
   return (
     <div className="pa-root">
       <div className="pa-flex pa-items-center pa-gap-4 pa-mb-6">
-        <Button variant="secondary" onClick={() => navigate('/admin/attendance')}>
+        <OrgAdminButton variant="primary" onClick={() => navigate('/admin/attendance')}>
            Back to Attendance
-        </Button>
+        </OrgAdminButton>
         <div className="pa-flex-1">
             <h1 className="pa-text-2xl pa-font-bold">Event Attendance</h1>
         </div>
@@ -141,5 +142,4 @@ export default function AttendanceRoster() {
     </div>
   )
 }
-
 

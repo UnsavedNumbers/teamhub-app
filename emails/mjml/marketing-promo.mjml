@@ -1,0 +1,53 @@
+<mjml>
+  <mj-head>
+    <mj-title>{{subject}}</mj-title>
+    <mj-attributes>
+      <mj-all font-family="Arial, sans-serif" />
+      <mj-text font-size="14px" color="#333333" line-height="1.5" />
+      <mj-section background-color="#ffffff" />
+    </mj-attributes>
+    <mj-style>
+      .button {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        padding: 12px 24px !important;
+        text-decoration: none !important;
+        border-radius: 6px !important;
+        display: inline-block !important;
+        font-weight: 600 !important;
+      }
+      .footer-text {
+        color: #64748b !important;
+        font-size: 12px !important;
+      }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f8fafc">
+    <mj-include path="partials/header.mjml" />
+
+    <mj-section padding="40px 20px">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold" color="#1e293b" padding-bottom="16px">
+          {{promo_title}}
+        </mj-text>
+        {{#if video_thumbnail_url}}
+        <mj-image src="{{video_thumbnail_url}}" href="{{video_url}}" width="500px" alt="Watch Video" border-radius="8px" padding-bottom="24px" />
+        {{/if}}
+        <mj-text padding-bottom="16px">
+          {{body_paragraph_1}}
+        </mj-text>
+        <mj-text padding-bottom="16px">
+          {{body_paragraph_2}}
+        </mj-text>
+        <mj-text padding-bottom="24px">
+          {{body_paragraph_3}}
+        </mj-text>
+        <mj-button css-class="button" href="{{action_url}}" padding="16px 24px">
+          {{action_button_text}}
+        </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <mj-include path="partials/footer.mjml" />
+  </mj-body>
+</mjml>

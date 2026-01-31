@@ -13,13 +13,45 @@ if (!supabaseUrl || !supabaseServiceRoleKey) {
 
 const stripe = stripeSecretKey ? new Stripe(stripeSecretKey, { apiVersion: "2024-06-20" }) : null
 
+// ---- CORS helpers ----
+const ALLOWED_ORIGINS = new Set([
+  "http://localhost:5173",
+  // add prod origins here, e.g. "https://app.yourdomain.com"
+])
+
+function corsHeaders(req: Request) {
+  const origin = req.headers.get("origin") ?? ""
+  const allowOrigin = ALLOWED_ORIGINS.has(origin) ? origin : ""
+
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Vary": "Origin",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  }
+}
+
+function json(req: Request, body: unknown, status = 200) {
+  const cors = corsHeaders(req)
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...cors, "Content-Type": "application/json" },
+  })
+}
+// ----------------------
+
 serve(async (req) => {
+  // ✅ Preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders(req) })
+  }
+
   if (!stripe) {
-    return new Response(JSON.stringify({ error: "Stripe not configured" }), { status: 500 })
+    return json(req, { error: "Stripe not configured" }, 500)
   }
 
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 })
+    return json(req, { error: "Method not allowed" }, 405)
   }
 
   const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
@@ -31,20 +63,20 @@ serve(async (req) => {
   let payload: any
   try {
     payload = await req.json()
-  } catch (_err) {
-    return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400 })
+  } catch {
+    return json(req, { error: "Invalid JSON" }, 400)
   }
 
   const organizationId = payload?.organization_id as string | undefined
   const returnUrl = payload?.return_url as string | undefined
 
   if (!organizationId || !returnUrl) {
-    return new Response(JSON.stringify({ error: "Missing required parameters" }), { status: 400 })
+    return json(req, { error: "Missing required parameters" }, 400)
   }
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 })
+    return json(req, { error: "Unauthorized" }, 401)
   }
 
   const { data: memberships, error: membershipError } = await supabase.rpc("get_user_organizations", {
@@ -52,12 +84,19 @@ serve(async (req) => {
   })
 
   if (membershipError) {
-    return new Response(JSON.stringify({ error: membershipError.message }), { status: 400 })
+    return json(req, { error: membershipError.message }, 400)
   }
 
-  const hasAdminRole = (memberships as any[] | null)?.some((m) => m.organization_id === organizationId && m.role === "org_admin")
+  // ✅ FIX: your RPC returns { org_id, org_name, roles: ["org_admin", ...] }
+  const hasAdminRole = (memberships as any[] | null)?.some(
+    (m) =>
+      m.org_id === organizationId &&
+      Array.isArray(m.roles) &&
+      m.roles.includes("org_admin"),
+  )
+
   if (!hasAdminRole) {
-    return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 })
+    return json(req, { error: "Forbidden" }, 403)
   }
 
   const { data: org, error: orgError } = await supabase
@@ -67,7 +106,7 @@ serve(async (req) => {
     .maybeSingle()
 
   if (orgError || !org?.stripe_customer_id) {
-    return new Response(JSON.stringify({ error: "Stripe customer missing" }), { status: 400 })
+    return json(req, { error: "Stripe customer missing" }, 400)
   }
 
   const portal = await stripe.billingPortal.sessions.create({
@@ -75,5 +114,5 @@ serve(async (req) => {
     return_url: returnUrl,
   })
 
-  return new Response(JSON.stringify({ portal_url: portal.url }), { status: 200 })
+  return json(req, { portal_url: portal.url }, 200)
 })

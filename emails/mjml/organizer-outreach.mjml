@@ -1,0 +1,52 @@
+<mjml>
+  <mj-head>
+    <mj-title>{{subject}}</mj-title>
+    <mj-attributes>
+      <mj-all font-family="Arial, sans-serif" />
+      <mj-text font-size="14px" color="#333333" line-height="1.5" />
+      <mj-section background-color="#ffffff" />
+    </mj-attributes>
+    <mj-style>
+      .footer-text {
+        color: #64748b !important;
+        font-size: 12px !important;
+      }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f8fafc">
+    <mj-include path="partials/header.mjml" />
+
+    <mj-section padding="40px 20px">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold" color="#1e293b" padding-bottom="16px">
+          Hi {{recipient_name}},
+        </mj-text>
+        <mj-text padding-bottom="16px">
+          My name is {{sender_name}} from {{organization_name}}.
+        </mj-text>
+        <mj-text padding-bottom="16px">
+          We are looking to partner with local organizations like {{target_organization}} to help streamline youth sports management.
+        </mj-text>
+        <mj-text padding-bottom="16px">
+          I'd love to chat briefly about how we can support your teams this season. Are you available for a quick call next week?
+        </mj-text>
+        <mj-text padding-top="24px">
+          Best regards,<br>
+          {{sender_name}}<br>
+          {{sender_title}}<br>
+          {{organization_name}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="24px 20px">
+      <mj-column>
+        <mj-text css-class="footer-text">
+          {{organization_address}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-include path="partials/footer.mjml" />
+  </mj-body>
+</mjml>
