@@ -59,6 +59,7 @@ export default function CreateEvent() {
   const [errorDetail, setErrorDetail] = useState<string | null>(null)
   const [showLocationDetails, setShowLocationDetails] = useState(false)
   const [showRecurring, setShowRecurring] = useState(false)
+  const [draftSaved, setDraftSaved] = useState(false)
 
   const t = useT()
   const { context, isReady } = useUserContext()
@@ -201,52 +202,60 @@ export default function CreateEvent() {
     name: 'ticketing.ticket_types',
   })
 
-  // Clear any saved draft when navigating away (route change/unmount)
-  // This keeps drafts only for tab switching / browser discard scenarios.
+  // Note: We do NOT clear saved drafts on unmount - users should be able to navigate
+  // away to look up information and come back to their form. Drafts expire after 2 hours
+  // or are cleared on successful submit.
+
+  // Save form data when page visibility changes (user switches tabs) or before unload
   useEffect(() => {
-    return () => {
+    const saveFormData = () => {
       try {
-        sessionStorage.removeItem(STORAGE_KEY)
-      } catch {
-        // Ignore cleanup errors
+        // Skip saving until we've restored initial state
+        if (!hasRestoredRef.current) return
+
+        // Only save if form has actual data (not just defaults)
+        const hasData = formValues.title || formValues.team_id || formValues.start_time
+        if (!hasData) {
+          sessionStorage.removeItem(STORAGE_KEY)
+          return
+        }
+
+        const dataToSave = {
+          ...formValues,
+          _uiState: {
+            showLocationDetails,
+            showRecurring
+          },
+          _savedAt: Date.now()
+        }
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave))
+        setDraftSaved(true)
+        setTimeout(() => setDraftSaved(false), 2000)
+      } catch (err) {
+        console.error('Failed to save form data:', err)
       }
     }
-  }, [])
 
-  // Save form data when page visibility changes (user switches tabs)
-  useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        // Save when user switches away
-        try {
-          // Skip saving until we've restored initial state
-          if (!hasRestoredRef.current) return
-
-          // Only save if form has actual data (not just defaults)
-          const hasData = formValues.title || formValues.team_id || formValues.start_time
-          if (!hasData) {
-            sessionStorage.removeItem(STORAGE_KEY)
-            return
-          }
-
-          const dataToSave = {
-            ...formValues,
-            _uiState: {
-              showLocationDetails,
-              showRecurring
-            },
-            _savedAt: Date.now()
-          }
-          sessionStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave))
-        } catch (err) {
-          console.error('Failed to save form data on visibility change:', err)
-        }
+        saveFormData()
       }
+    }
+
+    const handleBeforeUnload = () => {
+      saveFormData()
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    
+    // Also save periodically (every 30 seconds) while user is working
+    const autoSaveInterval = setInterval(saveFormData, 30000)
+    
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      clearInterval(autoSaveInterval)
     }
   }, [formValues, showLocationDetails, showRecurring])
 
@@ -435,6 +444,42 @@ export default function CreateEvent() {
     setErrorDetail(null)
     
     try {
+      // Normalize times and satisfy DB constraint (end_time > start_time)
+      const start = new Date(data.start_time)
+      if (isNaN(start.getTime())) throw new Error('Invalid start time')
+
+      // If no end_time provided, set to end of start day (23:59:59.999) local
+      const end = data.end_time
+        ? new Date(data.end_time)
+        : (() => {
+            const dt = new Date(start)
+            dt.setHours(23, 59, 59, 999)
+            return dt
+          })()
+      if (end <= start) {
+        setError(t('admin.events.validation.endAfterStart' as any) || 'End time must be after start time.')
+        setSaving(false)
+        return
+      }
+      const arrival = data.arrival_time ? new Date(data.arrival_time) : null
+      if (arrival && arrival >= start) {
+        setError(t('admin.events.validation.arrivalBeforeStart' as any) || 'Arrival time must be before start time.')
+        setSaving(false)
+        return
+      }
+
+      // Ticketing sales window defaults
+      const salesStartAt = data.ticketing?.sales_start_at
+        ? new Date(data.ticketing.sales_start_at)
+        : null
+      const salesEndAt = data.ticketing?.sales_end_at
+        ? new Date(data.ticketing.sales_end_at)
+        : null
+      const resolvedSalesEnd =
+        data.ticketing?.is_ticketed && !salesEndAt
+          ? end
+          : salesEndAt || null
+
       // 1. Insert Event
       type EventInsert = Database['public']['Tables']['events']['Insert']
       const eventInsertData = {
@@ -442,9 +487,9 @@ export default function CreateEvent() {
         type: data.type,
         team_id: data.team_id,
         season_id: data.season_id,
-        start_time: new Date(data.start_time).toISOString(),
-        end_time: data.end_time ? new Date(data.end_time).toISOString() : new Date(data.start_time).toISOString(),
-        arrival_time: data.arrival_time ? new Date(data.arrival_time).toISOString() : null,
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        arrival_time: arrival ? arrival.toISOString() : null,
         timezone: data.timezone,
         notes: data.notes,
         uniform_notes: data.uniform_notes,
@@ -513,7 +558,7 @@ export default function CreateEvent() {
           title: data.title,
           description: data.notes || null,
           starts_at: new Date(data.start_time).toISOString(),
-          ends_at: new Date(data.end_time).toISOString(),
+          ends_at: end.toISOString(),
           timezone: data.timezone,
           venue_name: data.location.venue_name?.trim() || null,
           venue_address_line1: data.location.address_line1?.trim() || null,
@@ -523,8 +568,8 @@ export default function CreateEvent() {
           venue_country: 'US',
           venue_is_virtual: data.location.is_virtual,
           venue_virtual_link: data.location.virtual_link?.trim() || null,
-          sales_start_at: data.ticketing.sales_start_at ? new Date(data.ticketing.sales_start_at).toISOString() : null,
-          sales_end_at: data.ticketing.sales_end_at ? new Date(data.ticketing.sales_end_at).toISOString() : null,
+          sales_start_at: salesStartAt ? salesStartAt.toISOString() : null,
+          sales_end_at: resolvedSalesEnd ? resolvedSalesEnd.toISOString() : null,
           status: data.ticketing.status as Database['public']['Enums']['ticketed_event_status'],
         }
 
@@ -674,11 +719,18 @@ export default function CreateEvent() {
       />
       <div className="pa-form-container">
         <Card>
-          <form onSubmit={handleSubmit(onSubmit)}>
+          <form onSubmit={handleSubmit(onSubmit, (errors) => console.error('Form validation errors:', errors))}>
             {error && (
               <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>
                 <div>{error}</div>
                 {errorDetail && <div className="pa-mt-2 pa-text-muted" style={{ fontSize: '0.875rem' }}>{errorDetail}</div>}
+              </div>
+            )}
+            
+            {draftSaved && (
+              <div className="pa-mb-4 pa-flex pa-items-center pa-gap-2 pa-text-muted" style={{ fontSize: '0.875rem' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>check_circle</span>
+                <span>Draft saved</span>
               </div>
             )}
             
@@ -971,10 +1023,9 @@ export default function CreateEvent() {
                       rules={{
                         validate: (value) => {
                           if (value) {
-                            const today = new Date()
-                            today.setHours(0, 0, 0, 0)
-                            if (new Date(value) < today) {
-                              return t('admin.events.ticketing.salesWindow.startNotBeforeToday' as any)
+                            const now = new Date()
+                            if (new Date(value) < now) {
+                              return t('admin.events.ticketing.salesWindow.startNotBeforeNow' as any)
                             }
                           }
                           return true
@@ -984,10 +1035,12 @@ export default function CreateEvent() {
                         <DatePicker
                           label={t('admin.events.ticketing.salesWindow.startDate' as any)}
                           value={field.value ? field.value.split('T')[0] : ''}
+                          minValue={new Date().toISOString().slice(0, 10)}
                           onChange={(date) => {
                             const time = field.value?.split('T')[1] || '00:00'
                             field.onChange(`${date}T${time}`)
                           }}
+                          error={errors.ticketing?.sales_start_at?.message}
                         />
                       )}
                     />
@@ -1003,6 +1056,7 @@ export default function CreateEvent() {
                               const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
                               field.onChange(`${date}T${time}`)
                             }}
+                            error={errors.ticketing?.sales_start_at?.message}
                           />
                         )}
                       />
@@ -1027,6 +1081,7 @@ export default function CreateEvent() {
                         <DatePicker
                           label={t('admin.events.ticketing.salesWindow.endDate' as any)}
                           value={field.value ? field.value.split('T')[0] : ''}
+                          maxValue={watch('start_time')?.split('T')[0]}
                           onChange={(date) => {
                             const time = field.value?.split('T')[1] || '23:59'
                             field.onChange(`${date}T${time}`)
@@ -1290,7 +1345,13 @@ export default function CreateEvent() {
             >
               Cancel
             </OrgAdminButton>
-            <Button type="submit" loading={saving} className="pa-form-submit-btn w-full sm:w-auto">Create Event</Button>
+            <Button
+              type="submit"
+              loading={saving}
+              className="pa-form-submit-btn w-full sm:w-auto"
+            >
+              Create Event
+            </Button>
           </div>
         </form>
       </Card>

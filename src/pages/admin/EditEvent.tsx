@@ -38,6 +38,12 @@ interface Season { id: string; name: string; team_id: string }
 
 const supabaseAny = supabase as any
 
+/** Format Date for datetime-local input (YYYY-MM-DDTHH:mm) */
+function toDatetimeLocal(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 export default function EditEvent() {
   const { id: eventId } = useParams<{ id: string }>()
   const [teams, setTeams] = useState<Team[]>([])
@@ -1104,12 +1110,22 @@ export default function EditEvent() {
                     <Controller
                       name="ticketing.sales_start_at"
                       control={control}
+                      rules={{
+                        validate: (value) => {
+                          if (value && new Date(value) < new Date()) {
+                            return t('admin.events.ticketing.salesWindow.startNotBeforeNow')
+                          }
+                          return true
+                        }
+                      }}
                       render={({ field }) => (
                         <Input
                           {...field}
                           type="datetime-local"
                           label={t('admin.events.ticketing.salesWindow.start')}
                           placeholder={t('admin.events.ticketing.salesWindow.optional')}
+                          min={toDatetimeLocal(new Date())}
+                          error={errors.ticketing?.sales_start_at?.message}
                         />
                       )}
                     />
@@ -1122,6 +1138,10 @@ export default function EditEvent() {
                           if (startAt && value && new Date(value) <= new Date(startAt)) {
                             return t('admin.events.ticketing.salesWindow.endAfterStart')
                           }
+                          const eventStart = watch('start_time')
+                          if (eventStart && value && new Date(value) > new Date(eventStart)) {
+                            return t('admin.events.ticketing.salesWindow.endNotAfterEventStart')
+                          }
                           return true
                         }
                       }}
@@ -1131,6 +1151,7 @@ export default function EditEvent() {
                           type="datetime-local"
                           label={t('admin.events.ticketing.salesWindow.end')}
                           placeholder={t('admin.events.ticketing.salesWindow.optional')}
+                          max={watch('start_time') || undefined}
                           error={errors.ticketing?.sales_end_at?.message}
                         />
                       )}
