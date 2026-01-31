@@ -82,6 +82,7 @@ DO $$
 DECLARE
   sport_count INT;
   field_count INT;
+  rec RECORD;
 BEGIN
   SELECT COUNT(DISTINCT sport_code) INTO sport_count FROM sport_field_definitions;
   SELECT COUNT(*) INTO field_count FROM sport_field_definitions;

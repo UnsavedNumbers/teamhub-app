@@ -41,11 +41,19 @@ CREATE INDEX IF NOT EXISTS idx_athlete_sport_profiles_sport
 CREATE INDEX IF NOT EXISTS idx_athlete_sport_profiles_org_sport 
   ON athlete_sport_profiles(org_id, sport_code);
 
--- Add trigger for updated_at
-CREATE TRIGGER update_athlete_sport_profiles_updated_at
-  BEFORE UPDATE ON athlete_sport_profiles
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+-- Add trigger for updated_at (idempotent)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger 
+    WHERE tgname = 'update_athlete_sport_profiles_updated_at'
+  ) THEN
+    CREATE TRIGGER update_athlete_sport_profiles_updated_at
+      BEFORE UPDATE ON athlete_sport_profiles
+      FOR EACH ROW
+      EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+END $$;
 
 -- Enable RLS (policies will be added in a later migration)
 ALTER TABLE athlete_sport_profiles ENABLE ROW LEVEL SECURITY;

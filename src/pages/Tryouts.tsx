@@ -191,11 +191,11 @@ export default function Tryouts() {
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4 sm:mb-6 break-words">{selectedTryout.title}</p>
               
               <div className="mb-4 sm:mb-6">
-                <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Select Athlete</label>
+                <label className="form-label">Select Athlete</label>
                 <select
                   value={selectedChild}
                   onChange={(e) => setSelectedChild(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2.5 text-sm"
+                  className="form-select"
                 >
                   <option value="">Choose athlete</option>
                   {children.map(c => (

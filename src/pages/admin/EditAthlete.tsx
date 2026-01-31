@@ -377,7 +377,11 @@ export default function EditAthlete() {
             }
 
             // Then update sports
-            const { error: sportsError } = await updateAthleteSports(athleteId, context.orgId, selectedSports)
+            const { error: sportsError } = await updateAthleteSports(
+              athleteId,
+              athlete?.org_id || context.orgId,
+              selectedSports
+            )
             if (sportsError) throw sportsError
 
             // Success - navigate back to athletes list

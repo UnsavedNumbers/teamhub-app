@@ -11,6 +11,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAthleteUniversalFields, useHeightInput, useWeightInput } from '../../hooks/useAthleteUniversalFields'
 import type { Athlete } from '../../types/family'
 import type { EmergencyContact } from '../../types/athleteSportProfiles'
+import Button from '../portal/Button'
 
 interface UniversalFieldsFormProps {
   /** Athlete data */
@@ -82,16 +83,7 @@ export function UniversalFieldsForm({
   }, [updateFields, heightInput.heightCm, weightInput.weightKg, shoeSize, shoeSizeSystem, shoeWidth, tshirtSize, shortsSize, dominantHand])
 
   return (
-    <div className="universal-fields-form">
-      {/* Header */}
-      <div className="form-header">
-        <div className="form-header-content">
-          <h2 className="form-title">Physical Information</h2>
-          <p className="form-subtitle">
-            Basic measurements and sizes for {athlete.first_name}
-          </p>
-        </div>
-      </div>
+    <div className="portal-form universal-fields-form">
 
       {/* Error banner */}
       {error && (
@@ -105,9 +97,9 @@ export function UniversalFieldsForm({
       <div className="form-fields">
         {/* Height */}
         <div className="field-group">
-          <div className="field-label-row">
-            <label className="field-label">Height</label>
-            <div className="field-unit-toggle">
+          <div className="form-row">
+            <label className="form-label">Height</label>
+            <div className="unit-toggle">
               <button
                 type="button"
                 onClick={() => setHeightUnit('imperial')}
@@ -126,8 +118,8 @@ export function UniversalFieldsForm({
           </div>
 
           {heightUnit === 'imperial' ? (
-            <div className="field-input-group">
-              <div className="field-input-wrapper">
+            <div className="form-row two-col">
+              <div className="form-field form-field--small">
                 <input
                   type="number"
                   value={heightInput.feet || ''}
@@ -135,14 +127,14 @@ export function UniversalFieldsForm({
                     parseInt(e.target.value) || 0,
                     heightInput.inches
                   )}
-                  className="field-input"
+                  className="form-input"
                   placeholder="0"
                   min="0"
                   max="8"
                 />
-                <span className="field-input-suffix">ft</span>
+                <span className="field-unit">ft</span>
               </div>
-              <div className="field-input-wrapper">
+              <div className="form-field form-field--small">
                 <input
                   type="number"
                   value={heightInput.inches || ''}
@@ -150,36 +142,36 @@ export function UniversalFieldsForm({
                     heightInput.feet,
                     parseInt(e.target.value) || 0
                   )}
-                  className="field-input"
+                  className="form-input"
                   placeholder="0"
                   min="0"
                   max="11"
                 />
-                <span className="field-input-suffix">in</span>
+                <span className="field-unit">in</span>
               </div>
             </div>
           ) : (
-            <div className="field-input-wrapper">
+            <div className="form-field form-field--medium">
               <input
                 type="number"
                 value={heightInput.heightCm || ''}
                 onChange={(e) => heightInput.setHeightMetric(parseFloat(e.target.value) || null)}
-                className="field-input"
+                className="form-input"
                 placeholder="0"
                 min="50"
                 max="250"
               />
-              <span className="field-input-suffix">cm</span>
+              <span className="field-unit">cm</span>
             </div>
-          )}
+          )} 
           <p className="field-help">Used for uniform sizing and equipment fitting</p>
         </div>
 
         {/* Weight */}
         <div className="field-group">
-          <div className="field-label-row">
-            <label className="field-label">Weight</label>
-            <div className="field-unit-toggle">
+          <div className="form-row">
+            <label className="form-label">Weight</label>
+            <div className="unit-toggle">
               <button
                 type="button"
                 onClick={() => setWeightUnit('imperial')}
@@ -197,20 +189,20 @@ export function UniversalFieldsForm({
             </div>
           </div>
 
-          <div className="field-input-wrapper">
+          <div>
             {weightUnit === 'imperial' ? (
               <>
                 <input
                   type="number"
                   value={weightInput.weightLbs || ''}
                   onChange={(e) => weightInput.setWeightImperial(parseFloat(e.target.value) || 0)}
-                  className="field-input"
+                  className="form-input form-field--small"
                   placeholder="0"
                   min="0"
                   max="500"
                   step="0.1"
                 />
-                <span className="field-input-suffix">lbs</span>
+                <span className="field-unit">lbs</span>
               </>
             ) : (
               <>
@@ -218,13 +210,13 @@ export function UniversalFieldsForm({
                   type="number"
                   value={weightInput.weightKg || ''}
                   onChange={(e) => weightInput.setWeightMetric(parseFloat(e.target.value) || null)}
-                  className="field-input"
+                  className="form-input form-field--small"
                   placeholder="0"
                   min="0"
                   max="200"
                   step="0.1"
                 />
-                <span className="field-input-suffix">kg</span>
+                <span className="field-unit">kg</span>
               </>
             )}
           </div>
@@ -233,45 +225,51 @@ export function UniversalFieldsForm({
 
         {/* Shoe Size */}
         <div className="field-group">
-          <label className="field-label">Shoe Size</label>
-          <div className="field-input-group">
-            <input
-              type="number"
-              value={shoeSize || ''}
-              onChange={(e) => setShoeSize(parseFloat(e.target.value) || null)}
-              className="field-input"
-              placeholder="Size"
-              step="0.5"
-            />
-            <select
-              value={shoeSizeSystem || 'us'}
-              onChange={(e) => setShoeSizeSystem(e.target.value as 'us' | 'eu' | 'uk')}
-              className="field-select"
-            >
-              <option value="us">US</option>
-              <option value="eu">EU</option>
-              <option value="uk">UK</option>
-            </select>
-            <select
-              value={shoeWidth || 'standard'}
-              onChange={(e) => setShoeWidth(e.target.value as 'narrow' | 'standard' | 'wide')}
-              className="field-select"
-            >
-              <option value="narrow">Narrow</option>
-              <option value="standard">Standard</option>
-              <option value="wide">Wide</option>
-            </select>
+          <label className="form-label">Shoe Size</label>
+          <div className="form-row two-col">
+            <div className="form-field form-field--small">
+              <input
+                type="number"
+                value={shoeSize || ''}
+                onChange={(e) => setShoeSize(parseFloat(e.target.value) || null)}
+                className="form-input"
+                placeholder="Size"
+                step="0.5"
+              />
+            </div>
+            <div className="form-field">
+              <select
+                value={shoeSizeSystem || 'us'}
+                onChange={(e) => setShoeSizeSystem(e.target.value as 'us' | 'eu' | 'uk')}
+                className="form-select"
+              >
+                <option value="us">US</option>
+                <option value="eu">EU</option>
+                <option value="uk">UK</option>
+              </select>
+            </div>
+            <div className="form-field">
+              <select
+                value={shoeWidth || 'standard'}
+                onChange={(e) => setShoeWidth(e.target.value as 'narrow' | 'standard' | 'wide')}
+                className="form-select"
+              >
+                <option value="narrow">Narrow</option>
+                <option value="standard">Standard</option>
+                <option value="wide">Wide</option>
+              </select>
+            </div>
           </div>
           <p className="field-help">Important for proper footwear fitting</p>
-        </div>
+        </div> 
 
         {/* Clothing Sizes */}
         <div className="field-group">
-          <label className="field-label">T-Shirt Size</label>
+          <label className="form-label">T-Shirt Size</label>
           <select
             value={tshirtSize || ''}
             onChange={(e) => setTshirtSize(e.target.value || null)}
-            className="field-select"
+            className="form-select"
           >
             <option value="">Select size</option>
             <option value="YXS">Youth XS</option>
@@ -289,11 +287,11 @@ export function UniversalFieldsForm({
         </div>
 
         <div className="field-group">
-          <label className="field-label">Shorts Size</label>
+          <label className="form-label">Shorts Size</label>
           <select
             value={shortsSize || ''}
             onChange={(e) => setShortsSize(e.target.value || null)}
-            className="field-select"
+            className="form-select"
           >
             <option value="">Select size</option>
             <option value="YXS">Youth XS</option>
@@ -312,40 +310,40 @@ export function UniversalFieldsForm({
 
         {/* Dominant Hand */}
         <div className="field-group">
-          <label className="field-label">Dominant Hand</label>
-          <div className="field-radio-group">
-            <label className="field-radio-label">
+          <label className="form-label">Dominant Hand</label>
+          <div className="radio-row">
+            <label className="form-radio-label">
               <input
                 type="radio"
                 name="dominant_hand"
                 value="left"
                 checked={dominantHand === 'left'}
                 onChange={(e) => setDominantHand(e.target.value as 'left')}
-                className="field-radio-input"
+                className="form-radio"
               />
-              <span className="field-radio-text">Left</span>
+              <span>Left</span>
             </label>
-            <label className="field-radio-label">
+            <label className="form-radio-label">
               <input
                 type="radio"
                 name="dominant_hand"
                 value="right"
                 checked={dominantHand === 'right'}
                 onChange={(e) => setDominantHand(e.target.value as 'right')}
-                className="field-radio-input"
+                className="form-radio"
               />
-              <span className="field-radio-text">Right</span>
+              <span>Right</span>
             </label>
-            <label className="field-radio-label">
+            <label className="form-radio-label">
               <input
                 type="radio"
                 name="dominant_hand"
                 value="ambidextrous"
                 checked={dominantHand === 'ambidextrous'}
                 onChange={(e) => setDominantHand(e.target.value as 'ambidextrous')}
-                className="field-radio-input"
+                className="form-radio"
               />
-              <span className="field-radio-text">Ambidextrous</span>
+              <span>Ambidextrous</span>
             </label>
           </div>
           <p className="field-help">Helps with equipment selection and positioning</p>
@@ -355,21 +353,11 @@ export function UniversalFieldsForm({
       {/* Actions */}
       <div className="form-actions">
         {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={updating}
-            className="btn-secondary"
-          >
+          <Button variant="secondary" onClick={onCancel} disabled={updating}>
             Cancel
-          </button>
+          </Button>
         )}
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={updating || !hasChanges}
-          className="btn-primary"
-        >
+        <Button variant="primary" onClick={handleSave} disabled={updating || !hasChanges}>
           {updating ? (
             <>
               <span className="btn-spinner"></span>
@@ -381,7 +369,7 @@ export function UniversalFieldsForm({
               <span>Save Information</span>
             </>
           )}
-        </button>
+        </Button>
       </div>
 
       {/* Unsaved changes warning */}

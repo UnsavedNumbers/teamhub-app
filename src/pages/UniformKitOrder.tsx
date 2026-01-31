@@ -368,7 +368,7 @@ export default function UniformKitOrder() {
                     return (
                       <div key={item.id} className="flex items-center justify-between py-3 border-b border-slate-100 dark:border-slate-800 last:border-0">
                         <div className="flex-1">
-                          <label className="block text-sm font-medium text-slate-900 dark:text-white mb-1">
+                          <label className="form-label">
                             {item.name}
                             {item.required && (
                               <span className="text-red-500 ml-1">*</span>
@@ -379,7 +379,7 @@ export default function UniformKitOrder() {
                               value={selectedSize}
                               onChange={(e) => handleSizeChange(child.id, item.id, e.target.value)}
                               disabled={isLocked}
-                              className="mt-1 block w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="form-select"
                             >
                               <option value="">Select size...</option>
                               {sizeOptions.map((size) => (
@@ -395,7 +395,7 @@ export default function UniformKitOrder() {
                               onChange={(e) => handleSizeChange(child.id, item.id, e.target.value)}
                               disabled={isLocked}
                               placeholder="Enter size..."
-                              className="mt-1 block w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="form-input"
                             />
                           )}
                         </div>

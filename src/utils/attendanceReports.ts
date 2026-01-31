@@ -133,7 +133,7 @@ export async function generateAtRiskPlayersPDF(
     
     // Headers
     doc.setFontSize(9)
-    doc.setFont(undefined, 'bold')
+    doc.setFont('helvetica', 'bold')
     doc.text('Name', 14, yPos)
     doc.text('Teams', 60, yPos)
     doc.text('Rate', 120, yPos)
@@ -141,7 +141,7 @@ export async function generateAtRiskPlayersPDF(
     doc.text('Last Attended', 160, yPos)
     
     yPos += lineHeight
-    doc.setFont(undefined, 'normal')
+    doc.setFont('helvetica', 'normal')
     
     // Data rows
     for (const person of atRisk.slice(0, 25)) { // Limit to 25 per page

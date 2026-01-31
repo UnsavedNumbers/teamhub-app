@@ -52,6 +52,7 @@ export default function Settings() {
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
   const t = useT()
+  const translator = t as unknown as (key: string) => string
   const { locale, setLocale } = useLocale()
   const isMountedRef = useRef(true)
   const emailInputRef = useRef<HTMLInputElement>(null)
@@ -139,11 +140,11 @@ export default function Settings() {
     const { data: prefs } = await getUserPreferences(user.id)
     preferencesRef.current = prefs || {}
     const savedGroups = prefs?.notifications_v2?.[context.orgId]?.[activeRole]
-    const mergedGroups = mergeNotificationPreferences(savedGroups as NotificationGroup[] | undefined, activeRole, t)
+    const mergedGroups = mergeNotificationPreferences(savedGroups as NotificationGroup[] | undefined, activeRole, translator)
     setNotificationGroups(mergedGroups)
 
     setLoading(false)
-  }, [context, isReady, user?.id, activeRole, t])
+  }, [context, isReady, user?.id, activeRole, translator])
 
   useEffect(() => {
     if (isReady) fetchData()
@@ -767,26 +768,26 @@ export default function Settings() {
               </div>
               <div className="p-6 space-y-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                  <label className="form-label">
                     New Password
                   </label>
                   <input
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                    className="form-input"
                     placeholder="Enter new password"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                  <label className="form-label">
                     Confirm Password
                   </label>
                   <input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                    className="form-input"
                     placeholder="Confirm new password"
                   />
                 </div>
@@ -861,7 +862,7 @@ export default function Settings() {
 
                   {/* Email Input */}
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                    <label className="form-label">
                       {t('admin.athletes.guardians.emailLabel')}
                     </label>
                     <input
@@ -875,11 +876,7 @@ export default function Settings() {
                       }}
                       placeholder={t('admin.athletes.guardians.emailPlaceholder')}
                       disabled={isInvitingGuardian}
-                      className={`w-full px-4 py-2.5 border rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-base ${
-                        inviteGuardianError && emailTouched 
-                          ? 'border-red-500 focus:ring-red-500' 
-                          : 'border-slate-200 dark:border-slate-700 focus:ring-[var(--org-btn-primary-bg)]'
-                      } focus:outline-none focus:ring-2`}
+                      className={`form-input ${inviteGuardianError && emailTouched ? 'border-red-500 focus:ring-red-500' : ''}`}
                       autoFocus
                     />
                     {inviteGuardianError && emailTouched && (

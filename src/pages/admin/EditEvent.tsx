@@ -35,6 +35,8 @@ import {
 interface Team { id: string; name: string }
 interface Season { id: string; name: string; team_id: string }
 
+const supabaseAny = supabase as any
+
 export default function EditEvent() {
   const { id: eventId } = useParams<{ id: string }>()
   const [teams, setTeams] = useState<Team[]>([])
@@ -985,7 +987,7 @@ export default function EditEvent() {
             
              // Distribute notifications for cancellation
              const { distributeEventCancelNotifications } = await import('../../data/services/notificationDistribution')
-             const { data: eventData } = await supabase.from('events').select('title, team_id, org_id, start_time').eq('id', eventId).single()
+             const { data: eventData } = await supabaseAny.from('events').select('title, team_id, org_id, start_time').eq('id', eventId).single()
              
              if (eventData) {
                distributeEventCancelNotifications({
@@ -1031,4 +1033,3 @@ export default function EditEvent() {
     </div>
   )
 }
-

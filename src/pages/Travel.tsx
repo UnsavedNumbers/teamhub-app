@@ -419,7 +419,7 @@ export default function Travel() {
                           placeholder="Search..." 
                           value={searchQuery}
                           onChange={e => setSearchQuery(e.target.value)}
-                          className="pl-9 pr-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm w-40 sm:w-64 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent outline-none"
+                          className="form-input pl-9 pr-4 w-40 sm:w-64"
                        />
                        <Icon name="search" className="absolute left-3 top-2.5 text-slate-400 text-sm" />
                    </div>
@@ -438,22 +438,22 @@ export default function Travel() {
                 <Card className="mb-6 p-4 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="flex flex-wrap gap-4">
                         <div className="flex-1 min-w-[200px]">
-                            <label className="text-xs font-bold uppercase text-slate-400 mb-1 block">Season</label>
+                            <label className="form-label">Season</label>
                             <select 
                                 value={seasonFilter} 
                                 onChange={e => setSeasonFilter(e.target.value)}
-                                className="w-full rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2 text-sm"
+                                className="form-select"
                             >
                                 <option value="">All Seasons</option>
                                 {seasonOptions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         </div>
                         <div className="flex-1 min-w-[200px]">
-                            <label className="text-xs font-bold uppercase text-slate-400 mb-1 block">Team</label>
+                            <label className="form-label">Team</label>
                             <select 
                                 value={teamFilter} 
                                 onChange={e => setTeamFilter(e.target.value)}
-                                className="w-full rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2 text-sm"
+                                className="form-select"
                             >
                                 <option value="">All Teams</option>
                                 {teamOptions.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}

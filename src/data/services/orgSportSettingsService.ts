@@ -20,6 +20,8 @@ interface ServiceResponse<T> {
     error: Error | null
 }
 
+const supabaseAny = supabase as any
+
 /**
  * Get org sport profile settings for a specific sport
  */
@@ -36,7 +38,7 @@ export async function getOrgSportSettings(
             throw new Error('sportCode is required')
         }
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAny
             .from('org_sport_profile_settings')
             .select('*')
             .eq('org_id', orgId)
@@ -51,7 +53,7 @@ export async function getOrgSportSettings(
             throw error
         }
 
-        return { data, error: null }
+        return { data: data as OrgSportProfileSettings | null, error: null }
     } catch (err) {
         console.error('[OrgSportSettingsService] Error getting org sport settings:', err)
         return { data: null, error: err as Error }
@@ -70,7 +72,7 @@ export async function getAllOrgSportSettings(
             throw new Error('orgId is required')
         }
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAny
             .from('org_sport_profile_settings')
             .select('*')
             .eq('org_id', orgId)
@@ -78,7 +80,7 @@ export async function getAllOrgSportSettings(
 
         if (error) throw error
 
-        return { data: data || [], error: null }
+        return { data: (data as OrgSportProfileSettings[] | null) || [], error: null }
     } catch (err) {
         console.error('[OrgSportSettingsService] Error getting all org sport settings:', err)
         return { data: null, error: err as Error }
@@ -121,7 +123,7 @@ export async function upsertOrgSportSettings(
 
         // Upsert (insert or update based on unique constraint)
         // Version will be auto-incremented by database trigger
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAny
             .from('org_sport_profile_settings')
             .upsert(upsertData, {
                 onConflict: 'org_id,sport_code',
@@ -133,7 +135,7 @@ export async function upsertOrgSportSettings(
 
         console.log(`[OrgSportSettingsService] Upserted org sport settings for org ${orgId}, sport ${sportCode}`)
 
-        return { data, error: null }
+        return { data: data as OrgSportProfileSettings | null, error: null }
     } catch (err) {
         console.error('[OrgSportSettingsService] Error upserting org sport settings:', err)
         return { data: null, error: err as Error }
@@ -213,7 +215,11 @@ export async function removeFieldOverride(
 
         // If no overrides remain, delete the entire settings row
         if (Object.keys(remainingOverrides).length === 0) {
-            return await deleteOrgSportSettings(orgId, sportCode)
+            const deleteResult = await deleteOrgSportSettings(orgId, sportCode)
+            if (deleteResult.error) {
+                return { data: null, error: deleteResult.error }
+            }
+            return { data: null, error: null }
         }
 
         return await upsertOrgSportSettings(orgId, sportCode, remainingOverrides)
@@ -240,7 +246,7 @@ export async function deleteOrgSportSettings(
             throw new Error('sportCode is required')
         }
 
-        const { error } = await supabase
+        const { error } = await supabaseAny
             .from('org_sport_profile_settings')
             .delete()
             .eq('org_id', orgId)

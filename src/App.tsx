@@ -47,6 +47,7 @@ import TryoutDetail from './pages/TryoutDetail'
 import Huddles from './pages/Huddles'
 import AnnouncementDetail from './pages/AnnouncementDetail'
 import { RoleSelection } from './pages/RoleSelection'
+import AthleteProfile from './pages/AthleteProfile'
 const Notifications = lazy(() => import('./pages/Notifications'))
 
 // Portal Pages - Lazy loaded
@@ -145,6 +146,7 @@ const EditAthlete = lazy(() => import('./pages/admin/EditAthlete'))
 const AdminChildren = lazy(() => import('./pages/admin/AdminChildren'))
 const ImportAthletes = lazy(() => import('./pages/admin/ImportAthletes'))
 const GuardianAttachmentRequests = lazy(() => import('./pages/admin/GuardianAttachmentRequests').then(m => ({ default: m.default })))
+const AdminSportSettings = lazy(() => import('./pages/admin/AdminSportSettings'))
 
 function HostHomeRoute() {
   const appContext = getHostAppContext()
@@ -257,6 +259,7 @@ function AppWithTheme() {
             <Route path="settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="athletes" element={<ProtectedRoute><Athletes /></ProtectedRoute>} />
             <Route path="athletes/new" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><CreateAthletePortal /></Suspense></ProtectedRoute>} />
+            <Route path="athletes/:id/profile" element={<ProtectedRoute><AthleteProfile /></ProtectedRoute>} />
             <Route path="athletes/:id/edit" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><EditAthletePortal /></Suspense></ProtectedRoute>} />
             <Route path="athletes/request-attachment" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><RequestAthleteAttachment /></Suspense></ProtectedRoute>} />
             <Route path="join" element={<ProtectedRoute><JoinTeam /></ProtectedRoute>} />
@@ -432,6 +435,7 @@ function AppWithTheme() {
               
               {/* Personal Settings */}
               <Route path="settings" element={<AdminSettings />} />
+              <Route path="settings/sport-profiles" element={<AdminSportSettings />} />
             </Route>
           </Route>
 

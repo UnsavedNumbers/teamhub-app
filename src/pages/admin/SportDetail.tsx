@@ -262,9 +262,9 @@ export default function SportDetail() {
                   }}
                 >
                   {iconUrl ? (
-                    <img src={iconUrl} alt={`${sport.name} icon`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={iconUrl || undefined} alt={`${sport?.name || 'Sport'} icon`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : isMaterialIcon ? (
-                    <span className="material-symbols-outlined" style={{ fontSize: '48px', color: pendingColor }}>{sport.icon}</span>
+                    <span className="material-symbols-outlined" style={{ fontSize: '48px', color: pendingColor }}>{sport?.icon}</span>
                   ) : (
                     <span className="material-symbols-outlined" style={{ fontSize: '36px', color: 'var(--pa-n400)' }}>sports</span>
                   )}
@@ -385,7 +385,7 @@ export default function SportDetail() {
 
                   <Button
                     variant="danger"
-                    disabled={!sport.icon || deletingIcon || isOffline || USE_FAKE_DATA}
+                    disabled={!sport?.icon || deletingIcon || isOffline || USE_FAKE_DATA}
                     loading={deletingIcon}
                     onClick={async () => {
                       setActionError(null)
@@ -466,4 +466,3 @@ export default function SportDetail() {
     </div>
   )
 }
-

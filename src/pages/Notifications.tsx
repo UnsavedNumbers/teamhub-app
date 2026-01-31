@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../hooks/useAuth'
 import { useUserContext } from '../hooks/useUserContext'
 import { 
   getNotifications, 
@@ -102,7 +101,6 @@ const FilterSection = ({ title, items, selectedIds, onToggle, onSelectAll }: Fil
 }
 
 export default function Notifications() {
-  const { user } = useAuth()
   const { context, isReady } = useUserContext()
   
   // State
@@ -110,8 +108,8 @@ export default function Notifications() {
   const [loading, setLoading] = useState(true)
   const [athletes, setAthletes] = useState<any[]>([])
   const [teams, setTeams] = useState<any[]>([])
-  const [programs, setPrograms] = useState<any[]>(MOCK_PROGRAMS)
-  const [sports, setSports] = useState<any[]>(MOCK_SPORTS)
+  const programs = MOCK_PROGRAMS
+  const sports = MOCK_SPORTS
   
   // Filters
   const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'archived'>('all')

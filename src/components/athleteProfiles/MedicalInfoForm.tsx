@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAthleteMedical } from '../../hooks/useAthleteMedical'
 import type { EmergencyContact } from '../../types/athleteSportProfiles'
+import Button from '../portal/Button'
 
 interface MedicalInfoFormProps {
   /** Athlete ID */
@@ -104,22 +105,7 @@ export function MedicalInfoForm({
   }
 
   return (
-    <div className="medical-info-form">
-      {/* Header */}
-      <div className="form-header">
-        <div className="form-header-content">
-          <div className="form-title-row">
-            <h2 className="form-title">Medical Information</h2>
-            <div className="privacy-badge">
-              <span className="material-symbols-outlined">lock</span>
-              <span>Private</span>
-            </div>
-          </div>
-          <p className="form-subtitle">
-            Confidential health information for {athleteName}
-          </p>
-        </div>
-      </div>
+    <div className="portal-form medical-info-form">
 
       {/* Error banner */}
       {error && (
@@ -145,7 +131,7 @@ export function MedicalInfoForm({
       <div className="form-fields">
         {/* Medical Notes */}
         <div className="field-group">
-          <label htmlFor="medical_notes" className="field-label">
+          <label htmlFor="medical_notes" className="form-label">
             Medical Conditions & Notes
           </label>
           <textarea
@@ -154,7 +140,7 @@ export function MedicalInfoForm({
             onChange={(e) => setMedicalNotes(e.target.value)}
             disabled={updating}
             rows={4}
-            className="field-textarea"
+            className="form-textarea"
             placeholder="List any medical conditions, medications, or important health information coaches should know about..."
           />
           <p className="field-help">
@@ -164,7 +150,7 @@ export function MedicalInfoForm({
 
         {/* Allergies */}
         <div className="field-group">
-          <label htmlFor="allergies" className="field-label">
+          <label htmlFor="allergies" className="form-label">
             Allergies
           </label>
           <textarea
@@ -173,7 +159,7 @@ export function MedicalInfoForm({
             onChange={(e) => setAllergies(e.target.value)}
             disabled={updating}
             rows={3}
-            className="field-textarea"
+            className="form-textarea"
             placeholder="List any known allergies (food, medication, environmental)..."
           />
           <p className="field-help">
@@ -188,63 +174,65 @@ export function MedicalInfoForm({
             Primary contact to reach in case of medical emergency
           </p>
 
-          <div className="field-group">
-            <label htmlFor="emergency_name" className="field-label">
-              Contact Name
-              <span className="field-required">*</span>
-            </label>
-            <input
-              id="emergency_name"
-              type="text"
-              value={emergencyName}
-              onChange={(e) => setEmergencyName(e.target.value)}
-              disabled={updating}
-              className="field-input"
-              placeholder="Full name"
-            />
-          </div>
+          <div className="form-row two-col">
+            <div className="field-group form-field">
+              <label htmlFor="emergency_name" className="form-label">
+                Contact Name
+                <span className="field-required">*</span>
+              </label>
+              <input
+                id="emergency_name"
+                type="text"
+                value={emergencyName}
+                onChange={(e) => setEmergencyName(e.target.value)}
+                disabled={updating}
+                className="form-input"
+                placeholder="Full name"
+              />
+            </div>
 
-          <div className="field-group">
-            <label htmlFor="emergency_relationship" className="field-label">
-              Relationship
-              <span className="field-required">*</span>
-            </label>
-            <select
-              id="emergency_relationship"
-              value={emergencyRelationship}
-              onChange={(e) => setEmergencyRelationship(e.target.value)}
-              disabled={updating}
-              className="field-select"
-            >
-              <option value="">Select relationship</option>
-              <option value="Mother">Mother</option>
-              <option value="Father">Father</option>
-              <option value="Guardian">Guardian</option>
-              <option value="Grandparent">Grandparent</option>
-              <option value="Aunt">Aunt</option>
-              <option value="Uncle">Uncle</option>
-              <option value="Sibling">Sibling</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
+            <div className="field-group form-field">
+              <label htmlFor="emergency_relationship" className="form-label">
+                Relationship
+                <span className="field-required">*</span>
+              </label>
+              <select
+                id="emergency_relationship"
+                value={emergencyRelationship}
+                onChange={(e) => setEmergencyRelationship(e.target.value)}
+                disabled={updating}
+                className="form-select"
+              >
+                <option value="">Select relationship</option>
+                <option value="Mother">Mother</option>
+                <option value="Father">Father</option>
+                <option value="Guardian">Guardian</option>
+                <option value="Grandparent">Grandparent</option>
+                <option value="Aunt">Aunt</option>
+                <option value="Uncle">Uncle</option>
+                <option value="Sibling">Sibling</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
 
-          <div className="field-group">
-            <label htmlFor="emergency_phone" className="field-label">
-              Phone Number
-              <span className="field-required">*</span>
-            </label>
-            <input
-              id="emergency_phone"
-              type="tel"
-              value={emergencyPhone}
-              onChange={(e) => setEmergencyPhone(e.target.value)}
-              disabled={updating}
-              className="field-input"
-              placeholder="(555) 123-4567"
-            />
-            <p className="field-help">
-              Must be reachable during practices and games
-            </p>
+            <div className="field-group form-field">
+              <label htmlFor="emergency_phone" className="form-label">
+                Phone Number
+                <span className="field-required">*</span>
+              </label>
+              <input
+                id="emergency_phone"
+                type="tel"
+                value={emergencyPhone}
+                onChange={(e) => setEmergencyPhone(e.target.value)}
+                disabled={updating}
+                className="form-input"
+                placeholder="(555) 123-4567"
+              />
+              <p className="field-help">
+                Must be reachable during practices and games
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -252,21 +240,11 @@ export function MedicalInfoForm({
       {/* Actions */}
       <div className="form-actions">
         {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={updating}
-            className="btn-secondary"
-          >
+          <Button variant="secondary" onClick={onCancel} disabled={updating}>
             Cancel
-          </button>
+          </Button>
         )}
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={updating || !hasChanges || !emergencyName || !emergencyRelationship || !emergencyPhone}
-          className="btn-primary"
-        >
+        <Button variant="primary" onClick={handleSave} disabled={updating || !hasChanges || !emergencyName || !emergencyRelationship || !emergencyPhone}>
           {updating ? (
             <>
               <span className="btn-spinner"></span>
@@ -278,7 +256,7 @@ export function MedicalInfoForm({
               <span>Save Medical Info</span>
             </>
           )}
-        </button>
+        </Button>
       </div>
 
       {/* Unsaved changes warning */}

@@ -104,17 +104,6 @@ export default function OrganizationBilling() {
     }
   }, [summary?.status])
 
-  const formatDateUppercase = useCallback((value?: string | null): string => {
-    if (!value) return ''
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return ''
-    return date.toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    }).toUpperCase()
-  }, [])
-
   const isAutoRenewing = summary ? !summary.cancelAtPeriodEnd : false
 
   async function handleOpenPortal() {
