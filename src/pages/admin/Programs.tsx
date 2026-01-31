@@ -13,7 +13,7 @@ import { getSports, getPrograms, deleteProgram, getSportBySlug } from '../../dat
 import { getLevels } from '../../data/services/levelsService'
 import { getTeams } from '../../data/services/teamsService'
 import type { Sport, Program, Level, Team } from '../../data/types/organization'
-import { AdminPageHeader, Select, ConfirmDialog, Button, Card, EmptyState, Badge } from '../../components/platformAdmin'
+import { AdminPageHeader, Select, ConfirmDialog, Button, Card, EmptyState, Badge, InlineNotice } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 import './Programs.css'
@@ -352,20 +352,43 @@ export default function Programs() {
         ]}
       />
 
+      {error && (
+        <InlineNotice
+          tone="error"
+          title="We couldn't load programs"
+          message={error}
+          actions={
+            <Button
+              variant="ghost"
+              size="dense"
+              icon="refresh"
+              onClick={loadProgramsData}
+              disabled={loading}
+            >
+              Retry
+            </Button>
+          }
+          onClose={() => setError(null)}
+          className="pa-mb-4"
+        />
+      )}
+
       {successMessage && (
-        <Card className="pa-mb-4" noPadding>
-          <div className="pa-p-4" style={{ background: 'var(--pa-success-bg, #ecfdf5)', borderLeft: '4px solid var(--pa-success, #10b981)' }}>
-            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-success-dark, #065f46)' }}>{successMessage}</div>
-          </div>
-        </Card>
+        <InlineNotice
+          tone="success"
+          title={successMessage}
+          onClose={() => setSuccessMessage(null)}
+          className="pa-mb-4"
+        />
       )}
 
       {actionError && (
-        <Card className="pa-mb-4" noPadding>
-          <div className="pa-p-4" style={{ background: 'var(--pa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--pa-danger, #ef4444)' }}>
-            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-danger-dark, #991b1b)' }}>{actionError}</div>
-          </div>
-        </Card>
+        <InlineNotice
+          tone="error"
+          title={actionError}
+          onClose={() => setActionError(null)}
+          className="pa-mb-4"
+        />
       )}
 
       <Card className="pa-mb-6 pa-filter-section">

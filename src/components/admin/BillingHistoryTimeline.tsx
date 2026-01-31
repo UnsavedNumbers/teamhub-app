@@ -192,11 +192,79 @@ export function BillingHistoryTimeline({
 
                     {/* Event content */}
                     <div className="pa-flex-1 pa-min-w-0">
-                      <div className="pa-body-m" style={{ fontWeight: 600, marginBottom: '2px' }}>
-                        {eventLabel}
+                      <div className="pa-flex pa-items-center pa-gap-2 pa-mb-1">
+                        <div className="pa-body-m" style={{ fontWeight: 600 }}>
+                          {eventLabel}
+                        </div>
+                        {event.payment_status && (
+                          <span
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px',
+                              backgroundColor:
+                                event.payment_status === 'paid' || event.payment_status === 'succeeded'
+                                  ? '#dcfce7'
+                                  : event.payment_status === 'open' || event.payment_status === 'processing'
+                                  ? '#dbeafe'
+                                  : event.payment_status === 'draft'
+                                  ? '#f3f4f6'
+                                  : '#fef3c7',
+                              color:
+                                event.payment_status === 'paid' || event.payment_status === 'succeeded'
+                                  ? '#166534'
+                                  : event.payment_status === 'open' || event.payment_status === 'processing'
+                                  ? '#1e40af'
+                                  : event.payment_status === 'draft'
+                                  ? '#6b7280'
+                                  : '#92400e',
+                            }}
+                          >
+                            {event.payment_status}
+                          </span>
+                        )}
                       </div>
-                      <div className="pa-body-s pa-text-muted">
-                        {eventTime}
+                      
+                      {event.description && (
+                        <div className="pa-body-s pa-text-muted pa-mb-1">
+                          {event.description}
+                        </div>
+                      )}
+                      
+                      <div className="pa-flex pa-items-center pa-gap-3">
+                        <div className="pa-body-s pa-text-muted">
+                          {eventTime}
+                        </div>
+                        {event.amount !== undefined && event.currency && (
+                          <div className="pa-body-s" style={{ fontWeight: 600 }}>
+                            {new Intl.NumberFormat('en-US', {
+                              style: 'currency',
+                              currency: event.currency,
+                            }).format(event.amount)}
+                          </div>
+                        )}
+                        {event.invoice_url && (
+                          <a
+                            href={event.invoice_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="pa-body-s pa-flex pa-items-center pa-gap-1"
+                            style={{
+                              color: 'var(--pa-primary)',
+                              textDecoration: 'none',
+                              fontWeight: 600,
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
+                              download
+                            </span>
+                            Invoice
+                          </a>
+                        )}
                       </div>
 
                       {/* Expandable technical details */}
@@ -213,11 +281,13 @@ export function BillingHistoryTimeline({
                         >
                           {event.stripe_event_id && (
                             <div style={{ marginBottom: '4px' }}>
+                              <span style={{ color: 'var(--pa-n500)' }}>Event: </span>
                               {event.stripe_event_id}
                             </div>
                           )}
                           {event.stripe_object_id && (
                             <div>
+                              <span style={{ color: 'var(--pa-n500)' }}>Object: </span>
                               {event.stripe_object_id}
                             </div>
                           )}

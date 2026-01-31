@@ -19,16 +19,33 @@ export interface Athlete {
     gender: Gender | null
     preferred_name: string | null  // Name the athlete prefers to go by (nickname, etc.)
     jersey_number: string | null
-    medical_notes: string | null
-    allergies: string | null
-    emergency_contact_name: string | null
-    emergency_contact_phone: string | null
+    medical_notes: string | null  // @deprecated - Use athlete_medical_private table instead
+    allergies: string | null  // @deprecated - Use athlete_medical_private table instead
+    emergency_contact_name: string | null  // @deprecated - Migrated to emergency_contact JSONB
+    emergency_contact_phone: string | null  // @deprecated - Migrated to emergency_contact JSONB
     phone: string | null  // Athlete phone number
     email: string | null  // Athlete email address
     photo_url: string | null  // @deprecated - Use profile_photo_updated_at and has_profile_photo instead
     profile_photo_updated_at: string | null  // Timestamp when profile photo was last updated
     has_profile_photo: boolean | null  // Whether athlete has a profile photo
     org_id?: string  // Organization ID (for photo URL generation)
+
+    // Universal Profile Fields (added 2026-01-31)
+    height_cm: number | null  // Height in centimeters (normalized)
+    weight_kg: number | null  // Weight in kilograms (normalized)
+    shoe_size_value: number | null  // Numeric shoe size
+    shoe_size_system: 'us' | 'eu' | 'uk' | null  // Shoe sizing system
+    shoe_width: 'narrow' | 'standard' | 'wide' | null  // Shoe width
+    tshirt_size: string | null  // T-shirt size (YS, YM, YL, AS, AM, AL, AXL, AXXL, AXXXL)
+    shorts_size: string | null  // Shorts size (same enum as tshirt_size)
+    dominant_hand: 'left' | 'right' | 'ambidextrous' | null  // Dominant hand
+    emergency_contact: {
+        name: string
+        relationship: string
+        phone: string
+        email?: string
+    } | null  // Emergency contact (replaces deprecated emergency_contact_name/phone)
+
     created_at: string
     updated_at: string
     deleted_at: string | null

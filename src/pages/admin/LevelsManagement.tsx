@@ -13,7 +13,7 @@ import { getLevels, deleteLevel } from '../../data/services/levelsService'
 import { getPrograms } from '../../data/services/sportsService'
 import { getTeams } from '../../data/services/teamsService'
 import type { Level, Program, Team } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button, Select, ConfirmDialog, EmptyState, Badge, PlatformDataTable } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, Select, ConfirmDialog, EmptyState, Badge, PlatformDataTable, InlineNotice } from '../../components/platformAdmin'
 import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
@@ -342,34 +342,41 @@ export default function LevelsManagement() {
       />
 
       {error && (
-        <Card className="pa-mb-6" noPadding>
-             <div className="pa-p-4 pa-flex pa-items-center pa-justify-between" style={{ background: 'var(--pa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--pa-danger, #ef4444)' }}>
-                <div className="pa-body-m pa-text-danger-dark" style={{ color: 'var(--pa-danger-dark, #991b1b)' }}>{error}</div>
-                <Button variant="ghost" size="dense" onClick={handleRetry} disabled={loading || refreshing}>
-                Retry
-                </Button>
-            </div>
-        </Card>
+        <InlineNotice
+          tone="error"
+          title="Unable to load levels"
+          message={error}
+          actions={
+            <Button
+              variant="ghost"
+              size="dense"
+              onClick={handleRetry}
+              disabled={loading || refreshing}
+            >
+              Retry
+            </Button>
+          }
+          onClose={() => setError(null)}
+          className="pa-mb-6"
+        />
       )}
 
       {successMessage && (
-        <Card className="pa-mb-6" noPadding>
-            <div className="pa-p-4" style={{ background: 'var(--pa-success-bg, #ecfdf5)', borderLeft: '4px solid var(--pa-success, #10b981)' }}>
-                <div className="pa-body-m pa-text-success-dark" style={{ color: 'var(--pa-success-dark, #065f46)' }}>
-                    {successMessage}
-                </div>
-            </div>
-        </Card>
+        <InlineNotice
+          tone="success"
+          title={successMessage}
+          onClose={() => setSuccessMessage(null)}
+          className="pa-mb-6"
+        />
       )}
 
       {actionError && (
-        <Card className="pa-mb-6" noPadding>
-            <div className="pa-p-4" style={{ background: 'var(--pa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--pa-danger, #ef4444)' }}>
-                <div className="pa-body-m pa-text-danger-dark" style={{ color: 'var(--pa-danger-dark, #991b1b)' }}>
-                    {actionError}
-                </div>
-            </div>
-        </Card>
+        <InlineNotice
+          tone="error"
+          title={actionError}
+          onClose={() => setActionError(null)}
+          className="pa-mb-6"
+        />
       )}
 
       {levels.length === 0 ? (
