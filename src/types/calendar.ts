@@ -95,6 +95,40 @@ export interface CalendarEvent {
       ai_summary: string | null
       ai_what_to_expect: string | null
     } | null
+
+    // Ticketing (optional, present when ticketing is enabled)
+    ticketed_event?: TicketedEventSummary | null
+}
+
+export interface TicketedEventSummary {
+    id: string
+    org_id: string
+    team_id: string | null
+    event_type: string | null
+    title: string
+    description: string | null
+    starts_at: string
+    ends_at: string
+    timezone: string | null
+    venue_name: string | null
+    venue_city: string | null
+    venue_state: string | null
+    venue_postal_code: string | null
+    sales_start_at: string | null
+    sales_end_at: string | null
+    status: 'draft' | 'published' | 'archived' | string
+    ticket_types?: TicketTypeSummary[]
+}
+
+export interface TicketTypeSummary {
+    id: string
+    name: string
+    price_cents: number
+    currency: string
+    capacity_total: number | null
+    capacity_remaining: number | null
+    sort_order?: number | null
+    is_active?: boolean | null
 }
 
 // Meeting location for travel events
