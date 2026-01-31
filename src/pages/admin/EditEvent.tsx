@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { startTransition } from 'react'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
@@ -11,6 +11,7 @@ import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { getLink } from '../../utils/routes'
 import { showSuccess, showError } from '../../utils/toast'
+import { useFeatureGate } from '../../lib/featureGate'
 import { 
   AdminPageHeader, 
   Card, 
@@ -56,8 +57,11 @@ export default function EditEvent() {
   const [cancelDialog, setCancelDialog] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [hasPaidOrders, setHasPaidOrders] = useState(false)
+  const [ticketedEventId, setTicketedEventId] = useState<string | null>(null)
 
   const { context, isReady } = useUserContext()
+  const { allowed: ticketingAllowed, loading: ticketingGateLoading } = useFeatureGate('ticketing')
   const navigate = useNavigate()
   const t = useT()
   const { isOffline } = useOffline()
@@ -104,6 +108,12 @@ export default function EditEvent() {
 
   const watchTeamId = watch('team_id')
   const watchRSVPEnabled = watch('rsvp_enabled')
+  const watchTicketingEnabled = watch('ticketing.is_ticketed')
+
+  const { fields: ticketTypeFields, append: appendTicketType, remove: removeTicketType } = useFieldArray({
+    control,
+    name: 'ticketing.ticket_types',
+  })
 
 
   const fetchEvent = useCallback(async () => {
@@ -260,6 +270,55 @@ export default function EditEvent() {
         setValue('recurring.end_date', event.recurring_pattern.end_date || '')
         setValue('recurring.max_occurrences', event.recurring_pattern.max_occurrences?.toString() || '')
         setShowRecurring(true)
+      }
+
+      // Load ticketing if linked
+      const { data: ticketedEvent } = await supabase
+        .from('ticketed_events')
+        .select('id, event_type, sales_start_at, sales_end_at, status')
+        .eq('event_id', eventId)
+        .maybeSingle() as { data: { id: string; event_type: string; sales_start_at: string | null; sales_end_at: string | null; status: string } | null }
+
+      if (ticketedEvent) {
+        setTicketedEventId(ticketedEvent.id)
+        setValue('ticketing.is_ticketed', true)
+        setValue('ticketing.event_type', ticketedEvent.event_type || 'other')
+        setValue('ticketing.sales_start_at', ticketedEvent.sales_start_at
+          ? new Date(new Date(ticketedEvent.sales_start_at).getTime() - new Date(ticketedEvent.sales_start_at).getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+          : '')
+        setValue('ticketing.sales_end_at', ticketedEvent.sales_end_at
+          ? new Date(new Date(ticketedEvent.sales_end_at).getTime() - new Date(ticketedEvent.sales_end_at).getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+          : '')
+        setValue('ticketing.status', ticketedEvent.status || 'draft')
+
+        const { data: ticketTypes } = await supabase
+          .from('ticket_types')
+          .select('id, name, price_cents, capacity_total, capacity_remaining, sort_order')
+          .eq('ticketed_event_id', ticketedEvent.id)
+          .order('sort_order') as { data: { id: string; name: string; price_cents: number; capacity_total: number | null; capacity_remaining: number | null; sort_order: number }[] | null }
+
+        if (ticketTypes?.length) {
+          const formTicketTypes = ticketTypes.map(tt => {
+            const sold = (tt.capacity_total != null && tt.capacity_remaining != null)
+              ? tt.capacity_total - tt.capacity_remaining
+              : 0
+            return {
+              id: tt.id,
+              soldCount: sold,
+              name: tt.name,
+              price_dollars: (tt.price_cents / 100).toFixed(2),
+              capacity: tt.capacity_total != null ? String(tt.capacity_total) : ''
+            }
+          })
+          setValue('ticketing.ticket_types', formTicketTypes)
+        }
+
+        const { count: paidCount } = await supabase
+          .from('ticket_orders')
+          .select('*', { count: 'exact', head: true })
+          .eq('ticketed_event_id', ticketedEvent.id)
+          .eq('status', 'paid')
+        setHasPaidOrders((paidCount ?? 0) > 0)
       }
 
       // Fetch teams and seasons
@@ -523,6 +582,171 @@ export default function EditEvent() {
           if (patternError) {
             console.error('Recurring pattern insert error:', patternError)
             // Don't fail the whole update
+          }
+        }
+      }
+
+      // Handle ticketing: create or update ticketed_events and ticket_types
+      if (data.ticketing?.is_ticketed) {
+        const { data: teamDataForTicketing } = await supabase.from('teams').select('org_id').eq('id', data.team_id).single()
+        if (!teamDataForTicketing?.org_id) {
+          throw new Error('Failed to get organization ID from team')
+        }
+        const orgId = teamDataForTicketing.org_id
+
+        if (!ticketedEventId) {
+          // Create ticketed_events and ticket_types
+          type TicketedEventInsert = Database['public']['Tables']['ticketed_events']['Insert']
+          const ticketedEventData: TicketedEventInsert = {
+            event_id: eventId,
+            org_id: orgId,
+            team_id: data.team_id,
+            event_type: data.ticketing.event_type as Database['public']['Enums']['ticketed_event_type'],
+            title: data.title,
+            description: data.notes || null,
+            starts_at: new Date(data.start_time).toISOString(),
+            ends_at: new Date(data.end_time).toISOString(),
+            timezone: data.timezone,
+            venue_name: data.location.venue_name?.trim() || null,
+            venue_address_line1: data.location.address_line1?.trim() || null,
+            venue_city: data.location.city?.trim() || null,
+            venue_state: data.location.state?.trim() || null,
+            venue_postal_code: data.location.postal_code?.trim() || null,
+            venue_country: 'US',
+            venue_is_virtual: data.location.is_virtual,
+            venue_virtual_link: data.location.virtual_link?.trim() || null,
+            sales_start_at: data.ticketing.sales_start_at ? new Date(data.ticketing.sales_start_at).toISOString() : null,
+            sales_end_at: data.ticketing.sales_end_at ? new Date(data.ticketing.sales_end_at).toISOString() : null,
+            status: data.ticketing.status as Database['public']['Enums']['ticketed_event_status'],
+          }
+          const { data: createdTe, error: teError } = await supabase
+            .from('ticketed_events')
+            .insert(ticketedEventData)
+            .select('id')
+            .single()
+          if (teError) throw new Error(`Ticketing setup failed: ${teError.message}`)
+          if (!createdTe) throw new Error('Failed to create ticketed event')
+          const newTeId = createdTe.id
+
+          if (data.ticketing.ticket_types?.length) {
+            type TicketTypeInsert = Database['public']['Tables']['ticket_types']['Insert']
+            const inserts: TicketTypeInsert[] = data.ticketing.ticket_types
+              .filter(tt => tt.name.trim() !== '')
+              .map((tt, index) => {
+                const priceCents = Math.round((parseFloat(tt.price_dollars) || 0) * 100)
+                const capStr = tt.capacity.trim()
+                const capacityTotal = capStr === '' ? null : (parseInt(capStr, 10) || null)
+                const capacityRemaining = capacityTotal
+                return {
+                  org_id: orgId,
+                  ticketed_event_id: newTeId,
+                  name: tt.name.trim(),
+                  price_cents: priceCents,
+                  currency: 'USD',
+                  capacity_total: capacityTotal && capacityTotal > 0 ? capacityTotal : null,
+                  capacity_remaining: capacityRemaining && capacityRemaining > 0 ? capacityRemaining : null,
+                  sort_order: index,
+                  is_active: true,
+                } satisfies TicketTypeInsert
+              })
+            if (inserts.length > 0) {
+              const { error: ttError } = await supabase.from('ticket_types').insert(inserts)
+              if (ttError) throw new Error(`Failed to create ticket types: ${ttError.message}`)
+            }
+          }
+        } else {
+          // Update ticketed_events
+          type TicketedEventUpdate = Database['public']['Tables']['ticketed_events']['Update']
+          const teUpdate: TicketedEventUpdate = {
+            title: data.title,
+            description: data.notes || null,
+            starts_at: new Date(data.start_time).toISOString(),
+            ends_at: new Date(data.end_time).toISOString(),
+            timezone: data.timezone,
+            venue_name: data.location.venue_name?.trim() || null,
+            venue_address_line1: data.location.address_line1?.trim() || null,
+            venue_city: data.location.city?.trim() || null,
+            venue_state: data.location.state?.trim() || null,
+            venue_postal_code: data.location.postal_code?.trim() || null,
+            venue_country: 'US',
+            venue_is_virtual: data.location.is_virtual,
+            venue_virtual_link: data.location.virtual_link?.trim() || null,
+            sales_start_at: data.ticketing.sales_start_at ? new Date(data.ticketing.sales_start_at).toISOString() : null,
+            sales_end_at: data.ticketing.sales_end_at ? new Date(data.ticketing.sales_end_at).toISOString() : null,
+            status: data.ticketing.status as Database['public']['Enums']['ticketed_event_status'],
+          }
+          if (!hasPaidOrders) {
+            (teUpdate as Record<string, unknown>).event_type = data.ticketing.event_type
+          }
+          const { error: teUpdateError } = await supabase
+            .from('ticketed_events')
+            .update(teUpdate)
+            .eq('id', ticketedEventId)
+          if (teUpdateError) throw teUpdateError
+
+          // Reconcile ticket_types
+          const formTypes = data.ticketing.ticket_types ?? []
+          const existingIds = formTypes.filter(tt => tt.id).map(tt => tt.id as string)
+
+          if (!hasPaidOrders) {
+            const { data: existingTypes } = await supabase
+              .from('ticket_types')
+              .select('id')
+              .eq('ticketed_event_id', ticketedEventId)
+            const toRemove = (existingTypes ?? []).filter(et => !existingIds.includes(et.id)).map(et => et.id)
+            for (const id of toRemove) {
+              await supabase.from('ticket_types').delete().eq('id', id)
+            }
+          }
+
+          type TicketTypeUpdate = Database['public']['Tables']['ticket_types']['Update']
+          for (let index = 0; index < formTypes.length; index++) {
+            const tt = formTypes[index]
+            if (!tt.name.trim()) continue
+            const priceCents = Math.round((parseFloat(tt.price_dollars) || 0) * 100)
+            const capStr = tt.capacity.trim()
+            const capacityTotal = capStr === '' ? null : (parseInt(capStr, 10) || null)
+            const soldCount = tt.soldCount ?? 0
+            const capacityRemaining = capacityTotal != null && capacityTotal > 0
+              ? Math.max(0, capacityTotal - soldCount)
+              : null
+
+            if (tt.id) {
+              const updatePayload: TicketTypeUpdate = {
+                name: tt.name.trim(),
+                sort_order: index,
+              }
+              if (!hasPaidOrders) {
+                updatePayload.price_cents = priceCents
+                updatePayload.capacity_total = capacityTotal && capacityTotal > 0 ? capacityTotal : null
+                updatePayload.capacity_remaining = capacityRemaining
+              } else {
+                if (capacityTotal != null && capacityTotal > 0) {
+                  updatePayload.capacity_total = capacityTotal
+                  updatePayload.capacity_remaining = capacityRemaining
+                }
+              }
+              const { error: uErr } = await supabase
+                .from('ticket_types')
+                .update(updatePayload)
+                .eq('id', tt.id)
+              if (uErr) throw uErr
+            } else {
+              type TicketTypeInsert = Database['public']['Tables']['ticket_types']['Insert']
+              const insertPayload: TicketTypeInsert = {
+                org_id: orgId,
+                ticketed_event_id: ticketedEventId,
+                name: tt.name.trim(),
+                price_cents: priceCents,
+                currency: 'USD',
+                capacity_total: capacityTotal && capacityTotal > 0 ? capacityTotal : null,
+                capacity_remaining: capacityRemaining,
+                sort_order: index,
+                is_active: true,
+              }
+              const { error: iErr } = await supabase.from('ticket_types').insert(insertPayload)
+              if (iErr) throw iErr
+            }
           }
         }
       }
@@ -822,6 +1046,245 @@ export default function EditEvent() {
               </div>
             )}
           </div>
+
+          {/* SECTION 4.5: TICKETING */}
+          {!ticketingGateLoading && ticketingAllowed && (ticketedEventId || watchTicketingEnabled) && (
+            <div className="pa-mb-4">
+              <div className="pa-checkbox-group pa-checkbox-group--inline pa-mb-4">
+                <div className="pa-flex pa-items-center pa-gap-2">
+                  <span className="pa-label">{t('admin.events.ticketing.isTicketed')}</span>
+                  <Controller
+                    name="ticketing.is_ticketed"
+                    control={control}
+                    render={({ field: { value, onChange } }) => (
+                      <Checkbox
+                        checked={!!value}
+                        onChange={(e) => onChange(e.target.checked)}
+                        label=""
+                        disabled={!!ticketedEventId}
+                      />
+                    )}
+                  />
+                </div>
+              </div>
+
+              {watchTicketingEnabled && (
+                <div className="pa-card pa-mb-4" style={{ background: 'var(--pa-card-bg)', border: '1px solid var(--pa-border)' }}>
+                  {hasPaidOrders && (
+                    <div className="pa-mb-4 pa-p-3" style={{ background: 'var(--pa-warning-bg)', border: '1px solid var(--pa-warning)', borderRadius: 'var(--pa-radius)' }}>
+                      <span className="pa-body-s">{t('admin.events.ticketing.editBanner')}</span>
+                    </div>
+                  )}
+                  <h3 className="pa-heading-3 pa-mb-4">{t('admin.events.ticketing.title')}</h3>
+
+                  <div className="pa-mb-4">
+                    <Controller
+                      name="ticketing.event_type"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          {...field}
+                          value={field.value || 'other'}
+                          label={t('admin.events.ticketing.eventType.label')}
+                          options={[
+                            { value: 'game', label: t('admin.events.ticketing.eventType.game') },
+                            { value: 'tournament', label: t('admin.events.ticketing.eventType.tournament') },
+                            { value: 'concert', label: t('admin.events.ticketing.eventType.concert') },
+                            { value: 'fundraiser', label: t('admin.events.ticketing.eventType.fundraiser') },
+                            { value: 'other', label: t('admin.events.ticketing.eventType.other') },
+                          ]}
+                          disabled={hasPaidOrders}
+                        />
+                      )}
+                    />
+                    <p className="pa-text-xs pa-text-muted pa-mt-1">{t('admin.events.ticketing.eventType.helper')}</p>
+                  </div>
+
+                  <div className="pa-form-grid pa-form-grid-2 pa-mb-4">
+                    <Controller
+                      name="ticketing.sales_start_at"
+                      control={control}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          type="datetime-local"
+                          label={t('admin.events.ticketing.salesWindow.start')}
+                          placeholder={t('admin.events.ticketing.salesWindow.optional')}
+                        />
+                      )}
+                    />
+                    <Controller
+                      name="ticketing.sales_end_at"
+                      control={control}
+                      rules={{
+                        validate: (value) => {
+                          const startAt = watch('ticketing.sales_start_at')
+                          if (startAt && value && new Date(value) <= new Date(startAt)) {
+                            return t('admin.events.ticketing.salesWindow.endAfterStart')
+                          }
+                          return true
+                        }
+                      }}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          type="datetime-local"
+                          label={t('admin.events.ticketing.salesWindow.end')}
+                          placeholder={t('admin.events.ticketing.salesWindow.optional')}
+                          error={errors.ticketing?.sales_end_at?.message}
+                        />
+                      )}
+                    />
+                  </div>
+
+                  <div className="pa-mb-4">
+                    <Controller
+                      name="ticketing.status"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          {...field}
+                          value={field.value || 'draft'}
+                          label={t('admin.events.ticketing.status.label')}
+                          options={[
+                            { value: 'draft', label: t('admin.events.ticketing.status.draft') },
+                            { value: 'published', label: t('admin.events.ticketing.status.published') },
+                          ]}
+                        />
+                      )}
+                    />
+                  </div>
+
+                  <div className="pa-mb-4">
+                    <div className="pa-flex pa-items-center pa-justify-between pa-mb-2">
+                      <label className="pa-label">{t('admin.events.ticketing.ticketTypes.label')}</label>
+                      {!hasPaidOrders && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => appendTicketType({ name: '', price_dollars: '', capacity: '' })}
+                        >
+                          {t('admin.events.ticketing.ticketTypes.add')}
+                        </Button>
+                      )}
+                    </div>
+                    {ticketTypeFields.length === 0 ? (
+                      <p className="pa-text-sm pa-text-muted">{t('admin.events.ticketing.ticketTypes.none')}</p>
+                    ) : (
+                      <div className="pa-space-y-3">
+                        {ticketTypeFields.map((field, index) => {
+                          const soldCount = watch(`ticketing.ticket_types.${index}.soldCount`) ?? 0
+                          const canRemove = !hasPaidOrders || soldCount === 0
+                          return (
+                            <div key={field.id} className="pa-card pa-p-3" style={{ background: 'var(--pa-card-bg)', border: '1px solid var(--pa-border)' }}>
+                              <div className="pa-form-grid pa-form-grid-3 pa-mb-2">
+                                <Controller
+                                  name={`ticketing.ticket_types.${index}.name`}
+                                  control={control}
+                                  rules={{
+                                    validate: (value) => {
+                                      const price = watch(`ticketing.ticket_types.${index}.price_dollars`)
+                                      const capacity = watch(`ticketing.ticket_types.${index}.capacity`)
+                                      if (price || capacity) {
+                                        return value?.trim() ? true : t('admin.events.ticketing.ticketTypes.name.required')
+                                      }
+                                      return true
+                                    }
+                                  }}
+                                  render={({ field: f }) => (
+                                    <Input
+                                      {...f}
+                                      label={t('admin.events.ticketing.ticketTypes.name.label')}
+                                      placeholder={t('admin.events.ticketing.ticketTypes.name.placeholder')}
+                                      error={errors.ticketing?.ticket_types?.[index]?.name?.message}
+                                      disabled={hasPaidOrders}
+                                    />
+                                  )}
+                                />
+                                <Controller
+                                  name={`ticketing.ticket_types.${index}.price_dollars`}
+                                  control={control}
+                                  rules={{
+                                    validate: (value) => {
+                                      const name = watch(`ticketing.ticket_types.${index}.name`)
+                                      if (name?.trim()) {
+                                        const parsed = parseFloat(value || '0')
+                                        if (isNaN(parsed) || parsed < 0) {
+                                          return t('admin.events.ticketing.ticketTypes.price.invalid')
+                                        }
+                                      }
+                                      return true
+                                    }
+                                  }}
+                                  render={({ field: f }) => (
+                                    <Input
+                                      {...f}
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      label={t('admin.events.ticketing.ticketTypes.price.label')}
+                                      placeholder={t('admin.events.ticketing.ticketTypes.price.placeholder')}
+                                      error={errors.ticketing?.ticket_types?.[index]?.price_dollars?.message}
+                                      disabled={hasPaidOrders}
+                                    />
+                                  )}
+                                />
+                                <div className="pa-flex pa-items-end pa-gap-2">
+                                  <Controller
+                                    name={`ticketing.ticket_types.${index}.capacity`}
+                                    control={control}
+                                    rules={{
+                                      validate: (value) => {
+                                        if (value?.trim()) {
+                                          const parsed = parseInt(value, 10)
+                                          if (isNaN(parsed) || parsed <= 0) {
+                                            return t('admin.events.ticketing.ticketTypes.capacity.invalid')
+                                          }
+                                          if (soldCount > 0 && parsed < soldCount) {
+                                            return t('admin.events.ticketing.ticketTypes.capacity.minSold')
+                                          }
+                                        }
+                                        return true
+                                      }
+                                    }}
+                                    render={({ field: f }) => (
+                                      <Input
+                                        {...f}
+                                        type="number"
+                                        min={soldCount > 0 ? soldCount : 1}
+                                        label={t('admin.events.ticketing.ticketTypes.capacity.label')}
+                                        placeholder={t('admin.events.ticketing.ticketTypes.capacity.placeholder')}
+                                        error={errors.ticketing?.ticket_types?.[index]?.capacity?.message}
+                                      />
+                                    )}
+                                  />
+                                  {soldCount > 0 && (
+                                    <span className="pa-body-s pa-text-muted" style={{ marginBottom: 'var(--pa-space-2)' }}>
+                                      Sold: {soldCount}
+                                    </span>
+                                  )}
+                                  {canRemove && (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      onClick={() => removeTicketType(index)}
+                                      style={{ marginBottom: '0' }}
+                                    >
+                                      {t('admin.events.ticketing.ticketTypes.remove')}
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* SECTION 5: NOTES + PREP */}
           <div className="pa-form-grid pa-form-grid-2 pa-mb-6 pa-gap-4">

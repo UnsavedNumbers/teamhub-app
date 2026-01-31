@@ -100,7 +100,6 @@ const EmailPreview = lazy(() => import('./pages/platformAdmin/EmailPreview'))
 const PlatformPhotosOverview = lazy(() => import('./pages/platformAdmin/PhotosOverview'))
 const PlatformPhotosContentReview = lazy(() => import('./pages/platformAdmin/PhotosContentReview'))
 const PlatformPhotosStorage = lazy(() => import('./pages/platformAdmin/PhotosStorage'))
-const PlatformOrgPhotos = lazy(() => import('./pages/platformAdmin/OrgPhotos'))
 // Ticketing - Platform Admin
 const PlatformTicketingAllEvents = lazy(() => import('./pages/platformAdmin/TicketingAllEvents'))
 const PlatformTicketingOrderLookup = lazy(() => import('./pages/platformAdmin/TicketingOrderLookup'))
