@@ -1353,3 +1353,42 @@ export async function getTeamsForCoach(
         return { data: [], error: classifiedError }
     }
 }
+
+/**
+ * Get distinct sport IDs from an athlete's team history (past and present).
+ * Used to lock "Plays" checkboxes.
+ */
+export async function getAthleteTeamHistory(
+    context: UserContext,
+    athleteId: string
+): Promise<{ data: string[]; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+        return { data: [], error: null }
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('team_memberships')
+            .select('team:teams(sport_id)')
+            .eq('athlete_id', athleteId)
+
+        if (error) throw error
+
+        // Extract sport_ids
+        const sportIds = new Set<string>()
+        if (data) {
+            data.forEach((item: any) => {
+                // Supabase returns array or object for joined relation depending on 1:1 or 1:N
+                // team_memberships -> team is N:1, so 'team' should be an object
+                if (item.team && item.team.sport_id) {
+                    sportIds.add(item.team.sport_id)
+                }
+            })
+        }
+
+        return { data: Array.from(sportIds), error: null }
+    } catch (err) {
+        return { data: [], error: mapDatabaseError(err) }
+    }
+}
