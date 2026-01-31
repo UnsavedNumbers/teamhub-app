@@ -302,13 +302,6 @@ export const adminMenuItems: MenuItemDefinition[] = [
         children: null,
     },
     {
-        label: 'Payments',
-        icon: 'credit_card',
-        routeKey: 'admin.payments.list',
-        requiresOrg: true,
-        children: null,
-    },
-    {
         label: 'Ticketing',
         icon: 'confirmation_number',
         routeKey: 'admin.ticketingEvents',
@@ -316,15 +309,25 @@ export const adminMenuItems: MenuItemDefinition[] = [
         children: [
             { text: 'Events', icon: 'event', routeKey: 'admin.ticketingEvents', requiresOrg: true },
             { text: 'Orders', icon: 'receipt_long', routeKey: 'admin.ticketingOrders', requiresOrg: true },
-            { text: 'Scanner', icon: 'qr_code_scanner', routeKey: 'admin.ticketingScanner', requiresOrg: true },
+            { text: 'Gate Entry', icon: 'qr_code_scanner', routeKey: 'admin.ticketingScanner', requiresOrg: true },
         ],
+    },
+    {
+        label: 'Payments',
+        icon: 'credit_card',
+        routeKey: 'admin.payments.list',
+        requiresOrg: true,
+        children: null,
     },
     {
         label: 'Photos',
         icon: 'photo_library',
         routeKey: 'admin.photos.list',
         requiresOrg: true,
-        children: null,
+        children: [
+            { text: 'All Galleries', icon: 'collections', routeKey: 'admin.photos.list', requiresOrg: true },
+            { text: 'New Gallery', icon: 'add_photo_alternate', routeKey: 'admin.photos.list', requiresOrg: true },
+        ],
     },
     {
         label: 'Operations',
@@ -386,6 +389,14 @@ export const platformAdminNavSections: {
             ],
         },
         {
+            label: 'Ticketing',
+            items: [
+                { routeKey: 'platformAdmin.ticketing.allEvents', text: 'All Events', icon: 'event', requiredAction: 'view_ticketing' },
+                { routeKey: 'platformAdmin.ticketing.orderLookup', text: 'Order Lookup', icon: 'receipt_long', requiredAction: 'view_ticketing' },
+                { routeKey: 'platformAdmin.ticketing.webhookStatus', text: 'Webhook Status', icon: 'webhook', requiredAction: 'view_ticketing' },
+            ],
+        },
+        {
             label: 'Compliance',
             items: [
                 { routeKey: 'platformAdmin.audit', text: 'Event Log', icon: 'history', requiredAction: 'view_audit_log' },
@@ -440,6 +451,19 @@ export const adminGlobalNavSections: NavigationSection[] = [
                     { routeKey: 'admin.guardians.list', text: 'Guardians', icon: 'home', description: 'Guardian management' },
                     { routeKey: 'admin.guardianRequests', text: 'Guardian Requests', icon: 'person_add', description: 'Review attachment requests' },
                     { routeKey: 'admin.teams.list', text: 'Teams', icon: 'groups', description: 'Manage teams & rosters' },
+                ],
+            },
+        ],
+    },
+    {
+        label: 'Ticketing',
+        groups: [
+            {
+                label: '',
+                items: [
+                    { routeKey: 'admin.ticketingEvents', text: 'Events', icon: 'event', description: 'Create and manage ticketed events' },
+                    { routeKey: 'admin.ticketingOrders', text: 'Orders', icon: 'receipt_long', description: 'Search purchases and process refunds' },
+                    { routeKey: 'admin.ticketingScanner', text: 'Gate Entry', icon: 'qr_code_scanner', description: 'Ticket validation' },
                 ],
             },
         ],
@@ -513,6 +537,32 @@ export const platformAdminGlobalNavSections: NavigationSection[] = [
                 items: [
                     { routeKey: 'platformAdmin.payments', text: 'Payments', icon: 'credit_card', description: 'Payment transactions' },
                     { routeKey: 'platformAdmin.fees', text: 'Fees', icon: 'receipt_long', description: 'Fee schedules' },
+                ],
+            },
+        ],
+    },
+    {
+        label: 'Ticketing',
+        groups: [
+            {
+                label: '',
+                items: [
+                    { routeKey: 'platformAdmin.ticketing.allEvents', text: 'All Events', icon: 'event', description: 'Cross-org ticketed events' },
+                    { routeKey: 'platformAdmin.ticketing.orderLookup', text: 'Order Lookup', icon: 'receipt_long', description: 'Global order search' },
+                    { routeKey: 'platformAdmin.ticketing.webhookStatus', text: 'Webhook Status', icon: 'webhook', description: 'Payment delivery monitoring' },
+                ],
+            },
+        ],
+    },
+    {
+        label: 'Photos',
+        groups: [
+            {
+                label: '',
+                items: [
+                    { routeKey: 'platformAdmin.photos.overview', text: 'Gallery Overview', icon: 'photo_library', description: 'Storage and gallery stats' },
+                    { routeKey: 'platformAdmin.photos.contentReview', text: 'Content Review', icon: 'flag', description: 'Flagged content' },
+                    { routeKey: 'platformAdmin.photos.storage', text: 'Storage Management', icon: 'storage', description: 'Quotas and retention' },
                 ],
             },
         ],

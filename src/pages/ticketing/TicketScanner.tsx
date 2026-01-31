@@ -58,7 +58,8 @@ export default function TicketScanner() {
     queryFn: () => getTicketedEvents({ status: 'published', upcoming_only: true }),
     enabled: !token, // Only load if admin route
   })
-  const eventList = Array.isArray(events) ? events : events?.data || []
+  const eventsAny = events as any
+  const eventList = Array.isArray(eventsAny) ? eventsAny : eventsAny?.data || []
 
   // Auto-focus input
   useEffect(() => {

@@ -27,7 +27,8 @@ export default function TicketOrderSuccess() {
   })
 
   const order = (orderResponse as any)?.data ?? orderResponse ?? null
-  const tickets = Array.isArray(ticketsResponse) ? ticketsResponse : ticketsResponse?.data || []
+  const ticketsResponseAny = ticketsResponse as any
+  const tickets = Array.isArray(ticketsResponseAny) ? ticketsResponseAny : ticketsResponseAny?.data || []
 
   if (!order) {
     return (

@@ -22,6 +22,7 @@ import { useExportOrganization } from '../../../hooks/useExportOrganization'
 import { isValidUUID } from '../../../utils/uuid'
 import { handleRpcError } from '../../../utils/rpcErrorHandler'
 import { isRpcSuccessResponse } from '../../../utils/typeAdapters'
+import { getLink } from '../../../utils/routes'
 import { showSuccess } from '../../../utils/toast'
 import { USE_FAKE_DATA } from '../../../data/config'
 import { getStatusVariant } from '../../../utils/organizationUtils'
@@ -390,6 +391,15 @@ export default function OrganizationDetail() {
 
         {/* Action Buttons */}
         <div className="pa-flex pa-gap-2">
+          <Button
+            variant="ghost"
+            size="compact"
+            icon="confirmation_number"
+            onClick={() => navigate(getLink('platformAdmin.ticketing.organization', { id: organization.id }))}
+            title="View this org's ticketing dashboard"
+          >
+            Ticketing
+          </Button>
           {/* Export Menu */}
           <div style={{ position: 'relative' }}>
             <Button

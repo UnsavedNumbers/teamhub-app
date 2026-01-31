@@ -71,7 +71,7 @@ export default function TicketingOrders() {
                       {order.status}
                     </span>
                   </td>
-                  <td>{new Date(order.created_at).toLocaleDateString()}</td>
+                  <td>{order.created_at ? new Date(order.created_at).toLocaleDateString() : ''}</td>
                 </tr>
               ))}
             </tbody>

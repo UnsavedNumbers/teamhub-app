@@ -7,6 +7,7 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { useUserContext } from '../../hooks/useUserContext'
+import { supabase } from '../../lib/supabase'
 import Icon from '../portal/Icon'
 import Card from '../portal/Card'
 import Button from '../portal/Button'
@@ -262,7 +263,6 @@ export function PhotoUploader({
                   {uploadFile.status === 'error' && (
                     <Button
                       variant="secondary"
-                      size="small"
                       onClick={() => retryUpload(uploadFile)}
                     >
                       Retry
@@ -270,8 +270,7 @@ export function PhotoUploader({
                   )}
                   {(uploadFile.status === 'success' || uploadFile.status === 'error') && (
                     <Button
-                      variant="ghost"
-                      size="small"
+                      variant="secondary"
                       onClick={() => removeFile(uploadFile.id)}
                     >
                       Remove

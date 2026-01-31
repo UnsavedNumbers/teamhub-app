@@ -75,7 +75,7 @@ export function ModerationQueue({ galleryId, onModerationComplete }: ModerationQ
     
     try {
       // Call Edge Function for moderation (which handles email notifications)
-      const { data: functionData, error: functionError } = await supabase.functions.invoke(
+      const { error: functionError } = await supabase.functions.invoke(
         'moderate-photo-submission',
         {
           body: {
@@ -149,7 +149,6 @@ export function ModerationQueue({ galleryId, onModerationComplete }: ModerationQ
             <div className="flex gap-2">
               <Button
                 variant="primary"
-                size="small"
                 onClick={() => handleModerate('approve')}
                 disabled={moderating}
               >
@@ -157,8 +156,7 @@ export function ModerationQueue({ galleryId, onModerationComplete }: ModerationQ
                 Approve
               </Button>
               <Button
-                variant="danger"
-                size="small"
+                variant="primary"
                 onClick={() => handleModerate('reject')}
                 disabled={moderating}
               >
@@ -166,8 +164,7 @@ export function ModerationQueue({ galleryId, onModerationComplete }: ModerationQ
                 Reject
               </Button>
               <Button
-                variant="ghost"
-                size="small"
+                variant="secondary"
                 onClick={() => setSelectedPhotos(new Set())}
               >
                 Clear

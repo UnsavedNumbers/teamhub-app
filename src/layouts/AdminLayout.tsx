@@ -66,6 +66,7 @@ export default function AdminLayout() {
         { routeKey: 'admin.levels.list', text: 'Levels', icon: 'grade', path: getLink('admin.levels.list'), requiresOrg: true },
         { routeKey: 'admin.teams.list', text: 'Teams', icon: 'groups', path: getLink('admin.teams.list'), requiresOrg: true },
         { routeKey: 'admin.seasons.list', text: 'Seasons', icon: 'calendar_month', path: getLink('admin.seasons.list'), requiresOrg: true },
+        { routeKey: 'admin.ticketingEvents.list', text: 'Team Events', icon: 'confirmation_number', path: getLink('admin.ticketingEvents.list'), requiresOrg: true },
         { routeKey: 'admin.organization.users', text: 'Staff', icon: 'person', path: getPath(RouteKeys.ADMIN_ORGANIZATION_USERS), requiresOrg: true },
       ],
     },
@@ -81,6 +82,17 @@ export default function AdminLayout() {
         ],
     },
     {
+      label: 'Ticketing',
+      icon: 'confirmation_number',
+      path: getLink('admin.ticketingEvents.list'),
+      requiresOrg: true,
+      children: [
+        { routeKey: 'admin.ticketingEvents.list', text: 'Events', icon: 'event', path: getLink('admin.ticketingEvents.list'), requiresOrg: true },
+        { routeKey: 'admin.ticketingOrders', text: 'Orders', icon: 'receipt_long', path: getLink('admin.ticketingOrders'), requiresOrg: true },
+        { routeKey: 'admin.ticketingScanner', text: 'Gate Entry', icon: 'qr_code_scanner', path: getLink('admin.ticketingScanner'), requiresOrg: true },
+      ],
+    },
+    {
       label: 'Operations',
       icon: 'settings',
       path: getPath(RouteKeys.ADMIN_PAYMENTS),
@@ -93,6 +105,16 @@ export default function AdminLayout() {
         { routeKey: 'admin.announcements.list', text: 'Announcements', icon: 'campaign', path: getPath(RouteKeys.ADMIN_ANNOUNCEMENTS), requiresOrg: true },
         { routeKey: 'admin.travel.list', text: 'Travel', icon: 'flight', path: '/admin/travel', requiresOrg: true },
         { routeKey: 'admin.uniforms.list', text: 'Uniforms', icon: 'checkroom', path: getPath(RouteKeys.ADMIN_UNIFORMS), requiresOrg: true },
+      ],
+    },
+    {
+      label: 'Photos',
+      icon: 'photo_library',
+      path: getLink('admin.photos.list'),
+      requiresOrg: true,
+      children: [
+        { routeKey: 'admin.photos.list', text: 'All Galleries', icon: 'collections', path: getLink('admin.photos.list'), requiresOrg: true },
+        { routeKey: 'admin.photos.list', text: 'New Gallery', icon: 'add_photo_alternate', path: getLink('admin.photos.list') + '?new=1', requiresOrg: true },
       ],
     },
     {

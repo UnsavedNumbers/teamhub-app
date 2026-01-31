@@ -53,7 +53,7 @@ export async function getAthleteMedical(
             throw error
         }
 
-        return { data, error: null }
+        return { data: data as unknown as AthleteMedicalPrivate, error: null }
     } catch (err) {
         console.error('[AthleteMedicalService] Error getting athlete medical data:', err)
         return { data: null, error: err as Error }
@@ -93,13 +93,13 @@ export async function upsertAthleteMedical(
         // Prepare upsert data
         const upsertData = {
             athlete_id: athleteId,
-            org_id: athlete.org_id,
+            org_id: (athlete as any).org_id,
             medical_notes: medicalNotes,
             allergies: allergies,
             emergency_contact: emergencyContact,
             updated_by: userId,
             updated_at: new Date().toISOString(),
-        }
+        } as any
 
         // Upsert (insert or update based on primary key)
         const { data, error } = await supabase
@@ -120,7 +120,7 @@ export async function upsertAthleteMedical(
 
         console.log(`[AthleteMedicalService] Upserted medical data for athlete ${athleteId}`)
 
-        return { data, error: null }
+        return { data: data as unknown as AthleteMedicalPrivate, error: null }
     } catch (err) {
         console.error('[AthleteMedicalService] Error upserting athlete medical data:', err)
         return { data: null, error: err as Error }
@@ -259,7 +259,7 @@ export async function deleteAthleteMedical(
  */
 export async function canViewAthleteMedical(athleteId: string): Promise<boolean> {
     try {
-        const { data, error } = await getAthleteMedical(athleteId)
+        const { error } = await getAthleteMedical(athleteId)
 
         // If we got data or a "not found" error, user has permission
         // If we got a permission error, user doesn't have permission

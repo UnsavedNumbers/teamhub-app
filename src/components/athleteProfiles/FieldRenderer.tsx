@@ -7,7 +7,7 @@
  * Design: Clean, breathable inputs with clear labels and helpful guidance.
  */
 
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import type { SportFieldDefinition } from '../../types/athleteSportProfiles'
 
 interface FieldRendererProps {

@@ -6,8 +6,7 @@
  * Design: ticket_mobile_entry
  */
 
-// QR Code will be generated server-side or via a library
-// For now, using a placeholder that can be replaced with QRCodeSVG from 'qrcode.react'
+import { QRCodeSVG } from 'qrcode.react'
 import type { Ticket, TicketType, TicketedEvent } from '@/types/ticketing'
 import { formatEntryCode } from '@/types/ticketing'
 
@@ -25,7 +24,6 @@ export default function TicketCard({
   ticket,
   event,
   orderId,
-  orgName,
   showQR = true,
 }: TicketCardProps) {
   const entryCodeFormatted = formatEntryCode(ticket.entry_code)

@@ -8,8 +8,6 @@
 import { supabase } from '../../lib/supabase'
 import type {
     AthleteSportProfile,
-    CreateAthleteSportProfileDTO,
-    UpdateAthleteSportProfileDTO,
 } from '../../types/athleteSportProfiles'
 import type { SportCode } from '../../types/sports'
 
@@ -65,7 +63,7 @@ export async function getAthleteSportProfile(
             throw error
         }
 
-        return { data: data ?? null, error: null }
+        return { data: (data ?? null) as unknown as AthleteSportProfile | null, error: null }
     } catch (err) {
         console.error('[AthleteSportProfilesService] Error getting sport profile:', err)
         return { data: null, error: err as Error }
@@ -97,7 +95,7 @@ export async function getAthleteSportProfiles(
             throw error
         }
 
-        return { data: data || [], error: null }
+        return { data: (data || []) as unknown as AthleteSportProfile[], error: null }
     } catch (err) {
         console.error('[AthleteSportProfilesService] Error getting sport profiles:', err)
         return { data: null, error: err as Error }
@@ -148,14 +146,14 @@ export async function upsertAthleteSportProfile(
         // Prepare upsert data
         const upsertData = {
             athlete_id: athleteId,
-            org_id: athlete.org_id,
+            org_id: (athlete as any).org_id,
             sport_code: sportCode,
-            profile_data: profileData,
-            equipment_data: equipmentData,
+            profile_data: profileData as any,
+            equipment_data: equipmentData as any,
             completeness_score: completenessScore,
             updated_by: userId,
             updated_at: new Date().toISOString(),
-        }
+        } as any
 
         // Upsert (insert or update based on unique constraint)
         const { data, error } = await supabase
@@ -175,7 +173,7 @@ export async function upsertAthleteSportProfile(
 
         console.log(`[AthleteSportProfilesService] Upserted sport profile for athlete ${athleteId}, sport ${sportCode}`)
 
-        return { data: data ?? null, error: null }
+        return { data: (data ?? null) as unknown as AthleteSportProfile | null, error: null }
     } catch (err) {
         console.error('[AthleteSportProfilesService] Error upserting sport profile:', err)
         return { data: null, error: err as Error }
@@ -289,7 +287,7 @@ export async function markSportProfileAsVerified(
 
         console.log(`[AthleteSportProfilesService] Marked sport profile as verified for athlete ${athleteId}, sport ${sportCode}`)
 
-        return { data: data ?? null, error: null }
+        return { data: (data ?? null) as unknown as AthleteSportProfile | null, error: null }
     } catch (err) {
         console.error('[AthleteSportProfilesService] Error marking profile as verified:', err)
         return { data: null, error: err as Error }

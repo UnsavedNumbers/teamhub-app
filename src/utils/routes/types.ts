@@ -107,6 +107,8 @@ export interface MenuItemDefinition {
     routeKey: string
     requiresOrg: boolean
     children: MenuItemChild[] | null
+    /** Optional count for notification badge (e.g. orders requiring action, refunds pending) */
+    badgeCount?: number
 }
 
 /**
