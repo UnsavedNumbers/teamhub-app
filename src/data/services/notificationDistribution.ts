@@ -60,7 +60,7 @@ export async function distributeEventNotifications(event: EventNotificationInput
             .eq('team_id', event.team_id)
 
         if (!coachError && coaches) {
-            coaches.forEach(c => recipients.add(c.user_id))
+            coaches.forEach((c: any) => recipients.add(c.user_id))
         }
 
         recipients.delete(event.created_by_user_id)
@@ -145,7 +145,7 @@ export async function distributeEventUpdateNotifications(event: EventNotificatio
             .eq('team_id', event.team_id)
 
         if (!coachError && coaches) {
-            coaches.forEach(c => recipients.add(c.user_id))
+            coaches.forEach((c: any) => recipients.add(c.user_id))
         }
 
         recipients.delete(event.created_by_user_id)
@@ -230,7 +230,7 @@ export async function distributeEventCancelNotifications(event: EventNotificatio
             .eq('team_id', event.team_id)
 
         if (!coachError && coaches) {
-            coaches.forEach(c => recipients.add(c.user_id))
+            coaches.forEach((c: any) => recipients.add(c.user_id))
         }
 
         recipients.delete(event.created_by_user_id)

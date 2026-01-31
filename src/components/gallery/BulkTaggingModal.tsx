@@ -8,7 +8,6 @@ import { useState, useEffect } from 'react'
 import { useUserContext } from '../../hooks/useUserContext'
 import { supabase } from '../../lib/supabase'
 import { getGalleryPhotoUrl, type GalleryPhoto } from '../../data/services/galleryService'
-import Card from '../portal/Card'
 import Button from '../portal/Button'
 import Icon from '../portal/Icon'
 import { showError, showSuccess } from '../../utils/toast'
@@ -185,7 +184,7 @@ export function BulkTaggingModal({
               Tags added here will be applied to all selected items.
             </p>
           </div>
-          <Button variant="ghost" size="small" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             <Icon name="close" size="text-lg" />
           </Button>
         </div>

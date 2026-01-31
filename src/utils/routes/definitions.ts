@@ -984,12 +984,69 @@ const platformAdmin = {
         description: 'Feature toggles',
     },
 
+    // Ticketing (platform oversight)
+    ticketing: {
+        allEvents: {
+            path: '/platform-admin/ticketing/events',
+            label: 'All Events',
+            icon: 'event',
+            description: 'Searchable cross-org ticketed events',
+        },
+        orderLookup: {
+            path: '/platform-admin/ticketing/orders',
+            label: 'Order Lookup',
+            icon: 'receipt_long',
+            description: 'Global order search by email, order ID, or transaction',
+        },
+        webhookStatus: {
+            path: '/platform-admin/ticketing/webhooks',
+            label: 'Webhook Status',
+            icon: 'webhook',
+            description: 'Payment processing and delivery monitoring',
+        },
+        organization: {
+            path: '/platform-admin/ticketing/organizations/:id',
+            params: ['id'] as const,
+            label: 'Org Ticketing',
+            icon: 'confirmation_number',
+            description: "This org's ticketing dashboard",
+        },
+    },
+
     // Email Preview
     emailPreview: {
         path: '/platform-admin/email-preview',
         label: 'Email Preview',
         icon: 'email',
         description: 'Email template testing',
+    },
+
+    // Photos (cross-org overview, content review, storage)
+    photos: {
+        overview: {
+            path: '/platform-admin/photos',
+            label: 'Gallery Overview',
+            icon: 'photo_library',
+            description: 'Storage usage and gallery stats',
+        },
+        contentReview: {
+            path: '/platform-admin/photos/content-review',
+            label: 'Content Review',
+            icon: 'flag',
+            description: 'Flagged content and moderation',
+        },
+        storage: {
+            path: '/platform-admin/photos/storage',
+            label: 'Storage Management',
+            icon: 'storage',
+            description: 'Quotas and retention',
+        },
+        orgGalleries: {
+            path: '/platform-admin/organizations/:id/photos',
+            params: ['id'] as const,
+            label: 'Organization Galleries',
+            icon: 'collections',
+        },
     },
 
     // Licenses

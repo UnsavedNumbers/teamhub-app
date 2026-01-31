@@ -1460,6 +1460,58 @@ export const en = {
                 recurringDaysRequired: 'Select at least one day',
                 recurringEndRequired: 'Specify end date or number of occurrences',
             },
+            ticketing: {
+                isTicketed: 'This is a ticketed event?',
+                title: 'Ticketing',
+                eventType: {
+                    label: 'Ticketed Event Type',
+                    helper: 'Used for ticket sales and display.',
+                    game: 'Game',
+                    tournament: 'Tournament',
+                    concert: 'Concert',
+                    fundraiser: 'Fundraiser',
+                    other: 'Other',
+                },
+                salesWindow: {
+                    start: 'Sales Start',
+                    end: 'Sales End',
+                    optional: 'Optional',
+                    endAfterStart: 'Sales end must be after sales start',
+                },
+                status: {
+                    label: 'Status',
+                    draft: 'Draft',
+                    published: 'Published',
+                },
+                ticketTypes: {
+                    label: 'Ticket Types',
+                    add: 'Add Ticket Type',
+                    none: 'No ticket types added. You can add them later on the event detail page.',
+                    name: {
+                        label: 'Name',
+                        placeholder: 'e.g. General Admission',
+                        required: 'Name is required when price or capacity is set',
+                    },
+                    price: {
+                        label: 'Price ($)',
+                        placeholder: '0.00',
+                        invalid: 'Price must be a valid number >= 0',
+                    },
+                    capacity: {
+                        label: 'Capacity',
+                        placeholder: 'Unlimited',
+                        invalid: 'Capacity must be a positive integer',
+                    },
+                    remove: 'Remove',
+                },
+                errors: {
+                    setupFailed: 'Event created successfully, but ticketing setup failed. You can add ticketing from the event edit page.',
+                },
+                success: {
+                    created: 'Event created successfully!',
+                    noTypes: 'Event created! Add ticket types on the event to start selling.',
+                },
+            },
         },
         users: {
             title: 'Users',
@@ -2941,6 +2993,58 @@ export const es = {
                 locationRequired: 'La información de ubicación es requerida',
                 recurringDaysRequired: 'Seleccione al menos un día',
                 recurringEndRequired: 'Especifique fecha de finalización o número de ocurrencias',
+            },
+            ticketing: {
+                isTicketed: '¿Este es un evento con entradas?',
+                title: 'Venta de Entradas',
+                eventType: {
+                    label: 'Tipo de Evento con Entradas',
+                    helper: 'Utilizado para venta y visualización de entradas.',
+                    game: 'Juego',
+                    tournament: 'Torneo',
+                    concert: 'Concierto',
+                    fundraiser: 'Recaudación de Fondos',
+                    other: 'Otro',
+                },
+                salesWindow: {
+                    start: 'Inicio de Ventas',
+                    end: 'Fin de Ventas',
+                    optional: 'Opcional',
+                    endAfterStart: 'El fin de ventas debe ser después del inicio de ventas',
+                },
+                status: {
+                    label: 'Estado',
+                    draft: 'Borrador',
+                    published: 'Publicado',
+                },
+                ticketTypes: {
+                    label: 'Tipos de Entradas',
+                    add: 'Agregar Tipo de Entrada',
+                    none: 'No se han agregado tipos de entradas. Puede agregarlos más tarde en la página de detalles del evento.',
+                    name: {
+                        label: 'Nombre',
+                        placeholder: 'ej. Entrada General',
+                        required: 'El nombre es requerido cuando se establece precio o capacidad',
+                    },
+                    price: {
+                        label: 'Precio ($)',
+                        placeholder: '0.00',
+                        invalid: 'El precio debe ser un número válido >= 0',
+                    },
+                    capacity: {
+                        label: 'Capacidad',
+                        placeholder: 'Ilimitado',
+                        invalid: 'La capacidad debe ser un entero positivo',
+                    },
+                    remove: 'Eliminar',
+                },
+                errors: {
+                    setupFailed: 'Evento creado exitosamente, pero la configuración de venta de entradas falló. Puede agregar venta de entradas desde la página de edición del evento.',
+                },
+                success: {
+                    created: '¡Evento creado exitosamente!',
+                    noTypes: '¡Evento creado! Agregue tipos de entradas en el evento para comenzar a vender.',
+                },
             },
         },
         users: {

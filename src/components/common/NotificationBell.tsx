@@ -51,7 +51,7 @@ export default function NotificationBell({ viewAllPath = '/dashboard' }: Notific
     if (!context?.userId || !isReady) return
 
     import('../../lib/supabase').then(({ supabase }) => {
-      const channel = supabase
+      supabase
         .channel('notifications')
         .on(
           'postgres_changes',

@@ -100,6 +100,7 @@ export const SPORT_FIELD_CATALOG: Record<SportCode, SportFieldCatalog> = {
     gymnastics: { profile: [], equipment: [] },
     ice_hockey: { profile: [], equipment: [] },
     lacrosse: { profile: [], equipment: [] },
+    poms: { profile: [], equipment: [] },
     soccer: { profile: [], equipment: [] },
     softball: { profile: [], equipment: [] },
     swimming: { profile: [], equipment: [] },

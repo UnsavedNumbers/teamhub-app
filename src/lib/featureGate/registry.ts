@@ -112,6 +112,17 @@ export const ROUTE_TO_FEATURE: Record<string, string> = {
     'admin.seasons.update': 'team_management',
 
     // -------------------------------------------------------------------------
+    // Admin Routes - Ticketing
+    // -------------------------------------------------------------------------
+    'admin.ticketing': 'ticketing',
+    'admin.ticketingEvents': 'ticketing',
+    'admin.ticketingEvents.list': 'ticketing',
+    'admin.ticketingEvents.create': 'ticketing',
+    'admin.ticketingEvents.detail': 'ticketing',
+    'admin.ticketingOrders': 'ticketing',
+    'admin.ticketingScanner': 'ticketing',
+
+    // -------------------------------------------------------------------------
     // Admin Routes - Settings & Onboarding
     // -------------------------------------------------------------------------
     'admin.settings': 'settings',
@@ -133,6 +144,10 @@ export const ROUTE_TO_FEATURE: Record<string, string> = {
     'platformAdmin.audit': 'audit',
     'platformAdmin.featureFlags': 'featureflags',
     'platformAdmin.structure': 'structure',
+    'platformAdmin.ticketing.allEvents': 'ticketing',
+    'platformAdmin.ticketing.orderLookup': 'ticketing',
+    'platformAdmin.ticketing.webhookStatus': 'ticketing',
+    'platformAdmin.ticketing.organization': 'ticketing',
     'platformAdmin.licenses.overview': 'overview',
     'platformAdmin.licenses.tiers': 'tiers',
     'platformAdmin.licenses.tiers.detail': 'tierdetail',

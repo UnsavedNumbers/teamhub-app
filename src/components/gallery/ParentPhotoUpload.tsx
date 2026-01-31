@@ -213,8 +213,7 @@ export function ParentPhotoUpload({ gallery, onUploadComplete }: ParentPhotoUplo
                   )}
                 </div>
                 <Button
-                  variant="ghost"
-                  size="small"
+                  variant="secondary"
                   onClick={() => removeFile(uploadFile.id)}
                 >
                   <Icon name="close" size="text-sm" />

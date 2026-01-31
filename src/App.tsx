@@ -96,6 +96,16 @@ const LicensesAudit = lazy(() => import('./pages/platformAdmin/LicensesAudit'))
 
 // Email Preview - Platform Admin Feature
 const EmailPreview = lazy(() => import('./pages/platformAdmin/EmailPreview'))
+// Photos - Platform Admin (overview, content review, storage, org galleries)
+const PlatformPhotosOverview = lazy(() => import('./pages/platformAdmin/PhotosOverview'))
+const PlatformPhotosContentReview = lazy(() => import('./pages/platformAdmin/PhotosContentReview'))
+const PlatformPhotosStorage = lazy(() => import('./pages/platformAdmin/PhotosStorage'))
+const PlatformOrgPhotos = lazy(() => import('./pages/platformAdmin/OrgPhotos'))
+// Ticketing - Platform Admin
+const PlatformTicketingAllEvents = lazy(() => import('./pages/platformAdmin/TicketingAllEvents'))
+const PlatformTicketingOrderLookup = lazy(() => import('./pages/platformAdmin/TicketingOrderLookup'))
+const PlatformTicketingWebhookStatus = lazy(() => import('./pages/platformAdmin/TicketingWebhookStatus'))
+const PlatformTicketingOrgDashboard = lazy(() => import('./pages/platformAdmin/TicketingOrgDashboard'))
 
 // Admin Pages - Lazy loaded for code splitting
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
@@ -431,7 +441,7 @@ function AppWithTheme() {
             
               {/* Ticketing */}
               <Route path="ticketing/scanner" element={<FeatureGateRoute routeKey="admin.ticketingScanner"><TicketScanner /></FeatureGateRoute>} />
-              <Route path="ticketing/events" element={<FeatureGateRoute routeKey="admin.ticketingEvents"><Suspense fallback={<AdminLoadingSpinner />}><TicketingEvents /></Suspense></FeatureGateRoute>} />
+              <Route path="ticketing/events" element={<FeatureGateRoute routeKey="admin.ticketingEvents.list"><Suspense fallback={<AdminLoadingSpinner />}><TicketingEvents /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/events/new" element={<FeatureGateRoute routeKey="admin.ticketingEvents.create"><Suspense fallback={<AdminLoadingSpinner />}><CreateTicketedEvent /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/events/:id" element={<FeatureGateRoute routeKey="admin.ticketingEvents.detail"><Suspense fallback={<AdminLoadingSpinner />}><TicketedEventDetail /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/orders" element={<FeatureGateRoute routeKey="admin.ticketingOrders"><Suspense fallback={<AdminLoadingSpinner />}><TicketingOrders /></Suspense></FeatureGateRoute>} />
@@ -534,8 +544,19 @@ function AppWithTheme() {
               <Route path="licenses/overrides/:id" element={<OverrideDetail />} />
               <Route path="licenses/audit" element={<LicensesAudit />} />
 
+              {/* Ticketing (platform oversight) */}
+              <Route path="ticketing/events" element={<PlatformTicketingAllEvents />} />
+              <Route path="ticketing/orders" element={<PlatformTicketingOrderLookup />} />
+              <Route path="ticketing/webhooks" element={<PlatformTicketingWebhookStatus />} />
+              <Route path="ticketing/organizations/:id" element={<PlatformTicketingOrgDashboard />} />
+
               {/* Email Preview */}
               <Route path="email-preview" element={<EmailPreview />} />
+
+              {/* Photos */}
+              <Route path="photos" element={<PlatformPhotosOverview />} />
+              <Route path="photos/content-review" element={<PlatformPhotosContentReview />} />
+              <Route path="photos/storage" element={<PlatformPhotosStorage />} />
             </Route>
           </Route>
         </Routes>

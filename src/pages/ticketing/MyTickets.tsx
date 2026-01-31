@@ -15,7 +15,8 @@ export default function MyTickets() {
     queryFn: () => getMyTicketOrders(),
   })
 
-  const orders = Array.isArray(ordersResponse) ? ordersResponse : ordersResponse?.data || []
+  const ordersResponseAny = ordersResponse as any
+  const orders = Array.isArray(ordersResponseAny) ? ordersResponseAny : ordersResponseAny?.data || []
 
   return (
     <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] py-8 text-[#111418] dark:text-white">
@@ -50,7 +51,8 @@ function OrderTickets({ orderId }: { orderId: string }) {
     queryFn: () => getTicketsForOrder(orderId),
   })
 
-  const tickets = Array.isArray(ticketsResponse) ? ticketsResponse : ticketsResponse?.data || []
+  const ticketsResponseAny = ticketsResponse as any
+  const tickets = Array.isArray(ticketsResponseAny) ? ticketsResponseAny : ticketsResponseAny?.data || []
 
   if (tickets.length === 0) return null
 

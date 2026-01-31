@@ -252,7 +252,26 @@ export interface EventFormData {
     recurring: RecurringEventFormData | null
     rsvp_enabled: boolean
     rsvp_type: RSVPType | null
+    ticketing?: TicketingFormData
 }
+
+export interface TicketingFormData {
+    is_ticketed: boolean
+    event_type: TicketedEventType
+    sales_start_at: string
+    sales_end_at: string
+    status: TicketedEventStatus
+    ticket_types: TicketTypeFormData[]
+}
+
+export interface TicketTypeFormData {
+    name: string
+    price_dollars: string
+    capacity: string
+}
+
+// Re-export ticketing types from ticketing.ts
+export type { TicketedEventType, TicketedEventStatus } from './ticketing'
 
 export interface EventLocationFormData {
     venue_name: string

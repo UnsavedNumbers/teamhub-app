@@ -208,6 +208,10 @@ export const RouteKeys = {
     PLATFORM_AUDIT: 'platformAdmin.audit',
     PLATFORM_FEATURE_FLAGS: 'platformAdmin.featureFlags',
     PLATFORM_LICENSES: 'platformAdmin.licenses.overview',
+    PLATFORM_PHOTOS_OVERVIEW: 'platformAdmin.photos.overview',
+    PLATFORM_PHOTOS_CONTENT_REVIEW: 'platformAdmin.photos.contentReview',
+    PLATFORM_PHOTOS_STORAGE: 'platformAdmin.photos.storage',
+    PLATFORM_ORG_PHOTOS: 'platformAdmin.photos.orgGalleries',
 } as const
 
 export type RouteKeyConstant = typeof RouteKeys[keyof typeof RouteKeys]

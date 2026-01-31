@@ -18,7 +18,8 @@ export default function TicketEventList() {
     queryFn: () => getTicketedEvents({ status: 'published', upcoming_only: true }),
   })
 
-  const events = (Array.isArray(eventsResponse) ? eventsResponse : eventsResponse?.data || []) as TicketedEvent[]
+  const eventsResponseAny = eventsResponse as any
+  const events = (Array.isArray(eventsResponseAny) ? eventsResponseAny : eventsResponseAny?.data || []) as TicketedEvent[]
 
   return (
     <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] text-[#111418] dark:text-white transition-colors">

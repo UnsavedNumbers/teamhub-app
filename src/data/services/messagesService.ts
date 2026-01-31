@@ -522,7 +522,7 @@ async function distributeAnnouncementNotifications(announcement: Announcement, c
                 .eq('team_id', announcement.team_id)
 
             if (!coachError && coaches) {
-                coaches.forEach(c => recipients.add(c.user_id))
+                coaches.forEach((c: any) => recipients.add(c.user_id))
             }
         } else {
             // ORG-WIDE ANNOUNCEMENT
