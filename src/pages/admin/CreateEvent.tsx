@@ -31,8 +31,6 @@ import {
     EventFormData, 
     EVENT_TYPE_LABELS, 
     EventType,
-    TicketedEventType,
-    TicketedEventStatus,
 } from '../../types/calendar'
 
 const STORAGE_KEY = 'createEvent_formData'
@@ -152,7 +150,7 @@ export default function CreateEvent() {
     return getDefaultValues()
   })()
 
-  const { control, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm<EventFormData>({
+  const { control, handleSubmit, watch, setValue, trigger, getValues, formState: { errors } } = useForm<EventFormData>({
     defaultValues: initialValues,
     mode: 'onTouched',
   })
@@ -263,7 +261,7 @@ export default function CreateEvent() {
       const sportsList = (data || []).map(s => ({ id: s.id, name: s.name }))
       setSports(sportsList)
       // Auto-select if only one sport
-      if (sportsList.length === 1 && !watchSportId) {
+      if (sportsList.length === 1 && !getValues('sport_id')) {
         setValue('sport_id', sportsList[0].id, { shouldValidate: false })
       }
     } catch (err) {
@@ -272,7 +270,7 @@ export default function CreateEvent() {
     } finally {
       setLoading(false)
     }
-  }, [context, isReady, watchSportId, setValue])
+  }, [context, isReady, getValues, setValue])
 
   const fetchProgramsForSport = useCallback(async (sportId: string) => {
     if (!isReady || !context?.orgId) return
@@ -282,14 +280,14 @@ export default function CreateEvent() {
       const programsList = (data || []).map(p => ({ id: p.id, name: p.name, sport_id: p.sport_id }))
       setPrograms(programsList)
       // Auto-select if only one program
-      if (programsList.length === 1 && !watchProgramId) {
+      if (programsList.length === 1 && !getValues('program_id')) {
         setValue('program_id', programsList[0].id, { shouldValidate: false })
       }
     } catch (err) {
       console.error('Error fetching programs:', err)
       setPrograms([])
     }
-  }, [context, isReady, watchProgramId, setValue])
+  }, [context, isReady, getValues, setValue])
 
   const fetchSeasonsForProgram = useCallback(async (sportId: string, programId: string) => {
     if (!isReady || !context?.orgId) return
@@ -511,7 +509,7 @@ export default function CreateEvent() {
           event_id: eventDataAny.id,
           org_id: teamData.org_id,
           team_id: data.team_id,
-          event_type: data.ticketing.event_type,
+          event_type: data.ticketing.event_type as Database['public']['Enums']['ticketed_event_type'],
           title: data.title,
           description: data.notes || null,
           starts_at: new Date(data.start_time).toISOString(),
@@ -527,7 +525,7 @@ export default function CreateEvent() {
           venue_virtual_link: data.location.virtual_link?.trim() || null,
           sales_start_at: data.ticketing.sales_start_at ? new Date(data.ticketing.sales_start_at).toISOString() : null,
           sales_end_at: data.ticketing.sales_end_at ? new Date(data.ticketing.sales_end_at).toISOString() : null,
-          status: data.ticketing.status,
+          status: data.ticketing.status as Database['public']['Enums']['ticketed_event_status'],
         }
 
         const { data: ticketedEventDataResult, error: ticketedEventError } = await supabase
@@ -795,6 +793,7 @@ export default function CreateEvent() {
                         const time = field.value?.split('T')[1] || '09:00'
                         field.onChange(`${date}T${time}`)
                       }}
+                      minValue={new Date().toISOString().split('T')[0]}
                       required
                       error={errors.start_time?.message}
                     />
@@ -821,7 +820,6 @@ export default function CreateEvent() {
                   <Controller 
                     name="end_time" 
                     control={control} 
-                    rules={{ required: t('admin.events.validation.endTimeRequired') }}
                     render={({ field }) => (
                       <TimePicker 
                         label="End Time" 
@@ -830,7 +828,6 @@ export default function CreateEvent() {
                           const startDate = watch('start_time')?.split('T')[0] || new Date().toISOString().split('T')[0]
                           field.onChange(time ? `${startDate}T${time}` : '')
                         }}
-                        required
                         error={errors.end_time?.message}
                       />
                     )} 
@@ -967,19 +964,49 @@ export default function CreateEvent() {
                   </div>
 
                   {/* Sales window */}
-                  <div className="pa-form-grid pa-form-grid-2 pa-mb-4">
+                  <div className="pa-form-grid pa-form-grid-4 pa-form-grid-tablet-2col pa-mb-4">
                     <Controller
                       name="ticketing.sales_start_at"
                       control={control}
+                      rules={{
+                        validate: (value) => {
+                          if (value) {
+                            const today = new Date()
+                            today.setHours(0, 0, 0, 0)
+                            if (new Date(value) < today) {
+                              return t('admin.events.ticketing.salesWindow.startNotBeforeToday' as any)
+                            }
+                          }
+                          return true
+                        }
+                      }}
                       render={({ field }) => (
-                        <Input
-                          {...field}
-                          type="datetime-local"
-                          label={t('admin.events.ticketing.salesWindow.start')}
-                          placeholder={t('admin.events.ticketing.salesWindow.optional')}
+                        <DatePicker
+                          label={t('admin.events.ticketing.salesWindow.startDate' as any)}
+                          value={field.value ? field.value.split('T')[0] : ''}
+                          onChange={(date) => {
+                            const time = field.value?.split('T')[1] || '00:00'
+                            field.onChange(`${date}T${time}`)
+                          }}
                         />
                       )}
                     />
+                    <div className="pa-max-w-xs">
+                      <Controller
+                        name="ticketing.sales_start_at"
+                        control={control}
+                        render={({ field }) => (
+                          <TimePicker
+                            label={t('admin.events.ticketing.salesWindow.startTime' as any)}
+                            value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                            onChange={(time) => {
+                              const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
+                              field.onChange(`${date}T${time}`)
+                            }}
+                          />
+                        )}
+                      />
+                    </div>
                     <Controller
                       name="ticketing.sales_end_at"
                       control={control}
@@ -987,21 +1014,44 @@ export default function CreateEvent() {
                         validate: (value) => {
                           const startAt = watch('ticketing.sales_start_at')
                           if (startAt && value && new Date(value) <= new Date(startAt)) {
-                            return t('admin.events.ticketing.salesWindow.endAfterStart')
+                            return t('admin.events.ticketing.salesWindow.endAfterStart' as any)
+                          }
+                          const eventStart = watch('start_time')
+                          if (eventStart && value && new Date(value) > new Date(eventStart)) {
+                            return t('admin.events.ticketing.salesWindow.endNotAfterEventStart' as any)
                           }
                           return true
                         }
                       }}
                       render={({ field }) => (
-                        <Input
-                          {...field}
-                          type="datetime-local"
-                          label={t('admin.events.ticketing.salesWindow.end')}
-                          placeholder={t('admin.events.ticketing.salesWindow.optional')}
+                        <DatePicker
+                          label={t('admin.events.ticketing.salesWindow.endDate' as any)}
+                          value={field.value ? field.value.split('T')[0] : ''}
+                          onChange={(date) => {
+                            const time = field.value?.split('T')[1] || '23:59'
+                            field.onChange(`${date}T${time}`)
+                          }}
                           error={errors.ticketing?.sales_end_at?.message}
                         />
                       )}
                     />
+                    <div className="pa-max-w-xs">
+                      <Controller
+                        name="ticketing.sales_end_at"
+                        control={control}
+                        render={({ field }) => (
+                          <TimePicker
+                            label={t('admin.events.ticketing.salesWindow.endTime' as any)}
+                            value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                            onChange={(time) => {
+                              const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
+                              field.onChange(`${date}T${time}`)
+                            }}
+                            error={errors.ticketing?.sales_end_at?.message}
+                          />
+                        )}
+                      />
+                    </div>
                   </div>
 
                   {/* Status */}

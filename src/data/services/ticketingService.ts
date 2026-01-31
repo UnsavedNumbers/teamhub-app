@@ -49,13 +49,13 @@ export async function getTicketedEvents(filters?: {
     query = query.gte('starts_at', new Date().toISOString())
   }
 
-  const { data, error } = await query
+  const { data } = await query
 
   return normalizeSupabaseResponse<TicketedEvent[]>(data as unknown as TicketedEvent[], true)
 }
 
 export async function getTicketedEventById(id: string) {
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from('ticketed_events')
     .select('*')
     .eq('id', id)
@@ -69,7 +69,7 @@ export async function getTicketedEventById(id: string) {
 // ============================================================================
 
 export async function getTicketTypesForEvent(ticketedEventId: string) {
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from('ticket_types')
     .select('*')
     .eq('ticketed_event_id', ticketedEventId)
@@ -84,7 +84,7 @@ export async function getTicketTypesForEvent(ticketedEventId: string) {
 // ============================================================================
 
 export async function getTicketOrderById(orderId: string) {
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from('ticket_orders')
     .select(`
       *,
@@ -137,7 +137,7 @@ export async function getMyTicketOrders() {
     .eq('id', user.id)
     .single()
 
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from('ticket_orders')
     .select('*')
     .or(`purchaser_user_id.eq.${user.id}${userData?.email ? `,purchaser_email.eq.${userData.email}` : ''}`)
@@ -151,7 +151,7 @@ export async function getMyTicketOrders() {
 // ============================================================================
 
 export async function getTicketsForOrder(orderId: string) {
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from('tickets')
     .select(`
       *,

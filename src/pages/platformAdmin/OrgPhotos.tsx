@@ -22,7 +22,7 @@ export default function OrgPhotos() {
     }
     const load = async () => {
       setLoading(true)
-      const platformContext: UserContext = {
+      const platformContext = {
         userId: '',
         email: null,
         orgId: orgId ?? '',

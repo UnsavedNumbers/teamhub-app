@@ -257,14 +257,18 @@ export interface EventFormData {
 
 export interface TicketingFormData {
     is_ticketed: boolean
-    event_type: TicketedEventType
+    event_type: string
     sales_start_at: string
     sales_end_at: string
-    status: TicketedEventStatus
+    status: string
     ticket_types: TicketTypeFormData[]
 }
 
 export interface TicketTypeFormData {
+    /** Present when editing an existing ticket type */
+    id?: string
+    /** Sold count for display/validation; from DB (capacity_total - capacity_remaining) */
+    soldCount?: number
     name: string
     price_dollars: string
     capacity: string
