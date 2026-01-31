@@ -32,6 +32,7 @@ export type SportCode =
     | 'track_field'
     | 'volleyball'
     | 'wrestling'
+    | 'poms'
 
 /**
  * Array of all sport codes for iteration
@@ -57,6 +58,7 @@ export const SPORT_CODES: readonly SportCode[] = [
     'track_field',
     'volleyball',
     'wrestling',
+    'poms',
 ] as const
 
 /**
@@ -83,6 +85,7 @@ export const SPORT_NAMES: Record<SportCode, string> = {
     track_field: 'Track & Field',
     volleyball: 'Volleyball',
     wrestling: 'Wrestling',
+    poms: 'Poms',
 } as const
 
 /**

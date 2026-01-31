@@ -9,6 +9,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { getAthleteById } from '../data/services/familyService'
+import { getAthleteTeamHistory } from '../data/services/teamsService'
 import { getAthletePhotoUrl } from '../data/services/athletePhotoService'
 import { getDisplayName, getAthleteInitials } from '../utils/athleteHelpers'
 import PortalLayout from '../components/portal/PortalLayout'
@@ -38,6 +39,8 @@ export default function AthleteProfilePage() {
   const [activeTab, setActiveTab] = useState<'universal' | 'physical' | 'sports' | 'medical'>('universal')
   const [selectedSport, setSelectedSport] = useState<SportCode | null>(null)
   const [sportIdToCode, setSportIdToCode] = useState<Record<string, SportCode>>({})
+  const [activeTeamSports, setActiveTeamSports] = useState<SportCode[]>([])
+  const [customSportNames, setCustomSportNames] = useState<Record<string, string>>({})
 
   const refreshAthlete = async () => {
     if (!athleteId || !isReady) return
@@ -74,10 +77,13 @@ export default function AthleteProfilePage() {
         if (error || !data) return
 
         const mapping: Record<string, SportCode> = {}
+        const names: Record<string, string> = {}
+
         data.forEach((sport) => {
-          // Prefer slug when valid
-          if (sport.slug && isValidSportCode(sport.slug)) {
-            mapping[sport.id] = sport.slug
+          // Prefer slug when valid, but accept dynamic slugs from DB
+          if (sport.slug) {
+            mapping[sport.id] = sport.slug as SportCode
+            names[sport.slug] = sport.name
             return
           }
           // Fallback: map by normalized name
@@ -89,6 +95,7 @@ export default function AthleteProfilePage() {
           }
         })
         setSportIdToCode(mapping)
+        setCustomSportNames(names)
       } catch (err) {
         console.warn('Failed to load sports for mapping:', err)
       }
@@ -138,33 +145,62 @@ export default function AthleteProfilePage() {
     fetchAthlete()
   }, [athleteId, context, isReady])
 
+  // Load enrolled sports (team history)
+  useEffect(() => {
+    if (!athleteId || Object.keys(sportIdToCode).length === 0) return
+
+    const loadTeamSports = async () => {
+        const { data } = await getAthleteTeamHistory(context, athleteId)
+        if (data) {
+            const teamCodes: SportCode[] = []
+            data.forEach(id => {
+                const mapped = sportIdToCode[id]
+                if (mapped && !teamCodes.includes(mapped)) {
+                    teamCodes.push(mapped)
+                }
+            })
+            setActiveTeamSports(teamCodes)
+        }
+    }
+    loadTeamSports()
+  }, [athleteId, context, sportIdToCode])
+
   // Determine which sports the athlete has selected (plays or interested)
   const selectedSportCodes = useMemo(() => {
-    if (!athlete?.sports) return []
     const codes: SportCode[] = []
+    
+    // Add explicitly selected sports
+    if (athlete?.sports) {
+        athlete.sports.forEach((s) => {
+          // Map by id -> SportCode when possible
+          const mapped = sportIdToCode[s.sport_id]
+          if (mapped && !codes.includes(mapped)) {
+            codes.push(mapped)
+            return
+          }
 
-    athlete.sports.forEach((s) => {
-      // Map by id -> SportCode when possible
-      const mapped = sportIdToCode[s.sport_id]
-      if (mapped && !codes.includes(mapped)) {
-        codes.push(mapped)
-        return
-      }
-
-      // Fallback: map by sport_name to SPORT_NAMES
-      const fallback = (SPORT_CODES as SportCode[]).find(
-        (code) => SPORT_NAMES[code].toLowerCase() === (s.sport_name || '').toLowerCase()
-      )
-      if (fallback && !codes.includes(fallback)) {
-        codes.push(fallback)
-      }
+          // Fallback: map by sport_name to SPORT_NAMES
+          const fallback = (SPORT_CODES as SportCode[]).find(
+            (code) => SPORT_NAMES[code].toLowerCase() === (s.sport_name || '').toLowerCase()
+          )
+          if (fallback && !codes.includes(fallback)) {
+            codes.push(fallback)
+          }
+        })
+    }
+    
+    // Add active team sports (force include)
+    activeTeamSports.forEach(code => {
+        if (!codes.includes(code)) {
+            codes.push(code)
+        }
     })
 
     // Sort by SPORT_CODES order to keep consistency
     return codes.sort(
       (a, b) => SPORT_CODES.indexOf(a) - SPORT_CODES.indexOf(b)
     )
-  }, [athlete?.sports, sportIdToCode])
+  }, [athlete?.sports, sportIdToCode, activeTeamSports])
 
   // Keep selected sport in sync with available selections
   useEffect(() => {
@@ -423,7 +459,7 @@ export default function AthleteProfilePage() {
                       }`}
                     >
                       <Icon name="sports" size="text-2xl" className="mb-2" />
-                      <p className="text-sm font-bold">{SPORT_NAMES[sport]}</p>
+                      <p className="text-sm font-bold">{customSportNames[sport] || SPORT_NAMES[sport] || sport}</p>
                     </button>
                   ))}
                 </div>
