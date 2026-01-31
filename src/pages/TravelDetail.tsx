@@ -18,6 +18,7 @@ import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import VenueInsights from '../components/portal/VenueInsights'
 import NearbyAmenities from '../components/portal/NearbyAmenities'
+import { GalleryLink } from '../components/gallery/GalleryLink'
 import { useNeighborhoodSummaryDirect } from '../hooks/useVenueInsights'
 import { useT } from '../i18n/useI18n'
 
@@ -1272,6 +1273,26 @@ export default function TravelDetail() {
           )}
 
           {/* Nearby Amenities */}
+          {/* Travel Gallery */}
+          {id && plan && (
+            <Card className="mb-8 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="mb-1">Travel Photos</CardTitle>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    View and share photos from this trip
+                  </p>
+                </div>
+                <GalleryLink
+                  galleryType="travel"
+                  entityId={id}
+                  entityName={plan.title}
+                  variant="button"
+                />
+              </div>
+            </Card>
+          )}
+
           <NearbyAmenities
             key={`${plan.venue_place_id || ''}-${plan.venue_lat || ''}-${plan.venue_lng || ''}`}
             latitude={plan.venue_lat}

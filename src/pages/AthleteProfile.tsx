@@ -17,6 +17,7 @@ import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
+import { GalleryLink } from '../components/gallery/GalleryLink'
 import { SportProfileCard } from '../components/athleteProfiles/SportProfileCard'
 import { UniversalFieldsForm } from '../components/athleteProfiles/UniversalFieldsForm'
 import { MedicalInfoForm } from '../components/athleteProfiles/MedicalInfoForm'
@@ -293,6 +294,16 @@ export default function AthleteProfilePage() {
             <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide mt-2">
               Athlete Profile
             </p>
+            {athleteId && (
+              <div className="mt-4">
+                <GalleryLink
+                  galleryType="athlete"
+                  entityId={athleteId}
+                  entityName={displayName}
+                  variant="link"
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -146,6 +146,26 @@ const portal = {
         description: 'Preferences',
     },
 
+    // Photos
+    photos: {
+        path: '/portal/photos',
+        label: 'Photos',
+        icon: 'photo_library',
+        description: 'Team and athlete photos',
+    },
+    photosGallery: {
+        path: '/portal/photos/gallery/:id',
+        params: ['id'] as const,
+        label: 'Gallery',
+        icon: 'photo_library',
+    },
+    photosGalleryManage: {
+        path: '/portal/photos/gallery/:id/manage',
+        params: ['id'] as const,
+        label: 'Manage Gallery',
+        icon: 'edit',
+    },
+
     // Role Selection
     roleSelection: {
         path: '/portal/role-selection',
@@ -778,6 +798,17 @@ const admin = {
         icon: 'settings',
         description: 'Personal settings',
         requiresOrg: false,
+    },
+
+    // Photos
+    photos: {
+        list: {
+            path: '/admin/photos',
+            label: 'Photos',
+            icon: 'photo_library',
+            description: 'Photo galleries',
+            requiresOrg: true,
+        },
     },
 } as const satisfies Record<string, RouteDefinition | Record<string, RouteDefinition | Record<string, RouteDefinition>>>
 

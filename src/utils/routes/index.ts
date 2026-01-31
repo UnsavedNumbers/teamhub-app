@@ -119,6 +119,9 @@ export const RouteKeys = {
     PORTAL_TRYOUTS: 'portal.tryouts',
     PORTAL_UNIFORMS: 'portal.uniforms',
     PORTAL_SETTINGS: 'portal.settings',
+    PORTAL_PHOTOS: 'portal.photos',
+    PORTAL_PHOTOS_GALLERY: 'portal.photosGallery',
+    PORTAL_PHOTOS_GALLERY_MANAGE: 'portal.photosGalleryManage',
     PORTAL_ROLE_SELECTION: 'portal.roleSelection',
 
     // Auth
@@ -179,6 +182,7 @@ export const RouteKeys = {
     ADMIN_TRAVEL: 'admin.travel.list',
     ADMIN_TRYOUTS: 'admin.tryouts.list',
     ADMIN_SETTINGS: 'admin.settings',
+    ADMIN_PHOTOS: 'admin.photos.list',
 
     // Platform Admin
     PLATFORM_DASHBOARD: 'platformAdmin.dashboard',

@@ -132,7 +132,7 @@ supabase/.temp
 
 # Docs
 designs/
-#docs
+docs
 *.md
 #*.sql
 *.txt

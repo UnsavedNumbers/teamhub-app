@@ -79,6 +79,18 @@ export const parentNavSections: NavigationSection[] = [
         ],
     },
     {
+        label: 'Photos',
+        route: '/portal/photos',
+        groups: [
+            {
+                label: 'Photos',
+                items: [
+                    { routeKey: 'portal.photos', text: 'Photos', icon: 'photo_library', description: 'Team and athlete photos' },
+                ],
+            },
+        ],
+    },
+    {
         label: 'More',
         groups: [
             {
@@ -150,6 +162,18 @@ export const coachNavSections: NavigationSection[] = [
                 items: [
                     { routeKey: 'portal.calendar', text: 'Take Attendance', icon: 'how_to_reg', description: 'Use events to manage attendance', disabled: true },
                     { routeKey: 'portal.calendar', text: 'Attendance History', icon: 'history', description: 'Use events to review attendance', disabled: true },
+                ],
+            },
+        ],
+    },
+    {
+        label: 'Photos',
+        route: '/portal/photos',
+        groups: [
+            {
+                label: 'Photos',
+                items: [
+                    { routeKey: 'portal.photos', text: 'Photos', icon: 'photo_library', description: 'Team and athlete photos' },
                 ],
             },
         ],
@@ -281,6 +305,13 @@ export const adminMenuItems: MenuItemDefinition[] = [
         label: 'Payments',
         icon: 'credit_card',
         routeKey: 'admin.payments.list',
+        requiresOrg: true,
+        children: null,
+    },
+    {
+        label: 'Photos',
+        icon: 'photo_library',
+        routeKey: 'admin.photos.list',
         requiresOrg: true,
         children: null,
     },

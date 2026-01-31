@@ -48,7 +48,9 @@ import Huddles from './pages/Huddles'
 import AnnouncementDetail from './pages/AnnouncementDetail'
 import { RoleSelection } from './pages/RoleSelection'
 import AthleteProfile from './pages/AthleteProfile'
+import Photos from './pages/Photos'
 const Notifications = lazy(() => import('./pages/Notifications'))
+const PhotosGallery = lazy(() => import('./pages/PhotosGallery'))
 
 // Portal Pages - Lazy loaded
 const CreateAthletePortal = lazy(() => import('./pages/CreateAthletePortal'))
@@ -126,6 +128,7 @@ const EditTravelPlan = lazy(() => import('./pages/admin/EditTravelPlan'))
 const AdminTryouts = lazy(() => import('./pages/admin/AdminTryouts'))
 const AdminTryoutDetail = lazy(() => import('./pages/admin/AdminTryoutDetail'))
 const CreateTryout = lazy(() => import('./pages/admin/CreateTryout'))
+const AdminPhotos = lazy(() => import('./pages/admin/Photos'))
 const OrganizationSettings = lazy(() => import('./pages/admin/OrganizationSettings'))
 const OrganizationStructureForms = lazy(() => import('./pages/admin/OrganizationStructureForms'))
 const OrganizationUsers = lazy(() => import('./pages/admin/OrganizationUsers'))
@@ -280,6 +283,9 @@ function AppWithTheme() {
             <Route path="huddles" element={<Navigate to="/portal/huddles/announcements" replace />} />
             <Route path="huddles/announcements" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.messages"><Huddles /></FeatureGateRoute></ProtectedRoute>} />
             <Route path="huddles/chat" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.messages"><Huddles /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="photos" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.photos"><Photos /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="photos/gallery/:id" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.photosGallery"><Suspense fallback={<AdminLoadingSpinner />}><PhotosGallery /></Suspense></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="photos/gallery/:id/manage" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.photosGalleryManage"><Suspense fallback={<AdminLoadingSpinner />}><PhotosGallery /></Suspense></FeatureGateRoute></ProtectedRoute>} />
             
             {/* Redirect root portal to dashboard */}
             <Route path="notifications" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.messages"><Suspense fallback={<AdminLoadingSpinner />}><Notifications /></Suspense></FeatureGateRoute></ProtectedRoute>} />
@@ -418,6 +424,9 @@ function AppWithTheme() {
               <Route path="tryouts" element={<FeatureGateRoute routeKey="admin.tryouts.list"><AdminTryouts /></FeatureGateRoute>} />
               <Route path="tryouts/new" element={<FeatureGateRoute routeKey="admin.tryouts.create"><CreateTryout /></FeatureGateRoute>} />
               <Route path="tryouts/:tryoutId" element={<FeatureGateRoute routeKey="admin.tryouts.detail"><AdminTryoutDetail /></FeatureGateRoute>} />
+            
+              {/* Photos */}
+              <Route path="photos" element={<FeatureGateRoute routeKey="admin.photos.list"><Suspense fallback={<AdminLoadingSpinner />}><AdminPhotos /></Suspense></FeatureGateRoute>} />
             
               {/* Users */}
               <Route path="users/new" element={<CreateUser />} />
