@@ -658,7 +658,8 @@ export async function checkCanModerateGallery(
 
 /**
  * Check storage cap for organization
- * Returns true if org has storage available, false if at/over limit
+ * Reads limit from org_licenses / organizations.license_plan (starter 1GB, standard 5GB, pro 20GB).
+ * Returns true if org has storage available, false if at/over limit.
  */
 export async function checkStorageCap(
   context: UserContext
@@ -673,29 +674,48 @@ export async function checkStorageCap(
       return { allowed: false, error: new Error('Organization context required') }
     }
 
-    // Get current storage usage
-    const { data: usage, error: usageError } = await supabase
-      .from('org_storage_usage')
-      .select('bytes_used')
-      .eq('org_id', context.orgId)
-      .eq('bucket_id', 'public-media')
-      .maybeSingle()
+    const [usageResult, limitResult] = await Promise.all([
+      supabase
+        .from('org_storage_usage')
+        .select('bytes_used')
+        .eq('org_id', context.orgId)
+        .eq('bucket_id', 'public-media')
+        .maybeSingle(),
+      supabase.rpc('get_org_photo_storage_limit_bytes', {
+        p_org_id: context.orgId,
+      }),
+    ])
 
-    if (usageError && usageError.code !== 'PGRST116') {
-      // PGRST116 = no rows returned, which is OK (no usage yet)
-      throw usageError
+    if (usageResult.error && usageResult.error.code !== 'PGRST116') {
+      throw usageResult.error
     }
 
-    const currentBytes = usage?.bytes_used || 0
+    const currentBytes = Number(usageResult.data?.bytes_used ?? 0)
+    const limitBytes =
+      typeof limitResult.data === 'number'
+        ? limitResult.data
+        : Number(limitResult.data ?? 0)
 
-    // TODO: Get Stripe tier limit from license/entitlement tables
-    // For now, allow uploads (storage caps can be enforced later)
-    // In production, check org's Stripe tier and compare currentBytes to limit
+    if (limitResult.error) {
+      console.warn('[galleryService] get_org_photo_storage_limit_bytes failed, allowing upload', limitResult.error)
+      return {
+        allowed: true,
+        error: null,
+        currentUsage: currentBytes,
+      }
+    }
+
+    const allowed = limitBytes <= 0 || currentBytes < limitBytes
 
     return {
-      allowed: true,
-      error: null,
+      allowed,
+      error: allowed
+        ? null
+        : new Error(
+            'Photo storage limit reached for your plan. Upgrade or delete existing photos to add more.'
+          ),
       currentUsage: currentBytes,
+      limit: limitBytes > 0 ? limitBytes : undefined,
     }
   } catch (err) {
     console.error('[galleryService] Error checking storage cap:', err)

@@ -10,7 +10,7 @@ export interface NotificationJob {
   org_id: string;
   user_id?: string;
   email: string;
-  type: 'new_event' | 'new_message' | 'payment_receipt' | 'payment_reminder' | 'event_reminder' | 'registration_confirmation' | 'team_invite' | 'password_reset' | 'welcome_email';
+  type: 'new_event' | 'new_message' | 'payment_receipt' | 'payment_reminder' | 'event_reminder' | 'registration_confirmation' | 'team_invite' | 'password_reset' | 'welcome_email' | 'photo_approved' | 'photo_rejected';
   payload: Record<string, any>;
   status: 'queued' | 'sent' | 'failed';
   error?: string;
@@ -61,6 +61,14 @@ const EMAIL_CONFIG = {
   welcome_email: {
     subject: 'Welcome to YouthSports Team Hub',
     preview: 'Get started with your new account'
+  },
+  photo_approved: {
+    subject: 'Your photo was approved - {{gallery_name}}',
+    preview: 'Your photo has been approved and added to the gallery'
+  },
+  photo_rejected: {
+    subject: 'Your photo was not approved - {{gallery_name}}',
+    preview: 'Your photo was not approved for the gallery'
   }
 };
 
