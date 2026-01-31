@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getSeasons, deleteSeason, isSeasonEmpty } from '../../data/services/seasonsService'
 import type { Season } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button, ConfirmDialog, EmptyState, Badge, PlatformDataTable } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, ConfirmDialog, EmptyState, Badge, PlatformDataTable, InlineNotice } from '../../components/platformAdmin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
 import OfflineBanner from '../../components/admin/OfflineBanner'
@@ -26,6 +26,7 @@ export default function SeasonsManagement() {
   const [seasonToDelete, setSeasonToDelete] = useState<Season | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const checkedSeasonIds = useRef<Set<string>>(new Set())
 
   const load = useCallback(async () => {
@@ -102,6 +103,8 @@ export default function SeasonsManagement() {
         next.delete(seasonToDelete.id)
         return next
       })
+      setSuccessMessage(`"${seasonToDelete.name}" has been removed.`)
+      setTimeout(() => setSuccessMessage(null), 5000)
       setSeasonToDelete(null)
       setDeleting(false)
     } catch (err) {
@@ -225,11 +228,22 @@ export default function SeasonsManagement() {
       />
 
       {error && (
-        <Card className="pa-mb-6" noPadding>
-          <div className="pa-p-4" style={{ background: 'var(--pa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--pa-danger, #ef4444)' }}>
-            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-danger-dark, #991b1b)' }}>{error}</div>
-          </div>
-        </Card>
+        <InlineNotice
+          tone="error"
+          title="Unable to load seasons"
+          message={error}
+          onClose={() => setError(null)}
+          className="pa-mb-6"
+        />
+      )}
+
+      {successMessage && (
+        <InlineNotice
+          tone="success"
+          title={successMessage}
+          onClose={() => setSuccessMessage(null)}
+          className="pa-mb-6"
+        />
       )}
 
       {seasons.length === 0 ? (

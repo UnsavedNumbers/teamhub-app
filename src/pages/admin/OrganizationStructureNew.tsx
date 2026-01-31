@@ -10,6 +10,7 @@ import { getLevels } from '../../data/services/levelsService'
 import { getTeams } from '../../data/services/teamsService'
 import { getSeasons } from '../../data/services/seasonsService'
 import { getAthletes } from '../../data/services/familyService'
+import { getOrganizationUsers } from '../../data/services/usersService'
 import type { Sport, Program, Level, Team, Season } from '../../data/types/organization'
 import type { Child } from '../../types/family'
 
@@ -24,6 +25,7 @@ export default function OrganizationStructureNew() {
   const [teams, setTeams] = useState<Team[]>([])
   const [seasons, setSeasons] = useState<Season[]>([])
   const [children, setChildren] = useState<Child[]>([])
+  const [coachCount, setCoachCount] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -34,7 +36,7 @@ export default function OrganizationStructureNew() {
     setError(null)
 
     try {
-      const [sportsResult, programsResult, levelsResult, teamsResult, seasonsResult, childrenResult] =
+      const [sportsResult, programsResult, levelsResult, teamsResult, seasonsResult, childrenResult, usersResult] =
         await Promise.all([
           getSports(context),
           getPrograms(context),
@@ -42,9 +44,18 @@ export default function OrganizationStructureNew() {
           getTeams(context),
           getSeasons(context),
           getAthletes(context),
+          getOrganizationUsers(context),
         ])
 
-      if (sportsResult.error || programsResult.error || levelsResult.error || teamsResult.error || seasonsResult.error || childrenResult.error) {
+      if (
+        sportsResult.error ||
+        programsResult.error ||
+        levelsResult.error ||
+        teamsResult.error ||
+        seasonsResult.error ||
+        childrenResult.error ||
+        usersResult.error
+      ) {
         throw (
           sportsResult.error ||
           programsResult.error ||
@@ -52,6 +63,7 @@ export default function OrganizationStructureNew() {
           teamsResult.error ||
           seasonsResult.error ||
           childrenResult.error ||
+          usersResult.error ||
           new Error('Failed to load organization data')
         )
       }
@@ -62,6 +74,10 @@ export default function OrganizationStructureNew() {
       setTeams(Array.isArray(teamsResult.data) ? teamsResult.data : [])
       setSeasons(Array.isArray(seasonsResult.data) ? seasonsResult.data : [])
       setChildren(Array.isArray(childrenResult.data) ? childrenResult.data : [])
+      const coachTotal = Array.isArray(usersResult.data)
+        ? usersResult.data.filter((u) => u.roles.includes('coach')).length
+        : 0
+      setCoachCount(coachTotal)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load organization data')
     } finally {
@@ -81,7 +97,7 @@ export default function OrganizationStructureNew() {
     teams: Array.isArray(teams) ? teams.length : 0,
     seasons: Array.isArray(seasons) ? seasons.length : 0,
     players: Array.isArray(children) ? children.length : 0,
-    coaches: 0,
+    coaches: coachCount,
   }
 
   const activeSeasons = Array.isArray(seasons) ? seasons.filter((s) => s.is_active) : []

@@ -195,7 +195,12 @@ export default function MyPayments() {
 
   const filteredAssignments = useMemo(() => {
     return assignments.filter((a) => {
-      if (statusFilter !== 'all' && a.status !== statusFilter) return false
+      if (statusFilter === 'unpaid') {
+        // Treat partial as unpaid for filtering so guardians can see anything still owed
+        if (!['unpaid', 'partial'].includes(a.status)) return false
+      } else if (statusFilter !== 'all' && a.status !== statusFilter) {
+        return false
+      }
       if (childFilter !== 'all' && a.child?.id !== childFilter) return false
       const teamName = a.fee?.season?.team?.name
       if (teamFilter !== 'all' && teamName !== teamFilter) return false

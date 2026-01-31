@@ -6047,6 +6047,212 @@ html.dark .org-hierarchy-arrow {
     color: var(--pa-warning, #f59e0b);
 }
 
+/* Inline notice banners for CRUD/system feedback */
+.pa-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--pa-space-3);
+    padding: var(--pa-space-3) var(--pa-space-4);
+    border-radius: 12px;
+    border: 1px solid var(--pa-border-default, #e5e7eb);
+    background: var(--pa-surface, #fff);
+    box-shadow: var(--pa-shadow-1);
+}
+
+.pa-notice__icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.pa-notice__body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.pa-notice__title {
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--pa-text-primary, #0b0f14);
+}
+
+.pa-notice__message {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--pa-text-secondary, #334155);
+}
+
+.pa-notice__actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+}
+
+.pa-notice__close {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    color: inherit;
+}
+
+.pa-notice__close:hover {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+html.dark .pa-notice__close:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.pa-notice--success {
+    background: linear-gradient(120deg, rgba(34, 197, 94, 0.14), rgba(34, 197, 94, 0.07));
+    border-color: rgba(34, 197, 94, 0.35);
+    color: #14532d;
+}
+
+.pa-notice--success .pa-notice__title,
+.pa-notice--success .pa-notice__message {
+    color: #14532d;
+}
+
+.pa-notice--success .pa-notice__icon {
+    background: rgba(34, 197, 94, 0.2);
+    color: #14532d;
+}
+
+.pa-notice--info {
+    background: linear-gradient(120deg, rgba(37, 99, 235, 0.12), rgba(37, 99, 235, 0.06));
+    border-color: rgba(37, 99, 235, 0.3);
+    color: #1d4ed8;
+}
+
+.pa-notice--info .pa-notice__title,
+.pa-notice--info .pa-notice__message {
+    color: #1d4ed8;
+}
+
+.pa-notice--info .pa-notice__icon {
+    background: rgba(37, 99, 235, 0.18);
+    color: #1d4ed8;
+}
+
+.pa-notice--warning {
+    background: linear-gradient(120deg, rgba(245, 158, 11, 0.16), rgba(245, 158, 11, 0.08));
+    border-color: rgba(245, 158, 11, 0.32);
+    color: #92400e;
+}
+
+.pa-notice--warning .pa-notice__title,
+.pa-notice--warning .pa-notice__message {
+    color: #92400e;
+}
+
+.pa-notice--warning .pa-notice__icon {
+    background: rgba(245, 158, 11, 0.22);
+    color: #92400e;
+}
+
+.pa-notice--error {
+    background: linear-gradient(120deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.08));
+    border-color: rgba(239, 68, 68, 0.32);
+    color: #991b1b;
+}
+
+.pa-notice--error .pa-notice__title,
+.pa-notice--error .pa-notice__message {
+    color: #991b1b;
+}
+
+.pa-notice--error .pa-notice__icon {
+    background: rgba(239, 68, 68, 0.22);
+    color: #991b1b;
+}
+
+html.dark .pa-notice {
+    border-color: var(--pa-border-default, #374151);
+    box-shadow: var(--pa-shadow-0);
+}
+
+html.dark .pa-notice--success {
+    background: linear-gradient(120deg, rgba(34, 197, 94, 0.28), rgba(34, 197, 94, 0.14));
+    color: #d1fae5;
+}
+
+html.dark .pa-notice--success .pa-notice__title,
+html.dark .pa-notice--success .pa-notice__message {
+    color: #d1fae5;
+}
+
+html.dark .pa-notice--success .pa-notice__icon {
+    background: rgba(34, 197, 94, 0.24);
+    color: #c7f9dd;
+}
+
+html.dark .pa-notice--info {
+    background: linear-gradient(120deg, rgba(37, 99, 235, 0.28), rgba(37, 99, 235, 0.14));
+    color: #cbdfff;
+}
+
+html.dark .pa-notice--info .pa-notice__title,
+html.dark .pa-notice--info .pa-notice__message {
+    color: #dbeafe;
+}
+
+html.dark .pa-notice--info .pa-notice__icon {
+    background: rgba(37, 99, 235, 0.24);
+    color: #bfdbfe;
+}
+
+html.dark .pa-notice--warning {
+    background: linear-gradient(120deg, rgba(245, 158, 11, 0.28), rgba(245, 158, 11, 0.16));
+    color: #fef3c7;
+}
+
+html.dark .pa-notice--warning .pa-notice__title,
+html.dark .pa-notice--warning .pa-notice__message {
+    color: #fde68a;
+}
+
+html.dark .pa-notice--warning .pa-notice__icon {
+    background: rgba(245, 158, 11, 0.26);
+    color: #fcd34d;
+}
+
+html.dark .pa-notice--error {
+    background: linear-gradient(120deg, rgba(239, 68, 68, 0.28), rgba(239, 68, 68, 0.16));
+    color: #ffe4e6;
+}
+
+html.dark .pa-notice--error .pa-notice__title,
+html.dark .pa-notice--error .pa-notice__message {
+    color: #fecdd3;
+}
+
+html.dark .pa-notice--error .pa-notice__icon {
+    background: rgba(239, 68, 68, 0.26);
+    color: #fecdd3;
+}
+
+@media (max-width: 640px) {
+    .pa-notice {
+        flex-direction: column;
+    }
+
+    .pa-notice__actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+
 /* Radio option row - for RadioGroup options */
 .pa-radio-option {
     display: flex;

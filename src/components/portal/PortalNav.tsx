@@ -237,7 +237,8 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Payments',
           items: [
-            { routeKey: 'portal.payments', text: 'Fees Due', icon: 'receipt_long', path: '/portal/payments', description: 'Outstanding fees' },
+            // Flat link (no dropdown): text matches section label so nav renders as a direct link
+            { routeKey: 'portal.payments', text: 'Payments', icon: 'receipt_long', path: '/portal/payments', description: 'Outstanding fees' },
           ],
         },
       ],

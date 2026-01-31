@@ -15,7 +15,7 @@ import { getLevels } from '../../data/services/levelsService'
 import { getSeasons } from '../../data/services/seasonsService'
 import type { Team, Sport, Program, Level, Season } from '../../data/types/organization'
 import { supabase } from '../../lib/supabase'
-import { AdminPageHeader, Button, ConfirmDialog, EmptyState, Card, Select, Badge, PlatformDataTable } from '../../components/platformAdmin'
+import { AdminPageHeader, Button, ConfirmDialog, EmptyState, Card, Select, Badge, PlatformDataTable, InlineNotice } from '../../components/platformAdmin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
 import OfflineBanner from '../../components/admin/OfflineBanner'
@@ -451,61 +451,42 @@ export default function TeamsManagement() {
       />
 
       {error && (
-        <Card className="pa-mb-6" noPadding>
-          <div className="pa-p-4 pa-flex pa-items-center pa-justify-between" style={{ background: 'var(--pa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--pa-danger, #ef4444)' }}>
-            <div>
-              <div className="pa-font-medium pa-text-danger-dark" style={{ color: 'var(--pa-danger-dark, #991b1b)' }}>{error}</div>
-              <button
-                onClick={fetchData}
-                className="pa-mt-2 pa-text-sm pa-underline hover:pa-no-underline"
-                style={{ color: 'var(--pa-danger-dark, #991b1b)' }}
-                disabled={loading}
-              >
-                Retry
-              </button>
-            </div>
-            <button
-              onClick={() => setError(null)}
-              className="pa-ml-4"
-              style={{ color: 'var(--pa-danger-dark, #991b1b)' }}
-              aria-label="Dismiss error"
+        <InlineNotice
+          tone="error"
+          title="We couldn't load teams"
+          message={error}
+          actions={
+            <Button
+              variant="ghost"
+              size="dense"
+              icon="refresh"
+              onClick={fetchData}
+              disabled={loading}
             >
-              <span className="material-symbols-outlined">close</span>
-            </button>
-          </div>
-        </Card>
+              Retry
+            </Button>
+          }
+          onClose={() => setError(null)}
+          className="pa-mb-6"
+        />
       )}
 
       {successMessage && (
-        <Card className="pa-mb-4" noPadding>
-          <div className="pa-p-4 pa-flex pa-items-center pa-justify-between" style={{ background: 'var(--pa-success-bg, #ecfdf5)', borderLeft: '4px solid var(--pa-success, #10b981)' }}>
-            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-success-dark, #065f46)' }}>{successMessage}</div>
-            <button
-              onClick={handleDismissSuccess}
-              className="pa-ml-4"
-              style={{ color: 'var(--pa-success-dark, #065f46)' }}
-              aria-label="Dismiss success message"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>close</span>
-            </button>
-          </div>
-        </Card>
+        <InlineNotice
+          tone="success"
+          title={successMessage}
+          onClose={handleDismissSuccess}
+          className="pa-mb-4"
+        />
       )}
 
       {actionError && (
-        <Card className="pa-mb-4" noPadding>
-          <div className="pa-p-4 pa-flex pa-items-center pa-justify-between" style={{ background: 'var(--pa-danger-bg, #fef2f2)', borderLeft: '4px solid var(--pa-danger, #ef4444)' }}>
-            <div className="pa-text-sm pa-font-medium" style={{ color: 'var(--pa-danger-dark, #991b1b)' }}>{actionError}</div>
-            <button
-              onClick={handleDismissError}
-              className="pa-ml-4"
-              style={{ color: 'var(--pa-danger-dark, #991b1b)' }}
-              aria-label="Dismiss error message"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>close</span>
-            </button>
-          </div>
-        </Card>
+        <InlineNotice
+          tone="error"
+          title={actionError}
+          onClose={handleDismissError}
+          className="pa-mb-4"
+        />
       )}
 
       {/* Filter Bar */}

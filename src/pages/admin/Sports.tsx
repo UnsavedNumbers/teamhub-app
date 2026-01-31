@@ -12,7 +12,7 @@ import { USE_FAKE_DATA } from '../../data/config'
 import { getSports, deleteSport } from '../../data/services/sportsService'
 import { getPrograms } from '../../data/services/sportsService'
 import type { Sport } from '../../data/types/organization'
-import { AdminPageHeader, ConfirmDialog, Button, Card, EmptyState, Badge } from '../../components/platformAdmin'
+import { AdminPageHeader, ConfirmDialog, Button, Card, EmptyState, Badge, InlineNotice } from '../../components/platformAdmin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { Tooltip } from '../../components/admin/Tooltip'
@@ -145,19 +145,21 @@ export default function Sports() {
       />
 
       {successMessage && (
-        <Card className="pa-mb-4" noPadding>
-          <div className="sports-alert sports-alert--success pa-p-4">
-            <div className="pa-text-sm pa-font-medium sports-alert-text sports-alert-text--success">{successMessage}</div>
-          </div>
-        </Card>
+        <InlineNotice
+          tone="success"
+          title={successMessage}
+          onClose={() => setSuccessMessage(null)}
+          className="pa-mb-4"
+        />
       )}
 
       {actionError && (
-        <Card className="pa-mb-4" noPadding>
-          <div className="sports-alert sports-alert--error pa-p-4">
-            <div className="pa-text-sm pa-font-medium sports-alert-text sports-alert-text--error">{actionError}</div>
-          </div>
-        </Card>
+        <InlineNotice
+          tone="error"
+          title={actionError}
+          onClose={() => setActionError(null)}
+          className="pa-mb-4"
+        />
       )}
 
       <div className="pa-flex pa-flex-col pa-gap-4">
