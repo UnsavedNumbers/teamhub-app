@@ -20,7 +20,7 @@ CREATE POLICY "Platform admins can view all memberships" ON organization_members
 -- Org admins can view memberships in their org
 CREATE POLICY "Org admins can view org memberships" ON organization_members
   FOR SELECT
-  USING (user_is_org_admin(auth.uid(), organization_id));
+  USING (user_is_org_admin(auth.uid(), org_id));
 
 -- Platform admins can manage all memberships
 CREATE POLICY "Platform admins can manage all memberships" ON organization_members
@@ -31,21 +31,21 @@ CREATE POLICY "Platform admins can manage all memberships" ON organization_membe
 CREATE POLICY "Org admins can manage org memberships" ON organization_members
   FOR INSERT
   WITH CHECK (
-    user_is_org_admin(auth.uid(), organization_id)
+    user_is_org_admin(auth.uid(), org_id)
     AND role != 'org_admin' -- Can't create other admins
   );
 
 CREATE POLICY "Org admins can update org memberships" ON organization_members
   FOR UPDATE
   USING (
-    user_is_org_admin(auth.uid(), organization_id)
+    user_is_org_admin(auth.uid(), org_id)
     AND role != 'org_admin' -- Can't modify other admins
   );
 
 CREATE POLICY "Org admins can delete org memberships" ON organization_members
   FOR DELETE
   USING (
-    user_is_org_admin(auth.uid(), organization_id)
+    user_is_org_admin(auth.uid(), org_id)
     AND role != 'org_admin' -- Can't remove other admins
     AND user_id != auth.uid() -- Can't remove self
   );
@@ -71,7 +71,7 @@ CREATE POLICY "Platform admins can manage all" ON platform_admins
 -- Org admins can view invites for their org
 CREATE POLICY "Org admins can view org invites" ON organization_invites
   FOR SELECT
-  USING (user_is_org_admin(auth.uid(), organization_id));
+  USING (user_is_org_admin(auth.uid(), org_id));
 
 -- Platform admins can view all invites
 CREATE POLICY "Platform admins can view all invites" ON organization_invites
@@ -86,7 +86,7 @@ CREATE POLICY "Anyone can view invite by token" ON organization_invites
 -- Org admins can create invites for their org
 CREATE POLICY "Org admins can create invites" ON organization_invites
   FOR INSERT
-  WITH CHECK (user_is_org_admin(auth.uid(), organization_id));
+  WITH CHECK (user_is_org_admin(auth.uid(), org_id));
 
 -- Platform admins can create invites for any org
 CREATE POLICY "Platform admins can create all invites" ON organization_invites
@@ -96,7 +96,7 @@ CREATE POLICY "Platform admins can create all invites" ON organization_invites
 -- Org admins can delete invites for their org
 CREATE POLICY "Org admins can delete org invites" ON organization_invites
   FOR DELETE
-  USING (user_is_org_admin(auth.uid(), organization_id));
+  USING (user_is_org_admin(auth.uid(), org_id));
 
 -- Platform admins can delete any invite
 CREATE POLICY "Platform admins can delete all invites" ON organization_invites
@@ -129,7 +129,7 @@ CREATE POLICY "Org admins can view org users v2" ON users
     EXISTS (
       SELECT 1 FROM organization_members om
       WHERE om.user_id = users.id
-      AND user_is_org_admin(auth.uid(), om.organization_id)
+      AND user_is_org_admin(auth.uid(), om.org_id)
     )
   );
 
@@ -142,7 +142,7 @@ CREATE POLICY "Coaches can view org users v2" ON users
       WHERE om.user_id = users.id
       AND user_has_any_org_roles(
         auth.uid(),
-        om.organization_id,
+        om.org_id,
         ARRAY['coach','org_admin']::org_member_role[]
       )
     )

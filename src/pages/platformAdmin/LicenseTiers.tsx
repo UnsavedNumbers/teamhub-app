@@ -38,7 +38,7 @@ export default function LicenseTiers() {
         setTiers([])
         setTotalCount(0)
       } else {
-        setTiers(data || [])
+        setTiers(data as LicenseTierWithCounts[])
         setTotalCount(count || 0)
       }
     } catch (err) {
@@ -69,9 +69,28 @@ export default function LicenseTiers() {
       sortable: true,
       render: (row) => (
         <div>
-          <div className="pa-body-m" style={{ fontWeight: 600 }}>
+          <a
+            href={`/platform-admin/licenses/tiers/${row.id}`}
+            onClick={(e) => {
+              e.preventDefault()
+              navigate(`/platform-admin/licenses/tiers/${row.id}`)
+            }}
+            className="pa-body-m"
+            style={{
+              fontWeight: 600,
+              color: 'var(--pa-n900)',
+              textDecoration: 'none',
+              cursor: 'pointer',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.textDecoration = 'underline'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.textDecoration = 'none'
+            }}
+          >
             {row.tier_name}
-          </div>
+          </a>
           <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
             {row.tier_key}
           </div>
@@ -92,9 +111,33 @@ export default function LicenseTiers() {
       label: 'Stripe Price ID',
       render: (row) => (
         <div>
-          <div className="pa-body-m" style={{ fontFamily: 'var(--pa-font-mono)', fontSize: '12px' }}>
-            {row.stripe_price_id || '—'}
-          </div>
+          {row.stripe_price_id ? (
+            <a
+              href={`https://dashboard.stripe.com/prices/${row.stripe_price_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="pa-body-m"
+              style={{
+                fontFamily: 'var(--pa-font-mono)',
+                fontSize: '12px',
+                color: 'var(--pa-n900)',
+                textDecoration: 'none',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.textDecoration = 'underline'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.textDecoration = 'none'
+              }}
+            >
+              {row.stripe_price_id}
+            </a>
+          ) : (
+            <div className="pa-body-m" style={{ fontFamily: 'var(--pa-font-mono)', fontSize: '12px' }}>
+              —
+            </div>
+          )}
           {row.stripe_verified_at && (
             <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
               <span className="material-symbols-outlined" style={{ fontSize: '14px', verticalAlign: 'middle' }}>
@@ -192,7 +235,7 @@ export default function LicenseTiers() {
         columns={columns}
         rows={tiers}
         loading={loading}
-        emptyMessage="No license tiers found"
+        emptyMessage="No license tiers found. Try adjusting your search or create a new tier."
         page={page}
         rowsPerPage={rowsPerPage}
         totalCount={totalCount}

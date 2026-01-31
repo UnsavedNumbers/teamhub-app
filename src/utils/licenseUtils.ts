@@ -12,6 +12,7 @@ export interface LicenseSummary {
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
   stripePriceId?: string | null
+  tierName?: string | null
   // Computed properties used by UI components
   isTrial?: boolean
   isGracePeriod?: boolean
@@ -62,7 +63,23 @@ export function isLicenseReadOnlyAllowed(summary: LicenseSummary): boolean {
   return isWithinGracePeriod(summary)
 }
 
+export function isTrialExpired(summary: LicenseSummary): boolean {
+  if (summary.status === 'trial') {
+    const trialEnd = parseDate(summary.trialEndsAt)
+    if (!trialEnd) return false
+    // Trial is expired if the end date/time has passed
+    // Use <= to ensure we catch trials that end exactly at the current moment
+    return trialEnd.getTime() <= Date.now()
+  }
+  return false
+}
+
 export function isPastGrace(summary: LicenseSummary): boolean {
+  // Check if trial has expired first (status might still be 'trial' but date has passed)
+  if (isTrialExpired(summary)) {
+    return true
+  }
+
   if (summary.status === 'past_due') {
     const grace = parseDate(summary.graceEndsAt)
     if (!grace) return true

@@ -10,7 +10,7 @@ import type { UserContext } from '../data/fake/userContext'
 import { getTeamDetails, getTeamsForParent } from '../data/services/teamsService'
 import { getSports } from '../data/services/sportsService'
 import { getEventDetails } from '../data/services/eventsService'
-import { getChildren } from '../data/services/familyService'
+import { getAthletes } from '../data/services/familyService'
 import type { CalendarEvent } from '../types/calendar'
 
 export interface SportInfo {
@@ -68,7 +68,7 @@ export async function getSportFromTeam(
         return {
             id: sport.id,
             name: sport.name,
-            color: sport.color || '#137fec',
+            color: sport.color || 'var(--org-btn-primary-bg, #137fec)',
             icon: sport.icon || undefined,
         }
     } catch (err) {
@@ -128,7 +128,7 @@ export async function getPrimarySportForUser(
 ): Promise<SportInfo | null> {
     try {
         // Get user's children
-        const { data: children, error: childrenError } = await getChildren(context)
+        const { data: children, error: childrenError } = await getAthletes(context)
         if (childrenError || !children || children.length === 0) {
             // Fallback: try to get first sport from org
             return await getFirstSportFromOrg(context)
@@ -211,7 +211,7 @@ async function getFirstSportFromOrg(context: UserContext): Promise<SportInfo | n
         return {
             id: firstSport.id,
             name: firstSport.name,
-            color: firstSport.color || '#137fec',
+            color: firstSport.color || 'var(--org-btn-primary-bg, #137fec)',
             icon: firstSport.icon || undefined,
         }
     } catch (err) {

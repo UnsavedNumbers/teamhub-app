@@ -1,0 +1,129 @@
+/* =====================================================================
+   Sport Detail — theme-consistent color palette
+   Uses org/pa theme variables for hierarchy, status, and interaction.
+   ===================================================================== */
+
+/* Hero overlay: title and ghost link stay readable on dark gradient */
+.sport-detail-page .sport-detail-hero-title {
+  color: var(--pa-text-inverse, #fff);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.sport-detail-page .sport-detail-hero-link--ghost .pa-btn {
+  color: rgba(255, 255, 255, 0.95);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.sport-detail-page .sport-detail-hero-link--ghost .pa-btn:hover:not(:disabled) {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.sport-detail-page .sport-detail-hero-link--ghost .pa-btn:focus-visible {
+  outline-color: rgba(255, 255, 255, 0.7);
+}
+
+/* Status alerts: semantic colors with theme fallbacks */
+.sport-detail-page .sport-detail-alert-text--success {
+  color: var(--org-status-success, var(--pa-success, #2e7d32));
+}
+
+.sport-detail-page .sport-detail-alert-text--error {
+  color: var(--org-status-error, var(--pa-danger, #c62828));
+}
+
+/* Section labels: muted hierarchy */
+.sport-detail-page .sport-detail-label {
+  color: var(--org-text-muted, var(--pa-text-muted));
+}
+
+/* Danger (Remove Icon) button always visible in light mode — solid background + white text */
+.sport-detail-page .pa-btn--danger {
+  background: var(--org-status-error, var(--pa-danger, #c62828)) !important;
+  color: var(--org-status-error-text, var(--pa-white)) !important;
+  border: none;
+}
+
+.sport-detail-page .pa-btn--danger:hover:not(:disabled) {
+  background: var(--org-status-error-hover, #b71c1c) !important;
+  color: var(--org-status-error-text, var(--pa-white)) !important;
+}
+
+.sport-detail-page .pa-btn--danger .material-symbols-outlined {
+  color: inherit;
+}
+
+html.dark .sport-detail-page .pa-btn--danger {
+  background: var(--org-status-error, var(--pa-danger)) !important;
+  color: var(--org-status-error-text, #fff) !important;
+}
+
+html.dark .sport-detail-page .pa-btn--danger:hover:not(:disabled) {
+  background: var(--org-status-error-hover, #b71c1c) !important;
+  color: var(--org-status-error-text, #fff) !important;
+}
+
+html.dark .sport-detail-page .pa-btn--danger .material-symbols-outlined {
+  color: inherit;
+}
+
+/* Programs count badge */
+.sport-detail-page .sport-detail-programs-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pa-space-2);
+}
+
+.sport-detail-page .sport-detail-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  padding: 2px var(--pa-space-2);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  border-radius: 9999px;
+  background: var(--org-badge-primary-bg, var(--pa-theme-surface-accent));
+  color: var(--org-badge-primary-text, var(--pa-theme-text-accent, var(--org-btn-primary-bg)));
+}
+
+/* Empty state: muted, clear hierarchy */
+.sport-detail-page .sport-detail-empty {
+  color: var(--org-text-muted, var(--pa-text-muted));
+}
+
+/* Program list rows: theme hover and link accent */
+.sport-detail-page .sport-detail-program-list .sport-detail-program-row {
+  transition: background-color var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.sport-detail-page .sport-detail-program-list .sport-detail-program-row:hover {
+  background: var(--org-surface-hover, var(--pa-theme-surface-accent, var(--pa-n50)));
+}
+
+.sport-detail-page .sport-detail-program-name {
+  color: var(--org-text-primary, var(--pa-text-primary));
+  transition: color var(--pa-motion-fast) ease;
+}
+
+.sport-detail-page .sport-detail-program-row:hover .sport-detail-program-name {
+  color: var(--org-link-color, var(--pa-theme-text-accent, var(--org-btn-primary-bg)));
+}
+
+.sport-detail-page .sport-detail-program-meta {
+  color: var(--org-text-muted, var(--pa-text-muted));
+}
+
+/* Loading skeleton: theme surface */
+.sport-detail-page .sport-detail-skeleton {
+  background: var(--org-surface-section, var(--pa-n100));
+  border-radius: var(--pa-radius-lg);
+}
+
+/* Focus visibility for interactive elements */
+.sport-detail-page .sport-detail-program-row:focus-visible {
+  outline: 2px solid var(--org-focus-ring, var(--pa-theme-focus-ring));
+  outline-offset: -2px;
+}

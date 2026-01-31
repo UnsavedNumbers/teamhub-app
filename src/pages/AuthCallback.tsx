@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useI18n } from '../i18n/useI18n'
+import { useLoadingState } from '../contexts/LoadingStateContext'
+import FullScreenLoader from '../components/common/FullScreenLoader'
 import { getHostAppContext } from '../utils/host'
 import {
   getSetupOrganizationFlag,
@@ -8,23 +11,65 @@ import {
   cleanupStaleFlags,
 } from '../utils/setupOrganization'
 import { getLoginRedirect } from '../utils/loginRedirect'
+import { mapAuthError } from '../utils/authErrorMapper'
+import type { SupabaseExtended as Database } from '../lib/supabase.extended.types'
+import type { OrgMemberRole } from '../contexts/OrganizationContext'
 
 export default function AuthCallback() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  const { t } = useI18n()
+  const { setLoading } = useLoadingState()
+  const isMountedRef = useRef(true)
+  const hasSetLoadingRef = useRef(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  // Set loading state - show loader while processing callback
+  // Use ref to track whether we've incremented the counter to prevent imbalance
+  useEffect(() => {
+    if (!hasSetLoadingRef.current) {
+      setLoading(true)
+      hasSetLoadingRef.current = true
+    }
+    return () => {
+      if (hasSetLoadingRef.current) {
+        setLoading(false)
+        hasSetLoadingRef.current = false
+      }
+    }
+  }, [setLoading])
 
   useEffect(() => {
     // Clean up any stale flags first
     cleanupStaleFlags()
 
     async function handleCallback() {
+      if (!isMountedRef.current) return
+      // Note: Loading is already set by the effect above, don't call setLoading(true) again
+      // When we navigate away, the component unmounts and cleanup decrements the loading counter
+
       // Check for error in URL params
       const errorParam = searchParams.get('error')
       const errorDescription = searchParams.get('error_description')
       
       if (errorParam) {
-        setError(errorDescription || errorParam)
+        const errorMessage = errorDescription || errorParam
+        if (isMountedRef.current) {
+          setError(mapAuthError(errorMessage, t))
+          // Decrement loading counter and update ref since we're showing error UI (not navigating)
+          if (hasSetLoadingRef.current) {
+            setLoading(false)
+            hasSetLoadingRef.current = false
+          }
+        }
         return
       }
 
@@ -32,7 +77,14 @@ export default function AuthCallback() {
       const { data, error: sessionError } = await supabase.auth.getSession()
       
       if (sessionError) {
-        setError(sessionError.message)
+        if (isMountedRef.current) {
+          setError(mapAuthError(sessionError, t))
+          // Decrement loading counter and update ref since we're showing error UI (not navigating)
+          if (hasSetLoadingRef.current) {
+            setLoading(false)
+            hasSetLoadingRef.current = false
+          }
+        }
         return
       }
 
@@ -48,10 +100,11 @@ export default function AuthCallback() {
             .from('platform_admins')
             .select('user_id')
             .eq('user_id', userId)
-            .single()
+            .maybeSingle()
 
           if (adminData) {
             isPlatformAdmin = true
+            // Navigation will unmount and cleanup will handle loading state
             navigate('/platform-admin', { replace: true })
             return
           }
@@ -70,11 +123,12 @@ export default function AuthCallback() {
 
           // Only run org setup flow on the platform host. The admin subdomain
           // is reserved for platform admins and should not auto-route into org onboarding.
-          if (appContext !== 'platform-admin' && !userError && userData?.requires_org_setup) {
-            // Clear any localStorage flag (since database has it)
-            clearSetupOrganizationFlag()
-            navigate('/admin/onboarding', { replace: true })
-            return
+          if (appContext !== 'platform-admin' && !userError && (userData as any)?.requires_org_setup) {
+          // Clear any localStorage flag (since database has it)
+          clearSetupOrganizationFlag()
+          // Navigation will unmount and cleanup will handle loading state
+          navigate('/admin/onboarding', { replace: true })
+          return
           }
         } catch (err) {
           console.error('Error checking requires_org_setup flag:', err)
@@ -92,9 +146,11 @@ export default function AuthCallback() {
           // Set the database flag for this user (for OAuth flow)
           // The trigger should have set it from metadata, but this is a backup
           try {
+            type UsersUpdate = Database['public']['Tables']['users']['Update']
+
             await supabase
               .from('users')
-              .update({ requires_org_setup: true })
+              .update({ requires_org_setup: true } satisfies UsersUpdate)
               .eq('id', userId)
 
             // Also update auth metadata for consistency
@@ -108,16 +164,39 @@ export default function AuthCallback() {
 
           // Clear the localStorage flag immediately to prevent redirect loops
           clearSetupOrganizationFlag()
+          // Navigation will unmount and cleanup will handle loading state
           navigate('/admin/onboarding', { replace: true })
           return
           }
         }
 
-        // Priority 2: Check for pending invite token in sessionStorage
-        const pendingInviteToken = sessionStorage.getItem('pending_invite_token')
+        // Priority 2: Check for pending invite token in sessionStorage or localStorage
+        const pendingInviteToken = sessionStorage.getItem('pending_invite_token') || localStorage.getItem('pending_invite_token')
         if (pendingInviteToken) {
-          navigate(`/portal/accept-invite?token=${pendingInviteToken}`, { replace: true })
-          return
+          // Check if email is confirmed - if so, the auto-link trigger already ran
+          // and we should let them go to dashboard, not redirect to accept-invite
+          const emailConfirmed = data.session.user.email_confirmed_at !== null
+          
+          if (emailConfirmed) {
+            // Email is confirmed, auto-link trigger has run
+            // Clear the stored tokens since linking is done
+            sessionStorage.removeItem('pending_invite_token')
+            localStorage.removeItem('pending_invite_token')
+            sessionStorage.removeItem('pending_invite_athlete_id')
+            // Fall through to default redirect (dashboard)
+          } else {
+            // Email not yet confirmed, redirect to accept-invite which will handle the flow
+            const pendingAthleteId = sessionStorage.getItem('pending_invite_athlete_id')
+            
+            let acceptInviteUrl = `/portal/accept-invite?token=${pendingInviteToken}`
+            if (pendingAthleteId) {
+              acceptInviteUrl += `&athlete_id=${pendingAthleteId}`
+            }
+            
+            // Navigation will unmount and cleanup will handle loading state
+            navigate(acceptInviteUrl, { replace: true })
+            return
+          }
         }
 
         // Priority 3: Check for redirect param in URL
@@ -125,6 +204,7 @@ export default function AuthCallback() {
         if (redirectTo) {
           // Validate the redirect URL is internal to prevent open redirect attacks
           if (redirectTo.startsWith('/')) {
+            // Navigation will unmount and cleanup will handle loading state
             navigate(redirectTo, { replace: true })
             return
           }
@@ -133,23 +213,48 @@ export default function AuthCallback() {
         // Default: redirect based on user roles
         // Fetch user's organizations to determine redirect
         try {
-          const { data: orgData } = await supabase.rpc('get_user_organizations', {
+          const { data: orgData, error: orgError } = await supabase.rpc('get_user_organizations', {
             check_user_id: userId
-          })
+          } as any)
 
-          // Map to Organization format
-          const organizations = (orgData || []).map((org: any) => ({
-            id: org.organization_id,
-            name: org.org_name,
-            roles: org.roles || [],
-          }))
+          if (orgError) {
+            console.error('Error fetching user organizations for redirect:', orgError)
+            // Fallback to host-based redirect if org fetch fails
+            // Navigation will unmount and cleanup will handle loading state
+            if (appContext === 'platform-admin') {
+              navigate('/platform-admin', { replace: true })
+            } else {
+              navigate('/portal/dashboard', { replace: true })
+            }
+            return
+          }
+
+          // Map to Organization format with proper role validation
+          const organizations = (orgData || []).map((org: any) => {
+            // Normalize and validate roles array (same logic as useAuth.tsx)
+            const roles = Array.isArray(org.roles)
+              ? org.roles.filter(
+                  (r: unknown): r is OrgMemberRole =>
+                    r === 'parent' || r === 'coach' || r === 'org_admin'
+                )
+              : []
+            
+            return {
+              id: org.org_id,
+              name: org.org_name || '',
+              roles,
+              get role() { return this.roles[0] ?? 'parent' }
+            }
+          })
 
           // Determine redirect based on roles
           const finalRedirect = getLoginRedirect(isPlatformAdmin, organizations)
+          // Navigation will unmount and cleanup will handle loading state
           navigate(finalRedirect, { replace: true })
         } catch (err) {
           // Fallback to host-based redirect if org fetch fails
-          console.error('Error fetching organizations for redirect:', err)
+          console.error('Exception fetching organizations for redirect:', err)
+          // Navigation will unmount and cleanup will handle loading state
           if (appContext === 'platform-admin') {
             navigate('/platform-admin', { replace: true })
           } else {
@@ -159,12 +264,13 @@ export default function AuthCallback() {
       } else {
         // No session, might be email confirmation
         // Supabase should handle this automatically
+        // Navigation will unmount and cleanup will handle loading state
         navigate('/portal/login', { replace: true })
       }
     }
 
     handleCallback()
-  }, [navigate, searchParams])
+  }, [navigate, searchParams, t, setLoading])
 
   if (error) {
     return (
@@ -196,12 +302,5 @@ export default function AuthCallback() {
     )
   }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-slate-900 dark:border-white mx-auto"></div>
-        <p className="mt-4 text-slate-600 dark:text-slate-400">Completing sign in...</p>
-      </div>
-    </div>
-  )
+  return <FullScreenLoader message="Completing sign in..." />
 }

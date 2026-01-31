@@ -1,0 +1,399 @@
+/* =====================================================================
+   Season Detail — ORG ADMIN page
+   Org admin theme tokens only (--org-*). No fallbacks. No inline styles.
+   ===================================================================== */
+
+/* Page content container */
+.season-detail-page .season-detail-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  padding: var(--pa-space-6) var(--pa-space-4);
+  padding-bottom: var(--pa-space-8);
+}
+
+/* Hero section */
+.season-detail-page .season-detail-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--pa-radius-m);
+  background: var(--org-btn-primary-bg);
+  box-shadow: var(--pa-shadow-3);
+  margin-bottom: var(--pa-space-6);
+}
+
+.season-detail-page .season-detail-hero-overlay {
+  position: absolute;
+  inset: 0;
+  opacity: 0.6;
+  background-image: linear-gradient(to right, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.2));
+  background-size: cover;
+  background-position: center;
+}
+
+.season-detail-page .season-detail-hero-inner {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pa-space-2);
+  padding: var(--pa-space-6);
+  min-height: 280px;
+}
+
+@media (min-width: 640px) {
+  .season-detail-page .season-detail-hero-inner {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: var(--pa-space-8);
+  }
+}
+
+.season-detail-page .season-detail-hero-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pa-space-2);
+}
+
+.season-detail-page .season-detail-hero-badge {
+  align-self: flex-start;
+  margin-bottom: var(--pa-space-4);
+  padding: var(--pa-space-2) var(--pa-space-3);
+  border-radius: var(--pa-radius-xs);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pa-space-2);
+  color: var(--org-btn-primary-text);
+  background: var(--org-btn-primary-bg);
+}
+
+.season-detail-page .season-detail-hero-badge.neutral {
+  background: var(--org-border-active);
+  color: var(--org-text-primary);
+}
+
+.season-detail-page .season-detail-hero-title {
+  font-family: var(--pa-font-display);
+  font-size: clamp(36px, 8vw, 72px);
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
+  color: var(--org-btn-primary-text);
+  margin: 0;
+}
+
+.season-detail-page .season-detail-hero-dates {
+  color: var(--org-btn-primary-text);
+  font-size: clamp(16px, 2vw, 20px);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  margin-top: var(--pa-space-2);
+  text-transform: uppercase;
+}
+
+/* Progress panel (desktop) */
+.season-detail-page .season-detail-progress-panel {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: var(--pa-space-4);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  border-radius: var(--pa-radius-m);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+@media (min-width: 640px) {
+  .season-detail-page .season-detail-progress-panel {
+    display: flex;
+    padding: var(--pa-space-6);
+  }
+}
+
+.season-detail-page .season-detail-progress-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pa-space-2);
+}
+
+.season-detail-page .season-detail-progress-icon {
+  font-size: 48px;
+  color: var(--org-btn-primary-bg);
+  opacity: 0.8;
+}
+
+.season-detail-page .season-detail-progress-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.7;
+  color: var(--org-btn-primary-text);
+}
+
+.season-detail-page .season-detail-progress-track {
+  width: 128px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: var(--pa-radius-pill);
+  margin-top: var(--pa-space-2);
+  overflow: hidden;
+}
+
+.season-detail-page .season-detail-progress-fill {
+  height: 100%;
+  width: var(--season-progress);
+  background: var(--org-btn-primary-bg);
+  transition: width 0.3s ease;
+}
+
+/* Cards grid */
+.season-detail-page .season-detail-cards {
+  display: grid;
+  gap: var(--pa-space-6);
+  margin-bottom: var(--pa-space-6);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+  .season-detail-page .season-detail-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .season-detail-page .season-detail-cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Card header (title + icon) */
+.season-detail-page .season-detail-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--pa-space-6);
+}
+
+.season-detail-page .season-detail-card-title {
+  font-family: var(--pa-font-body);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--org-text-muted);
+  margin: 0;
+}
+
+.season-detail-page .season-detail-card-icon {
+  font-size: 24px;
+  color: var(--org-btn-primary-bg);
+}
+
+/* Sports & Programs card: flex so VIEW PROGRAMS sits at bottom */
+.season-detail-page .season-detail-programs-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.season-detail-page .season-detail-programs-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pa-space-4);
+}
+
+.season-detail-page .season-detail-programs-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--pa-space-2);
+  border-bottom: 1px solid var(--org-border-default);
+}
+
+.season-detail-page .season-detail-programs-name {
+  font-weight: 700;
+  color: var(--org-text-primary);
+}
+
+.season-detail-page .season-detail-programs-count {
+  color: var(--org-text-muted);
+}
+
+.season-detail-page .season-detail-view-programs {
+  margin-top: auto;
+  color: var(--org-btn-primary-bg);
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: var(--pa-space-1);
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: gap var(--pa-motion-normal) var(--pa-ease-out);
+  font-family: inherit;
+}
+
+.season-detail-page .season-detail-view-programs:hover {
+  gap: var(--pa-space-2);
+}
+
+.season-detail-page .season-detail-view-programs .material-symbols-outlined {
+  font-size: 16px;
+}
+
+html.dark .season-detail-page .season-detail-view-programs {
+  color: var(--pa-theme-text-accent);
+}
+
+/* Teams card (accent border): flex so VIEW TEAMS sits at bottom */
+.season-detail-page .season-detail-teams-card {
+  display: flex;
+  flex-direction: column;
+  border-color: var(--org-card-accent-border);
+  box-shadow: var(--pa-shadow-2);
+}
+
+.season-detail-page .season-detail-teams-value-wrap {
+  padding: var(--pa-space-4) 0;
+}
+
+.season-detail-page .season-detail-teams-value {
+  font-family: var(--pa-font-display);
+  font-size: 72px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  color: var(--org-text-primary);
+  display: block;
+}
+
+@media (max-width: 767px) {
+  .season-detail-page .season-detail-teams-value {
+    font-size: clamp(48px, 12vw, 72px);
+  }
+}
+
+.season-detail-page .season-detail-teams-label {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--org-btn-primary-bg);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.season-detail-page .season-detail-teams-sub {
+  font-size: 14px;
+  color: var(--org-text-muted);
+}
+
+/* Season Stats card grid */
+.season-detail-page .season-detail-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--pa-space-4);
+}
+
+.season-detail-page .season-detail-stat-box {
+  background: var(--pa-n50);
+  padding: var(--pa-space-4);
+  border-radius: var(--pa-radius-xs);
+}
+
+html.dark .season-detail-page .season-detail-stat-box {
+  background: var(--pa-surface-panel);
+}
+
+.season-detail-page .season-detail-stat-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--pa-n500);
+  text-transform: uppercase;
+  margin: 0 0 var(--pa-space-1) 0;
+}
+
+html.dark .season-detail-page .season-detail-stat-label {
+  color: var(--pa-text-muted);
+}
+
+.season-detail-page .season-detail-stat-value {
+  font-size: clamp(20px, 4vw, 24px);
+  font-weight: 900;
+  color: var(--pa-n900);
+  margin: 0;
+  font-family: var(--pa-font-display);
+}
+
+html.dark .season-detail-page .season-detail-stat-value {
+  color: var(--pa-text-primary);
+}
+
+/* Action bar */
+.season-detail-page .season-detail-action-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pa-space-4);
+  padding: var(--pa-space-6);
+  background: var(--org-surface-section);
+  border-radius: var(--pa-radius-m);
+}
+
+@media (min-width: 640px) {
+  .season-detail-page .season-detail-action-bar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.season-detail-page .season-detail-action-desc {
+  display: flex;
+  align-items: center;
+  gap: var(--pa-space-3);
+  color: var(--org-text-muted);
+}
+
+.season-detail-page .season-detail-action-desc .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.season-detail-page .season-detail-action-desc span {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.season-detail-page .season-detail-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--pa-space-4);
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .season-detail-page .season-detail-action-buttons {
+    width: auto;
+  }
+}
+
+.season-detail-page .season-detail-action-buttons .pa-btn {
+  flex: 1 1 auto;
+}
+
+@media (min-width: 640px) {
+  .season-detail-page .season-detail-action-buttons .pa-btn {
+    flex: none;
+  }
+}
+
+/* Loading skeleton for page */
+.season-detail-page .season-detail-skeleton {
+  height: 500px;
+}

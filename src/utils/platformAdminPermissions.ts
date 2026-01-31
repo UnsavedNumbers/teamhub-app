@@ -32,6 +32,7 @@ export type PlatformAdminAction =
     // Org management (ops/super)
     | 'activate_organization'
     | 'suspend_organization'
+    | 'reset_mock_organization'
     // User management
     | 'disable_user'        // ops/super
     | 'enable_user'         // ops/super
@@ -55,6 +56,13 @@ export type PlatformAdminAction =
     | 'manage_features'
     | 'manage_overrides'
     | 'view_licenses_audit'
+    // Email system
+    | 'view_email_preview'
+    | 'send_test_emails'
+    // Photos / Media (cross-org support, moderation, storage)
+    | 'view_photo_overview'
+    | 'view_content_review'
+    | 'view_storage_management'
 
 /**
  * Permission matrix: maps actions to allowed roles
@@ -76,6 +84,7 @@ const PERMISSION_MATRIX: Record<PlatformAdminAction, PlatformAdminRole[]> = {
     // Org management - ops/super
     activate_organization: ['super_admin', 'ops_admin'],
     suspend_organization: ['super_admin', 'ops_admin'],
+    reset_mock_organization: ['super_admin', 'ops_admin'],
 
     // User management
     disable_user: ['super_admin', 'ops_admin'],
@@ -105,6 +114,15 @@ const PERMISSION_MATRIX: Record<PlatformAdminAction, PlatformAdminRole[]> = {
     manage_features: ['super_admin', 'ops_admin'],
     manage_overrides: ['super_admin', 'ops_admin'],
     view_licenses_audit: ['super_admin', 'ops_admin'],
+
+    // Email system - ops/super (development/testing only)
+    view_email_preview: ['super_admin', 'ops_admin'],
+    send_test_emails: ['super_admin', 'ops_admin'],
+
+    // Photos / Media - all platform admins for overview; ops/super for review and storage
+    view_photo_overview: ['super_admin', 'support_admin', 'finance_admin', 'ops_admin'],
+    view_content_review: ['super_admin', 'ops_admin'],
+    view_storage_management: ['super_admin', 'ops_admin'],
 }
 
 /**

@@ -1,4 +1,5 @@
-import type { SelectHTMLAttributes } from 'react'
+import { forwardRef, type SelectHTMLAttributes } from 'react'
+import { cn } from '../../utils/cn'
 
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   /** Select label */
@@ -18,43 +19,47 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
  * 
  * Dropdown select with custom styling
  */
-export function Select({
+export const Select = forwardRef<HTMLSelectElement, SelectProps>(({
   label,
   helper,
   error,
   required = false,
   options,
   className = '',
+  style,
   ...props
-}: SelectProps) {
+}, ref) => {
   const hasError = !!error
 
   return (
-    <div className="pa-form-group">
+    <div className="pa-form-group" style={style}>
       {label && (
-        <label className={`pa-label ${required ? 'pa-label--required' : ''}`}>
+        <label className={cn('pa-label', required && 'pa-label--required')}>
           {label}
         </label>
       )}
       
       <select
-        className={`pa-input pa-select ${hasError ? 'pa-input--error' : ''} ${className}`.trim()}
+        ref={ref}
+        className={cn('pa-input', 'pa-select', hasError && 'pa-input--error', className)}
         {...props}
       >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
+        {options.map((option, index) => (
+          <option key={`${option.value}-${index}`} value={option.value}>
             {option.label}
           </option>
         ))}
       </select>
       
       {(helper || error) && (
-        <div className={`pa-helper ${hasError ? 'pa-helper--error' : ''}`}>
+        <div className={cn('pa-helper', hasError && 'pa-helper--error')}>
           {error || helper}
         </div>
       )}
     </div>
   )
-}
+})
+
+Select.displayName = 'Select'
 
 export default Select

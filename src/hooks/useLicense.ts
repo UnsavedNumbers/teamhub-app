@@ -102,6 +102,30 @@ export function useLicense(organizationId?: string, options?: { requireOrganizat
         return
       }
 
+      // Map license_plan to tier_key
+      const planToTierKey = (plan: string | null | undefined): string | null => {
+        switch (plan) {
+          case 'starter': return 'basic'
+          case 'standard':
+          case 'pro': return 'power'
+          default: return null
+        }
+      }
+      const tierKey = planToTierKey(data.license_plan)
+
+      // Fetch tier_name if tier_key exists
+      let tierName: string | null = null
+      if (tierKey) {
+        const { data: tierData, error: tierError } = await supabase
+          .from('license_tiers')
+          .select('tier_name')
+          .eq('tier_key', tierKey)
+          .maybeSingle()
+        if (!tierError && tierData) {
+          tierName = tierData.tier_name
+        }
+      }
+
       const parsed: LicenseSummary = {
         status: (data.license_status as LicenseStatus | null) ?? null,
         plan: (data.license_plan as LicensePlan | null) ?? null,
@@ -113,6 +137,7 @@ export function useLicense(organizationId?: string, options?: { requireOrganizat
         stripeCustomerId: data.stripe_customer_id ?? null,
         stripeSubscriptionId: data.stripe_subscription_id ?? null,
         stripePriceId: data.stripe_price_id ?? null,
+        tierName,
       }
 
       // Populate computed properties

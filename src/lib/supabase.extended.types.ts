@@ -1,110 +1,16 @@
 import type { Database, Json } from './database.types'
+import type {
+  NotificationAction,
+  NotificationEntityType,
+  NotificationPresentation,
+  NotificationRole,
+} from '../types/notifications'
 
 // Re-export Json for use in other modules
 export type { Json }
 
-// Additional tables and views that are not present in the generated database.types.ts
-// This augments the Supabase schema used by the client to cover license/entitlements tables and views.
+// Additional tables that are NOT present in the generated database.types.ts
 type AdditionalTables = {
-  license_tiers: {
-    Row: {
-      id: string
-      tier_key: string
-      tier_name: string
-      description: string | null
-      stripe_price_id: string
-      stripe_verified_at: string | null
-      stripe_product_name: string | null
-      stripe_amount_cents: number | null
-      stripe_interval: string | null
-      stripe_currency: string | null
-      stripe_active: boolean | null
-      status: 'active' | 'archived'
-      version: number | null
-      created_at: string
-      updated_at: string
-    }
-    Insert: Partial<AdditionalTables['license_tiers']['Row']> & {
-      tier_key: string
-      tier_name: string
-      stripe_price_id: string
-    }
-    Update: Partial<AdditionalTables['license_tiers']['Row']>
-    Relationships: []
-  }
-  feature_entitlements: {
-    Row: {
-      id: string
-      feature_key: string
-      display_name: string
-      category: string
-      feature_type: 'module' | 'permission' | 'limit' | 'visibility' | 'integration'
-      description: string | null
-      rollout_status: 'live' | 'beta' | 'hidden'
-      created_at: string
-      updated_at: string
-      archived_at: string | null
-    }
-    Insert: Partial<AdditionalTables['feature_entitlements']['Row']> & {
-      feature_key: string
-      display_name: string
-      category: string
-      feature_type: AdditionalTables['feature_entitlements']['Row']['feature_type']
-    }
-    Update: Partial<AdditionalTables['feature_entitlements']['Row']>
-    Relationships: []
-  }
-  tier_feature_assignments: {
-    Row: {
-      id: string
-      license_tier_id: string
-      feature_entitlement_id: string
-      included: boolean
-      limit_value: number | null
-      role_admin: boolean
-      role_coach: boolean
-      role_parent: boolean
-      created_at: string
-      updated_at: string
-    }
-    Insert: Partial<AdditionalTables['tier_feature_assignments']['Row']> & {
-      license_tier_id: string
-      feature_entitlement_id: string
-      included: boolean
-    }
-    Update: Partial<AdditionalTables['tier_feature_assignments']['Row']>
-    Relationships: []
-  }
-  entitlement_overrides: {
-    Row: {
-      id: string
-      target_type: 'organization' | 'user'
-      target_id: string
-      feature_entitlement_id: string
-      override_action: 'enable' | 'disable' | 'set_limit'
-      limit_value: number | null
-      role_admin: boolean | null
-      role_coach: boolean | null
-      role_parent: boolean | null
-      reason: string
-      expires_at: string | null
-      created_by: string
-      created_at: string
-      updated_at: string
-      revoked_at: string | null
-      revoked_by: string | null
-      revoked_reason: string | null
-    }
-    Insert: Partial<AdditionalTables['entitlement_overrides']['Row']> & {
-      target_type: 'organization' | 'user'
-      target_id: string
-      feature_entitlement_id: string
-      override_action: AdditionalTables['entitlement_overrides']['Row']['override_action']
-      created_by: string
-    }
-    Update: Partial<AdditionalTables['entitlement_overrides']['Row']>
-    Relationships: []
-  }
   entitlement_audit_log: {
     Row: {
       id: string
@@ -118,7 +24,9 @@ type AdditionalTables = {
       reason: string | null
       created_at: string
     }
-    Insert: AdditionalTables['entitlement_audit_log']['Row']
+    Insert: Partial<AdditionalTables['entitlement_audit_log']['Row']> & {
+      action: string
+    }
     Update: Partial<AdditionalTables['entitlement_audit_log']['Row']>
     Relationships: []
   }
@@ -150,9 +58,7 @@ type AdditionalTables = {
     }
     Insert: Partial<AdditionalTables['event_general_rsvps']['Row']> & {
       event_id: string
-      user_id?: string | null
       status: 'going' | 'not_going' | 'maybe'
-      responded_at?: string | null
     }
     Update: Partial<AdditionalTables['event_general_rsvps']['Row']>
     Relationships: [
@@ -184,6 +90,14 @@ type AdditionalTables = {
       body: string
       payload: Json | null
       dedupe_key: string
+      action: NotificationAction
+      presentation_type: NotificationPresentation
+      role_context: NotificationRole
+      entity_type: NotificationEntityType | null
+      entity_id: string | null
+      link_url: string | null
+      metadata: Json | null
+      actor_id: string | null
       read_at: string | null
       created_at: string
     }
@@ -194,6 +108,9 @@ type AdditionalTables = {
       body: string
       dedupe_key: string
       type: string
+      action: NotificationAction
+      role_context: NotificationRole
+      presentation_type?: NotificationPresentation
     }
     Update: Partial<AdditionalTables['user_notifications']['Row']>
     Relationships: [
@@ -222,27 +139,9 @@ type AdditionalTables = {
   }
 }
 
+// Additional views that are NOT present in database.types.ts
 type AdditionalViews = {
-  admin_license_tiers_list: {
-    Row: AdditionalTables['license_tiers']['Row'] & {
-      included_features_count: number
-      orgs_using_count: number
-    }
-  }
-  admin_entitlement_overrides_list: {
-    Row: AdditionalTables['entitlement_overrides']['Row'] & {
-      target_name: string | null
-      feature_key: string
-      feature_name: string
-      created_by_email: string | null
-      revoked_by_email: string | null
-      status: 'active' | 'expired' | 'revoked'
-    }
-  }
-  admin_audit_log: {
-    Row: AdditionalTables['entitlement_audit_log']['Row']
-  }
-  // Admin feature flag views - these exist in database.types.ts but we ensure they're typed correctly
+  // admin_feature_flags_list view with additional computed columns
   admin_feature_flags_list: {
     Row: {
       id: string
@@ -260,6 +159,9 @@ type AdditionalViews = {
       org_override_count: number
       user_override_count: number
     }
+    Insert: never
+    Update: never
+    Relationships: []
   }
   admin_feature_flag_overrides: {
     Row: {
@@ -276,6 +178,9 @@ type AdditionalViews = {
       created_at: string
       updated_at: string
     }
+    Insert: never
+    Update: never
+    Relationships: []
   }
   admin_feature_flag_audit: {
     Row: {
@@ -293,214 +198,80 @@ type AdditionalViews = {
       environment: Database['public']['Enums']['feature_flag_environment']
       created_at: string
     }
+    Insert: never
+    Update: never
+    Relationships: []
   }
-  admin_fees_status: {
+  admin_audit_log: {
     Row: {
-      fee_id: string
-      fee_name: string
-      amount_cents: number
-      currency: string | null
-      due_date: string | null
-      fee_status: Database['public']['Enums']['fee_status']
-      organization_id: string
-      organization_name: string
-      assigned_count: number
-      paid_count: number
-      unpaid_count: number
-      payment_rate_percent: number
+      id: string
+      actor_id: string | null
+      actor_email: string | null
+      actor_name: string | null
+      action: string
+      entity_type: string
+      entity_id: string
+      metadata: Record<string, unknown>
+      created_at: string
     }
+    Insert: never
+    Update: never
+    Relationships: []
   }
 }
 
-// RPC response type for admin functions
-type AdminRpcResponse = {
-  success: boolean
-  error?: string
-  action?: string
-  flag_id?: string
-}
-
+// Additional RPC functions that are NOT present in database.types.ts
 type AdditionalFunctions = {
-  resolve_feature_flag: {
+  // Role management functions
+  admin_add_org_role: {
     Args: {
-      p_feature_key: string
-      p_user_id?: string | null
-      p_org_id?: string | null
-      p_environment?: string | null
+      target_user_id: string
+      target_org_id: string
+      target_role: Database['public']['Enums']['org_member_role']
+      reason: string
     }
     Returns: {
-      value: unknown
-      value_type: 'boolean' | 'integer' | 'double' | 'string' | null
-      resolved_from: 'platform' | 'organization' | 'user' | null
-      source_id: string | null
+      success: boolean
+      role_added?: boolean
+      error?: string
     }
   }
-  resolve_feature_flags: {
+  admin_remove_org_role: {
     Args: {
-      p_feature_keys: string[]
-      p_user_id?: string | null
-      p_org_id?: string | null
-      p_environment?: string | null
+      target_user_id: string
+      target_org_id: string
+      target_role: Database['public']['Enums']['org_member_role']
+      reason: string
     }
     Returns: {
-      feature_key: string
-      value: unknown
-      value_type: 'boolean' | 'integer' | 'double' | 'string' | null
-      resolved_from: 'platform' | 'organization' | 'user' | null
-      source_id: string | null
-    }[]
-  }
-  // Admin RPCs with typed return values
-  admin_activate_organization: {
-    Args: {
-      target_org_id: string
-      reason: string
+      success: boolean
+      role_removed?: boolean
+      error?: string
     }
-    Returns: AdminRpcResponse
   }
-  admin_suspend_organization: {
-    Args: {
-      target_org_id: string
-      reason: string
-    }
-    Returns: AdminRpcResponse
-  }
-  admin_disable_user: {
+  admin_change_org_role: {
     Args: {
       target_user_id: string
-      reason: string
-    }
-    Returns: AdminRpcResponse
-  }
-  admin_enable_user: {
-    Args: {
-      target_user_id: string
-      reason: string
-    }
-    Returns: AdminRpcResponse
-  }
-  admin_add_platform_admin: {
-    Args: {
-      target_email: string
-      target_role: Database['public']['Enums']['platform_admin_role']
-      reason: string
-    }
-    Returns: AdminRpcResponse & { action?: 'added' | 'updated' }
-  }
-  admin_remove_platform_admin: {
-    Args: {
-      target_user_id: string
-      reason: string
-    }
-    Returns: AdminRpcResponse
-  }
-  admin_create_feature_flag: {
-    Args: {
-      p_key: string
-      p_value_type: Database['public']['Enums']['feature_flag_value_type']
-      p_environment: Database['public']['Enums']['feature_flag_environment']
-      p_description?: string
-    }
-    Returns: AdminRpcResponse & { flag_id?: string }
-  }
-  admin_set_platform_default: {
-    Args: {
-      p_feature_flag_id: string
-      p_environment: Database['public']['Enums']['feature_flag_environment']
-      p_reason: string
-      p_value_boolean?: boolean | null
-      p_value_integer?: number | null
-      p_value_double?: number | null
-      p_expected_version?: number | null
-    }
-    Returns: AdminRpcResponse
-  }
-  admin_set_org_override: {
-    Args: {
-      p_feature_flag_id: string
-      p_org_id: string
-      p_environment: Database['public']['Enums']['feature_flag_environment']
-      p_reason: string
-      p_value_boolean?: boolean | null
-      p_value_integer?: number | null
-      p_value_double?: number | null
-      p_expected_version?: number | null
-    }
-    Returns: AdminRpcResponse
-  }
-  admin_set_user_override: {
-    Args: {
-      p_feature_flag_id: string
-      p_user_id: string
-      p_environment: Database['public']['Enums']['feature_flag_environment']
-      p_reason: string
-      p_value_boolean?: boolean | null
-      p_value_integer?: number | null
-      p_value_double?: number | null
-      p_expected_version?: number | null
-    }
-    Returns: AdminRpcResponse
-  }
-  admin_remove_org_override: {
-    Args: {
-      p_feature_flag_id: string
-      p_org_id: string
-      p_environment: Database['public']['Enums']['feature_flag_environment']
-      p_reason: string
-      p_expected_version?: number | null
-    }
-    Returns: AdminRpcResponse
-  }
-  admin_remove_user_override: {
-    Args: {
-      p_feature_flag_id: string
-      p_user_id: string
-      p_environment: Database['public']['Enums']['feature_flag_environment']
-      p_reason: string
-      p_expected_version?: number | null
-    }
-    Returns: AdminRpcResponse
-  }
-  admin_delete_feature_flag: {
-    Args: {
-      p_feature_flag_id: string
-      p_environment: Database['public']['Enums']['feature_flag_environment']
-      p_reason: string
-    }
-    Returns: AdminRpcResponse
-  }
-  admin_restore_feature_flag: {
-    Args: {
-      p_feature_flag_id: string
-      p_environment: Database['public']['Enums']['feature_flag_environment']
-      p_reason: string
-    }
-    Returns: AdminRpcResponse
-  }
-  admin_set_feature_flag: {
-    Args: {
-      target_feature_key: string
       target_org_id: string
-      target_enabled: boolean
+      old_role: Database['public']['Enums']['org_member_role']
+      new_role: Database['public']['Enums']['org_member_role']
       reason: string
     }
-    Returns: AdminRpcResponse
-  }
-  log_event: {
-    Args: {
-      p_category: Database['public']['Enums']['event_category']
-      p_event_type: string
-      p_actor_role: Database['public']['Enums']['event_actor_role']
-      p_actor_user_id?: string | null
-      p_org_id?: string | null
-      p_target_entity_type?: string | null
-      p_target_entity_id?: string | null
-      p_metadata?: Json | null
-      p_ip_address?: string | null
-      p_user_agent?: string | null
-      p_idempotency_key?: string | null
+    Returns: {
+      success: boolean
+      role_changed?: boolean
+      error?: string
     }
-    Returns: string | null // Returns UUID of created event or null
+  }
+  // Event RSVP functions
+  update_event_rsvp_config: {
+    Args: {
+      p_event_id: string
+      p_rsvp_enabled: boolean
+      p_rsvp_type: 'general' | 'athlete' | null
+      p_clear_existing: boolean
+    }
+    Returns: { success: boolean; error?: string }
   }
   is_child_eligible_for_event: {
     Args: {
@@ -509,10 +280,107 @@ type AdditionalFunctions = {
     }
     Returns: boolean
   }
+  // Invite acceptance functions
+  accept_parent_invite: {
+    Args: {
+      p_token: string
+    }
+    Returns: Array<{
+      success: boolean
+      organization_id?: string
+      athlete_id?: string
+      child_id?: string
+      message?: string
+    }>
+  }
+  accept_organization_invite: {
+    Args: {
+      p_token: string
+    }
+    Returns: Array<{
+      success: boolean
+      org_id?: string
+      organization_name?: string
+      role?: string
+      message?: string
+    }>
+  }
+  // Guardian status functions
+  athlete_has_active_guardian: {
+    Args: {
+      p_athlete_id: string
+      p_org_id: string
+    }
+    Returns: boolean
+  }
+  get_athletes_with_guardian_status: {
+    Args: {
+      p_org_id: string
+      p_limit?: number
+      p_offset?: number
+    }
+    Returns: Array<{
+      athlete_id: string
+      first_name: string
+      last_name: string
+      birthdate: string | null
+      gender: string | null
+      preferred_name: string | null
+      jersey_number: string | null
+      medical_notes: string | null
+      allergies: string | null
+      emergency_contact_name: string | null
+      emergency_contact_phone: string | null
+      created_at: string
+      updated_at: string
+      deleted_at: string | null
+      family_id: string | null
+      has_active_guardian: boolean
+    }>
+  }
+  // Feature Gate functions
+  get_feature_gate: {
+    Args: {
+      p_org_id: string | null
+      p_user_id: string
+      p_feature_key: string
+    }
+    Returns: {
+      allowed: boolean
+      gate_action: 'disable' | 'overlay' | 'hide' | 'modal' | 'paywall' | 'custom' | null
+      reason_code: string
+      feature_key: string
+      limit_value?: number
+      current_usage?: number
+      user_role?: string
+      error?: string
+    }
+  }
+  get_feature_gates: {
+    Args: {
+      p_org_id: string | null
+      p_user_id: string
+      p_feature_keys: string[]
+    }
+    Returns: Record<string, {
+      allowed: boolean
+      gate_action: 'disable' | 'overlay' | 'hide' | 'modal' | 'paywall' | 'custom' | null
+      reason_code: string
+      feature_key: string
+      limit_value?: number
+      current_usage?: number
+      user_role?: string
+      error?: string
+    }>
+  }
 }
 
+// Override status and target types for entitlement overrides
+export type OverrideStatus = 'active' | 'expired' | 'revoked'
+export type OverrideTargetType = 'organization' | 'user'
+
 export type SupabaseExtended = Omit<Database, 'public'> & {
-  public: {
+  public: Omit<Database['public'], 'Tables' | 'Views' | 'Functions'> & {
     Tables: Database['public']['Tables'] & AdditionalTables
     Views: Database['public']['Views'] & AdditionalViews
     Functions: Database['public']['Functions'] & AdditionalFunctions

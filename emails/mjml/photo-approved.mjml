@@ -1,0 +1,72 @@
+<mjml>
+  <mj-head>
+    <mj-title>Your photo was approved</mj-title>
+    <mj-preview>Your photo has been approved and added to the gallery</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Arial, sans-serif" />
+      <mj-text font-size="14px" color="#333333" line-height="1.5" />
+      <mj-section background-color="#ffffff" />
+    </mj-attributes>
+    <mj-style>
+      .button {
+        background-color: #16a34a !important;
+        color: #ffffff !important;
+        padding: 12px 24px !important;
+        text-decoration: none !important;
+        border-radius: 6px !important;
+        display: inline-block !important;
+        font-weight: 600 !important;
+      }
+      .footer-text {
+        color: #64748b !important;
+        font-size: 12px !important;
+      }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f8fafc">
+    <mj-include path="partials/header.mjml" />
+
+    <mj-section padding="40px 20px">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold" color="#1e293b" padding-bottom="16px">
+          Photo approved
+        </mj-text>
+        <mj-text padding-bottom="16px">
+          Hi {{recipient_name}},
+        </mj-text>
+        <mj-text padding-bottom="24px">
+          Your photo has been approved and added to <strong>{{gallery_name}}</strong>.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="24px 20px" background-color="#ffffff" border-radius="8px" border="1px solid #e2e8f0">
+      <mj-column>
+        <mj-text font-size="16px" font-weight="bold" color="#1e293b" padding-bottom="12px">
+          Gallery
+        </mj-text>
+        <mj-text padding-bottom="8px">
+          {{gallery_name}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="24px 20px">
+      <mj-column>
+        <mj-button css-class="button" href="{{url}}" padding="16px 24px">
+          View gallery
+        </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="24px 20px">
+      <mj-column>
+        <mj-text>
+          Thanks for contributing to the team gallery.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-include path="partials/footer.mjml" />
+  </mj-body>
+</mjml>

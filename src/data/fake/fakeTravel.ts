@@ -7,10 +7,21 @@
 
 import { DEMO_ORG_A_ID } from '../config'
 import {
+    TEAM_U10_BASKETBALL_ID,
+    TEAM_U12_BASKETBALL_ID,
     TEAM_U12_SOCCER_ID,
     TEAM_U14_SOCCER_ELITE_ID,
-    SEASON_SPRING_2024_ID,
+    SEASON_SPRING_CURRENT_ID,
 } from './fakeTeams'
+
+// Dynamic year helpers
+const getCurrentYear = () => new Date().getFullYear()
+
+// Helper functions for date generation relative to current year
+const getDateInCurrentYear = (month: number, day: number): string => {
+    const year = getCurrentYear()
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00Z`
+}
 
 // ============================================================================
 // Types
@@ -29,6 +40,9 @@ export interface FakeTravelPlan {
     destination_state: string | null
     venue_name: string | null
     venue_address: string | null
+    venue_place_id: string | null
+    venue_lat: number | null
+    venue_lng: number | null
     start_date: string
     end_date: string
     hotel_name: string | null
@@ -46,6 +60,14 @@ export interface FakeTravelPlan {
     cancelled_at: string | null
     created_at: string
     updated_at: string
+    team?: {
+        id: string
+        name: string
+    }
+    season?: {
+        id: string
+        name: string
+    }
 }
 
 export interface MeetingLocation {
@@ -83,18 +105,21 @@ function addDays(date: Date, days: number): string {
 // ============================================================================
 
 export const fakeTravelPlans: FakeTravelPlan[] = [
-    // Spring Cup Tournament - U12 Soccer (upcoming)
+    // Spring Cup Tournament - U12 Basketball (upcoming)
     {
         id: TRAVEL_SPRING_CUP_ID,
         org_id: DEMO_ORG_A_ID,
-        team_id: TEAM_U12_SOCCER_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        team_id: TEAM_U12_BASKETBALL_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'Spring Cup Tournament',
         location: 'San Diego, CA',
         destination_city: 'San Diego',
         destination_state: 'CA',
         venue_name: 'San Diego Sports Complex',
         venue_address: '4545 Sports Arena Blvd, San Diego, CA 92110',
+        venue_place_id: null,
+        venue_lat: null,
+        venue_lng: null,
         start_date: addDays(today, 10),
         end_date: addDays(today, 12),
         hotel_name: 'Courtyard by Marriott San Diego',
@@ -118,7 +143,7 @@ GAME SCHEDULE (tentative):
 - Saturday 9:00 AM: Pool play game 1
 - Saturday 2:00 PM: Pool play game 2
 - Sunday 10:00 AM: Bracket play (if qualify)`,
-        itinerary_file_path: 'travel/spring-cup-2024/itinerary.pdf',
+        itinerary_file_path: 'travel/spring-cup-${getCurrentYear()}/itinerary.pdf',
         meeting_locations: [
             {
                 name: 'Team Bus Pickup',
@@ -138,22 +163,25 @@ GAME SCHEDULE (tentative):
         status: 'published',
         published_at: '2024-02-20T00:00:00Z',
         cancelled_at: null,
-        created_at: '2024-02-15T00:00:00Z',
+        created_at: getDateInCurrentYear(2, 15),
         updated_at: '2024-02-20T00:00:00Z',
     },
 
-    // State Championship - U14 Elite Soccer
+    // State Championship - U10 Basketball
     {
         id: TRAVEL_STATE_CHAMPIONSHIP_ID,
         org_id: DEMO_ORG_A_ID,
-        team_id: TEAM_U14_SOCCER_ELITE_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        team_id: TEAM_U10_BASKETBALL_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'State Championship',
         location: 'Sacramento, CA',
         destination_city: 'Sacramento',
         destination_state: 'CA',
         venue_name: 'Cal Expo Sports Complex',
         venue_address: '1600 Exposition Blvd, Sacramento, CA 95815',
+        venue_place_id: null,
+        venue_lat: null,
+        venue_lng: null,
         start_date: addDays(today, 14),
         end_date: addDays(today, 16),
         hotel_name: 'Hilton Sacramento Arden West',
@@ -180,7 +208,7 @@ WHAT TO BRING:
 TEAM DINNER: Friday 7 PM - Venue TBD
 
 Players must travel with the team. No exceptions.`,
-        itinerary_file_path: 'travel/state-championship-2024/itinerary.pdf',
+        itinerary_file_path: 'travel/state-championship-${getCurrentYear()}/itinerary.pdf',
         meeting_locations: [
             {
                 name: 'Carpool Meeting Point',
@@ -193,7 +221,7 @@ Players must travel with the team. No exceptions.`,
         status: 'published',
         published_at: '2024-02-01T00:00:00Z',
         cancelled_at: null,
-        created_at: '2024-01-25T00:00:00Z',
+        created_at: getDateInCurrentYear(1, 25),
         updated_at: '2024-02-01T00:00:00Z',
     },
 
@@ -201,14 +229,17 @@ Players must travel with the team. No exceptions.`,
     {
         id: TRAVEL_REGIONAL_SHOWCASE_ID,
         org_id: DEMO_ORG_A_ID,
-        team_id: TEAM_U14_SOCCER_ELITE_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        team_id: TEAM_U12_BASKETBALL_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'Regional Showcase Cup',
         location: 'Las Vegas, NV',
         destination_city: 'Las Vegas',
         destination_state: 'NV',
         venue_name: 'Las Vegas Sports Park',
         venue_address: '7065 Arroyo Crossing Pkwy, Las Vegas, NV 89113',
+        venue_place_id: null,
+        venue_lat: null,
+        venue_lng: null,
         start_date: addDays(today, 30),
         end_date: addDays(today, 32),
         hotel_name: null, // Not finalized yet
@@ -224,22 +255,25 @@ Players must travel with the team. No exceptions.`,
         status: 'draft',
         published_at: null,
         cancelled_at: null,
-        created_at: '2024-02-28T00:00:00Z',
-        updated_at: '2024-02-28T00:00:00Z',
+        created_at: getDateInCurrentYear(2, 28),
+        updated_at: getDateInCurrentYear(2, 28),
     },
 
     // Cancelled travel plan example
     {
         id: TRAVEL_CANCELLED_ID,
         org_id: DEMO_ORG_A_ID,
-        team_id: TEAM_U12_SOCCER_ID,
-        season_id: SEASON_SPRING_2024_ID,
+        team_id: TEAM_U12_BASKETBALL_ID,
+        season_id: SEASON_SPRING_CURRENT_ID,
         title: 'Winter Invitational',
         location: 'Phoenix, AZ',
         destination_city: 'Phoenix',
         destination_state: 'AZ',
         venue_name: 'Reach 11 Sports Complex',
         venue_address: '2425 E Deer Valley Rd, Phoenix, AZ 85024',
+        venue_place_id: null,
+        venue_lat: null,
+        venue_lng: null,
         start_date: addDays(today, -20),
         end_date: addDays(today, -18),
         hotel_name: 'Hampton Inn Phoenix',
@@ -255,7 +289,7 @@ Players must travel with the team. No exceptions.`,
         status: 'cancelled',
         published_at: '2024-01-15T00:00:00Z',
         cancelled_at: addDays(today, -25),
-        created_at: '2024-01-10T00:00:00Z',
+        created_at: getDateInCurrentYear(1, 10),
         updated_at: addDays(today, -25),
     },
 ]
@@ -323,5 +357,36 @@ export function getTravelPlanWithTeamInfo(
     return {
         ...plan,
         team: { id: plan.team_id, name: teamNames[plan.team_id] ?? 'Unknown Team' },
+    }
+}
+
+// ============================================================================
+// Mutation Helpers for Fake Data
+// ============================================================================
+
+/**
+ * Add a new fake travel plan to the array
+ */
+export function addFakeTravelPlan(plan: FakeTravelPlan): void {
+    fakeTravelPlans.push(plan)
+}
+
+/**
+ * Update an existing fake travel plan
+ */
+export function updateFakeTravelPlan(id: string, updates: Partial<FakeTravelPlan>): void {
+    const index = fakeTravelPlans.findIndex(p => p.id === id)
+    if (index !== -1) {
+        fakeTravelPlans[index] = { ...fakeTravelPlans[index], ...updates }
+    }
+}
+
+/**
+ * Delete a fake travel plan from the array
+ */
+export function deleteFakeTravelPlan(id: string): void {
+    const index = fakeTravelPlans.findIndex(p => p.id === id)
+    if (index !== -1) {
+        fakeTravelPlans.splice(index, 1)
     }
 }

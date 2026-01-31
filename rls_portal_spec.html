@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YouthSports.team Portal — RLS Implementation Spec</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --platform: #a371f7;
+      --org-admin: #3fb950;
+      --coach: #d29922;
+      --guardian: #79c0ff;
+      --athlete: #7ee787;
+    }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; margin: 0; padding: 2rem; max-width: 1200px; margin-left: auto; margin-right: auto; }
+    h1 { font-size: 1.75rem; border-bottom: 1px solid var(--surface); padding-bottom: 0.5rem; }
+    h2 { font-size: 1.35rem; margin-top: 2rem; color: var(--accent); }
+    h3 { font-size: 1.1rem; margin-top: 1.5rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; background: var(--surface); border-radius: 6px; overflow: hidden; }
+    th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    th { background: rgba(0,0,0,0.2); color: var(--muted); font-weight: 600; }
+    pre, code { font-family: 'Consolas', 'Monaco', monospace; font-size: 0.85rem; background: var(--surface); padding: 0.2em 0.4em; border-radius: 4px; }
+    pre { padding: 1rem; overflow-x: auto; white-space: pre-wrap; }
+    .badge { display: inline-block; padding: 0.15em 0.5em; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
+    .badge-platform { background: rgba(163,113,247,0.2); color: var(--platform); }
+    .badge-org-admin { background: rgba(63,185,80,0.2); color: var(--org-admin); }
+    .badge-coach { background: rgba(210,153,34,0.2); color: var(--coach); }
+    .badge-guardian { background: rgba(121,192,255,0.2); color: var(--guardian); }
+    .badge-athlete { background: rgba(126,231,135,0.2); color: var(--athlete); }
+    .policy-block { margin: 1.5rem 0; padding: 1rem; background: var(--surface); border-radius: 8px; border-left: 4px solid var(--accent); }
+    .policy-block h4 { margin-top: 0; }
+    ul { padding-left: 1.5rem; }
+    .toc { list-style: none; padding-left: 0; }
+    .toc li { margin: 0.5rem 0; }
+    .toc a { color: var(--accent); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    .note { background: rgba(210,153,34,0.1); border-left: 4px solid var(--coach); padding: 0.75rem 1rem; margin: 1rem 0; border-radius: 4px; }
+    .critical { background: rgba(248,81,73,0.15); border-left: 4px solid #f85149; padding: 0.75rem 1rem; margin: 1rem 0; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<h1>YouthSports.team Portal — Row Level Security (RLS) Implementation Spec</h1>
+
+<p><strong>Purpose:</strong> This document defines all Row Level Security requirements for the YouthSports.team portal. It is a documentation deliverable for developers to implement policies correctly and consistently. <em>Do not implement policies from this spec without validating against the current schema (migrations).</em></p>
+
+<nav>
+  <h3>Contents</h3>
+  <ol class="toc">
+    <li><a href="#sec1">1. Title + Summary</a></li>
+    <li><a href="#sec2">2. Role Definitions</a></li>
+    <li><a href="#sec3">3. Org Context Model</a></li>
+    <li><a href="#sec4">4. Authorization Primitives</a></li>
+    <li><a href="#sec5">5. Policy Matrix (per-table)</a></li>
+    <li><a href="#sec6">6. Required SQL Policy Stubs</a></li>
+    <li><a href="#sec7">7. Storage (Supabase Storage) Access Rules</a></li>
+    <li><a href="#sec8">8. Testing Checklist</a></li>
+    <li><a href="#sec9">9. Known Failure Patterns</a></li>
+    <li><a href="#sec10">10. Implementation Order</a></li>
+  </ol>
+</nav>
+
+<!-- ========== 1. TITLE + SUMMARY ========== -->
+<h2 id="sec1">1. Title + Summary</h2>
+
+<h3>Purpose of RLS in this portal</h3>
+<ul>
+  <li>Enforce <strong>per-row</strong> access so that users see only data they are allowed to see, regardless of application bugs or misuse of the API.</li>
+  <li>Support <strong>multi-organization</strong> and <strong>multi-role</strong> users: the same user can be org_admin in Org A and guardian in Org B; RLS must respect the <strong>current org context</strong> and role when filtering rows.</li>
+  <li>Separate <strong>Platform Admin</strong> (global) from <strong>Org Admin</strong> (per-org): platform admins can see all orgs; org admins see only their org(s).</li>
+  <li>Protect <strong>guardian/athlete</strong> data: guardians see only athletes they are linked to (via <code>athlete_guardians</code>); org admins and coaches do <strong>not</strong> get expanded guardian-style access to other guardians’ children.</li>
+</ul>
+
+<h3>Key assumptions</h3>
+<ul>
+  <li><strong>Multi-org:</strong> One user can belong to multiple organizations via <code>organization_members</code> with one role per org (<code>org_member_role</code>: <code>parent</code>, <code>coach</code>, <code>org_admin</code>).</li>
+  <li><strong>Multi-role:</strong> A user may be org_admin in one org and guardian (parent) in another; RLS checks must use <code>org_id</code> and role together.</li>
+  <li><strong>Org context:</strong> The “current” org is determined by the application (e.g. selected org in UI or JWT/session). Policies use <code>auth.uid()</code> and derive org from the row (e.g. <code>org_id</code>, <code>team_id</code> → org) or from membership; there is no single “current_org_id” in the DB unless provided via RPC/session variable.</li>
+  <li><strong>Athletes vs children:</strong> Canonical table is <code>athletes</code> (renamed from <code>children</code>). Some legacy tables may still reference <code>children</code>; policy logic should use <code>athletes</code> and <code>athlete_guardians</code> for guardian-based access.</li>
+</ul>
+
+<h3>Security principles</h3>
+<ul>
+  <li><strong>Deny by default:</strong> If no policy allows a row to be seen or modified, access is denied.</li>
+  <li><strong>Least privilege:</strong> Each role gets the minimum access needed (e.g. coaches see roster/attendance but not payment amounts where specified).</li>
+  <li><strong>Explicit grants:</strong> Every SELECT/INSERT/UPDATE/DELETE must be explicitly allowed by at least one policy for the acting role.</li>
+</ul>
+
+<!-- ========== 2. ROLE DEFINITIONS ========== -->
+<h2 id="sec2">2. Role Definitions</h2>
+
+<table>
+  <thead>
+    <tr><th>Role</th><th>Scope</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="badge badge-platform">Platform Admin</span></td>
+      <td>Global</td>
+      <td>User listed in <code>platform_admins</code>. Can view/manage all organizations, users, audit logs, feature flags. Sub-roles: <code>super_admin</code>, <code>support_admin</code>, <code>finance_admin</code>, <code>ops_admin</code>. RLS typically allows full access to tables when <code>is_platform_admin(auth.uid())</code>.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-org-admin">Org Admin</span></td>
+      <td>Per org</td>
+      <td>User has <code>role = 'org_admin'</code> in <code>organization_members</code> for that <code>org_id</code>. Can manage org settings, members (except other org admins), teams/seasons, fees, invites, and all org-scoped data. Cannot see other organizations’ data. Guardian data access is still limited: org admin sees all athletes in the org but does <strong>not</strong> get to see other guardians’ private data (e.g. payment details of another parent) unless explicitly allowed for admin duties (e.g. recording offline payments).</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-coach">Coach</span></td>
+      <td>Per org</td>
+      <td>User has <code>role = 'coach'</code> in <code>organization_members</code> for that org. Can view/manage teams they are associated with (via org membership; “coached” teams may be org-wide or scoped by a coach–team link if present). Can see rosters, events, attendance, announcements. Cannot see payment amounts or guardian PII beyond what’s needed for roster. Cannot create fees or refunds.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-guardian">Guardian (Parent)</span></td>
+      <td>Per org / per athlete</td>
+      <td>User has <code>role = 'parent'</code> in <code>organization_members</code> and is linked to athletes via <code>athlete_guardians</code> with <code>status = 'active'</code>. Can see only their linked athletes and data scoped to those athletes (events, RSVPs, attendance, fees assigned to them, payments they made). Cannot see other guardians’ athletes or payment details.</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-athlete">Athlete</span></td>
+      <td>Data subject</td>
+      <td>Athletes are represented as rows in <code>athletes</code> (and legacy <code>children</code>). They do not have a separate login; access to athlete data is via Guardian, Coach, or Org Admin. “Athlete data access rules” below define who can see which athlete rows.</td>
+    </tr>
+    <tr>
+      <td>Member (implicit)</td>
+      <td>Per org</td>
+      <td>Any user with a row in <code>organization_members</code> for an org (any role). Used for “user has some access to this org” checks (e.g. <code>user_has_org_access</code>).</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ========== 3. ORG CONTEXT MODEL ========== -->
+<h2 id="sec3">3. Org Context Model</h2>
+
+<h3>How “current org” is determined</h3>
+<ul>
+  <li>The database does not store “current org” for the session. The application (frontend or backend) chooses the active org (e.g. after login or org switcher) and passes <code>org_id</code> in queries or RPCs where needed.</li>
+  <li>RLS policies do not rely on a single global “current_org_id.” They derive org from the row being accessed (e.g. <code>organizations.id</code>, <code>teams.org_id</code>, <code>fees.org_id</code>) and then check whether <code>auth.uid()</code> has the required relationship to that org (member, org_admin, coach) or to the linked athlete (guardian).</li>
+  <li>For multi-org users, after “switching” org in the UI, all subsequent queries must be filtered by the selected org (e.g. <code>WHERE org_id = :current_org_id</code>). RLS then ensures that only rows the user is allowed to see within that org are returned.</li>
+</ul>
+
+<h3>Required helpers used by policies</h3>
+<table>
+  <thead>
+    <tr><th>Helper</th><th>Purpose</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>auth.uid()</code></td><td>Current authenticated user ID (Supabase).</td></tr>
+    <tr><td><code>is_platform_admin(check_user_id UUID)</code></td><td>Returns true if user is in <code>platform_admins</code>. Use <code>auth.uid()</code> as argument.</td></tr>
+    <tr><td><code>user_has_org_access(check_user_id, check_org_id)</code></td><td>True if platform admin or has any row in <code>organization_members</code> for that org.</td></tr>
+    <tr><td><code>user_has_org_role(check_user_id, check_org_id, check_role)</code></td><td>True if platform admin or has that specific role in that org.</td></tr>
+    <tr><td><code>user_is_org_admin(check_user_id, check_org_id)</code></td><td>True if platform admin or org_admin for that org.</td></tr>
+    <tr><td><code>user_has_any_org_roles(check_user_id, check_org_id, roles[])</code></td><td>True if platform admin or has any of the given roles in that org.</td></tr>
+    <tr><td><code>user_is_guardian_of_child(check_user_id, check_athlete_id)</code></td><td>True if user has active row in <code>athlete_guardians</code> for that athlete.</td></tr>
+    <tr><td><code>get_user_children(check_user_id)</code></td><td>Returns set of athlete IDs for which user is active guardian.</td></tr>
+    <tr><td><code>get_user_organizations(check_user_id)</code></td><td>Returns table of (org_id, org_name, roles[]) for the user.</td></tr>
+  </tbody>
+</table>
+
+<h3>Membership tables</h3>
+<ul>
+  <li><code>organization_members</code>: (org_id, user_id, role). Primary source for org-level authorization.</li>
+  <li><code>athlete_guardians</code>: (athlete_id, user_id, org_id, status). Primary source for guardian–athlete relationship; use <code>status = 'active'</code> for “can access this athlete.”</li>
+  <li><code>team_memberships</code>: (athlete_id, team_id, season_id, status). Links athletes to teams; used to scope “coach/org admin sees athletes on teams in org” and “guardian sees events for teams their athletes are on.”</li>
+</ul>
+
+<!-- ========== 4. AUTHORIZATION PRIMITIVES ========== -->
+<h2 id="sec4">4. Authorization Primitives</h2>
+
+<p>Canonical checks used repeatedly in policies:</p>
+
+<table>
+  <thead>
+    <tr><th>Check</th><th>Implementation</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Is platform admin?</td><td><code>is_platform_admin(auth.uid())</code></td></tr>
+    <tr><td>Is org admin for org_id?</td><td><code>user_is_org_admin(auth.uid(), org_id)</code> or <code>user_has_org_role(auth.uid(), org_id, 'org_admin')</code></td></tr>
+    <tr><td>Is coach for org_id? (or for team_id → org)</td><td><code>user_has_any_org_roles(auth.uid(), org_id, ARRAY['coach','org_admin'])</code>. If table has only team_id, join to teams to get org_id.</td></tr>
+    <tr><td>Is guardian for athlete_id?</td><td><code>user_is_guardian_of_child(auth.uid(), athlete_id)</code></td></tr>
+    <tr><td>Is user associated with org_id at all?</td><td><code>user_has_org_access(auth.uid(), org_id)</code></td></tr>
+    <tr><td>Org admin AND guardian: guardian data</td><td>Guardian data (e.g. “see only my linked athletes”) is still limited to athletes linked via <code>athlete_guardians</code>. Being org admin does not grant access to other guardians’ children for guardian-style views (e.g. “my family’s payments”). For admin duties (e.g. “list all fee assignments in org”), org admin uses org-scoped policies, not guardian primitives.</td></tr>
+  </tbody>
+</table>
+
+<!-- ========== 5. POLICY MATRIX ========== -->
+<h2 id="sec5">5. Policy Matrix (per-table)</h2>
+
+<p>For each table: org scoping fields, CRUD by role, row filters, and notes. <strong>org_id</strong> is used consistently; where the schema uses <code>organization_id</code>, policies must align (prefer normalizing to <code>org_id</code> in schema).</p>
+
+<div class="policy-block">
+  <h4>TABLE: organizations</h4>
+  <p><strong>Description:</strong> Master org table. Scoping: <code>id</code> (org_id).</p>
+  <p><strong>SELECT:</strong> Platform Admin: all. Org member: orgs where <code>user_has_org_access(auth.uid(), id)</code>.</p>
+  <p><strong>INSERT:</strong> Platform Admin only (or service role for signup flows).</p>
+  <p><strong>UPDATE:</strong> Platform Admin: all. Org Admin: only where <code>user_is_org_admin(auth.uid(), id)</code>.</p>
+  <p><strong>DELETE:</strong> Platform Admin only (or restrict to prevent accidental deletion).</p>
+  <p><strong>Notes:</strong> Multi-org user sees multiple rows (one per membership).</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: organization_members</h4>
+  <p><strong>Description:</strong> Links users to orgs with role. Scoping: <code>org_id</code>, <code>user_id</code>.</p>
+  <p><strong>SELECT:</strong> User: own rows (<code>user_id = auth.uid()</code>). Platform Admin: all. Org Admin: rows where <code>org_id</code> in orgs they admin.</p>
+  <p><strong>INSERT:</strong> Platform Admin: any. Org Admin: only for their org, and <code>role != 'org_admin'</code> (cannot create other admins).</p>
+  <p><strong>UPDATE/DELETE:</strong> Platform Admin: all. Org Admin: only for their org, cannot modify/remove other org_admin rows or self-remove last admin.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: platform_admins</h4>
+  <p><strong>Description:</strong> Global platform admins. Scoping: <code>user_id</code>.</p>
+  <p><strong>SELECT/ALL:</strong> Only <code>is_platform_admin(auth.uid())</code>. Mutations via RPC (e.g. admin_add_platform_admin) with super_admin check.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: organization_invites</h4>
+  <p><strong>Description:</strong> Invite tokens for org membership. Scoping: <code>org_id</code>, <code>email</code>, <code>token</code>.</p>
+  <p><strong>SELECT:</strong> Org Admin for that org; Platform Admin; or anyone for row where <code>accepted_at IS NULL AND expires_at > NOW()</code> (e.g. for acceptance page lookup by token).</p>
+  <p><strong>INSERT:</strong> Org Admin for <code>org_id</code>; Platform Admin.</p>
+  <p><strong>DELETE:</strong> Org Admin for that org; Platform Admin.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: users</h4>
+  <p><strong>Description:</strong> User profiles. No direct org_id on row; org membership is in <code>organization_members</code>.</p>
+  <p><strong>SELECT:</strong> Own row (<code>id = auth.uid()</code>). Platform Admin: all. Org Admin/Coach: users who are members of orgs they have org_admin/coach role in (via <code>organization_members</code>).</p>
+  <p><strong>INSERT:</strong> Handled by <code>handle_new_user</code> trigger (auth); or service role. No direct user INSERT from app with RLS.</p>
+  <p><strong>UPDATE:</strong> Own row; Platform Admin for any.</p>
+  <p><strong>DELETE:</strong> Typically Platform Admin or service role only.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: families</h4>
+  <p><strong>Description:</strong> Household grouping (legacy). Scoping: <code>org_id</code>.</p>
+  <p><strong>SELECT:</strong> Org Admin/Coach for that org; Guardian: families that contain their linked athletes (via athletes.family_id). Platform Admin: all.</p>
+  <p><strong>INSERT/UPDATE/DELETE:</strong> Org Admin for org; Platform Admin. Guardians do not create families directly in typical flow.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: athletes</h4>
+  <p><strong>Description:</strong> Athletes (children). Scoping: <code>family_id</code> (optional), linked via <code>athlete_guardians</code> and <code>team_memberships</code> to org/team.</p>
+  <p><strong>SELECT:</strong> Guardian: only athletes where <code>user_is_guardian_of_child(auth.uid(), athletes.id)</code>. Org Admin: athletes in org (e.g. via team_memberships → teams.org_id and <code>user_is_org_admin(auth.uid(), org_id)</code>). Coach: athletes on teams in org where <code>user_has_any_org_roles(auth.uid(), org_id, ['coach','org_admin'])</code>. Platform Admin: all.</p>
+  <p><strong>INSERT:</strong> Org Admin (for org-scoped flows); Guardian only if explicitly allowed (e.g. “add my child” RPC). Coach: optional per product.</p>
+  <p><strong>UPDATE:</strong> Guardian: own linked athletes. Org Admin: athletes in org. Coach: typically no or limited. Platform Admin: all.</p>
+  <p><strong>DELETE:</strong> Restrict: only Org Admin or Platform Admin; prevent if dependent data exists (team_memberships, fee_assignments, etc.).</p>
+  <p><strong>Notes:</strong> Guardian sees only their linked athletes; org admin does not see “as guardian” for other parents’ children.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: athlete_guardians</h4>
+  <p><strong>Description:</strong> Links guardians to athletes per org. Scoping: <code>org_id</code>, <code>athlete_id</code>, <code>user_id</code>.</p>
+  <p><strong>SELECT:</strong> User: own rows (<code>user_id = auth.uid()</code>). Org Admin: rows for athletes in their org (via team_memberships + org). Platform Admin: all.</p>
+  <p><strong>INSERT/UPDATE/DELETE:</strong> Prefer RPCs (e.g. add_guardian_to_child, accept_invite). If direct: Org Admin for that org; Platform Admin. Guardian may INSERT for self when accepting invite (WITH CHECK <code>user_id = auth.uid()</code> and valid token).</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: sports, programs, levels</h4>
+  <p><strong>Description:</strong> Org hierarchy: sports (org), programs (org + sport), levels (org + program). Scoping: <code>org_id</code>.</p>
+  <p><strong>SELECT:</strong> Anyone with org access: <code>user_has_org_access(auth.uid(), org_id)</code>. Platform Admin: all.</p>
+  <p><strong>INSERT/UPDATE/DELETE:</strong> Org Admin for that org; Platform Admin.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: teams</h4>
+  <p><strong>Description:</strong> Teams belong to org. Scoping: <code>org_id</code>.</p>
+  <p><strong>SELECT:</strong> Org Admin/Coach: teams in org where they have role. Guardian: teams where their linked athletes have team_memberships. Platform Admin: all.</p>
+  <p><strong>INSERT/UPDATE/DELETE:</strong> Org Admin; Platform Admin. Coach: UPDATE only if product allows (e.g. event updates).</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: seasons</h4>
+  <p><strong>Description:</strong> Seasons (org-scoped). Scoping: <code>org_id</code>, <code>team_id</code> (if present).</p>
+  <p><strong>SELECT:</strong> Same as teams: org role or guardian via team_memberships. Platform Admin: all.</p>
+  <p><strong>INSERT/UPDATE/DELETE:</strong> Org Admin; Platform Admin.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: team_seasons</h4>
+  <p><strong>Description:</strong> Junction team–season. Scoping: via <code>team_id</code> → teams.org_id.</p>
+  <p><strong>SELECT:</strong> Same as teams (org access or guardian via team). INSERT/UPDATE/DELETE: Org Admin; Platform Admin.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: team_memberships</h4>
+  <p><strong>Description:</strong> Athlete–team–season membership. Scoping: <code>team_id</code>, <code>season_id</code>, <code>athlete_id</code>.</p>
+  <p><strong>SELECT:</strong> Guardian: memberships for their linked athletes. Org Admin/Coach: memberships for teams in their org. Platform Admin: all.</p>
+  <p><strong>INSERT/UPDATE/DELETE:</strong> Org Admin (roster management); Platform Admin. Guardian: no direct write (use RPCs if join requests).</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: events</h4>
+  <p><strong>Description:</strong> Events (practice, game, etc.) per team/season. Scoping: <code>team_id</code>, <code>season_id</code>.</p>
+  <p><strong>SELECT:</strong> Guardian: events for teams their athletes are on (via team_memberships). Org Admin/Coach: events for teams in org. Platform Admin: all.</p>
+  <p><strong>INSERT/UPDATE/DELETE:</strong> Org Admin; Coach (UPDATE often allowed). Platform Admin: all. Guardian: no.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: event_rsvps, event_general_rsvps</h4>
+  <p><strong>Description:</strong> RSVPs per event/athlete or general. Scoping: event_id → team; athlete_id.</p>
+  <p><strong>SELECT:</strong> Guardian: RSVPs for their athletes. Org Admin/Coach: RSVPs for events in org. Platform Admin: all.</p>
+  <p><strong>INSERT/UPDATE:</strong> Guardian: for their athletes only. Org Admin/Coach: for events in org. WITH CHECK: same scope as SELECT.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: event_attendance (attendance)</h4>
+  <p><strong>Description:</strong> Attendance records per event/athlete. Scoping: <code>event_id</code>, <code>athlete_id</code>.</p>
+  <p><strong>SELECT:</strong> Guardian: attendance for their athletes. Org Admin/Coach: attendance for events in org. Platform Admin: all.</p>
+  <p><strong>INSERT/UPDATE/DELETE:</strong> Guardian: for their athletes. Org Admin/Coach: for events in org.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: announcements</h4>
+  <p><strong>Description:</strong> Team or org-wide announcements. Scoping: <code>team_id</code>, <code>org_id</code> (if present).</p>
+  <p><strong>SELECT:</strong> Guardian: announcements for teams their athletes are on. Org Admin/Coach: announcements for teams/org they have access to. Platform Admin: all.</p>
+  <p><strong>INSERT/UPDATE/DELETE:</strong> Org Admin; Coach (team-scoped). Platform Admin: all.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: fees</h4>
+  <p><strong>Description:</strong> Fee definitions per org. Scoping: <code>org_id</code>.</p>
+  <p><strong>SELECT:</strong> Org Admin/Coach: fees in org (coach may see only metadata, not amounts if policy restricts). Guardian: published fees that are visible (e.g. all_parents or assigned to their athletes). Platform Admin: all.</p>
+  <p><strong>INSERT/UPDATE/DELETE:</strong> Org Admin; Platform Admin. Coach/Guardian: no.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: fee_assignments</h4>
+  <p><strong>Description:</strong> Assignment of fee to athlete + parent. Scoping: <code>org_id</code>, <code>athlete_id</code>, <code>parent_id</code>.</p>
+  <p><strong>SELECT:</strong> Guardian: only rows where <code>parent_id = auth.uid()</code> (or linked as guardian for that athlete). Org Admin: all in org. Coach: status-only view if allowed (no amount_cents); application or view can restrict columns. Platform Admin: all.</p>
+  <p><strong>INSERT/UPDATE/DELETE:</strong> Org Admin; Platform Admin. Guardian: no (assignments created by org).</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: charges, checkout_sessions, checkout_session_items</h4>
+  <p><strong>Description:</strong> Charges and checkout per org/parent. Scoping: <code>org_id</code>, <code>parent_id</code>, <code>fee_assignment_id</code>.</p>
+  <p><strong>SELECT:</strong> Guardian: own checkout and charges (parent_id = auth.uid() or via fee_assignment they can see). Org Admin: all in org. Coach: no. Platform Admin: all.</p>
+  <p><strong>INSERT:</strong> Guardian: own checkout (WITH CHECK parent_id = auth.uid()). Org Admin: charges/checkout for org. Platform Admin: all.</p>
+  <p><strong>UPDATE/DELETE:</strong> Per product (e.g. Org Admin for refunds/cancel).</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: payments, payment_allocations, refunds</h4>
+  <p><strong>Description:</strong> Payments and allocations. Scoping: <code>org_id</code>, <code>parent_id</code>.</p>
+  <p><strong>SELECT:</strong> Guardian: own payments (parent_id = auth.uid()). Org Admin: all in org. Coach: no. Platform Admin: all.</p>
+  <p><strong>INSERT:</strong> Service role / Stripe webhooks; or Org Admin for offline. Guardian: only via checkout flow (service role or RPC). UPDATE/DELETE: Org Admin (e.g. refund); Platform Admin.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: offline_payments, offline_payment_allocations</h4>
+  <p><strong>Description:</strong> Offline payment tracking. Scoping: <code>org_id</code>, <code>parent_id</code>, <code>fee_assignment_id</code>. Note: some schemas use <code>child_id</code> referencing legacy <code>children</code>; treat same as athlete for guardian scope.</p>
+  <p><strong>SELECT:</strong> Guardian: own (parent_id = auth.uid()). Org Admin: all in org. Coach: no. Platform Admin: all.</p>
+  <p><strong>INSERT/UPDATE:</strong> Org Admin; Platform Admin. Guardian: no.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: installment_plans, installments, installment_schedules; waivers; discount_codes, discount_redemptions; scholarship_*; org_payment_policies</h4>
+  <p><strong>Description:</strong> Payment configuration and ledger. Scoping: <code>org_id</code>.</p>
+  <p><strong>SELECT:</strong> Org Admin: all in org. Guardian/Coach: only where product allows (e.g. installment_plans visible for reference). Platform Admin: all.</p>
+  <p><strong>INSERT/UPDATE/DELETE:</strong> Org Admin; Platform Admin. Guardian: no (except discount_redemptions for own checkout if allowed).</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: travel_plans</h4>
+  <p><strong>Description:</strong> Travel plans per team/season. Scoping: <code>team_id</code>, <code>season_id</code>.</p>
+  <p><strong>SELECT:</strong> Guardian: for teams their athletes are on. Org Admin/Coach: for teams in org. Platform Admin: all.</p>
+  <p><strong>INSERT/UPDATE/DELETE:</strong> Org Admin; Coach (if allowed). Platform Admin: all.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: uniform_kits, uniform_kit_items, uniform_submissions, uniform_submission_items</h4>
+  <p><strong>Description:</strong> Uniform kits and orders. Scoping: org/team/athlete.</p>
+  <p><strong>SELECT:</strong> Guardian: submissions for their athletes. Org Admin/Coach: kits and submissions for org/team. Platform Admin: all.</p>
+  <p><strong>INSERT/UPDATE/DELETE:</strong> Org Admin/Coach: kits and items; Guardian: own submission rows for their athletes. Platform Admin: all.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: tryouts, tryout_registrations, tryout_scores, tryout_teams, tryout_criteria</h4>
+  <p><strong>Description:</strong> Tryouts and registrations. Scoping: <code>org_id</code>, <code>athlete_id</code>.</p>
+  <p><strong>SELECT:</strong> Guardian: registrations for their athletes. Org Admin/Coach: tryouts and registrations in org. Platform Admin: all.</p>
+  <p><strong>INSERT/UPDATE/DELETE:</strong> Org Admin/Coach: tryouts and scores; Guardian: own registrations (if allowed). Platform Admin: all.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: parent_invites, join_links, join_requests, child_claim_tokens</h4>
+  <p><strong>Description:</strong> Invites and join flows. Scoping: <code>org_id</code>, <code>team_id</code>, <code>email</code>, <code>token</code>.</p>
+  <p><strong>SELECT:</strong> Org Admin: invites/links/requests for org. User: own pending invites (by email/token). Platform Admin: all. Join links: anyone for active token (for join page).</p>
+  <p><strong>INSERT/UPDATE/DELETE:</strong> Org Admin; Platform Admin. User: INSERT join_request (requested_by_user_id = auth.uid()); accept invite via RPC.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: stream_channels, stream_channel_metadata, huddle_notification_preferences, huddle_reports, huddle_audit_log</h4>
+  <p><strong>Description:</strong> Huddles (Stream Chat) metadata and preferences. Scoping: <code>org_id</code>, <code>team_id</code>, <code>user_id_1</code>/<code>user_id_2</code> for DMs.</p>
+  <p><strong>SELECT:</strong> User: team channels for teams they’re in (guardian via athlete or coach/org_admin); org channels for org_admin; DM channels where user is participant. Preferences: own rows. Reports: own or org_admin. Audit: Platform Admin only.</p>
+  <p><strong>INSERT/UPDATE/DELETE:</strong> Org Admin create channels; users own preferences; reports by reporter; audit by platform only.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: feature_flags (per-org), feature_flag_platform_defaults, feature_flag_org_overrides, feature_flag_user_overrides</h4>
+  <p><strong>Description:</strong> Feature flags and license gating. Scoping: <code>org_id</code> for overrides.</p>
+  <p><strong>SELECT:</strong> Platform Admin: all. Org Admin: own org’s overrides and flag definitions they’re allowed to see. Others: typically no or via RPC that evaluates flags.</p>
+  <p><strong>INSERT/UPDATE/DELETE:</strong> Platform Admin. Org overrides may be updatable by Org Admin if product allows.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: license_tiers, feature_entitlements, tier_feature_assignments, entitlement_overrides, org_licenses</h4>
+  <p><strong>Description:</strong> License and entitlement model. Scoping: org.</p>
+  <p><strong>SELECT:</strong> Platform Admin: all. Org Admin: own org’s license and entitlements. Others: no or via RPC.</p>
+  <p><strong>INSERT/UPDATE/DELETE:</strong> Platform Admin (or service role for billing).</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: audit_logs</h4>
+  <p><strong>Description:</strong> Platform admin audit trail (immutable). Scoping: actor, entity.</p>
+  <p><strong>SELECT/INSERT:</strong> Platform Admin only. UPDATE/DELETE: deny (FALSE).</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: event_logs</h4>
+  <p><strong>Description:</strong> Global event log (immutable). Scoping: <code>org_id</code>, <code>actor_user_id</code>.</p>
+  <p><strong>SELECT:</strong> Platform Admin only. INSERT: authenticated (log_event is SECURITY DEFINER). UPDATE/DELETE: deny (FALSE).</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: organization_settings, organization_*_settings</h4>
+  <p><strong>Description:</strong> Org settings. Scoping: <code>org_id</code>.</p>
+  <p><strong>SELECT:</strong> Org Admin; Coach/Guardian if needed for product (e.g. visibility). Platform Admin: all.</p>
+  <p><strong>INSERT/UPDATE/DELETE:</strong> Org Admin; Platform Admin.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: notification_outbox, rsvp_notification_outbox, uniform_notification_outbox, user_notifications</h4>
+  <p><strong>Description:</strong> Outbox and user notifications. Scoping: org/user.</p>
+  <p><strong>SELECT/INSERT/UPDATE/DELETE:</strong> Typically service role or RPC; if exposed, user sees own notifications; org admin sees org outbox.</p>
+</div>
+
+<div class="policy-block">
+  <h4>TABLE: athlete_imports, venue_insights, event_locations, recurring_event_patterns, recurring_event_instances</h4>
+  <p><strong>Description:</strong> Supporting tables. Scoping: org_id or team_id where present. Apply same pattern: org role or guardian via team/athlete; Platform Admin all.</p>
+</div>
+
+<!-- ========== 6. REQUIRED SQL POLICY STUBS ========== -->
+<h2 id="sec6">6. Required SQL Policy Stubs</h2>
+
+<p>Per-table policy names and conceptual USING/WITH CHECK. Final SQL must match actual schema (column names: <code>org_id</code> vs <code>organization_id</code>, <code>child_id</code> vs <code>athlete_id</code>).</p>
+
+<pre>
+-- organizations
+--   SELECT: "Members can view their orgs" USING user_has_org_access(auth.uid(), id)
+--   SELECT: "Platform admins can view all orgs" USING is_platform_admin(auth.uid())
+--   UPDATE: "Org admins can update their org" USING user_is_org_admin(auth.uid(), id)
+--   ALL: "Platform admins can manage all orgs" USING is_platform_admin(auth.uid())
+
+-- organization_members
+--   SELECT: "Users can view own memberships" USING (auth.uid() = user_id)
+--   SELECT: "Platform admins can view all memberships" USING is_platform_admin(auth.uid())
+--   SELECT: "Org admins can view org memberships" USING user_is_org_admin(auth.uid(), org_id)
+--   INSERT: "Org admins can manage org memberships" WITH CHECK (user_is_org_admin(auth.uid(), org_id) AND role != 'org_admin')
+--   UPDATE/DELETE: per existing 021_auth_rls_policies
+
+-- athletes
+--   SELECT: "Guardians can manage their children" USING user_is_guardian_of_child(auth.uid(), id)
+--   SELECT: "Org admins can view org children" USING (EXISTS team_memberships + teams where user_is_org_admin)
+--   SELECT: "Coaches can view org team children" USING (EXISTS team_memberships + teams where user_has_any_org_roles coach/org_admin)
+--   INSERT: "Guardians can manage their children" WITH CHECK user_is_guardian_of_child (if allowed)
+--   INSERT: "Org admins can manage org children" WITH CHECK (org scope)
+--   UPDATE/DELETE: same scopes
+
+-- fee_assignments
+--   SELECT: Guardian WHERE parent_id = auth.uid() OR user_is_guardian_of_child for athlete_id
+--   SELECT: Org Admin WHERE user_is_org_admin(auth.uid(), org_id)
+--   INSERT/UPDATE/DELETE: Org Admin for org_id only
+
+-- payments
+--   SELECT: Guardian WHERE parent_id = auth.uid()
+--   SELECT: Org Admin WHERE user_is_org_admin(auth.uid(), org_id)
+--   INSERT: service role / RPC; or WITH CHECK parent_id = auth.uid() for user-initiated
+
+-- event_logs
+--   SELECT: "Platform admins can view all event logs" USING is_platform_admin(auth.uid())
+--   INSERT: "Authenticated users can insert event logs" WITH CHECK (auth.role() = 'authenticated')
+--   UPDATE/DELETE: "Deny update/delete" USING (FALSE)
+</pre>
+
+<p>Repeat similar stubs for every table in section 5; reference the exact column names from migrations (e.g. <code>fee_assignments.parent_id</code>, <code>payments.org_id</code>).</p>
+
+<!-- ========== 7. STORAGE ========== -->
+<h2 id="sec7">7. Storage (Supabase Storage) Access Rules</h2>
+
+<h3>Buckets</h3>
+<table>
+  <thead>
+    <tr><th>Bucket</th><th>Public/Private</th><th>Purpose</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>public-media</td><td>Public</td><td>Athlete profile photos. Path: <code>orgs/{org_id}/athletes/...</code></td></tr>
+    <tr><td>organization storage (if any)</td><td>Private</td><td>Org-private files (e.g. travel itineraries). Path includes org_id.</td></tr>
+    <tr><td>athlete-imports (if any)</td><td>Private</td><td>CSV imports. Org-scoped.</td></tr>
+  </tbody>
+</table>
+
+<h3>public-media (athlete photos)</h3>
+<ul>
+  <li><strong>Read:</strong> Public (bucket is public). Optional policy: SELECT USING <code>bucket_id = 'public-media'</code>.</li>
+  <li><strong>Upload (INSERT):</strong> Authenticated users who are members of the org in the path. WITH CHECK: <code>(storage.foldername(name))[1] = 'orgs'</code> and <code>EXISTS (SELECT 1 FROM organization_members WHERE user_id = auth.uid() AND org_id::text = (storage.foldername(name))[2])</code>. Application must ensure path is orgs/{org_id}/athletes/... and that user is org_admin, coach, or guardian for that athlete (DB validation in RPC or app).</li>
+  <li><strong>Update/DELETE:</strong> Same: user must be member of org in path. Stricter: only org_admin, coach, or guardian of that athlete if path encodes athlete_id.</li>
+</ul>
+
+<h3>Org-scoped private buckets</h3>
+<ul>
+  <li>SELECT: user has org access (<code>user_has_org_access(auth.uid(), org_id)</code>) where org_id is derived from path.</li>
+  <li>INSERT/UPDATE/DELETE: Org Admin or Coach for that org; or Guardian for paths that encode their athlete (e.g. travel docs for their athlete).</li>
+</ul>
+
+<h3>Required storage policies by bucket</h3>
+<pre>
+-- public-media
+-- Policy: "Public read access for athlete photos" FOR SELECT USING (bucket_id = 'public-media')
+-- Policy: "Authenticated users can upload athlete photos" FOR INSERT WITH CHECK (bucket + path orgs/... + org membership)
+-- Policy: "Authenticated users can update/delete athlete photos" FOR UPDATE/DELETE USING/WITH CHECK (same org membership)
+</pre>
+
+<!-- ========== 8. TESTING CHECKLIST ========== -->
+<h2 id="sec8">8. Testing Checklist</h2>
+
+<ul>
+  <li><strong>Guardian:</strong> Cannot see other guardians’ athletes; cannot see other parents’ fee_assignments or payments; can see only own checkout_sessions and payments; can see events/RSVPs/attendance only for their linked athletes.</li>
+  <li><strong>Coach:</strong> Cannot see athletes outside teams in their org; cannot see payment amounts (if restricted by policy or view); can see roster and attendance for teams in org; cannot create fees or refunds.</li>
+  <li><strong>Org Admin:</strong> Can see all org data (teams, seasons, athletes, fee_assignments, payments in org); cannot see other orgs’ data; cannot create other org_admin members; cannot remove self if last admin.</li>
+  <li><strong>Platform Admin:</strong> Can see all organizations, users, event_logs, audit_logs, feature flags; can perform admin RPCs per role (super_admin, etc.).</li>
+  <li><strong>Multi-org user:</strong> After switching org in UI, queries filtered by new org_id return only that org’s data; RLS does not leak data from other orgs.</li>
+  <li><strong>Insert flows:</strong> Org creation (platform or service role); fee creation and assignment (org admin); checkout and payment (guardian own, or service role for Stripe); join_request (user own); invite accept (user + token).</li>
+  <li><strong>Webhooks / service role:</strong> Stripe webhooks and server-side writes use service_role and bypass RLS; ensure no anon/authenticated path allows forbidden writes.</li>
+</ul>
+
+<!-- ========== 9. KNOWN FAILURE PATTERNS ========== -->
+<h2 id="sec9">9. Known Failure Patterns</h2>
+
+<div class="critical">
+  <strong>FOR ALL policies blocking inserts:</strong> Use both USING (for existing row checks where applicable) and WITH CHECK for INSERT and UPDATE. If only USING is set, INSERT may succeed with rows that don’t satisfy the intended constraint.
+</div>
+
+<ul>
+  <li><strong>USING without WITH CHECK:</strong> UPDATE policy with USING but no WITH CHECK can allow inserting or updating to values outside intended scope. Always add WITH CHECK for INSERT and UPDATE policies.</li>
+  <li><strong>Missing org_id scoping:</strong> Policies that only check “user is org_admin” without tying to the row’s org_id allow access to all orgs. Always bind to row: e.g. <code>user_is_org_admin(auth.uid(), table.org_id)</code>.</li>
+  <li><strong>Inconsistent naming org_id vs organization_id:</strong> Schema may use organization_id in some tables. Policies must use the actual column name; normalize to org_id in schema where possible.</li>
+  <li><strong>Stale org context:</strong> If the app caches “current org” and doesn’t refetch after switch, queries may still filter by old org. RLS will still restrict rows, but the app may show no data or wrong list. Ensure UI refetches after org switch.</li>
+  <li><strong>Coach vs org_admin:</strong> Do not grant coach the same write access as org_admin (e.g. fee creation, member removal). Use <code>user_has_any_org_roles(..., ARRAY['coach','org_admin'])</code> only where both are allowed.</li>
+  <li><strong>Guardian as org_admin:</strong> When user is both org_admin and guardian, guardian-style policies (e.g. “see only my athletes”) still apply to guardian primitives. Do not expand guardian visibility for org admins; keep “my linked athletes” strict.</li>
+</ul>
+
+<!-- ========== 10. IMPLEMENTATION ORDER ========== -->
+<h2 id="sec10">10. Implementation Order</h2>
+
+<ol>
+  <li><strong>Membership and helpers:</strong> Ensure <code>organization_members</code>, <code>platform_admins</code>, <code>athlete_guardians</code> RLS and helper functions (<code>is_platform_admin</code>, <code>user_has_org_access</code>, <code>user_is_org_admin</code>, <code>user_has_any_org_roles</code>, <code>user_is_guardian_of_child</code>, <code>get_user_children</code>) exist and are correct.</li>
+  <li><strong>Core org scoping:</strong> <code>organizations</code>, <code>organization_invites</code>, <code>users</code> (read policies).</li>
+  <li><strong>Athletes and guardians:</strong> <code>athletes</code>, <code>athlete_guardians</code>, <code>families</code>; then <code>team_memberships</code>, <code>teams</code>, <code>seasons</code>.</li>
+  <li><strong>Events and announcements:</strong> <code>events</code>, <code>event_rsvps</code>, <code>event_attendance</code>, <code>announcements</code>.</li>
+  <li><strong>Payments:</strong> <code>fees</code>, <code>fee_assignments</code>, <code>charges</code>, <code>checkout_sessions</code>, <code>payments</code>, <code>payment_allocations</code>, <code>refunds</code>, <code>offline_payments</code>.</li>
+  <li><strong>Travel, uniforms, tryouts:</strong> <code>travel_plans</code>, uniform tables, tryout tables.</li>
+  <li><strong>Invites and join:</strong> <code>parent_invites</code>, <code>join_links</code>, <code>join_requests</code>, <code>child_claim_tokens</code>.</li>
+  <li><strong>Storage:</strong> public-media and any org/import buckets with path-based org checks.</li>
+  <li><strong>Logs and audit:</strong> <code>event_logs</code>, <code>audit_logs</code> (platform admin only; deny UPDATE/DELETE).</li>
+  <li><strong>Feature flags and license:</strong> feature_flags, org overrides, license_tiers, entitlement tables.</li>
+  <li><strong>Huddles:</strong> stream_channels, stream_channel_metadata, huddle_notification_preferences, huddle_reports, huddle_audit_log.</li>
+</ol>
+
+<hr />
+<p><em>End of RLS Portal Spec. Validate all policies against current migrations and schema before implementation.</em></p>
+
+</body>
+</html>

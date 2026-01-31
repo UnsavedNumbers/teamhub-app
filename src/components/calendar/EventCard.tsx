@@ -39,7 +39,7 @@ export default function EventCard({ event, sport = null, onClick, compact = fals
       onClick={onClick}
       className={`w-full text-left group ${className}`}
     >
-      <Card className={`p-0 border-l-4 ${typeColor} hover:shadow-lg transition-all duration-300 overflow-hidden h-full rounded-none !border-0 ${isCancelled ? 'opacity-75 bg-slate-50 dark:bg-slate-900/50' : ''}`}>
+      <Card className={`p-0 border-l-4 ${typeColor} hover:shadow-lg transition-all duration-300 overflow-hidden h-full !border-0 ${isCancelled ? 'opacity-75 bg-slate-50 dark:bg-slate-900/50' : ''}`}>
         {/* Sport Background Image */}
         <SportCardImage 
           sport={sport} 

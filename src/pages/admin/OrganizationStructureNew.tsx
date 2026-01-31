@@ -1,15 +1,18 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useUserContext } from '../../hooks/useUserContext'
-import { PageHeader } from '../../components/platformAdmin'
+import { AdminPageHeader, Button } from '../../components/platformAdmin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
+import { getLink } from '../../utils/routes'
 import { getSports, getPrograms } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
 import { getTeams } from '../../data/services/teamsService'
 import { getSeasons } from '../../data/services/seasonsService'
-import { getChildren } from '../../data/services/familyService'
-import type { Sport, Program, Level, Team, Season, Child } from '../../data/types/organization'
+import { getAthletes } from '../../data/services/familyService'
+import { getOrganizationUsers } from '../../data/services/usersService'
+import type { Sport, Program, Level, Team, Season } from '../../data/types/organization'
+import type { Child } from '../../types/family'
 
 export default function OrganizationStructureNew() {
   const { currentOrganization } = useOrganization()
@@ -22,6 +25,7 @@ export default function OrganizationStructureNew() {
   const [teams, setTeams] = useState<Team[]>([])
   const [seasons, setSeasons] = useState<Season[]>([])
   const [children, setChildren] = useState<Child[]>([])
+  const [coachCount, setCoachCount] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -32,17 +36,26 @@ export default function OrganizationStructureNew() {
     setError(null)
 
     try {
-      const [sportsResult, programsResult, levelsResult, teamsResult, seasonsResult, childrenResult] =
+      const [sportsResult, programsResult, levelsResult, teamsResult, seasonsResult, childrenResult, usersResult] =
         await Promise.all([
           getSports(context),
           getPrograms(context),
           getLevels(context),
           getTeams(context),
           getSeasons(context),
-          getChildren(context),
+          getAthletes(context),
+          getOrganizationUsers(context),
         ])
 
-      if (sportsResult.error || programsResult.error || levelsResult.error || teamsResult.error || seasonsResult.error || childrenResult.error) {
+      if (
+        sportsResult.error ||
+        programsResult.error ||
+        levelsResult.error ||
+        teamsResult.error ||
+        seasonsResult.error ||
+        childrenResult.error ||
+        usersResult.error
+      ) {
         throw (
           sportsResult.error ||
           programsResult.error ||
@@ -50,6 +63,7 @@ export default function OrganizationStructureNew() {
           teamsResult.error ||
           seasonsResult.error ||
           childrenResult.error ||
+          usersResult.error ||
           new Error('Failed to load organization data')
         )
       }
@@ -60,6 +74,10 @@ export default function OrganizationStructureNew() {
       setTeams(Array.isArray(teamsResult.data) ? teamsResult.data : [])
       setSeasons(Array.isArray(seasonsResult.data) ? seasonsResult.data : [])
       setChildren(Array.isArray(childrenResult.data) ? childrenResult.data : [])
+      const coachTotal = Array.isArray(usersResult.data)
+        ? usersResult.data.filter((u) => u.roles.includes('coach')).length
+        : 0
+      setCoachCount(coachTotal)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load organization data')
     } finally {
@@ -79,11 +97,27 @@ export default function OrganizationStructureNew() {
     teams: Array.isArray(teams) ? teams.length : 0,
     seasons: Array.isArray(seasons) ? seasons.length : 0,
     players: Array.isArray(children) ? children.length : 0,
-    coaches: 0,
+    coaches: coachCount,
   }
 
   const activeSeasons = Array.isArray(seasons) ? seasons.filter((s) => s.is_active) : []
   const currentSeason = activeSeasons.length > 0 ? activeSeasons[0] : null
+
+  // Compute prerequisite flags using useMemo for consistency
+  const canCreateProgram = useMemo(
+    () => !loading && Array.isArray(sports) && sports.length > 0,
+    [loading, sports.length]
+  )
+
+  const canCreateLevel = useMemo(
+    () => !loading && Array.isArray(programs) && programs.length > 0,
+    [loading, programs.length]
+  )
+
+  const canCreateTeam = useMemo(
+    () => !loading && Array.isArray(levels) && levels.length > 0,
+    [loading, levels.length]
+  )
 
   if (!isReady || loading) {
     return (
@@ -96,7 +130,7 @@ export default function OrganizationStructureNew() {
   if (error) {
     return (
       <div className="org-structure-page">
-        <PageHeader
+        <AdminPageHeader
           title={
             <>
               Organization <span className="pa-title-accent">Overview</span>
@@ -110,9 +144,9 @@ export default function OrganizationStructureNew() {
         />
         <div className="pa-card">
           <div className="pa-text-danger pa-mb-3">{error}</div>
-          <button className="pa-btn pa-btn--primary" onClick={loadData}>
+          <Button onClick={loadData}>
             Retry
-          </button>
+          </Button>
         </div>
       </div>
     )
@@ -121,7 +155,7 @@ export default function OrganizationStructureNew() {
   return (
     <div className="org-structure-page">
       <OfflineBanner />
-      <PageHeader
+      <AdminPageHeader
         title={
           <>
             Organization <span className="pa-title-accent">Overview</span>
@@ -129,7 +163,7 @@ export default function OrganizationStructureNew() {
         }
         subtitle={`${currentOrganization?.name || 'Organization'} — Structural setup and team management`}
         breadcrumbs={[
-          { label: 'Organizations', path: '/admin/organization' },
+          { label: 'Organizations', path: getLink('admin.organization.structure') },
           { label: currentOrganization?.name || 'Organization' },
         ]}
       />
@@ -168,32 +202,38 @@ export default function OrganizationStructureNew() {
             <QuickActionButton
               icon="sports_basketball"
               label="Add Sport"
-              onClick={() => navigate('/admin/organization/structure/forms?type=sport')}
+              onClick={() => navigate(`${getLink('admin.organization.forms')}?type=sport`)}
             />
             <QuickActionButton
               icon="category"
               label="Add Program"
-              onClick={() => navigate('/admin/organization/structure/forms?type=program')}
+              onClick={() => navigate(`${getLink('admin.organization.forms')}?type=program`)}
+              disabled={!canCreateProgram}
+              tooltip={!canCreateProgram ? 'Add a Sport first' : undefined}
             />
             <QuickActionButton
               icon="stairs"
               label="Add Level"
-              onClick={() => navigate('/admin/organization/structure/forms?type=level')}
+              onClick={() => navigate(`${getLink('admin.organization.forms')}?type=level`)}
+              disabled={!canCreateLevel}
+              tooltip={!canCreateLevel ? 'Add a Program first' : undefined}
             />
             <QuickActionButton
               icon="groups"
               label="Add Team"
-              onClick={() => navigate('/admin/organization/structure/forms?type=team')}
+              onClick={() => navigate(`${getLink('admin.organization.forms')}?type=team`)}
+              disabled={!canCreateTeam}
+              tooltip={!canCreateTeam ? 'Add a Level first' : undefined}
             />
             <QuickActionButton
               icon="calendar_today"
               label="Add Season"
-              onClick={() => navigate('/admin/organization/structure/forms?type=season')}
+              onClick={() => navigate(`${getLink('admin.organization.forms')}?type=season`)}
             />
             <QuickActionButton
               icon="person_add"
               label="Add Player"
-              onClick={() => navigate('/admin/children')}
+              onClick={() => navigate(getLink('admin.athletes.list'))}
             />
           </div>
         </div>
@@ -249,12 +289,12 @@ export default function OrganizationStructureNew() {
             descriptor="The sport you offer"
             example={
               exampleType === 'school'
-                ? 'Boys Soccer'
+                ? 'Soccer'
                 : exampleType === 'club'
-                  ? 'Boys Soccer'
+                  ? 'Soccer'
                   : exampleType === 'aau'
-                    ? 'Boys Basketball'
-                    : 'Girls Basketball'
+                    ? 'Basketball'
+                    : 'Basketball'
             }
             variant="primary"
           />
@@ -338,13 +378,26 @@ function QuickActionButton({
   icon,
   label,
   onClick,
+  disabled = false,
+  tooltip,
 }: {
   icon: string
   label: string
   onClick: () => void
+  disabled?: boolean
+  tooltip?: string
 }) {
   return (
-    <button className="org-action-btn" onClick={onClick}>
+    <button
+      className="org-action-btn"
+      onClick={onClick}
+      disabled={disabled}
+      title={tooltip}
+      style={{
+        opacity: disabled ? 0.5 : 1,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+      }}
+    >
       <div className="org-action-content">
         <span className="material-symbols-outlined org-action-icon">{icon}</span>
         <span className="org-action-label">{label}</span>

@@ -5,7 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0"
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 const resendApiKey = Deno.env.get("RESEND_API_KEY")
-const emailFrom = Deno.env.get("TRAVEL_EMAIL_FROM") // e.g. "TeamHub <no-reply@yourdomain.com>"
+const emailFrom = Deno.env.get("TRAVEL_EMAIL_FROM") // e.g. "Youth Sports <no-reply@yourdomain.com>"
 const notifySecret = Deno.env.get("TRAVEL_NOTIFY_SECRET")
 
 if (!supabaseUrl || !supabaseServiceRoleKey) {
@@ -62,7 +62,7 @@ function buildEmailHtml(row: OutboxRow) {
         Status: ${status}
       </p>
       <p style="margin:0;color:#334155;">
-        Open the TeamHub app to view full details, maps, and the itinerary.
+        Open the Youth Sports app to view full details, maps, and the itinerary.
       </p>
     </div>
   `

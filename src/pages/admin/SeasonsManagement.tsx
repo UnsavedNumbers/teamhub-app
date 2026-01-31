@@ -4,140 +4,295 @@
  * Table view for organization-wide time periods.
  */
 
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
-import { getSeasons } from '../../data/services/seasonsService'
+import { getSeasons, deleteSeason, isSeasonEmpty } from '../../data/services/seasonsService'
 import type { Season } from '../../data/types/organization'
-import { PageHeader, Card, Button } from '../../components/platformAdmin'
+import { AdminPageHeader, Card, Button, ConfirmDialog, EmptyState, Badge, PlatformDataTable, InlineNotice } from '../../components/platformAdmin'
+import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
+import type { ColumnConfig } from '../../components/platformAdmin/PlatformDataTable'
 import OfflineBanner from '../../components/admin/OfflineBanner'
+import { getLink } from '../../utils/routes'
 
 export default function SeasonsManagement() {
   const { context, isReady } = useUserContext()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [seasons, setSeasons] = useState<Season[]>([])
+  const [emptySeasons, setEmptySeasons] = useState<Set<string>>(new Set())
+  const [checkingEmpty, setCheckingEmpty] = useState(false)
+  const [seasonToDelete, setSeasonToDelete] = useState<Season | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const checkedSeasonIds = useRef<Set<string>>(new Set())
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!isReady) return
+    setLoading(true)
+    setError(null)
 
-    const load = async () => {
-      setLoading(true)
-      setError(null)
-
-      try {
-        const result = await getSeasons(context)
-        setSeasons(result.data as Season[])
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load seasons')
-      } finally {
-        setLoading(false)
-      }
+    try {
+      const result = await getSeasons(context)
+      setSeasons(result.data as Season[])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load seasons')
+    } finally {
+      setLoading(false)
     }
-
-    load()
   }, [context, isReady])
 
-  const statusBadgeStyle = (status: string) => {
-    const styles = {
-      upcoming: { background: 'var(--pa-n300)', color: 'var(--pa-n700)' },
-      active: { background: 'var(--pa-success-bg)', color: 'var(--pa-success)' },
-      locked: { background: 'var(--pa-warning-bg)', color: 'var(--pa-warning)' },
-      archived: { background: 'var(--pa-n200)', color: 'var(--pa-n600)' },
+  useEffect(() => {
+    load()
+  }, [load])
+
+  // Check which seasons are empty
+  useEffect(() => {
+    if (!isReady || seasons.length === 0 || checkingEmpty) return
+
+    const currentSeasonIds = new Set(seasons.map(s => s.id))
+    const seasonIdsString = Array.from(currentSeasonIds).sort().join(',')
+
+    if (checkedSeasonIds.current.has(seasonIdsString)) return
+
+    const checkEmpty = async () => {
+      setCheckingEmpty(true)
+      const emptySet = new Set<string>()
+
+      for (const season of seasons) {
+        const { isEmpty, error: checkError } = await isSeasonEmpty(context, season.id)
+        if (!checkError && isEmpty) {
+          emptySet.add(season.id)
+        }
+      }
+
+      setEmptySeasons(emptySet)
+      checkedSeasonIds.current.clear()
+      checkedSeasonIds.current.add(seasonIdsString)
+      setCheckingEmpty(false)
     }
-    return styles[status as keyof typeof styles] || styles.upcoming
+
+    checkEmpty()
+  }, [context, isReady, seasons, checkingEmpty])
+
+  const handleDeleteClick = (season: Season, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setSeasonToDelete(season)
+    setDeleteError(null)
   }
 
+  const handleConfirmDelete = async () => {
+    if (!seasonToDelete) return
+
+    setDeleting(true)
+    setDeleteError(null)
+
+    try {
+      const { error: deleteErrorResult } = await deleteSeason(context, seasonToDelete.id)
+      if (deleteErrorResult) {
+        setDeleteError(deleteErrorResult.message)
+        setDeleting(false)
+        return
+      }
+
+      setSeasons(seasons.filter(s => s.id !== seasonToDelete.id))
+      setEmptySeasons(prev => {
+        const next = new Set(prev)
+        next.delete(seasonToDelete.id)
+        return next
+      })
+      setSuccessMessage(`"${seasonToDelete.name}" has been removed.`)
+      setTimeout(() => setSuccessMessage(null), 5000)
+      setSeasonToDelete(null)
+      setDeleting(false)
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete season')
+      setDeleting(false)
+    }
+  }
+
+  const columns: ColumnConfig<Season>[] = useMemo(() => [
+    {
+      id: 'name',
+      label: 'Season Name',
+      sortable: true,
+      render: (row) => (
+        <div className="pa-font-bold pa-text-slate-900">
+          {row.name}
+        </div>
+      )
+    },
+    {
+      id: 'term',
+      label: 'Term',
+      render: () => <span className="pa-text-xs pa-text-slate-400 pa-font-medium">SYSTEM DEFAULT</span>
+    },
+    {
+      id: 'start_date',
+      label: 'Start Date',
+      sortable: true,
+      render: (row) => (
+        <span className="pa-text-sm pa-text-slate-600">
+          {row.start_date ? new Date(row.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+        </span>
+      )
+    },
+    {
+      id: 'end_date',
+      label: 'End Date',
+      sortable: true,
+      render: (row) => (
+        <span className="pa-text-sm pa-text-slate-600">
+          {row.end_date ? new Date(row.end_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+        </span>
+      )
+    },
+    {
+      id: 'is_active',
+      label: 'Status',
+      sortable: true,
+      render: (row) => (
+        <Badge variant={row.is_active ? 'success' : 'neutral'}>
+          {row.is_active ? 'Active' : 'Upcoming'}
+        </Badge>
+      )
+    },
+    {
+      id: 'actions',
+      label: 'Actions',
+      align: 'right',
+      render: (row) => (
+        <div className="pa-flex pa-items-center pa-justify-end pa-gap-2">
+          <Button 
+            variant="ghost" 
+            size="dense" 
+            icon="edit"
+            onClick={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                navigate(`${getLink('admin.seasons.update', { id: row.id })}?returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`)
+            }}
+          >
+            Edit
+          </Button>
+          {emptySeasons.has(row.id) && (
+            <Button
+              variant="ghost"
+              size="dense"
+              icon="delete"
+              disabled={deleting}
+              onClick={(e: React.MouseEvent) => handleDeleteClick(row, e)}
+              className="pa-text-danger hover:pa-bg-danger-surface"
+              title="Delete empty season"
+            >
+              Delete
+            </Button>
+          )}
+        </div>
+      )
+    }
+  ], [emptySeasons, deleting, navigate])
+
   if (loading) {
-    return <div className="pa-skeleton" style={{ height: '500px' }} />
+    return (
+      <div className="pa-root">
+        <div className="pa-skeleton pa-mb-8" style={{ width: '40%', height: '40px' }} />
+        <div className="pa-skeleton" style={{ width: '100%', height: '400px' }} />
+      </div>
+    )
   }
 
   return (
     <div className="pa-root">
       <OfflineBanner />
-      <PageHeader
+      <AdminPageHeader
         title="Seasons"
         subtitle="Manage organization-wide time periods"
         breadcrumbs={[
-          { label: 'Organizations', path: '/admin/organization/structure' },
+          { label: 'Organizations', path: getLink('admin.organization.structure') },
           { label: 'Seasons' },
         ]}
+        actions={
+          seasons.length > 0 && (
+            <OrgAdminButton
+                icon="add"
+                variant="primary"
+                onClick={() => navigate(`${getLink('admin.organization.forms')}?type=season&returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`)}
+                className="w-full sm:w-auto"
+            >
+                Add Season
+            </OrgAdminButton>
+          )
+        }
       />
 
       {error && (
-        <Card className="pa-mb-4">
-          <div className="pa-text-danger">{error}</div>
-        </Card>
+        <InlineNotice
+          tone="error"
+          title="Unable to load seasons"
+          message={error}
+          onClose={() => setError(null)}
+          className="pa-mb-6"
+        />
+      )}
+
+      {successMessage && (
+        <InlineNotice
+          tone="success"
+          title={successMessage}
+          onClose={() => setSuccessMessage(null)}
+          className="pa-mb-6"
+        />
       )}
 
       {seasons.length === 0 ? (
         <Card>
-          <div className="pa-flex pa-flex-col pa-items-center pa-justify-center pa-text-center pa-p-6">
-            <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--pa-n300)', marginBottom: '16px' }}>
-              calendar_month
-            </span>
-            <h3 className="pa-h3">No seasons yet</h3>
-            <p className="pa-body-m pa-text-muted pa-mb-4">Create your first season to start organizing teams and events.</p>
-            <Link to="/admin/organization/structure/forms?type=season">
-              <Button>Add Season</Button>
-            </Link>
-          </div>
+          <EmptyState
+            icon="calendar_month"
+            title="No seasons yet"
+            description="Create your first season to start organizing teams and events."
+            noCard
+          >
+             <Button 
+                icon="add"
+                onClick={() => navigate(`${getLink('admin.organization.forms')}?type=season&returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`)}
+            >
+                Add Season
+            </Button>
+          </EmptyState>
         </Card>
       ) : (
-        <>
-          <div className="pa-flex pa-justify-end pa-mb-4">
-            <Link to="/admin/organization/structure/forms?type=season">
-              <Button>Add Season</Button>
-            </Link>
-          </div>
-
-          <Card noPadding>
-            <table className="pa-table" style={{ width: '100%' }}>
-              <thead>
-                <tr>
-                  <th className="pa-p-4">Season Name</th>
-                  <th className="pa-p-4">Term</th>
-                  <th className="pa-p-4">Start Date</th>
-                  <th className="pa-p-4">End Date</th>
-                  <th className="pa-p-4">Status</th>
-                  <th className="pa-p-4">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {seasons.map((season) => (
-                  <tr key={season.id} style={{ borderTop: '1px solid var(--pa-n200)' }}>
-                    <td className="pa-p-4 pa-font-medium">{season.name}</td>
-                    <td className="pa-p-4 pa-text-muted">—</td>
-                    <td className="pa-p-4 pa-text-muted">{season.start_date ? new Date(season.start_date).toLocaleDateString() : '—'}</td>
-                    <td className="pa-p-4 pa-text-muted">{season.end_date ? new Date(season.end_date).toLocaleDateString() : '—'}</td>
-                    <td className="pa-p-4">
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: 600,
-                          ...statusBadgeStyle(season.is_active ? 'active' : 'upcoming'),
-                        }}
-                      >
-                        {season.is_active ? 'Active' : 'Upcoming'}
-                      </span>
-                    </td>
-                    <td className="pa-p-4">
-                      <Link to={`/admin/organization/structure/forms?edit=season&id=${season.id}`}>
-                        <Button variant="secondary">
-                          Edit
-                        </Button>
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Card>
-        </>
+        <PlatformDataTable
+           rows={seasons}
+           columns={columns}
+           onRowClick={(row) => navigate(getLink('admin.seasons.detail', { id: row.id }))}
+           page={0}
+           rowsPerPage={seasons.length || 10}
+           totalCount={seasons.length}
+           onPageChange={() => {}}
+           onRowsPerPageChange={() => {}}
+        />
       )}
+
+      <ConfirmDialog
+        open={Boolean(seasonToDelete)}
+        title="Delete season?"
+        description={
+          seasonToDelete
+            ? `Are you sure you want to delete "${seasonToDelete.name}"? This action cannot be undone.`
+            : ''
+        }
+        confirmLabel="Delete"
+        variant="danger"
+        loading={deleting}
+        error={deleteError}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => {
+          setSeasonToDelete(null)
+          setDeleteError(null)
+        }}
+      />
     </div>
   )
 }

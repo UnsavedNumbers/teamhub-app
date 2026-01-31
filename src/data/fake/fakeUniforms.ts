@@ -310,15 +310,64 @@ export const fakeUniformSizeSelections: FakeUniformSizeSelection[] = [
 ]
 
 // ============================================================================
+// Mutable store for kits created in demo mode (so list reflects new kits)
+// ============================================================================
+
+const createdKitsStore: FakeUniformKit[] = []
+
+function getCreatedKitsForOrg(orgId: string): FakeUniformKit[] {
+    return createdKitsStore.filter((k) => k.org_id === orgId)
+}
+
+/**
+ * Create a uniform kit in fake mode and add it to the store so getUniformKitsForOrg returns it.
+ * Used by uniformsService.createUniformKit when USE_FAKE_DATA is true.
+ */
+export function createFakeUniformKit(
+    orgId: string,
+    dto: {
+        name: string
+        team_id?: string | null
+        season_id?: string | null
+        status?: string
+        deadline_at?: string | null
+        vendor?: string | null
+    }
+): { id: string } {
+    const id = `kit-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+    const now = new Date().toISOString()
+    const kit: FakeUniformKit = {
+        id,
+        org_id: orgId,
+        team_id: dto.team_id ?? null,
+        name: dto.name,
+        description: null,
+        status: (dto.status as UniformKitStatus) || 'active',
+        deadline: dto.deadline_at ?? null,
+        vendor_name: dto.vendor ?? null,
+        ordering_deadline: dto.deadline_at ?? null,
+        estimated_delivery: null,
+        created_at: now,
+        updated_at: now,
+    }
+    createdKitsStore.push(kit)
+    return { id }
+}
+
+// ============================================================================
 // Helper Functions
 // ============================================================================
 
 export function getUniformKitById(kitId: string): FakeUniformKit | undefined {
-    return fakeUniformKits.find((k) => k.id === kitId)
+    const fromBase = fakeUniformKits.find((k) => k.id === kitId)
+    if (fromBase) return fromBase
+    return createdKitsStore.find((k) => k.id === kitId)
 }
 
 export function getUniformKitsForOrg(orgId: string): FakeUniformKit[] {
-    return fakeUniformKits.filter((k) => k.org_id === orgId)
+    const base = fakeUniformKits.filter((k) => k.org_id === orgId)
+    const created = getCreatedKitsForOrg(orgId)
+    return [...base, ...created]
 }
 
 export function getActiveUniformKitsForOrg(orgId: string): FakeUniformKit[] {

@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, Badge, FilterBar, PlatformDataTable, ConfirmDialog, type ColumnConfig } from '../../components/platformAdmin'
+import { PageHeader, Badge, FilterBar, PlatformDataTable, ConfirmDialog, type ColumnConfig, OfflineBanner, ErrorState } from '../../components/platformAdmin'
 import { canPerformAction, getDeniedMessage } from '../../utils/platformAdminPermissions'
 import { isRpcSuccessResponse } from '../../utils/typeAdapters'
-import type { AdminOrganization, PlatformAdminRole, OrganizationStatus } from '../../types/platformAdmin.types'
+import type { AdminOrganization, AdminRpcResponse, PlatformAdminRole, OrganizationStatus } from '../../types/platformAdmin.types'
+import { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
+import { showSuccess, showError } from '../../utils/toast'
+import { cn } from '../../utils/cn'
 
 // Status filter options
 const statusOptions = [
@@ -17,6 +20,7 @@ const statusOptions = [
 export default function Organizations() {
   const [organizations, setOrganizations] = useState<AdminOrganization[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(50)
   const [totalCount, setTotalCount] = useState(0)
@@ -34,13 +38,6 @@ export default function Organizations() {
   const [dialogLoading, setDialogLoading] = useState(false)
   const [dialogError, setDialogError] = useState<string | null>(null)
   
-  // Toast state
-  const [toast, setToast] = useState<{ show: boolean; message: string; variant: 'success' | 'danger' }>({
-    show: false,
-    message: '',
-    variant: 'success',
-  })
-  
   // TODO: Fetch actual role
   const [adminRole] = useState<PlatformAdminRole>('super_admin')
   
@@ -48,6 +45,7 @@ export default function Organizations() {
 
   const fetchOrganizations = useCallback(async () => {
     setLoading(true)
+    setError(null)
 
     try {
       let query = supabase
@@ -59,7 +57,7 @@ export default function Organizations() {
       }
 
       if (statusFilter) {
-        query = query.eq('status', statusFilter)
+        query = query.eq('status', statusFilter as Database["public"]["Enums"]["org_status"])
       }
 
       query = query.order(orderBy, { ascending: order === 'asc' })
@@ -72,14 +70,17 @@ export default function Organizations() {
 
       if (error) {
         console.error('Error fetching organizations:', error)
+        setError(error.message || 'Failed to load organizations')
         setOrganizations([])
         setTotalCount(0)
       } else {
-        setOrganizations(data || [])
+        setOrganizations(data as AdminOrganization[])
         setTotalCount(count || 0)
+        setError(null)
       }
     } catch (err) {
       console.error('Error:', err)
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
       setOrganizations([])
     } finally {
       setLoading(false)
@@ -89,14 +90,6 @@ export default function Organizations() {
   useEffect(() => {
     fetchOrganizations()
   }, [fetchOrganizations])
-
-  // Auto-hide toast
-  useEffect(() => {
-    if (toast.show) {
-      const timer = setTimeout(() => setToast({ ...toast, show: false }), 5000)
-      return () => clearTimeout(timer)
-    }
-  }, [toast])
 
   const handleSort = (column: string) => {
     const isAsc = orderBy === column && order === 'asc'
@@ -109,8 +102,8 @@ export default function Organizations() {
   }
 
   const handleActivate = (org: AdminOrganization) => {
-    if (!canPerformAction(adminRole, 'activate_organization')) {
-      setToast({ show: true, message: getDeniedMessage('activate_organization'), variant: 'danger' })
+    if (!adminRole || !canPerformAction(adminRole, 'activate_organization')) {
+      showError(getDeniedMessage('activate_organization'))
       return
     }
     setDialogError(null)
@@ -118,8 +111,8 @@ export default function Organizations() {
   }
 
   const handleSuspend = (org: AdminOrganization) => {
-    if (!canPerformAction(adminRole, 'suspend_organization')) {
-      setToast({ show: true, message: getDeniedMessage('suspend_organization'), variant: 'danger' })
+    if (!adminRole || !canPerformAction(adminRole, 'suspend_organization')) {
+      showError(getDeniedMessage('suspend_organization'))
       return
     }
     setDialogError(null)
@@ -140,24 +133,20 @@ export default function Organizations() {
       const { data, error } = await supabase.rpc(rpcName, {
         target_org_id: confirmDialog.org.id,
         reason,
-      })
+      } as any)
 
       if (error) {
         setDialogError(error.message)
         return
       }
 
-      if (!isRpcSuccessResponse(data) || !data.success) {
-        setDialogError(data?.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !(data as AdminRpcResponse).success) {
+        setDialogError((data as AdminRpcResponse)?.error || 'Unknown error')
         return
       }
 
       setConfirmDialog({ open: false, type: 'activate', org: null })
-      setToast({
-        show: true,
-        message: `Organization ${confirmDialog.type === 'activate' ? 'activated' : 'suspended'} successfully`,
-        variant: 'success',
-      })
+      showSuccess(`Organization ${confirmDialog.type === 'activate' ? 'activated' : 'suspended'} successfully`)
       fetchOrganizations()
     } catch (err) {
       setDialogError(err instanceof Error ? err.message : 'Unknown error')
@@ -231,26 +220,24 @@ export default function Organizations() {
       label: '',
       align: 'right',
       render: (row) => (
-        <div className="pa-table-actions" style={{ opacity: 1 }}>
+        <div className={cn('pa-table-actions', 'pa-opacity-100')}>
           {row.status !== 'active' && canPerformAction(adminRole, 'activate_organization') && (
             <button
-              className="pa-btn pa-btn--ghost pa-btn--dense"
+              className="pa-btn pa-btn--ghost pa-btn--dense pa-text-success"
               onClick={(e) => { e.stopPropagation(); handleActivate(row) }}
               title="Activate"
-              style={{ color: 'var(--pa-success)' }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>play_arrow</span>
+              <span className="material-symbols-outlined pa-icon-md">play_arrow</span>
               Activate
             </button>
           )}
           {row.status !== 'suspended' && canPerformAction(adminRole, 'suspend_organization') && (
             <button
-              className="pa-btn pa-btn--ghost pa-btn--dense"
+              className="pa-btn pa-btn--ghost pa-btn--dense pa-text-danger"
               onClick={(e) => { e.stopPropagation(); handleSuspend(row) }}
               title="Suspend"
-              style={{ color: 'var(--pa-danger)' }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>block</span>
+              <span className="material-symbols-outlined pa-icon-md">block</span>
               Suspend
             </button>
           )}
@@ -261,6 +248,7 @@ export default function Organizations() {
 
   return (
     <div>
+      <OfflineBanner />
       <PageHeader
         title="Organizations"
         subtitle={`${totalCount} organizations total`}
@@ -281,21 +269,31 @@ export default function Organizations() {
         }}
       />
 
-      <PlatformDataTable
-        columns={columns}
-        rows={organizations}
-        loading={loading}
-        emptyMessage="No organizations found."
-        page={page}
-        rowsPerPage={rowsPerPage}
-        totalCount={totalCount}
-        onPageChange={setPage}
-        onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0) }}
-        onRowClick={handleRowClick}
-        orderBy={orderBy}
-        order={order}
-        onSort={handleSort}
-      />
+      {error && !loading && (
+        <ErrorState
+          message={error}
+          onRetry={fetchOrganizations}
+          retryLabel="Retry"
+        />
+      )}
+
+      {!error && (
+        <PlatformDataTable
+          columns={columns}
+          rows={organizations}
+          loading={loading}
+          emptyMessage="No organizations found. Try adjusting your filters."
+          page={page}
+          rowsPerPage={rowsPerPage}
+          totalCount={totalCount}
+          onPageChange={setPage}
+          onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0) }}
+          onRowClick={handleRowClick}
+          orderBy={orderBy}
+          order={order}
+          onSort={handleSort}
+        />
+      )}
 
       {/* Confirm Dialog */}
       <ConfirmDialog
@@ -315,44 +313,6 @@ export default function Organizations() {
         onCancel={() => setConfirmDialog({ open: false, type: 'activate', org: null })}
       />
 
-      {/* Toast */}
-      {toast.show && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 'var(--pa-space-5)',
-            right: 'var(--pa-space-5)',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            className="pa-card"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--pa-space-3)',
-              padding: 'var(--pa-space-3) var(--pa-space-4)',
-              borderLeft: `3px solid var(--pa-${toast.variant})`,
-              boxShadow: 'var(--pa-shadow-2)',
-            }}
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{ color: `var(--pa-${toast.variant})`, fontSize: '20px' }}
-            >
-              {toast.variant === 'success' ? 'check_circle' : 'error'}
-            </span>
-            <span className="pa-body-m">{toast.message}</span>
-            <button
-              className="pa-btn pa-btn--ghost pa-btn--dense"
-              onClick={() => setToast({ ...toast, show: false })}
-              style={{ marginLeft: 'var(--pa-space-2)' }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>close</span>
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

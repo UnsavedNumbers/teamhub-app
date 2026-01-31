@@ -38,7 +38,7 @@ export default function EventFilters({ filters, onFiltersChange }: EventFiltersP
             <Icon name="filter_list" className="text-slate-400" />
             <span className="font-bold uppercase tracking-wider text-sm text-slate-600 dark:text-slate-300">{safeT('calendar.filters.title', 'Filters')}</span>
             {(filters.eventTypes.length > 0 || filters.showCancelled) && (
-                <span className="bg-[#137fec] text-white text-[10px] font-black px-1.5 py-0.5 rounded-full ml-1">
+                <span className="bg-[var(--org-btn-primary-bg)] text-white text-[10px] font-black px-1.5 py-0.5 rounded-full ml-1">
                     {filters.eventTypes.length + (filters.showCancelled ? 1 : 0)}
                 </span>
             )}
@@ -59,7 +59,7 @@ export default function EventFilters({ filters, onFiltersChange }: EventFiltersP
                             onClick={() => toggleEventType(type)}
                             className={`px-2 py-1 rounded text-xs font-bold border transition-colors ${
                                 filters.eventTypes.includes(type)
-                                    ? 'bg-[#137fec] text-white border-[#137fec]'
+                                    ? 'bg-[var(--org-btn-primary-bg)] text-white border-[var(--org-btn-primary-bg, #137fec)]'
                                     : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300'
                             }`}
                         >
@@ -76,7 +76,7 @@ export default function EventFilters({ filters, onFiltersChange }: EventFiltersP
                         type="checkbox" 
                         checked={filters.showCancelled} 
                         onChange={(e) => onFiltersChange({ ...filters, showCancelled: e.target.checked })}
-                        className="rounded border-slate-300 text-[#137fec] focus:ring-[#137fec]"
+                        className="rounded border-slate-300 text-[var(--org-link-color)] focus:ring-[var(--org-btn-primary-bg, #137fec)]"
                     />
                     <span className="text-sm font-medium text-slate-600 dark:text-slate-300">{safeT('calendar.filters.showCancelled', 'Show Cancelled Events')}</span>
                  </label>

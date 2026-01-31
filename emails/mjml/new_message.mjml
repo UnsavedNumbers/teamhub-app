@@ -1,0 +1,77 @@
+<mjml>
+  <mj-head>
+    <mj-title>New Message from {{sender_name}}</mj-title>
+    <mj-preview>You have a new message in Team Hub</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Arial, sans-serif" />
+      <mj-text font-size="14px" color="#333333" line-height="1.5" />
+      <mj-section background-color="#ffffff" />
+    </mj-attributes>
+    <mj-style>
+      .button {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        padding: 12px 24px !important;
+        text-decoration: none !important;
+        border-radius: 6px !important;
+        display: inline-block !important;
+        font-weight: 600 !important;
+      }
+      .footer-text {
+        color: #64748b !important;
+        font-size: 12px !important;
+      }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f8fafc">
+    <mj-include path="partials/header.mjml" />
+
+    <mj-section padding="40px 20px">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold" color="#1e293b" padding-bottom="16px">
+          New Message from {{sender_name}}
+        </mj-text>
+        <mj-text padding-bottom="16px">
+          Hi {{recipient_name}},
+        </mj-text>
+        <mj-text padding-bottom="24px">
+          You have a new message {{#if team_name}}for {{team_name}}{{/if}}:
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="24px 20px" background-color="#ffffff" border-radius="8px" border="1px solid #e2e8f0">
+      <mj-column>
+        <mj-text font-size="16px" font-weight="bold" color="#1e293b" padding-bottom="12px">
+          From: {{sender_name}} {{#if sender_role}}({{sender_role}}){{/if}}
+        </mj-text>
+        <mj-text padding-bottom="8px" font-style="italic">
+          "{{message_content}}"
+        </mj-text>
+        {{#if message_subject}}
+        <mj-text padding-top="8px" font-weight="bold">
+          Subject: {{message_subject}}
+        </mj-text>
+        {{/if}}
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="24px 20px">
+      <mj-column>
+        <mj-button css-class="button" href="{{url}}" padding="16px 24px">
+          View Message
+        </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="24px 20px">
+      <mj-column>
+        <mj-text>
+          You can reply to this message through the Team Hub app.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-include path="partials/footer.mjml" />
+  </mj-body>
+</mjml>

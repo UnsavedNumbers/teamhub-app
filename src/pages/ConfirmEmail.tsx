@@ -1,5 +1,8 @@
+import { useEffect, useState } from 'react'
 import { useLocation, Link } from 'react-router-dom'
+import { useTheme } from '../hooks/useTheme'
 import { getSetupOrganizationFlag } from '../utils/setupOrganization'
+import { AUTH_HERO_IMAGES } from '../utils/authImages'
 
 interface ConfirmEmailState {
   email?: string
@@ -10,6 +13,9 @@ interface ConfirmEmailState {
 export default function ConfirmEmail() {
   const location = useLocation()
   const state = location.state as ConfirmEmailState | null
+  const { resolvedTheme } = useTheme()
+  const [heroImage, setHeroImage] = useState<string>('')
+  const [logoVersion] = useState(0)
 
   // Check for org setup intent from both state and localStorage
   const isOrgSetupFlow =
@@ -19,37 +25,58 @@ export default function ConfirmEmail() {
 
   const email = state?.email
 
-  return (
-    <div className="min-h-screen flex items-stretch bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-sans">
-      {/* Main Content Area */}
-      <main className="w-full lg:w-[45%] flex flex-col justify-between p-8 lg:p-16 xl:p-24 bg-background-light dark:bg-[#121212] z-10">
-        {/* Logo */}
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-[#5468FF] rounded-sm flex items-center justify-center">
-            <span className="material-symbols-outlined text-white text-xl">sports_volleyball</span>
-          </div>
-          <span className="text-xl font-black tracking-tighter uppercase dark:text-white">YouthSports</span>
-        </div>
+  // Select random hero image on mount
+  useEffect(() => {
+    if (AUTH_HERO_IMAGES.length > 0) {
+      const randomImage = AUTH_HERO_IMAGES[Math.floor(Math.random() * AUTH_HERO_IMAGES.length)]
+      setHeroImage(randomImage)
+    }
+  }, [])
 
-        <div className="max-w-md">
-          <div className="mb-8">
+  return (
+    <div className="h-screen w-screen overflow-hidden bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-white antialiased relative flex">
+      {/* Background Field Markings (Grid) */}
+      <div 
+        className="fixed inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.02] z-[-1]"
+        style={{
+          backgroundImage: 'linear-gradient(to right, #f3f4f6 1px, transparent 1px), linear-gradient(to bottom, #f3f4f6 1px, transparent 1px)',
+          backgroundSize: '100px 100px',
+        }}
+      />
+
+      {/* Left side - Form Content */}
+      <div className="flex-1 flex flex-col px-6 py-8 lg:px-20 xl:px-24 bg-white dark:bg-slate-900/50 overflow-hidden">
+        <div className="mx-auto w-full max-w-sm lg:w-96 flex flex-col min-h-0">
+          {/* Logo */}
+          <div className="mb-8 pt-4">
+            <img 
+              key={resolvedTheme}
+              src={`${resolvedTheme === 'dark' ? '/images/logo-dark.png' : '/images/logo-light.png'}?theme=${resolvedTheme}&v=${logoVersion}`}
+              alt="YouthSports" 
+              className="h-24 w-auto object-contain"
+            />
+          </div>
+
+          <div className="flex-1 flex flex-col justify-center">
             {/* Verification Badge */}
-            <span className="inline-flex items-center gap-2 px-3 py-1 bg-[#5468FF]/10 text-[#5468FF] text-xs font-bold uppercase tracking-widest mb-6">
-              <span className="material-symbols-outlined text-sm">mail_outline</span>
-              Verification Sent
-            </span>
+            <div className="mb-6">
+              <span className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-link-color)] text-[10px] font-black uppercase tracking-widest">
+                <span className="material-symbols-outlined text-sm">mail_outline</span>
+                VERIFICATION SENT
+              </span>
+            </div>
 
             {/* Main Heading */}
-            <h1 className="text-6xl lg:text-7xl xl:text-8xl font-black italic uppercase mb-6 dark:text-white" style={{ letterSpacing: '-0.05em', lineHeight: '0.9', fontStyle: 'italic' }}>
-              Check your<br />Email
+            <h1 className="text-4xl font-black tracking-tighter leading-none text-slate-900 dark:text-white mb-4 font-impact">
+              CHECK YOUR EMAIL
             </h1>
 
             {/* Description */}
-            <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed">
+            <p className="text-lg font-light tracking-wide text-slate-500 dark:text-slate-400 mb-8">
               {email ? (
                 <>
                   We&apos;ve sent a confirmation link to{' '}
-                  <span className="font-bold text-slate-900 dark:text-white underline decoration-[#5468FF]">{email}</span>.
+                  <strong className="text-slate-900 dark:text-white">{email}</strong>.
                   {' '}Please click the link to verify your account.
                 </>
               ) : (
@@ -58,71 +85,62 @@ export default function ConfirmEmail() {
                 </>
               )}
             </p>
-          </div>
 
-          {/* Organization Setup Info Box */}
-          {isOrgSetupFlow && (
-            <div className="border-l-4 border-[#5468FF] bg-slate-100 dark:bg-zinc-900/50 p-6 mb-10">
-              <div className="flex items-start gap-4">
-                <span className="material-symbols-outlined text-[#5468FF]">info</span>
+            {/* Organization Setup Info Box */}
+            {isOrgSetupFlow && (
+              <div className="mb-8 p-4 rounded-xl flex items-center gap-3 text-sm bg-[var(--org-btn-primary-bg)]/10 border border-[var(--org-btn-primary-bg, #137fec)]/20">
+                <span className="material-symbols-outlined text-[var(--org-link-color)]">info</span>
                 <div>
-                  <h3 className="font-bold uppercase text-sm tracking-wider mb-1 dark:text-white">Organization Setup</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] mb-1 text-slate-900 dark:text-white font-impact">ORGANIZATION SETUP</h3>
+                  <p className="text-sm text-slate-700 dark:text-slate-200">
                     After confirming your email, you&apos;ll be redirected to complete your organization setup.
                   </p>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Actions */}
-          <div className="flex flex-col gap-4">
-            <Link
-              to="/portal/login"
-              className="inline-block bg-slate-900 dark:bg-white text-white dark:text-black text-center font-black py-5 px-8 uppercase tracking-widest hover:bg-[#5468FF] dark:hover:bg-[#5468FF] dark:hover:text-white transition-all duration-300"
-            >
-              Back to Login
-            </Link>
-            <p className="text-xs text-slate-500 dark:text-zinc-500 text-center uppercase tracking-tighter">
-              Didn&apos;t receive the email? Check your spam folder or try again in 2 minutes.
+            {/* Actions */}
+            <div className="flex flex-col gap-4">
+              <Link
+                to="/portal/login"
+                className="bg-slate-900 dark:bg-white text-white dark:text-black px-8 py-3 font-black text-sm tracking-widest uppercase w-full flex items-center justify-center hover:bg-[#5468FF] dark:hover:bg-[#5468FF] dark:hover:text-white transition-all duration-300"
+              >
+                BACK TO LOGIN
+              </Link>
+              <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+                Didn&apos;t receive the email? Check your spam folder or try again in 2 minutes.
+              </p>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="mt-auto pt-8 text-center">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-600">
+              © {new Date().getFullYear()} YOUTHSPORTS PROFESSIONAL SPORTS MANAGEMENT
             </p>
           </div>
         </div>
+      </div>
 
-        {/* Footer */}
-        <footer className="pt-12">
-          <p className="text-sm text-slate-500 dark:text-zinc-500">
-            Having trouble?{' '}
-            <a className="text-[#5468FF] font-bold hover:underline" href="mailto:support@youthsports.team">
-              Contact support
-            </a>
-          </p>
-        </footer>
-      </main>
-
-      {/* Right Side - Stadium Background */}
-      <aside className="hidden lg:block lg:flex-1 relative overflow-hidden bg-black">
-        <div className="absolute inset-0 z-0">
+      {/* Right side - Hero Image */}
+      <div className="hidden lg:block relative w-0 flex-1">
+        {heroImage && (
           <img
-            alt="High-contrast stadium lighting at night"
-            className="w-full h-full object-cover opacity-60 grayscale"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8j09nXAAIZCs8TsFUfhqUdRGrd0Fy0kN5WmdAnGPtc12Z_xDAr-wYqjGF9aaH7JcNy82GO8qULydSUQf_dE1vH8iCLvVXA7Cflctjl9ZSWLwkqxMxsZ61DnpiZUs5UTbmothGuJO_j2sSsROKNZBu02qDUW28vdd_zw_npLegMOoEKk-phBo5pEIQdt8Lq7m56W-Qs_aStU0Y3hs_brlvXn-wFo6pger4H0uiVnunzzR9DnYMJ7N34csYoOZvgFzBcnIxP76gsz4"
+            alt="Youth sports"
+            className="absolute inset-0 h-full w-full object-cover"
+            src={heroImage}
           />
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, #0A0A0A 0%, transparent 100%)' }}></div>
-          <div className="absolute inset-0 opacity-20 pointer-events-none mix-blend-overlay">
-            <img
-              alt="Jersey texture overlay"
-              className="w-full h-full"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBnGd6NKc8iWgiveXIvL8PIOXFqD6jVVWn3CbHCUOT2cbei2E_6xdoWI13EO00Y2dACrZgvltyjqzCIIwqk8v7cOEGMnDJpNwtEeEoYoBzss4lNXG7wv2z2ANkSMBJ35bHXuQei_jJM5gQPoTKkms0sH1lYDB3gRNoBhpGCWKCSx5TCV88eFkPb-TIHxYKP9u8QHveH75llffQi_72QN6HXSMidCnyrYfXze4MyLIDz-KVUbW2lEmOkXqYYQURp0YTlUnGXx190QXE"
-            />
-          </div>
+        )}
+        <div className="absolute inset-0 bg-slate-900/60"></div>
+        <div className="absolute bottom-16 left-16 right-16 z-10">
+          <h2 className="text-5xl font-black tracking-tighter leading-none text-white mb-4 font-impact">
+            VERIFY YOUR ACCOUNT
+          </h2>
+          <p className="text-lg font-light tracking-wide text-white/80 max-w-lg leading-relaxed">
+            We&apos;ve sent you a confirmation email. Click the link to activate your account and get started.
+          </p>
         </div>
-        <div className="absolute bottom-16 right-16 z-10 text-right">
-          <div className="text-[#5468FF] text-9xl font-black italic opacity-20 select-none">YOUTHSPORTS</div>
-          <div className="text-white text-xl font-bold tracking-[0.5em] uppercase opacity-40 mt-[-2rem]">Performance Portal</div>
-        </div>
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#5468FF]/20 rounded-full blur-[120px] animate-pulse"></div>
-      </aside>
+      </div>
     </div>
   )
 }

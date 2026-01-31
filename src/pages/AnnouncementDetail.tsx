@@ -7,6 +7,7 @@ import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
+import { getAnnouncementEmoji } from '../utils/announcementTypes'
 
 export default function AnnouncementDetail() {
   const { announcementId } = useParams<{ announcementId: string }>()
@@ -110,6 +111,9 @@ export default function AnnouncementDetail() {
   const authorEmail = announcement.author?.email || ''
   const teamName = announcement.team?.name || null
   const isUrgent = priority === 'urgent'
+  const isOrgWide = announcement.team_id === null
+  const announcementType = announcement.type || 'general'
+  const emoji = getAnnouncementEmoji(announcementType)
 
   function formatDate(dateStr: string) {
     return new Date(dateStr).toLocaleDateString('en-US', {
@@ -133,7 +137,10 @@ export default function AnnouncementDetail() {
       ]}
     >
       <div className="mb-12">
-        <PageTitle>{announcement.title}</PageTitle>
+        <div className="flex items-center gap-3">
+          <span className="text-3xl">{emoji}</span>
+          <PageTitle>{announcement.title}</PageTitle>
+        </div>
       </div>
 
       <Card className="p-8 mb-6">
@@ -145,9 +152,14 @@ export default function AnnouncementDetail() {
                 Urgent
               </span>
             )}
+            {isOrgWide && (
+              <span className="px-3 py-1 bg-purple-500/10 text-purple-500 dark:text-purple-400 text-xs font-bold uppercase tracking-widest rounded">
+                Org-Wide
+              </span>
+            )}
             <span className={`px-3 py-1 text-xs font-bold uppercase tracking-widest rounded ${
               authorRole === 'coach'
-                ? 'bg-[#137fec]/10 text-[#137fec]'
+                ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-link-color)]'
                 : 'bg-purple-500/10 text-purple-500 dark:text-purple-400'
             }`}>
               {authorRole === 'coach' ? 'Coach' : authorRole === 'org_admin' ? 'Admin' : 'Parent'}
@@ -157,13 +169,18 @@ export default function AnnouncementDetail() {
             )}
           </div>
 
-          {/* Team Name (if team-specific) */}
-          {teamName && (
+          {/* Team Name (if team-specific) or Org-Wide indicator */}
+          {isOrgWide ? (
+            <div className="flex items-center gap-3">
+              <Icon name="business" className="text-slate-400" />
+              <p className="font-bold text-slate-900 dark:text-white">All Teams</p>
+            </div>
+          ) : teamName ? (
             <div className="flex items-center gap-3">
               <Icon name="group" className="text-slate-400" />
               <p className="font-bold text-slate-900 dark:text-white">{teamName}</p>
             </div>
-          )}
+          ) : null}
 
           {/* Dates */}
           <div className="flex items-center gap-3">

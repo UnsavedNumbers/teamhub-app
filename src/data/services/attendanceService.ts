@@ -1,5 +1,6 @@
 
 import { supabase } from '../../lib/supabase'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext } from '../fake/userContext'
 import type {
@@ -13,11 +14,13 @@ import type {
 // Fake data stores (internal to module for demo mode)
 let FAKE_SETTINGS: AttendanceSettings = {
     org_id: 'org-1',
-    reminder_enabled: true,
-    lock_after_hours: 24,
+    enable_coach_reminders: true,
+    submission_deadline_hours: 24,
+    lock_after_days: 7,
     required_for_practice: true,
     required_for_game: true,
     required_for_meeting: false,
+    parent_visibility: {},
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
 }
@@ -36,22 +39,30 @@ export async function getAttendanceSettings(context: UserContext): Promise<{ dat
     }
 
     try {
+        type AttendanceSettingsRow = Database['public']['Tables']['organization_attendance_settings']['Row'];
+
         const { data, error } = await supabase
-            .from('attendance_settings')
+            .from('organization_attendance_settings')
             .select('*')
             .eq('org_id', context.orgId)
-            .single()
+            .single<AttendanceSettingsRow>()
 
         if (error && error.code === 'PGRST116') {
             // Not found - return default
             return {
                 data: {
                     org_id: context.orgId,
-                    reminder_enabled: false,
-                    lock_after_hours: 24,
+                    enable_coach_reminders: false,
+                    submission_deadline_hours: 24,
+                    lock_after_days: null,
                     required_for_practice: true,
                     required_for_game: true,
                     required_for_meeting: false,
+                    parent_visibility: {
+                        can_view_own_child: true,
+                        can_view_team_attendance: false,
+                        can_submit_attendance: false
+                    },
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                 },
@@ -73,13 +84,15 @@ export async function updateAttendanceSettings(context: UserContext, settings: P
     }
 
     try {
+        type AttendanceSettingsUpsert = Database['public']['Tables']['attendance_settings']['Insert']
+        const upsertData = {
+            org_id: context.orgId,
+            ...settings,
+            updated_at: new Date().toISOString()
+        } satisfies AttendanceSettingsUpsert
         const { error } = await supabase
             .from('attendance_settings')
-            .upsert({
-                org_id: context.orgId,
-                ...settings,
-                updated_at: new Date().toISOString()
-            } as Database['public']['Tables']['attendance_settings']['Insert'])
+            .upsert(upsertData)
         return { error: error ? new Error(error.message) : null }
     } catch (e: any) {
         return { error: e }
@@ -107,7 +120,7 @@ export async function getEventAttendance(
             .from('event_attendance')
             .select(`
                 *,
-                child:children(id, first_name, last_name),
+                athlete:athletes(id, first_name, last_name),
                 recorder:users!recorded_by_user_id(display_name)
             `)
             .eq('event_id', eventId)
@@ -132,16 +145,18 @@ export async function updateAttendance(
     }
 
     try {
+        type EventAttendanceUpsert = Database['public']['Tables']['event_attendance']['Insert']
+        const upsertData2 = {
+            event_id: eventId,
+            child_id: childId,
+            status,
+            notes,
+            recorded_by_user_id: context.userId,
+            updated_at: new Date().toISOString()
+        } satisfies EventAttendanceUpsert
         const { error } = await supabase
             .from('event_attendance')
-            .upsert({
-                event_id: eventId,
-                child_id: childId,
-                status,
-                notes,
-                recorded_by_user_id: context.userId,
-                updated_at: new Date().toISOString()
-            } as Database['public']['Tables']['event_attendance']['Insert'], { onConflict: 'event_id, child_id' })
+            .upsert(upsertData2, { onConflict: 'event_id,child_id' })
 
         return { error: error ? new Error(error.message) : null }
     } catch (e: any) {
@@ -210,10 +225,10 @@ export async function getAttendanceEvents(
 
         const summaries: AttendanceEventSummary[] = events.map((e: any) => {
             const records = e.attendance || []
-            const present = records.filter((r: any) => r.status === 'present').length
-            const absent = records.filter((r: any) => r.status === 'absent').length
-            const late = records.filter((r: any) => r.status === 'late').length
-            const excused = records.filter((r: any) => r.status === 'excused').length
+            const present = records.filter((r: AttendanceRecord) => r.status === 'present').length
+            const absent = records.filter((r: AttendanceRecord) => r.status === 'absent').length
+            const late = records.filter((r: AttendanceRecord) => r.status === 'late').length
+            const excused = records.filter((r: AttendanceRecord) => r.status === 'excused').length
 
             // "Unknown" is tricky without knowing total roster size. 
             // We'll estimate "total expected" = records.length for now, or 0 if no records.
@@ -269,26 +284,34 @@ export async function getAttendancePeople(
         // Simplified: Query attendance records directly for the org's teams
         // relying on RLS to filter to current org
 
+        type EventAttendanceRow = {
+            child_id: string
+            status: AttendanceStatus
+            event: { start_time: string }
+            child: { id: string, first_name: string, last_name: string }
+        }
+
         const { data: records, error } = await supabase
             .from('event_attendance')
             .select(`
                 child_id,
                 status,
                 event:events(start_time),
-                child:children(id, first_name, last_name)
+                child:athletes(id, first_name, last_name)
             `)
-            .limit(1000) // Safety cap
+            .limit(1000)
+            .returns<EventAttendanceRow[]>() // Safety cap
 
         if (error) throw error
 
         // Aggregate
         const statsMap = new Map<string, AttendancePersonSummary>()
 
-        records.forEach((r: any) => {
+        records.forEach((r: EventAttendanceRow) => {
             const cid = r.child_id
             if (!statsMap.has(cid)) {
                 statsMap.set(cid, {
-                    child_id: cid,
+                    athlete_id: cid,
                     first_name: r.child?.first_name || 'Unknown',
                     last_name: r.child?.last_name || 'Child',
                     team_names: [], // Populate if we fetch assignments

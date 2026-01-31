@@ -1,0 +1,94 @@
+<mjml>
+  <mj-head>
+    <mj-title>Payment Receipt</mj-title>
+    <mj-preview>Your payment has been processed successfully</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Arial, sans-serif" />
+      <mj-text font-size="14px" color="#333333" line-height="1.5" />
+      <mj-section background-color="#ffffff" />
+    </mj-attributes>
+    <mj-style>
+      .button {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        padding: 12px 24px !important;
+        text-decoration: none !important;
+        border-radius: 6px !important;
+        display: inline-block !important;
+        font-weight: 600 !important;
+      }
+      .footer-text {
+        color: #64748b !important;
+        font-size: 12px !important;
+      }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f8fafc">
+    <mj-include path="partials/header.mjml" />
+
+    <mj-section padding="40px 20px">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold" color="#1e293b" padding-bottom="16px">
+          Payment Receipt
+        </mj-text>
+        <mj-text padding-bottom="16px">
+          Hi {{recipient_name}},
+        </mj-text>
+        <mj-text padding-bottom="24px">
+          Thank you for your payment. Here are the details:
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="24px 20px" background-color="#ffffff" border-radius="8px" border="1px solid #e2e8f0">
+      <mj-column>
+        <mj-text font-size="16px" font-weight="bold" color="#1e293b" padding-bottom="12px">
+          Payment Details
+        </mj-text>
+        <mj-text padding-bottom="8px">
+          Amount: ${{amount}}<br>
+          Date: {{payment_date}}<br>
+          Transaction ID: {{transaction_id}}
+        </mj-text>
+        {{#if description}}
+        <mj-text padding-top="12px">
+          Description: {{description}}
+        </mj-text>
+        {{/if}}
+      </mj-column>
+    </mj-section>
+
+    {{#if items}}
+    <mj-section padding="24px 20px" background-color="#ffffff" border-radius="8px" border="1px solid #e2e8f0">
+      <mj-column>
+        <mj-text font-size="16px" font-weight="bold" color="#1e293b" padding-bottom="12px">
+          Items Purchased
+        </mj-text>
+        {{#each items}}
+        <mj-text padding-bottom="8px">
+          {{name}} - ${{price}}
+        </mj-text>
+        {{/each}}
+      </mj-column>
+    </mj-section>
+    {{/if}}
+
+    <mj-section padding="24px 20px">
+      <mj-column>
+        <mj-button css-class="button" href="{{url}}" padding="16px 24px">
+          View Receipt
+        </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="24px 20px">
+      <mj-column>
+        <mj-text>
+          If you have any questions about this payment, please contact your organization administrator.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-include path="partials/footer.mjml" />
+  </mj-body>
+</mjml>

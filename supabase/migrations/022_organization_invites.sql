@@ -32,7 +32,7 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM organization_members om
     JOIN users u ON u.id = om.user_id
-    WHERE om.organization_id = p_org_id
+    WHERE om.org_id = p_org_id
     AND LOWER(u.email) = LOWER(p_email)
   ) THEN
     RAISE EXCEPTION 'User is already a member of this organization';
@@ -41,7 +41,7 @@ BEGIN
   -- Check if there's already a pending invite
   IF EXISTS (
     SELECT 1 FROM organization_invites
-    WHERE organization_id = p_org_id
+    WHERE org_id = p_org_id
     AND LOWER(email) = LOWER(p_email)
     AND accepted_at IS NULL
     AND expires_at > NOW()
@@ -55,7 +55,7 @@ BEGIN
   
   -- Create the invite
   INSERT INTO organization_invites (
-    organization_id,
+    org_id,
     email,
     role,
     token,
@@ -81,7 +81,7 @@ $$;
 CREATE OR REPLACE FUNCTION accept_organization_invite(p_token TEXT)
 RETURNS TABLE(
   success BOOLEAN,
-  organization_id UUID,
+  org_id UUID,
   organization_name TEXT,
   role org_member_role,
   message TEXT
@@ -110,7 +110,7 @@ BEGIN
   BEGIN
     SELECT 
       oi.id,
-      oi.organization_id,
+      oi.org_id,
       o.name as org_name,
       oi.email,
       oi.role,
@@ -118,7 +118,7 @@ BEGIN
       oi.accepted_at
     INTO v_invite
     FROM organization_invites oi
-    JOIN organizations o ON o.id = oi.organization_id
+    JOIN organizations o ON o.id = oi.org_id
     WHERE oi.token = p_token
     FOR UPDATE NOWAIT;
   EXCEPTION
@@ -156,10 +156,10 @@ BEGIN
   -- Check if user is already a member
   IF EXISTS (
     SELECT 1 FROM organization_members
-    WHERE organization_id = v_invite.organization_id
+    WHERE org_id = v_invite.org_id
     AND user_id = v_current_user_id
   ) THEN
-    RETURN QUERY SELECT false, v_invite.organization_id, v_invite.org_name, v_invite.role, 'You are already a member of this organization';
+    RETURN QUERY SELECT false, v_invite.org_id, v_invite.org_name, v_invite.role, 'You are already a member of this organization';
     RETURN;
   END IF;
   
@@ -169,13 +169,13 @@ BEGIN
   WHERE id = v_invite.id;
   
   -- Create organization membership
-  INSERT INTO organization_members (organization_id, user_id, role)
-  VALUES (v_invite.organization_id, v_current_user_id, v_invite.role);
+  INSERT INTO organization_members (org_id, user_id, role)
+  VALUES (v_invite.org_id, v_current_user_id, v_invite.role);
   
   -- Also update the legacy org_id/role on users table for backward compatibility
   UPDATE users
   SET 
-    org_id = COALESCE(org_id, v_invite.organization_id),
+    org_id = COALESCE(org_id, v_invite.org_id),
     role = CASE 
       WHEN v_invite.role = 'org_admin' THEN 'admin'::user_role
       WHEN v_invite.role = 'coach' THEN 'coach'::user_role
@@ -185,7 +185,7 @@ BEGIN
   AND org_id IS NULL; -- Only set if not already set
   
   -- Return success
-  RETURN QUERY SELECT true, v_invite.organization_id, v_invite.org_name, v_invite.role, 'Successfully joined organization';
+  RETURN QUERY SELECT true, v_invite.org_id, v_invite.org_name, v_invite.role, 'Successfully joined organization';
 END;
 $$;
 
@@ -211,7 +211,7 @@ DECLARE
 BEGIN
   -- Get invite details
   SELECT 
-    oi.organization_id,
+    oi.org_id,
     o.name as org_name,
     oi.email,
     oi.role,
@@ -219,7 +219,7 @@ BEGIN
     oi.accepted_at
   INTO v_invite
   FROM organization_invites oi
-  JOIN organizations o ON o.id = oi.organization_id
+  JOIN organizations o ON o.id = oi.org_id
   WHERE oi.token = p_token;
   
   -- Check if invite exists
@@ -291,7 +291,7 @@ BEGIN
   v_current_user_id := auth.uid();
   
   -- Get the org_id of the invite
-  SELECT organization_id INTO v_org_id
+  SELECT org_id INTO v_org_id
   FROM organization_invites
   WHERE id = p_invite_id AND accepted_at IS NULL;
   
@@ -337,7 +337,7 @@ BEGIN
     oi.role,
     oi.expires_at
   FROM organization_invites oi
-  JOIN organizations o ON o.id = oi.organization_id
+  JOIN organizations o ON o.id = oi.org_id
   WHERE LOWER(oi.email) = LOWER(v_user_email)
   AND oi.accepted_at IS NULL
   AND oi.expires_at > NOW()

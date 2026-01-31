@@ -1,4 +1,5 @@
 import type { HTMLAttributes, ReactNode } from 'react'
+import { cn } from '../../utils/cn'
 
 interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
   /** Card title (H3 style) */
@@ -6,13 +7,13 @@ interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
   /** Action buttons/links for card header */
   actions?: ReactNode
   /** Card content */
-  children: ReactNode
+  children?: ReactNode
   /** Remove default padding */
   noPadding?: boolean
 }
 
 interface CardSubComponentProps extends HTMLAttributes<HTMLDivElement> {
-  children: ReactNode
+  children?: ReactNode
 }
 
 /**
@@ -32,12 +33,10 @@ export function Card({
   style,
   ...rest
 }: CardProps) {
-  const mergedStyle = noPadding ? { padding: 0, ...style } : style
-
   return (
     <div
-      className={`pa-card ${className}`.trim()}
-      style={mergedStyle}
+      className={cn('pa-card', noPadding && 'pa-card--no-padding', className)}
+      style={style}
       {...rest}
     >
       {(title || actions) && (
@@ -56,7 +55,7 @@ export function Card({
  */
 export function CardHeader({ children, className = '', ...rest }: CardSubComponentProps) {
   return (
-    <div className={`pa-card-header ${className}`.trim()} {...rest}>
+    <div className={cn('pa-card-header', className)} {...rest}>
       {children}
     </div>
   )
@@ -67,7 +66,7 @@ export function CardHeader({ children, className = '', ...rest }: CardSubCompone
  */
 export function CardTitle({ children, className = '', ...rest }: CardSubComponentProps) {
   return (
-    <h3 className={`pa-card-title ${className}`.trim()} {...rest}>
+    <h3 className={cn('pa-card-title', className)} {...rest}>
       {children}
     </h3>
   )
@@ -78,7 +77,7 @@ export function CardTitle({ children, className = '', ...rest }: CardSubComponen
  */
 export function CardContent({ children, className = '', ...rest }: CardSubComponentProps) {
   return (
-    <div className={`pa-card-content ${className}`.trim()} {...rest}>
+    <div className={cn('pa-card-content', className)} {...rest}>
       {children}
     </div>
   )

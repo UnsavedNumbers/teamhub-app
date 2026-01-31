@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, Badge, Card, FilterBar, ConfirmDialog, Button, Input, Select, PlatformDataTable, type ColumnConfig } from '../../components/platformAdmin'
+import { PageHeader, Badge, Card, FilterBar, ConfirmDialog, Button, Input, Select, PlatformDataTable, type ColumnConfig, ErrorState } from '../../components/platformAdmin'
+import { EntitySelect } from '../../components/common/EntitySelect'
 import { canPerformAction } from '../../utils/platformAdminPermissions'
 import { getEnvironment } from '../../utils/featureFlags'
 import { mapFeatureFlagOverride, isRpcSuccessResponse } from '../../utils/typeAdapters'
@@ -14,6 +15,7 @@ import type {
   RpcResponse,
 } from '../../types/featureFlags.types'
 import type { PlatformAdminRole } from '../../types/platformAdmin.types'
+import { showSuccess } from '../../utils/toast'
 
 type TabType = 'flags' | 'overrides' | 'audit'
 
@@ -23,6 +25,7 @@ export default function FeatureFlags() {
   const [flags, setFlags] = useState<AdminFeatureFlag[]>([])
   const [overrides, setOverrides] = useState<FeatureFlagOverride[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [environmentFilter, setEnvironmentFilter] = useState<FeatureFlagEnvironment>(getEnvironment())
   const [showDeleted, setShowDeleted] = useState(false)
@@ -39,6 +42,7 @@ export default function FeatureFlags() {
   const [userOverrideDialog, setUserOverrideDialog] = useState<{ open: boolean; flag: AdminFeatureFlag | null }>({ open: false, flag: null })
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; flag: AdminFeatureFlag | null }>({ open: false, flag: null })
   const [restoreDialog, setRestoreDialog] = useState<{ open: boolean; flag: AdminFeatureFlag | null }>({ open: false, flag: null })
+  const [overrideToRemove, setOverrideToRemove] = useState<FeatureFlagOverride | null>(null)
   
   const [dialogLoading, setDialogLoading] = useState(false)
   const [dialogError, setDialogError] = useState<string | null>(null)
@@ -51,19 +55,10 @@ export default function FeatureFlags() {
     environment: getEnvironment(),
   })
   const [defaultValue, setDefaultValue] = useState<{ boolean?: boolean; integer?: number; double?: number }>({})
-  const [orgSearch, setOrgSearch] = useState('')
-  const [selectedOrgId, setSelectedOrgId] = useState('')
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null)
   const [orgValue, setOrgValue] = useState<{ boolean?: boolean; integer?: number; double?: number }>({})
-  const [userSearch, setUserSearch] = useState('')
-  const [selectedUserId, setSelectedUserId] = useState('')
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [userValue, setUserValue] = useState<{ boolean?: boolean; integer?: number; double?: number }>({})
-  
-  // Toast state
-  const [toast, setToast] = useState<{ show: boolean; message: string; variant: 'success' | 'danger' }>({
-    show: false,
-    message: '',
-    variant: 'success',
-  })
   
   // TODO: Fetch actual role
   const [adminRole] = useState<PlatformAdminRole>('super_admin')
@@ -71,22 +66,20 @@ export default function FeatureFlags() {
 
   const fetchFlags = useCallback(async () => {
     setLoading(true)
+    setError(null)
 
     try {
+      // Use the simpler admin_feature_flags view that exists in production
+      // Columns: id, org_id, organization_name, feature_key, enabled, created_at, updated_at
       let query = supabase
-        .from('admin_feature_flags_list')
+        .from('admin_feature_flags')
         .select('*', { count: 'exact' })
-        .eq('environment', environmentFilter)
 
       if (search) {
-        query = query.or(`key.ilike.%${search}%,description.ilike.%${search}%`)
+        query = query.or(`feature_key.ilike.%${search}%,organization_name.ilike.%${search}%`)
       }
       
-      if (!showDeleted) {
-        query = query.is('deleted_at', null)
-      }
-      
-      query = query.order('key', { ascending: true })
+      query = query.order('feature_key', { ascending: true })
       
       const from = page * rowsPerPage
       const to = from + rowsPerPage - 1
@@ -96,41 +89,72 @@ export default function FeatureFlags() {
 
       if (error) {
         console.error('Error fetching feature flags:', error)
+        setError(error.message || 'Failed to load feature flags')
         setFlags([])
         setTotalCount(0)
       } else {
-        setFlags(data || [])
+        // Map to AdminFeatureFlag type for compatibility
+        const mappedFlags = (data || []).map((row: any) => ({
+          id: row.id,
+          key: row.feature_key,
+          value_type: 'boolean' as FeatureFlagValueType,
+          description: `Organization: ${row.organization_name}`,
+          environment: currentEnvironment,
+          deleted_at: null,
+          version: 1,
+          created_at: row.created_at,
+          updated_at: row.updated_at,
+          default_value_boolean: row.enabled,
+          default_value_integer: null,
+          default_value_double: null,
+          org_override_count: 0,
+          user_override_count: 0,
+          // Keep original fields for reference
+          org_id: row.org_id,
+          organization_name: row.organization_name,
+          enabled: row.enabled,
+        })) as AdminFeatureFlag[]
+        setFlags(mappedFlags)
         setTotalCount(count || 0)
+        setError(null)
       }
     } catch (err) {
       console.error('Error:', err)
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
       setFlags([])
     } finally {
       setLoading(false)
     }
-  }, [page, rowsPerPage, search, environmentFilter, showDeleted])
+  }, [page, rowsPerPage, search, currentEnvironment])
   
   const fetchOverrides = useCallback(async () => {
     try {
+      // The admin_feature_flag_overrides view may not exist in production
+      // Skip fetching overrides if the view doesn't exist
       const { data, error } = await supabase
         .from('admin_feature_flag_overrides')
         .select('*')
-        .eq('environment', environmentFilter)
         .order('created_at', { ascending: false })
       
       if (error) {
+        // If table doesn't exist, just return empty array instead of showing error
+        if (error.code === 'PGRST204' || error.message?.includes('does not exist')) {
+          console.log('admin_feature_flag_overrides view not available')
+          setOverrides([])
+          return
+        }
         console.error('Error fetching overrides:', error)
         setOverrides([])
       } else {
         // Map rows to include id field
-        const mapped = (data || []).map(row => mapFeatureFlagOverride(row as any))
+        const mapped = (data || []).map(row => mapFeatureFlagOverride(row))
         setOverrides(mapped)
       }
     } catch (err) {
       console.error('Error:', err)
       setOverrides([])
     }
-  }, [environmentFilter])
+  }, [])
   
   useEffect(() => {
     if (activeTab === 'flags') {
@@ -140,13 +164,6 @@ export default function FeatureFlags() {
     }
   }, [activeTab, fetchFlags, fetchOverrides])
 
-  // Auto-hide toast
-  useEffect(() => {
-    if (toast.show) {
-      const timer = setTimeout(() => setToast({ ...toast, show: false }), 5000)
-      return () => clearTimeout(timer)
-    }
-  }, [toast])
 
   const handleCreateFlag = async (_reason: string) => {
     if (!newFlag.key.trim()) {
@@ -163,25 +180,21 @@ export default function FeatureFlags() {
         p_value_type: newFlag.value_type,
         p_description: newFlag.description || null,
         p_environment: newFlag.environment,
-      })
+      } as any)
       
       if (error) {
         setDialogError(error.message)
         return
       }
       
-      if (!isRpcSuccessResponse(data) || !data.success) {
-        setDialogError(data?.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !(data as RpcResponse).success) {
+        setDialogError((data as RpcResponse)?.error || 'Unknown error')
         return
       }
       
       setCreateDialog(false)
       setNewFlag({ key: '', value_type: 'boolean', description: '', environment: getEnvironment() })
-      setToast({
-        show: true,
-        message: 'Feature flag created successfully',
-        variant: 'success',
-      })
+      showSuccess('Feature flag created successfully')
       fetchFlags()
     } catch (err) {
       setDialogError(err instanceof Error ? err.message : 'Unknown error')
@@ -215,25 +228,21 @@ export default function FeatureFlags() {
         p_environment: flag.environment,
         p_reason: reason,
         p_expected_version: flag.version,
-      })
+      } as any)
       
       if (error) {
         setDialogError(error.message)
         return
       }
       
-      if (!isRpcSuccessResponse(data) || !data.success) {
-        setDialogError(data?.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !(data as RpcResponse).success) {
+        setDialogError((data as RpcResponse)?.error || 'Unknown error')
         return
       }
       
       setEditDefaultDialog({ open: false, flag: null })
       setDefaultValue({})
-      setToast({
-        show: true,
-        message: 'Platform default updated successfully',
-        variant: 'success',
-      })
+      showSuccess('Platform default updated successfully')
       fetchFlags()
     } catch (err) {
       setDialogError(err instanceof Error ? err.message : 'Unknown error')
@@ -275,26 +284,22 @@ export default function FeatureFlags() {
         p_environment: flag.environment,
         p_reason: reason,
         p_expected_version: existing?.version,
-      })
+      } as any)
 
       if (error) {
         setDialogError(error.message)
         return
       }
 
-      if (!isRpcSuccessResponse(data) || !data.success) {
-        setDialogError(data?.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !(data as RpcResponse).success) {
+        setDialogError((data as RpcResponse)?.error || 'Unknown error')
         return
       }
 
       setOrgOverrideDialog({ open: false, flag: null })
       setSelectedOrgId('')
       setOrgValue({})
-      setToast({
-        show: true,
-        message: 'Organization override set successfully',
-        variant: 'success',
-      })
+      showSuccess('Organization override set successfully')
       fetchFlags()
       fetchOverrides()
     } catch (err) {
@@ -330,33 +335,29 @@ export default function FeatureFlags() {
       
       const { data, error } = await supabase.rpc('admin_set_user_override', {
         p_feature_flag_id: flag.id,
-        p_user_id: selectedUserId,
+        p_user_id: selectedUserId!,
         p_value_boolean: userValue.boolean ?? null,
         p_value_integer: userValue.integer ?? null,
         p_value_double: userValue.double ?? null,
         p_environment: flag.environment,
         p_reason: reason,
         p_expected_version: existing?.version,
-      })
+      } as any)
       
       if (error) {
         setDialogError(error.message)
         return
       }
       
-      if (data && !data.success) {
-        setDialogError(data.error || 'Unknown error')
+      if (data && !(data as unknown as RpcResponse).success) {
+        setDialogError((data as unknown as RpcResponse).error || 'Unknown error')
         return
       }
       
       setUserOverrideDialog({ open: false, flag: null })
       setSelectedUserId('')
       setUserValue({})
-      setToast({
-        show: true,
-        message: 'User override set successfully',
-        variant: 'success',
-      })
+      showSuccess('User override set successfully')
       fetchFlags()
       fetchOverrides()
     } catch (err) {
@@ -381,8 +382,8 @@ export default function FeatureFlags() {
           p_environment: override.environment,
           p_reason: reason,
           p_expected_version: override.version,
-        })
-        data = result.data
+        } as any)
+        data = result.data as any
         error = result.error
       } else {
         const result = await supabase.rpc('admin_remove_user_override', {
@@ -391,8 +392,8 @@ export default function FeatureFlags() {
           p_environment: override.environment,
           p_reason: reason,
           p_expected_version: override.version,
-        })
-        data = result.data
+        } as any)
+        data = result.data as any
         error = result.error
       }
       
@@ -406,11 +407,7 @@ export default function FeatureFlags() {
         return
       }
       
-      setToast({
-        show: true,
-        message: 'Override removed successfully',
-        variant: 'success',
-      })
+      showSuccess('Override removed successfully')
       fetchFlags()
       fetchOverrides()
     } catch (err) {
@@ -431,24 +428,20 @@ export default function FeatureFlags() {
         p_feature_flag_id: deleteDialog.flag!.id,
         p_environment: deleteDialog.flag!.environment,
         p_reason: reason,
-      })
+      } as any)
       
       if (error) {
         setDialogError(error.message)
         return
       }
       
-      if (data && !data.success) {
-        setDialogError(data.error || 'Unknown error')
+      if (data && !(data as unknown as RpcResponse).success) {
+        setDialogError((data as unknown as RpcResponse).error || 'Unknown error')
         return
       }
       
       setDeleteDialog({ open: false, flag: null })
-      setToast({
-        show: true,
-        message: 'Feature flag deleted successfully',
-        variant: 'success',
-      })
+      showSuccess('Feature flag deleted successfully')
       fetchFlags()
     } catch (err) {
       setDialogError(err instanceof Error ? err.message : 'Unknown error')
@@ -468,24 +461,20 @@ export default function FeatureFlags() {
         p_feature_flag_id: restoreDialog.flag!.id,
         p_environment: restoreDialog.flag!.environment,
         p_reason: reason,
-      })
+      } as any)
       
       if (error) {
         setDialogError(error.message)
         return
       }
       
-      if (!isRpcSuccessResponse(data) || !data.success) {
-        setDialogError(data?.error || 'Unknown error')
+      if (!isRpcSuccessResponse(data) || !(data as RpcResponse).success) {
+        setDialogError((data as RpcResponse)?.error || 'Unknown error')
         return
       }
       
       setRestoreDialog({ open: false, flag: null })
-      setToast({
-        show: true,
-        message: 'Feature flag restored successfully',
-        variant: 'success',
-      })
+      showSuccess('Feature flag restored successfully')
       fetchFlags()
     } catch (err) {
       setDialogError(err instanceof Error ? err.message : 'Unknown error')
@@ -632,7 +621,7 @@ export default function FeatureFlags() {
     },
     {
       id: 'scope_name',
-      label: (row: FeatureFlagOverride) => row.override_type === 'org' ? 'Organization' : 'User',
+      label: 'Scope',
       render: (row: FeatureFlagOverride) => (
         <div className="pa-body-m">{row.scope_name}</div>
       ),
@@ -655,12 +644,7 @@ export default function FeatureFlags() {
       render: (row) => (
         <Button
           variant="ghost"
-          onClick={() => {
-            // We'll use ConfirmDialog for this
-            if (window.confirm(`Remove ${row.override_type} override for ${row.scope_name}?`)) {
-              handleRemoveOverride(row, 'Removed via admin UI')
-            }
-          }}
+          onClick={() => setOverrideToRemove(row)}
         >
           Remove
         </Button>
@@ -755,17 +739,28 @@ export default function FeatureFlags() {
       
       {/* Content */}
       {activeTab === 'flags' && (
-        <PlatformDataTable
-          columns={flagColumns}
-          rows={flags}
-          loading={loading}
-          emptyMessage="No feature flags found"
-          page={page}
-          rowsPerPage={rowsPerPage}
-          totalCount={totalCount}
-          onPageChange={setPage}
-          onRowsPerPageChange={setRowsPerPage}
-        />
+        <>
+          {error && !loading && (
+            <ErrorState
+              message={error}
+              onRetry={fetchFlags}
+              retryLabel="Retry"
+            />
+          )}
+          {!error && (
+            <PlatformDataTable
+              columns={flagColumns}
+              rows={flags}
+              loading={loading}
+              emptyMessage="No feature flags found. Try adjusting your filters."
+              page={page}
+              rowsPerPage={rowsPerPage}
+              totalCount={totalCount}
+              onPageChange={setPage}
+              onRowsPerPageChange={setRowsPerPage}
+            />
+          )}
+        </>
       )}
       
       {activeTab === 'overrides' && (
@@ -894,7 +889,7 @@ export default function FeatureFlags() {
               }}
             >
               <Button
-                variant="secondary"
+                variant="blue"
                 onClick={() => {
                   setCreateDialog(false)
                   setNewFlag({ key: '', value_type: 'boolean', description: '', environment: getEnvironment() })
@@ -1007,23 +1002,43 @@ export default function FeatureFlags() {
           onConfirm={handleSetOrgOverride}
           onCancel={() => {
             setOrgOverrideDialog({ open: false, flag: null })
-            setSelectedOrgId('')
+            setSelectedOrgId(null)
             setOrgValue({})
-            setOrgSearch('')
             setDialogError(null)
           }}
           requireReason
         >
-          <div className="pa-form-group">
-            <label className="pa-label">Organization *</label>
-            <OrgSearchSelect
-              value={selectedOrgId}
-              onChange={setSelectedOrgId}
-              search={orgSearch}
-              onSearchChange={setOrgSearch}
-              disabled={dialogLoading}
-            />
-          </div>
+          <EntitySelect
+            label="Organization *"
+            value={selectedOrgId}
+            onChange={(id) => setSelectedOrgId(id)}
+            fetchOptions={async (query) => {
+              const { data, error } = await supabase
+                .from('organizations')
+                .select('id, name')
+                .ilike('name', `%${query}%`)
+                .limit(20)
+              
+              if (error) throw error
+              return (data || []).map((org: any) => ({
+                id: org.id,
+                label: org.name,
+              }))
+            }}
+            getOptionById={async (id) => {
+              const { data, error } = await supabase
+                .from('organizations')
+                .select('id, name')
+                .eq('id', id)
+                .single()
+              
+              if (error || !data) return null
+              return { id: data.id, label: data.name }
+            }}
+            placeholder="Search organizations..."
+            disabled={dialogLoading}
+            required
+          />
           {orgOverrideDialog.flag.value_type === 'boolean' && (
             <div className="pa-form-group">
               <label className="pa-label">Value *</label>
@@ -1095,23 +1110,65 @@ export default function FeatureFlags() {
           onConfirm={handleSetUserOverride}
           onCancel={() => {
             setUserOverrideDialog({ open: false, flag: null })
-            setSelectedUserId('')
+            setSelectedUserId(null)
             setUserValue({})
-            setUserSearch('')
             setDialogError(null)
           }}
           requireReason
         >
-          <div className="pa-form-group">
-            <label className="pa-label">User *</label>
-            <UserSearchSelect
-              value={selectedUserId}
-              onChange={setSelectedUserId}
-              search={userSearch}
-              onSearchChange={setUserSearch}
-              disabled={dialogLoading}
-            />
-          </div>
+          <EntitySelect
+            label="User *"
+            value={selectedUserId}
+            onChange={(id) => setSelectedUserId(id)}
+            fetchOptions={async (query) => {
+              const { data, error } = await supabase
+                .from('users')
+                .select('id, email, display_name')
+                .or(`email.ilike.%${query}%,display_name.ilike.%${query}%`)
+                .limit(20)
+              
+              if (error) throw error
+              return (data || []).map((user: any) => ({
+                id: user.id,
+                label: user.display_name || user.email || '',
+                data: user,
+              }))
+            }}
+            getOptionById={async (id) => {
+              const { data, error } = await supabase
+                .from('users')
+                .select('id, email, display_name')
+                .eq('id', id)
+                .single()
+              
+              if (error || !data) return null
+              return {
+                id: data.id,
+                label: data.display_name || data.email || '',
+                data,
+              }
+            }}
+            renderOption={(option, isHighlighted) => (
+              <div
+                style={{
+                  padding: '12px 16px',
+                  cursor: 'pointer',
+                  background: isHighlighted ? 'var(--pa-n50)' : 'transparent',
+                  borderBottom: '1px solid var(--pa-n100)',
+                }}
+              >
+                <div className="pa-body-m">{option.label}</div>
+                {option.data && (option.data as any).email && option.label !== (option.data as any).email && (
+                  <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
+                    {(option.data as any).email}
+                  </div>
+                )}
+              </div>
+            )}
+            placeholder="Search users by email or name..."
+            disabled={dialogLoading}
+            required
+          />
           {userOverrideDialog.flag.value_type === 'boolean' && (
             <div className="pa-form-group">
               <label className="pa-label">Value *</label>
@@ -1205,160 +1262,28 @@ export default function FeatureFlags() {
         }}
       />
 
+      {/* Remove Override Confirmation Dialog */}
+      <ConfirmDialog
+        open={!!overrideToRemove}
+        title="Remove Override"
+        description={`Remove ${overrideToRemove?.override_type} override for ${overrideToRemove?.scope_name}?`}
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => {
+          if (overrideToRemove) {
+            handleRemoveOverride(overrideToRemove, 'Removed via admin UI')
+            setOverrideToRemove(null)
+          }
+        }}
+        onCancel={() => setOverrideToRemove(null)}
+      />
+
       {/* Toast */}
-      {toast.show && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 'var(--pa-space-5)',
-            right: 'var(--pa-space-5)',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            className="pa-card"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--pa-space-3)',
-              padding: 'var(--pa-space-3) var(--pa-space-4)',
-              borderLeft: `3px solid var(--pa-${toast.variant})`,
-              boxShadow: 'var(--pa-shadow-2)',
-            }}
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{ color: `var(--pa-${toast.variant})`, fontSize: '20px' }}
-            >
-              {toast.variant === 'success' ? 'check_circle' : 'error'}
-            </span>
-            <span className="pa-body-m">{toast.message}</span>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
 
-// Org Search Select Component
-function OrgSearchSelect({
-  value,
-  onChange,
-  search,
-  onSearchChange,
-  disabled,
-}: {
-  value: string
-  onChange: (orgId: string) => void
-  search: string
-  onSearchChange: (search: string) => void
-  disabled?: boolean
-}) {
-  const [orgs, setOrgs] = useState<Array<{ id: string; name: string }>>([])
-  const [loading, setLoading] = useState(false)
-  
-  useEffect(() => {
-    if (search.length < 2) {
-      setOrgs([])
-      return
-    }
-    
-    const fetchOrgs = async () => {
-      setLoading(true)
-      try {
-        const { data, error } = await supabase
-          .from('organizations')
-          .select('id, name')
-          .ilike('name', `%${search}%`)
-          .limit(20)
-        
-        if (!error && data) {
-          setOrgs(data)
-        }
-      } catch (err) {
-        console.error('Error fetching organizations:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    
-    const timeout = setTimeout(fetchOrgs, 300)
-    return () => clearTimeout(timeout)
-  }, [search])
-  
-  const selectedOrg = orgs.find(o => o.id === value)
-  
-  return (
-    <div style={{ position: 'relative' }}>
-      <Input
-        value={selectedOrg ? selectedOrg.name : search}
-        onChange={(e) => {
-          onSearchChange(e.target.value)
-          if (!e.target.value) {
-            onChange('')
-          }
-        }}
-        placeholder="Search organizations..."
-        disabled={disabled}
-        onFocus={() => {
-          if (!search && value) {
-            // Load selected org name
-            const org = orgs.find(o => o.id === value)
-            if (org) {
-              onSearchChange(org.name)
-            }
-          }
-        }}
-      />
-      {search.length >= 2 && orgs.length > 0 && !selectedOrg && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            right: 0,
-            background: 'var(--pa-bg-primary)',
-            border: '1px solid var(--pa-n100)',
-            borderRadius: 'var(--pa-radius-md)',
-            marginTop: '4px',
-            maxHeight: '200px',
-            overflowY: 'auto',
-            zIndex: 1000,
-            boxShadow: 'var(--pa-shadow-2)',
-          }}
-        >
-          {orgs.map((org) => (
-            <div
-              key={org.id}
-              onClick={() => {
-                onChange(org.id)
-                onSearchChange(org.name)
-              }}
-              style={{
-                padding: '12px 16px',
-                cursor: 'pointer',
-                borderBottom: '1px solid var(--pa-n100)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--pa-n50)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent'
-              }}
-            >
-              <div className="pa-body-m">{org.name}</div>
-            </div>
-          ))}
-        </div>
-      )}
-      {loading && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, padding: '12px', textAlign: 'center' }}>
-          <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>Loading...</div>
-        </div>
-      )}
-    </div>
-  )
-}
 
 // Form Modal Component
 function FormModal({
@@ -1468,7 +1393,7 @@ function FormModal({
             justifyContent: 'flex-end',
           }}
         >
-          <Button variant="secondary" onClick={onCancel} disabled={loading}>
+          <Button variant="blue" onClick={onCancel} disabled={loading}>
             Cancel
           </Button>
           <Button
@@ -1484,122 +1409,3 @@ function FormModal({
   )
 }
 
-// User Search Select Component
-function UserSearchSelect({
-  value,
-  onChange,
-  search,
-  onSearchChange,
-  disabled,
-}: {
-  value: string
-  onChange: (userId: string) => void
-  search: string
-  onSearchChange: (search: string) => void
-  disabled?: boolean
-}) {
-  const [users, setUsers] = useState<Array<{ id: string; email: string; display_name: string | null }>>([])
-  const [loading, setLoading] = useState(false)
-  
-  useEffect(() => {
-    if (search.length < 2) {
-      setUsers([])
-      return
-    }
-    
-    const fetchUsers = async () => {
-      setLoading(true)
-      try {
-        const { data, error } = await supabase
-          .from('users')
-          .select('id, email, display_name')
-          .or(`email.ilike.%${search}%,display_name.ilike.%${search}%`)
-          .limit(20)
-        
-        if (!error && data) {
-          setUsers(data)
-        }
-      } catch (err) {
-        console.error('Error fetching users:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    
-    const timeout = setTimeout(fetchUsers, 300)
-    return () => clearTimeout(timeout)
-  }, [search])
-  
-  const selectedUser = users.find(u => u.id === value)
-  
-  return (
-    <div style={{ position: 'relative' }}>
-      <Input
-        value={selectedUser ? (selectedUser.display_name || selectedUser.email) : search}
-        onChange={(e) => {
-          onSearchChange(e.target.value)
-          if (!e.target.value) {
-            onChange('')
-          }
-        }}
-        placeholder="Search users by email or name..."
-        disabled={disabled}
-        onFocus={() => {
-          if (!search && value) {
-            const user = users.find(u => u.id === value)
-            if (user) {
-              onSearchChange(user.display_name || user.email)
-            }
-          }
-        }}
-      />
-      {search.length >= 2 && users.length > 0 && !selectedUser && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            right: 0,
-            background: 'var(--pa-bg-primary)',
-            border: '1px solid var(--pa-n100)',
-            borderRadius: 'var(--pa-radius-md)',
-            marginTop: '4px',
-            maxHeight: '200px',
-            overflowY: 'auto',
-            zIndex: 1000,
-            boxShadow: 'var(--pa-shadow-2)',
-          }}
-        >
-          {users.map((user) => (
-            <div
-              key={user.id}
-              onClick={() => {
-                onChange(user.id)
-                onSearchChange(user.display_name || user.email)
-              }}
-              style={{
-                padding: '12px 16px',
-                cursor: 'pointer',
-                borderBottom: '1px solid var(--pa-n100)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--pa-n50)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent'
-              }}
-            >
-              <div className="pa-body-m">{user.display_name || user.email}</div>
-              <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>{user.email}</div>
-            </div>
-          ))}
-        </div>
-      )}
-      {loading && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, padding: '12px', textAlign: 'center' }}>
-          <div className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>Loading...</div>
-        </div>
-      )}
-    </div>
-  )
-}

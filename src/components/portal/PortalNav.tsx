@@ -3,10 +3,15 @@ import { Link, useLocation } from 'react-router-dom'
 import MegaMenu from '../common/MegaMenu'
 import ThemeToggle from './ThemeToggle'
 import UserContextDropdown from '../common/UserContextDropdown'
+import NotificationBell from '../common/NotificationBell'
+import MobileMenu from '../common/MobileMenu'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useTheme } from '../../hooks/useTheme'
 import { useT } from '../../i18n/useI18n'
+import { useMobile } from '@/hooks/useMobile'
+import { getLink } from '../../utils/routes'
+import { useFilteredNavigation } from '@/hooks/useFilteredNavigation'
 
 // ============================================================================
 // ORGANIZATION ADMIN MENU STRUCTURE
@@ -66,7 +71,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: '',
           items: [
-            { text: 'Admin Dashboard', icon: 'dashboard', path: '/admin', description: 'Organization overview' },
+            { routeKey: 'admin.dashboard', text: 'Admin Dashboard', icon: 'dashboard', path: '/admin', description: 'Organization overview' },
           ],
         },
       ],
@@ -78,31 +83,31 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Configuration',
           items: [
-            { text: 'Organization Settings', icon: 'settings', path: '/admin/organization', description: 'Organization info' },
-            { text: 'Users', icon: 'admin_panel_settings', path: '/admin/organization/users', description: 'Access and roles' },
-            { text: 'Billing', icon: 'credit_card', path: '/admin/organization/billing', description: 'Plan and billing' },
+            { routeKey: 'admin.organization.settings', text: 'Organization Settings', icon: 'settings', path: '/admin/organization', description: 'Organization info' },
+            { routeKey: 'admin.organization.users', text: 'Users', icon: 'admin_panel_settings', path: '/admin/organization/users', description: 'Access and roles' },
+            { routeKey: 'admin.organization.billing', text: 'Billing', icon: 'credit_card', path: '/admin/organization/billing', description: 'Plan and billing' },
           ],
         },
       ],
     },
     {
       label: 'Operations',
-      route: '/admin/teams',
+      route: getLink('admin.teams.list'),
       groups: [
         {
           label: 'Core',
           items: [
-            { text: 'Teams', icon: 'groups', path: '/admin/teams', description: 'Teams and rosters' },
-            { text: 'Events', icon: 'event', path: '/admin/events', description: 'Schedule and calendar' },
-            { text: 'Payments', icon: 'receipt_long', path: '/admin/payments', description: 'Fees and collections' },
+            { routeKey: 'admin.teams.list', text: 'Teams', icon: 'groups', path: getLink('admin.teams.list'), description: 'Teams and rosters' },
+            { routeKey: 'admin.events.list', text: 'Events', icon: 'event', path: '/admin/events', description: 'Schedule and calendar' },
+            { routeKey: 'admin.payments.list', text: 'Payments', icon: 'receipt_long', path: '/admin/payments', description: 'Fees and collections' },
+            { routeKey: 'admin.travel.list', text: 'Travel', icon: 'flight', path: '/admin/travel', description: 'Trip planning' },
           ],
         },
         {
           label: 'Programs',
           items: [
-            { text: 'Tryouts', icon: 'emoji_events', path: '/admin/tryouts', description: 'Registration and evaluation' },
-            { text: 'Travel', icon: 'flight', path: '/admin/travel', description: 'Trip planning' },
-            { text: 'Uniforms', icon: 'checkroom', path: '/admin/uniforms', description: 'Kits and gear' },
+            { routeKey: 'admin.tryouts.list', text: 'Tryouts', icon: 'emoji_events', path: '/admin/tryouts', description: 'Registration and evaluation' },
+            { routeKey: 'admin.uniforms.list', text: 'Uniforms', icon: 'checkroom', path: '/admin/uniforms', description: 'Kits and gear' },
           ],
         },
       ],
@@ -117,21 +122,22 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: '',
           items: [
-            { text: 'Dashboard', icon: 'dashboard', path: '/portal/dashboard', description: 'Today\'s overview' },
+            { routeKey: 'portal.dashboard', text: 'Dashboard', icon: 'dashboard', path: '/portal/dashboard', description: 'Today\'s overview' },
           ],
         },
       ],
     },
     {
-      label: 'Teams',
-      route: '/portal/children',
+      label: 'My Athletes',
+      route: '/portal/athletes',
       groups: [
-        {
-          label: 'Teams',
-          items: [
-            { text: 'Teams', icon: 'groups', path: '/portal/children', description: 'Teams and roster access' },
-          ],
-        },
+            {
+              label: 'My Athletes',
+              items: [
+                { routeKey: 'portal.athletes', text: 'My Athletes', icon: 'groups', path: '/portal/athletes', description: 'Athlete profiles and information' },
+                { routeKey: 'portal.athletes.requestAttachment', text: 'Request Athlete Attachment', icon: 'person_add', path: '/portal/athletes/request-attachment', description: 'Request to attach to an existing athlete' },
+              ],
+            },
       ],
     },
     {
@@ -141,7 +147,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Schedule',
           items: [
-            { text: 'Calendar', icon: 'calendar_month', path: '/portal/calendar', description: 'View schedule' },
+            { routeKey: 'portal.calendar', text: 'Calendar', icon: 'calendar_month', path: '/portal/calendar', description: 'View schedule' },
           ],
         },
       ],
@@ -153,8 +159,8 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Tracking',
           items: [
-            { text: 'Take Attendance', icon: 'how_to_reg', path: '/portal/calendar', description: 'Use events to manage attendance', disabled: true },
-            { text: 'Attendance History', icon: 'history', path: '/portal/calendar', description: 'Use events to review attendance', disabled: true },
+            { routeKey: 'portal.calendar', text: 'Take Attendance', icon: 'how_to_reg', path: '/portal/calendar', description: 'Use events to manage attendance', disabled: true },
+            { routeKey: 'portal.calendar', text: 'Attendance History', icon: 'history', path: '/portal/calendar', description: 'Use events to review attendance', disabled: true },
           ],
         },
       ],
@@ -165,10 +171,10 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Additional',
           items: [
-            { text: 'Tryouts', icon: 'emoji_events', path: '/portal/tryouts', description: 'Tryout sessions' },
-            { text: 'Travel', icon: 'flight', path: '/portal/travel', description: 'Trip details' },
-            { text: 'Messages', icon: 'mail', path: '/portal/messages', description: 'Communications' },
-            { text: 'Settings', icon: 'settings', path: '/portal/settings', description: 'Preferences' },
+            { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', path: '/portal/tryouts', description: 'Tryout sessions' },
+            { routeKey: 'portal.travel', text: 'Travel', icon: 'flight', path: '/portal/travel', description: 'Trip details' },
+            { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', path: '/portal/messages', description: 'Communications' },
+            { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', path: '/portal/settings', description: 'Preferences' },
           ],
         },
       ],
@@ -183,7 +189,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: '',
           items: [
-            { text: 'Dashboard', icon: 'dashboard', path: '/portal/dashboard', description: 'Daily overview' },
+            { routeKey: 'portal.dashboard', text: 'Dashboard', icon: 'dashboard', path: '/portal/dashboard', description: 'Daily overview' },
           ],
         },
       ],
@@ -195,7 +201,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Schedule',
           items: [
-            { text: 'Schedule', icon: 'calendar_month', path: '/portal/calendar', description: 'View all events' },
+            { routeKey: 'portal.calendar', text: 'Schedule', icon: 'calendar_month', path: '/portal/calendar', description: 'View all events' },
           ],
         },
       ],
@@ -207,7 +213,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Travel',
           items: [
-            { text: 'Travel', icon: 'flight', path: '/portal/travel', description: 'Trip information' },
+            { routeKey: 'portal.travel', text: 'Travel', icon: 'flight', path: '/portal/travel', description: 'Trip information' },
           ],
         },
       ],
@@ -219,7 +225,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Messages',
           items: [
-            { text: 'Messages', icon: 'mail', path: '/portal/messages', description: 'Announcements and chat' },
+            { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', path: '/portal/messages', description: 'Announcements and chat' },
           ],
         },
       ],
@@ -231,7 +237,8 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Payments',
           items: [
-            { text: 'Fees Due', icon: 'receipt_long', path: '/portal/payments', description: 'Outstanding fees' },
+            // Flat link (no dropdown): text matches section label so nav renders as a direct link
+            { routeKey: 'portal.payments', text: 'Payments', icon: 'receipt_long', path: '/portal/payments', description: 'Outstanding fees' },
           ],
         },
       ],
@@ -242,16 +249,17 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Programs',
           items: [
-            { text: 'My Teams', icon: 'groups', path: '/portal/children', description: t('portal.navigation.yourChildrenTeams') },
-            { text: 'Join a Team', icon: 'group_add', path: '/portal/join', description: 'Enter an invite code' },
-            { text: 'Tryouts', icon: 'emoji_events', path: '/portal/tryouts', description: 'Tryout sessions' },
+            { routeKey: 'portal.athletes', text: 'My Athletes', icon: 'groups', path: '/portal/athletes', description: t('portal.navigation.yourChildrenTeams') },
+            { routeKey: 'portal.athletes.requestAttachment', text: 'Request Athlete Attachment', icon: 'person_add', path: '/portal/athletes/request-attachment', description: 'Request to attach to an existing athlete' },
+            { routeKey: 'portal.join', text: 'Join a Team', icon: 'group_add', path: '/portal/join', description: 'Enter an invite code' },
+            { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', path: '/portal/tryouts', description: 'Tryout sessions' },
           ],
         },
         {
           label: 'Additional',
           items: [
-            { text: 'Uniforms', icon: 'checkroom', path: '/portal/uniforms', description: 'Uniform orders' },
-            { text: 'Settings', icon: 'settings', path: '/portal/settings', description: 'Preferences' },
+            { routeKey: 'portal.uniforms', text: 'Uniforms', icon: 'checkroom', path: '/portal/uniforms', description: 'Uniform orders' },
+            { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', path: '/portal/settings', description: 'Preferences' },
           ],
         },
       ],
@@ -261,8 +269,10 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [logoError, setLogoError] = useState(false)
+  const [logoVersion, setLogoVersion] = useState(0)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const isMobile = useMobile()
 
   // Determine user role for navigation
   const determineRole = useCallback((): PortalRole => {
@@ -277,20 +287,29 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
   const currentRole = determineRole()
 
   // Select navigation based on role
-  const navSections = currentRole === 'org_admin' 
+  const rawNavSections = currentRole === 'org_admin' 
     ? orgAdminNavSections 
     : currentRole === 'coach' 
       ? coachNavSections 
       : parentNavSections
 
+  // Apply feature gate filtering
+  const { filteredSections: navSections } = useFilteredNavigation(rawNavSections)
+
   // Logo based on theme
+  // Light mode needs dark text logo, dark mode needs light text logo
+  // Note: If logo appears white in light mode, the files may be misnamed
   const logoSrc = resolvedTheme === 'dark' 
     ? '/images/logo-dark.png' 
     : '/images/logo-light.png'
 
-  // Reset logo error when theme changes
+  // Add cache-busting query parameter to force reload on theme change
+  const logoSrcWithCacheBust = `${logoSrc}?theme=${resolvedTheme}&v=${logoVersion}`
+
+  // Reset logo error and increment version when theme changes to force reload
   useEffect(() => {
     setLogoError(false)
+    setLogoVersion(prev => prev + 1)
   }, [resolvedTheme])
 
   const handleMenuOpen = (menuId: string) => {
@@ -346,6 +365,43 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
     }
   }
 
+  // Close menus immediately on mount
+  useEffect(() => {
+    // Clear any pending timeouts that might open menus
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
+    }
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current)
+      closeTimeoutRef.current = null
+    }
+    // Close menus immediately on mount
+    setOpenMenuId(null)
+    setMobileMenuOpen(false)
+  }, [])
+
+  // Close menus on route change
+  useEffect(() => {
+    // Clear any pending timeouts that might open menus
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
+    }
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current)
+      closeTimeoutRef.current = null
+    }
+    // Close menus immediately on route change
+    setOpenMenuId(null)
+    setMobileMenuOpen(false)
+  }, [location.pathname])
+
+  // Close mobile menu handler
+  const handleMobileMenuClose = useCallback(() => {
+    setMobileMenuOpen(false)
+  }, [])
+
   // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
@@ -353,12 +409,6 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
       if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current)
     }
   }, [])
-
-  // Close menus on route change
-  useEffect(() => {
-    handleMenuClose()
-    setMobileMenuOpen(false)
-  }, [location.pathname])
 
   const brandPath = '/portal/dashboard'
   const brandIcon = 'sports'
@@ -371,6 +421,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
   }
 
   return (
+    <>
     <nav className="gn-root" role="navigation" aria-label="Main navigation">
       {/* Left section */}
       <div className="gn-left">
@@ -379,7 +430,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
           {!logoError ? (
             <img 
               key={logoSrc}
-              src={logoSrc} 
+              src={logoSrcWithCacheBust} 
               alt="AthleticPortal" 
               className="h-8 w-auto transition-opacity duration-200"
               onError={() => {
@@ -392,25 +443,31 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
               <div className="gn-logo">
                 <span className="material-symbols-outlined">{brandIcon}</span>
               </div>
-              <span className="gn-brand-text">TEAMHUB</span>
+              <span className="gn-brand-text">YOUTH SPORTS</span>
             </>
           )}
         </Link>
 
-        {/* Mobile toggle */}
-        <button
-          className="gn-util-btn gn-mobile-toggle"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          aria-expanded={mobileMenuOpen}
-          aria-label="Toggle navigation menu"
-        >
-          <span className="material-symbols-outlined">
-            {mobileMenuOpen ? 'close' : 'menu'}
-          </span>
-        </button>
+        {/* Mobile toggle - only show on mobile */}
+        {isMobile && (
+          <button
+            className="gn-util-btn gn-mobile-toggle"
+            onClick={() => {
+              setMobileMenuOpen(prev => !prev)
+            }}
+            aria-expanded={mobileMenuOpen}
+            aria-label="Toggle navigation menu"
+            type="button"
+          >
+            <span className="material-symbols-outlined">
+              {mobileMenuOpen ? 'close' : 'menu'}
+            </span>
+          </button>
+        )}
 
-        {/* Navigation items */}
-        <ul className="gn-nav" role="menubar">
+        {/* Navigation items - only show on desktop */}
+        {!isMobile && (
+          <ul className="gn-nav" role="menubar">
           {navSections.map((section) => {
             const menuId = `menu-${section.label.toLowerCase().replace(/\s+/g, '-')}`
             const isOpen = openMenuId === menuId
@@ -462,14 +519,15 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
                     id={menuId}
                     isOpen={isOpen}
                     onClose={handleMenuClose}
-                    groups={section.groups}
+                    groups={section.groups as any}
                     wide={isWide}
                   />
                 </div>
               </li>
             )
           })}
-        </ul>
+          </ul>
+        )}
       </div>
 
       {/* Right section */}
@@ -487,13 +545,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         )}
 
         {/* Notifications */}
-        <button
-          className="gn-util-btn"
-          aria-label="Notifications"
-          title="Notifications"
-        >
-          <span className="material-symbols-outlined">notifications</span>
-        </button>
+        <NotificationBell viewAllPath="/portal/notifications" />
 
         <div className="gn-divider" />
 
@@ -506,5 +558,15 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         <UserContextDropdown />
       </div>
     </nav>
+
+    {/* Mobile Menu */}
+    <MobileMenu
+      isOpen={mobileMenuOpen}
+      onClose={handleMobileMenuClose}
+      sections={navSections as any}
+      brandName="Youth Sports"
+      brandSubtitle="Team Hub"
+    />
+    </>
   )
 }

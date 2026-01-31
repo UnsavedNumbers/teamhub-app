@@ -371,7 +371,7 @@ BEGIN
 
   -- Verify child belongs to family
   IF NOT EXISTS (
-    SELECT 1 FROM children c
+    SELECT 1 FROM athletes c
     WHERE c.id = p_child_id AND c.family_id = v_family_id
   ) THEN
     RAISE EXCEPTION 'Child does not belong to user family';
@@ -452,7 +452,7 @@ BEGIN
     RAISE EXCEPTION 'Not authenticated';
   END IF;
 
-  SELECT r.child_id, r.tryout_id
+  SELECT r.athlete_id, r.tryout_id
     INTO v_child_id, v_tryout_id
   FROM tryout_registrations r
   WHERE r.id = p_registration_id;
@@ -481,13 +481,13 @@ BEGIN
     RAISE EXCEPTION 'Team does not belong to organization';
   END IF;
 
-  -- Verify season belongs to org via seasons.organization_id when available, or via team
+  -- Verify season belongs to org via seasons.org_id when available, or via team
   IF NOT EXISTS (
     SELECT 1
     FROM seasons s
     WHERE s.id = p_season_id
       AND (
-        (s.organization_id IS NOT NULL AND s.organization_id = v_org_id)
+        (s.org_id IS NOT NULL AND s.org_id = v_org_id)
         OR (s.team_id = p_team_id)
       )
   ) THEN

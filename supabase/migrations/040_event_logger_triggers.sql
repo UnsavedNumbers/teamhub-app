@@ -74,8 +74,8 @@ BEGIN
   PERFORM log_event(
     'ORGANIZATION'::event_category,
     v_event_type,
-    auth.uid(),
     v_actor_role,
+    auth.uid(),
     COALESCE(NEW.id, OLD.id),
     'organization',
     COALESCE(NEW.id, OLD.id),
@@ -136,8 +136,8 @@ BEGIN
   PERFORM log_event(
     'USER'::event_category,
     v_event_type,
-    auth.uid(),
     v_actor_role,
+    auth.uid(),
     NULL, -- org_id not directly on users table
     'user',
     COALESCE(NEW.id, OLD.id),
@@ -184,7 +184,7 @@ BEGIN
   PERFORM set_config('app.logging_disabled', 'true', true);
 
   -- Get organization ID from payment
-  v_org_id := COALESCE(NEW.organization_id, OLD.organization_id);
+  v_org_id := COALESCE(NEW.org_id, OLD.org_id);
 
   -- Determine event type based on status changes
   IF TG_OP = 'INSERT' THEN
@@ -285,9 +285,9 @@ BEGIN
   PERFORM log_event(
     'PAYMENT'::event_category,
     v_event_type,
-    auth.uid(),
     v_actor_role,
-    COALESCE(NEW.organization_id, OLD.organization_id),
+    auth.uid(),
+    COALESCE(NEW.org_id, OLD.org_id),
     'fee',
     COALESCE(NEW.id, OLD.id),
     jsonb_build_object(

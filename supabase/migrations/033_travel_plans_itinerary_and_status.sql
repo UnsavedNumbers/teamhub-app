@@ -62,8 +62,8 @@ CREATE POLICY "Parents can view travel plans" ON public.travel_plans
     status IN ('published', 'cancelled')
     AND EXISTS (
       SELECT 1 FROM public.users u
-      JOIN public.children c ON c.family_id = u.family_id
-      JOIN public.team_memberships tm ON tm.child_id = c.id
+      JOIN public.athletes c ON c.family_id = u.family_id
+      JOIN public.team_memberships tm ON tm.athlete_id = c.id
       WHERE u.id = auth.uid()
       AND u.role = 'parent'
       AND tm.team_id = travel_plans.team_id

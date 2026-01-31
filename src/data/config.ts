@@ -6,9 +6,55 @@
  * When false, services use real Supabase queries (requires migration).
  */
 
-// Toggle fake data mode
-// TODO: Replace with environment variable in production (e.g., import.meta.env.VITE_USE_FAKE_DATA)
-export const USE_FAKE_DATA = true
+/**
+ * Get USE_FAKE_DATA flag from environment variable
+ * Defaults to false in production, can be overridden via VITE_USE_FAKE_DATA env var
+ * 
+ * Usage in .env files:
+ * - Development: VITE_USE_FAKE_DATA=true
+ * - Production: VITE_USE_FAKE_DATA=false (or omit, defaults to false)
+ */
+function getUseFakeDataFromEnv(): boolean {
+  const envValue = import.meta.env.VITE_USE_FAKE_DATA
+  
+  // If not set, default to false (production mode)
+  if (envValue === undefined || envValue === null) {
+    return false
+  }
+  
+  // Handle string values ('true', 'false', '1', '0')
+  if (typeof envValue === 'string') {
+    const normalized = envValue.toLowerCase().trim()
+    return normalized === 'true' || normalized === '1'
+  }
+  
+  // Handle boolean directly
+  if (typeof envValue === 'boolean') {
+    return envValue
+  }
+  
+  // Default to false for any other type
+  return false
+}
+
+// Toggle fake data mode - reads from environment variable
+export const USE_FAKE_DATA = getUseFakeDataFromEnv()
+
+// Store original value for immutability validation (Issue 10 mitigation)
+// const _ORIGINAL_USE_FAKE_DATA = USE_FAKE_DATA // Unused - kept for reference
+
+/**
+ * Get USE_FAKE_DATA flag value
+ * 
+ * Note: This function exists for backward compatibility and immutability validation.
+ * The flag is set at build time from VITE_USE_FAKE_DATA environment variable.
+ * It should never change at runtime.
+ */
+export function getUseFakeData(): boolean {
+    // Return the constant value (set at module load time from env var)
+    // This ensures the flag is immutable after initial load
+    return USE_FAKE_DATA
+}
 
 // Simulate network delay for realistic loading states (milliseconds)
 export const FAKE_DATA_DELAY_MS = 300
@@ -87,7 +133,9 @@ function validateConfiguration(): void {
 }
 
 // Run validation on module load (only in development)
-if (USE_FAKE_DATA && import.meta.env?.DEV) {
+// NOTE: Avoid relying on `ImportMetaEnv.DEV` typing (varies by tooling).
+const __isDev = !!(import.meta as any)?.env?.DEV
+if (USE_FAKE_DATA && __isDev) {
     validateConfiguration()
 }
 

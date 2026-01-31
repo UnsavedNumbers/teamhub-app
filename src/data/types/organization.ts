@@ -5,13 +5,15 @@ export type TeamSkillLevel = 'recreational' | 'competitive' | 'elite' // Depreca
 
 export interface Sport {
     id: string
-    org_id: string
+    org_id: string | null // NULL for system sports, set for organization-specific sports (legacy)
     name: string
+    slug: string | null // URL-friendly identifier (e.g., "track-and-field", "field-hockey")
     icon: string | null
     color: string
     created_at: string
     updated_at: string
     deleted_at: string | null
+    is_system?: boolean // True for system-wide predefined sports
 }
 
 export interface Program {
@@ -59,6 +61,7 @@ export interface Team {
     is_active?: boolean
     created_at: string
     updated_at: string
+    deleted_at?: string | null
 
     // Deprecated fields - derived from Program/Level now
     age_group?: string | null
@@ -89,7 +92,7 @@ export interface TeamSeason {
 export interface CreateTeamDTO {
     org_id: string
     name: string
-    level_id: string
+    level_id?: string | null
     sport_id?: string | null
     program_id?: string | null
     max_roster_size?: number | null

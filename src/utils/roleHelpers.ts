@@ -15,7 +15,7 @@ export function hasRole(
   org: Organization | null | undefined,
   role: OrgMemberRole
 ): boolean {
-  return org?.roles.includes(role) ?? false
+  return org?.roles?.includes(role) ?? false
 }
 
 /**
@@ -41,7 +41,7 @@ export function hasAllRoles(
   org: Organization | null | undefined,
   roles: OrgMemberRole[]
 ): boolean {
-  if (!org) return false
+  if (!org || !org.roles) return false
   return roles.every(role => org.roles.includes(role))
 }
 
@@ -54,7 +54,7 @@ export function hasAllRoles(
 export function getPrimaryRole(
   org: Organization | null | undefined
 ): OrgMemberRole | null {
-  if (!org || org.roles.length === 0) return null
+  if (!org || !org.roles || org.roles.length === 0) return null
 
   if (org.roles.includes('org_admin')) return 'org_admin'
   if (org.roles.includes('coach')) return 'coach'
@@ -75,5 +75,79 @@ export function hasRoleInAnyOrg(
   organizations: Organization[],
   role: OrgMemberRole
 ): boolean {
-  return organizations.some(org => org.roles.includes(role))
+  return organizations.some(org => org.roles?.includes(role))
+}
+
+/**
+ * Format role name for display
+ * @param role - Role to format
+ * @returns Display name for the role
+ */
+export function formatRoleName(role: OrgMemberRole): string {
+  switch (role) {
+    case 'org_admin':
+      return 'Admin'
+    case 'parent':
+      return 'Parent'
+    case 'coach':
+      return 'Coach'
+    default:
+      // TypeScript exhaustiveness check - this should never happen
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const _exhaustive: never = role
+      void _exhaustive
+      return String(role).charAt(0).toUpperCase() + String(role).slice(1)
+  }
+}
+
+/**
+ * Frontend role type (used in forms and UI)
+ */
+export type FrontendRole = 'admin' | 'coach' | 'parent'
+
+/**
+ * Database role type (org_member_role enum)
+ */
+export type DbRole = OrgMemberRole
+
+/**
+ * Map frontend role ('admin') to database role ('org_admin')
+ * @param role - Frontend role
+ * @returns Database role
+ */
+export function mapFrontendRoleToDbRole(role: FrontendRole): DbRole {
+  switch (role) {
+    case 'admin':
+      return 'org_admin'
+    case 'coach':
+      return 'coach'
+    case 'parent':
+      return 'parent'
+    default:
+      // TypeScript exhaustiveness check
+      const _exhaustive: never = role
+      void _exhaustive
+      return 'parent' // Safe default
+  }
+}
+
+/**
+ * Map database role ('org_admin') to frontend role ('admin')
+ * @param role - Database role
+ * @returns Frontend role
+ */
+export function mapDbRoleToFrontendRole(role: DbRole): FrontendRole {
+  switch (role) {
+    case 'org_admin':
+      return 'admin'
+    case 'coach':
+      return 'coach'
+    case 'parent':
+      return 'parent'
+    default:
+      // TypeScript exhaustiveness check
+      const _exhaustive: never = role
+      void _exhaustive
+      return 'parent' // Safe default
+  }
 }

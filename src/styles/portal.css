@@ -1,0 +1,277 @@
+/* portal.css - Global portal layout and form styling
+   Follows the GLOBAL IMPLEMENTATION RULES for forms and layout
+*/
+
+:root {
+  --portal-max-width: 820px;
+  --form-gap: 1rem;
+}
+
+/* Background grid used site-wide in portal */
+.portal-grid-bg {
+  background-image: linear-gradient(to right, #f3f4f6 1px, transparent 1px), linear-gradient(to bottom, #f3f4f6 1px, transparent 1px);
+  background-size: 100px 100px;
+}
+
+/* Portal form container - constrained, left-aligned within portal */
+.portal-form {
+  max-width: var(--portal-max-width);
+  margin-left: 0;
+}
+
+.portal-form .form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Field group (single logical field) */
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Generic container for field lists: ensure consistent spacing when not inside .portal-form */
+.form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Form field wrapper for multi-column layouts */
+.form-field {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Generic row that can collapse to single-column on mobile */
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+/* Two-column variant - children with .form-field will split space */
+.form-row.two-col .form-field {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .form-row {
+    flex-direction: row;
+    align-items: center;
+  }
+  .form-row.two-col .form-field {
+    width: calc(50% - 0.5rem);
+  }
+}
+
+/* Three-column variant for city/state/zip (50/25/25) */
+.form-row.three-col-50-25-25 .form-field:nth-child(1) {
+  width: 100%;
+}
+.form-row.three-col-50-25-25 .form-field:nth-child(2) {
+  width: 100%;
+}
+.form-row.three-col-50-25-25 .form-field:nth-child(3) {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .form-row.three-col-50-25-25 .form-field:nth-child(1) {
+    width: calc(50% - 0.5rem);
+  }
+  .form-row.three-col-50-25-25 .form-field:nth-child(2) {
+    width: calc(25% - 0.5rem);
+  }
+  .form-row.three-col-50-25-25 .form-field:nth-child(3) {
+    width: calc(25% - 0.5rem);
+  }
+}
+
+/* Three-column equal thirds (33/33/33) */
+.form-row.three-col-33 .form-field:nth-child(1),
+.form-row.three-col-33 .form-field:nth-child(2),
+.form-row.three-col-33 .form-field:nth-child(3) {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .form-row.three-col-33 .form-field:nth-child(1),
+  .form-row.three-col-33 .form-field:nth-child(2),
+  .form-row.three-col-33 .form-field:nth-child(3) {
+    width: calc(33.333% - 0.666rem);
+  }
+}
+
+/* Two-column variants with specific proportions */
+.form-row.two-col-75-25 .form-field:nth-child(1) {
+  width: 100%;
+}
+.form-row.two-col-75-25 .form-field:nth-child(2) {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .form-row.two-col-75-25 .form-field:nth-child(1) {
+    width: calc(75% - 0.5rem);
+  }
+  .form-row.two-col-75-25 .form-field:nth-child(2) {
+    width: calc(25% - 0.5rem);
+  }
+}
+
+.form-row.two-col-60-40 .form-field:nth-child(1) {
+  width: 100%;
+}
+.form-row.two-col-60-40 .form-field:nth-child(2) {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .form-row.two-col-60-40 .form-field:nth-child(1) {
+    width: calc(60% - 0.5rem);
+  }
+  .form-row.two-col-60-40 .form-field:nth-child(2) {
+    width: calc(40% - 0.5rem);
+  }
+}
+
+.form-row.two-col-equal .form-field {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .form-row.two-col-equal .form-field {
+    width: calc(50% - 0.5rem);
+  }
+}
+
+/* Labels */
+.form-label {
+  font-size: 0.625rem; /* text-xs */
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-muted, #94a3b8);
+  text-transform: uppercase;
+}
+
+/* Inputs / selects / textareas share visual styling */
+.form-input,
+.form-select,
+.form-textarea {
+  display: block;
+  width: 100%;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--input-bg, #ffffff);
+  color: var(--text-primary, #0f172a);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  outline: none;
+  font-size: 0.875rem;
+}
+
+.form-textarea {
+  min-height: 72px;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  box-shadow: 0 0 0 4px rgba(19, 127, 236, 0.12);
+  border-color: var(--org-btn-primary-bg, #137fec);
+}
+
+/* Size helpers */
+.form-field--small { width: 6rem; }
+.form-field--medium { width: 10rem; }
+
+/* Unit toggle buttons */
+.unit-toggle-btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 0.375rem;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  background: transparent;
+  color: var(--text-muted, #64748b);
+  cursor: pointer;
+}
+.unit-toggle-btn.active {
+  border-color: var(--org-btn-primary-bg, #137fec);
+  background: rgba(19,127,236,0.08);
+  color: var(--org-btn-primary-bg, #137fec);
+}
+
+.field-help { font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem; }
+.field-unit { font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem; }
+
+/* Radio/checkbox styles */
+.radio-row { display:flex; gap:1rem; align-items:center; }
+.form-radio-label { display: inline-flex; align-items:center; gap:0.5rem; font-size:0.875rem; color:var(--text-primary); }
+.form-radio-label input { accent-color: var(--org-btn-primary-bg, #137fec); }
+.checkbox-row { display:flex; align-items:center; gap:0.5rem; }
+
+/* Form actions: mobile-first full-width CTAs, desktop right-aligned */
+.form-actions { display:flex; gap:0.75rem; align-items:center; margin-top: 0.5rem; }
+.form-actions .btn-primary,
+.form-actions .btn-secondary { width: 100%; }
+@media (min-width: 640px) {
+  .form-actions .btn-primary,
+  .form-actions .btn-secondary { width: auto; }
+  .form-actions { justify-content: flex-end; }
+}
+
+/* Banners */
+.form-unsaved-warning,
+.form-error-banner,
+.form-info-banner { display:flex; gap:0.5rem; align-items:center; color: #7c2d2d; }
+.form-info-banner { color: #0f5132; }
+
+/* Button utilities copied from portal Button component */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 2rem; /* matches Button base px-8 py-3 */
+  border-radius: 0.375rem;
+  font-weight: 700;
+  font-size: 0.875rem;
+  letter-spacing: 0.01em;
+  background-color: var(--org-btn-primary-bg, #137fec);
+  color: var(--org-btn-primary-text, #fff);
+  transition: background-color 150ms ease, transform 60ms ease;
+}
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--org-btn-primary-hover, #0d6bc2);
+}
+.btn-primary:active:not(:disabled) {
+  background-color: var(--org-btn-primary-active, #0b5ba0);
+  transform: translateY(0.5px);
+}
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.375rem;
+  font-weight: 700;
+  font-size: 0.875rem;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  color: var(--text-primary, #0f172a);
+  background: transparent;
+  transition: background-color 150ms ease;
+}
+.btn-secondary:hover:not(:disabled) {
+  background-color: rgba(15, 23, 42, 0.03);
+}
+
+/* Small utility */
+.hidden-mobile { display:block; }
+@media (max-width:639px) { .hidden-mobile { display:none; } }

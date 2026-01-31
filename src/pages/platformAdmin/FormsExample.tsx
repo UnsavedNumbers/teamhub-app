@@ -36,8 +36,8 @@ export default function FormsExample() {
     setErrors(newErrors)
     
     if (Object.keys(newErrors).length === 0) {
-      alert('Form submitted successfully!')
-      console.log('Form data:', formData)
+      // Form submitted successfully - in a real app, this would show a toast or success message
+      console.log('Form submitted successfully!', formData)
     }
   }
 
@@ -132,7 +132,7 @@ export default function FormsExample() {
               </Button>
               <Button
                 type="button"
-                variant="secondary"
+                variant="blue"
                 onClick={() => {
                   setFormData({
                     name: '',

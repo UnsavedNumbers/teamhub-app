@@ -1,4 +1,6 @@
-import { ReactNode } from 'react'
+import { CSSProperties, ReactNode } from 'react'
+import { Checkbox } from './Checkbox'
+import { cn } from '../../utils/cn'
 
 /**
  * Column configuration for PlatformDataTable
@@ -24,9 +26,17 @@ interface PlatformDataTableProps<T extends { id: string }> {
   onPageChange: (page: number) => void
   onRowsPerPageChange: (rowsPerPage: number) => void
   onRowClick?: (row: T) => void
+  getRowClassName?: (row: T) => string
+  getRowStyle?: (row: T) => CSSProperties | undefined
   orderBy?: string
   order?: 'asc' | 'desc'
   onSort?: (column: string) => void
+  // Selection props
+  selectable?: boolean
+  selectedIds?: Set<string>
+  onSelectionChange?: (updater: ((prev: Set<string>) => Set<string>) | Set<string>) => void
+  selectAllMode?: 'none' | 'page' | 'all'
+  onSelectAllChange?: (mode: 'none' | 'page' | 'all') => void
 }
 
 /**
@@ -44,9 +54,16 @@ export default function PlatformDataTable<T extends { id: string }>({
   onPageChange,
   onRowsPerPageChange,
   onRowClick,
+  getRowClassName,
+  getRowStyle,
   orderBy,
   order = 'asc',
   onSort,
+  selectable = false,
+  selectedIds = new Set(),
+  onSelectionChange,
+  selectAllMode = 'none',
+  onSelectAllChange,
 }: PlatformDataTableProps<T>) {
   // Defensive guard against null (if default didn't catch it due to explicit null pass)
   const safeRows = (data || rows) || []
@@ -61,6 +78,67 @@ export default function PlatformDataTable<T extends { id: string }>({
       onSort(columnId)
     }
   }
+
+  // Selection handlers
+  const handleRowToggle = (rowId: string, event?: React.MouseEvent) => {
+    if (event) {
+      event.stopPropagation()
+    }
+    if (!onSelectionChange) return
+
+    onSelectionChange((prev) => {
+      const next = new Set<string>(prev)
+      if (next.has(rowId)) {
+        next.delete(rowId)
+      } else {
+        next.add(rowId)
+      }
+      return next
+    })
+
+    // Clear select-all mode when individual selection changes
+    if (onSelectAllChange) {
+      onSelectAllChange('none')
+    }
+  }
+
+  const handleSelectAll = (event?: React.MouseEvent) => {
+    if (event) {
+      event.stopPropagation()
+    }
+    if (!onSelectionChange || !onSelectAllChange) return
+
+    if (selectAllMode === 'all') {
+      // Clear all
+      onSelectionChange(new Set())
+      onSelectAllChange('none')
+    } else if (selectAllMode === 'page') {
+      // Clear page selection
+      onSelectionChange(new Set())
+      onSelectAllChange('none')
+    } else {
+      // Select all on current page
+      const pageIds = new Set(safeRows.map(r => r.id))
+      onSelectionChange((prev) => {
+        const next = new Set<string>(prev)
+        pageIds.forEach(id => next.add(id))
+        return next
+      })
+      onSelectAllChange('page')
+    }
+  }
+
+  // Determine header checkbox state
+  const headerCheckboxState =
+    selectAllMode === 'all'
+      ? 'checked'
+      : selectAllMode === 'page'
+      ? 'checked'
+      : selectedIds.size === 0
+      ? 'unchecked'
+      : selectedIds.size === safeRows.length && safeRows.every(r => selectedIds.has(r.id))
+      ? 'checked'
+      : 'indeterminate'
 
   if (loading) {
     return (
@@ -86,31 +164,63 @@ export default function PlatformDataTable<T extends { id: string }>({
     )
   }
 
+  // Get first column as key field (usually name/title)
+  const keyColumn = safeColumns[0]
+  const otherColumns = safeColumns.slice(1)
+
   return (
     <div className="pa-card" style={{ padding: 0, overflow: 'hidden' }}>
-      {/* Table */}
-      <div style={{ overflowX: 'auto' }}>
+      {/* Desktop Table View - hidden on mobile */}
+      <div className="pa-table-desktop" style={{ overflowX: 'auto' }}>
         <table className="pa-table" style={{ width: '100%' }}>
           <thead>
             <tr>
+              {/* Selection column */}
+              {selectable && (
+                <th
+                  style={{
+                    width: '48px',
+                    textAlign: 'center',
+                    padding: 'var(--pa-space-2)',
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleSelectAll(e)
+                  }}
+                >
+                  <Checkbox
+                    checked={headerCheckboxState === 'checked'}
+                    indeterminate={headerCheckboxState === 'indeterminate'}
+                    onChange={() => handleSelectAll()}
+                    label=""
+                    style={{ margin: 0 }}
+                  />
+                </th>
+              )}
               {safeColumns.map((column) => (
                 <th
                   key={String(column.id)}
-                  className={`${column.sortable && onSort ? 'pa-sortable' : ''} ${
+                  className={cn(
+                    column.sortable && onSort ? 'pa-sortable' : '',
                     orderBy === column.id ? 'pa-sorted' : ''
-                  }`}
+                  )}
                   style={{
                     textAlign: column.align || 'left',
-                    minWidth: column.minWidth,
+                    minWidth: column.minWidth ?? (column.align === 'right' ? 200 : undefined),
                     cursor: column.sortable && onSort ? 'pointer' : 'default',
                   }}
                   onClick={() => column.sortable && onSort && handleSort(String(column.id))}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}>
+                  <div 
+                    className={cn('pa-flex', 'pa-items-center', 'pa-gap-2')}
+                    style={{
+                      justifyContent: column.align === 'right' ? 'flex-end' : column.align === 'center' ? 'center' : 'flex-start',
+                    }}
+                  >
                     <span>{column.label}</span>
                     {column.sortable && onSort && (
                       <span
-                        className="material-symbols-outlined pa-sort-icon"
+                        className={cn('material-symbols-outlined', 'pa-sort-icon')}
                         style={{ fontSize: '16px' }}
                       >
                         {orderBy === column.id
@@ -129,18 +239,61 @@ export default function PlatformDataTable<T extends { id: string }>({
             {safeRows.map((row) => (
               <tr
                 key={row.id}
-                className={onRowClick ? 'pa-clickable' : ''}
+                className={cn(onRowClick ? 'pa-clickable' : '', getRowClassName?.(row) ?? '')}
                 onClick={() => onRowClick?.(row)}
-                style={{ cursor: onRowClick ? 'pointer' : 'default' }}
+                style={(() => {
+                  const baseStyle = getRowStyle?.(row)
+                  const selectedStyle = selectable && selectedIds.has(row.id)
+                    ? { backgroundColor: 'var(--pa-primary-bg)' }
+                    : null
+
+                  return {
+                    ...baseStyle,
+                    cursor: onRowClick ? 'pointer' : 'default',
+                    ...(selectedStyle || {}),
+                  }
+                })()}
               >
+                {/* Selection checkbox */}
+                {selectable && (
+                  <td
+                    style={{
+                      width: '48px',
+                      textAlign: 'center',
+                      padding: 'var(--pa-space-2)',
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      // Skip if click came from checkbox so we don't double-toggle (onChange already fires)
+                      const target = e.target as HTMLElement
+                      if (target.closest?.('input[type=checkbox]') || target.closest?.('.pa-checkbox')) return
+                      handleRowToggle(row.id, e)
+                    }}
+                  >
+                    <Checkbox
+                      checked={selectedIds.has(row.id)}
+                      onChange={() => handleRowToggle(row.id)}
+                      label=""
+                      style={{ margin: 0 }}
+                    />
+                  </td>
+                )}
                 {safeColumns.map((column) => (
                   <td
                     key={String(column.id)}
                     style={{ textAlign: column.align || 'left' }}
                   >
-                    {column.render
-                      ? column.render(row)
-                      : String(row[column.id as keyof T] ?? '—')}
+                    {column.align === 'right' ? (
+                      <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end' }}>
+                        {column.render
+                          ? column.render(row)
+                          : String(row[column.id as keyof T] ?? '—')}
+                      </div>
+                    ) : column.render ? (
+                      column.render(row)
+                    ) : (
+                      String(row[column.id as keyof T] ?? '—')
+                    )}
                   </td>
                 ))}
               </tr>
@@ -149,19 +302,92 @@ export default function PlatformDataTable<T extends { id: string }>({
         </table>
       </div>
 
+      {/* Mobile Card View - shown only on mobile */}
+      <div className="pa-table-mobile">
+        <div className="space-y-3" style={{ padding: 'var(--pa-space-4)' }}>
+          {safeRows.map((row) => (
+            <div
+              key={row.id}
+              onClick={() => onRowClick?.(row)}
+              className={cn(
+                'pa-card',
+                onRowClick ? 'cursor-pointer hover:shadow-md transition-shadow' : '',
+                getRowClassName?.(row) ?? ''
+              )}
+              style={(() => {
+                const baseStyle = getRowStyle?.(row)
+                const selectedStyle = selectable && selectedIds.has(row.id)
+                  ? { backgroundColor: 'var(--pa-primary-bg)' }
+                  : null
+
+                return {
+                  ...baseStyle,
+                  padding: 'var(--pa-space-4)',
+                  ...(selectedStyle || {}),
+                }
+              })()}
+            >
+              {/* Key field (first column) - prominent */}
+              {keyColumn && (
+                <div style={{ marginBottom: 'var(--pa-space-3)', paddingBottom: 'var(--pa-space-3)', borderBottom: '1px solid var(--pa-n100)' }}>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--pa-n500)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 'var(--pa-space-1)' }}>
+                    {keyColumn.label}
+                  </div>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--pa-n900)' }}>
+                    {keyColumn.render
+                      ? keyColumn.render(row)
+                      : String(row[keyColumn.id as keyof T] ?? '—')}
+                  </div>
+                </div>
+              )}
+
+              {/* Other fields - stacked */}
+              <div className="space-y-2">
+                {otherColumns.map((column) => (
+                  <div key={String(column.id)}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--pa-n500)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 'var(--pa-space-1)' }}>
+                      {column.label}
+                    </div>
+                    <div style={{ fontSize: '0.875rem', color: 'var(--pa-n700)' }}>
+                      {column.render
+                        ? column.render(row)
+                        : String(row[column.id as keyof T] ?? '—')}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Selection checkbox on mobile - wrapper only stops row click; checkbox onChange handles toggle */}
+              {selectable && (
+                <div
+                  style={{ marginTop: 'var(--pa-space-3)', paddingTop: 'var(--pa-space-3)', borderTop: '1px solid var(--pa-n100)' }}
+                  onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                >
+                  <Checkbox
+                    checked={selectedIds.has(row.id)}
+                    onChange={() => handleRowToggle(row.id)}
+                    label="Select"
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Pagination */}
       <div
+        className={cn('pa-flex', 'pa-flex-col', 'pa-items-stretch', 'pa-gap-3', 'pa-bg-n50', 'pa-table-pagination')}
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: 'var(--pa-space-4)',
+          padding: 'var(--pa-space-3)',
           borderTop: '1px solid var(--pa-n100)',
-          background: 'var(--pa-n25)',
         }}
       >
         {/* Rows per page */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)' }}>
+        <div
+          className={cn('pa-flex', 'pa-items-center', 'pa-gap-2', 'pa-table-pagination-controls')}
+          style={{ whiteSpace: 'nowrap' }}
+        >
           <span className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
             Rows per page:
           </span>
@@ -169,7 +395,7 @@ export default function PlatformDataTable<T extends { id: string }>({
             className="pa-input pa-select"
             value={rowsPerPage}
             onChange={(e) => onRowsPerPageChange(Number(e.target.value))}
-            style={{ width: 'auto', height: '36px', padding: '0 var(--pa-space-3)' }}
+            style={{ height: '44px', padding: '0 var(--pa-space-3)', minWidth: '4.5rem' }}
           >
             <option value={10}>10</option>
             <option value={25}>25</option>
@@ -179,17 +405,18 @@ export default function PlatformDataTable<T extends { id: string }>({
         </div>
 
         {/* Page info */}
-        <span className="pa-body-s" style={{ color: 'var(--pa-n700)' }}>
+        <span className="pa-body-s pa-text-center" style={{ color: 'var(--pa-n700)' }}>
           {startRow}–{endRow} of {totalCount}
         </span>
 
         {/* Page controls */}
-        <div style={{ display: 'flex', gap: 'var(--pa-space-2)' }}>
+        <div className={cn('pa-flex', 'pa-gap-2', 'pa-justify-center')}>
           <button
             className="pa-btn pa-btn--ghost pa-btn--dense"
             onClick={() => onPageChange(page - 1)}
             disabled={page === 0}
             aria-label="Previous page"
+            style={{ minHeight: '44px', minWidth: '44px' }}
           >
             <span className="material-symbols-outlined">chevron_left</span>
           </button>
@@ -198,6 +425,7 @@ export default function PlatformDataTable<T extends { id: string }>({
             onClick={() => onPageChange(page + 1)}
             disabled={page >= totalPages - 1}
             aria-label="Next page"
+            style={{ minHeight: '44px', minWidth: '44px' }}
           >
             <span className="material-symbols-outlined">chevron_right</span>
           </button>

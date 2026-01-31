@@ -11,7 +11,17 @@ CREATE OR REPLACE FUNCTION create_uniform_kit(
   p_season_id UUID,
   p_name TEXT,
   p_deadline_at TIMESTAMPTZ,
-  p_items JSONB
+  p_items JSONB,
+  p_sport_id UUID DEFAULT NULL,
+  p_program_id UUID DEFAULT NULL,
+  p_org_id UUID DEFAULT NULL,
+  p_sport_specific_fields JSONB DEFAULT '{}'::jsonb,
+  p_primary_color TEXT DEFAULT NULL,
+  p_secondary_color TEXT DEFAULT NULL,
+  p_accent_color TEXT DEFAULT NULL,
+  p_vendor TEXT DEFAULT NULL,
+  p_notes TEXT DEFAULT NULL,
+  p_status TEXT DEFAULT 'active'
 )
 RETURNS UUID
 LANGUAGE plpgsql
@@ -25,23 +35,123 @@ DECLARE
   v_required BOOLEAN;
   v_size_options JSONB;
   v_sort_order INT;
+  v_org_id UUID;
 BEGIN
   IF p_name IS NULL OR length(trim(p_name)) = 0 THEN
     RAISE EXCEPTION 'Kit name is required';
   END IF;
 
-  IF NOT staff_can_access_team(auth.uid(), p_team_id) THEN
-    RAISE EXCEPTION 'Not authorized to create kits for this team';
+  -- For team-level uniforms, verify authorization
+  IF p_team_id IS NOT NULL THEN
+    IF NOT staff_can_access_team(auth.uid(), p_team_id) THEN
+      RAISE EXCEPTION 'Not authorized to create kits for this team';
+    END IF;
+    -- Derive org_id from team if not provided
+    SELECT org_id INTO v_org_id FROM teams WHERE id = p_team_id;
+    IF v_org_id IS NULL THEN
+      RAISE EXCEPTION 'Team not found';
+    END IF;
+  ELSE
+    -- For org-level templates, use provided org_id
+    v_org_id := p_org_id;
+    IF v_org_id IS NULL THEN
+      RAISE EXCEPTION 'org_id is required for org-level templates';
+    END IF;
+    -- Verify user has org admin access
+    IF NOT user_has_org_role(auth.uid(), v_org_id, 'org_admin') THEN
+      RAISE EXCEPTION 'Not authorized to create org-level templates';
+    END IF;
   END IF;
 
   -- Upsert kit (idempotent)
-  INSERT INTO uniform_kits (team_id, season_id, name, deadline_at, locked_at, created_by)
-  VALUES (p_team_id, p_season_id, trim(p_name), p_deadline_at, NULL, auth.uid())
-  ON CONFLICT (team_id, season_id, name)
-  DO UPDATE SET
-    deadline_at = EXCLUDED.deadline_at,
-    updated_at = NOW()
-  RETURNING id INTO v_kit_id;
+  -- Use appropriate unique constraint based on team_id
+  IF p_team_id IS NOT NULL THEN
+    -- Team-level uniform
+    INSERT INTO uniform_kits (
+      team_id, 
+      season_id, 
+      name, 
+      deadline_at, 
+      locked_at, 
+      created_by,
+      sport_id,
+      program_id,
+      org_id,
+      sport_specific_fields,
+      primary_color,
+      secondary_color,
+      accent_color,
+      vendor,
+      notes,
+      status
+    )
+    VALUES (
+      p_team_id, 
+      p_season_id, 
+      trim(p_name), 
+      p_deadline_at, 
+      NULL, 
+      auth.uid(),
+      p_sport_id,
+      p_program_id,
+      v_org_id,
+      p_sport_specific_fields,
+      p_primary_color,
+      p_secondary_color,
+      p_accent_color,
+      p_vendor,
+      p_notes,
+      p_status
+    )
+    ON CONFLICT (team_id, season_id, name)
+    DO UPDATE SET
+      deadline_at = EXCLUDED.deadline_at,
+      updated_at = NOW()
+    RETURNING id INTO v_kit_id;
+  ELSE
+    -- Org-level template
+    INSERT INTO uniform_kits (
+      team_id, 
+      season_id, 
+      name, 
+      deadline_at, 
+      locked_at, 
+      created_by,
+      sport_id,
+      program_id,
+      org_id,
+      sport_specific_fields,
+      primary_color,
+      secondary_color,
+      accent_color,
+      vendor,
+      notes,
+      status
+    )
+    VALUES (
+      NULL, 
+      NULL, 
+      trim(p_name), 
+      p_deadline_at, 
+      NULL, 
+      auth.uid(),
+      p_sport_id,
+      p_program_id,
+      v_org_id,
+      p_sport_specific_fields,
+      p_primary_color,
+      p_secondary_color,
+      p_accent_color,
+      p_vendor,
+      p_notes,
+      p_status
+    )
+    ON CONFLICT (org_id, sport_id, COALESCE(program_id, '00000000-0000-0000-0000-000000000000'::uuid), name) WHERE team_id IS NULL
+    DO UPDATE SET
+      deadline_at = EXCLUDED.deadline_at,
+      updated_at = NOW()
+    RETURNING id INTO v_kit_id;
+  END IF;
 
   -- Items are required for a useful kit
   IF p_items IS NULL OR jsonb_typeof(p_items) <> 'array' THEN
@@ -60,13 +170,21 @@ BEGIN
     v_size_options := COALESCE(v_item->'size_options', '[]'::jsonb);
     v_sort_order := COALESCE((v_item->>'sort_order')::int, 0);
 
-    INSERT INTO uniform_kit_items (kit_id, name, required, size_options, sort_order)
-    VALUES (v_kit_id, v_item_name, v_required, v_size_options, v_sort_order)
+    INSERT INTO uniform_kit_items (kit_id, name, required, size_options, sort_order, sport_specific_fields)
+    VALUES (
+      v_kit_id, 
+      v_item_name, 
+      v_required, 
+      v_size_options, 
+      v_sort_order,
+      COALESCE(v_item->'sport_specific_fields', '{}'::jsonb)
+    )
     ON CONFLICT (kit_id, name)
     DO UPDATE SET
       required = EXCLUDED.required,
       size_options = EXCLUDED.size_options,
       sort_order = EXCLUDED.sort_order,
+      sport_specific_fields = EXCLUDED.sport_specific_fields,
       updated_at = NOW();
   END LOOP;
 
@@ -74,7 +192,9 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION create_uniform_kit(UUID, UUID, TEXT, TIMESTAMPTZ, JSONB) TO authenticated;
+GRANT EXECUTE ON FUNCTION create_uniform_kit(
+  UUID, UUID, TEXT, TIMESTAMPTZ, JSONB, UUID, UUID, UUID, JSONB, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT
+) TO authenticated;
 
 -- ============================================
 -- 2) submit_uniform_sizes
@@ -314,7 +434,7 @@ AS $$
     WHERE k.id = p_kit_id
   ),
   roster AS (
-    SELECT tm.child_id, tm.team_id, tm.season_id
+    SELECT tm.athlete_id, tm.team_id, tm.season_id
     FROM kit
     JOIN team_memberships tm
       ON tm.team_id = kit.team_id
@@ -361,10 +481,10 @@ AS $$
     ) AS items
   FROM kit
   JOIN roster r ON true
-  JOIN children c ON c.id = r.child_id
+  JOIN athletes c ON c.id = r.athlete_id
   LEFT JOIN subs s
     ON s.kit_id = kit.id
-   AND s.child_id = c.id
+   AND s.athlete_id = c.id
   WHERE staff_can_access_team(auth.uid(), kit.team_id)
   ORDER BY c.last_name, c.first_name;
 $$;

@@ -167,7 +167,8 @@ export default function TableExample() {
             className="pa-table-action-btn"
             onClick={(e) => {
               e.stopPropagation()
-              alert(`Edit ${user.name}`)
+              // In a real app, this would navigate to edit page
+              console.log(`Edit ${user.name}`)
             }}
             aria-label={`Edit ${user.name}`}
           >
@@ -177,7 +178,8 @@ export default function TableExample() {
             className="pa-table-action-btn"
             onClick={(e) => {
               e.stopPropagation()
-              alert(`Delete ${user.name}`)
+              // In a real app, this would show a delete confirmation dialog
+              console.log(`Delete ${user.name}`)
             }}
             aria-label={`Delete ${user.name}`}
           >
@@ -187,7 +189,8 @@ export default function TableExample() {
             className="pa-table-action-btn"
             onClick={(e) => {
               e.stopPropagation()
-              alert(`More actions for ${user.name}`)
+              // In a real app, this would show a menu with more actions
+              console.log(`More actions for ${user.name}`)
             }}
             aria-label={`More actions for ${user.name}`}
           >

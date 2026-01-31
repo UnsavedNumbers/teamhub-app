@@ -7,7 +7,7 @@
 
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
-import type { Database } from '../../lib/database.types'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { UserContext } from '../fake/userContext'
 import type { Level, CreateLevelDTO, UpdateLevelDTO } from '../types/organization'
 import { getLevelById, fakeLevels } from '../fake/fakeTeams'
@@ -113,21 +113,23 @@ export async function createLevel(
     }
 
     try {
+        type LevelInsert = Database['public']['Tables']['levels']['Insert']
+        const insertData = {
+            org_id: dto.org_id,
+            program_id: dto.program_id,
+            name: dto.name,
+            level_type: dto.level_type,
+            description: dto.description || null,
+            age_min: dto.age_min || null,
+            age_max: dto.age_max || null,
+            grade_min: dto.grade_min || null,
+            grade_max: dto.grade_max || null,
+            skill_min: dto.skill_min || null,
+            skill_max: dto.skill_max || null,
+        } satisfies LevelInsert
         const { data, error } = await supabase
             .from('levels')
-            .insert({
-                org_id: dto.org_id,
-                program_id: dto.program_id,
-                name: dto.name,
-                level_type: dto.level_type,
-                description: dto.description || null,
-                age_min: dto.age_min || null,
-                age_max: dto.age_max || null,
-                grade_min: dto.grade_min || null,
-                grade_max: dto.grade_max || null,
-                skill_min: dto.skill_min || null,
-                skill_max: dto.skill_max || null,
-            } as Database['public']['Tables']['levels']['Insert'])
+            .insert(insertData)
             .select()
             .single()
 
@@ -156,7 +158,8 @@ export async function updateLevel(
     }
 
     try {
-        const updateData: any = {}
+        type LevelUpdate = Database['public']['Tables']['levels']['Update']
+        const updateData: LevelUpdate = {}
         if (dto.name !== undefined) updateData.name = dto.name
         if (dto.description !== undefined) updateData.description = dto.description
         if (dto.level_type !== undefined) updateData.level_type = dto.level_type
@@ -169,7 +172,7 @@ export async function updateLevel(
 
         const { data, error } = await supabase
             .from('levels')
-            .update(updateData as any)
+            .update(updateData)
             .eq('id', levelId)
             .eq('org_id', context.orgId)
             .is('deleted_at', null)
@@ -186,6 +189,7 @@ export async function updateLevel(
 
 /**
  * Soft delete a level
+ * Will fail if level has teams (enforced by database trigger)
  */
 export async function deleteLevel(
     context: UserContext,
@@ -197,13 +201,43 @@ export async function deleteLevel(
     }
 
     try {
+        // First check if level has teams (for better UX, though trigger will also catch this)
+        const { count, error: countError } = await supabase
+            .from('teams')
+            .select('*', { count: 'exact', head: true })
+            .eq('level_id', levelId)
+
+        if (countError) {
+            console.error('[levelsService] Error checking teams for level:', countError)
+        } else if (count && count > 0) {
+            return { error: new Error(`Cannot delete level: ${count} team(s) exist. Please remove all teams before deleting this level.`) }
+        }
+
+        type LevelUpdate = Database['public']['Tables']['levels']['Update']
+        const updateData = { deleted_at: new Date().toISOString() } satisfies LevelUpdate
         const { error } = await supabase
             .from('levels')
-            .update({ deleted_at: new Date().toISOString() } as Database['public']['Tables']['levels']['Update'])
+            .update(updateData)
             .eq('id', levelId)
             .eq('org_id', context.orgId)
+            .is('deleted_at', null)
 
-        if (error) throw error
+        if (error) {
+            // Check for trigger errors (deletion blocked due to children)
+            if (error.code === 'P0001' || error.message?.includes('Cannot delete level')) {
+                // Database trigger error - level has teams
+                return { error: new Error(error.message || 'Cannot delete level: It contains teams and cannot be removed.') }
+            }
+            // Check for network errors
+            if (error.message?.includes('network') || error.message?.includes('fetch') || error.message?.includes('timeout')) {
+                return { error: new Error('Network error. Please check your internet connection and try again.') }
+            }
+            // Check for RLS/permission errors
+            if (error.message?.includes('row-level security') || error.message?.includes('RLS') || error.code === '42501') {
+                return { error: new Error('Permission denied. You do not have permission to delete this level.') }
+            }
+            throw error
+        }
         return { error: null }
     } catch (err) {
         console.error('[levelsService] Error deleting level:', err)

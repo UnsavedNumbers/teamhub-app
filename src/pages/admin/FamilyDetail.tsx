@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { 
-    PageHeader, 
+    AdminPageHeader, 
     Card, 
     Button, 
     Badge, 
@@ -15,10 +15,11 @@ import { useUserContext } from '../../hooks/useUserContext'
 import { 
     getFamilyDetails, 
     deleteFamily, 
-    deleteChild 
+    deleteAthlete 
 } from '../../data/services/familyService'
 import { useT } from '../../i18n/useI18n'
 import type { FamilyWithDetails, Child, FamilyMember } from '../../types/family'
+import { getLink } from '../../utils/routes'
 
 export default function FamilyDetail() {
     const navigate = useNavigate()
@@ -33,6 +34,7 @@ export default function FamilyDetail() {
     // Delete Dialog States
     const [deleteFamilyOpen, setDeleteFamilyOpen] = useState(false)
     const [childToDelete, setChildToDelete] = useState<string | null>(null)
+    const [alertDialog, setAlertDialog] = useState<{ open: boolean; title: string; message: string } | null>(null)
 
     const fetchDetail = async () => {
         if (!id || !isReady) return
@@ -51,17 +53,25 @@ export default function FamilyDetail() {
         if (!family || !isReady) return
         const { error } = await deleteFamily(context, family.id)
         if (error) {
-            alert('Failed to delete family: ' + error.message) 
+            setAlertDialog({
+                open: true,
+                title: 'Failed to delete family',
+                message: error.message
+            })
             return
         }
-        navigate('/admin/families')
+        navigate(getLink('admin.guardians.list'))
     }
 
     const handleDeleteChild = async () => {
         if (!childToDelete || !isReady) return
-        const { error } = await deleteChild(context, childToDelete)
+        const { error } = await deleteAthlete(context, childToDelete)
         if (error) {
-            alert(t('admin.families.errorDeleteChild') + ': ' + error.message)
+            setAlertDialog({
+                open: true,
+                title: t('admin.families.errorDeleteChild'),
+                message: error.message
+            })
         } else {
             await fetchDetail() 
         }
@@ -131,61 +141,63 @@ export default function FamilyDetail() {
 
     return (
         <div className="pa-root">
-            <PageHeader 
+            <AdminPageHeader 
                 title={family.name?.toUpperCase() || 'FAMILY'} 
                 breadcrumbs={[
                     { label: 'Families', path: '/admin/families' },
                     { label: family.name || 'Detail' }
                 ]}
                 actions={
-                    <Button variant="danger" onClick={() => setDeleteFamilyOpen(true)}>
+                    <Button variant="danger" onClick={() => setDeleteFamilyOpen(true)} className="w-full sm:w-auto min-h-[44px]">
                         Delete Family
                     </Button>
                 }
             />
 
-            <div className="pa-grid pa-grid-12 pa-gap-6">
-                
-                {/* Children Section */}
-                <div className="pa-col-8">
-                    <Card>
-                        <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
-                            <h3 className="pa-h3">{t('admin.families.children')}</h3>
-                            <Button size="compact" variant="secondary" onClick={() => navigate(`/admin/families/${family.id}/children/new`)}>
-                                <span className="material-symbols-outlined">add</span>
-                                {t('admin.families.addChild')}
-                            </Button>
-                        </div>
-                        <PlatformDataTable
-                            data={family.children || []}
-                            columns={childColumns}
-                            page={0}
-                            rowsPerPage={family.children?.length || 0}
-                            totalCount={family.children?.length || 0}
-                            onPageChange={() => {}}
-                            onRowsPerPageChange={() => {}}
-                            emptyMessage={t('admin.families.noChildren')}
-                        />
-                    </Card>
-                </div>
+            <div className="pa-form-container">
+                <div className="pa-grid pa-grid-cols-1 lg:pa-grid-cols-12 pa-gap-6">
+                    
+                    {/* Children Section */}
+                    <div className="lg:pa-col-span-8">
+                        <Card>
+                            <div className="pa-flex pa-flex-col sm:pa-flex-row pa-justify-between pa-items-stretch sm:pa-items-center pa-gap-3 pa-mb-4">
+                                <h3 className="pa-h3">{t('admin.families.children')}</h3>
+                                <Button size="compact" variant="primary" onClick={() => navigate(getLink('admin.guardians.createAthlete', { familyId: family.id }))} className="w-full sm:w-auto min-h-[44px]">
+                                    <span className="material-symbols-outlined">add</span>
+                                    {t('admin.families.addChild')}
+                                </Button>
+                            </div>
+                            <PlatformDataTable
+                                data={family.children || []}
+                                columns={childColumns}
+                                page={0}
+                                rowsPerPage={family.children?.length || 0}
+                                totalCount={family.children?.length || 0}
+                                onPageChange={() => {}}
+                                onRowsPerPageChange={() => {}}
+                                emptyMessage={t('admin.families.noChildren')}
+                            />
+                        </Card>
+                    </div>
 
-                {/* Members Section */}
-                <div className="pa-col-4">
-                    <Card>
-                        <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
-                            <h3 className="pa-h3">Guardians</h3>
-                        </div>
-                         <PlatformDataTable
-                            data={family.members || []}
-                            columns={memberColumns}
-                            page={0}
-                            rowsPerPage={family.members?.length || 0}
-                            totalCount={family.members?.length || 0}
-                            onPageChange={() => {}}
-                            onRowsPerPageChange={() => {}}
-                            emptyMessage="No guardians found."
-                        />
-                    </Card>
+                    {/* Members Section */}
+                    <div className="lg:pa-col-span-4">
+                        <Card>
+                            <div className="pa-flex pa-justify-between pa-items-center pa-mb-4">
+                                <h3 className="pa-h3">Guardians</h3>
+                            </div>
+                             <PlatformDataTable
+                                data={family.members || []}
+                                columns={memberColumns}
+                                page={0}
+                                rowsPerPage={family.members?.length || 0}
+                                totalCount={family.members?.length || 0}
+                                onPageChange={() => {}}
+                                onRowsPerPageChange={() => {}}
+                                emptyMessage="No guardians found."
+                            />
+                        </Card>
+                    </div>
                 </div>
             </div>
 
@@ -209,6 +221,19 @@ export default function FamilyDetail() {
                 onConfirm={() => handleDeleteChild()}
                 onCancel={() => setChildToDelete(null)}
             />
+
+            {alertDialog && (
+                <ConfirmDialog
+                    open={alertDialog.open}
+                    title={alertDialog.title}
+                    description={alertDialog.message}
+                    confirmLabel="OK"
+                    cancelLabel={null}
+                    variant="danger"
+                    onConfirm={() => setAlertDialog(null)}
+                    onCancel={() => setAlertDialog(null)}
+                />
+            )}
         </div>
     )
 }

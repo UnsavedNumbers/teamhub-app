@@ -1,15 +1,15 @@
-import { Database } from '../lib/database.types'
+import type { SupabaseExtended as Database } from '../lib/supabase.extended.types'
 
 // Safe access to event_attendance table type (will be available after type regeneration)
 type EventAttendanceTable = Database['public']['Tables']['event_attendance']
-export type AttendanceStatus = EventAttendanceTable extends { Row: { status: infer S } } 
-  ? S 
-  : 'present' | 'absent' | 'late' | 'excused'
+export type AttendanceStatus = EventAttendanceTable extends { Row: { status: infer S } }
+    ? S
+    : 'present' | 'absent' | 'late' | 'excused'
 
 export interface AttendanceRecord {
     id: string
     event_id: string
-    child_id: string
+    athlete_id: string
     status: AttendanceStatus
     notes: string | null
     recorded_by_user_id: string | null
@@ -29,11 +29,13 @@ export interface AttendanceRecord {
 
 export interface AttendanceSettings {
     org_id: string
-    reminder_enabled: boolean
-    lock_after_hours: number
+    enable_coach_reminders: boolean
+    submission_deadline_hours: number
+    lock_after_days: number | null
     required_for_practice: boolean
     required_for_game: boolean
     required_for_meeting: boolean
+    parent_visibility: any // JSONB
     created_at: string
     updated_at: string
 }
@@ -54,7 +56,7 @@ export interface AttendanceEventSummary {
 }
 
 export interface AttendancePersonSummary {
-    child_id: string
+    athlete_id: string
     first_name: string
     last_name: string
     team_names: string[]

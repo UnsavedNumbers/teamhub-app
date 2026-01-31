@@ -401,9 +401,25 @@ function createTrip(events: TravelEvent[]): TravelTrip {
  * Accepts both Date objects and ISO date strings
  */
 export function formatTravelDateRange(startDate: Date | string, endDate: Date | string): string {
+    const parseDate = (value: Date | string): Date => {
+        if (value instanceof Date) return value
+
+        const v = value.trim()
+
+        // Treat date-only strings as local dates to avoid timezone shifting.
+        // Note: `new Date('YYYY-MM-DD')` is parsed as UTC by JS, which can display as the prior day
+        // in negative offsets (e.g. America/* timezones).
+        if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+            const [y, m, d] = v.split('-').map((n) => Number(n))
+            return new Date(y, m - 1, d)
+        }
+
+        return new Date(v)
+    }
+
     // Convert strings to Date objects if needed
-    const start = typeof startDate === 'string' ? new Date(startDate) : startDate
-    const end = typeof endDate === 'string' ? new Date(endDate) : endDate
+    const start = parseDate(startDate)
+    const end = parseDate(endDate)
 
     const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
     const yearOptions: Intl.DateTimeFormatOptions = { ...options, year: 'numeric' }

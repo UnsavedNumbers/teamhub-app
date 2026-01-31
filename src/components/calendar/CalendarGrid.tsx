@@ -2,6 +2,7 @@
 import { CalendarEvent, CalendarViewMode, formatEventTimeRange } from '../../types/calendar'
 import type { SportInfo } from '../../utils/sportContext'
 import Icon from '../portal/Icon'
+import Button from '../portal/Button'
 import EventCard from './EventCard'
 
 interface CalendarGridProps {
@@ -9,11 +10,24 @@ interface CalendarGridProps {
   eventSports: Record<string, SportInfo | null>
   viewMode: CalendarViewMode
   currentDate: Date
+  currentPage?: number
+  eventsPerPage?: number
   onEventClick: (event: CalendarEvent) => void
   onDateChange: (date: Date) => void
+  onPageChange?: (page: number) => void
 }
 
-export default function CalendarGrid({ events, eventSports, viewMode, currentDate, onEventClick, onDateChange }: CalendarGridProps) {
+export default function CalendarGrid({ 
+  events, 
+  eventSports, 
+  viewMode, 
+  currentDate, 
+  currentPage = 1,
+  eventsPerPage = 9,
+  onEventClick, 
+  onDateChange,
+  onPageChange
+}: CalendarGridProps) {
   
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear()
@@ -89,7 +103,7 @@ export default function CalendarGrid({ events, eventSports, viewMode, currentDat
                                <div key={dIndex} className={`bg-white dark:bg-slate-900 rounded-none p-1 overflow-hidden hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer ${isCurrentDay ? 'bg-slate-100 dark:bg-slate-800' : ''}`}
                                     onClick={() => onDateChange(day)}
                                >
-                                   <div className={`text-right text-xs font-bold mb-1 ${isCurrentDay ? 'text-[#137fec]' : 'text-slate-500'}`}>
+                                   <div className={`text-right text-xs font-bold mb-1 ${isCurrentDay ? 'text-[var(--org-link-color)]' : 'text-slate-500'}`}>
                                        {day.getDate()}
                                    </div>
                                     <div className="space-y-1">
@@ -99,7 +113,7 @@ export default function CalendarGrid({ events, eventSports, viewMode, currentDat
                                                  className={`text-[10px] truncate px-1 py-0.5 rounded-none border-l-2 cursor-pointer
                                                  hover:bg-slate-100 dark:hover:bg-slate-800
                                                  ${event.is_cancelled ? 'line-through opacity-50' : ''}`}
-                                                 style={{ borderLeftColor: event.type === 'game' ? '#10b981' : '#137fec' }}
+                                                 style={{ borderLeftColor: event.type === 'game' ? '#10b981' : 'var(--org-btn-primary-bg, #137fec)' }}
                                             >
                                                 {formatEventTimeRange(event.start_time, event.end_time, event.timezone).split(' - ')[0]} {event.title}
                                             </div>
@@ -119,30 +133,68 @@ export default function CalendarGrid({ events, eventSports, viewMode, currentDat
   }
 
   const renderAgendaView = () => {
-    if (events.length === 0) {
-        return (
-            <div className="text-center py-12">
-                <Icon name="event_busy" size="text-4xl" className="text-slate-300 mb-4" />
-                <p className="text-slate-500">No events found for this period</p>
-            </div>
-        )
-    }
-
     // Sort events by date
     const sortedEvents = [...events].sort((a, b) => 
         new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
     )
 
+    // Calculate pagination
+    const totalPages = Math.ceil(sortedEvents.length / eventsPerPage)
+    const startIndex = (currentPage - 1) * eventsPerPage
+    const endIndex = startIndex + eventsPerPage
+    const paginatedEvents = sortedEvents.slice(startIndex, endIndex)
+
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sortedEvents.map(event => (
-                <EventCard 
-                    key={event.id}
-                    event={event} 
-                    sport={eventSports[event.id] || null}
-                    onClick={() => onEventClick(event)} 
-                />
-            ))}
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {paginatedEvents.map(event => (
+                    <EventCard 
+                        key={event.id}
+                        event={event} 
+                        sport={eventSports[event.id] || null}
+                        onClick={() => onEventClick(event)} 
+                    />
+                ))}
+            </div>
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && onPageChange && (
+                <div className="flex items-center justify-center gap-2 pt-4">
+                    <Button
+                        variant="secondary"
+                        onClick={() => onPageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="px-3 py-2"
+                    >
+                        <Icon name="chevron_left" />
+                    </Button>
+                    
+                    <div className="flex items-center gap-2">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                            <button
+                                key={page}
+                                onClick={() => onPageChange(page)}
+                                className={`px-3 py-1.5 rounded text-sm font-bold transition-colors ${
+                                    currentPage === page
+                                        ? 'bg-[var(--org-btn-primary-bg)] text-white'
+                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                }`}
+                            >
+                                {page}
+                            </button>
+                        ))}
+                    </div>
+                    
+                    <Button
+                        variant="secondary"
+                        onClick={() => onPageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-2"
+                    >
+                        <Icon name="chevron_right" />
+                    </Button>
+                </div>
+            )}
         </div>
     )
   }

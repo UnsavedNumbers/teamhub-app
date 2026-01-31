@@ -11,7 +11,7 @@ BEGIN
     WHERE conname = 'uq_org_member_user_org_role'
   ) THEN
     ALTER TABLE organization_members ADD CONSTRAINT uq_org_member_user_org_role 
-      UNIQUE (organization_id, user_id, role);
+      UNIQUE (org_id, user_id, role);
   END IF;
 END $$;
 

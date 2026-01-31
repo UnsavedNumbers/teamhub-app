@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useAuth } from '../hooks/useAuth'
 import { useUserContext } from '../hooks/useUserContext'
-import { getTeamDetails } from '../data/services/teamsService'
-import { getChildren } from '../data/services/familyService'
+import { getTeamByInviteCode, getTeamDetails, createTeamMembership } from '../data/services/teamsService'
+import { getAthletes } from '../data/services/familyService'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
@@ -48,7 +47,7 @@ export default function JoinTeam() {
   const fetchChildren = useCallback(async () => {
     if (!isReady) return
     
-    const { data } = await getChildren(context)
+    const { data } = await getAthletes(context)
     setChildren(data.map(c => ({
       id: c.id,
       first_name: c.first_name,
@@ -62,27 +61,20 @@ export default function JoinTeam() {
     setLoading(true)
     setError(null)
 
-    // In fake data mode, simulate team lookup by invite code
-    // For demo, we'll use a simple mapping
-    const teamMapping: Record<string, string> = {
-      'LIGHTNING': 'team-u10-soccer-001',
-      'THUNDER': 'team-u12-soccer-002',
-      'HAWKS': 'team-u10-basketball-003',
-      'EAGLES': 'team-u12-basketball-004',
-    }
+    // Look up team by invite code using real database query
+    const { data: teamData, error: teamError } = await getTeamByInviteCode(inviteCode)
 
-    const teamId = teamMapping[inviteCode.toUpperCase().trim()]
-    
-    if (!teamId) {
-      setError('Invalid invite code. Please check and try again.')
+    if (teamError || !teamData) {
+      setError(teamError?.message || 'Invalid invite code. Please check and try again.')
       setLoading(false)
       return
     }
 
-    const { data: teamData, error: teamError } = await getTeamDetails(context, teamId)
+    // Fetch team details with seasons
+    const { data: teamDetails, error: detailsError } = await getTeamDetails(context, teamData.id)
 
-    if (teamError || !teamData) {
-      setError('Invalid invite code. Please check and try again.')
+    if (detailsError || !teamDetails) {
+      setError('Failed to load team details. Please try again.')
       setLoading(false)
       return
     }
@@ -92,8 +84,9 @@ export default function JoinTeam() {
       name: teamData.name,
     })
 
-    if (teamData.seasons) {
-      const seasonList = teamData.seasons.map(s => ({
+    // Extract seasons from team details
+    if (teamDetails.seasons) {
+      const seasonList = teamDetails.seasons.map((s: any) => ({
         id: s.id,
         name: s.name,
       }))
@@ -101,6 +94,10 @@ export default function JoinTeam() {
       if (seasonList.length > 0) {
         setSelectedSeason(seasonList[0].id)
       }
+    } else {
+      // If no seasons in details, try to get them from team_seasons
+      // This is a fallback in case the relationship isn't loaded
+      setSeasons([])
     }
     
     setStep('select')
@@ -118,19 +115,39 @@ export default function JoinTeam() {
   }, [searchParams, isReady, handleLookup])
 
   async function handleJoin() {
-    if (!selectedChild || !selectedSeason || !team) return
+    if (!selectedChild || !selectedSeason || !team || !isReady) return
     
     setJoining(true)
     setError(null)
 
-    // In fake data mode, just show success
-    // TODO: Replace with real Supabase insert when migrating
-    // Check for existing membership and insert new one
-    
-    setTimeout(() => {
+    try {
+      // Create team membership using real database operation
+      const { data: membershipData, error: membershipError } = await createTeamMembership(
+        context,
+        selectedChild,
+        team.id,
+        selectedSeason
+      )
+
+      if (membershipError) {
+        setError(membershipError.message || 'Failed to join team. Please try again.')
+        setJoining(false)
+        return
+      }
+
+      if (!membershipData) {
+        setError('Failed to create membership. Please try again.')
+        setJoining(false)
+        return
+      }
+
+      // Success - show success step
       setStep('success')
       setJoining(false)
-    }, 500)
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.')
+      setJoining(false)
+    }
   }
 
   return (
@@ -168,9 +185,6 @@ export default function JoinTeam() {
                     maxLength={8}
                     autoFocus
                   />
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 text-center">
-                    Try: LIGHTNING, THUNDER, HAWKS, or EAGLES
-                  </p>
                 </div>
                 <Button variant="primary" onClick={handleLookup} disabled={loading || !inviteCode.trim()} className="w-full">
                   {loading ? 'Looking up' : 'Find Team'}
@@ -180,7 +194,7 @@ export default function JoinTeam() {
 
             {step === 'select' && team && (
               <>
-                <Card className="mb-6 border-[#137fec]/30 bg-[#137fec]/10 p-4 text-center">
+                <Card className="mb-6 border-[var(--org-btn-primary-bg, #137fec)]/30 bg-[var(--org-btn-primary-bg)]/10 p-4 text-center">
                   <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Joining team</p>
                   <CardTitle className="text-lg">{team.name}</CardTitle>
                 </Card>
@@ -188,7 +202,7 @@ export default function JoinTeam() {
                 {children.length === 0 ? (
                   <div className="text-center py-4">
                     <p className="text-slate-500 dark:text-slate-400 mb-6">{t('portal.joinTeam.addChildFirst')}</p>
-                    <Link to="/portal/children">
+                    <Link to="/portal/athletes">
                       <Button variant="primary">
                         {t('portal.joinTeam.add')}
                       </Button>

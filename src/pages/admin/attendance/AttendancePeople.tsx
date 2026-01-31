@@ -45,7 +45,7 @@ export default function AttendancePeople() {
   ]
 
   // Map data to include id field
-  const rowsWithId = data.map(item => ({ ...item, id: item.child_id }))
+  const rowsWithId = data.map(item => ({ ...item, id: item.athlete_id ?? (item as { child_id?: string }).child_id }))
 
   return (
     <Card>

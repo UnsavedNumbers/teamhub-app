@@ -10,6 +10,7 @@
         ],
         "module": "ESNext",
         "skipLibCheck": true,
+        "esModuleInterop": true,
         /* Bundler mode */
         "moduleResolution": "bundler",
         "allowImportingTsExtensions": true,
@@ -33,5 +34,9 @@
     },
     "include": [
         "src"
+    ],
+    "exclude": [
+        "node_modules",
+        "supabase"
     ]
 }

@@ -9,7 +9,7 @@ export function NoOrganizationEmptyState() {
       <EmptyState
         icon="business"
         title="NO ORGANIZATION FOUND"
-        description="You haven't set up an organization yet. Create your first organization to get started with TeamHub."
+        description="You haven't set up an organization yet. Create your first organization to get started with Youth Sports."
         action={{
           label: 'Set Up Organization',
           onClick: () => navigate('/admin/onboarding')

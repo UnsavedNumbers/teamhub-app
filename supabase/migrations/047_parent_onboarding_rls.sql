@@ -1,8 +1,8 @@
 -- ============================================
 -- Parent Onboarding RLS Policies
 -- ============================================
--- RLS policies for the new child_guardians model and parent onboarding tables
--- Parents can only see their own children + teams their children are on
+-- RLS policies for the new athlete_guardians model and parent onboarding tables
+-- Parents can only see their own athletes + teams their athletes are on
 
 -- ============================================
 -- Helper functions for parent access
@@ -16,48 +16,48 @@ STABLE
 SECURITY DEFINER
 AS $$
   SELECT EXISTS (
-    SELECT 1 FROM child_guardians
+    SELECT 1 FROM athlete_guardians
     WHERE user_id = check_user_id
-      AND child_id = check_child_id
+      AND athlete_id = check_child_id
       AND status = 'active'
   );
 $$;
 
--- Get all children for a user (as guardian)
+-- Get all athletes for a user (as guardian)
 CREATE OR REPLACE FUNCTION get_user_children(check_user_id UUID)
 RETURNS SETOF UUID
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
 AS $$
-  SELECT child_id
-  FROM child_guardians
+  SELECT athlete_id
+  FROM athlete_guardians
   WHERE user_id = check_user_id
     AND status = 'active';
 $$;
 
 -- ============================================
--- child_guardians RLS Policies
+-- athlete_guardians RLS Policies
 -- ============================================
 
 -- Users can view their own guardian relationships
-CREATE POLICY "Users can view own guardian relationships" ON child_guardians
+CREATE POLICY "Users can view own guardian relationships" ON athlete_guardians
   FOR SELECT
   USING (auth.uid() = user_id);
 
 -- Platform admins can view all guardian relationships
-CREATE POLICY "Platform admins can view all guardians" ON child_guardians
+CREATE POLICY "Platform admins can view all guardians" ON athlete_guardians
   FOR SELECT
   USING (is_platform_admin(auth.uid()));
 
--- Org admins can view guardians for children in their org (via team membership)
-CREATE POLICY "Org admins can view org guardians" ON child_guardians
+-- Org admins can view guardians for athletes in their org (via team membership)
+CREATE POLICY "Org admins can view org guardians" ON athlete_guardians
   FOR SELECT
   USING (
     EXISTS (
       SELECT 1 FROM team_memberships tm
       JOIN teams t ON t.id = tm.team_id
-      WHERE tm.child_id = child_guardians.child_id
+      WHERE tm.athlete_id = athlete_guardians.athlete_id
       AND user_has_any_org_roles(
         auth.uid(),
         t.org_id,
@@ -70,29 +70,29 @@ CREATE POLICY "Org admins can view org guardians" ON child_guardians
 -- Direct INSERT/UPDATE/DELETE should be blocked to enforce using add_guardian_to_child RPC
 
 -- ============================================
--- Update CHILDREN RLS Policies (new guardian-based)
+-- Update ATHLETES RLS Policies (new guardian-based)
 -- ============================================
 
 -- Drop old family-based policies
-DROP POLICY IF EXISTS "Parents can manage their children" ON children;
-DROP POLICY IF EXISTS "Admins can view children" ON children;
-DROP POLICY IF EXISTS "Admins can manage children" ON children;
-DROP POLICY IF EXISTS "Coaches can view team children" ON children;
+DROP POLICY IF EXISTS "Parents can manage their children" ON athletes;
+DROP POLICY IF EXISTS "Admins can view children" ON athletes;
+DROP POLICY IF EXISTS "Admins can manage children" ON athletes;
+DROP POLICY IF EXISTS "Coaches can view team children" ON athletes;
 
--- Parents can view and manage children they are guardians of
-CREATE POLICY "Guardians can manage their children" ON children
+-- Parents can view and manage athletes they are guardians of
+CREATE POLICY "Guardians can manage their children" ON athletes
   FOR ALL
-  USING (user_is_guardian_of_child(auth.uid(), children.id))
-  WITH CHECK (user_is_guardian_of_child(auth.uid(), children.id));
+  USING (user_is_guardian_of_child(auth.uid(), athletes.id))
+  WITH CHECK (user_is_guardian_of_child(auth.uid(), athletes.id));
 
--- Org admins can view children on teams in their org
-CREATE POLICY "Org admins can view org children" ON children
+-- Org admins can view athletes on teams in their org
+CREATE POLICY "Org admins can view org children" ON athletes
   FOR SELECT
   USING (
     EXISTS (
       SELECT 1 FROM team_memberships tm
       JOIN teams t ON t.id = tm.team_id
-      WHERE tm.child_id = children.id
+      WHERE tm.athlete_id = athletes.id
       AND user_has_any_org_roles(
         auth.uid(),
         t.org_id,
@@ -101,14 +101,14 @@ CREATE POLICY "Org admins can view org children" ON children
     )
   );
 
--- Org admins can manage children in their org (for team assignments)
-CREATE POLICY "Org admins can manage org children" ON children
+-- Org admins can manage athletes in their org (for team assignments)
+CREATE POLICY "Org admins can manage org children" ON athletes
   FOR ALL
   USING (
     EXISTS (
       SELECT 1 FROM team_memberships tm
       JOIN teams t ON t.id = tm.team_id
-      WHERE tm.child_id = children.id
+      WHERE tm.athlete_id = athletes.id
       AND user_has_any_org_roles(
         auth.uid(),
         t.org_id,
@@ -117,14 +117,14 @@ CREATE POLICY "Org admins can manage org children" ON children
     )
   );
 
--- Coaches can view children on their org's teams
-CREATE POLICY "Coaches can view org team children" ON children
+-- Coaches can view athletes on their org's teams
+CREATE POLICY "Coaches can view org team children" ON athletes
   FOR SELECT
   USING (
     EXISTS (
       SELECT 1 FROM team_memberships tm
       JOIN teams t ON t.id = tm.team_id
-      WHERE tm.child_id = children.id
+      WHERE tm.athlete_id = athletes.id
       AND user_has_any_org_roles(
         auth.uid(),
         t.org_id,
@@ -143,7 +143,7 @@ DROP POLICY IF EXISTS "Parents can view their memberships" ON team_memberships;
 -- Guardians can view their children's team memberships
 CREATE POLICY "Guardians can view their children memberships" ON team_memberships
   FOR SELECT
-  USING (user_is_guardian_of_child(auth.uid(), team_memberships.child_id));
+  USING (user_is_guardian_of_child(auth.uid(), team_memberships.athlete_id));
 
 -- ============================================
 -- Update TEAMS RLS Policies (guardian-based)
@@ -152,14 +152,14 @@ CREATE POLICY "Guardians can view their children memberships" ON team_membership
 -- Drop old family-based policy
 DROP POLICY IF EXISTS "Parents can view their teams" ON teams;
 
--- Guardians can view teams their children are on
+-- Guardians can view teams their athletes are on
 CREATE POLICY "Guardians can view their children teams" ON teams
   FOR SELECT
   USING (
     EXISTS (
       SELECT 1 FROM team_memberships tm
       WHERE tm.team_id = teams.id
-      AND user_is_guardian_of_child(auth.uid(), tm.child_id)
+      AND user_is_guardian_of_child(auth.uid(), tm.athlete_id)
     )
   );
 
@@ -178,7 +178,7 @@ CREATE POLICY "Guardians can view their children events" ON events
       SELECT 1 FROM team_memberships tm
       WHERE tm.team_id = events.team_id
       AND tm.status = 'active'
-      AND user_is_guardian_of_child(auth.uid(), tm.child_id)
+      AND user_is_guardian_of_child(auth.uid(), tm.athlete_id)
     )
   );
 
@@ -189,11 +189,11 @@ CREATE POLICY "Guardians can view their children events" ON events
 -- Drop old family-based policy
 DROP POLICY IF EXISTS "Parents can manage their children's attendance" ON attendance;
 
--- Guardians can manage their children's attendance
+-- Guardians can manage their athletes' attendance
 CREATE POLICY "Guardians can manage their children attendance" ON attendance
   FOR ALL
-  USING (user_is_guardian_of_child(auth.uid(), attendance.child_id))
-  WITH CHECK (user_is_guardian_of_child(auth.uid(), attendance.child_id));
+  USING (user_is_guardian_of_child(auth.uid(), attendance.athlete_id))
+  WITH CHECK (user_is_guardian_of_child(auth.uid(), attendance.athlete_id));
 
 -- ============================================
 -- Update SEASONS RLS Policies (guardian-based)
@@ -209,7 +209,7 @@ CREATE POLICY "Guardians can view their children seasons" ON seasons
     EXISTS (
       SELECT 1 FROM team_memberships tm
       WHERE tm.season_id = seasons.id
-      AND user_is_guardian_of_child(auth.uid(), tm.child_id)
+      AND user_is_guardian_of_child(auth.uid(), tm.athlete_id)
     )
   );
 
@@ -223,7 +223,7 @@ CREATE POLICY "Org admins can view parent invites" ON parent_invites
   USING (
     user_has_any_org_roles(
       auth.uid(),
-      parent_invites.organization_id,
+      parent_invites.org_id,
       ARRAY['org_admin']::org_member_role[]
     )
   );
@@ -260,7 +260,7 @@ CREATE POLICY "Org admins can view org join links" ON join_links
   USING (
     user_has_any_org_roles(
       auth.uid(),
-      join_links.organization_id,
+      join_links.org_id,
       ARRAY['org_admin']::org_member_role[]
     )
   );
@@ -285,7 +285,7 @@ CREATE POLICY "Org admins can view org join requests" ON join_requests
   USING (
     user_has_any_org_roles(
       auth.uid(),
-      join_requests.organization_id,
+      join_requests.org_id,
       ARRAY['org_admin']::org_member_role[]
     )
   );
@@ -311,7 +311,7 @@ CREATE POLICY "Org admins can view claim tokens" ON child_claim_tokens
   USING (
     user_has_any_org_roles(
       auth.uid(),
-      child_claim_tokens.organization_id,
+      child_claim_tokens.org_id,
       ARRAY['org_admin']::org_member_role[]
     )
   );
@@ -337,8 +337,8 @@ GRANT EXECUTE ON FUNCTION get_user_children(UUID) TO authenticated;
 -- Comments
 -- ============================================
 
-COMMENT ON FUNCTION user_is_guardian_of_child(UUID, UUID) IS 'STABLE: Check if user is an active guardian of a child';
-COMMENT ON FUNCTION get_user_children(UUID) IS 'STABLE: Get all children for which user is an active guardian';
-COMMENT ON POLICY "Guardians can manage their children" ON children IS 'Parents can only access children they are guardians of (via child_guardians table)';
+COMMENT ON FUNCTION user_is_guardian_of_child(UUID, UUID) IS 'STABLE: Check if user is an active guardian of an athlete';
+COMMENT ON FUNCTION get_user_children(UUID) IS 'STABLE: Get all athletes for which user is an active guardian';
+COMMENT ON POLICY "Guardians can manage their children" ON athletes IS 'Parents can only access athletes they are guardians of (via athlete_guardians table)';
 COMMENT ON POLICY "Guardians can view their children teams" ON teams IS 'Parents see teams only if their child is a member';
 COMMENT ON POLICY "Authenticated users can submit join requests" ON join_requests IS 'Bootstrap policy: allows authenticated users to submit join requests via RPC';
