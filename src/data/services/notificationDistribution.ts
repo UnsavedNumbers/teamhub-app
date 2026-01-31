@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase'
+const supabaseAny = supabase as any
 import { USE_FAKE_DATA } from '../config'
 import type { NotificationAction } from '../../types/notifications'
 
@@ -53,7 +54,7 @@ export async function distributeEventNotifications(event: EventNotificationInput
         }
 
         // Get coaches for team
-        const { data: coaches, error: coachError } = await supabase
+        const { data: coaches, error: coachError } = await supabaseAny
             .from('coach_assignments')
             .select('user_id')
             .eq('team_id', event.team_id)
@@ -85,9 +86,9 @@ export async function distributeEventNotifications(event: EventNotificationInput
             }
         }))
 
-        const { error: insertError } = await supabase
+        const { error: insertError } = await supabaseAny
             .from('user_notifications')
-            .insert(notificationsToInsert)
+            .insert(notificationsToInsert as any)
 
         if (insertError) throw insertError
 
@@ -138,7 +139,7 @@ export async function distributeEventUpdateNotifications(event: EventNotificatio
             }
         }
 
-        const { data: coaches, error: coachError } = await supabase
+        const { data: coaches, error: coachError } = await supabaseAny
             .from('coach_assignments')
             .select('user_id')
             .eq('team_id', event.team_id)
@@ -170,9 +171,9 @@ export async function distributeEventUpdateNotifications(event: EventNotificatio
             }
         }))
 
-        const { error: insertError } = await supabase
+        const { error: insertError } = await supabaseAny
             .from('user_notifications')
-            .insert(notificationsToInsert)
+            .insert(notificationsToInsert as any)
 
         if (insertError) throw insertError
 
@@ -223,7 +224,7 @@ export async function distributeEventCancelNotifications(event: EventNotificatio
             }
         }
 
-        const { data: coaches, error: coachError } = await supabase
+        const { data: coaches, error: coachError } = await supabaseAny
             .from('coach_assignments')
             .select('user_id')
             .eq('team_id', event.team_id)
@@ -255,9 +256,9 @@ export async function distributeEventCancelNotifications(event: EventNotificatio
             }
         }))
 
-        const { error: insertError } = await supabase
+        const { error: insertError } = await supabaseAny
             .from('user_notifications')
-            .insert(notificationsToInsert)
+            .insert(notificationsToInsert as any)
 
         if (insertError) throw insertError
 

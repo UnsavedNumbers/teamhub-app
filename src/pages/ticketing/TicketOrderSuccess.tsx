@@ -26,8 +26,8 @@ export default function TicketOrderSuccess() {
     enabled: !!orderId,
   })
 
-  const order = orderResponse?.data
-  const tickets = ticketsResponse?.data || []
+  const order = (orderResponse as any)?.data ?? orderResponse ?? null
+  const tickets = Array.isArray(ticketsResponse) ? ticketsResponse : ticketsResponse?.data || []
 
   if (!order) {
     return (
@@ -82,7 +82,7 @@ export default function TicketOrderSuccess() {
           </div>
 
           {/* Tickets */}
-          {tickets.map((ticket, idx) => {
+          {tickets.map((ticket: any, idx: number) => {
             const ticketEvent = ticket.ticketed_events || event
             return (
               <div key={ticket.id}>

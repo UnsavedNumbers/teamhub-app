@@ -24,7 +24,7 @@ import { MedicalInfoForm } from '../components/athleteProfiles/MedicalInfoForm'
 import { BasicInfoForm } from '../components/athleteProfiles/BasicInfoForm'
 import { SportsInterestsForm } from '../components/athleteProfiles/SportsInterestsForm'
 import type { Athlete } from '../types/family'
-import { SPORT_CODES, SPORT_NAMES, isValidSportCode, type SportCode } from '../types/sports'
+import { SPORT_CODES, SPORT_NAMES, type SportCode } from '../types/sports'
 import { getSystemSports } from '../data/services/sportsService'
 
 export default function AthleteProfilePage() {

@@ -51,7 +51,7 @@ export default function CreateTicketedEvent() {
           ends_at: formData.ends_at || null,
           sales_start_at: formData.sales_start_at || null,
           sales_end_at: formData.sales_end_at || null,
-        })
+        } as any)
         .select('id')
         .single()
 

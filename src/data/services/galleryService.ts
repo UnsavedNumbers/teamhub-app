@@ -12,6 +12,7 @@
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import type { UserContext } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
+const supabaseAny = supabase as any
 
 // ============================================================================
 // Type Definitions
@@ -170,7 +171,7 @@ export async function getGalleriesForUser(
     // Get photo counts for all galleries
     if (galleryList.length > 0) {
       const galleryIds = galleryList.map((g) => g.id)
-      const { data: counts, error: countsError } = await supabase.rpc(
+      const { data: counts, error: countsError } = await supabaseAny.rpc(
         'get_gallery_photo_counts',
         {
           p_gallery_ids: galleryIds,
@@ -215,7 +216,7 @@ export async function getGalleriesForUser(
  * Get a single gallery by ID
  */
 export async function getGalleryById(
-  context: UserContext,
+  _context: UserContext,
   galleryId: string
 ): Promise<{ data: Gallery | null; error: Error | null }> {
   if (USE_FAKE_DATA) {
@@ -254,7 +255,7 @@ export async function getGalleryById(
  * Useful for finding the gallery linked to a team/athlete/event/travel
  */
 export async function getGalleryByEntity(
-  context: UserContext,
+  _context: UserContext,
   galleryType: GalleryType,
   entityId: string
 ): Promise<{ data: Gallery | null; error: Error | null }> {
@@ -299,7 +300,7 @@ export async function getGalleryByEntity(
  * Returns photos with tagged athletes (if any)
  */
 export async function getPhotosForGallery(
-  context: UserContext,
+  _context: UserContext,
   params: GetPhotosParams
 ): Promise<{ data: GalleryPhoto[]; error: Error | null }> {
   if (USE_FAKE_DATA) {
@@ -392,7 +393,7 @@ export async function getPhotosForGallery(
  * Get a single photo by ID
  */
 export async function getPhotoById(
-  context: UserContext,
+  _context: UserContext,
   photoId: string
 ): Promise<{ data: GalleryPhoto | null; error: Error | null }> {
   if (USE_FAKE_DATA) {
@@ -433,7 +434,7 @@ export async function getPhotoById(
 
     const photo: GalleryPhoto = {
       ...data,
-      tagged_athletes,
+      tagged_athletes: taggedAthletes,
     } as GalleryPhoto
 
     return {
@@ -453,7 +454,7 @@ export async function getPhotoById(
  * Get pending photos count for moderation
  */
 export async function getPendingPhotosCount(
-  context: UserContext,
+  _context: UserContext,
   galleryId: string
 ): Promise<{ data: number; error: Error | null }> {
   if (USE_FAKE_DATA) {
@@ -495,7 +496,7 @@ export async function getPendingPhotosCount(
  * Get albums for a gallery
  */
 export async function getAlbumsForGallery(
-  context: UserContext,
+  _context: UserContext,
   galleryId: string
 ): Promise<{ data: GalleryAlbum[]; error: Error | null }> {
   if (USE_FAKE_DATA) {
@@ -746,7 +747,7 @@ export async function updateStorageUsage(
     // Use RPC or upsert to update storage usage
     // This should be done via Edge Function or database trigger for atomicity
     // For now, we'll use a simple upsert
-    const { error } = await supabase.rpc('update_org_storage_usage', {
+    const { error } = await supabaseAny.rpc('update_org_storage_usage', {
       p_org_id: context.orgId,
       p_bucket_id: 'public-media',
       p_bytes_delta: bytesDelta,
@@ -871,7 +872,7 @@ export async function uploadPhotoToGallery(
  * Moderate photos (approve or reject)
  */
 export async function moderatePhotos(
-  context: UserContext,
+  _context: UserContext,
   photoIds: string[],
   action: 'approve' | 'reject'
 ): Promise<{ error: Error | null }> {

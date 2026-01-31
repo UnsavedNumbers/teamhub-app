@@ -31,7 +31,7 @@ export default function TicketingEvents() {
     },
   })
 
-  const events = eventsResponse?.data || []
+  const events = Array.isArray(eventsResponse) ? eventsResponse : eventsResponse?.data || []
 
   return (
     <div className="pa-page-container">

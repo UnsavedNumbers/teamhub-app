@@ -65,7 +65,7 @@ function mapFakeFamily(f: FakeFamily): Family {
     return {
         ...f,
         deleted_at: null
-    }
+    } as Family
 }
 
 function mapFakeChild(c: FakeChild): Child {
@@ -91,7 +91,7 @@ function mapFakeChild(c: FakeChild): Child {
         updated_at: c.updated_at,
         deleted_at: null,
         sports: [] // Fake data doesn't have sports
-    }
+    } as unknown as Child
 }
 
 function mapFakeMember(m: FakeFamilyMember): FamilyMember {
@@ -377,7 +377,7 @@ export async function createAthleteBasic(
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
                 deleted_at: null
-            },
+            } as unknown as Child,
             error: null
         }
     }
@@ -461,7 +461,7 @@ export async function updateAthlete(
         }
         
         // Convert to proper Child type
-        const athlete: Child = {
+        const athlete = {
             id: data.id,
             family_id: data.family_id,
             first_name: data.first_name,
@@ -485,7 +485,7 @@ export async function updateAthlete(
             deleted_at: data.deleted_at,
             sports: [], // Will be loaded separately if needed
             has_active_guardian: false // Will be checked separately if needed
-        }
+        } as unknown as Child
         
         return { data: athlete, error: null }
     } catch (err) {
@@ -595,7 +595,7 @@ export async function getAthletes(
             deleted_at: d.deleted_at,
             sports: [], // Sports will be fetched separately if needed
             has_active_guardian: d.has_active_guardian ?? false // Include guardian status
-        } as Child))
+        } as unknown as Child))
         
         console.log('[getAthletes] Returning athletes:', transformed.length)
         return { data: transformed, error: null }
@@ -677,7 +677,7 @@ export async function searchAthletes(
                     ...c,
                     age,
                     currentTeams: [] // Mock data - would need to fetch from team_memberships
-                }
+                } as unknown as AthleteWithTeams
             })
             
             return { data: mapped, error: null }
@@ -874,7 +874,7 @@ export async function searchAthletes(
                 deleted_at: (r.deleted_at as string | null) || null,
                 age,
                 currentTeams
-            } satisfies AthleteWithTeams
+            } as unknown as AthleteWithTeams
         }).filter((a): a is AthleteWithTeams => a !== null)
         
         return { data: mapped, error: null }
@@ -983,7 +983,7 @@ export async function getAthleteById(
         }
 
         // Return athlete with sports data
-        const athlete: Child = {
+        const athlete = {
             id: data.id,
             family_id: data.family_id,
             first_name: data.first_name,
@@ -1007,7 +1007,7 @@ export async function getAthleteById(
             deleted_at: data.deleted_at,
             sports: sports,
             has_active_guardian: hasActiveGuardian
-        }
+        } as unknown as Child
 
         return { data: athlete, error: null }
     } catch (err) {

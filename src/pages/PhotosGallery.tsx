@@ -156,7 +156,7 @@ export default function PhotosGallery() {
             )}
             {!isManageMode && canModerate && (
               <Link to={getLink('portal.photosGalleryManage', { id: gallery.id })}>
-                <Button variant="secondary" size="small">
+                <Button variant="secondary">
                   <Icon name="edit" size="text-sm" className="mr-2" />
                   Manage
                 </Button>
@@ -165,7 +165,6 @@ export default function PhotosGallery() {
             {!isManageMode && gallery.allow_contributions && canUpload && (
               <Button
                 variant="primary"
-                size="small"
                 onClick={() => setShowParentUpload(!showParentUpload)}
               >
                 <Icon name="add" size="text-sm" className="mr-2" />
@@ -174,7 +173,7 @@ export default function PhotosGallery() {
             )}
             {isManageMode && (
               <Link to={getLink('portal.photosGallery', { id: gallery.id })}>
-                <Button variant="secondary" size="small">
+                <Button variant="secondary">
                   <Icon name="arrow_back" size="text-sm" className="mr-2" />
                   Back to Gallery
                 </Button>
@@ -190,8 +189,7 @@ export default function PhotosGallery() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Share Your Highlights</h2>
             <Button
-              variant="ghost"
-              size="small"
+              variant="secondary"
               onClick={() => setShowParentUpload(false)}
             >
               <Icon name="close" size="text-sm" />
@@ -344,7 +342,6 @@ export default function PhotosGallery() {
                   <>
                     <Button
                       variant="secondary"
-                      size="small"
                       onClick={() => {
                         const selected = photos.filter((p) => selectedPhotos.has(p.id))
                         setBulkTaggingPhotos(selected)
@@ -354,8 +351,7 @@ export default function PhotosGallery() {
                       Tag {selectedPhotos.size} Photo{selectedPhotos.size !== 1 ? 's' : ''}
                     </Button>
                     <Button
-                      variant="ghost"
-                      size="small"
+                      variant="secondary"
                       onClick={() => setSelectedPhotos(new Set())}
                     >
                       Clear Selection
@@ -364,7 +360,6 @@ export default function PhotosGallery() {
                 ) : (
                   <Button
                     variant="secondary"
-                    size="small"
                     onClick={() => {
                       // Enable selection mode
                     }}

@@ -7,7 +7,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { formatCurrency } from '@/types/ticketing'
-import type { TicketOrder } from '@/types/ticketing'
 
 export default function TicketingOrders() {
   const { data: ordersResponse } = useQuery({
@@ -62,7 +61,7 @@ export default function TicketingOrders() {
               </tr>
             </thead>
             <tbody>
-              {orders.map((order: TicketOrder) => (
+              {orders.map((order) => (
                 <tr key={order.id}>
                   <td className="font-mono text-sm">{order.id.slice(-8).toUpperCase()}</td>
                   <td>{order.purchaser_email}</td>

@@ -7,6 +7,7 @@
 
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
 import { supabase } from '../../lib/supabase'
+const supabaseAny = supabase as any
 import { getTeamWithOrg, getOrgMembers, getOrgMember, getUserEmail } from '../../lib/supabase-helpers'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { UserContext } from '../fake/userContext'
@@ -18,6 +19,7 @@ import {
     type NotificationCreateInput,
     type NotificationCreateResult,
     type NotificationEntityType,
+    type NotificationPresentation,
     type NotificationRecord,
     type NotificationRole,
 } from '../../types/notifications'
@@ -514,7 +516,7 @@ async function distributeAnnouncementNotifications(announcement: Announcement, c
             }
 
             // Also include Coaches for this team
-            const { data: coaches, error: coachError } = await supabase
+            const { data: coaches, error: coachError } = await supabaseAny
                 .from('coach_assignments')
                 .select('user_id')
                 .eq('team_id', announcement.team_id)
@@ -529,7 +531,7 @@ async function distributeAnnouncementNotifications(announcement: Announcement, c
                 .from('organization_members')
                 .select('user_id')
                 .eq('org_id', orgId)
-                .in('role', recipientRoles)
+                .in('role', recipientRoles as any)
 
             if (!memberError && members) {
                 const userIds = members.map(m => m.user_id)
@@ -589,9 +591,9 @@ async function distributeAnnouncementNotifications(announcement: Announcement, c
         }))
 
         // Batch insert
-        const { error: insertError } = await supabase
+        const { error: insertError } = await supabaseAny
             .from('user_notifications')
-            .insert(notificationsToInsert)
+            .insert(notificationsToInsert as any)
 
         if (insertError) throw insertError
 
@@ -1022,7 +1024,7 @@ export async function markAllNotificationsRead(
 // ============================================================================
 
 export async function createNotification(
-    context: UserContext,
+    _context: UserContext,
     input: NotificationCreateInput
 ): Promise<NotificationCreateResult> {
     // Validate required params

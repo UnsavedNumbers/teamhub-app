@@ -35,8 +35,8 @@ export default function TicketEventDetail() {
     enabled: !!eventId,
   })
 
-  const event = eventResponse?.data
-  const ticketTypes = ticketTypesResponse?.data || []
+  const event = (eventResponse as any)?.data ?? eventResponse ?? null
+  const ticketTypes = ((ticketTypesResponse as any)?.data ?? ticketTypesResponse ?? []) as TicketType[]
 
   const checkoutMutation = useMutation({
     mutationFn: () =>
