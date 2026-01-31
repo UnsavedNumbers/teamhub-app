@@ -848,6 +848,374 @@ export const en = {
                 noAllergies: 'No allergies on file.',
             },
         },
+        athleteProfile: {
+            // Page titles and navigation
+            pageTitle: 'Athlete Profile',
+            pageTitleWithName: '{{name}} - Profile',
+            breadcrumbs: {
+                home: 'Home',
+                athletes: 'Athletes',
+                profile: 'Profile',
+            },
+
+            // Tab navigation
+            tabs: {
+                universal: 'Basic Info',
+                sports: 'Sport Profiles',
+                medical: 'Medical Info',
+                overview: 'Overview',
+            },
+
+            // Common buttons and actions
+            buttons: {
+                save: 'Save Changes',
+                saving: 'Saving...',
+                cancel: 'Cancel',
+                edit: 'Edit',
+                delete: 'Delete',
+                reset: 'Reset',
+                resetToDefaults: 'Reset to Defaults',
+                selectSport: 'Select Sport',
+                backToAthletes: 'Back to Athletes',
+                retry: 'Retry',
+                refresh: 'Refresh',
+            },
+
+            // Loading and status messages
+            status: {
+                loading: 'Loading profile...',
+                saving: 'Saving changes...',
+                saved: 'Changes saved successfully',
+                saveFailed: 'Failed to save changes',
+                unsavedChanges: 'You have unsaved changes',
+                confirmDiscard: 'Discard unsaved changes?',
+                completeness: '{{percent}}% Complete',
+            },
+
+            // Error states
+            errors: {
+                loadFailed: 'Failed to load athlete profile',
+                saveFailed: 'Failed to save changes',
+                notFound: 'Athlete not found',
+                permissionDenied: 'You do not have permission to view this profile',
+                networkError: 'Network error. Please check your connection.',
+                invalidData: 'Invalid data. Please check your inputs.',
+                retry: 'Retry',
+            },
+
+            // Empty states
+            empty: {
+                noSportSelected: 'Select a sport to view and edit profile information',
+                noSportsConfigured: 'No sports configured for this organization',
+                noFieldsConfigured: 'No fields configured for this sport',
+            },
+
+            // Universal Fields Section
+            universalFields: {
+                sectionTitle: 'Basic Measurements',
+                sectionDescription: 'Height, weight, and sizing information',
+
+                // Height
+                height: {
+                    label: 'Height',
+                    placeholder: 'Enter height',
+                    helpText: 'Athlete\'s current height',
+                    units: {
+                        metric: 'cm',
+                        imperial: 'ft/in',
+                        toggle: 'Switch to {{unit}}',
+                    },
+                    validation: {
+                        required: 'Height is required',
+                        min: 'Height must be at least {{min}} cm',
+                        max: 'Height cannot exceed {{max}} cm',
+                        invalid: 'Please enter a valid height',
+                    },
+                },
+
+                // Weight
+                weight: {
+                    label: 'Weight',
+                    placeholder: 'Enter weight',
+                    helpText: 'Athlete\'s current weight',
+                    units: {
+                        metric: 'kg',
+                        imperial: 'lbs',
+                        toggle: 'Switch to {{unit}}',
+                    },
+                    validation: {
+                        required: 'Weight is required',
+                        min: 'Weight must be at least {{min}} kg',
+                        max: 'Weight cannot exceed {{max}} kg',
+                        invalid: 'Please enter a valid weight',
+                    },
+                },
+
+                // Shoe Size
+                shoeSize: {
+                    label: 'Shoe Size',
+                    placeholder: 'Select size',
+                    helpText: 'Athlete\'s shoe size for equipment ordering',
+                    systems: {
+                        us: 'US',
+                        eu: 'EU',
+                        uk: 'UK',
+                        toggle: 'Switch to {{system}}',
+                    },
+                    width: {
+                        label: 'Width',
+                        narrow: 'Narrow',
+                        standard: 'Standard',
+                        wide: 'Wide',
+                        extraWide: 'Extra Wide',
+                    },
+                    validation: {
+                        required: 'Shoe size is required',
+                        invalid: 'Please select a valid shoe size',
+                    },
+                },
+
+                // Clothing Sizes
+                tshirtSize: {
+                    label: 'T-Shirt Size',
+                    placeholder: 'Select size',
+                    helpText: 'For uniform ordering',
+                    sizes: {
+                        yxs: 'Youth XS',
+                        ys: 'Youth S',
+                        ym: 'Youth M',
+                        yl: 'Youth L',
+                        yxl: 'Youth XL',
+                        as: 'Adult S',
+                        am: 'Adult M',
+                        al: 'Adult L',
+                        axl: 'Adult XL',
+                        axxl: 'Adult XXL',
+                    },
+                },
+
+                shortsSize: {
+                    label: 'Shorts Size',
+                    placeholder: 'Select size',
+                    helpText: 'For uniform ordering',
+                },
+
+                // Dominant Hand
+                dominantHand: {
+                    label: 'Dominant Hand',
+                    placeholder: 'Select hand',
+                    helpText: 'For sport-specific equipment',
+                    options: {
+                        left: 'Left',
+                        right: 'Right',
+                        ambidextrous: 'Ambidextrous',
+                    },
+                    validation: {
+                        required: 'Dominant hand is required',
+                    },
+                },
+            },
+
+            // Sport Profile Section
+            sportProfile: {
+                sectionTitle: 'Sport Profile',
+                sectionDescription: 'Sport-specific information and preferences',
+                selectSportPrompt: 'Choose a sport to view and edit profile information',
+                noFieldsMessage: 'No profile fields configured for this sport',
+
+                // Common field types
+                fieldTypes: {
+                    text: 'Text',
+                    number: 'Number',
+                    select: 'Select',
+                    multiSelect: 'Multiple Selection',
+                    boolean: 'Yes/No',
+                    time: 'Time',
+                },
+
+                // Validation messages (generic)
+                validation: {
+                    required: '{{field}} is required',
+                    min: '{{field}} must be at least {{min}}',
+                    max: '{{field}} cannot exceed {{max}}',
+                    invalid: 'Please enter a valid {{field}}',
+                    minLength: '{{field}} must be at least {{min}} characters',
+                    maxLength: '{{field}} cannot exceed {{max}} characters',
+                },
+            },
+
+            // Equipment Section
+            equipment: {
+                sectionTitle: 'Equipment',
+                sectionDescription: 'Equipment sizing and preferences',
+                completenessIndicator: '{{percent}}% Complete',
+                completenessMessage: 'Complete equipment information helps ensure proper fit',
+                noFieldsMessage: 'No equipment fields configured for this sport',
+
+                // Size guides
+                sizeGuides: {
+                    title: 'Size Guide',
+                    viewGuide: 'View Size Guide',
+                    closeGuide: 'Close',
+                },
+            },
+
+            // Medical Information Section
+            medicalInfo: {
+                sectionTitle: 'Medical Information',
+                sectionDescription: 'Confidential health and emergency contact information',
+                privacyNotice: 'This information is private and only visible to authorized personnel',
+
+                // Access control
+                accessDenied: {
+                    title: 'Access Restricted',
+                    message: 'You do not have permission to view this athlete\'s medical information',
+                    icon: 'lock',
+                },
+
+                // Medical Notes
+                medicalNotes: {
+                    label: 'Medical Notes',
+                    placeholder: 'Enter any medical conditions, medications, or special considerations',
+                    helpText: 'Include any information coaches and staff should be aware of',
+                    validation: {
+                        maxLength: 'Medical notes cannot exceed {{max}} characters',
+                    },
+                },
+
+                // Allergies
+                allergies: {
+                    label: 'Allergies',
+                    placeholder: 'List any known allergies',
+                    helpText: 'Include food, medication, environmental, and insect sting allergies',
+                    validation: {
+                        maxLength: 'Allergies cannot exceed {{max}} characters',
+                    },
+                },
+
+                // Emergency Contact
+                emergencyContact: {
+                    sectionTitle: 'Emergency Contact',
+                    name: {
+                        label: 'Contact Name',
+                        placeholder: 'Full name',
+                        validation: {
+                            required: 'Emergency contact name is required',
+                            maxLength: 'Name cannot exceed {{max}} characters',
+                        },
+                    },
+                    relationship: {
+                        label: 'Relationship',
+                        placeholder: 'e.g., Parent, Guardian, Grandparent',
+                        validation: {
+                            required: 'Relationship is required',
+                        },
+                    },
+                    phone: {
+                        label: 'Phone Number',
+                        placeholder: '(555) 123-4567',
+                        helpText: 'Primary contact number in case of emergency',
+                        validation: {
+                            required: 'Emergency contact phone is required',
+                            invalid: 'Please enter a valid phone number',
+                        },
+                    },
+                },
+            },
+
+            // Sport Settings (Admin)
+            sportSettings: {
+                pageTitle: 'Sport Profile Settings',
+                pageDescription: 'Customize which fields are required, optional, or disabled for each sport in your organization',
+
+                // Sport selector
+                sportSelector: {
+                    title: 'Select Sport',
+                    searchPlaceholder: 'Search sports...',
+                },
+
+                // Settings panel
+                panel: {
+                    tabs: {
+                        profile: 'Profile Fields',
+                        equipment: 'Equipment Fields',
+                    },
+
+                    // Table headers
+                    table: {
+                        field: 'Field',
+                        status: 'Status',
+                        required: 'Required',
+                        enabled: 'Enabled',
+                        actions: 'Actions',
+                    },
+
+                    // Field status
+                    status: {
+                        required: 'Required',
+                        optional: 'Optional',
+                        disabled: 'Disabled',
+                    },
+
+                    // Toggle labels
+                    toggles: {
+                        required: 'Required',
+                        enabled: 'Enabled',
+                        makeRequired: 'Make Required',
+                        makeOptional: 'Make Optional',
+                        enable: 'Enable',
+                        disable: 'Disable',
+                    },
+
+                    // Actions
+                    actions: {
+                        resetToDefaults: 'Reset to Defaults',
+                        confirmReset: 'Are you sure you want to reset all fields to default settings?',
+                        saveChanges: 'Save Changes',
+                        saving: 'Saving...',
+                    },
+
+                    // Messages
+                    messages: {
+                        saved: 'Settings saved successfully',
+                        saveFailed: 'Failed to save settings',
+                        resetSuccess: 'Settings reset to defaults',
+                        resetFailed: 'Failed to reset settings',
+                    },
+
+                    // Legend
+                    legend: {
+                        title: 'Legend',
+                        required: 'Required - Athletes must complete this field',
+                        optional: 'Optional - Athletes can complete this field',
+                        disabled: 'Disabled - Field is hidden from athletes',
+                    },
+                },
+            },
+
+            // Locale-specific formatting
+            formatting: {
+                date: {
+                    short: 'MM/DD/YYYY',
+                    long: 'MMMM D, YYYY',
+                    time: 'h:mm A',
+                },
+                number: {
+                    decimal: '.',
+                    thousands: ',',
+                },
+                measurements: {
+                    height: {
+                        metric: '{{value}} cm',
+                        imperial: '{{feet}}\' {{inches}}"',
+                    },
+                    weight: {
+                        metric: '{{value}} kg',
+                        imperial: '{{value}} lbs',
+                    },
+                },
+            },
+        },
         structureForms: {
             pageTitle: {
                 default: 'Organization Structure',
@@ -1960,6 +2328,374 @@ export const es = {
                 allergies: 'Alergias',
                 knownAllergies: 'Alergias Conocidas',
                 noAllergies: 'No hay alergias en el archivo.',
+            },
+        },
+        athleteProfile: {
+            // Page titles and navigation
+            pageTitle: 'Perfil del Atleta',
+            pageTitleWithName: '{{name}} - Perfil',
+            breadcrumbs: {
+                home: 'Inicio',
+                athletes: 'Atletas',
+                profile: 'Perfil',
+            },
+
+            // Tab navigation
+            tabs: {
+                universal: 'Información Básica',
+                sports: 'Perfiles Deportivos',
+                medical: 'Información Médica',
+                overview: 'Resumen',
+            },
+
+            // Common buttons and actions
+            buttons: {
+                save: 'Guardar Cambios',
+                saving: 'Guardando...',
+                cancel: 'Cancelar',
+                edit: 'Editar',
+                delete: 'Eliminar',
+                reset: 'Restablecer',
+                resetToDefaults: 'Restablecer a Valores Predeterminados',
+                selectSport: 'Seleccionar Deporte',
+                backToAthletes: 'Volver a Atletas',
+                retry: 'Reintentar',
+                refresh: 'Actualizar',
+            },
+
+            // Loading and status messages
+            status: {
+                loading: 'Cargando perfil...',
+                saving: 'Guardando cambios...',
+                saved: 'Cambios guardados exitosamente',
+                saveFailed: 'Error al guardar cambios',
+                unsavedChanges: 'Tiene cambios sin guardar',
+                confirmDiscard: '¿Descartar cambios sin guardar?',
+                completeness: '{{percent}}% Completo',
+            },
+
+            // Error states
+            errors: {
+                loadFailed: 'Error al cargar el perfil del atleta',
+                saveFailed: 'Error al guardar cambios',
+                notFound: 'Atleta no encontrado',
+                permissionDenied: 'No tiene permiso para ver este perfil',
+                networkError: 'Error de red. Por favor verifique su conexión.',
+                invalidData: 'Datos inválidos. Por favor verifique sus entradas.',
+                retry: 'Reintentar',
+            },
+
+            // Empty states
+            empty: {
+                noSportSelected: 'Seleccione un deporte para ver y editar información del perfil',
+                noSportsConfigured: 'No hay deportes configurados para esta organización',
+                noFieldsConfigured: 'No hay campos configurados para este deporte',
+            },
+
+            // Universal Fields Section
+            universalFields: {
+                sectionTitle: 'Medidas Básicas',
+                sectionDescription: 'Información de altura, peso y tallas',
+
+                // Height
+                height: {
+                    label: 'Altura',
+                    placeholder: 'Ingrese altura',
+                    helpText: 'Altura actual del atleta',
+                    units: {
+                        metric: 'cm',
+                        imperial: 'pies/pulg',
+                        toggle: 'Cambiar a {{unit}}',
+                    },
+                    validation: {
+                        required: 'La altura es requerida',
+                        min: 'La altura debe ser al menos {{min}} cm',
+                        max: 'La altura no puede exceder {{max}} cm',
+                        invalid: 'Por favor ingrese una altura válida',
+                    },
+                },
+
+                // Weight
+                weight: {
+                    label: 'Peso',
+                    placeholder: 'Ingrese peso',
+                    helpText: 'Peso actual del atleta',
+                    units: {
+                        metric: 'kg',
+                        imperial: 'lbs',
+                        toggle: 'Cambiar a {{unit}}',
+                    },
+                    validation: {
+                        required: 'El peso es requerido',
+                        min: 'El peso debe ser al menos {{min}} kg',
+                        max: 'El peso no puede exceder {{max}} kg',
+                        invalid: 'Por favor ingrese un peso válido',
+                    },
+                },
+
+                // Shoe Size
+                shoeSize: {
+                    label: 'Talla de Calzado',
+                    placeholder: 'Seleccione talla',
+                    helpText: 'Talla de calzado del atleta para pedidos de equipo',
+                    systems: {
+                        us: 'US',
+                        eu: 'EU',
+                        uk: 'UK',
+                        toggle: 'Cambiar a {{system}}',
+                    },
+                    width: {
+                        label: 'Ancho',
+                        narrow: 'Estrecho',
+                        standard: 'Estándar',
+                        wide: 'Ancho',
+                        extraWide: 'Extra Ancho',
+                    },
+                    validation: {
+                        required: 'La talla de calzado es requerida',
+                        invalid: 'Por favor seleccione una talla de calzado válida',
+                    },
+                },
+
+                // Clothing Sizes
+                tshirtSize: {
+                    label: 'Talla de Camiseta',
+                    placeholder: 'Seleccione talla',
+                    helpText: 'Para pedidos de uniformes',
+                    sizes: {
+                        yxs: 'Juvenil XS',
+                        ys: 'Juvenil S',
+                        ym: 'Juvenil M',
+                        yl: 'Juvenil L',
+                        yxl: 'Juvenil XL',
+                        as: 'Adulto S',
+                        am: 'Adulto M',
+                        al: 'Adulto L',
+                        axl: 'Adulto XL',
+                        axxl: 'Adulto XXL',
+                    },
+                },
+
+                shortsSize: {
+                    label: 'Talla de Shorts',
+                    placeholder: 'Seleccione talla',
+                    helpText: 'Para pedidos de uniformes',
+                },
+
+                // Dominant Hand
+                dominantHand: {
+                    label: 'Mano Dominante',
+                    placeholder: 'Seleccione mano',
+                    helpText: 'Para equipo específico del deporte',
+                    options: {
+                        left: 'Izquierda',
+                        right: 'Derecha',
+                        ambidextrous: 'Ambidiestro',
+                    },
+                    validation: {
+                        required: 'La mano dominante es requerida',
+                    },
+                },
+            },
+
+            // Sport Profile Section
+            sportProfile: {
+                sectionTitle: 'Perfil Deportivo',
+                sectionDescription: 'Información y preferencias específicas del deporte',
+                selectSportPrompt: 'Elija un deporte para ver y editar información del perfil',
+                noFieldsMessage: 'No hay campos de perfil configurados para este deporte',
+
+                // Common field types
+                fieldTypes: {
+                    text: 'Texto',
+                    number: 'Número',
+                    select: 'Seleccionar',
+                    multiSelect: 'Selección Múltiple',
+                    boolean: 'Sí/No',
+                    time: 'Tiempo',
+                },
+
+                // Validation messages (generic)
+                validation: {
+                    required: '{{field}} es requerido',
+                    min: '{{field}} debe ser al menos {{min}}',
+                    max: '{{field}} no puede exceder {{max}}',
+                    invalid: 'Por favor ingrese un {{field}} válido',
+                    minLength: '{{field}} debe tener al menos {{min}} caracteres',
+                    maxLength: '{{field}} no puede exceder {{max}} caracteres',
+                },
+            },
+
+            // Equipment Section
+            equipment: {
+                sectionTitle: 'Equipo',
+                sectionDescription: 'Tallas y preferencias de equipo',
+                completenessIndicator: '{{percent}}% Completo',
+                completenessMessage: 'Completar la información del equipo ayuda a asegurar el ajuste adecuado',
+                noFieldsMessage: 'No hay campos de equipo configurados para este deporte',
+
+                // Size guides
+                sizeGuides: {
+                    title: 'Guía de Tallas',
+                    viewGuide: 'Ver Guía de Tallas',
+                    closeGuide: 'Cerrar',
+                },
+            },
+
+            // Medical Information Section
+            medicalInfo: {
+                sectionTitle: 'Información Médica',
+                sectionDescription: 'Información confidencial de salud y contacto de emergencia',
+                privacyNotice: 'Esta información es privada y solo visible para personal autorizado',
+
+                // Access control
+                accessDenied: {
+                    title: 'Acceso Restringido',
+                    message: 'No tiene permiso para ver la información médica de este atleta',
+                    icon: 'lock',
+                },
+
+                // Medical Notes
+                medicalNotes: {
+                    label: 'Notas Médicas',
+                    placeholder: 'Ingrese cualquier condición médica, medicamentos o consideraciones especiales',
+                    helpText: 'Incluya cualquier información que los entrenadores y el personal deben conocer',
+                    validation: {
+                        maxLength: 'Las notas médicas no pueden exceder {{max}} caracteres',
+                    },
+                },
+
+                // Allergies
+                allergies: {
+                    label: 'Alergias',
+                    placeholder: 'Liste cualquier alergia conocida',
+                    helpText: 'Incluya alergias a alimentos, medicamentos, ambientales y picaduras de insectos',
+                    validation: {
+                        maxLength: 'Las alergias no pueden exceder {{max}} caracteres',
+                    },
+                },
+
+                // Emergency Contact
+                emergencyContact: {
+                    sectionTitle: 'Contacto de Emergencia',
+                    name: {
+                        label: 'Nombre del Contacto',
+                        placeholder: 'Nombre completo',
+                        validation: {
+                            required: 'El nombre del contacto de emergencia es requerido',
+                            maxLength: 'El nombre no puede exceder {{max}} caracteres',
+                        },
+                    },
+                    relationship: {
+                        label: 'Relación',
+                        placeholder: 'ej., Padre, Tutor, Abuelo',
+                        validation: {
+                            required: 'La relación es requerida',
+                        },
+                    },
+                    phone: {
+                        label: 'Número de Teléfono',
+                        placeholder: '(555) 123-4567',
+                        helpText: 'Número de contacto principal en caso de emergencia',
+                        validation: {
+                            required: 'El teléfono del contacto de emergencia es requerido',
+                            invalid: 'Por favor ingrese un número de teléfono válido',
+                        },
+                    },
+                },
+            },
+
+            // Sport Settings (Admin)
+            sportSettings: {
+                pageTitle: 'Configuración de Perfiles Deportivos',
+                pageDescription: 'Personalice qué campos son requeridos, opcionales o deshabilitados para cada deporte en su organización',
+
+                // Sport selector
+                sportSelector: {
+                    title: 'Seleccionar Deporte',
+                    searchPlaceholder: 'Buscar deportes...',
+                },
+
+                // Settings panel
+                panel: {
+                    tabs: {
+                        profile: 'Campos de Perfil',
+                        equipment: 'Campos de Equipo',
+                    },
+
+                    // Table headers
+                    table: {
+                        field: 'Campo',
+                        status: 'Estado',
+                        required: 'Requerido',
+                        enabled: 'Habilitado',
+                        actions: 'Acciones',
+                    },
+
+                    // Field status
+                    status: {
+                        required: 'Requerido',
+                        optional: 'Opcional',
+                        disabled: 'Deshabilitado',
+                    },
+
+                    // Toggle labels
+                    toggles: {
+                        required: 'Requerido',
+                        enabled: 'Habilitado',
+                        makeRequired: 'Hacer Requerido',
+                        makeOptional: 'Hacer Opcional',
+                        enable: 'Habilitar',
+                        disable: 'Deshabilitar',
+                    },
+
+                    // Actions
+                    actions: {
+                        resetToDefaults: 'Restablecer a Valores Predeterminados',
+                        confirmReset: '¿Está seguro de que desea restablecer todos los campos a la configuración predeterminada?',
+                        saveChanges: 'Guardar Cambios',
+                        saving: 'Guardando...',
+                    },
+
+                    // Messages
+                    messages: {
+                        saved: 'Configuración guardada exitosamente',
+                        saveFailed: 'Error al guardar configuración',
+                        resetSuccess: 'Configuración restablecida a valores predeterminados',
+                        resetFailed: 'Error al restablecer configuración',
+                    },
+
+                    // Legend
+                    legend: {
+                        title: 'Leyenda',
+                        required: 'Requerido - Los atletas deben completar este campo',
+                        optional: 'Opcional - Los atletas pueden completar este campo',
+                        disabled: 'Deshabilitado - El campo está oculto para los atletas',
+                    },
+                },
+            },
+
+            // Locale-specific formatting
+            formatting: {
+                date: {
+                    short: 'DD/MM/YYYY',
+                    long: 'D [de] MMMM [de] YYYY',
+                    time: 'HH:mm',
+                },
+                number: {
+                    decimal: ',',
+                    thousands: '.',
+                },
+                measurements: {
+                    height: {
+                        metric: '{{value}} cm',
+                        imperial: '{{feet}}\' {{inches}}"',
+                    },
+                    weight: {
+                        metric: '{{value}} kg',
+                        imperial: '{{value}} lbs',
+                    },
+                },
             },
         },
         structureForms: {

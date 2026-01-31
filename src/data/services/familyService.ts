@@ -11,6 +11,7 @@ import { calculatePermissions } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { normalizeSupabaseResponse } from './responseHelpers'
+import { getAthleteSports } from './athleteSportsService'
 import {
     fakeFamilies,
     fakeChildren,
@@ -88,7 +89,8 @@ function mapFakeChild(c: FakeChild): Child {
         has_profile_photo: false,
         created_at: c.created_at,
         updated_at: c.updated_at,
-        deleted_at: null
+        deleted_at: null,
+        sports: [] // Fake data doesn't have sports
     }
 }
 
@@ -400,13 +402,31 @@ export async function createAthleteBasic(
  * Update an athlete
  */
 export async function updateAthlete(
-    _context: UserContext,
+    context: UserContext,
     athleteId: string,
     dto: UpdateAthleteDTO
 ): Promise<{ data: Child | null; error: Error | null }> {
     if (USE_FAKE_DATA) {
         await simulateDelay()
-        return { data: null, error: null }
+        const permissions = buildPermissions(context)
+        const child = fakeChildren.find(c => c.id === athleteId)
+        
+        if (!child) {
+            return { data: null, error: new Error('Athlete not found') }
+        }
+        
+        // Check access
+        if (!permissions.canViewAllOrgData) {
+            const ownedChildIds = getChildrenForUserId(context.userId)
+            if (!ownedChildIds.includes(athleteId)) {
+                return { data: null, error: new Error('Access denied') }
+            }
+        }
+        
+        // Update fake data
+        Object.assign(child, dto)
+        
+        return { data: mapFakeChild(child), error: null }
     }
 
     try {
@@ -431,6 +451,7 @@ export async function updateAthlete(
             .from('athletes')
             .update(updateData)
             .eq('id', athleteId)
+            .eq('org_id', context.orgId) // Ensure org scope
             .select()
             .single()
 
@@ -438,7 +459,35 @@ export async function updateAthlete(
             console.error('[updateAthlete] Supabase error:', error)
             throw error
         }
-        return { data: data as unknown as Child, error: null }
+        
+        // Convert to proper Child type
+        const athlete: Child = {
+            id: data.id,
+            family_id: data.family_id,
+            first_name: data.first_name,
+            last_name: data.last_name,
+            date_of_birth: data.birthdate || '',
+            gender: data.gender as Gender | null,
+            preferred_name: data.preferred_name ?? null,
+            jersey_number: data.jersey_number ?? null,
+            medical_notes: data.medical_notes ?? null,
+            allergies: data.allergies ?? null,
+            phone: (data as any).phone ?? null,
+            email: (data as any).email ?? null,
+            emergency_contact_name: data.emergency_contact_name ?? null,
+            emergency_contact_phone: data.emergency_contact_phone ?? null,
+            photo_url: null,
+            profile_photo_updated_at: (data as any).profile_photo_updated_at ?? null,
+            has_profile_photo: (data as any).has_profile_photo ?? false,
+            org_id: context.orgId,
+            created_at: data.created_at ?? new Date().toISOString(),
+            updated_at: data.updated_at ?? new Date().toISOString(),
+            deleted_at: data.deleted_at,
+            sports: [], // Will be loaded separately if needed
+            has_active_guardian: false // Will be checked separately if needed
+        }
+        
+        return { data: athlete, error: null }
     } catch (err) {
         console.error('[updateAthlete] Exception:', err)
         const errorMessage = err instanceof Error ? err.message : 'Update athlete failed'
@@ -917,7 +966,23 @@ export async function getAthleteById(
             // Continue without guardian status if check fails
         }
 
-        // Return athlete with empty sports array (sports will be fetched separately if needed)
+        // Load athlete sports
+        let sports: Array<{ sport_id: string; sport_name: string; sport_type: 'plays' | 'interested' }> = []
+        try {
+            const { data: sportsData, error: sportsError } = await getAthleteSports(athleteId, context.orgId)
+            if (!sportsError && sportsData) {
+                sports = sportsData.map(s => ({
+                    sport_id: s.sport_id,
+                    sport_name: s.sport_name,
+                    sport_type: s.sport_type
+                }))
+            }
+        } catch (err) {
+            console.warn('[getAthleteById] Error loading athlete sports:', err)
+            // Continue without sports data
+        }
+
+        // Return athlete with sports data
         const athlete: Child = {
             id: data.id,
             family_id: data.family_id,
@@ -940,7 +1005,7 @@ export async function getAthleteById(
             created_at: data.created_at ?? new Date().toISOString(),
             updated_at: data.updated_at ?? new Date().toISOString(),
             deleted_at: data.deleted_at,
-            sports: [],
+            sports: sports,
             has_active_guardian: hasActiveGuardian
         }
 

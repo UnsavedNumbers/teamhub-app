@@ -20,10 +20,18 @@ CREATE INDEX IF NOT EXISTS idx_athlete_medical_private_org
   ON athlete_medical_private(org_id);
 
 -- Add trigger for updated_at
-CREATE TRIGGER update_athlete_medical_private_updated_at
-  BEFORE UPDATE ON athlete_medical_private
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger 
+    WHERE tgname = 'update_athlete_medical_private_updated_at'
+  ) THEN
+    CREATE TRIGGER update_athlete_medical_private_updated_at
+      BEFORE UPDATE ON athlete_medical_private
+      FOR EACH ROW
+      EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+END $$;
 
 -- Enable RLS (policies will be added in a later migration)
 ALTER TABLE athlete_medical_private ENABLE ROW LEVEL SECURITY;
@@ -57,12 +65,13 @@ BEGIN
   FOR athlete_rec IN 
     SELECT 
       a.id as athlete_id,
-      a.org_id,
+      f.org_id,
       a.medical_notes,
       a.allergies,
       a.emergency_contact_name,
       a.emergency_contact_phone
     FROM athletes a
+    JOIN families f ON f.id = a.family_id
     WHERE (
       a.medical_notes IS NOT NULL 
       OR a.allergies IS NOT NULL 
@@ -73,6 +82,7 @@ BEGIN
       SELECT 1 FROM athlete_medical_private amp 
       WHERE amp.athlete_id = a.id
     )
+    AND f.org_id IS NOT NULL
   LOOP
     -- Build emergency_contact JSONB
     DECLARE

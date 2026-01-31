@@ -92,6 +92,10 @@ export async function updateAthleteSports(
     }
 
     try {
+        if (!orgId) {
+            return { error: new Error('Organization is required to update sports.') }
+        }
+
         // Remove duplicates
         const uniqueSports = [...new Map(
             sports.map(s => [`${s.sport_id}-${s.sport_type}`, s])
@@ -130,6 +134,16 @@ export async function updateAthleteSports(
         return { error: null }
     } catch (err) {
         console.error('[athleteSportsService] Error updating athlete sports:', err)
+        
+        // Check for permission errors
+        if (err && typeof err === 'object' && 'code' in err) {
+            if (err.code === 'PGRST301' || err.code === '42501') {
+                return {
+                    error: new Error('You do not have permission to update sports for this athlete. Only guardians can modify athlete sports.')
+                }
+            }
+        }
+        
         return {
             error: err instanceof Error ? err : new Error('Update failed')
         }

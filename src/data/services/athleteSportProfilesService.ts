@@ -13,6 +13,16 @@ import type {
 } from '../../types/athleteSportProfiles'
 import type { SportCode } from '../../types/sports'
 
+const isMissingTableError = (err: any) =>
+    err?.code === 'PGRST205' ||
+    (typeof err?.message === 'string' && err.message.includes("Could not find the table 'public.athlete_sport_profiles'"))
+
+const missingTableError = () =>
+    new Error(
+        'Athlete sport profiles are not available because the table public.athlete_sport_profiles is missing. ' +
+        'Run the migration 20260231000000_athlete_sport_profiles.sql (and related RLS/seed files) on your Supabase project.'
+    )
+
 /**
  * Service response wrapper
  */
@@ -42,17 +52,20 @@ export async function getAthleteSportProfile(
             .select('*')
             .eq('athlete_id', athleteId)
             .eq('sport_code', sportCode)
-            .single()
+            .maybeSingle()
 
         if (error) {
             // Not found is not an error - return null data
             if (error.code === 'PGRST116') {
                 return { data: null, error: null }
             }
+            if (isMissingTableError(error)) {
+                return { data: null, error: missingTableError() }
+            }
             throw error
         }
 
-        return { data, error: null }
+        return { data: data ?? null, error: null }
     } catch (err) {
         console.error('[AthleteSportProfilesService] Error getting sport profile:', err)
         return { data: null, error: err as Error }
@@ -77,7 +90,12 @@ export async function getAthleteSportProfiles(
             .eq('athlete_id', athleteId)
             .order('sport_code', { ascending: true })
 
-        if (error) throw error
+        if (error) {
+            if (isMissingTableError(error)) {
+                return { data: [], error: missingTableError() }
+            }
+            throw error
+        }
 
         return { data: data || [], error: null }
     } catch (err) {
@@ -112,7 +130,12 @@ export async function upsertAthleteSportProfile(
             .eq('id', athleteId)
             .single()
 
-        if (athleteError) throw athleteError
+        if (athleteError) {
+            if (isMissingTableError(athleteError)) {
+                throw missingTableError()
+            }
+            throw athleteError
+        }
         if (!athlete) throw new Error('Athlete not found')
 
         // Get current user ID for audit trail
@@ -141,13 +164,18 @@ export async function upsertAthleteSportProfile(
                 onConflict: 'org_id,athlete_id,sport_code',
             })
             .select()
-            .single()
+            .maybeSingle()
 
-        if (error) throw error
+        if (error) {
+            if (isMissingTableError(error)) {
+                throw missingTableError()
+            }
+            throw error
+        }
 
         console.log(`[AthleteSportProfilesService] Upserted sport profile for athlete ${athleteId}, sport ${sportCode}`)
 
-        return { data, error: null }
+        return { data: data ?? null, error: null }
     } catch (err) {
         console.error('[AthleteSportProfilesService] Error upserting sport profile:', err)
         return { data: null, error: err as Error }
@@ -250,13 +278,18 @@ export async function markSportProfileAsVerified(
             .eq('athlete_id', athleteId)
             .eq('sport_code', sportCode)
             .select()
-            .single()
+            .maybeSingle()
 
-        if (error) throw error
+        if (error) {
+            if (isMissingTableError(error)) {
+                throw missingTableError()
+            }
+            throw error
+        }
 
         console.log(`[AthleteSportProfilesService] Marked sport profile as verified for athlete ${athleteId}, sport ${sportCode}`)
 
-        return { data, error: null }
+        return { data: data ?? null, error: null }
     } catch (err) {
         console.error('[AthleteSportProfilesService] Error marking profile as verified:', err)
         return { data: null, error: err as Error }
@@ -286,7 +319,12 @@ export async function deleteAthleteSportProfile(
             .eq('athlete_id', athleteId)
             .eq('sport_code', sportCode)
 
-        if (error) throw error
+        if (error) {
+            if (isMissingTableError(error)) {
+                throw missingTableError()
+            }
+            throw error
+        }
 
         console.log(`[AthleteSportProfilesService] Deleted sport profile for athlete ${athleteId}, sport ${sportCode}`)
 

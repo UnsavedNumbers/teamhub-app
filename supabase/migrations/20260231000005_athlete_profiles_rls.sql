@@ -12,6 +12,30 @@
 -- HELPER FUNCTIONS
 -- ============================================================================
 
+-- Check if user is an org admin (Wrapper)
+CREATE OR REPLACE FUNCTION is_org_admin(org_id_param UUID, user_id_param UUID DEFAULT auth.uid())
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN user_is_org_admin(org_id_param, user_id_param);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
+-- Check if user is an org member (Wrapper)
+CREATE OR REPLACE FUNCTION is_org_member(org_id_param UUID, user_id_param UUID DEFAULT auth.uid())
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN user_has_org_access(org_id_param, user_id_param);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
+-- Check if user is a coach for a team (Wrapper)
+CREATE OR REPLACE FUNCTION is_coach_for_team(team_id_param UUID, user_id_param UUID DEFAULT auth.uid())
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN staff_can_access_team(team_id_param, user_id_param);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
 -- Check if user is a parent/guardian of an athlete
 CREATE OR REPLACE FUNCTION is_parent_of_athlete(athlete_id_param UUID, user_id_param UUID DEFAULT auth.uid())
 RETURNS BOOLEAN AS $$
@@ -35,21 +59,18 @@ RETURNS BOOLEAN AS $$
 DECLARE
   athlete_org_id UUID;
 BEGIN
-  -- Get athlete's org_id
-  SELECT org_id INTO athlete_org_id
-  FROM athletes
-  WHERE id = athlete_id_param;
+  -- Try to get athlete's org_id via family
+  SELECT f.org_id INTO athlete_org_id
+  FROM athletes a
+  JOIN families f ON f.id = a.family_id
+  WHERE a.id = athlete_id_param;
   
-  IF athlete_org_id IS NULL THEN
-    RETURN FALSE;
-  END IF;
-  
-  -- Check if user is org admin
-  IF is_org_admin(athlete_org_id, user_id_param) THEN
+  -- Check if user is org admin (if org known)
+  IF athlete_org_id IS NOT NULL AND is_org_admin(athlete_org_id, user_id_param) THEN
     RETURN TRUE;
   END IF;
   
-  -- Check if user is parent/guardian
+  -- Check if user is parent/guardian (works even without org/family)
   IF is_parent_of_athlete(athlete_id_param, user_id_param) THEN
     RETURN TRUE;
   END IF;
@@ -76,21 +97,18 @@ RETURNS BOOLEAN AS $$
 DECLARE
   athlete_org_id UUID;
 BEGIN
-  -- Get athlete's org_id
-  SELECT org_id INTO athlete_org_id
-  FROM athletes
-  WHERE id = athlete_id_param;
+  -- Try to get athlete's org_id via family
+  SELECT f.org_id INTO athlete_org_id
+  FROM athletes a
+  JOIN families f ON f.id = a.family_id
+  WHERE a.id = athlete_id_param;
   
-  IF athlete_org_id IS NULL THEN
-    RETURN FALSE;
-  END IF;
-  
-  -- Check if user is org admin
-  IF is_org_admin(athlete_org_id, user_id_param) THEN
+  -- Check if user is org admin (if org known)
+  IF athlete_org_id IS NOT NULL AND is_org_admin(athlete_org_id, user_id_param) THEN
     RETURN TRUE;
   END IF;
   
-  -- Check if user is parent/guardian
+  -- Check if user is parent/guardian (works even without org/family)
   RETURN is_parent_of_athlete(athlete_id_param, user_id_param);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
@@ -212,10 +230,11 @@ DECLARE
   athlete_org_id UUID;
   coach_medical_access_enabled BOOLEAN;
 BEGIN
-  -- Get athlete's org_id
-  SELECT org_id INTO athlete_org_id
-  FROM athletes
-  WHERE id = athlete_id_param;
+  -- Get athlete's org_id via family
+  SELECT f.org_id INTO athlete_org_id
+  FROM athletes a
+  JOIN families f ON f.id = a.family_id
+  WHERE a.id = athlete_id_param;
   
   IF athlete_org_id IS NULL THEN
     RETURN FALSE;
@@ -304,6 +323,40 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON athlete_sport_profiles TO authenticated;
 GRANT SELECT ON sport_field_definitions TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON org_sport_profile_settings TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON athlete_medical_private TO authenticated;
+
+-- ============================================================================
+-- RLS POLICIES: athlete_sports (Legacy/Junction Table)
+-- ============================================================================
+-- Update policies to use new helper functions for consistency (fixes guardian access issues)
+
+DROP POLICY IF EXISTS "Guardians can view their athletes sports" ON athlete_sports;
+DROP POLICY IF EXISTS "Guardians can insert their athletes sports" ON athlete_sports;
+DROP POLICY IF EXISTS "Guardians can update their athletes sports" ON athlete_sports;
+DROP POLICY IF EXISTS "Guardians can delete their athletes sports" ON athlete_sports;
+DROP POLICY IF EXISTS "Org admins can view org athlete sports" ON athlete_sports;
+DROP POLICY IF EXISTS "Org admins can manage org athlete sports" ON athlete_sports;
+DROP POLICY IF EXISTS "Platform admins can view all athlete sports" ON athlete_sports;
+DROP POLICY IF EXISTS "Platform admins can manage all athlete sports" ON athlete_sports;
+
+-- SELECT
+DROP POLICY IF EXISTS athlete_sports_select_policy ON athlete_sports;
+CREATE POLICY athlete_sports_select_policy ON athlete_sports
+  FOR SELECT USING (can_view_athlete(athlete_id, auth.uid()));
+
+-- INSERT
+DROP POLICY IF EXISTS athlete_sports_insert_policy ON athlete_sports;
+CREATE POLICY athlete_sports_insert_policy ON athlete_sports
+  FOR INSERT WITH CHECK (can_edit_athlete(athlete_id, auth.uid()));
+
+-- UPDATE
+DROP POLICY IF EXISTS athlete_sports_update_policy ON athlete_sports;
+CREATE POLICY athlete_sports_update_policy ON athlete_sports
+  FOR UPDATE USING (can_edit_athlete(athlete_id, auth.uid()));
+
+-- DELETE
+DROP POLICY IF EXISTS athlete_sports_delete_policy ON athlete_sports;
+CREATE POLICY athlete_sports_delete_policy ON athlete_sports
+  FOR DELETE USING (can_edit_athlete(athlete_id, auth.uid()));
 
 -- ============================================================================
 -- VERIFICATION

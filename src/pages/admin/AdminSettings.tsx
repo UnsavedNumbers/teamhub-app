@@ -122,6 +122,7 @@ export default function AdminSettings() {
   const { user, profile, updatePassword, refreshProfile } = useAuth()
   const { currentOrganization } = useOrganization()
   const t = useT()
+  const translator = t as unknown as (key: string) => string
   
   // URL Persistence
   const [searchParams, setSearchParams] = useSearchParams()
@@ -237,10 +238,10 @@ export default function AdminSettings() {
           const savedGroups = orgId
             ? (prefs.notifications_v2?.[orgId]?.[canonicalRole(activeRole)] as NotificationGroup[] | undefined)
             : undefined
-          const mergedGroups = mergeNotificationPreferences(savedGroups, activeRole, t)
+          const mergedGroups = mergeNotificationPreferences(savedGroups, activeRole, translator)
           setNotificationGroups(mergedGroups)
         } else {
-          const mergedGroups = mergeNotificationPreferences(undefined, activeRole, t)
+          const mergedGroups = mergeNotificationPreferences(undefined, activeRole, translator)
           setNotificationGroups(mergedGroups)
         }
       } catch (err) {
@@ -252,7 +253,7 @@ export default function AdminSettings() {
     }
     
     loadSettings()
-  }, [user, profile, currentOrganization?.id, activeRole, t]) // Watch currentOrganization changes
+  }, [user, profile, currentOrganization?.id, activeRole, translator]) // Watch currentOrganization changes
   
   // Debounced save handlers to prevent race conditions
   const debouncedSaveProfile = useDebounce(async () => {

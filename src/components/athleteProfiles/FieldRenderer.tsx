@@ -163,7 +163,7 @@ function TextFieldInput({
 }) {
   return (
     <div className="field-group">
-      <label htmlFor={field.field_key} className="field-label">
+      <label htmlFor={field.field_key} className="form-label">
         {field.field_label}
         {isRequired && <span className="field-required">*</span>}
         {field.unit && <span className="field-unit">({field.unit})</span>}
@@ -175,7 +175,7 @@ function TextFieldInput({
         value={value || ''}
         onChange={(e) => onChange(e.target.value || null)}
         disabled={disabled}
-        className={`field-input ${error ? 'field-input-error' : ''}`}
+        className={`form-input ${error ? 'border-red-500 focus:ring-red-500' : ''}`}
         placeholder={`Enter ${field.field_label.toLowerCase()}`}
       />
       
@@ -222,7 +222,7 @@ function NumberFieldInput({
 
   return (
     <div className="field-group">
-      <label htmlFor={field.field_key} className="field-label">
+      <label htmlFor={field.field_key} className="form-label">
         {field.field_label}
         {isRequired && <span className="field-required">*</span>}
         {field.unit && <span className="field-unit">({field.unit})</span>}
@@ -235,7 +235,7 @@ function NumberFieldInput({
         onChange={handleChange}
         disabled={disabled}
         step={isInteger ? '1' : '0.01'}
-        className={`field-input ${error ? 'field-input-error' : ''}`}
+        className={`form-input ${error ? 'border-red-500 focus:ring-red-500' : ''}`}
         placeholder={`Enter ${field.field_label.toLowerCase()}`}
       />
       
@@ -310,7 +310,7 @@ function EnumFieldInput({
 
   return (
     <div className="field-group">
-      <label htmlFor={field.field_key} className="field-label">
+      <label htmlFor={field.field_key} className="form-label">
         {field.field_label}
         {isRequired && <span className="field-required">*</span>}
       </label>
@@ -320,7 +320,7 @@ function EnumFieldInput({
         value={value || ''}
         onChange={(e) => onChange(e.target.value || null)}
         disabled={disabled}
-        className={`field-select ${error ? 'field-select-error' : ''}`}
+        className={`form-select ${error ? 'border-red-500 focus:ring-red-500' : ''}`}
       >
         <option value="">Select {field.field_label.toLowerCase()}</option>
         {enumValues.map((option) => (
@@ -369,22 +369,22 @@ function MultiEnumFieldInput({
 
   return (
     <div className="field-group">
-      <label className="field-label">
+      <label className="form-label">
         {field.field_label}
         {isRequired && <span className="field-required">*</span>}
       </label>
       
-      <div className="field-checkbox-group">
+      <div className="checkbox-row">
         {enumValues.map((option) => (
-          <label key={option} className="field-checkbox-label">
+          <label key={option} className="form-radio-label">
             <input
               type="checkbox"
               checked={selectedValues.includes(option)}
               onChange={() => handleToggle(option)}
               disabled={disabled}
-              className="field-checkbox-input"
+              className="form-radio"
             />
-            <span className="field-checkbox-text">{formatEnumValue(option)}</span>
+            <span>{formatEnumValue(option)}</span>
           </label>
         ))}
       </div>
@@ -417,7 +417,7 @@ function TimeFieldInput({
 }) {
   return (
     <div className="field-group">
-      <label htmlFor={field.field_key} className="field-label">
+      <label htmlFor={field.field_key} className="form-label">
         {field.field_label}
         {isRequired && <span className="field-required">*</span>}
       </label>
@@ -428,7 +428,7 @@ function TimeFieldInput({
         value={value || ''}
         onChange={(e) => onChange(e.target.value || null)}
         disabled={disabled}
-        className={`field-input ${error ? 'field-input-error' : ''}`}
+        className={`form-input ${error ? 'border-red-500 focus:ring-red-500' : ''}`}
       />
       
       {helpText && <p className="field-help">{helpText}</p>}
@@ -478,7 +478,7 @@ function ObjectFieldInput({
 
   return (
     <div className="field-group">
-      <label htmlFor={field.field_key} className="field-label">
+      <label htmlFor={field.field_key} className="form-label">
         {field.field_label}
         {isRequired && <span className="field-required">*</span>}
       </label>
@@ -489,7 +489,7 @@ function ObjectFieldInput({
         onChange={handleChange}
         disabled={disabled}
         rows={4}
-        className={`field-textarea ${error || jsonError ? 'field-textarea-error' : ''}`}
+        className={`form-textarea ${error || jsonError ? 'border-red-500 focus:ring-red-500' : ''}`}
         placeholder={`Enter ${field.field_label.toLowerCase()} as JSON`}
       />
       

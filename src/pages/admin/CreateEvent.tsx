@@ -19,8 +19,7 @@ import {
   Select,
   DatePicker,
   TimePicker,
-  Checkbox,
-  Badge
+  Checkbox
 } from '../../components/platformAdmin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
@@ -177,7 +176,6 @@ export default function CreateEvent() {
   const watchSportId = watch('sport_id')
   const watchProgramId = watch('program_id')
   const watchSeasonId = watch('season_id')
-  const watchTeamId = watch('team_id')
   const watchRSVPEnabled = watch('rsvp_enabled')
   
   // Watch all form values for persistence
@@ -294,7 +292,7 @@ export default function CreateEvent() {
 
       const today = new Date().toISOString().split('T')[0]
       const bySeasonId = new Map<string, { id: string; name: string; is_active?: boolean; end_date?: string }>()
-      ;(tsData || []).forEach((row: { season_id: string; name: string; is_active?: boolean; end_date?: string }) => {
+      ;(tsData || []).forEach((row: { season_id: string | null; name: string | null; is_active: boolean | null; end_date: string | null }) => {
         if (!row.season_id || !row.name) return
         const isActive = row.is_active ?? false
         const isFuture = (row.end_date || '') >= today
@@ -566,7 +564,6 @@ export default function CreateEvent() {
                       value={field.value || ''}
                       label="Sport"
                       options={sports.map(s => ({ value: s.id, label: s.name }))}
-                      placeholder="Select sport"
                       onChange={(value) => {
                         field.onChange(value)
                         setValue('program_id', '', { shouldValidate: false })
@@ -587,7 +584,6 @@ export default function CreateEvent() {
                       value={field.value || ''}
                       label="Program"
                       options={programs.map(p => ({ value: p.id, label: p.name }))}
-                      placeholder="Select program"
                       disabled={!watchSportId}
                       onChange={(value) => {
                         field.onChange(value)
@@ -609,7 +605,6 @@ export default function CreateEvent() {
                       value={field.value || ''}
                       label="Season"
                       options={seasons.map(s => ({ value: s.id, label: s.name }))}
-                      placeholder="Select season"
                       required
                       disabled={!watchProgramId || loading}
                       error={errors.season_id?.message || undefined}
@@ -632,7 +627,6 @@ export default function CreateEvent() {
                       value={field.value || ''}
                       label="Team"
                       options={teams.map(t => ({ value: t.id, label: t.name }))}
-                      placeholder="Select team"
                       required
                       disabled={!watchSeasonId || loading}
                       error={errors.team_id?.message || undefined}
@@ -898,4 +892,3 @@ export default function CreateEvent() {
     </div>
   )
 }
-

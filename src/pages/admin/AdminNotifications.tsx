@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useUserContext } from '../../hooks/useUserContext'
-import { useAuth } from '../../hooks/useAuth'
 import { Link } from 'react-router-dom'
 import {
   getNotifications,
@@ -15,11 +14,9 @@ import {
   Badge,
   EmptyState,
   AdminFilterPanel,
-  FilterSectionConfig,
 } from '../../components/platformAdmin'
 import { showSuccess, showError } from '../../utils/toast'
 import { cn } from '../../utils/cn'
-import { useT } from '../../i18n/useI18n'
 import { getTeams } from '../../data/services/teamsService'
 import '../../styles/orgAdmin.css'
 
@@ -38,6 +35,15 @@ const getPresentationColor = (presentation: string) => {
     case 'warning': return 'pa-text-warning'
     default: return 'pa-text-primary'
   }
+}
+
+type FilterSectionConfig = {
+  id: string
+  title: string
+  layout?: string
+  items: { id: string; label: string; icon?: string; count?: number }[]
+  multiSelect?: boolean
+  searchable?: boolean
 }
 
 const STATIC_SECTIONS: FilterSectionConfig[] = [
@@ -77,9 +83,7 @@ const STATIC_SECTIONS: FilterSectionConfig[] = [
 ]
 
 export default function AdminNotifications() {
-  const t = useT()
   const { context, isReady } = useUserContext()
-  const { user } = useAuth()
   const isMountedRef = useRef(true)
 
   // State
@@ -260,7 +264,7 @@ export default function AdminNotifications() {
         if (section.id === 'status') {
           return {
             ...section,
-            items: section.items.map((item) => ({
+            items: section.items.map((item: { id: string; label: string; icon?: string }) => ({
               ...item,
               count: statusCounts[item.id as keyof typeof statusCounts],
             })),
@@ -269,7 +273,7 @@ export default function AdminNotifications() {
         if (section.id === 'type') {
           return {
             ...section,
-            items: section.items.map((item) => ({
+            items: section.items.map((item: { id: string; label: string; icon?: string }) => ({
               ...item,
               count: typeCounts[item.id as keyof typeof typeCounts],
             })),
@@ -278,7 +282,7 @@ export default function AdminNotifications() {
         if (section.id === 'role') {
           return {
             ...section,
-            items: section.items.map((item) => ({
+            items: section.items.map((item: { id: string; label: string; icon?: string }) => ({
               ...item,
               count: roleCounts[item.id] || 0,
             })),
@@ -371,7 +375,7 @@ export default function AdminNotifications() {
                             {group.items.map((notification, nIdx) => {
                                 const isUnread = !notification.read_at
                                 const icon = getIcon(notification.action)
-                                const colorClass = getPresentationColor(notification.presentation_type)
+                                getPresentationColor(notification.presentation_type)
 
                                 return (
                                     <Card 

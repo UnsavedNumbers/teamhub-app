@@ -4,6 +4,7 @@ import PortalHeader from './PortalHeader'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getContactForCategory } from '../../data/services/organizationContactsService'
 import Icon from './Icon'
+import '../../styles/portal.css'
 
 interface Breadcrumb {
   label: string
@@ -46,13 +47,7 @@ export default function PortalLayout({ children, breadcrumbs, forceRole }: Porta
   return (
     <div className="oa-theme-active min-h-screen bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-slate-100 antialiased relative">
       {/* Background Field Markings (Grid) */}
-      <div 
-        className="fixed inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.02] z-[-1]"
-        style={{
-          backgroundImage: 'linear-gradient(to right, #f3f4f6 1px, transparent 1px), linear-gradient(to bottom, #f3f4f6 1px, transparent 1px)',
-          backgroundSize: '100px 100px',
-        }}
-      />
+      <div className="fixed inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.02] z-[-1] portal-grid-bg" />
 
       {/* Portal Nav with Mega Menu */}
       <PortalHeader forceRole={forceRole} />

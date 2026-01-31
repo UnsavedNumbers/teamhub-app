@@ -14,8 +14,11 @@ import { getDisplayName, calculateAge, getGenderLabel, formatSports, getAthleteI
 import { formatPhoneDisplay } from '../../utils/phoneFormatting'
 import { GuardianMatchIndicator } from '../../components/admin/GuardianMatchIndicator'
 import { checkGuardianMatch, debounce } from '../../utils/guardianMatching'
+import { useSportFieldDefinitions } from '../../hooks/useSportFieldDefinitions'
+import { useAthleteSportProfile } from '../../hooks/useAthleteSportProfile'
 import type { Athlete, Guardian, GuardianMatch, PendingGuardianInvite } from '../../types/family'
 import type { AthleteSportWithDetails } from '../../data/services/athleteSportsService'
+import type { SportCode } from '../../types/sports'
 
 interface TeamMembership {
   id: string
@@ -84,10 +87,20 @@ export default function AthleteDetail() {
   // Invite Action States
   const [inviteActionLoading, setInviteActionLoading] = useState<string | null>(null)
 
+  // Sport Profiles State
+  const [selectedSport, setSelectedSport] = useState<SportCode>('soccer')
+
 
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
   const isMountedRef = useRef(true)
+
+  // Sport Profile Data Hooks
+  const { profile: sportProfile, loading: sportProfileLoading } = useAthleteSportProfile(
+    athleteId || '',
+    selectedSport
+  )
+  const { profileFields, equipmentFields } = useSportFieldDefinitions(selectedSport)
 
   useEffect(() => {
     isMountedRef.current = true
@@ -1015,6 +1028,7 @@ export default function AthleteDetail() {
           <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList>
             <TabsTrigger value="overview">{t('admin.athletes.tabs.overview')}</TabsTrigger>
+            <TabsTrigger value="sport_profiles">Sport Profiles</TabsTrigger>
             <TabsTrigger value="teams">{t('admin.athletes.tabs.teams', { count: totalTeams })}</TabsTrigger>
             <TabsTrigger value="sports">{t('admin.athletes.tabs.sports', { count: playsCount + interestedCount })}</TabsTrigger>
             <TabsTrigger value="guardians">
@@ -1220,6 +1234,92 @@ export default function AthleteDetail() {
                 </Card>
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="sport_profiles">
+            <div style={{ marginBottom: 'var(--pa-space-4)' }}>
+              <Card>
+                <h2 className="pa-card-title" style={{ marginBottom: 'var(--pa-space-4)' }}>Select Sport</h2>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 'var(--pa-space-3)' }}>
+                  {(['soccer', 'basketball', 'baseball', 'football'] as SportCode[]).map((sport) => (
+                    <button
+                      key={sport}
+                      onClick={() => setSelectedSport(sport)}
+                      className="pa-btn"
+                      style={{
+                        padding: 'var(--pa-space-4)',
+                        border: selectedSport === sport ? '2px solid var(--pa-theme-action-primary)' : '1px solid var(--pa-border-default)',
+                        background: selectedSport === sport ? 'var(--pa-theme-action-primary-bg)' : 'transparent',
+                        borderRadius: 'var(--pa-radius-md)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 'var(--pa-space-2)',
+                        transition: 'all 0.2s ease',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>sports</span>
+                      <span className="pa-body-s" style={{ fontWeight: 700, textTransform: 'capitalize' }}>
+                        {sport.replace('_', ' ')}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </Card>
+            </div>
+
+            {sportProfileLoading ? (
+              <div className="pa-skeleton" style={{ height: '200px' }} />
+            ) : (
+              <div style={{ display: 'grid', gap: 'var(--pa-space-6)' }}>
+                <Card>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--pa-space-4)' }}>
+                    <h2 className="pa-card-title" style={{ margin: 0 }}>Profile Data</h2>
+                    <Badge variant={sportProfile?.completeness_score === 100 ? 'success' : 'warning'}>
+                      {sportProfile?.completeness_score || 0}% Complete
+                    </Badge>
+                  </div>
+                  
+                  {profileFields.length > 0 ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 'var(--pa-space-4)' }}>
+                      {profileFields.map((field) => (
+                        <div key={field.field_key}>
+                          <p className="pa-label">{field.field_label}</p>
+                          <p className="pa-body-m">
+                            {sportProfile?.profile_data[field.field_key]?.toString() || '—'}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="pa-body-m" style={{ color: 'var(--pa-n500)' }}>
+                      No profile fields configured for this sport
+                    </p>
+                  )}
+                </Card>
+
+                <Card>
+                  <h2 className="pa-card-title" style={{ marginBottom: 'var(--pa-space-4)' }}>Equipment Data</h2>
+                  {equipmentFields.length > 0 ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 'var(--pa-space-4)' }}>
+                      {equipmentFields.map((field) => (
+                        <div key={field.field_key}>
+                          <p className="pa-label">{field.field_label}</p>
+                          <p className="pa-body-m">
+                            {sportProfile?.equipment_data[field.field_key]?.toString() || '—'}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="pa-body-m" style={{ color: 'var(--pa-n500)' }}>
+                      No equipment fields configured for this sport
+                    </p>
+                  )}
+                </Card>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="teams">
