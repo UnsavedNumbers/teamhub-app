@@ -90,6 +90,44 @@ const portal = {
         icon: 'cancel',
     },
 
+    // Tickets
+    tickets: {
+        path: '/tickets',
+        label: 'Tickets',
+        icon: 'confirmation_number',
+        description: 'Buy event tickets',
+    },
+    ticketEventDetail: {
+        path: '/tickets/events/:eventId',
+        params: ['eventId'] as const,
+        label: 'Event Tickets',
+        icon: 'confirmation_number',
+    },
+    ticketOrderSuccess: {
+        path: '/tickets/order/:orderId',
+        params: ['orderId'] as const,
+        label: 'Order Confirmation',
+        icon: 'check_circle',
+    },
+    ticketAccess: {
+        path: '/tickets/access/:token',
+        params: ['token'] as const,
+        label: 'My Tickets',
+        icon: 'confirmation_number',
+    },
+    ticketValidate: {
+        path: '/tickets/validate/:token',
+        params: ['token'] as const,
+        label: 'Validate Tickets',
+        icon: 'qr_code_scanner',
+    },
+    myTickets: {
+        path: '/account/tickets',
+        label: 'My Tickets',
+        icon: 'confirmation_number',
+        description: 'Your event tickets',
+    },
+
     // Athletes/Teams
     athletes: {
         path: '/portal/athletes',
@@ -690,6 +728,48 @@ const admin = {
             icon: 'add',
             requiresOrg: true,
         },
+    },
+
+    // Ticketing
+    ticketing: {
+        path: '/admin/ticketing',
+        label: 'Ticketing',
+        icon: 'confirmation_number',
+        description: 'Event ticket sales',
+        requiresOrg: true,
+    },
+    ticketingEvents: {
+        list: {
+            path: '/admin/ticketing/events',
+            label: 'Ticketed Events',
+            icon: 'event',
+            requiresOrg: true,
+        },
+        create: {
+            path: '/admin/ticketing/events/new',
+            label: 'Create Ticketed Event',
+            icon: 'add',
+            requiresOrg: true,
+        },
+        detail: {
+            path: '/admin/ticketing/events/:id',
+            params: ['id'] as const,
+            label: 'Event Details',
+            icon: 'event',
+            requiresOrg: true,
+        },
+    },
+    ticketingOrders: {
+        path: '/admin/ticketing/orders',
+        label: 'Ticket Orders',
+        icon: 'receipt_long',
+        requiresOrg: true,
+    },
+    ticketingScanner: {
+        path: '/admin/ticketing/scanner',
+        label: 'Ticket Scanner',
+        icon: 'qr_code_scanner',
+        requiresOrg: true,
     },
 
     // Uniforms

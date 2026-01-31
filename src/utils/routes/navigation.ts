@@ -309,6 +309,17 @@ export const adminMenuItems: MenuItemDefinition[] = [
         children: null,
     },
     {
+        label: 'Ticketing',
+        icon: 'confirmation_number',
+        routeKey: 'admin.ticketingEvents',
+        requiresOrg: true,
+        children: [
+            { text: 'Events', icon: 'event', routeKey: 'admin.ticketingEvents', requiresOrg: true },
+            { text: 'Orders', icon: 'receipt_long', routeKey: 'admin.ticketingOrders', requiresOrg: true },
+            { text: 'Scanner', icon: 'qr_code_scanner', routeKey: 'admin.ticketingScanner', requiresOrg: true },
+        ],
+    },
+    {
         label: 'Photos',
         icon: 'photo_library',
         routeKey: 'admin.photos.list',
