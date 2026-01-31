@@ -1359,7 +1359,7 @@ export async function getTeamsForCoach(
  * Used to lock "Plays" checkboxes.
  */
 export async function getAthleteTeamHistory(
-    context: UserContext,
+    _context: UserContext,
     athleteId: string
 ): Promise<{ data: string[]; error: Error | null }> {
     if (USE_FAKE_DATA) {

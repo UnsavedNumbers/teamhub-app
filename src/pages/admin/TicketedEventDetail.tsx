@@ -9,7 +9,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { getTicketedEventById, getTicketTypesForEvent } from '@/data/services'
 import { supabase } from '@/lib/supabase'
 import { useRouteLink } from '@/utils/routes'
-import { formatCurrency } from '@/types/ticketing'
+import { formatCurrency, type TicketType } from '@/types/ticketing'
 
 // Hash token helper (client-side)
 async function hashToken(token: string): Promise<string> {
@@ -35,8 +35,8 @@ export default function TicketedEventDetail() {
     enabled: !!id,
   })
 
-  const event = eventResponse?.data
-  const ticketTypes = ticketTypesResponse?.data || []
+  const event = (eventResponse as any)?.data ?? eventResponse ?? null
+  const ticketTypes = (ticketTypesResponse as any)?.data ?? ticketTypesResponse ?? []
 
   const generateStaffLinkMutation = useMutation({
     mutationFn: async () => {
@@ -159,7 +159,7 @@ export default function TicketedEventDetail() {
               </tr>
             </thead>
             <tbody>
-              {ticketTypes.map((type) => (
+              {ticketTypes.map((type: TicketType) => (
                 <tr key={type.id}>
                   <td>{type.name}</td>
                   <td>{formatCurrency(type.price_cents)}</td>

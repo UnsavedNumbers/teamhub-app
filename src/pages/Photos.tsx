@@ -63,7 +63,7 @@ export default function Photos() {
     loadGalleries()
   }, [context, isReady])
 
-  const renderGallerySection = (title: string, type: GalleryType, items: Gallery[]) => {
+  const renderGallerySection = (title: string, items: Gallery[]) => {
     if (items.length === 0 && !loading) return null
 
     return (
@@ -122,11 +122,11 @@ export default function Photos() {
         </p>
       </div>
 
-      {renderGallerySection('My Athletes', 'athlete', galleries.athlete)}
-      {renderGallerySection('My Teams', 'team', galleries.team)}
-      {renderGallerySection('Recent Events', 'event', galleries.event)}
-      {renderGallerySection('Travel', 'travel', galleries.travel)}
-      {renderGallerySection('Organization Galleries', 'org', galleries.org)}
+      {renderGallerySection('My Athletes', galleries.athlete)}
+      {renderGallerySection('My Teams', galleries.team)}
+      {renderGallerySection('Recent Events', galleries.event)}
+      {renderGallerySection('Travel', galleries.travel)}
+      {renderGallerySection('Organization Galleries', galleries.org)}
     </PortalLayout>
   )
 }

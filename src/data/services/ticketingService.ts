@@ -51,7 +51,7 @@ export async function getTicketedEvents(filters?: {
 
   const { data, error } = await query
 
-  return normalizeSupabaseResponse<TicketedEvent[]>(data, error)
+  return normalizeSupabaseResponse<TicketedEvent[]>(data as unknown as TicketedEvent[], error)
 }
 
 export async function getTicketedEventById(id: string) {
@@ -61,7 +61,7 @@ export async function getTicketedEventById(id: string) {
     .eq('id', id)
     .single()
 
-  return normalizeSupabaseResponse<TicketedEvent>(data, error)
+  return normalizeSupabaseResponse<TicketedEvent>(data as unknown as TicketedEvent, error)
 }
 
 // ============================================================================
@@ -76,7 +76,7 @@ export async function getTicketTypesForEvent(ticketedEventId: string) {
     .eq('is_active', true)
     .order('sort_order', { ascending: true })
 
-  return normalizeSupabaseResponse<TicketType[]>(data, error)
+  return normalizeSupabaseResponse<TicketType[]>(data as unknown as TicketType[], error)
 }
 
 // ============================================================================
@@ -113,7 +113,12 @@ export async function getTicketOrderById(orderId: string) {
       ticket_types: Pick<TicketType, 'name' | 'description'>
     }>
     ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
-  }>(data, error)
+  }>(data as unknown as (TicketOrder & {
+    ticket_order_items: Array<TicketOrderItem & {
+      ticket_types: Pick<TicketType, 'name' | 'description'>
+    }>
+    ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
+  }), error)
 }
 
 export async function getMyTicketOrders() {
@@ -138,7 +143,7 @@ export async function getMyTicketOrders() {
     .or(`purchaser_user_id.eq.${user.id}${userData?.email ? `,purchaser_email.eq.${userData.email}` : ''}`)
     .order('created_at', { ascending: false })
 
-  return normalizeSupabaseResponse<TicketOrder[]>(data, error)
+  return normalizeSupabaseResponse<TicketOrder[]>(data as unknown as TicketOrder[], error)
 }
 
 // ============================================================================
@@ -170,7 +175,10 @@ export async function getTicketsForOrder(orderId: string) {
   return normalizeSupabaseResponse<Array<Ticket & {
     ticket_types: Pick<TicketType, 'name' | 'description'>
     ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
-  }>>(data, error)
+  }>>(data as unknown as Array<Ticket & {
+    ticket_types: Pick<TicketType, 'name' | 'description'>
+    ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
+  }>, error)
 }
 
 export async function getTicketsByAccessToken(token: string) {

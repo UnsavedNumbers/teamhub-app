@@ -18,7 +18,7 @@ export default function TicketEventList() {
     queryFn: () => getTicketedEvents({ status: 'published', upcoming_only: true }),
   })
 
-  const events = eventsResponse?.data || []
+  const events = (Array.isArray(eventsResponse) ? eventsResponse : eventsResponse?.data || []) as TicketedEvent[]
 
   return (
     <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] text-[#111418] dark:text-white transition-colors">
@@ -66,8 +66,8 @@ function EventCard({ event }: { event: TicketedEvent }) {
   const { data: ticketTypesResponse } = useQuery({
     queryKey: ['ticket-types', event.id, 'min-price'],
     queryFn: () => getTicketTypesForEvent(event.id),
-    select: (data) => {
-      const types = data?.data || []
+    select: (data: any) => {
+      const types = Array.isArray(data) ? data : data?.data || []
       if (types.length === 0) return null
       return Math.min(...types.map((t: TicketType) => t.price_cents))
     },

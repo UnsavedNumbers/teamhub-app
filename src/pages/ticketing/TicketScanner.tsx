@@ -12,7 +12,6 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { getTicketedEvents, validateTicketScan, exchangeStaffLink } from '@/data/services'
 import { useOffline } from '@/hooks/useOffline'
 import type { ValidateScanResponse, TicketScanResult } from '@/types/ticketing'
-import { formatEntryCode } from '@/types/ticketing'
 
 interface ValidationResult {
   timestamp: Date
@@ -59,6 +58,7 @@ export default function TicketScanner() {
     queryFn: () => getTicketedEvents({ status: 'published', upcoming_only: true }),
     enabled: !token, // Only load if admin route
   })
+  const eventList = Array.isArray(events) ? events : events?.data || []
 
   // Auto-focus input
   useEffect(() => {
@@ -183,7 +183,7 @@ export default function TicketScanner() {
     ? staffLinkSession
       ? { id: staffLinkSession.ticketed_event_id, title: staffLinkSession.event_title }
       : null
-    : events?.data?.find((e) => e.id === selectedEventId)
+    : eventList.find((e: any) => e.id === selectedEventId)
 
   return (
     <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] text-[#111418] dark:text-white p-4">
@@ -201,7 +201,7 @@ export default function TicketScanner() {
         </div>
 
         {/* Event Selector (admin route only) */}
-        {!token && events?.data && (
+        {!token && eventList.length > 0 && (
           <div className="mb-6">
             <label className="block text-sm font-medium text-[#111418] dark:text-white mb-2">
               Select Event
@@ -212,7 +212,7 @@ export default function TicketScanner() {
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-[#111418] dark:text-white focus:ring-2 focus:ring-[#137fec] focus:border-[#137fec]"
             >
               <option value="">Choose an event...</option>
-              {events.data.map((event) => (
+              {eventList.map((event: any) => (
                 <option key={event.id} value={event.id}>
                   {event.title} - {new Date(event.starts_at).toLocaleDateString()}
                 </option>

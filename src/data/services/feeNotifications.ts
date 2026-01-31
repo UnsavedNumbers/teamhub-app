@@ -2,6 +2,8 @@ import { supabase } from '../../lib/supabase'
 import { USE_FAKE_DATA } from '../config'
 import type { NotificationAction } from '../../types/notifications'
 
+const supabaseAny = supabase as any
+
 interface FeeNotificationInput {
     fee_id: string
     athlete_id: string
@@ -68,9 +70,9 @@ export async function distributeFeeAssignedNotifications(input: FeeNotificationI
             }
         }))
 
-        const { error: insertError } = await supabase
+        const { error: insertError } = await supabaseAny
             .from('user_notifications')
-            .insert(notificationsToInsert)
+            .insert(notificationsToInsert as any)
 
         if (insertError) throw insertError
 
@@ -134,9 +136,9 @@ export async function distributeFeeOverdueNotifications(input: FeeNotificationIn
             }
         }))
 
-        const { error: insertError } = await supabase
+        const { error: insertError } = await supabaseAny
             .from('user_notifications')
-            .insert(notificationsToInsert)
+            .insert(notificationsToInsert as any)
 
         if (insertError) throw insertError
 

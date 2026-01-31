@@ -301,8 +301,8 @@ export default function CreateEvent() {
           bySeasonId.set(row.season_id, {
             id: row.season_id,
             name: row.name,
-            is_active: row.is_active,
-            end_date: row.end_date,
+            is_active: row.is_active ?? undefined,
+            end_date: row.end_date ?? undefined,
           })
         }
       })

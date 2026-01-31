@@ -18,7 +18,7 @@ export default function TicketAccess() {
     enabled: !!token,
   })
 
-  const tickets = ticketsResponse?.data || []
+  const tickets = Array.isArray(ticketsResponse) ? ticketsResponse : ticketsResponse?.data || []
 
   if (error) {
     return (
@@ -44,7 +44,7 @@ export default function TicketAccess() {
       <div className="max-w-4xl mx-auto px-4">
         <h1 className="text-3xl font-black text-[#111418] dark:text-white mb-6 uppercase tracking-tight">Your Tickets</h1>
         <div className="space-y-6">
-          {tickets.map((ticket) => {
+          {tickets.map((ticket: any) => {
             const ticketEvent = ticket.ticketed_events
             return (
               <TicketCard

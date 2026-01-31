@@ -15,7 +15,7 @@ export default function MyTickets() {
     queryFn: () => getMyTicketOrders(),
   })
 
-  const orders = ordersResponse?.data || []
+  const orders = Array.isArray(ordersResponse) ? ordersResponse : ordersResponse?.data || []
 
   return (
     <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] py-8 text-[#111418] dark:text-white">
@@ -34,7 +34,7 @@ export default function MyTickets() {
           </div>
         ) : (
           <div className="space-y-8">
-            {orders.map((order) => (
+            {orders.map((order: any) => (
               <OrderTickets key={order.id} orderId={order.id} />
             ))}
           </div>
@@ -50,7 +50,7 @@ function OrderTickets({ orderId }: { orderId: string }) {
     queryFn: () => getTicketsForOrder(orderId),
   })
 
-  const tickets = ticketsResponse?.data || []
+  const tickets = Array.isArray(ticketsResponse) ? ticketsResponse : ticketsResponse?.data || []
 
   if (tickets.length === 0) return null
 
@@ -62,7 +62,7 @@ function OrderTickets({ orderId }: { orderId: string }) {
         {event?.title || 'Event Tickets'}
       </h2>
       <div className="space-y-6">
-        {tickets.map((ticket) => (
+        {tickets.map((ticket: any) => (
           <TicketCard
             key={ticket.id}
             ticket={ticket}
