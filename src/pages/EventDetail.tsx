@@ -177,7 +177,7 @@ export default function EventDetail() {
     if (!eventId || !window.confirm('Are you sure you want to delete this event? This cannot be undone.')) return
     
     setLoading(true)
-    const { error } = await deleteEvent(context, eventId)
+    const { error } = await deleteEvent(eventId)
     if (error) {
       alert(error.message)
       setLoading(false)
@@ -186,7 +186,7 @@ export default function EventDetail() {
     }
   }
 
-  const canManage = context?.roles.includes('admin') || context?.roles.includes('org_admin') || context?.roles.includes('coach')
+  const canManage = context?.roles.includes('org_admin') || context?.roles.includes('coach')
 
   const statusStyles: Record<RSVPStatus, string> = {
     going: 'bg-emerald-500 text-white',
@@ -253,11 +253,11 @@ export default function EventDetail() {
                 <div className="p-4 sm:p-6 flex justify-between items-center">
                    <div>
                        <h3 className="text-lg font-black uppercase text-slate-900 dark:text-white">Tickets Required</h3>
-                       <p className="text-slate-500 dark:text-slate-400">
-                          {event.ticketed_event.ticket_types.length > 0 && 
-                             `Starting from $${Math.min(...event.ticketed_event.ticket_types.map(t => t.price_cents)).toFixed(2) / 100}`
-                          }
-                       </p>
+                        <p className="text-slate-500 dark:text-slate-400">
+                           {event.ticketed_event.ticket_types.length > 0 && 
+                              `Starting from $${(Math.min(...event.ticketed_event.ticket_types.map(t => t.price_cents)) / 100).toFixed(2)}`
+                           }
+                        </p>
                    </div>
                    <Button onClick={() => navigate(`/o/${context.orgId}/tickets/events/${event.ticketed_event?.id}`)}>
                       Get Tickets

@@ -73,6 +73,12 @@ const RequestAthleteAttachment = lazy(() => import('./pages/RequestAthleteAttach
 const PortalCreateEvent = lazy(() => import('./pages/portal/PortalCreateEvent'))
 const PortalEditEvent = lazy(() => import('./pages/portal/PortalEditEvent'))
 
+// Video Pages - Lazy loaded
+const GuardianVideos = lazy(() => import('./pages/GuardianVideos'))
+const GuardianVideoDetail = lazy(() => import('./pages/GuardianVideoDetail'))
+const CoachVideoLibrary = lazy(() => import('./pages/CoachVideoLibrary'))
+const CoachVideoDetail = lazy(() => import('./pages/CoachVideoDetail'))
+
 // Admin Layout (Material Dashboard)
 import AdminLayout from './layouts/AdminLayout'
 
@@ -332,6 +338,11 @@ function AppWithTheme() {
             <Route path="photos" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.photos"><Photos /></FeatureGateRoute></ProtectedRoute>} />
             <Route path="photos/gallery/:id" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.photosGallery"><Suspense fallback={<AdminLoadingSpinner />}><PhotosGallery /></Suspense></FeatureGateRoute></ProtectedRoute>} />
             <Route path="photos/gallery/:id/manage" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.photosGalleryManage"><Suspense fallback={<AdminLoadingSpinner />}><PhotosGallery /></Suspense></FeatureGateRoute></ProtectedRoute>} />
+            
+            {/* Videos */}
+            <Route path="videos" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><GuardianVideos /></Suspense></ProtectedRoute>} />
+            <Route path="videos/:id" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><GuardianVideoDetail /></Suspense></ProtectedRoute>} />
+            
             <Route path="account/tickets" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.myTickets"><MyTickets /></FeatureGateRoute></ProtectedRoute>} />
             
             {/* Redirect root portal to dashboard */}
@@ -482,6 +493,10 @@ function AppWithTheme() {
             
               {/* Photos */}
               <Route path="photos" element={<FeatureGateRoute routeKey="admin.photos.list"><Suspense fallback={<AdminLoadingSpinner />}><AdminPhotos /></Suspense></FeatureGateRoute>} />
+            
+              {/* Videos */}
+              <Route path="videos" element={<Suspense fallback={<AdminLoadingSpinner />}><CoachVideoLibrary /></Suspense>} />
+              <Route path="videos/:id" element={<Suspense fallback={<AdminLoadingSpinner />}><CoachVideoDetail /></Suspense>} />
             
               {/* Users */}
               <Route path="users/new" element={<CreateUser />} />

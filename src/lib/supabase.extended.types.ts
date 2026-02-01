@@ -6,8 +6,8 @@ import type {
   NotificationRole,
 } from '../types/notifications'
 
-// Re-export Json for use in other modules
-export type { Json }
+// Re-export Json and Database for use in other modules
+export type { Json, Database }
 
 // Additional tables that are NOT present in the generated database.types.ts
 type AdditionalTables = {

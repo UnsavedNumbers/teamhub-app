@@ -1036,28 +1036,42 @@ html.dark .oa-timepicker-option--selected:hover {
     align-items: center;
     gap: var(--pa-space-2);
     cursor: pointer;
+    width: 100%;
+    justify-content: flex-start;
 }
 
 .oa-checkbox-input {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
     border: 1px solid var(--pa-n300);
-    border-radius: 4px;
+    background: var(--pa-surface);
     appearance: none;
     cursor: pointer;
-    transition: all var(--pa-motion-normal) var(--pa-ease-out);
+    transition: border-color 220ms ease, background-color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 12px 12px;
+    box-shadow: inset 0 0 0 1px var(--pa-n200);
+}
+
+.oa-checkbox-input:hover:not(:disabled) {
+    border-color: var(--pa-n500);
 }
 
 .oa-checkbox-input:checked {
-    background: var(--pa-n900);
-    border-color: var(--pa-n900);
+    background: var(--org-btn-primary-bg, var(--pa-n900));
+    border-color: var(--org-btn-primary-bg, var(--pa-n900));
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.15);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: center;
 }
 
 .oa-checkbox-input:focus-visible {
-    outline: 2px solid var(--pa-n700);
+    outline: 3px solid var(--org-focus-ring, rgba(59, 130, 246, 0.45));
     outline-offset: 2px;
 }
 
@@ -2107,6 +2121,216 @@ html.dark .oa-text-danger {
     .oa-form-grid-3 {
         grid-template-columns: repeat(3, 1fr);
     }
+}
+
+.oa-skeleton--tall {
+    min-height: 500px;
+}
+
+/* Alerts / Notices */
+.oa-alert {
+    border-radius: 16px;
+    padding: var(--pa-space-4);
+    border: 1px solid transparent;
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-1);
+    font-size: 0.95rem;
+}
+
+.oa-alert__meta {
+    font-size: 0.85rem;
+    color: var(--pa-text-secondary);
+}
+
+.oa-alert--error {
+    background: var(--pa-danger-bg);
+    border-color: var(--pa-danger);
+    color: var(--pa-danger);
+}
+
+.oa-alert--error .oa-alert__meta {
+    color: color-mix(in srgb, var(--pa-danger) 70%, var(--pa-text-muted) 30%);
+}
+
+.oa-alert--info {
+    background: var(--pa-n25);
+    border-color: var(--pa-n200);
+    color: var(--pa-text-primary);
+}
+
+.oa-alert--warning {
+    background: rgba(250, 204, 21, 0.12);
+    border-color: var(--pa-warning);
+    color: var(--pa-warning);
+    border-radius: 12px;
+}
+
+.oa-alert--warning .oa-alert__meta {
+    color: color-mix(in srgb, var(--pa-warning) 85%, var(--pa-text-muted) 15%);
+}
+
+.oa-alert--info .oa-alert__meta {
+    color: var(--pa-text-secondary);
+}
+
+.oa-status-icon-lg {
+    font-size: 48px;
+    color: var(--pa-warning);
+    margin-bottom: var(--pa-space-4);
+}
+
+.oa-action-icon {
+    font-size: 18px;
+    margin-right: var(--pa-space-1);
+}
+
+.oa-draft-saved {
+    border-radius: 12px;
+    border: 1px solid var(--pa-border);
+    background: var(--pa-n50);
+    color: var(--pa-text-muted);
+    padding: var(--pa-space-3) var(--pa-space-4);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+    font-size: 0.875rem;
+}
+
+.oa-draft-saved__icon {
+    font-size: 1rem;
+    color: var(--org-btn-primary-bg, var(--pa-n900));
+}
+
+/* Form Section Layout */
+.oa-form-section {
+    margin-top: var(--pa-space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-5);
+}
+
+.oa-form-section:first-child {
+    margin-top: 0;
+}
+
+.oa-form-section-header {
+    border-radius: 16px;
+    border: 1px solid var(--pa-n200);
+    background: var(--pa-n25);
+    padding: var(--pa-space-4) var(--pa-space-5);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--pa-space-3);
+}
+
+.oa-form-section-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--pa-n900);
+}
+
+.oa-form-section-subtitle {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--pa-text-secondary);
+    max-width: 70ch;
+}
+
+.oa-form-section-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-4);
+    margin: 0;
+    padding: 0;
+}
+
+.oa-checkbox-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-3);
+    width: 100%;
+}
+
+.oa-checkbox-stack .oa-checkbox {
+    justify-content: flex-start;
+}
+
+@media (max-width: 639px) {
+    .oa-form-section-header {
+        padding: var(--pa-space-3);
+    }
+}
+
+html.dark .oa-form-section-header {
+    background: var(--pa-surface-panel);
+    border-color: var(--pa-border-subtle);
+}
+
+/* Ticketing helpers */
+.oa-ticket-card {
+    border: 1px solid var(--pa-border);
+    border-radius: 16px;
+    background: var(--pa-card-bg);
+    padding: var(--pa-space-5);
+}
+
+html.dark .oa-ticket-card {
+    background: var(--pa-surface-panel);
+    border-color: var(--pa-border-subtle);
+}
+
+.oa-ticket-type-card {
+    border: 1px solid var(--pa-border);
+    border-radius: 12px;
+    background: var(--pa-surface);
+    padding: var(--pa-space-4);
+}
+
+html.dark .oa-ticket-type-card {
+    border-color: var(--pa-border-subtle);
+    background: var(--pa-surface-panel);
+}
+
+.oa-ticket-type-actions {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--pa-space-2);
+}
+
+/* General notes helpers */
+.oa-notes-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-2);
+}
+
+.oa-textarea-expand {
+    width: 100%;
+    min-height: 140px;
+    resize: vertical;
+    display: block;
+}
+
+html.dark .oa-alert--error {
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.6);
+    color: var(--pa-danger);
+}
+
+html.dark .oa-alert--info {
+    background: var(--pa-surface-panel);
+    border-color: var(--pa-border-subtle);
+    color: var(--pa-text-primary);
+}
+
+html.dark .oa-draft-saved {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--pa-border-subtle);
+    color: var(--pa-text-secondary);
 }
 
 /* Inputs */

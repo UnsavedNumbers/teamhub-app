@@ -288,9 +288,9 @@ export default function CreateTicketType() {
             <Button
               variant="primary"
               type="submit"
-              disabled={mutation.isLoading}
+              disabled={mutation.status === 'pending'}
             >
-              {mutation.isLoading ? 'Saving...' : 'Save ticket type'}
+              {mutation.status === 'pending' ? 'Saving...' : 'Save ticket type'}
             </Button>
           </div>
         </form>
