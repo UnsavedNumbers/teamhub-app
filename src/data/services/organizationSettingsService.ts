@@ -263,18 +263,18 @@ export async function updateOrganizationThemeSettings(
     return { error: null }
   } catch (err) {
     console.error('[organizationSettingsService] Error updating theme settings:', err)
-    
+
     // Handle specific error cases
     if (err instanceof Error) {
       // If it's already our custom error, return it
       if (err.message.includes('Settings were modified') ||
-          err.message.includes('Permission denied')) {
+        err.message.includes('Permission denied')) {
         return { error: err }
       }
 
       // Check for RLS errors
-      if (err.message.includes('row-level security') || 
-          (err as any).code === '42501') {
+      if (err.message.includes('row-level security') ||
+        (err as any).code === '42501') {
         return {
           error: new Error(
             'Permission denied. Please ensure you have permission to update organization settings.'
@@ -851,5 +851,34 @@ export async function checkImpactedRecords(
   } catch (err) {
     console.error('[organizationSettingsService] Error checking impacted records:', err)
     return { count: 0, error: err instanceof Error ? err : new Error('Unknown error') }
+  }
+}
+
+/**
+ * Get organization theme settings by ID (public access)
+ * Uses secure RPC function to bypass RLS for public pages
+ */
+export async function getOrganizationThemeSettingsByOrgId(orgId: string): Promise<{ theme_id: string | null; error: Error | null }> {
+  try {
+    // Try to use the secure function we created in migration
+    const { data, error } = await supabase.rpc('get_public_org_theme' as any, { org_id_input: orgId })
+
+    if (error) {
+      // Fallback for dev/local where migration might be missing or if function fails
+      // This might fail if RLS is strict, which is why we prefer RPC
+      const { data: settingsData, error: selectError } = await supabase
+        .from('organization_settings')
+        .select('theme_id')
+        .eq('org_id', orgId)
+        .maybeSingle()
+
+      if (selectError) throw selectError
+      return { theme_id: settingsData?.theme_id ?? null, error: null }
+    }
+
+    return { theme_id: data as string | null, error: null }
+  } catch (err) {
+    console.error('[organizationSettingsService] Error fetching public theme:', err)
+    return { theme_id: null, error: err instanceof Error ? err : new Error('Unknown error') }
   }
 }

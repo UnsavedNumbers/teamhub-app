@@ -10,19 +10,58 @@ export type TicketOrderStatus = 'pending_payment' | 'paid' | 'refunded' | 'cance
 export type TicketStatus = 'active' | 'used' | 'refunded' | 'voided'
 export type TicketScanResult = 'valid' | 'already_used' | 'invalid' | 'wrong_event' | 'refunded' | 'voided' | 'not_found'
 export type ScanMethod = 'qr' | 'manual'
+export type TicketSaleStatus = 'off' | 'scheduled' | 'on_sale' | 'ended' | 'sold_out'
+
+export interface TicketingProgram {
+  id: string
+  org_id: string
+  name: string
+  slug?: string | null
+  sport?: string | null
+  color?: string | null
+  is_active?: boolean | null
+}
+
+export interface TicketingSeason {
+  id: string
+  org_id: string
+  program_id: string | null
+  name: string
+  slug?: string | null
+  start_date?: string | null
+  end_date?: string | null
+  is_active?: boolean | null
+}
+
+export interface TicketingVenue {
+  id: string
+  org_id: string
+  name: string
+  address?: string | null
+  city?: string | null
+  state?: string | null
+  capacity?: number | null
+}
 
 export interface TicketedEvent {
   id: string
   org_id: string
-  team_id: string | null
-  event_id: string | null // Optional link to existing calendar event
+  team_id?: string | null
+  event_id?: string | null // Optional link to existing calendar event
+  program_id?: string | null
+  season_id?: string | null
+  venue_id?: string | null
+  opponent?: string | null
+  is_home?: boolean | null
+
   event_type: TicketedEventType
   title: string
   description: string | null
+  event_description: string | null
   starts_at: string
   ends_at: string
   timezone: string
-  
+
   // Venue
   venue_name: string | null
   venue_address_line1: string | null
@@ -33,19 +72,33 @@ export interface TicketedEvent {
   venue_country: string | null
   venue_is_virtual: boolean
   venue_virtual_link: string | null
-  
+
   // Sales window
   sales_start_at: string | null
   sales_end_at: string | null
-  
+
   // Media
   cover_image_path: string | null
-  
+  ticket_banner_url: string | null
+
   // Status
   status: TicketedEventStatus
-  
+  sale_status?: TicketSaleStatus
+
   created_at: string
   updated_at: string
+
+  // Relations (optional)
+  program?: TicketingProgram | null
+  season?: TicketingSeason | null
+  venue?: TicketingVenue | null
+
+  // Derived metrics (for admin dashboards)
+  tickets_sold?: number
+  revenue_cents?: number
+  ticket_progress_pct?: number | null
+  capacity_total?: number | null
+  capacity_remaining?: number | null
 }
 
 export interface TicketType {
@@ -81,6 +134,13 @@ export interface TicketOrder {
   stripe_checkout_session_id: string | null
   stripe_payment_intent_id: string | null
   receipt_email_sent_at: string | null
+  // Stripe Connect fields (nullable for backward compatibility)
+  stripe_connect_account_id: string | null
+  platform_fee_cents: number | null
+  org_revenue_cents: number | null
+  stripe_charge_id: string | null
+  stripe_application_fee_id: string | null
+  processed_at: string | null
   created_at: string
   updated_at: string
 }

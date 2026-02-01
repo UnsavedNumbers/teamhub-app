@@ -14,7 +14,7 @@ import type { OrgContext } from '@/utils/orgResolution'
 import { OrgScopedRoute } from '@/components/OrgScopedRoute'
 
 function TicketEventListContent({ org }: { org: OrgContext }) {
-  const orgSlug = ''
+  const orgSlug = org.slug
 
   const { data: eventsResponse } = useQuery({
     queryKey: ['ticketed-events', 'published', org.id],
@@ -53,7 +53,7 @@ function TicketEventListContent({ org }: { org: OrgContext }) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {events.map((event) => (
-              <EventCard key={event.id} event={event} orgSlug={orgSlug!} />
+              <EventCard key={event.id} event={event} orgSlug={orgSlug} />
             ))}
           </div>
         )}

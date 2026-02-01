@@ -1070,6 +1070,36 @@ html.dark .oa-timepicker-option--selected:hover {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z'/%3E%3C/svg%3E");
 }
 
+/* Hide any duplicated font-icon check when using the SVG background-image.
+   Some checkbox markup renders a sibling Material Icons element; hide it
+   when the input is checked to avoid displaying two check marks. */
+.oa-checkbox-input:checked + .material-symbols-outlined,
+.oa-checkbox-input:checked ~ .material-symbols-outlined,
+.oa-checkbox-input:checked + .oa-checkbox-icon,
+.oa-checkbox-input:checked ~ .oa-checkbox-icon {
+    display: none;
+}
+
+/* Fallback using :has() to cover cases where the icon appears before the input
+   in the DOM. Modern browsers support :has(); if unsupported, the earlier
+   sibling selectors will still hide the icon when it's after the input. */
+.oa-checkbox:has(.oa-checkbox-input:checked) .material-symbols-outlined,
+.oa-checkbox:has(.oa-checkbox-input:checked) .oa-checkbox-icon {
+    display: none;
+}
+
+/* Ensure the checkbox is properly circular and the SVG check is centered */
+.oa-checkbox-input {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
+    border-radius: 999px;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 12px 12px;
+}
+
 .oa-checkbox-input:focus-visible {
     outline: 3px solid var(--org-focus-ring, rgba(59, 130, 246, 0.45));
     outline-offset: 2px;

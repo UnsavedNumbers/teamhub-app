@@ -7379,6 +7379,50 @@ export type Database = {
           },
         ]
       }
+      stripe_connect_transactions: {
+        Row: {
+          application_fee_cents: number
+          connect_account_id: string
+          created_at: string
+          gross_amount_cents: number
+          id: string
+          net_amount_cents: number
+          stripe_application_fee_id: string | null
+          stripe_charge_id: string | null
+          ticket_order_id: string
+        }
+        Insert: {
+          application_fee_cents: number
+          connect_account_id: string
+          created_at?: string
+          gross_amount_cents: number
+          id?: string
+          net_amount_cents: number
+          stripe_application_fee_id?: string | null
+          stripe_charge_id?: string | null
+          ticket_order_id: string
+        }
+        Update: {
+          application_fee_cents?: number
+          connect_account_id?: string
+          created_at?: string
+          gross_amount_cents?: number
+          id?: string
+          net_amount_cents?: number
+          stripe_application_fee_id?: string | null
+          stripe_charge_id?: string | null
+          ticket_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stripe_connect_transactions_ticket_order_id_fkey"
+            columns: ["ticket_order_id"]
+            isOneToOne: true
+            referencedRelation: "ticket_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stripe_webhook_receipts: {
         Row: {
           created_at: string | null
@@ -7782,12 +7826,18 @@ export type Database = {
           fees_cents: number
           id: string
           org_id: string
+          org_revenue_cents: number | null
+          platform_fee_cents: number | null
+          processed_at: string | null
           purchaser_email: string
           purchaser_name: string | null
           purchaser_user_id: string | null
           receipt_email_sent_at: string | null
           status: Database["public"]["Enums"]["ticket_order_status"]
+          stripe_application_fee_id: string | null
+          stripe_charge_id: string | null
           stripe_checkout_session_id: string | null
+          stripe_connect_account_id: string | null
           stripe_payment_intent_id: string | null
           subtotal_cents: number
           tax_cents: number
@@ -7800,12 +7850,18 @@ export type Database = {
           fees_cents?: number
           id?: string
           org_id: string
+          org_revenue_cents?: number | null
+          platform_fee_cents?: number | null
+          processed_at?: string | null
           purchaser_email: string
           purchaser_name?: string | null
           purchaser_user_id?: string | null
           receipt_email_sent_at?: string | null
           status?: Database["public"]["Enums"]["ticket_order_status"]
+          stripe_application_fee_id?: string | null
+          stripe_charge_id?: string | null
           stripe_checkout_session_id?: string | null
+          stripe_connect_account_id?: string | null
           stripe_payment_intent_id?: string | null
           subtotal_cents?: number
           tax_cents?: number
@@ -7818,12 +7874,18 @@ export type Database = {
           fees_cents?: number
           id?: string
           org_id?: string
+          org_revenue_cents?: number | null
+          platform_fee_cents?: number | null
+          processed_at?: string | null
           purchaser_email?: string
           purchaser_name?: string | null
           purchaser_user_id?: string | null
           receipt_email_sent_at?: string | null
           status?: Database["public"]["Enums"]["ticket_order_status"]
+          stripe_application_fee_id?: string | null
+          stripe_charge_id?: string | null
           stripe_checkout_session_id?: string | null
+          stripe_connect_account_id?: string | null
           stripe_payment_intent_id?: string | null
           subtotal_cents?: number
           tax_cents?: number
@@ -8164,6 +8226,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           ends_at: string
+          event_description: string | null
           event_id: string | null
           event_type: Database["public"]["Enums"]["ticketed_event_type"]
           id: string
@@ -8173,6 +8236,7 @@ export type Database = {
           starts_at: string
           status: Database["public"]["Enums"]["ticketed_event_status"]
           team_id: string | null
+          ticket_banner_url: string | null
           timezone: string
           title: string
           updated_at: string | null
@@ -8191,6 +8255,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           ends_at: string
+          event_description?: string | null
           event_id?: string | null
           event_type?: Database["public"]["Enums"]["ticketed_event_type"]
           id?: string
@@ -8200,6 +8265,7 @@ export type Database = {
           starts_at: string
           status?: Database["public"]["Enums"]["ticketed_event_status"]
           team_id?: string | null
+          ticket_banner_url?: string | null
           timezone?: string
           title: string
           updated_at?: string | null
@@ -8218,6 +8284,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           ends_at?: string
+          event_description?: string | null
           event_id?: string | null
           event_type?: Database["public"]["Enums"]["ticketed_event_type"]
           id?: string
@@ -8227,6 +8294,7 @@ export type Database = {
           starts_at?: string
           status?: Database["public"]["Enums"]["ticketed_event_status"]
           team_id?: string | null
+          ticket_banner_url?: string | null
           timezone?: string
           title?: string
           updated_at?: string | null
@@ -11803,6 +11871,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["platform_admin_role"]
       }
+      get_public_org_theme: { Args: { org_id_input: string }; Returns: string }
       get_schema_columns: {
         Args: never
         Returns: {
@@ -12115,6 +12184,19 @@ export type Database = {
         Returns: boolean
       }
       trigger_notification_worker: { Args: never; Returns: undefined }
+      update_event_rsvp_config: {
+        Args: {
+          p_clear_existing: boolean
+          p_event_id: string
+          p_rsvp_enabled: boolean
+          p_rsvp_type: string
+        }
+        Returns: {
+          error: string
+          has_data: boolean
+          success: boolean
+        }[]
+      }
       update_org_slug: {
         Args: { p_new_slug: string; p_org_id: string }
         Returns: undefined
