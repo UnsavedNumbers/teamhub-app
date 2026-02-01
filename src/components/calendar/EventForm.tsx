@@ -1,26 +1,18 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useForm, Controller, useFieldArray } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { useUserContext } from '../../hooks/useUserContext'
-import { useT } from '../../i18n/useI18n'
 import { getSports, getPrograms } from '../../data/services/sportsService'
 import { getTeams } from '../../data/services/teamsService'
 import { supabase } from '../../lib/supabase'
 import { 
-  getEventDetails, 
-  createEvent, 
-  updateEvent 
-} from '../../data/services/eventsService'
-import { 
   EventFormData, 
-  EVENT_TYPE_LABELS, 
-  EventType
+  EVENT_TYPE_LABELS
 } from '../../types/calendar'
 import Button from '../portal/Button'
 import Card from '../portal/Card'
-import { CardTitle, SectionHeader } from '../portal/Typography'
-import Icon from '../portal/Icon'
+import { SectionHeader } from '../portal/Typography'
 
 interface EventFormProps {
   initialValues?: Partial<EventFormData>
@@ -31,7 +23,6 @@ interface EventFormProps {
 }
 
 export default function EventForm({ initialValues, onSubmit, loading: parentLoading, error: parentError, mode }: EventFormProps) {
-  const t = useT()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
   

@@ -117,6 +117,16 @@ export default function AdminLayout() {
       ],
     },
     {
+      label: 'Videos',
+      icon: 'smart_display',
+      path: '/admin/videos',
+      requiresOrg: true,
+      children: [
+        { routeKey: 'admin.videos.list', text: 'Video Library', icon: 'video_library', path: '/admin/videos', requiresOrg: true },
+        { routeKey: 'admin.videos.upload', text: 'Upload Video', icon: 'upload', path: '/admin/videos?upload=1', requiresOrg: true },
+      ],
+    },
+    {
       label: 'Account',
       icon: 'account_circle',
       path: getPath(RouteKeys.ADMIN_SETTINGS),

@@ -372,7 +372,7 @@ export default function Calendar() {
             </div>
             
             <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
-              {(context?.roles.includes('admin') || context?.roles.includes('org_admin') || context?.roles.includes('coach')) && (
+              {(context?.roles.includes('org_admin') || context?.roles.includes('coach')) && (
                  <Button onClick={() => navigate('/portal/calendar/new')} className="w-full sm:w-auto">
                     <Icon name="add" className="mr-2" />
                     Create Event

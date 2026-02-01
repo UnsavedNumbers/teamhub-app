@@ -1058,7 +1058,6 @@ export async function updateEvent(
  * Delete an event
  */
 export async function deleteEvent(
-    context: UserContext,
     eventId: string
 ): Promise<{ error: Error | null }> {
     if (USE_FAKE_DATA) {

@@ -17,6 +17,7 @@
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@mux/mux-node": "^12.8.1",
+    "@mux/upchunk": "^3.5.0",
     "@react-google-maps/api": "^2.19.4",
     "@stripe/stripe-js": "^4.8.0",
     "@supabase/supabase-js": "^2.49.0",

@@ -1416,6 +1416,14 @@ export const en = {
             delete: 'Delete Event',
             cancel: 'Cancel Event',
             uncancel: 'Restore Event',
+            fields: {
+                sport: 'Sport',
+                program: 'Program',
+                season: 'Season',
+                team: 'Team',
+                eventType: 'Event Type',
+                generalNotes: 'General notes',
+            },
             rsvpType: {
                 general: 'General RSVP (Head Count)',
                 athlete: 'Athlete RSVP (Per Athlete)',
@@ -2959,6 +2967,14 @@ export const es = {
             delete: 'Eliminar Evento',
             cancel: 'Cancelar Evento',
             uncancel: 'Restaurar Evento',
+            fields: {
+                sport: 'Deporte',
+                program: 'Programa',
+                season: 'Temporada',
+                team: 'Equipo',
+                eventType: 'Tipo de evento',
+                generalNotes: 'Notas generales',
+            },
             rsvpType: {
                 general: 'RSVP General (Recuento)',
                 athlete: 'RSVP de Atleta (Por Atleta)',
