@@ -585,27 +585,102 @@ serve(async (req) => {
         const payoutsEnabled = acct.payouts_enabled === true
         const chargesEnabled = acct.charges_enabled === true
 
-        const currentlyDue = acct.requirements?.currently_due?.length ?? 0
-        const pendingVerif = acct.requirements?.pending_verification?.length ?? 0
+        const requirements = acct.requirements ?? {}
+        const disabledReason = requirements.disabled_reason ?? null
+        const currentlyDue = requirements.currently_due ?? []
+        const pastDue = requirements.past_due ?? []
+        const pendingVerification = requirements.pending_verification ?? []
+        const requirementErrors =
+          (requirements.errors ?? []).map((err) => ({
+            code: err.code ?? null,
+            reason: err.reason ?? null,
+            requirement: err.requirement ?? null,
+          })) ?? []
+        const deadline = requirements.current_deadline
+          ? new Date(requirements.current_deadline * 1000).toISOString()
+          : null
 
-        // Map Stripe state -> your enum
-        // Adjust these strings to match your actual payout_onboarding_status enum values
-        let onboardingStatus: string
-        if (chargesEnabled && payoutsEnabled) onboardingStatus = "complete"
-        else if (currentlyDue > 0) onboardingStatus = "pending"
-        else if (pendingVerif > 0) onboardingStatus = "in_review"
-        else onboardingStatus = "restricted"
+        // Map Stripe state -> payout_onboarding_status enum: pending | completed | restricted
+        let onboardingStatus: "pending" | "completed" | "restricted" = "pending"
+        if (chargesEnabled && payoutsEnabled && currentlyDue.length === 0 && pastDue.length === 0) {
+          onboardingStatus = "completed"
+        } else if (disabledReason?.startsWith("rejected.") || disabledReason === "listed") {
+          onboardingStatus = "restricted"
+        } else if (!payoutsEnabled) {
+          onboardingStatus = "restricted"
+        } else {
+          onboardingStatus = "pending"
+        }
+
+        // Fetch existing row to log meaningful changes
+        const { data: existingOrg } = await supabase
+          .from("organizations")
+          .select("id, stripe_payouts_enabled, stripe_payouts_disabled_reason, stripe_requirements_due")
+          .eq("payout_account_id", acct.id)
+          .maybeSingle()
 
         const { error } = await supabase
           .from("organizations")
           .update({
             payouts_enabled: payoutsEnabled,
+            stripe_payouts_enabled: payoutsEnabled,
             payout_onboarding_status: onboardingStatus,
-            // optional: connect_link_created_at, updated_at already handled by trigger
+            stripe_payouts_disabled_reason: disabledReason,
+            stripe_requirements_due: {
+              currently_due: currentlyDue,
+              past_due: pastDue,
+              pending_verification: pendingVerification,
+            },
+            stripe_requirements_errors: requirementErrors,
+            stripe_requirements_deadline: deadline,
+            stripe_status_updated_at: new Date().toISOString(),
           })
           .eq("payout_account_id", acct.id)
 
         if (error) throw error
+
+        // Log state changes for debugging/audit
+        if (existingOrg) {
+          const prevDueRaw: any = existingOrg.stripe_requirements_due
+          const prevCurrentlyDue = Array.isArray(prevDueRaw?.currently_due)
+            ? prevDueRaw.currently_due.length
+            : Array.isArray(prevDueRaw)
+              ? prevDueRaw.length
+              : 0
+
+          const changed =
+            existingOrg.stripe_payouts_enabled !== payoutsEnabled ||
+            existingOrg.stripe_payouts_disabled_reason !== disabledReason
+
+          if (changed) {
+            await supabase.from("billing_events").insert({
+              org_id: existingOrg.id,
+              event_type: "payout_status_changed",
+              stripe_event_id: event.id,
+              payload: {
+                payouts_enabled: payoutsEnabled,
+                disabled_reason: disabledReason,
+                currently_due: currentlyDue,
+                past_due: pastDue,
+                pending_verification: pendingVerification,
+                errors: requirementErrors,
+                deadline,
+              },
+            })
+          }
+
+          if (prevCurrentlyDue === 0 && currentlyDue.length > 0) {
+            await supabase.from("billing_events").insert({
+              org_id: existingOrg.id,
+              event_type: "payout_requirements_due",
+              stripe_event_id: event.id,
+              payload: {
+                currently_due: currentlyDue,
+                deadline,
+              },
+            })
+          }
+        }
         break
       }
       default:

@@ -1048,7 +1048,7 @@ export default function CreateEvent() {
                         control={control}
                         render={({ field }) => (
                           <Checkbox
-                            checked={field.value}
+                            checked={!!field.value}
                             onChange={(e) => {
                               field.onChange(e.target.checked)
                               if (e.target.checked) {
