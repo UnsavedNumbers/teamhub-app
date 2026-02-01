@@ -115,12 +115,34 @@ export async function resolveOrgFromSlug(slug: string): Promise<OrgResolutionRes
       p_slug: normalizedSlug,
     })
 
+    let rows = (data as any[]) || []
+
+    // Fallback for environments without the RPC (e.g., migrations not applied yet)
     if (rpcError) {
-      console.error('Error resolving org from slug:', rpcError)
-      return { org: null, redirectToSlug: null, error: 'not_found' }
+      console.error('Error resolving org from slug (RPC):', rpcError)
+      const { data: orgData, error: orgError } = await supabase
+        .from('organizations')
+        .select('id, slug, status, name')
+        .eq('slug', normalizedSlug)
+        .maybeSingle()
+
+      if (orgError || !orgData) {
+        if (orgError) {
+          console.error('Error resolving org from slug (fallback):', orgError)
+        }
+        return { org: null, redirectToSlug: null, error: 'not_found' }
+      }
+
+      rows = [
+        {
+          org_id: orgData.id,
+          current_slug: orgData.slug,
+          status: orgData.status,
+          name: orgData.name,
+        },
+      ]
     }
 
-    const rows = (data as any[]) || []
     if (rows.length === 0) {
       return { org: null, redirectToSlug: null, error: 'not_found' }
     }
