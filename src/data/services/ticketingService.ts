@@ -250,6 +250,9 @@ export async function getTicketOrderByIdAdmin(orderId: string) {
   }), false)
 }
 
+// Note: getTicketOrderByIdAdmin uses SELECT * which includes all columns including Connect fields
+// (stripe_connect_account_id, platform_fee_cents, org_revenue_cents, stripe_charge_id, stripe_application_fee_id, processed_at)
+
 export async function getMyTicketOrders() {
   const {
     data: { user },
@@ -453,5 +456,42 @@ export async function exchangeStaffLink(
     return createServiceResponse<StaffLinkExchangeResponse>(data, null)
   } catch (error: any) {
     return createServiceResponse<StaffLinkExchangeResponse>(null, error)
+  }
+}
+
+// ============================================================================
+// Refunds
+// ============================================================================
+
+export async function processTicketOrderRefund(
+  orderId: string,
+  amountCents?: number,
+): Promise<{ data: { refund_id: string; amount: number; status: string; message: string } | null; error: Error | null }> {
+  try {
+    const session = await supabase.auth.getSession()
+    const response = await fetch(`${FUNCTIONS_URL}/tickets-process-refund`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.data.session?.access_token || ''}`,
+      },
+      body: JSON.stringify({
+        order_id: orderId,
+        ...(amountCents !== undefined ? { amount_cents: amountCents } : {}),
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      return createServiceResponse<{ refund_id: string; amount: number; status: string; message: string }>(
+        null,
+        new Error(errorData.error || 'Failed to process refund')
+      )
+    }
+
+    const data = await response.json()
+    return createServiceResponse<{ refund_id: string; amount: number; status: string; message: string }>(data, null)
+  } catch (error: any) {
+    return createServiceResponse<{ refund_id: string; amount: number; status: string; message: string }>(null, error)
   }
 }

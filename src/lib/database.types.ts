@@ -7406,6 +7406,50 @@ export type Database = {
         }
         Relationships: []
       }
+      stripe_connect_transactions: {
+        Row: {
+          application_fee_cents: number
+          connect_account_id: string
+          created_at: string
+          gross_amount_cents: number
+          id: string
+          net_amount_cents: number
+          stripe_application_fee_id: string | null
+          stripe_charge_id: string | null
+          ticket_order_id: string
+        }
+        Insert: {
+          application_fee_cents: number
+          connect_account_id: string
+          created_at?: string
+          gross_amount_cents: number
+          id?: string
+          net_amount_cents: number
+          stripe_application_fee_id?: string | null
+          stripe_charge_id?: string | null
+          ticket_order_id: string
+        }
+        Update: {
+          application_fee_cents?: number
+          connect_account_id?: string
+          created_at?: string
+          gross_amount_cents?: number
+          id?: string
+          net_amount_cents?: number
+          stripe_application_fee_id?: string | null
+          stripe_charge_id?: string | null
+          ticket_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stripe_connect_transactions_ticket_order_id_fkey"
+            columns: ["ticket_order_id"]
+            isOneToOne: true
+            referencedRelation: "ticket_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_memberships: {
         Row: {
           athlete_id: string
@@ -7782,12 +7826,18 @@ export type Database = {
           fees_cents: number
           id: string
           org_id: string
+          org_revenue_cents: number | null
+          platform_fee_cents: number | null
+          processed_at: string | null
           purchaser_email: string
           purchaser_name: string | null
           purchaser_user_id: string | null
           receipt_email_sent_at: string | null
           status: Database["public"]["Enums"]["ticket_order_status"]
+          stripe_application_fee_id: string | null
+          stripe_charge_id: string | null
           stripe_checkout_session_id: string | null
+          stripe_connect_account_id: string | null
           stripe_payment_intent_id: string | null
           subtotal_cents: number
           tax_cents: number
@@ -7800,12 +7850,18 @@ export type Database = {
           fees_cents?: number
           id?: string
           org_id: string
+          org_revenue_cents?: number | null
+          platform_fee_cents?: number | null
+          processed_at?: string | null
           purchaser_email: string
           purchaser_name?: string | null
           purchaser_user_id?: string | null
           receipt_email_sent_at?: string | null
           status?: Database["public"]["Enums"]["ticket_order_status"]
+          stripe_application_fee_id?: string | null
+          stripe_charge_id?: string | null
           stripe_checkout_session_id?: string | null
+          stripe_connect_account_id?: string | null
           stripe_payment_intent_id?: string | null
           subtotal_cents?: number
           tax_cents?: number
@@ -7818,12 +7874,18 @@ export type Database = {
           fees_cents?: number
           id?: string
           org_id?: string
+          org_revenue_cents?: number | null
+          platform_fee_cents?: number | null
+          processed_at?: string | null
           purchaser_email?: string
           purchaser_name?: string | null
           purchaser_user_id?: string | null
           receipt_email_sent_at?: string | null
           status?: Database["public"]["Enums"]["ticket_order_status"]
+          stripe_application_fee_id?: string | null
+          stripe_charge_id?: string | null
           stripe_checkout_session_id?: string | null
+          stripe_connect_account_id?: string | null
           stripe_payment_intent_id?: string | null
           subtotal_cents?: number
           tax_cents?: number

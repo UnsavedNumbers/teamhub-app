@@ -81,6 +81,13 @@ export interface TicketOrder {
   stripe_checkout_session_id: string | null
   stripe_payment_intent_id: string | null
   receipt_email_sent_at: string | null
+  // Stripe Connect fields (nullable for backward compatibility)
+  stripe_connect_account_id: string | null
+  platform_fee_cents: number | null
+  org_revenue_cents: number | null
+  stripe_charge_id: string | null
+  stripe_application_fee_id: string | null
+  processed_at: string | null
   created_at: string
   updated_at: string
 }
