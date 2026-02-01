@@ -1,23 +1,24 @@
 /**
- * Ticket Order Success Page
+ * Org-Scoped Ticket Order Success Page
  * 
  * Shown after successful Stripe checkout
- * Design: ticket_mobile_entry (success banner)
+ * Must be wrapped in OrgScopedRoute
  */
 
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getTicketOrderById, getTicketsForOrder } from '@/data/services'
-import { useRouteLink } from '@/utils/routes'
 import TicketCard from '@/components/ticketing/TicketCard'
+import type { OrgContext } from '@/utils/orgResolution'
+import { OrgScopedRoute } from '@/components/OrgScopedRoute'
 
-export default function TicketOrderSuccess() {
-  const { orderId } = useParams<{ orderId: string }>()
+function TicketOrderSuccessContent({ org }: { org: OrgContext }) {
+  const { orderId, orgSlug } = useParams<{ orderId: string; orgSlug: string }>()
 
   const { data: orderResponse } = useQuery({
-    queryKey: ['ticket-order', orderId],
-    queryFn: () => getTicketOrderById(orderId!, ''),
-    enabled: !!orderId,
+    queryKey: ['ticket-order', orderId, org.id],
+    queryFn: () => getTicketOrderById(orderId!, org.id),
+    enabled: !!orderId && !!org.id,
   })
 
   const { data: ticketsResponse } = useQuery({
@@ -45,7 +46,7 @@ export default function TicketOrderSuccess() {
 
   return (
     <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] text-[#111418] dark:text-white">
-      {/* Header */}
+      {/* Header with org branding */}
       <header className="flex items-center justify-between border-b border-[#f0f2f4] dark:border-gray-800 bg-white dark:bg-[#101922] px-10 py-3 sticky top-0 z-50">
         <div className="flex items-center gap-4 text-[#111418] dark:text-white">
           <div className="size-6 text-[#137fec]">
@@ -53,7 +54,7 @@ export default function TicketOrderSuccess() {
               <path clipRule="evenodd" d="M24 4H6V17.3333V30.6667H24V44H42V30.6667V17.3333H24V4Z" fill="currentColor" fillRule="evenodd" />
             </svg>
           </div>
-          <h2 className="text-[#111418] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">YouthSports.team</h2>
+          <h2 className="text-[#111418] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">{org.name}</h2>
         </div>
       </header>
 
@@ -115,13 +116,26 @@ export default function TicketOrderSuccess() {
 
           {/* Action Buttons */}
           <div className="flex flex-col gap-3 py-6">
-            <Link
-              to={useRouteLink('portal.myTickets')}
-              className="flex min-w-[84px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-[#137fec] text-white text-lg font-bold leading-normal tracking-[0.015em] w-full shadow-lg shadow-[#137fec]/20 hover:bg-blue-600 transition-colors"
-            >
-              <span className="material-symbols-outlined">confirmation_number</span>
-              <span className="truncate uppercase">View All My Tickets</span>
-            </Link>
+            {/* For guest users, link back to org tickets page */}
+            {!order.purchaser_user_id && (
+              <Link
+                to={`/o/${orgSlug}/tickets`}
+                className="flex min-w-[84px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-[#137fec] text-white text-lg font-bold leading-normal tracking-[0.015em] w-full shadow-lg shadow-[#137fec]/20 hover:bg-blue-600 transition-colors"
+              >
+                <span className="material-symbols-outlined">confirmation_number</span>
+                <span className="truncate uppercase">View More Events</span>
+              </Link>
+            )}
+            {/* For logged-in users, link to portal */}
+            {order.purchaser_user_id && (
+              <Link
+                to="/portal/my-tickets"
+                className="flex min-w-[84px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-[#137fec] text-white text-lg font-bold leading-normal tracking-[0.015em] w-full shadow-lg shadow-[#137fec]/20 hover:bg-blue-600 transition-colors"
+              >
+                <span className="material-symbols-outlined">confirmation_number</span>
+                <span className="truncate uppercase">View All My Tickets</span>
+              </Link>
+            )}
           </div>
 
           {/* Footer Support */}
@@ -134,5 +148,13 @@ export default function TicketOrderSuccess() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function OrgScopedTicketOrderSuccess() {
+  return (
+    <OrgScopedRoute>
+      {(org) => <TicketOrderSuccessContent org={org} />}
+    </OrgScopedRoute>
   )
 }

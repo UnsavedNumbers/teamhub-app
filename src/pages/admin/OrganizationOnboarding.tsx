@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
+import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization, Organization } from '../../contexts/OrganizationContext'
 import OrganizationIdentityStep from '../../components/admin/onboarding/OrganizationIdentityStep'
 import LicenseActivationStep from '../../components/admin/onboarding/LicenseActivationStep'
+import { QUERY_KEY_ORG_SLUG } from '../../components/admin/PublicUrlBanner'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import {
   getSetupOrganizationFlag,
@@ -23,6 +25,7 @@ interface OrganizationFormData {
 }
 
 export default function OrganizationOnboarding() {
+  const queryClient = useQueryClient()
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
@@ -139,11 +142,17 @@ export default function OrganizationOnboarding() {
           get role() { return this.roles[0] ?? 'parent' }
         }
         setCurrentOrganization(nextOrg); setOrganizations([nextOrg])
+        
+        // Invalidate slug query so PublicUrlBanner and other consumers refetch
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEY_ORG_SLUG, newOrg.id] })
       } else {
         type OrgUpdate = Database['public']['Tables']['organizations']['Update']
         const orgUpdateData = { name: data.name, slug: data.slug, org_type: data.org_type || undefined, contact_email: data.contact_email } satisfies OrgUpdate
         const { error: updateError } = await supabase.from('organizations').update(orgUpdateData).eq('id', orgId)
         if (updateError) throw updateError
+        
+        // Invalidate slug query so PublicUrlBanner and other consumers refetch
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEY_ORG_SLUG, orgId] })
       }
       clearSetupOrganizationFlag()
       try {

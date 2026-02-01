@@ -6,7 +6,10 @@ import {
     getOrganizationDetails as getFakeOrganizationDetails,
     updateOrganizationDetails as updateFakeOrganizationDetails,
     uploadOrganizationLogo as uploadFakeOrganizationLogo,
+    getOrganizationBySlug as getFakeOrganizationBySlug,
+    updateOrganizationSlug as updateFakeOrganizationSlug,
 } from '../fake/organizationFakeService'
+
 
 export interface OrganizationUpdateDTO {
     name?: string
@@ -25,6 +28,7 @@ export interface OrganizationUpdateDTO {
 interface OrganizationRow {
     id: string
     name: string
+    slug: string | null
     org_type?: string | null
     status?: string | null
     created_at: string
@@ -61,7 +65,7 @@ export async function getOrganizationDetails(orgId: string): Promise<{ data: Org
                 payout_account_id
             `)
             .eq('id', orgId)
-            .single()
+            .maybeSingle()
 
         if (error) throw error
         if (!rawData) return { data: null, error: null }
@@ -72,6 +76,7 @@ export async function getOrganizationDetails(orgId: string): Promise<{ data: Org
         const org: Organization = {
             id: data.id,
             name: data.name,
+            slug: data.slug || null,
             orgType: data.org_type || null, // Assuming org_type exists from Context def, but might be missing in schema. Using fallback.
             status: (data.status || 'active') as OrganizationStatus, // Use status from DB (org_status enum: 'trial', 'active', 'suspended', 'inactive')
             createdAt: data.created_at,
@@ -105,6 +110,102 @@ export async function getOrganizationDetails(orgId: string): Promise<{ data: Org
     } catch (err) {
         console.error('[organizationService] Error fetching organization:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+    }
+}
+
+export async function getOrganizationBySlug(slug: string): Promise<{ data: Organization | null; error: Error | null }> {
+    try {
+        if (USE_FAKE_DATA) {
+            return getFakeOrganizationBySlug(slug)
+        }
+
+        if (!slug) {
+            return { data: null, error: new Error('Slug is required') }
+        }
+
+        const { data: rawData, error } = await supabase
+            .from('organizations')
+            .select(`
+                *,
+                license_status,
+                license_plan,
+                license_trial_ends_at,
+                license_current_period_end,
+                stripe_customer_id,
+                payout_account_id
+            `)
+            .eq('slug', slug)
+            .maybeSingle()
+
+        if (error) throw error
+        if (!rawData) return { data: null, error: null }
+
+        // Cast to known type to bypass stale generated types
+        const data = rawData as unknown as OrganizationRow
+
+        const org: Organization = {
+            id: data.id,
+            name: data.name,
+            slug: data.slug || null,
+            orgType: data.org_type || null,
+            status: (data.status || 'active') as OrganizationStatus,
+            createdAt: data.created_at,
+            updatedAt: data.updated_at,
+
+            // License & Stripe
+            licenseStatus: null,
+            licensePlan: null,
+            licenseTrialEndsAt: null,
+            licenseCurrentPeriodEnd: null,
+            payoutAccountId: null,
+            payoutsEnabled: false,
+            stripeConnected: false,
+
+            // Counts
+            teamCount: 0,
+            sportCount: 0,
+            userCount: 0,
+
+            // Profile
+            website: data.website || null,
+            phone: data.phone || null,
+            email: (data.contact_email ?? data.email) || null,
+            address: data.address || null,
+            city: data.city || null,
+            state: data.state || null,
+            zip: data.zip || null,
+        }
+
+        return { data: org, error: null }
+    } catch (err) {
+        console.error('[organizationService] Error fetching organization by slug:', err)
+        return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+    }
+}
+
+export async function updateOrganizationSlug(
+    orgId: string,
+    slug: string
+): Promise<{ error: Error | null }> {
+    try {
+        if (USE_FAKE_DATA) {
+            return updateFakeOrganizationSlug(orgId, slug)
+        }
+
+        if (!orgId) return { error: new Error('Organization ID is required') }
+        if (!slug) return { error: new Error('Slug is required') }
+
+        const { error } = await (supabase as any).rpc('update_org_slug', {
+            p_org_id: orgId,
+            p_new_slug: slug,
+        })
+
+        if (error) throw error
+
+        return { error: null }
+    } catch (err) {
+        console.error('[organizationService] Error updating organization slug:', err)
+        return { error: err instanceof Error ? err : new Error('Unknown error') }
     }
 }
 
@@ -144,6 +245,7 @@ export async function updateOrganizationDetails(
         const org: Organization = {
             id: data.id,
             name: data.name,
+            slug: data.slug || null,
             orgType: data.org_type || null,
             status: 'active',
             createdAt: data.created_at,

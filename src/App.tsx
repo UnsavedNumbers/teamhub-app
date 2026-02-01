@@ -59,6 +59,12 @@ import TicketOrderSuccess from './pages/ticketing/TicketOrderSuccess'
 import MyTickets from './pages/ticketing/MyTickets'
 import TicketAccess from './pages/ticketing/TicketAccess'
 import TicketScanner from './pages/ticketing/TicketScanner'
+// Org-scoped public ticketing routes
+import OrgScopedTicketEventList from './pages/ticketing/OrgScopedTicketEventList'
+import OrgScopedTicketEventDetail from './pages/ticketing/OrgScopedTicketEventDetail'
+import OrgScopedTicketOrderSuccess from './pages/ticketing/OrgScopedTicketOrderSuccess'
+import OrgScopedTicketAccess from './pages/ticketing/OrgScopedTicketAccess'
+import OrgLanding from './pages/ticketing/OrgLanding'
 
 // Portal Pages - Lazy loaded
 const CreateAthletePortal = lazy(() => import('./pages/CreateAthletePortal'))
@@ -262,7 +268,14 @@ function AppWithTheme() {
           {/* Marketing Landing Page - Public */}
           <Route path="/" element={<HostHomeRoute />} />
           
-          {/* Public Ticketing Routes */}
+          {/* Org-Scoped Public Routes */}
+          <Route path="/o/:orgSlug" element={<OrgLanding />} />
+          <Route path="/o/:orgSlug/tickets" element={<OrgScopedTicketEventList />} />
+          <Route path="/o/:orgSlug/tickets/events/:eventId" element={<OrgScopedTicketEventDetail />} />
+          <Route path="/o/:orgSlug/tickets/order/:orderId" element={<OrgScopedTicketOrderSuccess />} />
+          <Route path="/o/:orgSlug/tickets/access/:token" element={<OrgScopedTicketAccess />} />
+          
+          {/* Legacy Public Ticketing Routes (deprecated - will be removed) */}
           <Route path="/tickets" element={<TicketEventList />} />
           <Route path="/tickets/events/:eventId" element={<TicketEventDetail />} />
           <Route path="/tickets/order/:orderId" element={<TicketOrderSuccess />} />
