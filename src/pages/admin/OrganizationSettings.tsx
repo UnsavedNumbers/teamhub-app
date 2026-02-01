@@ -342,7 +342,10 @@ export default function OrganizationSettings() {
           {/* Public URL slug — set/update slug for established orgs */}
           {currentOrganization?.id && (
             <div className="mt-6">
-              <PublicUrlSlugForm orgId={currentOrganization.id} />
+              <PublicUrlSlugForm
+                orgId={currentOrganization.id}
+                initialSlug={orgDetails?.slug}
+              />
             </div>
           )}
 
@@ -419,7 +422,7 @@ export default function OrganizationSettings() {
 
 const SLUG_DEBOUNCE_MS = 500
 
-function PublicUrlSlugForm({ orgId }: { orgId: string }) {
+function PublicUrlSlugForm({ orgId, initialSlug }: { orgId: string; initialSlug?: string | null }) {
   const queryClient = useQueryClient()
   const { data: currentSlug, isFetched } = useQuery({
     queryKey: [QUERY_KEY_ORG_SLUG, orgId],
@@ -433,6 +436,7 @@ function PublicUrlSlugForm({ orgId }: { orgId: string }) {
         return data.slug
       },
     enabled: !!orgId,
+    initialData: initialSlug !== undefined ? initialSlug : undefined,
   })
 
   const [input, setInput] = useState('')
@@ -440,14 +444,19 @@ function PublicUrlSlugForm({ orgId }: { orgId: string }) {
   const [slugError, setSlugError] = useState<string | null>(null)
   const [slugTaken, setSlugTaken] = useState<boolean>(false)
   const [slugChecking, setSlugChecking] = useState(false)
-  const hasInitialSync = useRef(false)
+  const lastSyncedSlug = useRef<string | null | undefined>(undefined)
+  const resolvedSlug = currentSlug ?? (initialSlug ?? null)
+  const canSyncSlug = isFetched || initialSlug !== undefined
 
-  // Set initial input only when query first loads; do not overwrite on later refetches
+  // Sync input from server slug when it loads or changes; avoid overwriting user edits
   useEffect(() => {
-    if (!isFetched || hasInitialSync.current) return
-    hasInitialSync.current = true
-    setInput(currentSlug ?? '')
-  }, [isFetched, currentSlug])
+    if (!canSyncSlug) return
+    const serverSlug = resolvedSlug ?? ''
+    if (lastSyncedSlug.current === serverSlug) return
+    if (lastSyncedSlug.current !== undefined && input !== (lastSyncedSlug.current ?? '')) return
+    lastSyncedSlug.current = serverSlug
+    setInput(serverSlug)
+  }, [canSyncSlug, resolvedSlug, input])
 
   // Debounced uniqueness check
   useEffect(() => {
@@ -494,7 +503,7 @@ function PublicUrlSlugForm({ orgId }: { orgId: string }) {
         setSaving(false)
         return
       }
-      const previousSlug = currentSlug ?? null
+      const previousSlug = resolvedSlug ?? null
       await queryClient.invalidateQueries({ queryKey: [QUERY_KEY_ORG_SLUG, orgId] })
       await queryClient.refetchQueries({ queryKey: [QUERY_KEY_ORG_SLUG, orgId] })
       if (previousSlug) invalidateSlugCache(previousSlug)
@@ -525,11 +534,11 @@ function PublicUrlSlugForm({ orgId }: { orgId: string }) {
     <Card>
       <h3 className="pa-h3 pa-mb-2">Public URL slug</h3>
       <p className="pa-text-muted pa-mb-4">
-        This slug is used in your public URLs (e.g. youthsports.team/o/{currentSlug || '{slug}'}/tickets). It must be unique and URL-friendly.
+        This slug is used in your public URLs (e.g. youthsports.team/o/{resolvedSlug || '{slug}'}/tickets). It must be unique and URL-friendly.
       </p>
-      {currentSlug ? (
+      {resolvedSlug ? (
         <p className="pa-text-sm pa-mb-4">
-          Current slug: <strong>{currentSlug}</strong>. Changing it will create a redirect from the old URL for 12 months.
+          Current slug: <strong>{resolvedSlug}</strong>. Changing it will create a redirect from the old URL for 12 months.
         </p>
       ) : (
         <p className="pa-text-sm pa-mb-4">Not set. Set your public URL slug below.</p>
