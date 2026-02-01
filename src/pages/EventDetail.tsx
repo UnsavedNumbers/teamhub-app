@@ -12,6 +12,7 @@ import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import VenueInsights from '../components/portal/VenueInsights'
 import NearbyAmenities from '../components/portal/NearbyAmenities'
+import { GalleryLink } from '../components/gallery/GalleryLink'
 import { useT } from '../i18n/useI18n'
 
 interface Event {
@@ -257,6 +258,26 @@ export default function EventDetail() {
           variant="event"
           className="mb-8"
         />
+
+        {/* Event Gallery */}
+        {eventId && (
+          <Card className="mb-8 p-4 sm:p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-lg mb-1">Event Photos</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  View and share photos from this event
+                </p>
+              </div>
+              <GalleryLink
+                galleryType="event"
+                entityId={eventId}
+                entityName={event.title}
+                variant="button"
+              />
+            </div>
+          </Card>
+        )}
 
         <SectionHeader className="mb-4 sm:mb-6">RSVP</SectionHeader>
         

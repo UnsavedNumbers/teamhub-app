@@ -33,7 +33,11 @@ export function buildEventQuery(
         event_location:event_locations(*),
         rsvps:event_rsvps(*, athlete:athletes(id, first_name, last_name)),
         general_rsvps:event_general_rsvps(*),
-        recurring_pattern:recurring_event_patterns(*)
+        recurring_pattern:recurring_event_patterns(*),
+        ticketed_event:ticketed_events(
+            *,
+            ticket_types(*)
+        )
     `)
 }
 

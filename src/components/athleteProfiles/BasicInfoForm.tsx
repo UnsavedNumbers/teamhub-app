@@ -1,11 +1,9 @@
-import { useState, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
 import { updateAthlete } from '../../data/services/familyService'
 import { uploadAthletePhoto, deleteAthletePhoto } from '../../data/services/athletePhotoService'
 import { validatePhoneFormat } from '../../utils/phoneValidation'
 import { validateGuardianEmail } from '../../data/services/guardianService'
 import { useUserContext } from '../../hooks/useUserContext'
-import { useT } from '../../i18n/useI18n'
 import Button from '../portal/Button'
 import { PortalDatePicker } from '../portal/DatePicker'
 import { AthletePhotoUpload } from '../admin/AthletePhotoUpload'
@@ -19,7 +17,6 @@ interface BasicInfoFormProps {
 
 export function BasicInfoForm({ athlete, onSave }: BasicInfoFormProps) {
   const { context } = useUserContext()
-  const t = useT()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
@@ -37,7 +34,7 @@ export function BasicInfoForm({ athlete, onSave }: BasicInfoFormProps) {
 
   // Photo state
   const [photoFile, setPhotoFile] = useState<File | null>(null)
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null) // We don't have the URL here initially unless passed, but AthletePhotoUpload handles preview
+  const [photoUrl] = useState<string | null>(null) // We don't have the URL here initially unless passed, but AthletePhotoUpload handles preview
   const [photoRemoved, setPhotoRemoved] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
 
@@ -153,7 +150,7 @@ export function BasicInfoForm({ athlete, onSave }: BasicInfoFormProps) {
         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Profile Photo</h3>
         <AthletePhotoUpload
           photoFile={photoFile}
-          photoUrl={photoUrl || undefined} // We rely on parent for initial URL or let upload component handle it if we passed it? 
+          photoUrl={photoUrl ?? null} // We rely on parent for initial URL or let upload component handle it if we passed it?
           // Actually Upgrade: simpler to let parent handle URL or just pass null and let user upload new one. 
           // For now, simple upload logic.
           onPhotoSelect={(file) => {

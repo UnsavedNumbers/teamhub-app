@@ -10,7 +10,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAthleteUniversalFields, useHeightInput, useWeightInput } from '../../hooks/useAthleteUniversalFields'
 import type { Athlete } from '../../types/family'
-import type { EmergencyContact } from '../../types/athleteSportProfiles'
 import Button from '../portal/Button'
 
 interface UniversalFieldsFormProps {

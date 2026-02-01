@@ -59,7 +59,7 @@ export async function getAthleteById(
             throw error
         }
 
-        return { data, error: null }
+        return { data: data as unknown as Athlete, error: null }
     } catch (err) {
         console.error('[AthletesService] Error getting athlete:', err)
         return { data: null, error: err as Error }
@@ -141,7 +141,7 @@ export async function updateAthleteUniversalFields(
 
         console.log(`[AthletesService] Updated universal fields for athlete ${athleteId}`)
 
-        return { data, error: null }
+        return { data: data as unknown as Athlete, error: null }
     } catch (err) {
         console.error('[AthletesService] Error updating athlete universal fields:', err)
         return { data: null, error: err as Error }

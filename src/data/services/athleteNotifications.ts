@@ -2,6 +2,8 @@ import { supabase } from '../../lib/supabase'
 import { USE_FAKE_DATA } from '../config'
 import type { NotificationAction } from '../../types/notifications'
 
+const supabaseAny = supabase as any
+
 interface AthleteTeamNotificationInput {
     athlete_id: string
     team_id: string
@@ -44,13 +46,13 @@ export async function distributeAthleteAddedNotifications(input: AthleteTeamNoti
         }
 
         // Get coaches of the team
-        const { data: coaches, error: coachError } = await supabase
+        const { data: coaches, error: coachError } = await supabaseAny
             .from('coach_assignments')
             .select('user_id')
             .eq('team_id', input.team_id)
 
         if (!coachError && coaches) {
-            coaches.forEach(c => recipients.add(c.user_id))
+            coaches.forEach((c: any) => recipients.add(c.user_id))
         }
 
         recipients.delete(input.action_by_user_id)
@@ -76,9 +78,9 @@ export async function distributeAthleteAddedNotifications(input: AthleteTeamNoti
             }
         }))
 
-        const { error: insertError } = await supabase
+        const { error: insertError } = await supabaseAny
             .from('user_notifications')
-            .insert(notificationsToInsert)
+            .insert(notificationsToInsert as any)
 
         if (insertError) throw insertError
 
@@ -120,13 +122,13 @@ export async function distributeAthleteRemovedNotifications(input: AthleteTeamNo
             }
         }
 
-        const { data: coaches, error: coachError } = await supabase
+        const { data: coaches, error: coachError } = await supabaseAny
             .from('coach_assignments')
             .select('user_id')
             .eq('team_id', input.team_id)
 
         if (!coachError && coaches) {
-            coaches.forEach(c => recipients.add(c.user_id))
+            coaches.forEach((c: any) => recipients.add(c.user_id))
         }
 
         recipients.delete(input.action_by_user_id)
@@ -152,9 +154,9 @@ export async function distributeAthleteRemovedNotifications(input: AthleteTeamNo
             }
         }))
 
-        const { error: insertError } = await supabase
+        const { error: insertError } = await supabaseAny
             .from('user_notifications')
-            .insert(notificationsToInsert)
+            .insert(notificationsToInsert as any)
 
         if (insertError) throw insertError
 

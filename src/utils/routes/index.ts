@@ -119,7 +119,16 @@ export const RouteKeys = {
     PORTAL_TRYOUTS: 'portal.tryouts',
     PORTAL_UNIFORMS: 'portal.uniforms',
     PORTAL_SETTINGS: 'portal.settings',
+    PORTAL_PHOTOS: 'portal.photos',
+    PORTAL_PHOTOS_GALLERY: 'portal.photosGallery',
+    PORTAL_PHOTOS_GALLERY_MANAGE: 'portal.photosGalleryManage',
     PORTAL_ROLE_SELECTION: 'portal.roleSelection',
+    PORTAL_TICKETS: 'portal.tickets',
+    PORTAL_TICKET_EVENT_DETAIL: 'portal.ticketEventDetail',
+    PORTAL_TICKET_ORDER_SUCCESS: 'portal.ticketOrderSuccess',
+    PORTAL_TICKET_ACCESS: 'portal.ticketAccess',
+    PORTAL_MY_TICKETS: 'portal.myTickets',
+    PORTAL_TICKET_VALIDATE: 'portal.ticketValidate',
 
     // Auth
     AUTH_LOGIN: 'auth.login',
@@ -174,11 +183,18 @@ export const RouteKeys = {
     ADMIN_PAYMENTS: 'admin.payments.list',
     ADMIN_PAYMENT_DETAIL: 'admin.payments.detail',
     ADMIN_CREATE_FEE: 'admin.payments.create',
+    ADMIN_TICKETING: 'admin.ticketing',
+    ADMIN_TICKETING_EVENTS: 'admin.ticketingEvents.list',
+    ADMIN_TICKETING_EVENTS_CREATE: 'admin.ticketingEvents.create',
+    ADMIN_TICKETING_EVENTS_DETAIL: 'admin.ticketingEvents.detail',
+    ADMIN_TICKETING_ORDERS: 'admin.ticketingOrders',
+    ADMIN_TICKETING_SCANNER: 'admin.ticketingScanner',
     ADMIN_UNIFORMS: 'admin.uniforms.list',
     ADMIN_ANNOUNCEMENTS: 'admin.announcements.list',
     ADMIN_TRAVEL: 'admin.travel.list',
     ADMIN_TRYOUTS: 'admin.tryouts.list',
     ADMIN_SETTINGS: 'admin.settings',
+    ADMIN_PHOTOS: 'admin.photos.list',
 
     // Platform Admin
     PLATFORM_DASHBOARD: 'platformAdmin.dashboard',
@@ -192,6 +208,10 @@ export const RouteKeys = {
     PLATFORM_AUDIT: 'platformAdmin.audit',
     PLATFORM_FEATURE_FLAGS: 'platformAdmin.featureFlags',
     PLATFORM_LICENSES: 'platformAdmin.licenses.overview',
+    PLATFORM_PHOTOS_OVERVIEW: 'platformAdmin.photos.overview',
+    PLATFORM_PHOTOS_CONTENT_REVIEW: 'platformAdmin.photos.contentReview',
+    PLATFORM_PHOTOS_STORAGE: 'platformAdmin.photos.storage',
+    PLATFORM_ORG_PHOTOS: 'platformAdmin.photos.orgGalleries',
 } as const
 
 export type RouteKeyConstant = typeof RouteKeys[keyof typeof RouteKeys]

@@ -90,6 +90,44 @@ const portal = {
         icon: 'cancel',
     },
 
+    // Tickets
+    tickets: {
+        path: '/tickets',
+        label: 'Tickets',
+        icon: 'confirmation_number',
+        description: 'Buy event tickets',
+    },
+    ticketEventDetail: {
+        path: '/tickets/events/:eventId',
+        params: ['eventId'] as const,
+        label: 'Event Tickets',
+        icon: 'confirmation_number',
+    },
+    ticketOrderSuccess: {
+        path: '/tickets/order/:orderId',
+        params: ['orderId'] as const,
+        label: 'Order Confirmation',
+        icon: 'check_circle',
+    },
+    ticketAccess: {
+        path: '/tickets/access/:token',
+        params: ['token'] as const,
+        label: 'My Tickets',
+        icon: 'confirmation_number',
+    },
+    ticketValidate: {
+        path: '/tickets/validate/:token',
+        params: ['token'] as const,
+        label: 'Validate Tickets',
+        icon: 'qr_code_scanner',
+    },
+    myTickets: {
+        path: '/account/tickets',
+        label: 'My Tickets',
+        icon: 'confirmation_number',
+        description: 'Your event tickets',
+    },
+
     // Athletes/Teams
     athletes: {
         path: '/portal/athletes',
@@ -144,6 +182,26 @@ const portal = {
         label: 'Settings',
         icon: 'settings',
         description: 'Preferences',
+    },
+
+    // Photos
+    photos: {
+        path: '/portal/photos',
+        label: 'Photos',
+        icon: 'photo_library',
+        description: 'Team and athlete photos',
+    },
+    photosGallery: {
+        path: '/portal/photos/gallery/:id',
+        params: ['id'] as const,
+        label: 'Gallery',
+        icon: 'photo_library',
+    },
+    photosGalleryManage: {
+        path: '/portal/photos/gallery/:id/manage',
+        params: ['id'] as const,
+        label: 'Manage Gallery',
+        icon: 'edit',
     },
 
     // Role Selection
@@ -672,6 +730,48 @@ const admin = {
         },
     },
 
+    // Ticketing
+    ticketing: {
+        path: '/admin/ticketing',
+        label: 'Ticketing',
+        icon: 'confirmation_number',
+        description: 'Event ticket sales',
+        requiresOrg: true,
+    },
+    ticketingEvents: {
+        list: {
+            path: '/admin/ticketing/events',
+            label: 'Ticketed Events',
+            icon: 'event',
+            requiresOrg: true,
+        },
+        create: {
+            path: '/admin/ticketing/events/new',
+            label: 'Create Ticketed Event',
+            icon: 'add',
+            requiresOrg: true,
+        },
+        detail: {
+            path: '/admin/ticketing/events/:id',
+            params: ['id'] as const,
+            label: 'Event Details',
+            icon: 'event',
+            requiresOrg: true,
+        },
+    },
+    ticketingOrders: {
+        path: '/admin/ticketing/orders',
+        label: 'Ticket Orders',
+        icon: 'receipt_long',
+        requiresOrg: true,
+    },
+    ticketingScanner: {
+        path: '/admin/ticketing/scanner',
+        label: 'Ticket Scanner',
+        icon: 'qr_code_scanner',
+        requiresOrg: true,
+    },
+
     // Uniforms
     uniforms: {
         list: {
@@ -779,6 +879,17 @@ const admin = {
         description: 'Personal settings',
         requiresOrg: false,
     },
+
+    // Photos
+    photos: {
+        list: {
+            path: '/admin/photos',
+            label: 'Photos',
+            icon: 'photo_library',
+            description: 'Photo galleries',
+            requiresOrg: true,
+        },
+    },
 } as const satisfies Record<string, RouteDefinition | Record<string, RouteDefinition | Record<string, RouteDefinition>>>
 
 // ============================================================================
@@ -873,12 +984,69 @@ const platformAdmin = {
         description: 'Feature toggles',
     },
 
+    // Ticketing (platform oversight)
+    ticketing: {
+        allEvents: {
+            path: '/platform-admin/ticketing/events',
+            label: 'All Events',
+            icon: 'event',
+            description: 'Searchable cross-org ticketed events',
+        },
+        orderLookup: {
+            path: '/platform-admin/ticketing/orders',
+            label: 'Order Lookup',
+            icon: 'receipt_long',
+            description: 'Global order search by email, order ID, or transaction',
+        },
+        webhookStatus: {
+            path: '/platform-admin/ticketing/webhooks',
+            label: 'Webhook Status',
+            icon: 'webhook',
+            description: 'Payment processing and delivery monitoring',
+        },
+        organization: {
+            path: '/platform-admin/ticketing/organizations/:id',
+            params: ['id'] as const,
+            label: 'Org Ticketing',
+            icon: 'confirmation_number',
+            description: "This org's ticketing dashboard",
+        },
+    },
+
     // Email Preview
     emailPreview: {
         path: '/platform-admin/email-preview',
         label: 'Email Preview',
         icon: 'email',
         description: 'Email template testing',
+    },
+
+    // Photos (cross-org overview, content review, storage)
+    photos: {
+        overview: {
+            path: '/platform-admin/photos',
+            label: 'Gallery Overview',
+            icon: 'photo_library',
+            description: 'Storage usage and gallery stats',
+        },
+        contentReview: {
+            path: '/platform-admin/photos/content-review',
+            label: 'Content Review',
+            icon: 'flag',
+            description: 'Flagged content and moderation',
+        },
+        storage: {
+            path: '/platform-admin/photos/storage',
+            label: 'Storage Management',
+            icon: 'storage',
+            description: 'Quotas and retention',
+        },
+        orgGalleries: {
+            path: '/platform-admin/organizations/:id/photos',
+            params: ['id'] as const,
+            label: 'Organization Galleries',
+            icon: 'collections',
+        },
     },
 
     // Licenses

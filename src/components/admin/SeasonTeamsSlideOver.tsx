@@ -1,4 +1,3 @@
-import React from 'react'
 import { Link } from 'react-router-dom'
 import '../../styles/orgAdmin.css'
 import { getLink } from '../../utils/routes'

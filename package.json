@@ -12,7 +12,7 @@
     "generate-types": "npx supabase gen types typescript --local > src/lib/database.types.ts",
     "generate-types:remote": "npx supabase gen types typescript --project-id njdeuehessdffwmmzmcs > src/lib/database.types.ts",
     "emails:watch": "mjml -w emails/mjml -o emails/compiled",
-    "emails:build": "mjml emails/mjml/admin-invite.mjml emails/mjml/announcement.mjml emails/mjml/follow-up-message.mjml emails/mjml/guardian-invite.mjml emails/mjml/marketing-promo.mjml emails/mjml/member-referral.mjml emails/mjml/new_event.mjml emails/mjml/new_message.mjml emails/mjml/newsletter.mjml emails/mjml/organizer-outreach.mjml emails/mjml/partner-invite.mjml emails/mjml/password-reset.mjml emails/mjml/payment_receipt.mjml emails/mjml/program-highlights.mjml emails/mjml/re-engagement.mjml emails/mjml/staff-invite.mjml emails/mjml/urgent-notification.mjml -o emails/compiled"
+    "emails:build": "mjml emails/mjml/admin-invite.mjml emails/mjml/announcement.mjml emails/mjml/follow-up-message.mjml emails/mjml/guardian-invite.mjml emails/mjml/marketing-promo.mjml emails/mjml/member-referral.mjml emails/mjml/new_event.mjml emails/mjml/new_message.mjml emails/mjml/newsletter.mjml emails/mjml/organizer-outreach.mjml emails/mjml/partner-invite.mjml emails/mjml/password-reset.mjml emails/mjml/payment_receipt.mjml emails/mjml/photo-approved.mjml emails/mjml/photo-rejected.mjml emails/mjml/program-highlights.mjml emails/mjml/re-engagement.mjml emails/mjml/staff-invite.mjml emails/mjml/urgent-notification.mjml -o emails/compiled"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -26,12 +26,14 @@
     "lucide-react": "^0.562.0",
     "papaparse": "^5.5.3",
     "pg": "^8.17.1",
+    "qrcode.react": "^3.2.0",
     "react": "^18.3.1",
     "react-aria-components": "^1.14.0",
     "react-dom": "^18.3.1",
     "react-focus-lock": "^2.13.7",
     "react-hook-form": "^7.51.0",
     "react-hot-toast": "^2.6.0",
+    "react-photo-album": "^3.4.0",
     "react-remove-scroll": "^2.7.2",
     "react-router-dom": "^7.1.1",
     "resend": "^4.0.0",
@@ -39,6 +41,7 @@
     "stream-chat-react": "^11.0.0",
     "stripe": "^17.5.0",
     "xlsx": "^0.18.5",
+    "yet-another-react-lightbox": "^3.28.0",
     "zod": "^4.3.5"
   },
   "devDependencies": {

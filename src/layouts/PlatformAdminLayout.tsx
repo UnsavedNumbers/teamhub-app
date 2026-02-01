@@ -67,6 +67,14 @@ const navSections: NavSection[] = [
     ],
   },
   {
+    label: 'Photos',
+    items: [
+      { text: 'Gallery Overview', icon: 'photo_library', path: getLink('platformAdmin.photos.overview'), requiredAction: 'view_photo_overview' },
+      { text: 'Content Review', icon: 'flag', path: getLink('platformAdmin.photos.contentReview'), requiredAction: 'view_content_review' },
+      { text: 'Storage Management', icon: 'storage', path: getLink('platformAdmin.photos.storage'), requiredAction: 'view_storage_management' },
+    ],
+  },
+  {
     label: 'Licenses & Entitlements',
     items: [
       { text: 'Overview', icon: 'dashboard', path: getPath(RouteKeys.PLATFORM_LICENSES), requiredAction: 'view_licenses' },
