@@ -1,8 +1,8 @@
 /**
- * Ticketed Event Detail Page
+ * Org-Scoped Ticketed Event Detail Page
  * 
  * Shows event details, ticket types, and allows purchase
- * Design: ticket_selection
+ * Must be wrapped in OrgScopedRoute
  */
 
 import { useState } from 'react'
@@ -11,6 +11,8 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { getTicketedEventById, getTicketTypesForEvent, createCheckoutSession } from '@/data/services'
 import { formatCurrency } from '@/types/ticketing'
 import type { TicketType } from '@/types/ticketing'
+import type { OrgContext } from '@/utils/orgResolution'
+import { OrgScopedRoute } from '@/components/OrgScopedRoute'
 
 interface CartItem {
   ticket_type_id: string
@@ -18,38 +20,43 @@ interface CartItem {
   ticketType: TicketType
 }
 
-export default function TicketEventDetail() {
-  const { eventId } = useParams<{ eventId: string }>()
+function TicketEventDetailContent({ org }: { org: OrgContext }) {
+  const { eventId, orgSlug } = useParams<{ eventId: string; orgSlug: string }>()
   const [cart, setCart] = useState<CartItem[]>([])
   const [purchaserEmail, setPurchaserEmail] = useState('')
 
   const { data: eventResponse } = useQuery({
-    queryKey: ['ticketed-event', eventId],
-    queryFn: () => getTicketedEventById(eventId!, ''),
-    enabled: !!eventId,
+    queryKey: ['ticketed-event', eventId, org.id],
+    queryFn: () => getTicketedEventById(eventId!, org.id),
+    enabled: !!eventId && !!org.id,
   })
 
   const { data: ticketTypesResponse } = useQuery({
-    queryKey: ['ticket-types', eventId],
-    queryFn: () => getTicketTypesForEvent(eventId!, ''),
-    enabled: !!eventId,
+    queryKey: ['ticket-types', eventId, org.id],
+    queryFn: () => getTicketTypesForEvent(eventId!, org.id),
+    enabled: !!eventId && !!org.id,
   })
 
   const event = (eventResponse as any)?.data ?? eventResponse ?? null
   const ticketTypes = ((ticketTypesResponse as any)?.data ?? ticketTypesResponse ?? []) as TicketType[]
 
   const checkoutMutation = useMutation({
-    mutationFn: () =>
-      createCheckoutSession({
+    mutationFn: async () => {
+      // We need to pass org_slug to the checkout function
+      // For now, we'll update the checkout function to accept it
+      const response = await createCheckoutSession({
         ticketed_event_id: eventId!,
         items: cart.map((item) => ({
           ticket_type_id: item.ticket_type_id,
           quantity: item.quantity,
         })),
         purchaser_email: purchaserEmail,
-      }),
+        org_slug: orgSlug!, // Pass org slug for URL construction
+      })
+      return response
+    },
     onSuccess: ({ data, error }) => {
-      if (data && !error) {
+      if (data && !error && data.checkout_url) {
         window.location.href = data.checkout_url
       }
     },
@@ -100,7 +107,7 @@ export default function TicketEventDetail() {
 
   return (
     <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] text-[#111418] dark:text-white">
-      {/* Header */}
+      {/* Header with org branding */}
       <header className="flex items-center justify-between border-b border-[#f0f2f4] dark:border-gray-800 bg-white dark:bg-[#101922] px-10 py-3 sticky top-0 z-50">
         <div className="flex items-center gap-4 text-[#111418] dark:text-white">
           <div className="size-6 text-[#137fec]">
@@ -108,7 +115,7 @@ export default function TicketEventDetail() {
               <path clipRule="evenodd" d="M24 4H6V17.3333V30.6667H24V44H42V30.6667V17.3333H24V4Z" fillRule="evenodd" />
             </svg>
           </div>
-          <h2 className="text-[#111418] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">YouthSports.team</h2>
+          <h2 className="text-[#111418] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">{org.name}</h2>
         </div>
       </header>
 
@@ -280,5 +287,13 @@ export default function TicketEventDetail() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function OrgScopedTicketEventDetail() {
+  return (
+    <OrgScopedRoute>
+      {(org) => <TicketEventDetailContent org={org} />}
+    </OrgScopedRoute>
   )
 }

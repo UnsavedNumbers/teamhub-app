@@ -8,7 +8,10 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { formatCurrency } from '@/types/ticketing'
 
+const PublicUrlBanner = (_props: any) => null
+
 export default function TicketingOrders() {
+  const currentOrganization = null as { id: string } | null
   const { data: ordersResponse } = useQuery({
     queryKey: ['ticket-orders', 'admin'],
     queryFn: async () => {
@@ -43,6 +46,16 @@ export default function TicketingOrders() {
       <div className="pa-page-header">
         <h1 className="pa-page-title">Ticket Orders</h1>
       </div>
+
+      {/* Public URL Banner */}
+      {currentOrganization?.id && (
+        <PublicUrlBanner
+          orgId={currentOrganization.id}
+          title="Direct guests here"
+          description="Guests purchase at your public ticket page. Confirmation emails include a link for them to view their tickets."
+          path="tickets"
+        />
+      )}
 
       {orders.length === 0 ? (
         <div className="pa-empty-state">

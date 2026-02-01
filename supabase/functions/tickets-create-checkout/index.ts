@@ -70,6 +70,7 @@ serve(async (req) => {
   const ticketedEventId = payload?.ticketed_event_id as string | undefined
   const items = payload?.items as Array<{ ticket_type_id: string; quantity: number }> | undefined
   const purchaserEmail = payload?.purchaser_email as string | undefined
+  const orgSlug = payload?.org_slug as string | undefined
 
   if (!ticketedEventId || !items || !Array.isArray(items) || items.length === 0) {
     return json(req, { error: "Missing required fields: ticketed_event_id, items" }, 400)
@@ -271,8 +272,13 @@ serve(async (req) => {
     })
 
     const baseUrl = Deno.env.get("SITE_URL") || "http://localhost:3000"
-    const successUrl = `${baseUrl}/tickets/order/${order.id}`
-    const cancelUrl = `${baseUrl}/tickets/events/${ticketedEventId}`
+    // Use org-scoped URLs if org_slug is provided, otherwise fall back to old pattern
+    const successUrl = orgSlug 
+      ? `${baseUrl}/o/${orgSlug}/tickets/order/${order.id}`
+      : `${baseUrl}/tickets/order/${order.id}`
+    const cancelUrl = orgSlug
+      ? `${baseUrl}/o/${orgSlug}/tickets/events/${ticketedEventId}`
+      : `${baseUrl}/tickets/events/${ticketedEventId}`
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -284,6 +290,7 @@ serve(async (req) => {
       metadata: {
         order_id: order.id,
         org_id: event.org_id,
+        org_slug: orgSlug || "",
         ticketed_event_id: ticketedEventId,
       },
     })

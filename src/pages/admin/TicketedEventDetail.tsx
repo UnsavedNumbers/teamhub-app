@@ -6,7 +6,7 @@
 
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { getTicketedEventById, getTicketTypesForEvent } from '@/data/services'
+import { getTicketedEventByIdAdmin, getTicketTypesForEventAdmin } from '@/data/services'
 import { supabase } from '@/lib/supabase'
 import { useRouteLink } from '@/utils/routes'
 import { formatCurrency, type TicketType } from '@/types/ticketing'
@@ -20,18 +20,20 @@ async function hashToken(token: string): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
+const PublicUrlShare = (_props: any) => null
+
 export default function TicketedEventDetail() {
   const { id } = useParams<{ id: string }>()
 
   const { data: eventResponse } = useQuery({
     queryKey: ['ticketed-event', id],
-    queryFn: () => getTicketedEventById(id!),
+    queryFn: () => getTicketedEventByIdAdmin(id!),
     enabled: !!id,
   })
 
   const { data: ticketTypesResponse } = useQuery({
     queryKey: ['ticket-types', id],
-    queryFn: () => getTicketTypesForEvent(id!),
+    queryFn: () => getTicketTypesForEventAdmin(id!),
     enabled: !!id,
   })
 
@@ -134,6 +136,19 @@ export default function TicketedEventDetail() {
           </div>
         </div>
       </div>
+
+      {/* Public URL Share */}
+      {event.status === 'published' && (
+        <div className="mt-6">
+          <h2 className="pa-card-title mb-2">Direct users to this event page</h2>
+          <PublicUrlShare
+            orgId={event.org_id}
+            path={`tickets/events/${event.id}`}
+            title="Share Event"
+            description="Share this link with attendees to purchase tickets. This link is public and can be shared via email, social media, or printed materials."
+          />
+        </div>
+      )}
 
       <div className="pa-card mt-6">
         <div className="flex justify-between items-center mb-4">

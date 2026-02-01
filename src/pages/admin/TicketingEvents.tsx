@@ -4,14 +4,20 @@
  * Admin page to view and manage ticketed events
  */
 
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { getTicketedEvents } from '@/data/services'
 import { useRouteLink } from '@/utils/routes'
+import { useOrganization } from '@/contexts/OrganizationContext'
+import PublicUrlBanner, { QUERY_KEY_ORG_SLUG } from '@/components/admin/PublicUrlBanner'
+import { getPublicBaseUrl } from '@/utils/publicUrls'
 import type { TicketedEvent } from '@/types/ticketing'
 
 export default function TicketingEvents() {
+  const { currentOrganization } = useOrganization()
+
   const { data: eventsResponse } = useQuery({
     queryKey: ['ticketed-events', 'admin'],
     queryFn: async () => {
@@ -45,6 +51,16 @@ export default function TicketingEvents() {
         </Link>
       </div>
 
+      {/* Public URL Banner */}
+      {currentOrganization?.id && (
+        <PublicUrlBanner
+          orgId={currentOrganization.id}
+          title="Your public ticket page"
+          description="Share this link so guests can see events and buy tickets."
+          path="tickets"
+        />
+      )}
+
       {events.length === 0 ? (
         <div className="pa-empty-state">
           <p>No ticketed events yet. Create your first event to start selling tickets.</p>
@@ -73,8 +89,51 @@ export default function TicketingEvents() {
 }
 
 function EventRow({ event }: { event: TicketedEvent }) {
+  const [copied, setCopied] = useState(false)
   const eventDate = new Date(event.starts_at)
   const detailUrl = useRouteLink('admin.ticketingEvents.detail', { id: event.id })
+
+  // Get org slug for public URL (use consistent query key)
+  const { data: orgSlug } = useQuery({
+    queryKey: [QUERY_KEY_ORG_SLUG, event.org_id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('organizations')
+        .select('slug')
+        .eq('id', event.org_id)
+        .single()
+
+      return data?.slug || null
+    },
+    enabled: event.status === 'published',
+  })
+
+  const handleCopyPublicUrl = async () => {
+    if (!orgSlug) return
+
+    // Use shared util for URL construction
+    const publicUrl = getPublicBaseUrl(orgSlug, `tickets/events/${event.id}`)
+    
+    try {
+      await navigator.clipboard.writeText(publicUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      // Fallback: textarea method
+      const textArea = document.createElement('textarea')
+      textArea.value = publicUrl
+      document.body.appendChild(textArea)
+      textArea.select()
+      try {
+        document.execCommand('copy')
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      } catch (fallbackErr) {
+        console.error('Fallback copy failed:', fallbackErr)
+      }
+      document.body.removeChild(textArea)
+    }
+  }
 
   return (
     <tr>
@@ -90,9 +149,30 @@ function EventRow({ event }: { event: TicketedEvent }) {
         </span>
       </td>
       <td>
-        <Link to={detailUrl} className="pa-button pa-button-sm">
-          View
-        </Link>
+        <div className="flex items-center gap-2">
+          {event.status === 'published' && orgSlug && (
+            <button
+              onClick={handleCopyPublicUrl}
+              className={`pa-button pa-button-sm ${copied ? 'pa-button-success' : 'pa-button-secondary'}`}
+              title="Copy public link"
+            >
+              {copied ? (
+                <>
+                  <span className="material-symbols-outlined text-xs">check</span>
+                  Copied
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-xs">link</span>
+                  Copy Link
+                </>
+              )}
+            </button>
+          )}
+          <Link to={detailUrl} className="pa-button pa-button-sm">
+            View
+          </Link>
+        </div>
       </td>
     </tr>
   )
