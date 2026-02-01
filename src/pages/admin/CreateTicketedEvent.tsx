@@ -69,7 +69,7 @@ export default function CreateTicketedEvent() {
       if (bannerFile) {
          const { path, error: uploadError } = await uploadTicketBanner(userData.org_id, data.id, bannerFile)
          if (!uploadError && path) {
-             await supabase.from('ticketed_events').update({ ticket_banner_url: path }).eq('id', data.id)
+             await supabase.from('ticketed_events').update({ cover_image_path: path }).eq('id', data.id)
          }
       }
 

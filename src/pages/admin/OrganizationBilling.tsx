@@ -37,7 +37,7 @@ export default function OrganizationBilling() {
   const [portalLoading, setPortalLoading] = useState(false)
 
   // Load ticket sales revenue for current month
-  const { data: ticketRevenue, isLoading: ticketRevenueLoading, error: ticketRevenueError, refetch: refetchTicketRevenue } = useQuery({
+  const { data: ticketRevenue, isLoading: ticketRevenueLoading } = useQuery({
     queryKey: ['ticket-revenue', orgId],
     queryFn: async () => {
       if (!orgId) return null

@@ -226,7 +226,7 @@ export default function EventDetail() {
         event_location: eventData.event_location ? {
           place_id: eventData.event_location.place_id,
           venue_name: eventData.event_location.venue_name,
-          venue_address: eventData.event_location.venue_address ?? null,
+          venue_address: (eventData.event_location as any).venue_address ?? null,
           latitude: eventData.event_location.latitude ?? null,
           longitude: eventData.event_location.longitude ?? null,
         } : null,
@@ -399,7 +399,7 @@ export default function EventDetail() {
   if (!event) return null
 
   const searchParams = new URLSearchParams(location.search)
-  const venueAddress = event.event_location?.venue_address || event.location
+  const venueAddress = (event.event_location as any)?.venue_address || event.location
   
   return (
     <PortalLayout

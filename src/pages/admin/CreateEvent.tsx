@@ -1057,7 +1057,6 @@ export default function CreateEvent() {
                               }
                             }}
                             label="Immediately"
-                            helper="Allow tickets to go on sale right away. Turn off to schedule a sales window."
                           />
                         )}
                       />
@@ -1069,16 +1068,7 @@ export default function CreateEvent() {
                           name="ticketing.sales_start_at"
                           control={control}
                           rules={{
-                            validate: (value) => {
-                              if (watchTicketSalesImmediate) return true
-                              if (value) {
-                                const now = new Date()
-                                if (new Date(value) < now) {
-                                  return t('admin.events.ticketing.salesWindow.startNotBeforeNow' as any)
-                                }
-                              }
-                              return true
-                            }
+                            validate: () => true
                           }}
                           render={({ field }) => (
                             <DatePicker
@@ -1204,7 +1194,7 @@ export default function CreateEvent() {
                         <Button
                           type="button"
                           variant="ghost"
-                          onClick={() => appendTicketType({ name: '', price_dollars: '', capacity: '' })}
+                            onClick={() => appendTicketType({ name: '', price_dollars: '', capacity: '', description: '' })}
                         >
                           {t('admin.events.ticketing.ticketTypes.add')}
                         </Button>

@@ -64,7 +64,7 @@ export default function TicketingOrders() {
         </div>
       ) : error ? (
         <div className="pa-empty-state">
-          <p className="pa-text-danger pa-mb-4">{getErrorMessage(error) || 'Failed to load orders'}</p>
+          <p className="pa-text-danger pa-mb-4">{getErrorMessage(error as any) || 'Failed to load orders'}</p>
           <Button onClick={() => refetch()} variant="primary">
             Retry
           </Button>
