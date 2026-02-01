@@ -312,8 +312,8 @@ export default function EditEvent() {
           ? new Date(new Date(ticketedEvent.sales_end_at).getTime() - new Date(ticketedEvent.sales_end_at).getTimezoneOffset() * 60000).toISOString().slice(0, 16)
           : '')
         setValue('ticketing.status', ticketedEvent.status || 'draft')
-        setValue('ticketing.event_description', ticketedEvent.event_description || '')
-        setValue('ticketing.ticket_banner_url', ticketedEvent.ticket_banner_url || '')
+        setValue('ticketing.event_description', (ticketedEvent as any).event_description || '')
+        setValue('ticketing.ticket_banner_url', (ticketedEvent as any).ticket_banner_url || '')
 
         const { data: ticketTypes } = await supabase
           .from('ticket_types')
@@ -330,7 +330,7 @@ export default function EditEvent() {
               id: tt.id,
               soldCount: sold,
               name: tt.name,
-              description: tt.description || '',
+              description: (tt as any).description || '',
               price_dollars: (tt.price_cents / 100).toFixed(2),
               capacity: tt.capacity_total != null ? String(tt.capacity_total) : ''
             }
@@ -1185,7 +1185,7 @@ export default function EditEvent() {
                           control={control}
                           render={({ field }) => (
                             <Checkbox
-                              checked={field.value}
+                              checked={!!field.value}
                               onChange={(e) => {
                                 field.onChange(e.target.checked)
                                 if (e.target.checked) {
@@ -1260,7 +1260,7 @@ export default function EditEvent() {
                       )}
 
                       <div className="pa-mb-4">
-                        <label className="pa-label">{t('Event Description (public)')}</label>
+                         <label className="pa-label">Event Description (public)</label>
                         <Controller
                           name="ticketing.event_description"
                           control={control}
@@ -1278,7 +1278,7 @@ export default function EditEvent() {
                       </div>
 
                       <div className="pa-mb-4">
-                        <label className="pa-label">{t('Ticket Banner Image')}</label>
+                         <label className="pa-label">Ticket Banner Image</label>
                         <div className="pa-flex pa-flex-col pa-gap-4">
                             <FileUpload
                                 onFileSelect={setBannerFile}
@@ -1333,7 +1333,7 @@ export default function EditEvent() {
                             <Button
                               type="button"
                               variant="ghost"
-                              onClick={() => appendTicketType({ name: '', price_dollars: '', capacity: '' })}
+                            onClick={() => appendTicketType({ name: '', price_dollars: '', capacity: '', description: '' })}
                             >
                               {t('admin.events.ticketing.ticketTypes.add')}
                             </Button>

@@ -861,7 +861,7 @@ export async function checkImpactedRecords(
 export async function getOrganizationThemeSettingsByOrgId(orgId: string): Promise<{ theme_id: string | null; error: Error | null }> {
   try {
     // Try to use the secure function we created in migration
-    const { data, error } = await supabase.rpc('get_public_org_theme', { org_id_input: orgId })
+    const { data, error } = await supabase.rpc('get_public_org_theme' as any, { org_id_input: orgId })
 
     if (error) {
       // Fallback for dev/local where migration might be missing or if function fails

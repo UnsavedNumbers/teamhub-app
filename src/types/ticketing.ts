@@ -10,12 +10,50 @@ export type TicketOrderStatus = 'pending_payment' | 'paid' | 'refunded' | 'cance
 export type TicketStatus = 'active' | 'used' | 'refunded' | 'voided'
 export type TicketScanResult = 'valid' | 'already_used' | 'invalid' | 'wrong_event' | 'refunded' | 'voided' | 'not_found'
 export type ScanMethod = 'qr' | 'manual'
+export type TicketSaleStatus = 'off' | 'scheduled' | 'on_sale' | 'ended' | 'sold_out'
+
+export interface TicketingProgram {
+  id: string
+  org_id: string
+  name: string
+  slug?: string | null
+  sport?: string | null
+  color?: string | null
+  is_active?: boolean | null
+}
+
+export interface TicketingSeason {
+  id: string
+  org_id: string
+  program_id: string | null
+  name: string
+  slug?: string | null
+  start_date?: string | null
+  end_date?: string | null
+  is_active?: boolean | null
+}
+
+export interface TicketingVenue {
+  id: string
+  org_id: string
+  name: string
+  address?: string | null
+  city?: string | null
+  state?: string | null
+  capacity?: number | null
+}
 
 export interface TicketedEvent {
   id: string
   org_id: string
-  team_id: string | null
-  event_id: string | null // Optional link to existing calendar event
+  team_id?: string | null
+  event_id?: string | null // Optional link to existing calendar event
+  program_id?: string | null
+  season_id?: string | null
+  venue_id?: string | null
+  opponent?: string | null
+  is_home?: boolean | null
+
   event_type: TicketedEventType
   title: string
   description: string | null
@@ -45,9 +83,22 @@ export interface TicketedEvent {
 
   // Status
   status: TicketedEventStatus
+  sale_status?: TicketSaleStatus
 
   created_at: string
   updated_at: string
+
+  // Relations (optional)
+  program?: TicketingProgram | null
+  season?: TicketingSeason | null
+  venue?: TicketingVenue | null
+
+  // Derived metrics (for admin dashboards)
+  tickets_sold?: number
+  revenue_cents?: number
+  ticket_progress_pct?: number | null
+  capacity_total?: number | null
+  capacity_remaining?: number | null
 }
 
 export interface TicketType {

@@ -945,5 +945,3 @@ COMMENT ON COLUMN public.videos.mux_asset_id IS 'Mux Asset ID after processing c
 COMMENT ON COLUMN public.videos.mux_playback_id IS 'Mux Playback ID for streaming';
 COMMENT ON COLUMN public.videos.mux_upload_id IS 'Mux Direct Upload ID for correlating uploads';
 COMMENT ON COLUMN public.videos.passthrough IS 'JSON data passed through Mux webhooks for correlation';
-
-

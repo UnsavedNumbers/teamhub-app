@@ -4,7 +4,6 @@
  * Admin page to view ticket order details and process refunds
  */
 
-import React from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useOrganization } from '@/contexts/OrganizationContext'
@@ -26,7 +25,7 @@ export default function TicketingOrderDetail() {
   const queryClient = useQueryClient()
   const orgId = currentOrganization?.id
 
-  const { data: orderResponse, isLoading, error } = useQuery({
+  const { data: orderResponse, isLoading, error, refetch } = useQuery({
     queryKey: ['ticket-order-admin', orderId],
     queryFn: () => getTicketOrderByIdAdmin(orderId!),
     enabled: !!orderId,
@@ -51,11 +50,6 @@ export default function TicketingOrderDetail() {
 
   const handleRefund = async () => {
     if (!orderId || !order) return
-
-    if (isDemoMode()) {
-      showError('Refunds are not available in demo mode. Please configure Supabase to enable this feature.')
-      return
-    }
 
     if (!confirm('Are you sure you want to refund this order? This action cannot be undone.')) {
       return
@@ -131,7 +125,7 @@ export default function TicketingOrderDetail() {
 
   const event = (order as any).ticketed_events
   const orderItems = (order as any).ticket_order_items || []
-  const canRefund = order.status === 'paid' && order.stripe_charge_id !== null && !isDemoMode()
+  const canRefund = order.status === 'paid' && order.stripe_charge_id !== null
 
   return (
     <div className="pa-root">
@@ -154,7 +148,7 @@ export default function TicketingOrderDetail() {
             </div>
             <div>
               <p className="pa-body-xs pa-text-slate-500 pa-mb-1">Status</p>
-              <Badge variant={order.status === 'paid' ? 'success' : order.status === 'refunded' ? 'danger' : 'default'}>
+              <Badge variant={order.status === 'paid' ? 'success' : order.status === 'refunded' ? 'danger' : undefined}>
                 {order.status}
               </Badge>
             </div>

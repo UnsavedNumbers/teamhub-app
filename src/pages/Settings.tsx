@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { supabase } from '../lib/supabase'
 import { useUserContext } from '../hooks/useUserContext'
 import { getAthletes } from '../data/services/familyService'
 import { getTeamsForParent } from '../data/services/teamsService'
@@ -48,7 +49,7 @@ interface ChildWithGuardians extends Child {
 }
 
 export default function Settings() {
-  const { profile, signOut, updatePassword, user } = useAuth()
+  const { profile, signOut, updatePassword, user, refreshProfile } = useAuth()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
   const t = useT()
@@ -64,6 +65,9 @@ export default function Settings() {
 
   const [notificationGroups, setNotificationGroups] = useState<NotificationGroup[]>([])
   const [savingNotifications, setSavingNotifications] = useState(false)
+
+  const [homeZip, setHomeZip] = useState('')
+  const [savingHomeZip, setSavingHomeZip] = useState(false)
 
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [newPassword, setNewPassword] = useState('')
@@ -135,6 +139,8 @@ export default function Settings() {
       id: t.id,
       name: t.name,
     })))
+
+    setHomeZip(profile?.home_zipcode || '')
 
     // Load notification preferences
     const { data: prefs } = await getUserPreferences(user.id)
@@ -426,6 +432,37 @@ export default function Settings() {
     [persistNotificationGroups]
   )
 
+  const handleSaveHomeZip = useCallback(async () => {
+    if (!user?.id) return
+
+    const trimmed = homeZip.trim()
+    const zipcodePattern = /^[0-9]{5}(-[0-9]{4})?$/
+    if (trimmed && !zipcodePattern.test(trimmed)) {
+      showError('Enter a valid ZIP code')
+      return
+    }
+
+    setSavingHomeZip(true)
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ home_zipcode: trimmed || null })
+        .eq('id', user.id)
+
+      if (error) {
+        showError(error.message || 'Failed to save ZIP code')
+        return
+      }
+
+      await refreshProfile()
+      showSuccess('Home ZIP updated')
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to save ZIP code')
+    } finally {
+      setSavingHomeZip(false)
+    }
+  }, [homeZip, refreshProfile, user])
+
   async function handleChangePassword() {
     setPasswordError(null)
     
@@ -519,6 +556,25 @@ export default function Settings() {
                   </div>
                 </div>
               )}
+              <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                <div className="flex-1">
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Home ZIP Code</p>
+                  <input
+                    value={homeZip}
+                    onChange={(e) => setHomeZip(e.target.value)}
+                    className="form-input"
+                    placeholder="e.g., 12345"
+                  />
+                </div>
+                <Button
+                  variant="secondary"
+                  onClick={handleSaveHomeZip}
+                  disabled={savingHomeZip}
+                  className="w-full sm:w-auto"
+                >
+                  {savingHomeZip ? 'Saving...' : 'Save'}
+                </Button>
+              </div>
             </Card>
           </section>
 

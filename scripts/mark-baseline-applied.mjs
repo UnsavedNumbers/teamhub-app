@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
  * For each env (DATABASE_URL or .env.dev/.env.prod per --env), connect with pg;
- * detect schema_migrations columns; if version '0000_baseline' exists, skip; else INSERT.
- * Default: dev (DATABASE_URL). Optional: --env=dev|prod|all.
+ * ensure supabase_migrations.schema_migrations has baseline marked applied so
+ * `supabase db push` does not run it. Use --reset to clear the table first.
+ * Default: dev (DATABASE_URL). Optional: --env=dev|prod|all, --reset.
  */
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
@@ -12,7 +13,9 @@ import pg from 'pg';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(__dirname, '..');
 
-const BASELINE_VERSION = '0000_baseline';
+/** Must match migration filename without .sql: 00000000000000000_baseline.sql */
+const BASELINE_VERSION = '00000000000000000_baseline';
+const SUPABASE_MIGRATIONS_TABLE = 'supabase_migrations.schema_migrations';
 
 function loadEnv(fileName = '.env') {
   const envPath = join(projectRoot, fileName);
@@ -41,17 +44,8 @@ function getEnvFiles(args) {
   return ['.env'];
 }
 
-async function getMigrationTable(client) {
-  const res = await client.query(`
-    SELECT table_schema, table_name
-    FROM information_schema.tables
-    WHERE table_name LIKE '%migration%'
-    ORDER BY table_schema, table_name
-    LIMIT 1
-  `);
-  if (res.rows.length === 0) return null;
-  const r = res.rows[0];
-  return `${r.table_schema}.${r.table_name}`;
+function getResetFlag(args) {
+  return args.some((a) => a === '--reset');
 }
 
 async function getColumns(client, tableSchema, tableName) {
@@ -99,15 +93,23 @@ async function insertBaseline(client, fullTableName) {
   process.exit(1);
 }
 
-async function runForUrl(databaseUrl, label) {
+async function runForUrl(databaseUrl, label, reset) {
   if (!databaseUrl) return;
   const client = new pg.Client({ connectionString: databaseUrl });
   await client.connect();
-  const tableName = await getMigrationTable(client);
-  if (!tableName) {
-    console.warn(label, 'No migration table found');
+  const tableName = SUPABASE_MIGRATIONS_TABLE;
+  const tableExists = await client.query(
+    `SELECT 1 FROM information_schema.tables WHERE table_schema = $1 AND table_name = $2`,
+    ['supabase_migrations', 'schema_migrations']
+  );
+  if (tableExists.rows.length === 0) {
+    console.warn(label, 'Table', tableName, 'not found (run baseline migration first)');
     await client.end();
     return;
+  }
+  if (reset) {
+    await client.query(`DELETE FROM ${tableName}`);
+    console.log(label, 'Cleared', tableName);
   }
   const exists = await hasBaselineRow(client, tableName);
   if (exists) {
@@ -121,7 +123,9 @@ async function runForUrl(databaseUrl, label) {
 }
 
 async function main() {
-  const envFiles = getEnvFiles(process.argv.slice(2));
+  const args = process.argv.slice(2);
+  const envFiles = getEnvFiles(args);
+  const reset = getResetFlag(args);
   const seen = new Set();
   for (const ef of envFiles) {
     const env = loadEnv(ef);
@@ -129,7 +133,7 @@ async function main() {
     if (!url || seen.has(url)) continue;
     seen.add(url);
     const label = ef === '.env' ? 'dev' : ef.replace('.env.', '');
-    await runForUrl(url, label);
+    await runForUrl(url, label, reset);
   }
   if (seen.size === 0) {
     console.error('No DATABASE_URL found in', envFiles.join(', '));
