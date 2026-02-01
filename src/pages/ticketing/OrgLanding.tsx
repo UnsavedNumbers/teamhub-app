@@ -12,7 +12,7 @@ import type { OrgContext } from '@/utils/orgResolution'
 import { OrgScopedRoute } from '@/components/OrgScopedRoute'
 
 function OrgLandingContent({ org }: { org: OrgContext }) {
-  const orgSlug = ''
+  const orgSlug = org.slug
 
   // Check if ticketing is enabled and has events
   const { data: eventsResponse } = useQuery({

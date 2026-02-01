@@ -19,10 +19,11 @@ export interface TicketedEvent {
   event_type: TicketedEventType
   title: string
   description: string | null
+  event_description: string | null
   starts_at: string
   ends_at: string
   timezone: string
-  
+
   // Venue
   venue_name: string | null
   venue_address_line1: string | null
@@ -33,17 +34,18 @@ export interface TicketedEvent {
   venue_country: string | null
   venue_is_virtual: boolean
   venue_virtual_link: string | null
-  
+
   // Sales window
   sales_start_at: string | null
   sales_end_at: string | null
-  
+
   // Media
   cover_image_path: string | null
-  
+  ticket_banner_url: string | null
+
   // Status
   status: TicketedEventStatus
-  
+
   created_at: string
   updated_at: string
 }

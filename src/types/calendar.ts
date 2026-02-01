@@ -90,10 +90,10 @@ export interface CalendarEvent {
     recurring_pattern?: RecurringEventPattern | null
     change_history?: EventChangeHistory[]
     venue_insights?: {
-      place_id: string
-      photos: string[]
-      ai_summary: string | null
-      ai_what_to_expect: string | null
+        place_id: string
+        photos: string[]
+        ai_summary: string | null
+        ai_what_to_expect: string | null
     } | null
 
     // Ticketing (optional, present when ticketing is enabled)
@@ -116,13 +116,17 @@ export interface TicketedEventSummary {
     venue_postal_code: string | null
     sales_start_at: string | null
     sales_end_at: string | null
+    sales_end_at: string | null
     status: 'draft' | 'published' | 'archived' | string
+    event_description: string | null
+    ticket_banner_url: string | null
     ticket_types?: TicketTypeSummary[]
 }
 
 export interface TicketTypeSummary {
     id: string
     name: string
+    description?: string | null
     price_cents: number
     currency: string
     capacity_total: number | null
@@ -295,6 +299,8 @@ export interface TicketingFormData {
     sales_start_at: string
     sales_end_at: string
     status: string
+    event_description: string
+    ticket_banner_url: string
     ticket_types: TicketTypeFormData[]
 }
 
@@ -304,6 +310,7 @@ export interface TicketTypeFormData {
     /** Sold count for display/validation; from DB (capacity_total - capacity_remaining) */
     soldCount?: number
     name: string
+    description: string
     price_dollars: string
     capacity: string
 }

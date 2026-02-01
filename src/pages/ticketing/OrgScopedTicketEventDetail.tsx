@@ -24,6 +24,7 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
   const { eventId, orgSlug } = useParams<{ eventId: string; orgSlug: string }>()
   const [cart, setCart] = useState<CartItem[]>([])
   const [purchaserEmail, setPurchaserEmail] = useState('')
+  const [expandedTicketType, setExpandedTicketType] = useState<TicketType | null>(null)
 
   const { data: eventResponse } = useQuery({
     queryKey: ['ticketed-event', eventId, org.id],
@@ -125,14 +126,16 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
           <div
             className="relative min-h-[400px] flex flex-col justify-end bg-cover bg-center"
             style={{
-              backgroundImage: event.cover_image_path
-                ? `linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 60%, rgba(0,0,0,0) 100%), url(${event.cover_image_path})`
-                : 'linear-gradient(to top, rgba(19,127,236,0.9) 0%, rgba(19,127,236,0.3) 100%)',
+              backgroundImage: event.ticket_banner_url
+                ? `linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 60%, rgba(0,0,0,0) 100%), url(${event.ticket_banner_url})`
+                : event.cover_image_path
+                  ? `linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 60%, rgba(0,0,0,0) 100%), url(${event.cover_image_path})`
+                  : 'linear-gradient(to top, rgba(19,127,236,0.9) 0%, rgba(19,127,236,0.3) 100%)',
             }}
           >
             <div className="max-w-[1200px] mx-auto w-full px-10 pb-10">
               <div className="flex flex-wrap items-center gap-3 mb-4">
-                <span className="bg-[#137fec] text-white text-xs font-bold uppercase tracking-widest px-3 py-1 rounded">
+                <span className="bg-[var(--org-btn-primary-bg)] text-[var(--org-btn-primary-text)] text-xs font-bold uppercase tracking-widest px-3 py-1 rounded">
                   Official Event
                 </span>
               </div>
@@ -141,6 +144,9 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
               </h1>
               {event.description && (
                 <p className="text-white/80 text-lg mt-2 max-w-2xl font-light">{event.description}</p>
+              )}
+              {event.event_description && (
+                <p className="text-white/90 text-lg mt-4 max-w-3xl whitespace-pre-wrap leading-relaxed">{event.event_description}</p>
               )}
             </div>
           </div>
@@ -185,34 +191,43 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
                     <div
                       key={ticketType.id}
                       className={`flex flex-col md:flex-row md:items-center justify-between p-6 ${
-                        idx < ticketTypes.length - 1 ? 'border-b border-[#f0f2f4] dark:border-gray-800' : ''
-                      } hover:bg-[#f6f7f8] dark:hover:bg-gray-800/50 transition-colors`}
+                        idx < ticketTypes.length - 1 ? 'border-b border-[var(--org-border-subtle)]' : ''
+                      } hover:bg-[var(--org-surface-hover)] transition-colors`}
                     >
                       <div className="mb-4 md:mb-0">
-                        <h3 className="text-xl font-bold">{ticketType.name}</h3>
-                        {ticketType.description && (
-                          <p className="text-[#617589] dark:text-gray-400 text-sm">{ticketType.description}</p>
-                        )}
-                        <div className="mt-2 text-[#137fec] font-bold text-lg">
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-xl font-bold text-[var(--org-text-primary)]">{ticketType.name}</h3>
+                            {ticketType.description && (
+                                <button
+                                    onClick={() => setExpandedTicketType(ticketType)}
+                                    className="text-[var(--org-link-color)] hover:opacity-80"
+                                    aria-label="More info"
+                                    type="button"
+                                >
+                                    <span className="material-symbols-outlined text-xl align-middle">info</span>
+                                </button>
+                            )}
+                        </div>
+                        <div className="mt-2 text-[var(--org-text-accent)] font-bold text-lg" style={{ color: 'var(--org-link-color)' }}>
                           {formatCurrency(ticketType.price_cents)}{' '}
-                          <span className="text-xs font-normal text-gray-500 uppercase">per ticket</span>
+                          <span className="text-xs font-normal text-[var(--org-text-secondary)] uppercase">per ticket</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => updateQuantity(ticketType.id, -1)}
                           disabled={quantity === 0}
-                          className="bg-[#137fec] hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white size-12 flex items-center justify-center rounded-lg transition-colors"
+                          className="bg-[var(--org-btn-primary-bg)] hover:opacity-90 disabled:bg-[var(--org-btn-disabled-bg)] disabled:text-[var(--org-btn-disabled-text)] disabled:cursor-not-allowed text-[var(--org-btn-primary-text)] size-12 flex items-center justify-center rounded-lg transition-colors"
                         >
                           <span className="material-symbols-outlined">remove</span>
                         </button>
-                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 size-12 flex items-center justify-center font-bold text-xl">
+                        <div className="bg-[var(--org-surface-card)] border border-[var(--org-border-default)] size-12 flex items-center justify-center font-bold text-xl text-[var(--org-text-primary)]">
                           {quantity}
                         </div>
                         <button
                           onClick={() => updateQuantity(ticketType.id, 1)}
                           disabled={available <= quantity}
-                          className="bg-[#137fec] hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white size-12 flex items-center justify-center rounded-lg transition-colors"
+                          className="bg-[var(--org-btn-primary-bg)] hover:opacity-90 disabled:bg-[var(--org-btn-disabled-bg)] disabled:text-[var(--org-btn-disabled-text)] disabled:cursor-not-allowed text-[var(--org-btn-primary-text)] size-12 flex items-center justify-center rounded-lg transition-colors"
                         >
                           <span className="material-symbols-outlined">add</span>
                         </button>
@@ -286,6 +301,36 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
           </div>
         </div>
       </main>
+
+      {/* Ticket Info Modal */}
+      {expandedTicketType && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setExpandedTicketType(null)}>
+          <div className="bg-[var(--org-surface-card)] rounded-xl shadow-2xl max-w-lg w-full overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-[var(--org-border-subtle)] flex justify-between items-center">
+              <h3 className="text-xl font-bold text-[var(--org-text-primary)]">{expandedTicketType.name}</h3>
+              <button 
+                onClick={() => setExpandedTicketType(null)} 
+                className="text-[var(--org-text-muted)] hover:text-[var(--org-text-primary)]"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="p-6 max-h-[60vh] overflow-y-auto">
+              <p className="whitespace-pre-wrap text-[var(--org-text-secondary)] leading-relaxed">
+                {expandedTicketType.description}
+              </p>
+            </div>
+            <div className="p-4 bg-[var(--org-surface-section)] flex justify-end">
+               <button 
+                onClick={() => setExpandedTicketType(null)} 
+                className="px-4 py-2 border border-[var(--org-border-default)] bg-[var(--org-surface-card)] text-[var(--org-text-primary)] rounded-lg font-medium hover:bg-[var(--org-surface-hover)] transition-colors"
+               >
+                 Close
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

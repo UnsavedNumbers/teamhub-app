@@ -307,3 +307,34 @@ export async function uploadOrganizationLogo(
         return { path: null, error: err instanceof Error ? err : new Error('Unknown error') }
     }
 }
+
+export async function uploadTicketBanner(
+    orgId: string,
+    eventId: string,
+    file: File
+): Promise<{ path: string | null; error: Error | null }> {
+    try {
+        if (USE_FAKE_DATA) {
+            return { path: `fake-banner-${eventId}.png`, error: null }
+        }
+
+        if (!orgId) return { path: null, error: new Error('Organization ID is required') }
+        if (!eventId) return { path: null, error: new Error('Event ID is required') }
+
+        const fileExt = file.name.split('.').pop() || 'png'
+        const fileName = `banner-${Date.now()}.${fileExt}`
+        const filePath = `ticket-banners/${orgId}/${eventId}/${fileName}`
+
+        const { error: uploadError } = await supabase.storage
+            .from('organization-assets')
+            .upload(filePath, file, { upsert: true })
+
+        if (uploadError) throw uploadError
+
+        const { data } = supabase.storage.from('organization-assets').getPublicUrl(filePath)
+        return { path: data.publicUrl, error: null }
+    } catch (err) {
+        console.error('[organizationService] Error uploading ticket banner:', err)
+        return { path: null, error: err instanceof Error ? err : new Error('Unknown error') }
+    }
+}

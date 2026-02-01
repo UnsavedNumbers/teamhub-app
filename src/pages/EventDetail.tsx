@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
+import { supabase } from '../lib/supabase'
 import { getEventDetails, updateRSVP, getAthletes, deleteEvent } from '../data/services'
 import type { RSVPStatus } from '../types/calendar'
 import { getSportFromEvent, type SportInfo } from '../utils/sportContext'
@@ -174,6 +175,7 @@ export default function EventDetail() {
   const [eventSport, setEventSport] = useState<SportInfo | null>(null)
   const [copiedText, setCopiedText] = useState<string | null>(null)
   const [copyError, setCopyError] = useState<string | null>(null)
+  const [orgSlug, setOrgSlug] = useState<string | null>(null)
 
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
@@ -280,6 +282,29 @@ export default function EventDetail() {
   useEffect(() => {
     if (eventId && isReady) fetchData()
   }, [eventId, isReady, fetchData])
+
+  useEffect(() => {
+    if (!context?.orgId) return
+    let cancelled = false
+
+    const loadOrgSlug = async () => {
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('slug')
+        .eq('id', context.orgId)
+        .maybeSingle()
+
+      if (!cancelled && !error) {
+        setOrgSlug(data?.slug ?? null)
+      }
+    }
+
+    loadOrgSlug()
+
+    return () => {
+      cancelled = true
+    }
+  }, [context?.orgId])
 
   async function handleRsvp(childId: string, status: RSVPStatus) {
     if (!eventId) return
@@ -451,7 +476,14 @@ export default function EventDetail() {
                 }
               </p>
             </div>
-            <Button onClick={() => navigate(`/o/${context.orgId}/tickets/events/${event.ticketed_event?.id}`)}>
+            <Button
+              onClick={() => {
+                if (orgSlug) {
+                  navigate(`/o/${orgSlug}/tickets/events/${event.ticketed_event?.id}`)
+                }
+              }}
+              disabled={!orgSlug}
+            >
               Get Tickets
             </Button>
           </div>
