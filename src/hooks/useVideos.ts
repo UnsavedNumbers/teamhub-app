@@ -82,12 +82,7 @@ export function useVideos(options: UseVideosOptions = {}): UseVideosReturn {
         .select(`
           *,
           team:teams!videos_team_id_fkey(id, name),
-          season:seasons!videos_season_id_fkey(id, name),
           event:events!videos_event_id_fkey(id, title, type),
-          program:programs!videos_program_id_fkey(id, name),
-          level:levels!videos_level_id_fkey(id, name),
-          sport:sports!videos_sport_id_fkey(id, name, icon),
-          uploader:profiles!videos_uploaded_by_fkey(id, full_name, avatar_url),
           video_athlete_links(id, athlete_id, link_type),
           video_tag_links(id, tag_id, tag:video_tags(id, name, type, color))
         `, { count: 'exact' })
@@ -218,12 +213,7 @@ export function useVideo({ videoId, enabled = true }: UseVideoOptions): UseVideo
         .select(`
           *,
           team:teams!videos_team_id_fkey(id, name),
-          season:seasons!videos_season_id_fkey(id, name),
           event:events!videos_event_id_fkey(id, title, type),
-          program:programs!videos_program_id_fkey(id, name),
-          level:levels!videos_level_id_fkey(id, name),
-          sport:sports!videos_sport_id_fkey(id, name, icon),
-          uploader:profiles!videos_uploaded_by_fkey(id, full_name, avatar_url),
           video_athlete_links(
             id, athlete_id, link_type, timestamp_start, timestamp_end, notes,
             athlete:athletes(id, first_name, last_name, jersey_number, photo_url)
@@ -233,13 +223,11 @@ export function useVideo({ videoId, enabled = true }: UseVideoOptions): UseVideo
             tag:video_tags(id, name, type, color)
           ),
           video_notes(
-            id, title, content, timestamp_start, timestamp_end, scope, is_pinned,
-            author:profiles!video_notes_author_id_fkey(id, full_name, avatar_url),
+            id, content, timestamp_seconds, duration_seconds, scope, author_id, created_at,
             video_note_targets(id, athlete_id, athlete:athletes(id, first_name, last_name))
           ),
           video_comments(
-            id, content, timestamp_seconds, parent_comment_id, is_edited, created_at,
-            author:profiles!video_comments_author_id_fkey(id, full_name, avatar_url)
+            id, content, timestamp_seconds, parent_comment_id, author_id, created_at
           )
         `)
         .eq('id', videoId)
@@ -639,11 +627,10 @@ export function useVideoNotes({ videoId, enabled = true }: UseVideoNotesOptions)
         .from('video_notes')
         .select(`
           *,
-          author:profiles!video_notes_author_id_fkey(id, full_name, avatar_url),
           video_note_targets(id, athlete_id, athlete:athletes(id, first_name, last_name))
         `)
         .eq('video_id', videoId)
-        .order('timestamp_start', { ascending: true, nullsFirst: true })
+        .order('timestamp_seconds', { ascending: true, nullsFirst: true })
       
       if (fetchError) throw fetchError
       
@@ -687,10 +674,7 @@ export function useVideoNotes({ videoId, enabled = true }: UseVideoNotesOptions)
       const { data, error: createError } = await supabase
         .from('video_notes')
         .insert(payload)
-        .select(`
-          *,
-          author:profiles!video_notes_author_id_fkey(id, full_name, avatar_url)
-        `)
+        .select(`*`)
         .single()
       
       if (createError) throw createError
@@ -921,10 +905,7 @@ export function useVideoComments({ videoId, enabled = true }: UseVideoCommentsOp
     try {
       const { data, error: fetchError } = await supabase
         .from('video_comments')
-        .select(`
-          *,
-          author:profiles!video_comments_author_id_fkey(id, full_name, avatar_url)
-        `)
+        .select(`*`)
         .eq('video_id', videoId)
         .order('created_at', { ascending: true })
       
@@ -959,10 +940,7 @@ export function useVideoComments({ videoId, enabled = true }: UseVideoCommentsOp
           timestamp_seconds: options?.timestamp,
           parent_comment_id: options?.parentId,
         })
-        .select(`
-          *,
-          author:profiles!video_comments_author_id_fkey(id, full_name, avatar_url)
-        `)
+        .select(`*`)
         .single()
       
       if (createError) throw createError
@@ -1069,7 +1047,6 @@ export function useAthleteVideos({ athleteId, enabled = true }: UseAthleteVideos
         .select(`
           *,
           team:teams!videos_team_id_fkey(id, name),
-          sport:sports!videos_sport_id_fkey(id, name, icon),
           video_athlete_links(id, link_type)
         `, { count: 'exact' })
         .in('id', videoIds)
