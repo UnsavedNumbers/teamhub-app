@@ -1,21 +1,24 @@
 /**
- * Ticketed Events List Page
+ * Org-Scoped Ticketed Events List Page
  * 
- * Public page showing available ticketed events
- * Design: public_ticket_events_grid
+ * Public page showing available ticketed events for an org
+ * Must be wrapped in OrgScopedRoute
  */
 
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { getTicketedEvents, getTicketTypesForEvent } from '@/data/services'
-import { useRouteLink } from '@/utils/routes'
 import type { TicketedEvent, TicketType } from '@/types/ticketing'
 import { formatCurrency } from '@/types/ticketing'
+import type { OrgContext } from '@/utils/orgResolution'
+import { OrgScopedRoute } from '@/components/OrgScopedRoute'
 
-export default function TicketEventList() {
+function TicketEventListContent({ org }: { org: OrgContext }) {
+  const orgSlug = ''
+
   const { data: eventsResponse } = useQuery({
-    queryKey: ['ticketed-events', 'published'],
-    queryFn: () => getTicketedEvents({ status: 'published', upcoming_only: true }),
+    queryKey: ['ticketed-events', 'published', org.id],
+    queryFn: () => getTicketedEvents({ org_id: org.id, status: 'published', upcoming_only: true }),
   })
 
   const eventsResponseAny = eventsResponse as any
@@ -23,7 +26,7 @@ export default function TicketEventList() {
 
   return (
     <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] text-[#111418] dark:text-white transition-colors">
-      {/* Header */}
+      {/* Header with org branding */}
       <header className="flex items-center justify-between border-b border-[#f0f2f4] dark:border-[#2a3038] px-10 py-3 bg-white dark:bg-[#111418]">
         <div className="flex items-center gap-4 text-[#137fec]">
           <div className="size-6">
@@ -31,7 +34,7 @@ export default function TicketEventList() {
               <path clipRule="evenodd" d="M24 4H6V17.3333V30.6667H24V44H42V30.6667V17.3333H24V4Z" fillRule="evenodd" />
             </svg>
           </div>
-          <h2 className="text-[#111418] dark:text-white text-lg font-black leading-tight tracking-tight">YouthSports.team</h2>
+          <h2 className="text-[#111418] dark:text-white text-lg font-black leading-tight tracking-tight">{org.name}</h2>
         </div>
       </header>
 
@@ -50,7 +53,7 @@ export default function TicketEventList() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {events.map((event) => (
-              <EventCard key={event.id} event={event} />
+              <EventCard key={event.id} event={event} orgSlug={orgSlug!} />
             ))}
           </div>
         )}
@@ -59,13 +62,10 @@ export default function TicketEventList() {
   )
 }
 
-function EventCard({ event }: { event: TicketedEvent }) {
-  const eventDate = new Date(event.starts_at)
-  const eventUrl = useRouteLink('portal.ticketEventDetail', { eventId: event.id })
-  
+function EventCard({ event, orgSlug }: { event: TicketedEvent; orgSlug: string }) {
   // Get minimum price
   const { data: ticketTypesResponse } = useQuery({
-    queryKey: ['ticket-types', event.id, 'min-price'],
+    queryKey: ['ticket-types', event.id, event.org_id, 'min-price'],
     queryFn: () => getTicketTypesForEvent(event.id, event.org_id),
     select: (data: any) => {
       const types = Array.isArray(data) ? data : data?.data || []
@@ -75,9 +75,11 @@ function EventCard({ event }: { event: TicketedEvent }) {
   })
 
   const minPrice = ticketTypesResponse || null
+  const eventDate = new Date(event.starts_at)
   const dayName = eventDate.toLocaleDateString('en-US', { weekday: 'short' })
   const dateStr = eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   const timeStr = eventDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+  const eventUrl = `/o/${orgSlug}/tickets/events/${event.id}`
 
   return (
     <Link
@@ -125,5 +127,13 @@ function EventCard({ event }: { event: TicketedEvent }) {
         </div>
       </div>
     </Link>
+  )
+}
+
+export default function OrgScopedTicketEventList() {
+  return (
+    <OrgScopedRoute>
+      {(org) => <TicketEventListContent org={org} />}
+    </OrgScopedRoute>
   )
 }

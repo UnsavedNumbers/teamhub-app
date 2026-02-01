@@ -449,6 +449,619 @@ html.dark .oa-theme-active textarea:focus {
 }
 
 /* =====================================================================
+   ORG ADMIN FORM SYSTEM
+   ===================================================================== */
+
+.oa-form-group {
+    margin-bottom: var(--pa-space-4);
+}
+
+.oa-label {
+    display: block;
+    font: 600 16px/1.4 var(--pa-font-body);
+    color: var(--pa-n500);
+    margin-bottom: var(--pa-space-2);
+}
+
+html.dark .oa-label {
+    color: var(--pa-text-secondary);
+}
+
+.oa-label--required::after {
+    content: ' *';
+    color: var(--pa-n500);
+}
+
+html.dark .oa-label--required::after {
+    color: var(--pa-text-muted);
+}
+
+.oa-input {
+    width: 100%;
+    height: 44px;
+
+    @media (max-width: 767px) {
+        height: 48px;
+        font-size: 16px;
+    }
+
+    padding: 0 var(--pa-space-3);
+    border: 1px solid var(--pa-n200);
+    border-radius: var(--pa-radius-s);
+    background: var(--pa-surface);
+    font: var(--pa-text-body-m);
+    color: var(--pa-n900);
+    transition: all var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.oa-input::placeholder {
+    color: var(--pa-n500);
+}
+
+.oa-input:hover {
+    border-color: var(--pa-n300);
+}
+
+.oa-input:focus {
+    border-color: var(--pa-n700);
+    outline: 2px solid rgba(43, 52, 61, 0.25);
+    box-shadow: var(--pa-shadow-1);
+}
+
+html.dark .oa-input {
+    background: var(--pa-surface);
+    border-color: #374151;
+    color: #f9fafb;
+}
+
+html.dark .oa-input::placeholder {
+    color: #9ca3af;
+}
+
+html.dark .oa-input:hover {
+    border-color: #4b5563;
+}
+
+html.dark .oa-input:focus {
+    border-color: #6b7280;
+    outline: 2px solid rgba(107, 114, 128, 0.25);
+}
+
+.oa-input--error {
+    border-color: var(--pa-n800);
+}
+
+.oa-input--error:focus {
+    outline-color: rgba(11, 15, 20, 0.25);
+}
+
+.oa-helper {
+    font: var(--pa-text-body-s);
+    color: var(--pa-n500);
+    margin-top: var(--pa-space-1);
+}
+
+.oa-helper--error {
+    color: var(--pa-n800);
+}
+
+.oa-helper-text {
+    font: var(--pa-text-body-s);
+    color: var(--pa-n500);
+    margin-top: var(--pa-space-1);
+}
+
+.oa-datepicker-group {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 44px;
+
+    @media (max-width: 767px) {
+        height: 48px;
+    }
+
+    border: 1px solid var(--pa-n200);
+    border-radius: var(--pa-radius-s);
+    background: var(--pa-surface);
+    transition: all var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.oa-datepicker-group:hover {
+    border-color: var(--pa-n300);
+}
+
+.oa-datepicker-group:focus-within {
+    border-color: var(--pa-n700);
+    outline: 2px solid rgba(43, 52, 61, 0.25);
+    box-shadow: var(--pa-shadow-1);
+}
+
+.oa-datepicker-group--error {
+    border-color: var(--pa-n800);
+}
+
+.oa-datepicker-group--error:focus-within {
+    outline-color: rgba(11, 15, 20, 0.25);
+}
+
+html.dark .oa-datepicker-group {
+    background: var(--pa-surface);
+    border-color: #374151;
+}
+
+html.dark .oa-datepicker-group:hover {
+    border-color: #4b5563;
+}
+
+html.dark .oa-datepicker-group:focus-within {
+    border-color: #6b7280;
+    outline: 2px solid rgba(107, 114, 128, 0.25);
+}
+
+.oa-datepicker-input {
+    flex: 1;
+    display: flex;
+    padding: 0 var(--pa-space-3);
+    font: var(--pa-text-body-m);
+    color: var(--pa-n900);
+}
+
+html.dark .oa-datepicker-input {
+    color: #f9fafb;
+}
+
+.oa-datepicker-segment {
+    padding: 2px;
+    font: var(--pa-text-body-m);
+    color: var(--pa-n900);
+    border-radius: 4px;
+    outline: none;
+}
+
+html.dark .oa-datepicker-segment {
+    color: #f9fafb;
+}
+
+.oa-datepicker-segment:focus {
+    background: var(--pa-n100);
+    color: var(--pa-n900);
+}
+
+html.dark .oa-datepicker-segment:focus {
+    background: #374151;
+    color: #f9fafb;
+}
+
+.oa-datepicker-segment[data-placeholder] {
+    color: var(--pa-n500);
+}
+
+html.dark .oa-datepicker-segment[data-placeholder] {
+    color: #9ca3af;
+}
+
+.oa-datepicker-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 var(--pa-space-2);
+    margin-right: var(--pa-space-1);
+    background: transparent;
+    border: none;
+    color: var(--pa-n500);
+    cursor: pointer;
+    border-radius: var(--pa-radius-s);
+    transition: all var(--pa-motion-fast) var(--pa-ease-out);
+}
+
+.oa-datepicker-button:hover {
+    background: var(--pa-n100);
+    color: var(--pa-n700);
+}
+
+html.dark .oa-datepicker-button {
+    color: #9ca3af;
+}
+
+html.dark .oa-datepicker-button:hover {
+    background: #374151;
+    color: #d1d5db;
+}
+
+.oa-datepicker-button:focus-visible {
+    outline: 2px solid var(--pa-n700);
+    outline-offset: 2px;
+}
+
+.oa-datepicker-popover {
+    background: var(--pa-surface);
+    border: 1px solid var(--pa-n200);
+    border-radius: var(--pa-radius-m);
+    box-shadow: var(--pa-shadow-4);
+    margin-top: var(--pa-space-1);
+    overflow: hidden;
+}
+
+html.dark .oa-datepicker-popover {
+    background: #1f2937;
+    border-color: #374151;
+}
+
+.oa-datepicker-popover[data-entering] {
+    animation: slideIn 200ms;
+}
+
+.oa-datepicker-popover[data-exiting] {
+    animation: slideOut 200ms;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+}
+
+.oa-datepicker-dialog {
+    padding: var(--pa-space-4);
+    outline: none;
+}
+
+.oa-datepicker-calendar {
+    width: 280px;
+}
+
+.oa-datepicker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--pa-space-3);
+}
+
+.oa-datepicker-heading {
+    flex: 1;
+    text-align: center;
+    font: var(--pa-text-heading-xs);
+    color: var(--pa-n900);
+    margin: 0;
+}
+
+html.dark .oa-datepicker-heading {
+    color: #f9fafb;
+}
+
+.oa-datepicker-nav-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: none;
+    border-radius: var(--pa-radius-s);
+    color: var(--pa-n700);
+    cursor: pointer;
+    transition: all var(--pa-motion-fast) var(--pa-ease-out);
+}
+
+.oa-datepicker-nav-button:hover {
+    background: var(--pa-n100);
+}
+
+html.dark .oa-datepicker-nav-button {
+    color: #d1d5db;
+}
+
+html.dark .oa-datepicker-nav-button:hover {
+    background: #374151;
+}
+
+.oa-datepicker-nav-button:focus-visible {
+    outline: 2px solid var(--pa-n700);
+    outline-offset: 2px;
+}
+
+.oa-datepicker-nav-button[data-disabled] {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.oa-datepicker-grid {
+    width: 100%;
+    border-spacing: 0;
+}
+
+.oa-datepicker-weekday {
+    font: var(--pa-text-body-s);
+    font-weight: 600;
+    color: var(--pa-n600);
+    text-align: center;
+    padding: var(--pa-space-1);
+}
+
+html.dark .oa-datepicker-weekday {
+    color: #9ca3af;
+}
+
+.oa-datepicker-cell {
+    width: 36px;
+    height: 36px;
+    text-align: center;
+    font: var(--pa-text-body-m);
+    color: var(--pa-n900);
+    border-radius: var(--pa-radius-s);
+    cursor: pointer;
+    outline: none;
+    border: 2px solid transparent;
+    transition: all var(--pa-motion-fast) var(--pa-ease-out);
+}
+
+html.dark .oa-datepicker-cell {
+    color: #f9fafb;
+}
+
+.oa-datepicker-cell:hover {
+    background: var(--pa-n100);
+}
+
+html.dark .oa-datepicker-cell:hover {
+    background: #374151;
+}
+
+.oa-datepicker-cell:focus-visible {
+    border-color: var(--pa-n700);
+}
+
+.oa-datepicker-cell[data-selected] {
+    background: var(--pa-n900);
+    color: var(--pa-white);
+}
+
+html.dark .oa-datepicker-cell[data-selected] {
+    background: #3b82f6;
+    color: #ffffff;
+}
+
+.oa-datepicker-cell[data-disabled] {
+    color: var(--pa-n300);
+    cursor: not-allowed;
+}
+
+html.dark .oa-datepicker-cell[data-disabled] {
+    color: #6b7280;
+}
+
+.oa-datepicker-cell[data-outside-month] {
+    color: var(--pa-n400);
+}
+
+html.dark .oa-datepicker-cell[data-outside-month] {
+    color: #6b7280;
+}
+
+.oa-datepicker-cell[data-unavailable] {
+    text-decoration: line-through;
+    color: var(--pa-n300);
+}
+
+html.dark .oa-datepicker-cell[data-unavailable] {
+    color: #6b7280;
+}
+
+.oa-timepicker-button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: 44px;
+    padding: 0 var(--pa-space-3);
+    border: 1px solid var(--pa-n200);
+    border-radius: var(--pa-radius-s);
+    background: var(--pa-surface);
+    font: var(--pa-text-body-m);
+    color: var(--pa-n900);
+    cursor: pointer;
+    transition: all var(--pa-motion-normal) var(--pa-ease-out);
+    text-align: left;
+
+    @media (max-width: 768px) {
+        height: 48px;
+    }
+}
+
+.oa-timepicker-button:hover:not(:disabled) {
+    border-color: var(--pa-n300);
+}
+
+.oa-timepicker-button:focus {
+    border-color: var(--pa-n700);
+    outline: 2px solid rgba(43, 52, 61, 0.25);
+    box-shadow: var(--pa-shadow-1);
+}
+
+.oa-timepicker-button--error {
+    border-color: var(--pa-n800);
+}
+
+.oa-timepicker-button--error:focus {
+    outline-color: rgba(11, 15, 20, 0.25);
+}
+
+.oa-timepicker-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+html.dark .oa-timepicker-button {
+    background: var(--pa-surface);
+    border-color: #374151;
+    color: #f9fafb;
+}
+
+html.dark .oa-timepicker-button:hover:not(:disabled) {
+    border-color: #4b5563;
+}
+
+html.dark .oa-timepicker-button:focus {
+    border-color: #6b7280;
+    outline: 2px solid rgba(107, 114, 128, 0.25);
+}
+
+.oa-timepicker-button-text {
+    flex: 1;
+}
+
+.oa-timepicker-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: var(--pa-space-1);
+    background: var(--pa-surface);
+    border: 1px solid var(--pa-n200);
+    border-radius: var(--pa-radius-m);
+    box-shadow: var(--pa-shadow-4);
+    display: flex;
+    gap: 1px;
+    overflow: hidden;
+    z-index: 1000;
+}
+
+html.dark .oa-timepicker-dropdown {
+    background: #1f2937;
+    border-color: #374151;
+}
+
+.oa-timepicker-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--pa-surface);
+}
+
+html.dark .oa-timepicker-column {
+    background: #1f2937;
+}
+
+.oa-timepicker-column--period {
+    flex: 0.6;
+}
+
+.oa-timepicker-column-header {
+    padding: var(--pa-space-2) var(--pa-space-3);
+    font: var(--pa-text-body-s);
+    font-weight: 600;
+    color: var(--pa-n600);
+    text-align: center;
+    border-bottom: 1px solid var(--pa-n200);
+    background: var(--pa-n50);
+}
+
+html.dark .oa-timepicker-column-header {
+    color: #9ca3af;
+    background: #111827;
+    border-color: #374151;
+}
+
+.oa-timepicker-column-scroll {
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.oa-timepicker-option {
+    display: block;
+    width: 100%;
+    padding: var(--pa-space-2) var(--pa-space-3);
+    font: var(--pa-text-body-m);
+    color: var(--pa-n900);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: center;
+    transition: all var(--pa-motion-fast) var(--pa-ease-out);
+}
+
+html.dark .oa-timepicker-option {
+    color: #f9fafb;
+}
+
+.oa-timepicker-option:hover {
+    background: var(--pa-n100);
+}
+
+html.dark .oa-timepicker-option:hover {
+    background: #374151;
+}
+
+.oa-timepicker-option--selected {
+    background: var(--pa-primary-500);
+    color: var(--pa-white);
+    font-weight: 600;
+}
+
+html.dark .oa-timepicker-option--selected {
+    background: #3b82f6;
+    color: #ffffff;
+}
+
+.oa-timepicker-option--selected:hover {
+    background: var(--pa-primary-600);
+}
+
+html.dark .oa-timepicker-option--selected:hover {
+    background: #2563eb;
+}
+
+.oa-checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+    cursor: pointer;
+}
+
+.oa-checkbox-input {
+    width: 18px;
+    height: 18px;
+    border: 1px solid var(--pa-n300);
+    border-radius: 4px;
+    appearance: none;
+    cursor: pointer;
+    transition: all var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.oa-checkbox-input:checked {
+    background: var(--pa-n900);
+    border-color: var(--pa-n900);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.oa-checkbox-input:focus-visible {
+    outline: 2px solid var(--pa-n700);
+    outline-offset: 2px;
+}
+
+/* =====================================================================
    ORG ADMIN SIDEBAR NAVIGATION - Uses org theme colors
    Secondary colors for structure, Tertiary for hover, Primary for active
    ===================================================================== */
@@ -1505,37 +2118,6 @@ html.dark .oa-text-danger {
 
 .oa-input-group--mb-0 {
     margin-bottom: 0;
-}
-
-.oa-label {
-    font-family: var(--pa-font-body);
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--pa-n500);
-}
-
-.oa-input {
-    width: 100%;
-    height: 44px;
-    padding: 0 12px;
-    border: 1px solid var(--pa-n200);
-    border-radius: 4px;
-    font-family: var(--pa-font-body);
-    font-size: 14px;
-    color: var(--pa-n900);
-    background: var(--pa-white);
-    transition: all var(--pa-motion-fast) var(--pa-ease-out);
-}
-
-.oa-input:focus {
-    border-color: var(--pa-n900);
-    outline: none;
-}
-
-.oa-input::placeholder {
-    color: var(--pa-n400);
 }
 
 /* Search Input */

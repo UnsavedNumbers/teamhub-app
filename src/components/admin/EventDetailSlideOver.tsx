@@ -142,6 +142,18 @@ export default function EventDetailSlideOver({
 
                     {!loading && !error && event && (
                         <>
+                            {(() => {
+                                const ticketedEvent = Array.isArray((event as any).ticketed_event)
+                                    ? (event as any).ticketed_event[0]
+                                    : (event as any).ticketed_event
+                                const ticketTypes = Array.isArray(ticketedEvent?.ticket_types)
+                                    ? ticketedEvent.ticket_types
+                                    : []
+                                const salesStartAt = ticketedEvent?.sales_start_at ?? null
+                                const salesEndAt = ticketedEvent?.sales_end_at ?? null
+
+                                return (
+                            <>
                             {/* Hero Section (No Card) */}
                             <div style={{ marginBottom: '24px', paddingTop: '40px' }}>
                                 <span className="oa-event-tag">{event.type}</span>
@@ -265,29 +277,29 @@ export default function EventDetailSlideOver({
                                     )}
 
                                     {/* Ticketing Meta */}
-                                    {event.ticketed_event && (
+                                    {ticketedEvent && (
                                         <div className="oa-detail-group">
                                             <label className="oa-detail-label">Ticketing</label>
                                             <div className="oa-detail-box oa-detail-box--dashed">
                                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
                                                     <span className="oa-detail-text">
-                                                        Status: <strong>{event.ticketed_event.status}</strong>
+                                                        Status: <strong>{ticketedEvent.status}</strong>
                                                     </span>
-                                                    {event.ticketed_event.sales_start_at || event.ticketed_event.sales_end_at ? (
+                                                    {salesStartAt || salesEndAt ? (
                                                         <span className="oa-badge">
-                                                            Sales {event.ticketed_event.sales_start_at ? 'from' : ''} {event.ticketed_event.sales_start_at ? new Date(event.ticketed_event.sales_start_at).toLocaleString() : ''} 
-                                                            {event.ticketed_event.sales_end_at ? ` to ${new Date(event.ticketed_event.sales_end_at).toLocaleString()}` : ''}
+                                                            Sales {salesStartAt ? 'from' : ''} {salesStartAt ? new Date(salesStartAt).toLocaleString() : ''} 
+                                                            {salesEndAt ? ` to ${new Date(salesEndAt).toLocaleString()}` : ''}
                                                         </span>
                                                     ) : (
                                                         <span className="oa-badge">Sales window not set</span>
                                                     )}
                                                 </div>
-                                                {event.ticketed_event.ticket_types && event.ticketed_event.ticket_types.length > 0 ? (
+                                                {ticketTypes.length > 0 ? (
                                                     <ul className="oa-equip-list" style={{ marginTop: '12px' }}>
-                                                        {event.ticketed_event.ticket_types
+                                                        {ticketTypes
                                                             .slice()
-                                                            .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-                                                            .map((tt) => (
+                                                            .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+                                                            .map((tt: any) => (
                                                                 <li key={tt.id} className="oa-equip-item">
                                                                     <span className="material-symbols-outlined">sell</span>
                                                                     <div>
@@ -311,8 +323,11 @@ export default function EventDetailSlideOver({
                                     )}
                                 </div>
                             </>
-                        )}
-                    </div>
+                                )
+                            })()}
+                        </>
+                    )}
+                </div>
 
                 {/* Footer Controls */}
                 {!loading && !error && event && (
