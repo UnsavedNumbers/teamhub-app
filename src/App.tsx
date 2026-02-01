@@ -59,6 +59,12 @@ import TicketOrderSuccess from './pages/ticketing/TicketOrderSuccess'
 import MyTickets from './pages/ticketing/MyTickets'
 import TicketAccess from './pages/ticketing/TicketAccess'
 import TicketScanner from './pages/ticketing/TicketScanner'
+// Org-scoped public ticketing routes
+import OrgScopedTicketEventList from './pages/ticketing/OrgScopedTicketEventList'
+import OrgScopedTicketEventDetail from './pages/ticketing/OrgScopedTicketEventDetail'
+import OrgScopedTicketOrderSuccess from './pages/ticketing/OrgScopedTicketOrderSuccess'
+import OrgScopedTicketAccess from './pages/ticketing/OrgScopedTicketAccess'
+import OrgLanding from './pages/ticketing/OrgLanding'
 
 // Portal Pages - Lazy loaded
 const CreateAthletePortal = lazy(() => import('./pages/CreateAthletePortal'))
@@ -138,6 +144,7 @@ const Payments = lazy(() => import('./pages/admin/Payments'))
 const TicketingEvents = lazy(() => import('./pages/admin/TicketingEvents'))
 const TicketingOrders = lazy(() => import('./pages/admin/TicketingOrders'))
 const CreateTicketedEvent = lazy(() => import('./pages/admin/CreateTicketedEvent'))
+const CreateTicketType = lazy(() => import('./pages/admin/CreateTicketType'))
 const TicketedEventDetail = lazy(() => import('./pages/admin/TicketedEventDetail'))
 const CreateFee = lazy(() => import('./pages/admin/CreateFee'))
 const UniformOrders = lazy(() => import('./pages/admin/UniformOrders'))
@@ -262,7 +269,14 @@ function AppWithTheme() {
           {/* Marketing Landing Page - Public */}
           <Route path="/" element={<HostHomeRoute />} />
           
-          {/* Public Ticketing Routes */}
+          {/* Org-Scoped Public Routes */}
+          <Route path="/o/:orgSlug" element={<OrgLanding />} />
+          <Route path="/o/:orgSlug/tickets" element={<OrgScopedTicketEventList />} />
+          <Route path="/o/:orgSlug/tickets/events/:eventId" element={<OrgScopedTicketEventDetail />} />
+          <Route path="/o/:orgSlug/tickets/order/:orderId" element={<OrgScopedTicketOrderSuccess />} />
+          <Route path="/o/:orgSlug/tickets/access/:token" element={<OrgScopedTicketAccess />} />
+          
+          {/* Legacy Public Ticketing Routes (deprecated - will be removed) */}
           <Route path="/tickets" element={<TicketEventList />} />
           <Route path="/tickets/events/:eventId" element={<TicketEventDetail />} />
           <Route path="/tickets/order/:orderId" element={<TicketOrderSuccess />} />
@@ -442,6 +456,7 @@ function AppWithTheme() {
               <Route path="ticketing/scanner" element={<FeatureGateRoute routeKey="admin.ticketingScanner"><TicketScanner /></FeatureGateRoute>} />
               <Route path="ticketing/events" element={<FeatureGateRoute routeKey="admin.ticketingEvents.list"><Suspense fallback={<AdminLoadingSpinner />}><TicketingEvents /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/events/new" element={<FeatureGateRoute routeKey="admin.ticketingEvents.create"><Suspense fallback={<AdminLoadingSpinner />}><CreateTicketedEvent /></Suspense></FeatureGateRoute>} />
+              <Route path="ticketing/events/:id/ticket-types/new" element={<FeatureGateRoute routeKey="admin.ticketingEvents.ticketTypes.create"><Suspense fallback={<AdminLoadingSpinner />}><CreateTicketType /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/events/:id" element={<FeatureGateRoute routeKey="admin.ticketingEvents.detail"><Suspense fallback={<AdminLoadingSpinner />}><TicketedEventDetail /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/orders" element={<FeatureGateRoute routeKey="admin.ticketingOrders"><Suspense fallback={<AdminLoadingSpinner />}><TicketingOrders /></Suspense></FeatureGateRoute>} />
             

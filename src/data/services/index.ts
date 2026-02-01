@@ -36,6 +36,7 @@ export * from './rsvpService'
 
 // Organization Settings Services
 export * from './organizationSettingsService'
+export * from './organizationService'
 
 // License Tiers Services
 export * from './licenseTiersService'

@@ -4,14 +4,17 @@
  * View event details, manage ticket types, generate staff links
  */
 
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { getTicketedEventById, getTicketTypesForEvent } from '@/data/services'
-import { supabase } from '@/lib/supabase'
 import { useRouteLink } from '@/utils/routes'
-import { formatCurrency, type TicketType } from '@/types/ticketing'
+import { supabase } from '@/lib/supabase'
+import { getTicketedEventByIdAdmin, getTicketTypesForEventAdmin } from '@/data/services'
+import { formatCurrency, type TicketedEvent, type TicketType } from '@/types/ticketing'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
+import { OrgAdminButton } from '@/components/admin/OrgAdminButton'
+import EmptyState from '@/components/platformAdmin/EmptyState'
+import PublicUrlShare from '@/components/ticketing/PublicUrlShare'
 
-// Hash token helper (client-side)
 async function hashToken(token: string): Promise<string> {
   const encoder = new TextEncoder()
   const data = encoder.encode(token)
@@ -20,29 +23,81 @@ async function hashToken(token: string): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
+function formatDateRange(start: string, end: string) {
+  const startDate = new Date(start)
+  const endDate = new Date(end)
+  return `${startDate.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })} – ${endDate.toLocaleString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  })}`
+}
+
+function formatSalesWindow(start?: string | null, end?: string | null) {
+  if (start && end) {
+    const startDate = new Date(start)
+    const endDate = new Date(end)
+    return `${startDate.toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    })} – ${endDate.toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    })}`
+  }
+
+  if (start) {
+    return `Sales begin ${new Date(start).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}`
+  }
+
+  if (end) {
+    return `Sales end ${new Date(end).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}`
+  }
+
+  return 'Opens automatically when event is published'
+}
+
 export default function TicketedEventDetail() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const scannerPath = useRouteLink('admin.ticketingScanner')
+  const detailPath = useRouteLink('admin.ticketingEvents.detail', { id: id ?? '' })
+  const addTicketTypePath = `${detailPath}/ticket-types/new`
 
-  const { data: eventResponse } = useQuery({
+  const {
+    data: event,
+    isLoading: eventLoading,
+    isError: eventError,
+  } = useQuery<TicketedEvent | null>({
     queryKey: ['ticketed-event', id],
-    queryFn: () => getTicketedEventById(id!),
-    enabled: !!id,
+    queryFn: () => getTicketedEventByIdAdmin(id!),
+    enabled: Boolean(id),
   })
 
-  const { data: ticketTypesResponse } = useQuery({
+  const {
+    data: ticketTypes,
+    isLoading: ticketTypesLoading,
+  } = useQuery<TicketType[]>({
     queryKey: ['ticket-types', id],
-    queryFn: () => getTicketTypesForEvent(id!),
-    enabled: !!id,
+    queryFn: () => getTicketTypesForEventAdmin(id!),
+    enabled: Boolean(id),
   })
 
-  const event = (eventResponse as any)?.data ?? eventResponse ?? null
-  const ticketTypes = (ticketTypesResponse as any)?.data ?? ticketTypesResponse ?? []
+  const ticketTypesList = ticketTypes ?? []
 
-  const generateStaffLinkMutation = useMutation({
+  const generateStaffLinkMutation = useMutation<string>({
     mutationFn: async () => {
       if (!id) throw new Error('No event ID')
-      
-      // Get user's org_id
+
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
@@ -54,15 +109,11 @@ export default function TicketedEventDetail() {
 
       if (!userData?.org_id) throw new Error('No organization')
 
-      // Generate token
       const array = new Uint8Array(32)
       window.crypto.getRandomValues(array)
       const token = Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('')
-
-      // Hash token
       const tokenHash = await hashToken(token)
 
-      // Create staff link (expires in 7 days)
       const expiresAt = new Date()
       expiresAt.setDate(expiresAt.getDate() + 7)
 
@@ -76,7 +127,6 @@ export default function TicketedEventDetail() {
 
       if (error) throw error
 
-      // Return the raw token (only shown once)
       const baseUrl = window.location.origin
       return `${baseUrl}/tickets/validate/${token}`
     },
@@ -86,98 +136,185 @@ export default function TicketedEventDetail() {
     },
   })
 
-  if (!event) {
+  if (!id) {
     return (
       <div className="pa-page-container">
-        <p>Loading event...</p>
+        <EmptyState
+          icon="event"
+          title="Event missing"
+          description="We could not determine which ticketed event to show."
+          action={{ label: 'Back to events', onClick: () => navigate('/admin/ticketing/events') }}
+          noCard
+        />
       </div>
     )
   }
 
+  if (eventLoading && !event) {
+    return (
+      <div className="pa-page-container">
+        <div className="pa-card">
+          <div className="pa-flex pa-justify-center pa-py-9">
+            <span className="pa-spinner" style={{ width: '32px', height: '32px', borderWidth: '3px' }} />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!event) {
+    return (
+      <div className="pa-page-container">
+        <EmptyState
+          icon="event_busy"
+          title={eventError ? 'Unable to load event' : 'Event not found'}
+          description={eventError ? 'Something went wrong while loading this ticketed event.' : 'This event may have been deleted.'}
+          action={{ label: 'Back to ticketed events', onClick: () => navigate('/admin/ticketing/events') }}
+          noCard
+        />
+      </div>
+    )
+  }
+
+  const eventDateRange = formatDateRange(event.starts_at, event.ends_at)
+  const salesWindow = formatSalesWindow(event.sales_start_at, event.sales_end_at)
+  const venueLabel = event.venue_name
+    ? `${event.venue_name} (${[event.venue_city, event.venue_state].filter(Boolean).join(', ')})`
+    : [event.venue_city, event.venue_state].filter(Boolean).join(', ') || 'TBD'
+
   return (
     <div className="pa-page-container">
-      <div className="pa-page-header">
-        <h1 className="pa-page-title">{event.title}</h1>
-        <div className="flex gap-2">
-          <button
-            onClick={() => generateStaffLinkMutation.mutate()}
-            className="pa-button pa-button-secondary"
-            disabled={generateStaffLinkMutation.isPending}
-          >
-            {generateStaffLinkMutation.isPending ? 'Generating...' : 'Generate Staff Link'}
-          </button>
-          <Link
-            to={useRouteLink('admin.ticketingScanner')}
-            className="pa-button pa-button-primary"
-          >
-            Open Scanner
-          </Link>
-        </div>
-      </div>
-
-      <div className="pa-card">
-        <h2 className="pa-card-title">Event Details</h2>
-        <div className="pa-info-grid">
-          <div>
-            <span className="pa-info-label">Status:</span>
-            <span className={`pa-badge pa-badge-${event.status === 'published' ? 'success' : 'default'}`}>
-              {event.status}
-            </span>
+      <AdminPageHeader
+        title={event.title}
+        subtitle={`Status: ${event.status}`}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <OrgAdminButton
+              variant="secondary"
+              icon={generateStaffLinkMutation.isPending ? 'hourglass_empty' : 'admin_panel_settings'}
+              onClick={() => generateStaffLinkMutation.mutate()}
+              disabled={generateStaffLinkMutation.isPending}
+            >
+              {generateStaffLinkMutation.isPending ? 'Generating...' : 'Generate Staff Link'}
+            </OrgAdminButton>
+            <OrgAdminButton as={Link} to={scannerPath} icon="qr_code_scanner">
+              Open Scanner
+            </OrgAdminButton>
           </div>
-          <div>
-            <span className="pa-info-label">Date:</span>
-            <span>{new Date(event.starts_at).toLocaleString()}</span>
-          </div>
-          <div>
-            <span className="pa-info-label">Venue:</span>
-            <span>{event.venue_name || 'TBD'}</span>
-          </div>
-        </div>
-      </div>
+        }
+      >
+        {event.description && <p className="oa-page-description">{event.description}</p>}
+      </AdminPageHeader>
 
-      <div className="pa-card mt-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="pa-card-title">Ticket Types</h2>
-          <Link
-            to={`${useRouteLink('admin.ticketingEvents.detail', { id: event.id })}/ticket-types/new`}
-            className="pa-button pa-button-sm pa-button-primary"
-          >
-            Add Ticket Type
-          </Link>
+      <div className="pa-space-y-6">
+        <div className="pa-grid pa-grid-cols-1 md:pa-grid-cols-2 pa-gap-6">
+          <div className="pa-card">
+            <h2 className="pa-card-title">Event Details</h2>
+            <div className="pa-info-grid">
+              <div>
+                <span className="pa-info-label">Date</span>
+                <span>{eventDateRange}</span>
+              </div>
+              <div>
+                <span className="pa-info-label">Venue</span>
+                <span>{venueLabel}</span>
+              </div>
+              <div>
+                <span className="pa-info-label">Timezone</span>
+                <span>{event.timezone}</span>
+              </div>
+              <div>
+                <span className="pa-info-label">Sales window</span>
+                <span>{salesWindow}</span>
+              </div>
+              <div>
+                <span className="pa-info-label">Team</span>
+                <span>{event.team_id ? event.team_id : 'Organization wide'}</span>
+              </div>
+              <div>
+                <span className="pa-info-label">Last updated</span>
+                <span>{new Date(event.updated_at).toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+
+          {event.status === 'published' ? (
+            <PublicUrlShare
+              orgId={event.org_id}
+              path={`tickets/events/${event.id}`}
+              title="Public event URL"
+              description="Share this link with guests so they can buy tickets."
+            />
+          ) : (
+            <div className="pa-card pa-flex pa-flex-col pa-gap-3 pa-justify-center pa-p-8">
+              <h2 className="pa-card-title">Public link</h2>
+              <p className="pa-text-muted">
+                Publish this event to unlock the public sharing toolkit and allow guests to reserve tickets.
+              </p>
+            </div>
+          )}
         </div>
 
-        {ticketTypes.length === 0 ? (
-          <p className="text-gray-500">No ticket types yet. Add ticket types to start selling.</p>
-        ) : (
-          <table className="pa-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Price</th>
-                <th>Capacity</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ticketTypes.map((type: TicketType) => (
-                <tr key={type.id}>
-                  <td>{type.name}</td>
-                  <td>{formatCurrency(type.price_cents)}</td>
-                  <td>
-                    {type.capacity_total !== null
-                      ? `${type.capacity_remaining}/${type.capacity_total}`
-                      : 'Unlimited'}
-                  </td>
-                  <td>
-                    <span className={`pa-badge pa-badge-${type.is_active ? 'success' : 'default'}`}>
-                      {type.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <div className="pa-card">
+          <div className="flex justify-between items-center gap-2 mb-4">
+            <h2 className="pa-card-title">Ticket Types</h2>
+            <OrgAdminButton
+              as={Link}
+              to={addTicketTypePath}
+              size="compact"
+              icon="add"
+            >
+              Add Ticket Type
+            </OrgAdminButton>
+          </div>
+
+          {ticketTypesLoading ? (
+            <div className="pa-flex pa-justify-center pa-py-9">
+              <span className="pa-spinner" style={{ width: '32px', height: '32px', borderWidth: '3px' }} />
+            </div>
+          ) : ticketTypesList.length === 0 ? (
+            <div className="pa-p-8">
+              <EmptyState
+                icon="confirmation_number"
+                title="No ticket types yet"
+                description="Create ticket types (GA, VIP, donation passes) so guests can start purchasing."
+                action={{ label: 'Add Ticket Type', onClick: () => navigate(addTicketTypePath) }}
+                noCard
+              />
+            </div>
+          ) : (
+            <div className="pa-table-container">
+              <table className="pa-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Price</th>
+                    <th>Capacity</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ticketTypesList.map((type) => (
+                    <tr key={type.id}>
+                      <td>{type.name}</td>
+                      <td>{formatCurrency(type.price_cents)}</td>
+                      <td>
+                        {type.capacity_total !== null
+                          ? `${type.capacity_remaining}/${type.capacity_total}`
+                          : 'Unlimited'}
+                      </td>
+                      <td>
+                        <span className={`pa-badge pa-badge-${type.is_active ? 'success' : 'default'}`}>
+                          {type.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

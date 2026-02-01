@@ -11,6 +11,7 @@ import {
   fakeOrganizations,
   type FakeOrganization,
   getOrganizationById,
+  getOrganizationBySlug as getFakeOrganizationBySlug,
   getOrganizationLicense,
 } from './fakeOrganizations'
 
@@ -31,6 +32,7 @@ function mapFakeToDomain(org: FakeOrganization): Organization {
   return {
     id: org.id,
     name: org.name,
+    slug: org.slug,
     orgType: org.org_type || null,
     status: org.status,
     createdAt: org.created_at,
@@ -82,6 +84,31 @@ export async function getOrganizationDetails(
   }
 }
 
+export async function getOrganizationBySlug(
+  slug: string
+): Promise<{ data: Organization | null; error: Error | null }> {
+  try {
+    if (!slug) {
+      return { data: null, error: new Error('Slug is required') }
+    }
+
+    await simulateDelay()
+
+    // Search in store first (in case of updates, though slug updates not simulated yet), then fallback
+    // Actually store uses ID, so we must search values or just refer to static data for slugs for now
+    // Simulating looking up by slug
+    const org = [...organizationStore.values()].find(o => o.slug === slug) ?? getFakeOrganizationBySlug(slug)
+
+    if (!org) {
+      return { data: null, error: new Error('Organization not found') }
+    }
+
+    return { data: mapFakeToDomain(org), error: null }
+  } catch (err) {
+    return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+  }
+}
+
 export async function updateOrganizationDetails(
   orgId: string,
   updates: OrganizationUpdateDTO
@@ -121,6 +148,36 @@ export async function updateOrganizationDetails(
     return { data: mapFakeToDomain(updated), error: null }
   } catch (err) {
     return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+  }
+}
+
+export async function updateOrganizationSlug(
+  orgId: string,
+  slug: string
+): Promise<{ error: Error | null }> {
+  try {
+    if (!orgId) return { error: new Error('Organization ID is required') }
+    if (!slug) return { error: new Error('Slug is required') }
+
+    await simulateDelay()
+
+    const existing = organizationStore.get(orgId)
+    if (!existing) return { error: new Error('Organization not found') }
+
+    // Check uniqueness
+    const collision = [...organizationStore.values()].find(o => o.slug === slug && o.id !== orgId)
+    if (collision) return { error: new Error(`Slug ${slug} is already in use`) }
+
+    const updated: FakeOrganization = {
+      ...existing,
+      slug,
+      updated_at: new Date().toISOString(),
+    }
+
+    organizationStore.set(orgId, updated)
+    return { error: null }
+  } catch (err) {
+    return { error: err instanceof Error ? err : new Error('Unknown error') }
   }
 }
 

@@ -154,6 +154,7 @@ export interface CreateCheckoutRequest {
     quantity: number
   }>
   purchaser_email: string
+  org_slug?: string // Optional org slug for URL construction in checkout
 }
 
 export interface CreateCheckoutResponse {

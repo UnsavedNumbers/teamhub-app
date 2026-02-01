@@ -5,6 +5,7 @@
  */
 
 import { supabase } from '../../lib/supabase'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type {
   TicketedEvent,
   TicketType,
@@ -19,6 +20,7 @@ import type {
   StaffLinkExchangeResponse,
 } from '../../types/ticketing'
 import { normalizeSupabaseResponse, createServiceResponse } from './responseHelpers'
+import { assertNotDemoMode } from '@/utils/demoMode'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || ''
 const FUNCTIONS_URL = `${SUPABASE_URL.replace('/rest/v1', '')}/functions/v1`
@@ -54,7 +56,30 @@ export async function getTicketedEvents(filters?: {
   return normalizeSupabaseResponse<TicketedEvent[]>(data as unknown as TicketedEvent[], true)
 }
 
-export async function getTicketedEventById(id: string) {
+/**
+ * Get ticketed event by ID (public - requires org_id for isolation)
+ * This function MUST be used for public routes to ensure org isolation
+ */
+export async function getTicketedEventById(id: string, orgId: string) {
+  if (!orgId) {
+    throw new Error('orgId is required for public event queries')
+  }
+
+  const { data } = await supabase
+    .from('ticketed_events')
+    .select('*')
+    .eq('id', id)
+    .eq('org_id', orgId) // CRITICAL: Always filter by org_id for public routes
+    .single()
+
+  return normalizeSupabaseResponse<TicketedEvent>(data as unknown as TicketedEvent, false)
+}
+
+/**
+ * Get ticketed event by ID (admin/internal use - no org filter)
+ * Only use this when org context is already enforced by RLS or admin context
+ */
+export async function getTicketedEventByIdAdmin(id: string) {
   const { data } = await supabase
     .from('ticketed_events')
     .select('*')
@@ -68,7 +93,26 @@ export async function getTicketedEventById(id: string) {
 // Ticket Types
 // ============================================================================
 
-export async function getTicketTypesForEvent(ticketedEventId: string) {
+/**
+ * Get ticket types for an event (public - requires org_id for isolation)
+ */
+export async function getTicketTypesForEvent(ticketedEventId: string, orgId: string) {
+  if (!orgId) {
+    throw new Error('orgId is required for public ticket type queries')
+  }
+
+  // First verify the event belongs to the org
+  const { data: event } = await supabase
+    .from('ticketed_events')
+    .select('id, org_id')
+    .eq('id', ticketedEventId)
+    .eq('org_id', orgId)
+    .single()
+
+  if (!event) {
+    return normalizeSupabaseResponse<TicketType[]>([], true)
+  }
+
   const { data } = await supabase
     .from('ticket_types')
     .select('*')
@@ -79,11 +123,96 @@ export async function getTicketTypesForEvent(ticketedEventId: string) {
   return normalizeSupabaseResponse<TicketType[]>(data as unknown as TicketType[], true)
 }
 
+/**
+ * Get ticket types for an event (admin/internal use)
+ */
+export async function getTicketTypesForEventAdmin(ticketedEventId: string) {
+  const { data } = await supabase
+    .from('ticket_types')
+    .select('*')
+    .eq('ticketed_event_id', ticketedEventId)
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+
+  return normalizeSupabaseResponse<TicketType[]>(data as unknown as TicketType[], true)
+}
+
+export async function createTicketType(
+  insert: Database['public']['Tables']['ticket_types']['Insert'],
+) {
+  try {
+    assertNotDemoMode('create ticket types')
+
+    const { data, error } = await supabase
+      .from('ticket_types')
+      .insert(insert)
+      .select('*')
+      .single()
+
+    if (error) {
+      return createServiceResponse<TicketType>(null, error)
+    }
+
+    return createServiceResponse<TicketType>(data as unknown as TicketType, null)
+  } catch (error: unknown) {
+    return createServiceResponse<TicketType>(null, error as Error)
+  }
+}
+
 // ============================================================================
 // Ticket Orders
 // ============================================================================
 
-export async function getTicketOrderById(orderId: string) {
+/**
+ * Get ticket order by ID (public - requires org_id for isolation)
+ */
+export async function getTicketOrderById(orderId: string, orgId: string) {
+  if (!orgId) {
+    throw new Error('orgId is required for public order queries')
+  }
+
+  const { data } = await supabase
+    .from('ticket_orders')
+    .select(`
+      *,
+      ticket_order_items (
+        *,
+        ticket_types (
+          name,
+          description
+        )
+      ),
+      ticketed_events (
+        id,
+        title,
+        starts_at,
+        ends_at,
+        venue_name,
+        venue_city,
+        venue_state
+      )
+    `)
+    .eq('id', orderId)
+    .eq('org_id', orgId) // CRITICAL: Always filter by org_id for public routes
+    .single()
+
+  return normalizeSupabaseResponse<TicketOrder & {
+    ticket_order_items: Array<TicketOrderItem & {
+      ticket_types: Pick<TicketType, 'name' | 'description'>
+    }>
+    ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
+  }>(data as unknown as (TicketOrder & {
+    ticket_order_items: Array<TicketOrderItem & {
+      ticket_types: Pick<TicketType, 'name' | 'description'>
+    }>
+    ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
+  }), false)
+}
+
+/**
+ * Get ticket order by ID (admin/internal use)
+ */
+export async function getTicketOrderByIdAdmin(orderId: string) {
   const { data } = await supabase
     .from('ticket_orders')
     .select(`
@@ -181,14 +310,28 @@ export async function getTicketsForOrder(orderId: string) {
   }>, true)
 }
 
-export async function getTicketsByAccessToken(token: string) {
+/**
+ * Get tickets by access token (public - requires org_id for isolation)
+ * Magic links are org-scoped, so we verify the order belongs to the org
+ */
+export async function getTicketsByAccessToken(token: string, orgId: string) {
+  if (!orgId) {
+    throw new Error('orgId is required for public ticket access queries')
+  }
+
   // Hash token and lookup access link
   const tokenHash = await hashToken(token)
 
   const { data: accessLink } = await supabase
     .from('ticket_access_links')
-    .select('order_id, expires_at, used_at')
+    .select(`
+      order_id, 
+      expires_at, 
+      used_at,
+      ticket_orders!inner(org_id)
+    `)
     .eq('token_hash', tokenHash)
+    .eq('ticket_orders.org_id', orgId) // CRITICAL: Verify order belongs to org
     .single()
 
   if (!accessLink) {
