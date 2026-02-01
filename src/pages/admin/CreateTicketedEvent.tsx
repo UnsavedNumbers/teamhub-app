@@ -8,6 +8,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { FileUpload } from '@/components/common/FileUpload'
 import { useRouteLink } from '@/utils/routes'
 import type { TicketedEventType, TicketedEventStatus } from '@/types/ticketing'
 import { uploadTicketBanner } from '@/data/services/organizationService'
@@ -125,14 +126,17 @@ export default function CreateTicketedEvent() {
         </div>
 
         <div className="pa-form-group">
-          <label className="pa-form-label">Ticket Banner Image</label>
-          <input
-            type="file"
+          <FileUpload
+            label="Ticket Banner Image"
+            onFileSelect={setBannerFile}
+            value={bannerFile}
             accept="image/*"
-            onChange={(e) => setBannerFile(e.target.files?.[0] || null)}
-            className="pa-form-input"
+            maxSize={5 * 1024 * 1024}
+            buttonText="Upload Banner"
+            helperText="Suggested size: 1200 × 400 px. Max 5MB."
+            showDropZone={true}
+            fullWidth={true}
           />
-          <p className="pa-text-sm pa-text-muted">Suggested size: 1200 × 400 px</p>
         </div>
 
         <div className="pa-form-row">

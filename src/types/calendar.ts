@@ -116,7 +116,6 @@ export interface TicketedEventSummary {
     venue_postal_code: string | null
     sales_start_at: string | null
     sales_end_at: string | null
-    sales_end_at: string | null
     status: 'draft' | 'published' | 'archived' | string
     event_description: string | null
     ticket_banner_url: string | null
@@ -296,6 +295,7 @@ export interface EventFormData {
 export interface TicketingFormData {
     is_ticketed: boolean
     event_type: string
+    sales_immediate: boolean
     sales_start_at: string
     sales_end_at: string
     status: string

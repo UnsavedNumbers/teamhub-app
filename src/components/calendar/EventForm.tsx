@@ -78,6 +78,8 @@ export default function EventForm({ initialValues, onSubmit, loading: parentLoad
       sales_start_at: '',
       sales_end_at: '',
       status: 'draft',
+      event_description: '',
+      ticket_banner_url: '',
       ticket_types: []
     },
     ...initialValues

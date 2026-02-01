@@ -114,9 +114,12 @@ export default function CreateEvent() {
     ticketing: {
       is_ticketed: false,
       event_type: 'other',
+      sales_immediate: true,
       sales_start_at: '',
       sales_end_at: '',
       status: 'draft',
+      event_description: '',
+      ticket_banner_url: '',
       ticket_types: []
     }
   })
@@ -192,6 +195,7 @@ export default function CreateEvent() {
   const watchSeasonId = watch('season_id')
   const watchRSVPEnabled = watch('rsvp_enabled')
   const watchTicketingEnabled = watch('ticketing.is_ticketed')
+  const watchTicketSalesImmediate = watch('ticketing.sales_immediate')
   
   // Watch all form values for persistence
   const formValues = watch()
@@ -469,14 +473,15 @@ export default function CreateEvent() {
       }
 
       // Ticketing sales window defaults
-      const salesStartAt = data.ticketing?.sales_start_at
-        ? new Date(data.ticketing.sales_start_at)
-        : null
-      const salesEndAt = data.ticketing?.sales_end_at
-        ? new Date(data.ticketing.sales_end_at)
-        : null
+      const salesImmediate = data.ticketing?.sales_immediate ?? true
+      const salesStartAt = salesImmediate
+        ? null
+        : (data.ticketing?.sales_start_at ? new Date(data.ticketing.sales_start_at) : null)
+      const salesEndAt = salesImmediate
+        ? null
+        : (data.ticketing?.sales_end_at ? new Date(data.ticketing.sales_end_at) : null)
       const resolvedSalesEnd =
-        data.ticketing?.is_ticketed && !salesEndAt
+        data.ticketing?.is_ticketed && !salesImmediate && !salesEndAt
           ? end
           : salesEndAt || null
 
@@ -528,13 +533,20 @@ export default function CreateEvent() {
 
       // 3. Handle Recurring
       if (data.recurring?.enabled) {
+          const recurringEndDate = data.recurring.end_date || null
+          let recurringMax = data.recurring.max_occurrences ? parseInt(data.recurring.max_occurrences) : null
+          // Constraint requires at least one end condition
+          if (!recurringEndDate && !recurringMax) {
+            recurringMax = 1
+          }
+
           type RecurringPatternInsert = Database['public']['Tables']['recurring_event_patterns']['Insert']
           const recurData = {
               parent_event_id: eventDataAny.id,
               frequency: data.recurring.frequency as Database['public']['Enums']['recurrence_frequency'],
               days_of_week: data.recurring.days_of_week.length > 0 ? data.recurring.days_of_week : [new Date(data.start_time).getDay()],
-              end_date: data.recurring.end_date || null,
-              max_occurrences: data.recurring.max_occurrences ? parseInt(data.recurring.max_occurrences) : null
+              end_date: recurringEndDate,
+              max_occurrences: recurringMax
           } satisfies RecurringPatternInsert
            const { error: recurError } = await supabase.from('recurring_event_patterns').insert(recurData)
            if (recurError) throw recurError
@@ -1030,98 +1042,143 @@ export default function CreateEvent() {
                       <p className="pa-text-xs pa-text-muted pa-mt-1">{t('admin.events.ticketing.eventType.helper')}</p>
                     </div>
 
-                    <div className="pa-form-grid pa-form-grid-4 pa-form-grid-tablet-2col pa-mb-4">
+                    <div className="pa-mb-4">
                       <Controller
-                        name="ticketing.sales_start_at"
+                        name="ticketing.sales_immediate"
                         control={control}
-                        rules={{
-                          validate: (value) => {
-                            if (value) {
-                              const now = new Date()
-                              if (new Date(value) < now) {
-                                return t('admin.events.ticketing.salesWindow.startNotBeforeNow' as any)
-                              }
-                            }
-                            return true
-                          }
-                        }}
                         render={({ field }) => (
-                          <DatePicker
-                            label={t('admin.events.ticketing.salesWindow.startDate' as any)}
-                            value={field.value ? field.value.split('T')[0] : ''}
-                            minValue={new Date().toISOString().slice(0, 10)}
-                            onChange={(date) => {
-                              const time = field.value?.split('T')[1] || '00:00'
-                              field.onChange(`${date}T${time}`)
+                          <Checkbox
+                            checked={field.value}
+                            onChange={(e) => {
+                              field.onChange(e.target.checked)
+                              if (e.target.checked) {
+                                setValue('ticketing.sales_start_at', '', { shouldValidate: false })
+                                setValue('ticketing.sales_end_at', '', { shouldValidate: false })
+                              }
                             }}
-                            error={errors.ticketing?.sales_start_at?.message}
+                            label="Immediately"
+                            helper="Allow tickets to go on sale right away. Turn off to schedule a sales window."
                           />
                         )}
                       />
-                      <div className="pa-max-w-xs">
+                    </div>
+
+                    {!watchTicketSalesImmediate && (
+                      <div className="pa-form-grid pa-form-grid-4 pa-form-grid-tablet-2col pa-mb-4">
                         <Controller
                           name="ticketing.sales_start_at"
                           control={control}
+                          rules={{
+                            validate: (value) => {
+                              if (watchTicketSalesImmediate) return true
+                              if (value) {
+                                const now = new Date()
+                                if (new Date(value) < now) {
+                                  return t('admin.events.ticketing.salesWindow.startNotBeforeNow' as any)
+                                }
+                              }
+                              return true
+                            }
+                          }}
                           render={({ field }) => (
-                            <TimePicker
-                              label={t('admin.events.ticketing.salesWindow.startTime' as any)}
-                              value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
-                              onChange={(time) => {
-                                const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
+                            <DatePicker
+                              label={t('admin.events.ticketing.salesWindow.startDate' as any)}
+                              value={field.value ? field.value.split('T')[0] : ''}
+                              minValue={new Date().toISOString().slice(0, 10)}
+                              onChange={(date) => {
+                                const time = field.value?.split('T')[1] || '00:00'
                                 field.onChange(`${date}T${time}`)
                               }}
                               error={errors.ticketing?.sales_start_at?.message}
                             />
                           )}
                         />
-                      </div>
-                      <Controller
-                        name="ticketing.sales_end_at"
-                        control={control}
-                        rules={{
-                          validate: (value) => {
-                            const startAt = watch('ticketing.sales_start_at')
-                            if (startAt && value && new Date(value) <= new Date(startAt)) {
-                              return t('admin.events.ticketing.salesWindow.endAfterStart' as any)
-                            }
-                            const eventStart = watch('start_time')
-                            if (eventStart && value && new Date(value) > new Date(eventStart)) {
-                              return t('admin.events.ticketing.salesWindow.endNotAfterEventStart' as any)
-                            }
-                            return true
-                          }
-                        }}
-                        render={({ field }) => (
-                          <DatePicker
-                            label={t('admin.events.ticketing.salesWindow.endDate' as any)}
-                            value={field.value ? field.value.split('T')[0] : ''}
-                            maxValue={watch('start_time')?.split('T')[0]}
-                            onChange={(date) => {
-                              const time = field.value?.split('T')[1] || '23:59'
-                              field.onChange(`${date}T${time}`)
+                        <div className="pa-max-w-xs">
+                          <Controller
+                            name="ticketing.sales_start_at"
+                            control={control}
+                            rules={{
+                              validate: (value) => {
+                                if (watchTicketSalesImmediate) return true
+                                return true
+                              }
                             }}
-                            error={errors.ticketing?.sales_end_at?.message}
+                            render={({ field }) => (
+                              <TimePicker
+                                label={t('admin.events.ticketing.salesWindow.startTime' as any)}
+                                value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                                onChange={(time) => {
+                                  const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
+                                  field.onChange(`${date}T${time}`)
+                                }}
+                                error={errors.ticketing?.sales_start_at?.message}
+                              />
+                            )}
                           />
-                        )}
-                      />
-                      <div className="pa-max-w-xs">
+                        </div>
                         <Controller
                           name="ticketing.sales_end_at"
                           control={control}
+                          rules={{
+                            validate: (value) => {
+                              if (watchTicketSalesImmediate) return true
+                              const startAt = watch('ticketing.sales_start_at')
+                              if (startAt && value && new Date(value) <= new Date(startAt)) {
+                                return t('admin.events.ticketing.salesWindow.endAfterStart' as any)
+                              }
+                              const eventStart = watch('start_time')
+                              if (eventStart && value && new Date(value) > new Date(eventStart)) {
+                                return t('admin.events.ticketing.salesWindow.endNotAfterEventStart' as any)
+                              }
+                              return true
+                            }
+                          }}
                           render={({ field }) => (
-                            <TimePicker
-                              label={t('admin.events.ticketing.salesWindow.endTime' as any)}
-                              value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
-                              onChange={(time) => {
-                                const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
+                            <DatePicker
+                              label={t('admin.events.ticketing.salesWindow.endDate' as any)}
+                              value={field.value ? field.value.split('T')[0] : ''}
+                              maxValue={watch('start_time')?.split('T')[0]}
+                              onChange={(date) => {
+                                const time = field.value?.split('T')[1] || '23:59'
                                 field.onChange(`${date}T${time}`)
                               }}
                               error={errors.ticketing?.sales_end_at?.message}
                             />
                           )}
                         />
+                        <div className="pa-max-w-xs">
+                          <Controller
+                            name="ticketing.sales_end_at"
+                            control={control}
+                            rules={{
+                              validate: (value) => {
+                                if (watchTicketSalesImmediate) return true
+                                const startAt = watch('ticketing.sales_start_at')
+                                if (startAt && value && new Date(value) <= new Date(startAt)) {
+                                  return t('admin.events.ticketing.salesWindow.endAfterStart' as any)
+                                }
+                                const eventStart = watch('start_time')
+                                if (eventStart && value && new Date(value) > new Date(eventStart)) {
+                                  return t('admin.events.ticketing.salesWindow.endNotAfterEventStart' as any)
+                                }
+                                return true
+                              }
+                            }}
+                            render={({ field }) => (
+                              <TimePicker
+                                label={t('admin.events.ticketing.salesWindow.endTime' as any)}
+                                value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                                onChange={(time) => {
+                                  const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
+                                  field.onChange(`${date}T${time}`)
+                                }}
+                                error={errors.ticketing?.sales_end_at?.message}
+                              />
+                            )}
+                          />
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     <div className="pa-mb-4">
                       <Controller
