@@ -10,6 +10,7 @@ import { useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useRouteLink } from '@/utils/routes'
 import type { TicketedEventType, TicketedEventStatus } from '@/types/ticketing'
+import { uploadTicketBanner } from '@/data/services/organizationService'
 
 export default function CreateTicketedEvent() {
   const navigate = useNavigate()
@@ -26,7 +27,10 @@ export default function CreateTicketedEvent() {
     sales_start_at: '',
     sales_end_at: '',
     status: 'draft' as TicketedEventStatus,
+    event_description: '',
+    ticket_banner_url: '',
   })
+  const [bannerFile, setBannerFile] = useState<File | null>(null)
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -42,6 +46,10 @@ export default function CreateTicketedEvent() {
 
       if (!userData?.org_id) throw new Error('No organization')
 
+      // Use a temporary ID for file path if needed, or upload after? 
+      // Upload path is ticket-banners/{orgId}/{eventId}/{fileName}. We don't have eventId yet.
+      // Strategy: Insert event first to get ID, then upload banner and update event.
+      
       const { data, error } = await supabase
         .from('ticketed_events')
         .insert({
@@ -56,6 +64,14 @@ export default function CreateTicketedEvent() {
         .single()
 
       if (error) throw error
+
+      if (bannerFile) {
+         const { path, error: uploadError } = await uploadTicketBanner(userData.org_id, data.id, bannerFile)
+         if (!uploadError && path) {
+             await supabase.from('ticketed_events').update({ ticket_banner_url: path }).eq('id', data.id)
+         }
+      }
+
       return data
     },
     onSuccess: (data) => {
@@ -87,13 +103,36 @@ export default function CreateTicketedEvent() {
         </div>
 
         <div className="pa-form-group">
-          <label className="pa-form-label">Description</label>
+          <label className="pa-form-label">Internal Methods / Description</label>
           <textarea
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             className="pa-form-input"
-            rows={4}
+            rows={2}
           />
+        </div>
+
+        <div className="pa-form-group">
+          <label className="pa-form-label">Public Event Description</label>
+           <textarea
+            value={formData.event_description}
+            onChange={(e) => setFormData({ ...formData, event_description: e.target.value })}
+            className="pa-form-input"
+            rows={4}
+            maxLength={500}
+            placeholder="Description shown to public users..."
+          />
+        </div>
+
+        <div className="pa-form-group">
+          <label className="pa-form-label">Ticket Banner Image</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setBannerFile(e.target.files?.[0] || null)}
+            className="pa-form-input"
+          />
+          <p className="pa-text-sm pa-text-muted">Suggested size: 1200 × 400 px</p>
         </div>
 
         <div className="pa-form-row">

@@ -32,6 +32,7 @@ import {
     isValidEventTimeOrder,
     RecurringEditMode,
 } from '../../types/calendar'
+import { uploadTicketBanner } from '../../data/services/organizationService'
 
 interface Team { id: string; name: string }
 interface Season { id: string; name: string; team_id: string }
@@ -65,6 +66,7 @@ export default function EditEvent() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [hasPaidOrders, setHasPaidOrders] = useState(false)
   const [ticketedEventId, setTicketedEventId] = useState<string | null>(null)
+  const [bannerFile, setBannerFile] = useState<File | null>(null)
 
   const { context, isReady } = useUserContext()
   const { allowed: ticketingAllowed, loading: ticketingGateLoading } = useFeatureGate('ticketing')
@@ -281,7 +283,7 @@ export default function EditEvent() {
       // Load ticketing if linked
       const { data: ticketedEvent } = await supabase
         .from('ticketed_events')
-        .select('id, event_type, sales_start_at, sales_end_at, status')
+        .select('id, event_type, sales_start_at, sales_end_at, status, event_description, ticket_banner_url')
         .eq('event_id', eventId)
         .maybeSingle() as { data: { id: string; event_type: string; sales_start_at: string | null; sales_end_at: string | null; status: string } | null }
 
@@ -296,10 +298,12 @@ export default function EditEvent() {
           ? new Date(new Date(ticketedEvent.sales_end_at).getTime() - new Date(ticketedEvent.sales_end_at).getTimezoneOffset() * 60000).toISOString().slice(0, 16)
           : '')
         setValue('ticketing.status', ticketedEvent.status || 'draft')
+        setValue('ticketing.event_description', ticketedEvent.event_description || '')
+        setValue('ticketing.ticket_banner_url', ticketedEvent.ticket_banner_url || '')
 
         const { data: ticketTypes } = await supabase
           .from('ticket_types')
-          .select('id, name, price_cents, capacity_total, capacity_remaining, sort_order')
+          .select('id, name, description, price_cents, capacity_total, capacity_remaining, sort_order')
           .eq('ticketed_event_id', ticketedEvent.id)
           .order('sort_order') as { data: { id: string; name: string; price_cents: number; capacity_total: number | null; capacity_remaining: number | null; sort_order: number }[] | null }
 
@@ -312,6 +316,7 @@ export default function EditEvent() {
               id: tt.id,
               soldCount: sold,
               name: tt.name,
+              description: tt.description || '',
               price_dollars: (tt.price_cents / 100).toFixed(2),
               capacity: tt.capacity_total != null ? String(tt.capacity_total) : ''
             }
@@ -600,6 +605,14 @@ export default function EditEvent() {
         }
         const orgId = teamDataForTicketing.org_id
 
+        // Handle Banner Upload
+        let finalBannerUrl = data.ticketing.ticket_banner_url
+        if (bannerFile) {
+           const { path, error: uploadError } = await uploadTicketBanner(orgId, eventId, bannerFile)
+           if (uploadError) throw new Error(`Banner upload failed: ${uploadError.message}`)
+           if (path) finalBannerUrl = path
+        }
+
         if (!ticketedEventId) {
           // Create ticketed_events and ticket_types
           type TicketedEventInsert = Database['public']['Tables']['ticketed_events']['Insert']
@@ -653,6 +666,7 @@ export default function EditEvent() {
                   capacity_remaining: capacityRemaining && capacityRemaining > 0 ? capacityRemaining : null,
                   sort_order: index,
                   is_active: true,
+                  description: tt.description?.trim() || null,
                 } satisfies TicketTypeInsert
               })
             if (inserts.length > 0) {
@@ -680,6 +694,8 @@ export default function EditEvent() {
             sales_start_at: data.ticketing.sales_start_at ? new Date(data.ticketing.sales_start_at).toISOString() : null,
             sales_end_at: data.ticketing.sales_end_at ? new Date(data.ticketing.sales_end_at).toISOString() : null,
             status: data.ticketing.status as Database['public']['Enums']['ticketed_event_status'],
+            event_description: data.ticketing.event_description || null,
+            ticket_banner_url: finalBannerUrl || null,
           }
           if (!hasPaidOrders) {
             (teUpdate as Record<string, unknown>).event_type = data.ticketing.event_type
@@ -721,6 +737,7 @@ export default function EditEvent() {
               const updatePayload: TicketTypeUpdate = {
                 name: tt.name.trim(),
                 sort_order: index,
+                description: tt.description?.trim() || null,
               }
               if (!hasPaidOrders) {
                 updatePayload.price_cents = priceCents
@@ -749,6 +766,7 @@ export default function EditEvent() {
                 capacity_remaining: capacityRemaining,
                 sort_order: index,
                 is_active: true,
+                description: tt.description?.trim() || null,
               }
               const { error: iErr } = await supabase.from('ticket_types').insert(insertPayload)
               if (iErr) throw iErr
@@ -1188,6 +1206,43 @@ export default function EditEvent() {
                       </div>
 
                       <div className="pa-mb-4">
+                        <label className="pa-label">{t('Event Description (public)')}</label>
+                        <Controller
+                          name="ticketing.event_description"
+                          control={control}
+                          rules={{ maxLength: { value: 500, message: 'Max 500 characters' } }}
+                          render={({ field }) => (
+                            <textarea
+                              className="pa-input pa-textarea oa-textarea-expand"
+                              {...field}
+                              placeholder="Describe this event for public ticket buyers..."
+                              rows={3}
+                            />
+                          )}
+                        />
+                         {errors.ticketing?.event_description && <span className="pa-error-message">{errors.ticketing.event_description.message}</span>}
+                      </div>
+
+                      <div className="pa-mb-4">
+                        <label className="pa-label">{t('Ticket Banner Image')}</label>
+                        <div className="pa-flex pa-flex-col pa-gap-2">
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => setBannerFile(e.target.files?.[0] || null)}
+                                className="pa-input"
+                            />
+                            <p className="pa-body-xs pa-text-muted">Suggested size: 1200 × 400 px (3:1)</p>
+                            {watch('ticketing.ticket_banner_url') && !bannerFile && (
+                                <div className="pa-mt-2">
+                                    <p className="pa-text-sm pa-text-accent">Current banner set</p>
+                                    <img src={watch('ticketing.ticket_banner_url')} alt="Current Banner" className="pa-h-20 pa-rounded pa-mt-1 object-cover" />
+                                </div>
+                            )}
+                        </div>
+                      </div>
+
+                      <div className="pa-mb-4">
                         <Controller
                           name="ticketing.status"
                           control={control}
@@ -1323,6 +1378,21 @@ export default function EditEvent() {
                                         </Button>
                                       )}
                                     </div>
+                                  </div>
+                                  <div className="pa-mb-2">
+                                    <Controller
+                                      name={`ticketing.ticket_types.${index}.description`}
+                                      control={control}
+                                      rules={{ maxLength: { value: 250, message: 'Max 250 characters' } }}
+                                      render={({ field }) => (
+                                        <Input
+                                          {...field}
+                                          label="Description (optional)"
+                                          placeholder="e.g. Early Bird special..."
+                                          error={errors.ticketing?.ticket_types?.[index]?.description?.message}
+                                        />
+                                      )}
+                                    />
                                   </div>
                                 </div>
                               )
