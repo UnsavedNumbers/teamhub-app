@@ -114,8 +114,9 @@ export async function generateAtRiskPlayersPDF(
   // Check if jsPDF is available
   try {
     // Dynamic import to avoid breaking if library not installed
+    const jspdfModule = 'jspdf'
     // @ts-ignore - optional dependency
-    const { default: jsPDF } = await import(/* @vite-ignore */ 'jspdf')
+    const { default: jsPDF } = await import(/* @vite-ignore */ jspdfModule)
     
     const doc = new jsPDF()
     const atRisk = people.filter(p => p.risk_level === 'at_risk' || p.risk_level === 'watch')

@@ -14,8 +14,6 @@ import type { PlatformAdminRole } from '../types/platformAdmin.types'
 
 // Role types - now per organization
 type OrgMemberRole = 'parent' | 'coach' | 'org_admin'
-
-// Legacy single-org role type (for backward compatibility)
 type LegacyUserRole = 'parent' | 'coach' | 'admin'
 
 interface UserProfile {
@@ -30,7 +28,6 @@ interface UserProfile {
   role?: LegacyUserRole
   family_id?: string | null
   org_id?: string | null
-  // New multi-org fields
   organizations: Organization[]
   isPlatformAdmin: boolean
   platformAdminRole: PlatformAdminRole | null
@@ -56,7 +53,11 @@ interface AuthContextType {
   isOrgAdmin: (orgId?: string) => boolean
 }
 
+/* ===================== CONTEXT ===================== */
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+/* ===================== PROVIDER ===================== */
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -462,10 +463,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   function isOrgAdmin(orgId?: string) {
     if (profile?.isPlatformAdmin) return true
-    if (orgId) {
-      return hasRole(orgId, 'org_admin')
-    }
-    return currentOrganization ? hasRole(currentOrganization.id, 'org_admin') : false
+    if (orgId) return hasRole(orgId, 'org_admin')
+    return currentOrganization
+      ? hasRole(currentOrganization.id, 'org_admin')
+      : false
   }
 
   /* ===================== CONTEXT VALUE ===================== */
@@ -494,7 +495,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext)
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider')
   }
   return context

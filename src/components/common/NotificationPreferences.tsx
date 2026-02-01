@@ -102,7 +102,7 @@ export function NotificationPreferences({
                     {group.actions.map((action) => (
                       <ToggleRow
                         key={action.id}
-                        label={t(`portal.settings.notifications.actions.${action.id}`, { defaultValue: action.id })}
+                        label={t(`portal.settings.notifications.actions.${action.id}` as any, { defaultValue: action.id })}
                         active={action.enabled}
                         onToggle={() => onToggleAction(group.id, action.id, !action.enabled)}
                         disabled={saving || group.allEnabled === false}
@@ -144,7 +144,6 @@ function ToggleChip({ label, active, onClick, disabled }: ToggleChipProps) {
   )
 }
 
-interface ChannelChipProps extends ToggleChipProps {}
 const ChannelChip = ToggleChip
 
 interface ToggleRowProps {

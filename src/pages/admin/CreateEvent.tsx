@@ -1,16 +1,18 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm, Controller, useFieldArray } from 'react-hook-form'
 
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
 import { getErrorMessage, normalizeSupabaseError } from '../../utils/errorUtils'
+import { showSuccess } from '../../utils/toast'
 import { getSports } from '../../data/services/sportsService'
 import { getPrograms } from '../../data/services/sportsService'
 import { getTeams } from '../../data/services/teamsService'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
+import { useFeatureGate } from '../../lib/featureGate'
 import { 
   AdminPageHeader, 
   Card, 
@@ -57,6 +59,7 @@ export default function CreateEvent() {
   const [errorDetail, setErrorDetail] = useState<string | null>(null)
   const [showLocationDetails, setShowLocationDetails] = useState(false)
   const [showRecurring, setShowRecurring] = useState(false)
+  const [draftSaved, setDraftSaved] = useState(false)
 
   const t = useT()
   const { context, isReady } = useUserContext()
@@ -64,6 +67,9 @@ export default function CreateEvent() {
   const hasRestoredRef = useRef(false)
   const previousSportIdRef = useRef<string | undefined>(undefined)
   const previousProgramIdRef = useRef<string | undefined>(undefined)
+  
+  // Feature gate for ticketing
+  const { allowed: ticketingAllowed, loading: ticketingGateLoading } = useFeatureGate('ticketing')
 
   // Default form values
   const getDefaultValues = (): EventFormData => ({ 
@@ -104,7 +110,15 @@ export default function CreateEvent() {
       max_occurrences: ''
     },
     rsvp_enabled: false,
-    rsvp_type: null
+    rsvp_type: null,
+    ticketing: {
+      is_ticketed: false,
+      event_type: 'other',
+      sales_start_at: '',
+      sales_end_at: '',
+      status: 'draft',
+      ticket_types: []
+    }
   })
 
   // Get initial values from sessionStorage (computed once during render)
@@ -137,7 +151,7 @@ export default function CreateEvent() {
     return getDefaultValues()
   })()
 
-  const { control, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm<EventFormData>({
+  const { control, handleSubmit, watch, setValue, trigger, getValues, formState: { errors } } = useForm<EventFormData>({
     defaultValues: initialValues,
     mode: 'onTouched',
   })
@@ -177,56 +191,71 @@ export default function CreateEvent() {
   const watchProgramId = watch('program_id')
   const watchSeasonId = watch('season_id')
   const watchRSVPEnabled = watch('rsvp_enabled')
+  const watchTicketingEnabled = watch('ticketing.is_ticketed')
   
   // Watch all form values for persistence
   const formValues = watch()
+  
+  // Ticket types field array
+  const { fields: ticketTypeFields, append: appendTicketType, remove: removeTicketType } = useFieldArray({
+    control,
+    name: 'ticketing.ticket_types',
+  })
 
-  // Clear any saved draft when navigating away (route change/unmount)
-  // This keeps drafts only for tab switching / browser discard scenarios.
+  // Note: We do NOT clear saved drafts on unmount - users should be able to navigate
+  // away to look up information and come back to their form. Drafts expire after 2 hours
+  // or are cleared on successful submit.
+
+  // Save form data when page visibility changes (user switches tabs) or before unload
   useEffect(() => {
-    return () => {
+    const saveFormData = () => {
       try {
-        sessionStorage.removeItem(STORAGE_KEY)
-      } catch {
-        // Ignore cleanup errors
+        // Skip saving until we've restored initial state
+        if (!hasRestoredRef.current) return
+
+        // Only save if form has actual data (not just defaults)
+        const hasData = formValues.title || formValues.team_id || formValues.start_time
+        if (!hasData) {
+          sessionStorage.removeItem(STORAGE_KEY)
+          return
+        }
+
+        const dataToSave = {
+          ...formValues,
+          _uiState: {
+            showLocationDetails,
+            showRecurring
+          },
+          _savedAt: Date.now()
+        }
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave))
+        setDraftSaved(true)
+        setTimeout(() => setDraftSaved(false), 2000)
+      } catch (err) {
+        console.error('Failed to save form data:', err)
       }
     }
-  }, [])
 
-  // Save form data when page visibility changes (user switches tabs)
-  useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        // Save when user switches away
-        try {
-          // Skip saving until we've restored initial state
-          if (!hasRestoredRef.current) return
-
-          // Only save if form has actual data (not just defaults)
-          const hasData = formValues.title || formValues.team_id || formValues.start_time
-          if (!hasData) {
-            sessionStorage.removeItem(STORAGE_KEY)
-            return
-          }
-
-          const dataToSave = {
-            ...formValues,
-            _uiState: {
-              showLocationDetails,
-              showRecurring
-            },
-            _savedAt: Date.now()
-          }
-          sessionStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave))
-        } catch (err) {
-          console.error('Failed to save form data on visibility change:', err)
-        }
+        saveFormData()
       }
+    }
+
+    const handleBeforeUnload = () => {
+      saveFormData()
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    
+    // Also save periodically (every 30 seconds) while user is working
+    const autoSaveInterval = setInterval(saveFormData, 30000)
+    
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      clearInterval(autoSaveInterval)
     }
   }, [formValues, showLocationDetails, showRecurring])
 
@@ -238,26 +267,36 @@ export default function CreateEvent() {
     try {
       const { data, error } = await getSports(context)
       if (error) throw error
-      setSports((data || []).map(s => ({ id: s.id, name: s.name })))
+      const sportsList = (data || []).map(s => ({ id: s.id, name: s.name }))
+      setSports(sportsList)
+      // Auto-select if only one sport
+      if (sportsList.length === 1 && !getValues('sport_id')) {
+        setValue('sport_id', sportsList[0].id, { shouldValidate: false })
+      }
     } catch (err) {
       console.error('Error fetching sports:', err)
       setSports([])
     } finally {
       setLoading(false)
     }
-  }, [context, isReady])
+  }, [context, isReady, getValues, setValue])
 
   const fetchProgramsForSport = useCallback(async (sportId: string) => {
     if (!isReady || !context?.orgId) return
     try {
       const { data, error } = await getPrograms(context, sportId)
       if (error) throw error
-      setPrograms((data || []).map(p => ({ id: p.id, name: p.name, sport_id: p.sport_id })))
+      const programsList = (data || []).map(p => ({ id: p.id, name: p.name, sport_id: p.sport_id }))
+      setPrograms(programsList)
+      // Auto-select if only one program
+      if (programsList.length === 1 && !getValues('program_id')) {
+        setValue('program_id', programsList[0].id, { shouldValidate: false })
+      }
     } catch (err) {
       console.error('Error fetching programs:', err)
       setPrograms([])
     }
-  }, [context, isReady])
+  }, [context, isReady, getValues, setValue])
 
   const fetchSeasonsForProgram = useCallback(async (sportId: string, programId: string) => {
     if (!isReady || !context?.orgId) return
@@ -301,8 +340,8 @@ export default function CreateEvent() {
           bySeasonId.set(row.season_id, {
             id: row.season_id,
             name: row.name,
-            is_active: row.is_active,
-            end_date: row.end_date,
+            is_active: row.is_active ?? undefined,
+            end_date: row.end_date ?? undefined,
           })
         }
       })
@@ -405,6 +444,42 @@ export default function CreateEvent() {
     setErrorDetail(null)
     
     try {
+      // Normalize times and satisfy DB constraint (end_time > start_time)
+      const start = new Date(data.start_time)
+      if (isNaN(start.getTime())) throw new Error('Invalid start time')
+
+      // If no end_time provided, set to end of start day (23:59:59.999) local
+      const end = data.end_time
+        ? new Date(data.end_time)
+        : (() => {
+            const dt = new Date(start)
+            dt.setHours(23, 59, 59, 999)
+            return dt
+          })()
+      if (end <= start) {
+        setError(t('admin.events.validation.endAfterStart' as any) || 'End time must be after start time.')
+        setSaving(false)
+        return
+      }
+      const arrival = data.arrival_time ? new Date(data.arrival_time) : null
+      if (arrival && arrival >= start) {
+        setError(t('admin.events.validation.arrivalBeforeStart' as any) || 'Arrival time must be before start time.')
+        setSaving(false)
+        return
+      }
+
+      // Ticketing sales window defaults
+      const salesStartAt = data.ticketing?.sales_start_at
+        ? new Date(data.ticketing.sales_start_at)
+        : null
+      const salesEndAt = data.ticketing?.sales_end_at
+        ? new Date(data.ticketing.sales_end_at)
+        : null
+      const resolvedSalesEnd =
+        data.ticketing?.is_ticketed && !salesEndAt
+          ? end
+          : salesEndAt || null
+
       // 1. Insert Event
       type EventInsert = Database['public']['Tables']['events']['Insert']
       const eventInsertData = {
@@ -412,9 +487,9 @@ export default function CreateEvent() {
         type: data.type,
         team_id: data.team_id,
         season_id: data.season_id,
-        start_time: new Date(data.start_time).toISOString(),
-        end_time: data.end_time ? new Date(data.end_time).toISOString() : new Date(data.start_time).toISOString(),
-        arrival_time: data.arrival_time ? new Date(data.arrival_time).toISOString() : null,
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        arrival_time: arrival ? arrival.toISOString() : null,
         timezone: data.timezone,
         notes: data.notes,
         uniform_notes: data.uniform_notes,
@@ -465,6 +540,96 @@ export default function CreateEvent() {
            if (recurError) throw recurError
       }
 
+      // 4. Handle Ticketing
+      if (data.ticketing?.is_ticketed) {
+        // Get org_id from team
+        const { data: teamData } = await supabase.from('teams').select('org_id').eq('id', data.team_id).single()
+        if (!teamData?.org_id) {
+          throw new Error('Failed to get organization ID from team')
+        }
+
+        // Build ticketed_events insert
+        type TicketedEventInsert = Database['public']['Tables']['ticketed_events']['Insert']
+        const ticketedEventData: TicketedEventInsert = {
+          event_id: eventDataAny.id,
+          org_id: teamData.org_id,
+          team_id: data.team_id,
+          event_type: data.ticketing.event_type as Database['public']['Enums']['ticketed_event_type'],
+          title: data.title,
+          description: data.notes || null,
+          starts_at: new Date(data.start_time).toISOString(),
+          ends_at: end.toISOString(),
+          timezone: data.timezone,
+          venue_name: data.location.venue_name?.trim() || null,
+          venue_address_line1: data.location.address_line1?.trim() || null,
+          venue_city: data.location.city?.trim() || null,
+          venue_state: data.location.state?.trim() || null,
+          venue_postal_code: data.location.postal_code?.trim() || null,
+          venue_country: 'US',
+          venue_is_virtual: data.location.is_virtual,
+          venue_virtual_link: data.location.virtual_link?.trim() || null,
+          sales_start_at: salesStartAt ? salesStartAt.toISOString() : null,
+          sales_end_at: resolvedSalesEnd ? resolvedSalesEnd.toISOString() : null,
+          status: data.ticketing.status as Database['public']['Enums']['ticketed_event_status'],
+        }
+
+        const { data: ticketedEventDataResult, error: ticketedEventError } = await supabase
+          .from('ticketed_events')
+          .insert(ticketedEventData)
+          .select('id')
+          .single()
+
+        if (ticketedEventError) {
+          throw new Error(`Ticketing setup failed: ${ticketedEventError.message}`)
+        }
+
+        if (!ticketedEventDataResult) {
+          throw new Error('Failed to create ticketed event')
+        }
+
+        const ticketedEventId = ticketedEventDataResult.id
+
+        // Insert ticket types
+        if (data.ticketing.ticket_types && data.ticketing.ticket_types.length > 0) {
+          type TicketTypeInsert = Database['public']['Tables']['ticket_types']['Insert']
+          const ticketTypeInserts: TicketTypeInsert[] = data.ticketing.ticket_types
+            .filter(tt => tt.name.trim() !== '')
+            .map((tt, index) => {
+              const priceDollars = parseFloat(tt.price_dollars)
+              const priceCents = Number.isFinite(priceDollars) && priceDollars >= 0 
+                ? Math.round(priceDollars * 100) 
+                : 0
+              
+              const capacityStr = tt.capacity.trim()
+              const capacity = capacityStr === '' ? null : parseInt(capacityStr)
+              const capacityTotal = capacity !== null && !isNaN(capacity) && capacity > 0 ? capacity : null
+              const capacityRemaining = capacityTotal
+
+              return {
+                org_id: teamData.org_id,
+                ticketed_event_id: ticketedEventId,
+                name: tt.name.trim(),
+                price_cents: priceCents,
+                currency: 'USD',
+                capacity_total: capacityTotal,
+                capacity_remaining: capacityRemaining,
+                sort_order: index,
+                is_active: true,
+              } satisfies TicketTypeInsert
+            })
+
+          if (ticketTypeInserts.length > 0) {
+            const { error: ticketTypesError } = await supabase
+              .from('ticket_types')
+              .insert(ticketTypeInserts)
+
+            if (ticketTypesError) {
+              throw new Error(`Failed to create ticket types: ${ticketTypesError.message}`)
+            }
+          }
+        }
+      }
+
       // Clear saved form data on successful submission
       try {
         sessionStorage.removeItem(STORAGE_KEY)
@@ -486,6 +651,18 @@ export default function CreateEvent() {
         }).catch(err => console.error('Failed to distribute event notifications:', err))
       }
 
+      // Success message for ticketed events
+      if (data.ticketing?.is_ticketed) {
+        const ticketTypesCount = data.ticketing.ticket_types?.filter(tt => tt.name.trim() !== '').length || 0
+        if (ticketTypesCount === 0) {
+          showSuccess(t('admin.events.ticketing.success.noTypes'))
+        } else {
+          showSuccess(t('admin.events.ticketing.success.created'))
+        }
+      } else {
+        showSuccess(t('admin.events.ticketing.success.created'))
+      }
+
       navigate('/admin/events')
     } catch (err: unknown) {
       // Parse database errors and show friendly messages
@@ -504,6 +681,9 @@ export default function CreateEvent() {
         friendlyError = t('admin.events.validation.teamRequired')
       } else if (rawError.includes('season_id') && rawError.includes('not-null')) {
         friendlyError = t('admin.events.validation.seasonRequired')
+      } else if (rawError.includes('Ticketing setup failed') || rawError.includes('Failed to create ticketed event') || rawError.includes('Failed to create ticket types')) {
+        friendlyError = t('admin.events.ticketing.errors.setupFailed')
+        detail = rawError.includes('Ticketing setup failed') ? rawError.replace('Ticketing setup failed: ', '') : displayMessage
       } else if (rawError.includes('row-level security') || rawError.includes('RLS') || rawError.includes('policy')) {
         friendlyError = "You don't have permission to create this event. Check that you're in the right organization and have admin access."
         detail = displayMessage
@@ -539,11 +719,18 @@ export default function CreateEvent() {
       />
       <div className="pa-form-container">
         <Card>
-          <form onSubmit={handleSubmit(onSubmit)}>
+          <form onSubmit={handleSubmit(onSubmit, (errors) => console.error('Form validation errors:', errors))}>
             {error && (
               <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>
                 <div>{error}</div>
                 {errorDetail && <div className="pa-mt-2 pa-text-muted" style={{ fontSize: '0.875rem' }}>{errorDetail}</div>}
+              </div>
+            )}
+            
+            {draftSaved && (
+              <div className="pa-mb-4 pa-flex pa-items-center pa-gap-2 pa-text-muted" style={{ fontSize: '0.875rem' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>check_circle</span>
+                <span>Draft saved</span>
               </div>
             )}
             
@@ -658,6 +845,7 @@ export default function CreateEvent() {
                         const time = field.value?.split('T')[1] || '09:00'
                         field.onChange(`${date}T${time}`)
                       }}
+                      minValue={new Date().toISOString().split('T')[0]}
                       required
                       error={errors.start_time?.message}
                     />
@@ -684,7 +872,6 @@ export default function CreateEvent() {
                   <Controller 
                     name="end_time" 
                     control={control} 
-                    rules={{ required: t('admin.events.validation.endTimeRequired') }}
                     render={({ field }) => (
                       <TimePicker 
                         label="End Time" 
@@ -693,7 +880,6 @@ export default function CreateEvent() {
                           const startDate = watch('start_time')?.split('T')[0] || new Date().toISOString().split('T')[0]
                           field.onChange(time ? `${startDate}T${time}` : '')
                         }}
-                        required
                         error={errors.end_time?.message}
                       />
                     )} 
@@ -781,6 +967,281 @@ export default function CreateEvent() {
               )}
             </div>
           </div>
+          
+          {/* SECTION 3.5: TICKETING */}
+          {!ticketingGateLoading && ticketingAllowed && (
+            <div className="pa-mb-4">
+              <div className="pa-checkbox-group pa-checkbox-group--inline pa-mb-4">
+                <div className="pa-flex pa-items-center pa-gap-2">
+                  <span className="pa-label">{t('admin.events.ticketing.isTicketed')}</span>
+                  <Controller 
+                    name="ticketing.is_ticketed" 
+                    control={control} 
+                    render={({ field: { value, onChange } }) => (
+                      <Checkbox 
+                        checked={!!value} 
+                        onChange={(e) => onChange(e.target.checked)} 
+                        label="" 
+                      />
+                    )} 
+                  />
+                </div>
+              </div>
+
+              {watchTicketingEnabled && (
+                <div className="pa-card pa-mb-4" style={{ background: 'var(--pa-card-bg)', border: '1px solid var(--pa-border)' }}>
+                  <h3 className="pa-heading-3 pa-mb-4">{t('admin.events.ticketing.title')}</h3>
+                  
+                  {/* Ticketed event type */}
+                  <div className="pa-mb-4">
+                    <Controller
+                      name="ticketing.event_type"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          {...field}
+                          value={field.value || 'other'}
+                          label={t('admin.events.ticketing.eventType.label')}
+                          options={[
+                            { value: 'game', label: t('admin.events.ticketing.eventType.game') },
+                            { value: 'tournament', label: t('admin.events.ticketing.eventType.tournament') },
+                            { value: 'concert', label: t('admin.events.ticketing.eventType.concert') },
+                            { value: 'fundraiser', label: t('admin.events.ticketing.eventType.fundraiser') },
+                            { value: 'other', label: t('admin.events.ticketing.eventType.other') },
+                          ]}
+                        />
+                      )}
+                    />
+                    <p className="pa-text-xs pa-text-muted pa-mt-1">{t('admin.events.ticketing.eventType.helper')}</p>
+                  </div>
+
+                  {/* Sales window */}
+                  <div className="pa-form-grid pa-form-grid-4 pa-form-grid-tablet-2col pa-mb-4">
+                    <Controller
+                      name="ticketing.sales_start_at"
+                      control={control}
+                      rules={{
+                        validate: (value) => {
+                          if (value) {
+                            const now = new Date()
+                            if (new Date(value) < now) {
+                              return t('admin.events.ticketing.salesWindow.startNotBeforeNow' as any)
+                            }
+                          }
+                          return true
+                        }
+                      }}
+                      render={({ field }) => (
+                        <DatePicker
+                          label={t('admin.events.ticketing.salesWindow.startDate' as any)}
+                          value={field.value ? field.value.split('T')[0] : ''}
+                          minValue={new Date().toISOString().slice(0, 10)}
+                          onChange={(date) => {
+                            const time = field.value?.split('T')[1] || '00:00'
+                            field.onChange(`${date}T${time}`)
+                          }}
+                          error={errors.ticketing?.sales_start_at?.message}
+                        />
+                      )}
+                    />
+                    <div className="pa-max-w-xs">
+                      <Controller
+                        name="ticketing.sales_start_at"
+                        control={control}
+                        render={({ field }) => (
+                          <TimePicker
+                            label={t('admin.events.ticketing.salesWindow.startTime' as any)}
+                            value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                            onChange={(time) => {
+                              const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
+                              field.onChange(`${date}T${time}`)
+                            }}
+                            error={errors.ticketing?.sales_start_at?.message}
+                          />
+                        )}
+                      />
+                    </div>
+                    <Controller
+                      name="ticketing.sales_end_at"
+                      control={control}
+                      rules={{
+                        validate: (value) => {
+                          const startAt = watch('ticketing.sales_start_at')
+                          if (startAt && value && new Date(value) <= new Date(startAt)) {
+                            return t('admin.events.ticketing.salesWindow.endAfterStart' as any)
+                          }
+                          const eventStart = watch('start_time')
+                          if (eventStart && value && new Date(value) > new Date(eventStart)) {
+                            return t('admin.events.ticketing.salesWindow.endNotAfterEventStart' as any)
+                          }
+                          return true
+                        }
+                      }}
+                      render={({ field }) => (
+                        <DatePicker
+                          label={t('admin.events.ticketing.salesWindow.endDate' as any)}
+                          value={field.value ? field.value.split('T')[0] : ''}
+                          maxValue={watch('start_time')?.split('T')[0]}
+                          onChange={(date) => {
+                            const time = field.value?.split('T')[1] || '23:59'
+                            field.onChange(`${date}T${time}`)
+                          }}
+                          error={errors.ticketing?.sales_end_at?.message}
+                        />
+                      )}
+                    />
+                    <div className="pa-max-w-xs">
+                      <Controller
+                        name="ticketing.sales_end_at"
+                        control={control}
+                        render={({ field }) => (
+                          <TimePicker
+                            label={t('admin.events.ticketing.salesWindow.endTime' as any)}
+                            value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                            onChange={(time) => {
+                              const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
+                              field.onChange(`${date}T${time}`)
+                            }}
+                            error={errors.ticketing?.sales_end_at?.message}
+                          />
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Status */}
+                  <div className="pa-mb-4">
+                    <Controller
+                      name="ticketing.status"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          {...field}
+                          value={field.value || 'draft'}
+                          label={t('admin.events.ticketing.status.label')}
+                          options={[
+                            { value: 'draft', label: t('admin.events.ticketing.status.draft') },
+                            { value: 'published', label: t('admin.events.ticketing.status.published') },
+                          ]}
+                        />
+                      )}
+                    />
+                  </div>
+
+                  {/* Ticket types */}
+                  <div className="pa-mb-4">
+                    <div className="pa-flex pa-items-center pa-justify-between pa-mb-2">
+                      <label className="pa-label">Ticket Types</label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => appendTicketType({ name: '', price_dollars: '', capacity: '' })}
+                      >
+                        Add Ticket Type
+                      </Button>
+                    </div>
+                    
+                    {ticketTypeFields.length === 0 ? (
+                      <p className="pa-text-sm pa-text-muted">No ticket types added. You can add them later on the event detail page.</p>
+                    ) : (
+                      <div className="pa-space-y-3">
+                        {ticketTypeFields.map((field, index) => (
+                          <div key={field.id} className="pa-card pa-p-3" style={{ background: 'var(--pa-card-bg)', border: '1px solid var(--pa-border)' }}>
+                            <div className="pa-form-grid pa-form-grid-3 pa-mb-2">
+                              <Controller
+                                name={`ticketing.ticket_types.${index}.name`}
+                                control={control}
+                                rules={{
+                                  validate: (value) => {
+                                    const price = watch(`ticketing.ticket_types.${index}.price_dollars`)
+                                    const capacity = watch(`ticketing.ticket_types.${index}.capacity`)
+                                    if (price || capacity) {
+                                      return value?.trim() ? true : t('admin.events.ticketing.ticketTypes.name.required')
+                                    }
+                                    return true
+                                  }
+                                }}
+                                render={({ field }) => (
+                                  <Input
+                                    {...field}
+                                    label={t('admin.events.ticketing.ticketTypes.name.label')}
+                                    placeholder={t('admin.events.ticketing.ticketTypes.name.placeholder')}
+                                    error={errors.ticketing?.ticket_types?.[index]?.name?.message}
+                                  />
+                                )}
+                              />
+                              <Controller
+                                name={`ticketing.ticket_types.${index}.price_dollars`}
+                                control={control}
+                                rules={{
+                                  validate: (value) => {
+                                    const name = watch(`ticketing.ticket_types.${index}.name`)
+                                    if (name?.trim()) {
+                                      const parsed = parseFloat(value || '0')
+                                      if (isNaN(parsed) || parsed < 0) {
+                                        return 'Price must be a valid number >= 0'
+                                      }
+                                    }
+                                    return true
+                                  }
+                                }}
+                                render={({ field }) => (
+                                  <Input
+                                    {...field}
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    label="Price ($)"
+                                    placeholder="0.00"
+                                    error={errors.ticketing?.ticket_types?.[index]?.price_dollars?.message}
+                                  />
+                                )}
+                              />
+                              <div className="pa-flex pa-items-end pa-gap-2">
+                                <Controller
+                                  name={`ticketing.ticket_types.${index}.capacity`}
+                                  control={control}
+                                  rules={{
+                                    validate: (value) => {
+                                      if (value?.trim()) {
+                                        const parsed = parseInt(value)
+                                        if (isNaN(parsed) || parsed <= 0) {
+                                          return t('admin.events.ticketing.ticketTypes.capacity.invalid')
+                                        }
+                                      }
+                                      return true
+                                    }
+                                  }}
+                                  render={({ field }) => (
+                                    <Input
+                                      {...field}
+                                      type="number"
+                                      min="1"
+                                      label={t('admin.events.ticketing.ticketTypes.capacity.label')}
+                                      placeholder={t('admin.events.ticketing.ticketTypes.capacity.placeholder')}
+                                      error={errors.ticketing?.ticket_types?.[index]?.capacity?.message}
+                                    />
+                                  )}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  onClick={() => removeTicketType(index)}
+                                  style={{ marginBottom: '0' }}
+                                >
+                                  {t('admin.events.ticketing.ticketTypes.remove')}
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           
           {/* SECTION 4: RSVP + RECURRENCE (SETTINGS) */}
           {/* Mobile: Vertical checkboxes | Desktop: Inline checkboxes */}
@@ -884,7 +1345,13 @@ export default function CreateEvent() {
             >
               Cancel
             </OrgAdminButton>
-            <Button type="submit" loading={saving} className="pa-form-submit-btn w-full sm:w-auto">Create Event</Button>
+            <Button
+              type="submit"
+              loading={saving}
+              className="pa-form-submit-btn w-full sm:w-auto"
+            >
+              Create Event
+            </Button>
           </div>
         </form>
       </Card>

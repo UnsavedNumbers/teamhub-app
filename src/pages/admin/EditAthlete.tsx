@@ -379,7 +379,7 @@ export default function EditAthlete() {
             // Then update sports
             const { error: sportsError } = await updateAthleteSports(
               athleteId,
-              athlete?.org_id || context.orgId,
+              context.orgId,
               selectedSports
             )
             if (sportsError) throw sportsError

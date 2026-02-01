@@ -60,6 +60,11 @@ export interface RolePermissions {
   canManageFeatures: boolean
   canManageOverrides: boolean
   canViewLicensesAudit: boolean
+
+  // Photos / Media
+  canViewPhotoOverview: boolean
+  canViewContentReview: boolean
+  canViewStorageManagement: boolean
 }
 
 /**
@@ -118,5 +123,10 @@ export function useRolePermissions(): RolePermissions {
     canManageFeatures: canPerformAction(adminRole, 'manage_features'),
     canManageOverrides: canPerformAction(adminRole, 'manage_overrides'),
     canViewLicensesAudit: canPerformAction(adminRole, 'view_licenses_audit'),
+
+    // Photos / Media
+    canViewPhotoOverview: canPerformAction(adminRole, 'view_photo_overview'),
+    canViewContentReview: canPerformAction(adminRole, 'view_content_review'),
+    canViewStorageManagement: canPerformAction(adminRole, 'view_storage_management'),
   }), [adminRole])
 }

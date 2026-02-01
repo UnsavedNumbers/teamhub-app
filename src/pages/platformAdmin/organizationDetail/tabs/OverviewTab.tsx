@@ -6,6 +6,7 @@
  */
 
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Card, Badge, Button } from '../../../../components/platformAdmin'
 import { MaskedStripeId } from '../../../../components/platformAdmin/MaskedStripeId'
 import { ContactLocationCard } from '../components/ContactLocationCard'
@@ -117,6 +118,23 @@ export function OverviewTab({ organization, adminRole, onViewActivity }: Overvie
 
         {/* Quick Stats */}
         <QuickStatsCard organization={organization} />
+
+        {/* Quick links */}
+        {permissions.canViewPhotoOverview && (
+          <Card title="Quick links">
+            <div className="pa-flex pa-gap-2">
+              <Button
+                variant="ghost"
+                size="dense"
+                icon="photo_library"
+                as={Link}
+                to={`/platform-admin/organizations/${organization.id}/photos`}
+              >
+                Photos
+              </Button>
+            </div>
+          </Card>
+        )}
 
         {/* Contact & Location */}
         <ContactLocationCard organization={organization} />

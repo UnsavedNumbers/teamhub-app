@@ -225,12 +225,12 @@ export default function EventDetailSlideOver({
                                 )}
                             </div>
 
-                            {/* Details Stack */}
-                            <div className="oa-details-stack">
-                                {event.uniform_notes && (
-                                    <div className="oa-detail-group">
-                                        <label className="oa-detail-label">Uniform</label>
-                                        <div className="oa-detail-box" style={{ display: 'flex', alignItems: 'center' }}>
+                                {/* Details Stack */}
+                                <div className="oa-details-stack">
+                                    {event.uniform_notes && (
+                                        <div className="oa-detail-group">
+                                            <label className="oa-detail-label">Uniform</label>
+                                            <div className="oa-detail-box" style={{ display: 'flex', alignItems: 'center' }}>
                                             <div className="oa-uniform-dot" />
                                             <span className="oa-detail-text" style={{ fontWeight: 600 }}>
                                                 {event.uniform_notes}
@@ -239,11 +239,11 @@ export default function EventDetailSlideOver({
                                     </div>
                                 )}
 
-                                {event.equipment_notes && (
-                                    <div className="oa-detail-group">
-                                        <label className="oa-detail-label">Equipment</label>
-                                        <div className="oa-detail-box">
-                                            <ul className="oa-equip-list">
+                                    {event.equipment_notes && (
+                                        <div className="oa-detail-group">
+                                            <label className="oa-detail-label">Equipment</label>
+                                            <div className="oa-detail-box">
+                                                <ul className="oa-equip-list">
                                                 {event.equipment_notes.split('\n').map((item, i) => (
                                                     <li key={i} className="oa-equip-item">
                                                         <span className="material-symbols-outlined">check_circle</span>
@@ -255,18 +255,64 @@ export default function EventDetailSlideOver({
                                     </div>
                                 )}
 
-                                {event.notes && (
-                                    <div className="oa-detail-group">
-                                        <label className="oa-detail-label">Notes</label>
-                                        <div className="oa-detail-box oa-detail-box--dashed">
-                                            <p className="oa-detail-text">{event.notes}</p>
+                                    {event.notes && (
+                                        <div className="oa-detail-group">
+                                            <label className="oa-detail-label">Notes</label>
+                                            <div className="oa-detail-box oa-detail-box--dashed">
+                                                <p className="oa-detail-text">{event.notes}</p>
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
-                            </div>
-                        </>
-                    )}
-                </div>
+                                    )}
+
+                                    {/* Ticketing Meta */}
+                                    {event.ticketed_event && (
+                                        <div className="oa-detail-group">
+                                            <label className="oa-detail-label">Ticketing</label>
+                                            <div className="oa-detail-box oa-detail-box--dashed">
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                                                    <span className="oa-detail-text">
+                                                        Status: <strong>{event.ticketed_event.status}</strong>
+                                                    </span>
+                                                    {event.ticketed_event.sales_start_at || event.ticketed_event.sales_end_at ? (
+                                                        <span className="oa-badge">
+                                                            Sales {event.ticketed_event.sales_start_at ? 'from' : ''} {event.ticketed_event.sales_start_at ? new Date(event.ticketed_event.sales_start_at).toLocaleString() : ''} 
+                                                            {event.ticketed_event.sales_end_at ? ` to ${new Date(event.ticketed_event.sales_end_at).toLocaleString()}` : ''}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="oa-badge">Sales window not set</span>
+                                                    )}
+                                                </div>
+                                                {event.ticketed_event.ticket_types && event.ticketed_event.ticket_types.length > 0 ? (
+                                                    <ul className="oa-equip-list" style={{ marginTop: '12px' }}>
+                                                        {event.ticketed_event.ticket_types
+                                                            .slice()
+                                                            .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+                                                            .map((tt) => (
+                                                                <li key={tt.id} className="oa-equip-item">
+                                                                    <span className="material-symbols-outlined">sell</span>
+                                                                    <div>
+                                                                        <div className="oa-detail-text" style={{ fontWeight: 700 }}>
+                                                                            {tt.name} — ${(tt.price_cents / 100).toFixed(2)} {tt.currency}
+                                                                        </div>
+                                                                        <div className="oa-detail-text oa-detail-subtle">
+                                                                            Capacity: {tt.capacity_total ?? '—'} | Remaining: {tt.capacity_remaining ?? '—'}
+                                                                        </div>
+                                                                    </div>
+                                                                </li>
+                                                            ))}
+                                                    </ul>
+                                                ) : (
+                                                    <p className="oa-detail-text oa-detail-subtle" style={{ marginTop: '12px' }}>
+                                                        No ticket types configured.
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        )}
+                    </div>
 
                 {/* Footer Controls */}
                 {!loading && !error && event && (

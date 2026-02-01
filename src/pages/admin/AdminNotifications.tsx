@@ -15,6 +15,7 @@ import {
   EmptyState,
   AdminFilterPanel,
 } from '../../components/platformAdmin'
+import type { FilterSectionConfig } from '../../components/platformAdmin/AdminFilterPanel'
 import { showSuccess, showError } from '../../utils/toast'
 import { cn } from '../../utils/cn'
 import { getTeams } from '../../data/services/teamsService'
@@ -35,15 +36,6 @@ const getPresentationColor = (presentation: string) => {
     case 'warning': return 'pa-text-warning'
     default: return 'pa-text-primary'
   }
-}
-
-type FilterSectionConfig = {
-  id: string
-  title: string
-  layout?: string
-  items: { id: string; label: string; icon?: string; count?: number }[]
-  multiSelect?: boolean
-  searchable?: boolean
 }
 
 const STATIC_SECTIONS: FilterSectionConfig[] = [

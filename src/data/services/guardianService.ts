@@ -336,7 +336,7 @@ export async function getGuardianAthletes(
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             deleted_at: null
-        }))
+        }) as unknown as Athlete)
 
         return { data: athletes, error: null }
     } catch (err) {

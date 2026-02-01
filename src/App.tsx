@@ -48,7 +48,17 @@ import Huddles from './pages/Huddles'
 import AnnouncementDetail from './pages/AnnouncementDetail'
 import { RoleSelection } from './pages/RoleSelection'
 import AthleteProfile from './pages/AthleteProfile'
+import Photos from './pages/Photos'
 const Notifications = lazy(() => import('./pages/Notifications'))
+const PhotosGallery = lazy(() => import('./pages/PhotosGallery'))
+
+// Ticketing Pages
+import TicketEventList from './pages/ticketing/TicketEventList'
+import TicketEventDetail from './pages/ticketing/TicketEventDetail'
+import TicketOrderSuccess from './pages/ticketing/TicketOrderSuccess'
+import MyTickets from './pages/ticketing/MyTickets'
+import TicketAccess from './pages/ticketing/TicketAccess'
+import TicketScanner from './pages/ticketing/TicketScanner'
 
 // Portal Pages - Lazy loaded
 const CreateAthletePortal = lazy(() => import('./pages/CreateAthletePortal'))
@@ -86,6 +96,15 @@ const LicensesAudit = lazy(() => import('./pages/platformAdmin/LicensesAudit'))
 
 // Email Preview - Platform Admin Feature
 const EmailPreview = lazy(() => import('./pages/platformAdmin/EmailPreview'))
+// Photos - Platform Admin (overview, content review, storage, org galleries)
+const PlatformPhotosOverview = lazy(() => import('./pages/platformAdmin/PhotosOverview'))
+const PlatformPhotosContentReview = lazy(() => import('./pages/platformAdmin/PhotosContentReview'))
+const PlatformPhotosStorage = lazy(() => import('./pages/platformAdmin/PhotosStorage'))
+// Ticketing - Platform Admin
+const PlatformTicketingAllEvents = lazy(() => import('./pages/platformAdmin/TicketingAllEvents'))
+const PlatformTicketingOrderLookup = lazy(() => import('./pages/platformAdmin/TicketingOrderLookup'))
+const PlatformTicketingWebhookStatus = lazy(() => import('./pages/platformAdmin/TicketingWebhookStatus'))
+const PlatformTicketingOrgDashboard = lazy(() => import('./pages/platformAdmin/TicketingOrgDashboard'))
 
 // Admin Pages - Lazy loaded for code splitting
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
@@ -116,6 +135,10 @@ const EditEvent = lazy(() => import('./pages/admin/EditEvent'))
 const AttendanceRoster = lazy(() => import('./pages/admin/AttendanceRoster'))
 const AdminAttendance = lazy(() => import('./pages/admin/AdminAttendance'))
 const Payments = lazy(() => import('./pages/admin/Payments'))
+const TicketingEvents = lazy(() => import('./pages/admin/TicketingEvents'))
+const TicketingOrders = lazy(() => import('./pages/admin/TicketingOrders'))
+const CreateTicketedEvent = lazy(() => import('./pages/admin/CreateTicketedEvent'))
+const TicketedEventDetail = lazy(() => import('./pages/admin/TicketedEventDetail'))
 const CreateFee = lazy(() => import('./pages/admin/CreateFee'))
 const UniformOrders = lazy(() => import('./pages/admin/UniformOrders'))
 const CreateUniform = lazy(() => import('./pages/admin/CreateUniform'))
@@ -126,6 +149,7 @@ const EditTravelPlan = lazy(() => import('./pages/admin/EditTravelPlan'))
 const AdminTryouts = lazy(() => import('./pages/admin/AdminTryouts'))
 const AdminTryoutDetail = lazy(() => import('./pages/admin/AdminTryoutDetail'))
 const CreateTryout = lazy(() => import('./pages/admin/CreateTryout'))
+const AdminPhotos = lazy(() => import('./pages/admin/Photos'))
 const OrganizationSettings = lazy(() => import('./pages/admin/OrganizationSettings'))
 const OrganizationStructureForms = lazy(() => import('./pages/admin/OrganizationStructureForms'))
 const OrganizationUsers = lazy(() => import('./pages/admin/OrganizationUsers'))
@@ -238,6 +262,13 @@ function AppWithTheme() {
           {/* Marketing Landing Page - Public */}
           <Route path="/" element={<HostHomeRoute />} />
           
+          {/* Public Ticketing Routes */}
+          <Route path="/tickets" element={<TicketEventList />} />
+          <Route path="/tickets/events/:eventId" element={<TicketEventDetail />} />
+          <Route path="/tickets/order/:orderId" element={<TicketOrderSuccess />} />
+          <Route path="/tickets/access/:token" element={<TicketAccess />} />
+          <Route path="/tickets/validate/:token" element={<TicketScanner />} />
+          
           {/* Redirect /accept-invite to /portal/accept-invite for old email links */}
           <Route path="/accept-invite" element={<AcceptInvite />} />
 
@@ -280,6 +311,10 @@ function AppWithTheme() {
             <Route path="huddles" element={<Navigate to="/portal/huddles/announcements" replace />} />
             <Route path="huddles/announcements" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.messages"><Huddles /></FeatureGateRoute></ProtectedRoute>} />
             <Route path="huddles/chat" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.messages"><Huddles /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="photos" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.photos"><Photos /></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="photos/gallery/:id" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.photosGallery"><Suspense fallback={<AdminLoadingSpinner />}><PhotosGallery /></Suspense></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="photos/gallery/:id/manage" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.photosGalleryManage"><Suspense fallback={<AdminLoadingSpinner />}><PhotosGallery /></Suspense></FeatureGateRoute></ProtectedRoute>} />
+            <Route path="account/tickets" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.myTickets"><MyTickets /></FeatureGateRoute></ProtectedRoute>} />
             
             {/* Redirect root portal to dashboard */}
             <Route path="notifications" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.messages"><Suspense fallback={<AdminLoadingSpinner />}><Notifications /></Suspense></FeatureGateRoute></ProtectedRoute>} />
@@ -403,6 +438,13 @@ function AppWithTheme() {
               <Route path="payments/:id" element={<FeatureGateRoute routeKey="admin.payments.detail"><AdminPaymentDetail /></FeatureGateRoute>} />
               <Route path="payments/new" element={<FeatureGateRoute routeKey="admin.payments.fees.create"><CreateFee /></FeatureGateRoute>} />
             
+              {/* Ticketing */}
+              <Route path="ticketing/scanner" element={<FeatureGateRoute routeKey="admin.ticketingScanner"><TicketScanner /></FeatureGateRoute>} />
+              <Route path="ticketing/events" element={<FeatureGateRoute routeKey="admin.ticketingEvents.list"><Suspense fallback={<AdminLoadingSpinner />}><TicketingEvents /></Suspense></FeatureGateRoute>} />
+              <Route path="ticketing/events/new" element={<FeatureGateRoute routeKey="admin.ticketingEvents.create"><Suspense fallback={<AdminLoadingSpinner />}><CreateTicketedEvent /></Suspense></FeatureGateRoute>} />
+              <Route path="ticketing/events/:id" element={<FeatureGateRoute routeKey="admin.ticketingEvents.detail"><Suspense fallback={<AdminLoadingSpinner />}><TicketedEventDetail /></Suspense></FeatureGateRoute>} />
+              <Route path="ticketing/orders" element={<FeatureGateRoute routeKey="admin.ticketingOrders"><Suspense fallback={<AdminLoadingSpinner />}><TicketingOrders /></Suspense></FeatureGateRoute>} />
+            
               {/* Uniforms */}
               <Route path="uniforms" element={<FeatureGateRoute routeKey="admin.uniforms.list"><UniformOrders /></FeatureGateRoute>} />
               <Route path="uniforms/new" element={<FeatureGateRoute routeKey="admin.uniforms.create"><CreateUniform /></FeatureGateRoute>} />
@@ -418,6 +460,9 @@ function AppWithTheme() {
               <Route path="tryouts" element={<FeatureGateRoute routeKey="admin.tryouts.list"><AdminTryouts /></FeatureGateRoute>} />
               <Route path="tryouts/new" element={<FeatureGateRoute routeKey="admin.tryouts.create"><CreateTryout /></FeatureGateRoute>} />
               <Route path="tryouts/:tryoutId" element={<FeatureGateRoute routeKey="admin.tryouts.detail"><AdminTryoutDetail /></FeatureGateRoute>} />
+            
+              {/* Photos */}
+              <Route path="photos" element={<FeatureGateRoute routeKey="admin.photos.list"><Suspense fallback={<AdminLoadingSpinner />}><AdminPhotos /></Suspense></FeatureGateRoute>} />
             
               {/* Users */}
               <Route path="users/new" element={<CreateUser />} />
@@ -498,8 +543,19 @@ function AppWithTheme() {
               <Route path="licenses/overrides/:id" element={<OverrideDetail />} />
               <Route path="licenses/audit" element={<LicensesAudit />} />
 
+              {/* Ticketing (platform oversight) */}
+              <Route path="ticketing/events" element={<PlatformTicketingAllEvents />} />
+              <Route path="ticketing/orders" element={<PlatformTicketingOrderLookup />} />
+              <Route path="ticketing/webhooks" element={<PlatformTicketingWebhookStatus />} />
+              <Route path="ticketing/organizations/:id" element={<PlatformTicketingOrgDashboard />} />
+
               {/* Email Preview */}
               <Route path="email-preview" element={<EmailPreview />} />
+
+              {/* Photos */}
+              <Route path="photos" element={<PlatformPhotosOverview />} />
+              <Route path="photos/content-review" element={<PlatformPhotosContentReview />} />
+              <Route path="photos/storage" element={<PlatformPhotosStorage />} />
             </Route>
           </Route>
         </Routes>

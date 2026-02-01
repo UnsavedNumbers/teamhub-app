@@ -78,6 +78,38 @@ function mapSupabaseEventToCalendarEvent(event: any): CalendarEvent {
         rsvp_config: rsvpConfig,
         rsvps,
         general_rsvps: generalRsvps,
+        ticketed_event: event.ticketed_event
+            ? {
+                id: event.ticketed_event.id,
+                org_id: event.ticketed_event.org_id,
+                team_id: event.ticketed_event.team_id,
+                event_type: event.ticketed_event.event_type,
+                title: event.ticketed_event.title,
+                description: event.ticketed_event.description,
+                starts_at: event.ticketed_event.starts_at,
+                ends_at: event.ticketed_event.ends_at,
+                timezone: event.ticketed_event.timezone,
+                venue_name: event.ticketed_event.venue_name,
+                venue_city: event.ticketed_event.venue_city,
+                venue_state: event.ticketed_event.venue_state,
+                venue_postal_code: event.ticketed_event.venue_postal_code,
+                sales_start_at: event.ticketed_event.sales_start_at,
+                sales_end_at: event.ticketed_event.sales_end_at,
+                status: event.ticketed_event.status,
+                ticket_types: Array.isArray(event.ticketed_event.ticket_types)
+                  ? event.ticketed_event.ticket_types.map((tt: any) => ({
+                      id: tt.id,
+                      name: tt.name,
+                      price_cents: tt.price_cents ?? 0,
+                      currency: tt.currency ?? 'USD',
+                      capacity_total: tt.capacity_total ?? null,
+                      capacity_remaining: tt.capacity_remaining ?? null,
+                      sort_order: tt.sort_order ?? null,
+                      is_active: tt.is_active ?? null,
+                  }))
+                  : [],
+              }
+            : null,
     } as CalendarEvent
 }
 

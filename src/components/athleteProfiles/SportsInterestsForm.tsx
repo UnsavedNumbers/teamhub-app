@@ -4,7 +4,6 @@ import { getSystemSports } from '../../data/services/sportsService'
 import { getAthleteTeamHistory } from '../../data/services/teamsService'
 import { useUserContext } from '../../hooks/useUserContext'
 import Button from '../portal/Button'
-import Card from '../portal/Card'
 import type { Sport } from '../../data/types/organization'
 import type { Athlete } from '../../types/family'
 
@@ -123,13 +122,11 @@ export function SportsInterestsForm({ athlete, onSave }: SportsInterestsFormProp
     // Enforce locks: If a sport is locked, it MUST be in 'plays'
     if (lockedSportIds.size > 0) {
         const lockedArray = Array.from(lockedSportIds)
-        let changed = false
         
         lockedArray.forEach(lockedId => {
             const playsExists = initialSelected.some(s => s.sport_id === lockedId && s.sport_type === 'plays')
             if (!playsExists) {
                 initialSelected.push({ sport_id: lockedId, sport_type: 'plays' })
-                changed = true
             }
         })
         
