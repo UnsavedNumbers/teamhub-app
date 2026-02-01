@@ -109,9 +109,9 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
   return (
     <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] text-[#111418] dark:text-white">
       {/* Header with org branding */}
-      <header className="flex items-center justify-between border-b border-[#f0f2f4] dark:border-gray-800 bg-white dark:bg-[#101922] px-10 py-3 sticky top-0 z-50">
+      <header className="flex items-center justify-between border-b border-[#f0f2f4] dark:border-gray-800 bg-white dark:bg-[#101922] px-6 md:px-10 py-3 sticky top-0 z-50">
         <div className="flex items-center gap-4 text-[#111418] dark:text-white">
-          <div className="size-6 text-[#137fec]">
+          <div className="size-6 text-[var(--org-btn-primary-bg)]" style={{ color: 'var(--org-btn-primary-bg)' }}>
             <svg fill="currentColor" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
               <path clipRule="evenodd" d="M24 4H6V17.3333V30.6667H24V44H42V30.6667V17.3333H24V4Z" fillRule="evenodd" />
             </svg>
@@ -133,7 +133,7 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
                   : 'linear-gradient(to top, rgba(19,127,236,0.9) 0%, rgba(19,127,236,0.3) 100%)',
             }}
           >
-            <div className="max-w-[1200px] mx-auto w-full px-10 pb-10">
+            <div className="max-w-[1200px] mx-auto w-full px-6 md:px-10 pb-10">
               <div className="flex flex-wrap items-center gap-3 mb-4">
                 <span className="bg-[var(--org-btn-primary-bg)] text-[var(--org-btn-primary-text)] text-xs font-bold uppercase tracking-widest px-3 py-1 rounded">
                   Official Event
@@ -142,9 +142,7 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
               <h1 className="text-white text-5xl md:text-6xl font-black leading-tight tracking-tight">
                 {event.title}
               </h1>
-              {event.description && (
-                <p className="text-white/80 text-lg mt-2 max-w-2xl font-light">{event.description}</p>
-              )}
+
               {event.event_description && (
                 <p className="text-white/90 text-lg mt-4 max-w-3xl whitespace-pre-wrap leading-relaxed">{event.event_description}</p>
               )}
@@ -153,26 +151,26 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
         </div>
 
         {/* Metadata Bar */}
-        <div className="bg-white dark:bg-gray-900 border-b border-[#f0f2f4] dark:border-gray-800 py-4 px-10">
-          <div className="max-w-[1200px] mx-auto flex flex-wrap justify-between items-center gap-4">
-            <div className="flex items-center gap-6">
+        <div className="bg-white dark:bg-gray-900 border-b border-[#f0f2f4] dark:border-gray-800 py-4">
+          <div className="max-w-[1200px] mx-auto px-6 md:px-10 flex flex-wrap justify-between items-center gap-4">
+            <div className="flex flex-col items-start md:flex-row md:items-center gap-4 md:gap-6 w-full md:w-auto">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#137fec]">calendar_month</span>
+                <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)]" style={{ color: 'var(--org-btn-primary-bg)' }}>calendar_month</span>
                 <span className="text-sm font-medium text-[#617589] dark:text-gray-400">{dateFormatted}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#137fec]">location_on</span>
+                <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)]" style={{ color: 'var(--org-btn-primary-bg)' }}>location_on</span>
                 <span className="text-sm font-medium text-[#617589] dark:text-gray-400">{venue}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#137fec]">schedule</span>
+                <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)]" style={{ color: 'var(--org-btn-primary-bg)' }}>schedule</span>
                 <span className="text-sm font-medium text-[#617589] dark:text-gray-400">Doors open at {timeFormatted}</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="max-w-[1200px] mx-auto px-10 py-12">
+        <div className="max-w-[1200px] mx-auto px-6 md:px-10 py-12">
           <div className="flex flex-col lg:flex-row gap-10">
             {/* Left Column: Ticket Selection */}
             <div className="flex-1">
@@ -200,7 +198,8 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
                             {ticketType.description && (
                                 <button
                                     onClick={() => setExpandedTicketType(ticketType)}
-                                    className="text-[var(--org-link-color)] hover:opacity-80"
+                                    className="text-[var(--org-btn-primary-bg)] hover:opacity-80"
+                                    style={{ color: 'var(--org-btn-primary-bg)' }}
                                     aria-label="More info"
                                     type="button"
                                 >
@@ -258,7 +257,7 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
                       <div className="h-px bg-[#f0f2f4] dark:bg-gray-800 my-2" />
                       <div className="flex justify-between items-center">
                         <span className="text-lg font-bold text-[#111418] dark:text-white uppercase">Total</span>
-                        <span className="text-3xl font-black text-[#137fec]">{formatCurrency(totalCents)}</span>
+                        <span className="text-3xl font-black text-[var(--org-btn-primary-bg)]" style={{ color: 'var(--org-btn-primary-bg)' }}>{formatCurrency(totalCents)}</span>
                       </div>
                     </div>
 
@@ -271,7 +270,8 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
                         value={purchaserEmail}
                         onChange={(e) => setPurchaserEmail(e.target.value)}
                         placeholder="your@email.com"
-                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-[#111418] dark:text-white focus:ring-2 focus:ring-[#137fec]"
+                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-[#111418] dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg)]"
+                        style={{ '--tw-ring-color': 'var(--org-btn-primary-bg)' } as React.CSSProperties}
                         required
                       />
                     </div>
@@ -279,18 +279,18 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
                     <button
                       onClick={() => checkoutMutation.mutate()}
                       disabled={cart.length === 0 || !purchaserEmail || checkoutMutation.isPending}
-                      className="w-full bg-[#137fec] hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-black py-4 rounded-lg shadow-[0_8px_0px_0px_rgba(10,64,118,1)] transition-all active:translate-y-1 active:shadow-none uppercase tracking-widest mb-6"
+                      className="w-full bg-[var(--org-btn-primary-bg)] hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed text-[var(--org-btn-primary-text)] font-black py-4 rounded-lg shadow-[0_8px_0px_0px_rgba(0,0,0,0.2)] transition-all active:translate-y-1 active:shadow-none uppercase tracking-widest mb-6"
                     >
                       {checkoutMutation.isPending ? 'Processing...' : 'Checkout Now'}
                     </button>
 
                     <div className="space-y-3">
                       <div className="flex items-start gap-3 text-xs text-[#617589] dark:text-gray-500">
-                        <span className="material-symbols-outlined text-[#137fec] text-sm">verified_user</span>
+                        <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)] text-sm" style={{ color: 'var(--org-btn-primary-bg)' }}>verified_user</span>
                         <p>Secure SSL Encrypted Checkout via YouthSports Payment Gateway.</p>
                       </div>
                       <div className="flex items-start gap-3 text-xs text-[#617589] dark:text-gray-500">
-                        <span className="material-symbols-outlined text-[#137fec] text-sm">confirmation_number</span>
+                        <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)] text-sm" style={{ color: 'var(--org-btn-primary-bg)' }}>confirmation_number</span>
                         <p>Instant digital ticket delivery to your registered email address.</p>
                       </div>
                     </div>
