@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
-import { getEventDetails, updateRSVP, getAthletes } from '../data/services'
+import { getEventDetails, updateRSVP, getAthletes, deleteEvent } from '../data/services'
 import type { RSVPStatus } from '../types/calendar'
 import { getSportFromEvent, type SportInfo } from '../utils/sportContext'
 import PortalLayout from '../components/portal/PortalLayout'
@@ -30,6 +30,11 @@ interface Event {
     venue_name: string | null
     latitude: number | null
     longitude: number | null
+  } | null
+  ticketed_event?: {
+    id: string
+    status: string
+    ticket_types: { price_cents: number; currency: string }[]
   } | null
 }
 
@@ -93,6 +98,11 @@ export default function EventDetail() {
         venue_name: eventData.event_location.venue_name,
         latitude: eventData.event_location.latitude ?? null,
         longitude: eventData.event_location.longitude ?? null,
+      } : null,
+      ticketed_event: eventData.ticketed_event ? {
+        id: eventData.ticketed_event.id,
+        status: eventData.ticketed_event.status,
+        ticket_types: eventData.ticketed_event.ticket_types || []
       } : null,
     })
 
@@ -163,6 +173,21 @@ export default function EventDetail() {
     return new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
   }
 
+  const handleDelete = async () => {
+    if (!eventId || !window.confirm('Are you sure you want to delete this event? This cannot be undone.')) return
+    
+    setLoading(true)
+    const { error } = await deleteEvent(context, eventId)
+    if (error) {
+      alert(error.message)
+      setLoading(false)
+    } else {
+      navigate('/portal/calendar')
+    }
+  }
+
+  const canManage = context?.roles.includes('admin') || context?.roles.includes('org_admin') || context?.roles.includes('coach')
+
   const statusStyles: Record<RSVPStatus, string> = {
     going: 'bg-emerald-500 text-white',
     late: 'bg-amber-500 text-white',
@@ -203,13 +228,43 @@ export default function EventDetail() {
         <div className="-mx-4 sm:-mx-6 mb-6 sm:mb-8">
           <SportHero sport={eventSport} height="40vh sm:50vh">
             <div className="max-w-[1200px] mx-auto px-4 sm:px-6 pb-6 sm:pb-8">
-              <div className="mb-6 sm:mb-8">
-                <PageTitle className="text-white text-2xl sm:text-3xl md:text-4xl">{event.title}</PageTitle>
-                <p className="text-xs font-bold uppercase tracking-widest text-white/80 mt-2">{event.team.name}</p>
+              <div className="mb-6 sm:mb-8 flex justify-between items-start">
+                  <div>
+                    <PageTitle className="text-white text-2xl sm:text-3xl md:text-4xl">{event.title}</PageTitle>
+                    <p className="text-xs font-bold uppercase tracking-widest text-white/80 mt-2">{event.team.name}</p>
+                  </div>
+                  {canManage && (
+                    <div className="flex gap-2">
+                       <Button variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-none" onClick={() => navigate(`/portal/calendar/events/${eventId}/edit`)}>
+                         <Icon name="edit" />
+                       </Button>
+                       <Button variant="secondary" className="bg-white/20 hover:bg-red-500/80 text-white border-none" onClick={handleDelete}>
+                         <Icon name="delete" />
+                       </Button>
+                    </div>
+                  )}
               </div>
             </div>
           </SportHero>
         </div>
+
+        {event.ticketed_event && (
+             <Card className="mb-6 border-l-4 border-l-[var(--org-btn-primary-bg)]">
+                <div className="p-4 sm:p-6 flex justify-between items-center">
+                   <div>
+                       <h3 className="text-lg font-black uppercase text-slate-900 dark:text-white">Tickets Required</h3>
+                       <p className="text-slate-500 dark:text-slate-400">
+                          {event.ticketed_event.ticket_types.length > 0 && 
+                             `Starting from $${Math.min(...event.ticketed_event.ticket_types.map(t => t.price_cents)).toFixed(2) / 100}`
+                          }
+                       </p>
+                   </div>
+                   <Button onClick={() => navigate(`/o/${context.orgId}/tickets/events/${event.ticketed_event?.id}`)}>
+                      Get Tickets
+                   </Button>
+                </div>
+             </Card>
+        )}
 
         <Card className="mb-6 sm:mb-8 p-4 sm:p-6 md:p-8">
           <div className="space-y-3 sm:space-y-4">

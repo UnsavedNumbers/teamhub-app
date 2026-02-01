@@ -135,6 +135,7 @@ designs/
 docs
 *.md
 #*.sql
+/keys
 *.txt
 
 # Logs

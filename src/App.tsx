@@ -70,6 +70,8 @@ import OrgLanding from './pages/ticketing/OrgLanding'
 const CreateAthletePortal = lazy(() => import('./pages/CreateAthletePortal'))
 const EditAthletePortal = lazy(() => import('./pages/EditAthletePortal'))
 const RequestAthleteAttachment = lazy(() => import('./pages/RequestAthleteAttachment').then(m => ({ default: m.default })))
+const PortalCreateEvent = lazy(() => import('./pages/portal/PortalCreateEvent'))
+const PortalEditEvent = lazy(() => import('./pages/portal/PortalEditEvent'))
 
 // Admin Layout (Material Dashboard)
 import AdminLayout from './layouts/AdminLayout'
@@ -308,6 +310,8 @@ function AppWithTheme() {
             <Route path="athletes/:id/edit" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><EditAthletePortal /></Suspense></ProtectedRoute>} />
             <Route path="athletes/request-attachment" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><RequestAthleteAttachment /></Suspense></ProtectedRoute>} />
             <Route path="join" element={<ProtectedRoute><JoinTeam /></ProtectedRoute>} />
+            <Route path="calendar/new" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><PortalCreateEvent /></Suspense></ProtectedRoute>} />
+            <Route path="calendar/events/:eventId/edit" element={<ProtectedRoute><Suspense fallback={<AdminLoadingSpinner />}><PortalEditEvent /></Suspense></ProtectedRoute>} />
             <Route path="calendar/events/:eventId" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />
             <Route path="calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
             <Route path="payments" element={<ProtectedRoute><FeatureGateRoute routeKey="portal.payments"><MyPayments /></FeatureGateRoute></ProtectedRoute>} />
