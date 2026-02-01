@@ -42,6 +42,7 @@ export function Checkbox({
       <label 
         className={cn(
           'pa-checkbox',
+          'oa-checkbox',
           disabled && 'pa-checkbox-disabled',
           'pa-inline-flex',
           'pa-items-center',
@@ -58,6 +59,7 @@ export function Checkbox({
           disabled={disabled}
           className={cn(
             'pa-checkbox-input',
+            'oa-checkbox-input',
             disabled ? 'pa-cursor-not-allowed' : 'pa-cursor-pointer'
           )}
         />
@@ -65,6 +67,7 @@ export function Checkbox({
           <span 
             className={cn(
               'pa-label',
+              'oa-label',
               'pa-font-xs',
               'pa-font-semibold',
               disabled ? 'pa-text-muted' : 'pa-text-primary'
@@ -75,7 +78,7 @@ export function Checkbox({
         )}
       </label>
       {helperText && (
-        <p className={cn('pa-helper-text', 'pa-mt-1', 'pa-checkbox-helper-offset')}>
+        <p className={cn('pa-helper-text', 'oa-helper-text', 'pa-mt-1', 'pa-checkbox-helper-offset')}>
           {helperText}
         </p>
       )}

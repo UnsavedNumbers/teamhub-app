@@ -66,7 +66,6 @@ export default function AdminLayout() {
         { routeKey: 'admin.levels.list', text: 'Levels', icon: 'grade', path: getLink('admin.levels.list'), requiresOrg: true },
         { routeKey: 'admin.teams.list', text: 'Teams', icon: 'groups', path: getLink('admin.teams.list'), requiresOrg: true },
         { routeKey: 'admin.seasons.list', text: 'Seasons', icon: 'calendar_month', path: getLink('admin.seasons.list'), requiresOrg: true },
-        { routeKey: 'admin.ticketingEvents.list', text: 'Team Events', icon: 'confirmation_number', path: getLink('admin.ticketingEvents.list'), requiresOrg: true },
         { routeKey: 'admin.organization.users', text: 'Staff', icon: 'person', path: getPath(RouteKeys.ADMIN_ORGANIZATION_USERS), requiresOrg: true },
       ],
     },

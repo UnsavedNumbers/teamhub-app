@@ -5,6 +5,7 @@
  */
 
 import { supabase } from '../../lib/supabase'
+import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type {
   TicketedEvent,
   TicketType,
@@ -19,6 +20,7 @@ import type {
   StaffLinkExchangeResponse,
 } from '../../types/ticketing'
 import { normalizeSupabaseResponse, createServiceResponse } from './responseHelpers'
+import { assertNotDemoMode } from '@/utils/demoMode'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || ''
 const FUNCTIONS_URL = `${SUPABASE_URL.replace('/rest/v1', '')}/functions/v1`
@@ -133,6 +135,28 @@ export async function getTicketTypesForEventAdmin(ticketedEventId: string) {
     .order('sort_order', { ascending: true })
 
   return normalizeSupabaseResponse<TicketType[]>(data as unknown as TicketType[], true)
+}
+
+export async function createTicketType(
+  insert: Database['public']['Tables']['ticket_types']['Insert'],
+) {
+  try {
+    assertNotDemoMode('create ticket types')
+
+    const { data, error } = await supabase
+      .from('ticket_types')
+      .insert(insert)
+      .select('*')
+      .single()
+
+    if (error) {
+      return createServiceResponse<TicketType>(null, error)
+    }
+
+    return createServiceResponse<TicketType>(data as unknown as TicketType, null)
+  } catch (error: unknown) {
+    return createServiceResponse<TicketType>(null, error as Error)
+  }
 }
 
 // ============================================================================

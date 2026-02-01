@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { cn } from '../../utils/cn'
 
 interface TimePickerProps {
   /** Input label */
@@ -97,7 +98,7 @@ export function TimePicker({
 
   return (
     <div 
-      className="pa-form-group" 
+      className="pa-form-group oa-form-group" 
       ref={containerRef}
       onBlur={(e) => {
         // Trigger onBlur when focus leaves the component
@@ -107,7 +108,14 @@ export function TimePicker({
       }}
     >
       {label && (
-        <label className={`pa-label ${isRequired ? 'pa-label--required' : ''}`}>
+        <label
+          className={cn(
+            'pa-label',
+            'oa-label',
+            isRequired && 'pa-label--required',
+            isRequired && 'oa-label--required',
+          )}
+        >
           {label}
         </label>
       )}
@@ -117,8 +125,13 @@ export function TimePicker({
           type="button"
           onClick={() => !isDisabled && !isReadOnly && setIsOpen(!isOpen)}
           disabled={isDisabled}
-          className={`pa-timepicker-button ${hasError ? 'pa-timepicker-button--error' : ''}`}
-        >
+          className={cn(
+            'pa-timepicker-button',
+            'oa-timepicker-button',
+            hasError && 'pa-timepicker-button--error',
+            hasError && 'oa-timepicker-button--error',
+          )}
+          >
           <span className="pa-timepicker-button-text">
             {formatDisplayValue() || 'Select time'}
           </span>
@@ -128,7 +141,7 @@ export function TimePicker({
         </button>
 
         {isOpen && (
-          <div className="pa-timepicker-dropdown">
+          <div className="pa-timepicker-dropdown oa-timepicker-dropdown">
             <div className="pa-timepicker-column">
               <div className="pa-timepicker-column-header">Hour</div>
               <div className="pa-timepicker-column-scroll">
@@ -136,7 +149,12 @@ export function TimePicker({
                   <button
                     key={h}
                     type="button"
-                    className={`pa-timepicker-option ${h === hour ? 'pa-timepicker-option--selected' : ''}`}
+                    className={cn(
+                      'pa-timepicker-option',
+                      'oa-timepicker-option',
+                      h === hour && 'pa-timepicker-option--selected',
+                      h === hour && 'oa-timepicker-option--selected',
+                    )}
                     onClick={() => handleTimeChange(h, minute, period)}
                   >
                     {h.toString().padStart(2, '0')}
@@ -145,14 +163,19 @@ export function TimePicker({
               </div>
             </div>
             
-            <div className="pa-timepicker-column">
+            <div className="pa-timepicker-column oa-timepicker-column">
               <div className="pa-timepicker-column-header">Minute</div>
               <div className="pa-timepicker-column-scroll">
                 {minutes.map((m) => (
                   <button
                     key={m}
                     type="button"
-                    className={`pa-timepicker-option ${m === minute ? 'pa-timepicker-option--selected' : ''}`}
+                    className={cn(
+                      'pa-timepicker-option',
+                      'oa-timepicker-option',
+                      m === minute && 'pa-timepicker-option--selected',
+                      m === minute && 'oa-timepicker-option--selected',
+                    )}
                     onClick={() => handleTimeChange(hour, m, period)}
                   >
                     {m.toString().padStart(2, '0')}
@@ -161,14 +184,19 @@ export function TimePicker({
               </div>
             </div>
             
-            <div className="pa-timepicker-column pa-timepicker-column--period">
+            <div className="pa-timepicker-column pa-timepicker-column--period oa-timepicker-column oa-timepicker-column--period">
               <div className="pa-timepicker-column-header">Period</div>
               <div className="pa-timepicker-column-scroll">
                 {['AM', 'PM'].map((p) => (
                   <button
                     key={p}
                     type="button"
-                    className={`pa-timepicker-option ${p === period ? 'pa-timepicker-option--selected' : ''}`}
+                    className={cn(
+                      'pa-timepicker-option',
+                      'oa-timepicker-option',
+                      p === period && 'pa-timepicker-option--selected',
+                      p === period && 'oa-timepicker-option--selected',
+                    )}
                     onClick={() => handleTimeChange(hour, minute, p)}
                   >
                     {p}
@@ -181,7 +209,14 @@ export function TimePicker({
       </div>
 
       {(helper || error) && (
-        <div className={`pa-helper ${hasError ? 'pa-helper--error' : ''}`}>
+        <div
+          className={cn(
+            'pa-helper',
+            'oa-helper',
+            hasError && 'pa-helper--error',
+            hasError && 'oa-helper--error',
+          )}
+        >
           {error || helper}
         </div>
       )}
