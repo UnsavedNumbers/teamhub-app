@@ -4,13 +4,18 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0"
 import Stripe from "https://esm.sh/stripe@12.18.0?dts"
 import { crypto } from "https://deno.land/std@0.208.0/crypto/mod.ts"
 
-const supabaseUrl = Deno.env.get("SUPABASE_URL")!
-const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY")!
-const stripeWebhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET_TICKETING") || Deno.env.get("STRIPE_WEBHOOK_SECRET")!
+const supabaseUrl = Deno.env.get("SUPABASE_URL")
+const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY")
+const stripeWebhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET_TICKETING")
 
 if (!supabaseUrl || !supabaseServiceRoleKey || !stripeSecretKey || !stripeWebhookSecret) {
-  throw new Error("Missing required environment configuration")
+  const missing = []
+  if (!supabaseUrl) missing.push("SUPABASE_URL")
+  if (!supabaseServiceRoleKey) missing.push("SUPABASE_SERVICE_ROLE_KEY")
+  if (!stripeSecretKey) missing.push("STRIPE_SECRET_KEY")
+  if (!stripeWebhookSecret) missing.push("STRIPE_WEBHOOK_SECRET_TICKETING")
+  throw new Error(`Missing required environment configuration: ${missing.join(", ")}`)
 }
 
 const stripe = new Stripe(stripeSecretKey, { apiVersion: "2024-06-20" })
@@ -78,18 +83,23 @@ serve(async (req) => {
     if (eventType === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session
 
+      // Guard on metadata with optional chaining
       const orderId = session.metadata?.order_id
       const orgId = session.metadata?.org_id
       const ticketedEventId = session.metadata?.ticketed_event_id
+      const stripeConnectAccountId = session.metadata?.stripe_connect_account_id
+      const platformFeeCentsStr = session.metadata?.platform_fee_cents
+      const orgRevenueCentsStr = session.metadata?.org_revenue_cents
+      const totalTicketsStr = session.metadata?.total_tickets
 
       if (!orderId || !orgId || !ticketedEventId) {
-        throw new Error("Missing metadata in checkout session")
+        throw new Error("Missing required metadata in checkout session")
       }
 
-      // Load order
+      // Load order (including Connect fields)
       const { data: order, error: orderError } = await supabase
         .from("ticket_orders")
-        .select("id, org_id, ticketed_event_id, status, total_cents")
+        .select("id, org_id, ticketed_event_id, status, total_cents, stripe_connect_account_id")
         .eq("id", orderId)
         .single()
 
@@ -110,6 +120,63 @@ serve(async (req) => {
       const amountTotal = session.amount_total || 0
       if (amountTotal !== order.total_cents) {
         throw new Error(`Amount mismatch: session ${amountTotal} vs order ${order.total_cents}`)
+      }
+
+      // Handle Connect destination charges if metadata present
+      let stripeChargeId: string | null = null
+      let stripeApplicationFeeId: string | null = null
+      let applicationFeeAmount = 0
+
+      if (stripeConnectAccountId && session.payment_intent) {
+        // Validate Connect account matches order
+        if (order.stripe_connect_account_id && order.stripe_connect_account_id !== stripeConnectAccountId) {
+          throw new Error("Connect account mismatch")
+        }
+
+        // Retrieve PaymentIntent with expand to get charge and application fee
+        try {
+          const paymentIntent = await stripe.paymentIntents.retrieve(
+            session.payment_intent as string,
+            { expand: ["charges.data"] }
+          )
+
+          // If charges.data is empty, retry once after short delay
+          if (!paymentIntent.charges?.data || paymentIntent.charges.data.length === 0) {
+            await new Promise((resolve) => setTimeout(resolve, 1500))
+            const retryPaymentIntent = await stripe.paymentIntents.retrieve(
+              session.payment_intent as string,
+              { expand: ["charges.data"] }
+            )
+            if (retryPaymentIntent.charges?.data && retryPaymentIntent.charges.data.length > 0) {
+              const charge = retryPaymentIntent.charges.data.find((c) => c.status === "succeeded") || retryPaymentIntent.charges.data[0]
+              stripeChargeId = charge.id
+              applicationFeeAmount = paymentIntent.application_fee_amount || 0
+              stripeApplicationFeeId = paymentIntent.application_fee_amount ? (paymentIntent.application_fee as string) || null : null
+            }
+          } else {
+            const charge = paymentIntent.charges.data.find((c) => c.status === "succeeded") || paymentIntent.charges.data[0]
+            stripeChargeId = charge.id
+            applicationFeeAmount = paymentIntent.application_fee_amount || 0
+            stripeApplicationFeeId = paymentIntent.application_fee_amount ? (paymentIntent.application_fee as string) || null : null
+          }
+
+          // Recompute platform fee from order items for validation
+          const { data: orderItemsForFee } = await supabase
+            .from("ticket_order_items")
+            .select("quantity")
+            .eq("order_id", orderId)
+
+          if (orderItemsForFee) {
+            const totalTicketsFromDB = orderItemsForFee.reduce((sum, item) => sum + item.quantity, 0)
+            const expectedFee = totalTicketsFromDB * 100 // $1 per ticket
+            if (applicationFeeAmount !== expectedFee && platformFeeCentsStr) {
+              console.warn(`Fee mismatch: expected ${expectedFee}, got ${applicationFeeAmount}, metadata says ${platformFeeCentsStr}`)
+            }
+          }
+        } catch (piError: any) {
+          console.error("Error retrieving PaymentIntent:", piError)
+          // Continue without Connect fields if PaymentIntent retrieval fails
+        }
       }
 
       // Finalize holds (check if expired)
@@ -170,17 +237,60 @@ serve(async (req) => {
         throw new Error(`Failed to create tickets: ${ticketsError.message}`)
       }
 
-      // Update order status
+      // Update order status and Connect fields (order update first, then transaction insert)
+      const orderUpdateData: any = {
+        status: "paid",
+        stripe_payment_intent_id: session.payment_intent as string | null,
+        processed_at: new Date().toISOString(),
+      }
+
+      if (stripeChargeId) {
+        orderUpdateData.stripe_charge_id = stripeChargeId
+      }
+      if (stripeApplicationFeeId) {
+        orderUpdateData.stripe_application_fee_id = stripeApplicationFeeId
+      }
+
       const { error: updateError } = await supabase
         .from("ticket_orders")
-        .update({
-          status: "paid",
-          stripe_payment_intent_id: session.payment_intent as string | null,
-        })
+        .update(orderUpdateData)
         .eq("id", orderId)
 
       if (updateError) {
         throw new Error("Failed to update order status")
+      }
+
+      // Insert Connect transaction record if Connect metadata present
+      if (stripeConnectAccountId && stripeChargeId && applicationFeeAmount > 0) {
+        try {
+          const grossAmount = amountTotal
+          const netAmount = grossAmount - applicationFeeAmount
+
+          const { error: transactionError } = await supabase
+            .from("stripe_connect_transactions")
+            .insert({
+              ticket_order_id: orderId,
+              stripe_charge_id: stripeChargeId,
+              stripe_application_fee_id: stripeApplicationFeeId,
+              connect_account_id: stripeConnectAccountId,
+              gross_amount_cents: grossAmount,
+              application_fee_cents: applicationFeeAmount,
+              net_amount_cents: netAmount,
+            })
+
+          if (transactionError) {
+            // Check for unique violation (23505)
+            if (transactionError.code === "23505") {
+              console.log(`Transaction already recorded for order ${orderId}`)
+            } else {
+              console.error("Failed to insert Connect transaction:", transactionError)
+              // Log but don't fail webhook - order is already marked paid
+            }
+          }
+        } catch (txError: any) {
+          console.error("Error inserting Connect transaction:", txError)
+          // Continue - order is already updated
+        }
       }
 
       // Delete holds (they're finalized)
@@ -214,12 +324,26 @@ serve(async (req) => {
     if (eventType === "charge.refunded") {
       const charge = event.data.object as Stripe.Charge
 
-      // Find order by payment intent
-      const { data: order } = await supabase
-        .from("ticket_orders")
-        .select("id")
-        .eq("stripe_payment_intent_id", charge.payment_intent)
-        .single()
+      // Find order by payment intent (preferred) or charge_id (fallback for Connect)
+      let order = null
+      if (charge.payment_intent) {
+        const { data } = await supabase
+          .from("ticket_orders")
+          .select("id")
+          .eq("stripe_payment_intent_id", charge.payment_intent)
+          .single()
+        order = data
+      }
+      
+      // Fallback: try finding by charge_id if payment_intent lookup failed
+      if (!order && charge.id) {
+        const { data } = await supabase
+          .from("ticket_orders")
+          .select("id")
+          .eq("stripe_charge_id", charge.id)
+          .single()
+        order = data
+      }
 
       if (order) {
         // Mark order and tickets as refunded

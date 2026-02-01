@@ -25,6 +25,7 @@ import {
 import { ConfirmDialog } from '../../components/platformAdmin/ConfirmDialog'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { LocationAutocomplete } from '../../components/common/LocationAutocomplete'
+import { FileUpload } from '../../components/common/FileUpload'
 import { 
     EventFormData, 
     EVENT_TYPE_LABELS, 
@@ -32,6 +33,7 @@ import {
     isValidEventTimeOrder,
     RecurringEditMode,
 } from '../../types/calendar'
+import { uploadTicketBanner } from '../../data/services/organizationService'
 
 interface Team { id: string; name: string }
 interface Season { id: string; name: string; team_id: string }
@@ -65,6 +67,7 @@ export default function EditEvent() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [hasPaidOrders, setHasPaidOrders] = useState(false)
   const [ticketedEventId, setTicketedEventId] = useState<string | null>(null)
+  const [bannerFile, setBannerFile] = useState<File | null>(null)
 
   const { context, isReady } = useUserContext()
   const { allowed: ticketingAllowed, loading: ticketingGateLoading } = useFeatureGate('ticketing')
@@ -108,13 +111,25 @@ export default function EditEvent() {
         max_occurrences: ''
       },
       rsvp_enabled: false,
-      rsvp_type: null
+      rsvp_type: null,
+      ticketing: {
+        is_ticketed: false,
+        event_type: 'other',
+        sales_immediate: true,
+        sales_start_at: '',
+        sales_end_at: '',
+        status: 'draft',
+        event_description: '',
+        ticket_banner_url: '',
+        ticket_types: []
+      }
     },
   })
 
   const watchTeamId = watch('team_id')
   const watchRSVPEnabled = watch('rsvp_enabled')
   const watchTicketingEnabled = watch('ticketing.is_ticketed')
+  const watchTicketSalesImmediate = watch('ticketing.sales_immediate')
 
   const { fields: ticketTypeFields, append: appendTicketType, remove: removeTicketType } = useFieldArray({
     control,
@@ -281,7 +296,7 @@ export default function EditEvent() {
       // Load ticketing if linked
       const { data: ticketedEvent } = await supabase
         .from('ticketed_events')
-        .select('id, event_type, sales_start_at, sales_end_at, status')
+        .select('id, event_type, sales_start_at, sales_end_at, status, event_description, ticket_banner_url')
         .eq('event_id', eventId)
         .maybeSingle() as { data: { id: string; event_type: string; sales_start_at: string | null; sales_end_at: string | null; status: string } | null }
 
@@ -289,6 +304,7 @@ export default function EditEvent() {
         setTicketedEventId(ticketedEvent.id)
         setValue('ticketing.is_ticketed', true)
         setValue('ticketing.event_type', ticketedEvent.event_type || 'other')
+        setValue('ticketing.sales_immediate', !ticketedEvent.sales_start_at)
         setValue('ticketing.sales_start_at', ticketedEvent.sales_start_at
           ? new Date(new Date(ticketedEvent.sales_start_at).getTime() - new Date(ticketedEvent.sales_start_at).getTimezoneOffset() * 60000).toISOString().slice(0, 16)
           : '')
@@ -296,10 +312,12 @@ export default function EditEvent() {
           ? new Date(new Date(ticketedEvent.sales_end_at).getTime() - new Date(ticketedEvent.sales_end_at).getTimezoneOffset() * 60000).toISOString().slice(0, 16)
           : '')
         setValue('ticketing.status', ticketedEvent.status || 'draft')
+        setValue('ticketing.event_description', (ticketedEvent as any).event_description || '')
+        setValue('ticketing.ticket_banner_url', (ticketedEvent as any).ticket_banner_url || '')
 
         const { data: ticketTypes } = await supabase
           .from('ticket_types')
-          .select('id, name, price_cents, capacity_total, capacity_remaining, sort_order')
+          .select('id, name, description, price_cents, capacity_total, capacity_remaining, sort_order')
           .eq('ticketed_event_id', ticketedEvent.id)
           .order('sort_order') as { data: { id: string; name: string; price_cents: number; capacity_total: number | null; capacity_remaining: number | null; sort_order: number }[] | null }
 
@@ -312,6 +330,7 @@ export default function EditEvent() {
               id: tt.id,
               soldCount: sold,
               name: tt.name,
+              description: (tt as any).description || '',
               price_dollars: (tt.price_cents / 100).toFixed(2),
               capacity: tt.capacity_total != null ? String(tt.capacity_total) : ''
             }
@@ -551,6 +570,13 @@ export default function EditEvent() {
 
       // Update recurring pattern if needed
       if (data.recurring?.enabled) {
+        const recurringEndDate = data.recurring.end_date || null
+        let recurringMax = data.recurring.max_occurrences ? parseInt(data.recurring.max_occurrences) : null
+        // Constraint requires at least one end condition
+        if (!recurringEndDate && !recurringMax) {
+          recurringMax = 1
+        }
+
         const { data: existingPattern } = await supabase
           .from('recurring_event_patterns')
           .select('id')
@@ -562,8 +588,8 @@ export default function EditEvent() {
           const patternUpdate: RecurringPatternUpdate = {
             frequency: data.recurring.frequency as Database['public']['Enums']['recurrence_frequency'],
             days_of_week: data.recurring.days_of_week.length > 0 ? data.recurring.days_of_week : [new Date(data.start_time).getDay()],
-            end_date: data.recurring.end_date || null,
-            max_occurrences: data.recurring.max_occurrences ? parseInt(data.recurring.max_occurrences) : null
+            end_date: recurringEndDate,
+            max_occurrences: recurringMax
           }
           const { error: patternError } = await supabase
             .from('recurring_event_patterns')
@@ -579,8 +605,8 @@ export default function EditEvent() {
             parent_event_id: eventId,
             frequency: data.recurring.frequency as Database['public']['Enums']['recurrence_frequency'],
             days_of_week: data.recurring.days_of_week.length > 0 ? data.recurring.days_of_week : [new Date(data.start_time).getDay()],
-            end_date: data.recurring.end_date || null,
-            max_occurrences: data.recurring.max_occurrences ? parseInt(data.recurring.max_occurrences) : null
+            end_date: recurringEndDate,
+            max_occurrences: recurringMax
           }
           const { error: patternError } = await supabase
             .from('recurring_event_patterns')
@@ -599,6 +625,19 @@ export default function EditEvent() {
           throw new Error('Failed to get organization ID from team')
         }
         const orgId = teamDataForTicketing.org_id
+
+        const salesImmediate = data.ticketing.sales_immediate ?? true
+        const salesStartAt = salesImmediate ? null : (data.ticketing.sales_start_at ? new Date(data.ticketing.sales_start_at) : null)
+        const salesEndAt = salesImmediate ? null : (data.ticketing.sales_end_at ? new Date(data.ticketing.sales_end_at) : null)
+        const resolvedSalesEnd = !salesImmediate && !salesEndAt ? new Date(data.end_time) : salesEndAt
+
+        // Handle Banner Upload
+        let finalBannerUrl = data.ticketing.ticket_banner_url
+        if (bannerFile) {
+           const { path, error: uploadError } = await uploadTicketBanner(orgId, eventId, bannerFile)
+           if (uploadError) throw new Error(`Banner upload failed: ${uploadError.message}`)
+           if (path) finalBannerUrl = path
+        }
 
         if (!ticketedEventId) {
           // Create ticketed_events and ticket_types
@@ -621,8 +660,8 @@ export default function EditEvent() {
             venue_country: 'US',
             venue_is_virtual: data.location.is_virtual,
             venue_virtual_link: data.location.virtual_link?.trim() || null,
-            sales_start_at: data.ticketing.sales_start_at ? new Date(data.ticketing.sales_start_at).toISOString() : null,
-            sales_end_at: data.ticketing.sales_end_at ? new Date(data.ticketing.sales_end_at).toISOString() : null,
+            sales_start_at: salesStartAt ? salesStartAt.toISOString() : null,
+            sales_end_at: resolvedSalesEnd ? resolvedSalesEnd.toISOString() : null,
             status: data.ticketing.status as Database['public']['Enums']['ticketed_event_status'],
           }
           const { data: createdTe, error: teError } = await supabase
@@ -653,6 +692,7 @@ export default function EditEvent() {
                   capacity_remaining: capacityRemaining && capacityRemaining > 0 ? capacityRemaining : null,
                   sort_order: index,
                   is_active: true,
+                  description: tt.description?.trim() || null,
                 } satisfies TicketTypeInsert
               })
             if (inserts.length > 0) {
@@ -677,9 +717,11 @@ export default function EditEvent() {
             venue_country: 'US',
             venue_is_virtual: data.location.is_virtual,
             venue_virtual_link: data.location.virtual_link?.trim() || null,
-            sales_start_at: data.ticketing.sales_start_at ? new Date(data.ticketing.sales_start_at).toISOString() : null,
-            sales_end_at: data.ticketing.sales_end_at ? new Date(data.ticketing.sales_end_at).toISOString() : null,
+            sales_start_at: salesStartAt ? salesStartAt.toISOString() : null,
+            sales_end_at: resolvedSalesEnd ? resolvedSalesEnd.toISOString() : null,
             status: data.ticketing.status as Database['public']['Enums']['ticketed_event_status'],
+            event_description: data.ticketing.event_description || null,
+            ticket_banner_url: finalBannerUrl || null,
           }
           if (!hasPaidOrders) {
             (teUpdate as Record<string, unknown>).event_type = data.ticketing.event_type
@@ -721,6 +763,7 @@ export default function EditEvent() {
               const updatePayload: TicketTypeUpdate = {
                 name: tt.name.trim(),
                 sort_order: index,
+                description: tt.description?.trim() || null,
               }
               if (!hasPaidOrders) {
                 updatePayload.price_cents = priceCents
@@ -749,6 +792,7 @@ export default function EditEvent() {
                 capacity_remaining: capacityRemaining,
                 sort_order: index,
                 is_active: true,
+                description: tt.description?.trim() || null,
               }
               const { error: iErr } = await supabase.from('ticket_types').insert(insertPayload)
               if (iErr) throw iErr
@@ -1135,56 +1179,133 @@ export default function EditEvent() {
                         <p className="pa-text-xs pa-text-muted pa-mt-1">{t('admin.events.ticketing.eventType.helper')}</p>
                       </div>
 
-                      <div className="pa-form-grid pa-form-grid-2 pa-mb-4">
+                      <div className="pa-mb-4">
                         <Controller
-                          name="ticketing.sales_start_at"
+                          name="ticketing.sales_immediate"
                           control={control}
-                          rules={{
-                            validate: (value) => {
-                              if (value && new Date(value) < new Date()) {
-                                return t('admin.events.ticketing.salesWindow.startNotBeforeNow')
-                              }
-                              return true
-                            }
-                          }}
                           render={({ field }) => (
-                            <Input
-                              {...field}
-                              type="datetime-local"
-                              label={t('admin.events.ticketing.salesWindow.start')}
-                              placeholder={t('admin.events.ticketing.salesWindow.optional')}
-                              min={toDatetimeLocal(new Date())}
-                              error={errors.ticketing?.sales_start_at?.message}
+                            <Checkbox
+                              checked={!!field.value}
+                              onChange={(e) => {
+                                field.onChange(e.target.checked)
+                                if (e.target.checked) {
+                                  setValue('ticketing.sales_start_at', '', { shouldValidate: false })
+                                  setValue('ticketing.sales_end_at', '', { shouldValidate: false })
+                                }
+                              }}
+                              label="Immediately"
+                              helper="Allow tickets to go on sale right away. Turn off to schedule a sales window."
+                              disabled={hasPaidOrders}
                             />
                           )}
                         />
+                      </div>
+
+                      {!watchTicketSalesImmediate && (
+                        <div className="pa-form-grid pa-form-grid-2 pa-mb-4">
+                          <Controller
+                            name="ticketing.sales_start_at"
+                            control={control}
+                            rules={{
+                              validate: (value) => {
+                                if (watchTicketSalesImmediate) return true
+                                if (value && new Date(value) < new Date()) {
+                                  return t('admin.events.ticketing.salesWindow.startNotBeforeNow')
+                                }
+                                return true
+                              }
+                            }}
+                            render={({ field }) => (
+                              <Input
+                                {...field}
+                                type="datetime-local"
+                                label={t('admin.events.ticketing.salesWindow.start')}
+                                placeholder={t('admin.events.ticketing.salesWindow.optional')}
+                                min={toDatetimeLocal(new Date())}
+                                error={errors.ticketing?.sales_start_at?.message}
+                                disabled={hasPaidOrders}
+                              />
+                            )}
+                          />
+                          <Controller
+                            name="ticketing.sales_end_at"
+                            control={control}
+                            rules={{
+                              validate: (value) => {
+                                if (watchTicketSalesImmediate) return true
+                                const startAt = watch('ticketing.sales_start_at')
+                                if (startAt && value && new Date(value) <= new Date(startAt)) {
+                                  return t('admin.events.ticketing.salesWindow.endAfterStart')
+                                }
+                                const eventStart = watch('start_time')
+                                if (eventStart && value && new Date(value) > new Date(eventStart)) {
+                                  return t('admin.events.ticketing.salesWindow.endNotAfterEventStart')
+                                }
+                                return true
+                              }
+                            }}
+                            render={({ field }) => (
+                              <Input
+                                {...field}
+                                type="datetime-local"
+                                label={t('admin.events.ticketing.salesWindow.end')}
+                                placeholder={t('admin.events.ticketing.salesWindow.optional')}
+                                max={watch('start_time') || undefined}
+                                error={errors.ticketing?.sales_end_at?.message}
+                                disabled={hasPaidOrders}
+                              />
+                            )}
+                          />
+                        </div>
+                      )}
+
+                      <div className="pa-mb-4">
+                         <label className="pa-label">Event Description (public)</label>
                         <Controller
-                          name="ticketing.sales_end_at"
+                          name="ticketing.event_description"
                           control={control}
-                          rules={{
-                            validate: (value) => {
-                              const startAt = watch('ticketing.sales_start_at')
-                              if (startAt && value && new Date(value) <= new Date(startAt)) {
-                                return t('admin.events.ticketing.salesWindow.endAfterStart')
-                              }
-                              const eventStart = watch('start_time')
-                              if (eventStart && value && new Date(value) > new Date(eventStart)) {
-                                return t('admin.events.ticketing.salesWindow.endNotAfterEventStart')
-                              }
-                              return true
-                            }
-                          }}
+                          rules={{ maxLength: { value: 500, message: 'Max 500 characters' } }}
                           render={({ field }) => (
-                            <Input
+                            <textarea
+                              className="pa-input pa-textarea oa-textarea-expand"
                               {...field}
-                              type="datetime-local"
-                              label={t('admin.events.ticketing.salesWindow.end')}
-                              placeholder={t('admin.events.ticketing.salesWindow.optional')}
-                              max={watch('start_time') || undefined}
-                              error={errors.ticketing?.sales_end_at?.message}
+                              placeholder="Describe this event for public ticket buyers..."
+                              rows={3}
                             />
                           )}
                         />
+                         {errors.ticketing?.event_description && <span className="pa-error-message">{errors.ticketing.event_description.message}</span>}
+                      </div>
+
+                      <div className="pa-mb-4">
+                         <label className="pa-label">Ticket Banner Image</label>
+                        <div className="pa-flex pa-flex-col pa-gap-4">
+                            <FileUpload
+                                onFileSelect={setBannerFile}
+                                value={bannerFile}
+                                accept="image/*"
+                                maxSize={5 * 1024 * 1024} // 5MB
+                                label=""
+                                buttonText="Upload Banner"
+                                replaceText="Replace Banner"
+                                helperText="Suggested size: 1200 × 400 px (3:1). Max 5MB."
+                                showDropZone={true}
+                                fullWidth={true}
+                            />
+                            
+                            {watch('ticketing.ticket_banner_url') && !bannerFile && (
+                                <div className="pa-bg-surface-section pa-p-3 pa-rounded-lg pa-border pa-border-border-subtle">
+                                    <p className="pa-text-xs pa-font-bold pa-uppercase pa-text-muted pa-mb-2">Current Banner</p>
+                                    <div className="pa-relative pa-w-full pa-h-32 pa-rounded-md pa-overflow-hidden pa-bg-gray-100 dark:pa-bg-gray-800">
+                                        <img 
+                                            src={watch('ticketing.ticket_banner_url')} 
+                                            alt="Current Banner" 
+                                            className="pa-w-full pa-h-full pa-object-cover" 
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                       </div>
 
                       <div className="pa-mb-4">
@@ -1212,7 +1333,7 @@ export default function EditEvent() {
                             <Button
                               type="button"
                               variant="ghost"
-                              onClick={() => appendTicketType({ name: '', price_dollars: '', capacity: '' })}
+                            onClick={() => appendTicketType({ name: '', price_dollars: '', capacity: '', description: '' })}
                             >
                               {t('admin.events.ticketing.ticketTypes.add')}
                             </Button>
@@ -1323,6 +1444,21 @@ export default function EditEvent() {
                                         </Button>
                                       )}
                                     </div>
+                                  </div>
+                                  <div className="pa-mb-2">
+                                    <Controller
+                                      name={`ticketing.ticket_types.${index}.description`}
+                                      control={control}
+                                      rules={{ maxLength: { value: 250, message: 'Max 250 characters' } }}
+                                      render={({ field }) => (
+                                        <Input
+                                          {...field}
+                                          label="Description (optional)"
+                                          placeholder="e.g. Early Bird special..."
+                                          error={errors.ticketing?.ticket_types?.[index]?.description?.message}
+                                        />
+                                      )}
+                                    />
                                   </div>
                                 </div>
                               )

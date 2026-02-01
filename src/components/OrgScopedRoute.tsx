@@ -8,10 +8,16 @@
 import { useEffect, useState } from 'react'
 import { useParams, Navigate, useLocation } from 'react-router-dom'
 import { resolveOrgFromSlug, type OrgContext } from '../utils/orgResolution'
+import { usePublicOrgTheme } from '../hooks/usePublicOrgTheme'
 
 interface OrgScopedRouteProps {
   children: (org: OrgContext) => React.ReactNode
   fallback?: React.ReactNode
+}
+
+function PublicThemeApplicator({ orgId, children }: { orgId: string, children: React.ReactNode }) {
+  usePublicOrgTheme(orgId)
+  return <>{children}</>
 }
 
 export function OrgScopedRoute({ children, fallback }: OrgScopedRouteProps) {
@@ -116,7 +122,11 @@ export function OrgScopedRoute({ children, fallback }: OrgScopedRouteProps) {
   }
 
   // Render children with org context
-  return <>{children(org)}</>
+  return (
+    <PublicThemeApplicator orgId={org.id}>
+      {children(org)}
+    </PublicThemeApplicator>
+  )
 }
 
 /**
