@@ -41,8 +41,8 @@ export function Checkbox({
     <div className={className} style={style}>
       <label 
         className={cn(
-          'pa-checkbox',
           'oa-checkbox',
+          'pa-checkbox',
           disabled && 'pa-checkbox-disabled',
           'pa-inline-flex',
           'pa-items-center',
@@ -58,8 +58,8 @@ export function Checkbox({
           onChange={onChange}
           disabled={disabled}
           className={cn(
-            'pa-checkbox-input',
             'oa-checkbox-input',
+            'pa-checkbox-input',
             disabled ? 'pa-cursor-not-allowed' : 'pa-cursor-pointer'
           )}
         />

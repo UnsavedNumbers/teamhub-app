@@ -53,6 +53,7 @@ import {
   initiateStripeConnectOnboarding,
   getStripeConnectStatus,
   refreshStripeConnectStatus,
+  createStripeRemediationLink,
 } from '../../data/services/paymentSettingsService'
 
 import type { StripeConnectStatus } from '../../types/stripeConnect.types'
@@ -971,11 +972,43 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
   const [loading, setLoading] = useState(true)
   const [onboarding, setOnboarding] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [remediating, setRemediating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const [allowPartialPayments, setAllowPartialPayments] = useState<boolean>(true)
   const [policyLoading, setPolicyLoading] = useState(true)
   const [policySaving, setPolicySaving] = useState(false)
+
+  const formatDateTime = useCallback((iso?: string | null) => {
+    if (!iso) return ''
+    try {
+      const dt = new Date(iso)
+      return dt.toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+    } catch {
+      return iso
+    }
+  }, [])
+
+  const payoutsPaused = !!(connectStatus?.connected && connectStatus?.payoutsEnabled === false)
+  const hasDueRequirements = (connectStatus?.requirementsDue?.length ?? 0) > 0
+  const hasPendingReview = (connectStatus?.requirementsPending?.length ?? 0) > 0 || connectStatus?.disabledReason === 'requirements.pending_verification'
+  const isActionablePause = payoutsPaused && (connectStatus?.disabledReason === 'requirements.past_due' || hasDueRequirements)
+
+  const disabledCopy = useMemo(() => {
+    const reason = connectStatus?.disabledReason
+    if (!reason) return null
+    switch (reason) {
+      case 'requirements.past_due':
+        return 'Action required: verification information is overdue.'
+      case 'requirements.pending_verification':
+        return 'Stripe is reviewing your submitted information. No action needed yet.'
+      case 'under_review':
+        return 'Your account is under review. This usually resolves within 1-2 business days.'
+      default:
+        if (reason.startsWith('rejected.')) return 'Stripe restricted the account. Please contact support.'
+        return `Stripe reported: ${reason}`
+    }
+  }, [connectStatus?.disabledReason])
 
   const loadPolicy = useCallback(async () => {
     if (!organizationId) return
@@ -1048,14 +1081,31 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
     if (!organizationId) return
     setRefreshing(true)
     setError(null)
-    const { error: refreshError } = await refreshStripeConnectStatus(organizationId)
+    const { error: refreshError, data: refreshed } = await refreshStripeConnectStatus(organizationId)
     if (refreshError) {
       setError(refreshError.message)
     } else {
-      await loadStatus()
+      if (refreshed) {
+        setConnectStatus(refreshed)
+      } else {
+        await loadStatus()
+      }
       showSuccess('Connect status refreshed')
     }
     setRefreshing(false)
+  }
+
+  const handleRemediationLink = async () => {
+    if (!organizationId) return
+    setRemediating(true)
+    setError(null)
+    const { url, error: linkError } = await createStripeRemediationLink(organizationId)
+    if (linkError || !url) {
+      setError(linkError?.message || 'Unable to generate remediation link')
+      setRemediating(false)
+      return
+    }
+    window.location.href = url
   }
 
   if (loading || policyLoading) {
@@ -1093,6 +1143,72 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
         </div>
       )}
 
+      {connectStatus && payoutsPaused && (
+        <div className="pa-alert pa-mb-4" style={{ background: 'var(--pa-danger-bg)', color: 'var(--pa-danger)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--pa-danger-border, rgba(220,38,38,0.3))' }}>
+          <div className="pa-flex pa-justify-between pa-items-center pa-gap-3">
+            <div>
+              <div className="pa-h4 pa-mb-1">Payouts Paused</div>
+              <div className="pa-text-sm">
+                {disabledCopy || 'Stripe paused payouts for this account. Please resolve in Stripe to resume transfers.'}
+              </div>
+              {connectStatus.requirementsDeadline && (
+                <div className="pa-text-xs pa-mt-2">
+                  Deadline: {formatDateTime(connectStatus.requirementsDeadline)}
+                </div>
+              )}
+            </div>
+            <div className="pa-flex pa-gap-2">
+              {isActionablePause ? (
+                <Button
+                  variant="primary"
+                  onClick={handleRemediationLink}
+                  loading={remediating}
+                  disabled={remediating}
+                >
+                  Fix Now
+                </Button>
+              ) : (
+                connectStatus?.dashboardUrl && (
+                  <Button
+                    variant="ghost"
+                    icon="open_in_new"
+                    onClick={() => window.open(connectStatus.dashboardUrl!, '_blank')}
+                  >
+                    View in Stripe
+                  </Button>
+                )
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {connectStatus && !payoutsPaused && hasDueRequirements && (
+        <div className="pa-alert pa-mb-4" style={{ background: 'var(--pa-warning-bg, #FFF8E6)', color: 'var(--pa-text)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--pa-border-subtle, #F3D9A4)' }}>
+          <div className="pa-flex pa-justify-between pa-items-center pa-gap-3">
+            <div>
+              <div className="pa-h4 pa-mb-1">Verification needed</div>
+              <div className="pa-text-sm">
+                Complete the outstanding Stripe requirements to avoid payout interruptions.
+              </div>
+              {connectStatus.requirementsDeadline && (
+                <div className="pa-text-xs pa-mt-2">
+                  Deadline: {formatDateTime(connectStatus.requirementsDeadline)}
+                </div>
+              )}
+            </div>
+            <Button
+              variant="primary"
+              onClick={handleRemediationLink}
+              loading={remediating}
+              disabled={remediating}
+            >
+              Complete Now
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="pa-form-group pa-mb-6">
         <div className="pa-mb-4">
           <div className="pa-caption pa-text-muted pa-mb-2">Connection Status</div>
@@ -1111,6 +1227,11 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
                 Refresh Status
               </Button>
             )}
+            {connectStatus?.lastStatusUpdated && (
+              <span className="pa-text-xs pa-text-muted">
+                Updated {formatDateTime(connectStatus.lastStatusUpdated)}
+              </span>
+            )}
           </div>
         </div>
 
@@ -1118,8 +1239,8 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
           <>
             <div className="pa-mb-4">
               <div className="pa-caption pa-text-muted pa-mb-2">Payout Status</div>
-              <Badge variant={connectStatus.payoutsEnabled ? 'success' : 'neutral'}>
-                {connectStatus.payoutsEnabled ? 'Enabled' : 'Disabled'}
+              <Badge variant={connectStatus.payoutsEnabled ? 'success' : 'danger'}>
+                {connectStatus.payoutsEnabled ? 'Active' : 'Paused'}
               </Badge>
             </div>
 
@@ -1137,6 +1258,46 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
                 {connectStatus.onboardingStatus}
               </Badge>
             </div>
+
+            <div className="pa-mb-4">
+              <div className="pa-caption pa-text-muted pa-mb-2">Stripe Reason</div>
+              <div className="pa-text-sm">
+                {disabledCopy || 'None reported'}
+              </div>
+            </div>
+
+            {hasPendingReview && (
+              <div className="pa-text-sm pa-text-muted pa-mb-4">
+                Stripe is reviewing recently submitted documents. You will be notified when this is complete.
+              </div>
+            )}
+
+            <div className="pa-mb-4">
+              <div className="pa-caption pa-text-muted pa-mb-2">Outstanding Requirements</div>
+              {connectStatus.requirementsDue?.length ? (
+                <ul className="pa-list pa-pl-4">
+                  {connectStatus.requirementsDue.map((req) => (
+                    <li key={req} className="pa-text-sm">{req}</li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="pa-text-sm pa-text-muted">No requirements currently due.</div>
+              )}
+            </div>
+
+            {connectStatus.requirementsErrors?.length > 0 && (
+              <div className="pa-mb-4">
+                <div className="pa-caption pa-text-muted pa-mb-2">Stripe reported issues</div>
+                <ul className="pa-list pa-pl-4">
+                  {connectStatus.requirementsErrors.map((err, idx) => (
+                    <li key={`${err.code}-${idx}`} className="pa-text-sm">
+                      {err.reason || err.code || 'Issue detected'}
+                      {err.requirement ? ` — ${err.requirement}` : ''}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {connectStatus.payoutDescriptor && (
               <div className="pa-mb-4">
@@ -1157,7 +1318,28 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
               </div>
             )}
 
-            {connectStatus.onboardingStatus !== 'completed' && (
+            {(isActionablePause || hasDueRequirements) && (
+              <div className="pa-mb-4 pa-flex pa-gap-2">
+                <Button
+                  variant="primary"
+                  onClick={handleRemediationLink}
+                  disabled={remediating}
+                  loading={remediating}
+                >
+                  Fix Now
+                </Button>
+                {connectStatus.dashboardUrl && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => window.open(connectStatus.dashboardUrl!, '_blank')}
+                  >
+                    Open Stripe
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {connectStatus.onboardingStatus !== 'completed' && !isActionablePause && (
               <div className="pa-mb-4">
                 <Button
                   variant="primary"

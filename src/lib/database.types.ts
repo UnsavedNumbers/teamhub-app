@@ -6109,6 +6109,12 @@ export type Database = {
             | Database["public"]["Enums"]["payout_onboarding_status"]
             | null
           payouts_enabled: boolean | null
+          stripe_payouts_enabled: boolean | null
+          stripe_payouts_disabled_reason: string | null
+          stripe_requirements_due: Json | null
+          stripe_requirements_errors: Json | null
+          stripe_requirements_deadline: string | null
+          stripe_status_updated_at: string | null
           place_id: string | null
           primary_city: string | null
           primary_region_radius_miles: number | null
@@ -6146,6 +6152,12 @@ export type Database = {
             | Database["public"]["Enums"]["payout_onboarding_status"]
             | null
           payouts_enabled?: boolean | null
+          stripe_payouts_enabled?: boolean | null
+          stripe_payouts_disabled_reason?: string | null
+          stripe_requirements_due?: Json | null
+          stripe_requirements_errors?: Json | null
+          stripe_requirements_deadline?: string | null
+          stripe_status_updated_at?: string | null
           place_id?: string | null
           primary_city?: string | null
           primary_region_radius_miles?: number | null
@@ -6183,6 +6195,12 @@ export type Database = {
             | Database["public"]["Enums"]["payout_onboarding_status"]
             | null
           payouts_enabled?: boolean | null
+          stripe_payouts_enabled?: boolean | null
+          stripe_payouts_disabled_reason?: string | null
+          stripe_requirements_due?: Json | null
+          stripe_requirements_errors?: Json | null
+          stripe_requirements_deadline?: string | null
+          stripe_status_updated_at?: string | null
           place_id?: string | null
           primary_city?: string | null
           primary_region_radius_miles?: number | null

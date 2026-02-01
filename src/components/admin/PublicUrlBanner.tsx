@@ -42,6 +42,9 @@ export default function PublicUrlBanner({
   links,
   setSlugLinkText = 'Set your organization slug in Organization setup to get public links.',
 }: PublicUrlBannerProps) {
+  // Track which URL was copied (for multi-URL case)
+  const [copiedPath, setCopiedPath] = useState<string | null>(null)
+
   // Fetch org slug
   const { data: orgSlug, isLoading: slugLoading } = useQuery({
     queryKey: [QUERY_KEY_ORG_SLUG, orgId],
@@ -90,9 +93,6 @@ export default function PublicUrlBanner({
       </div>
     )
   }
-
-  // Track which URL was copied (for multi-URL case)
-  const [copiedPath, setCopiedPath] = useState<string | null>(null)
 
   // Render URL(s)
   return (
