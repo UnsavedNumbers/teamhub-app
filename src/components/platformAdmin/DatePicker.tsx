@@ -1,4 +1,5 @@
 import { forwardRef } from 'react'
+import { cn } from '../../utils/cn'
 import {
   DatePicker as AriaDatePicker,
   Label,
@@ -90,7 +91,7 @@ export const DatePicker = forwardRef<HTMLDivElement, DatePickerProps>(({
   }
 
   return (
-    <div ref={ref} className="pa-form-group">
+    <div ref={ref} className="pa-form-group oa-form-group">
       <AriaDatePicker
         value={dateValue}
         onChange={handleChange}
@@ -104,43 +105,60 @@ export const DatePicker = forwardRef<HTMLDivElement, DatePickerProps>(({
         aria-label={!label ? accessibleName : undefined}
       >
         {label && (
-          <Label className={`pa-label ${isRequired ? 'pa-label--required' : ''}`}>
+          <Label
+            className={cn(
+              'pa-label',
+              'oa-label',
+              isRequired && 'pa-label--required',
+              isRequired && 'oa-label--required',
+            )}
+          >
             {label}
           </Label>
         )}
         
-        <Group className={`pa-datepicker-group ${hasError ? 'pa-datepicker-group--error' : ''}`}>
-          <DateInput className="pa-datepicker-input" aria-label={!label ? accessibleName : undefined}>
+        <Group
+          className={cn(
+            'pa-datepicker-group',
+            'oa-datepicker-group',
+            hasError && 'pa-datepicker-group--error',
+            hasError && 'oa-datepicker-group--error',
+          )}
+        >
+          <DateInput
+            className="pa-datepicker-input oa-datepicker-input"
+            aria-label={!label ? accessibleName : undefined}
+          >
             {(segment) => (
               <DateSegment
                 segment={segment}
-                className="pa-datepicker-segment"
+                className="pa-datepicker-segment oa-datepicker-segment"
               />
             )}
           </DateInput>
-          <Button className="pa-datepicker-button" aria-label="Open calendar">
+          <Button className="pa-datepicker-button oa-datepicker-button" aria-label="Open calendar">
             <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
               calendar_today
             </span>
           </Button>
         </Group>
 
-        <Popover className="pa-datepicker-popover" placement="bottom start">
-          <Dialog className="pa-datepicker-dialog">
-            <Calendar className="pa-datepicker-calendar">
-              <header className="pa-datepicker-header">
-                <Button slot="previous" className="pa-datepicker-nav-button">
+        <Popover className="pa-datepicker-popover oa-datepicker-popover" placement="bottom start">
+          <Dialog className="pa-datepicker-dialog oa-datepicker-dialog">
+            <Calendar className="pa-datepicker-calendar oa-datepicker-calendar">
+              <header className="pa-datepicker-header oa-datepicker-header">
+                <Button slot="previous" className="pa-datepicker-nav-button oa-datepicker-nav-button">
                   <span className="material-symbols-outlined">chevron_left</span>
                 </Button>
-                <Heading className="pa-datepicker-heading" />
-                <Button slot="next" className="pa-datepicker-nav-button">
+                <Heading className="pa-datepicker-heading oa-datepicker-heading" />
+                <Button slot="next" className="pa-datepicker-nav-button oa-datepicker-nav-button">
                   <span className="material-symbols-outlined">chevron_right</span>
                 </Button>
               </header>
-              <CalendarGrid className="pa-datepicker-grid">
+              <CalendarGrid className="pa-datepicker-grid oa-datepicker-grid">
                 <CalendarGridHeader>
                   {(day) => (
-                    <CalendarHeaderCell className="pa-datepicker-weekday">
+                    <CalendarHeaderCell className="pa-datepicker-weekday oa-datepicker-weekday">
                       {day}
                     </CalendarHeaderCell>
                   )}
@@ -149,7 +167,7 @@ export const DatePicker = forwardRef<HTMLDivElement, DatePickerProps>(({
                   {(date) => (
                     <CalendarCell
                       date={date}
-                      className="pa-datepicker-cell"
+                      className="pa-datepicker-cell oa-datepicker-cell"
                     />
                   )}
                 </CalendarGridBody>
@@ -159,7 +177,14 @@ export const DatePicker = forwardRef<HTMLDivElement, DatePickerProps>(({
         </Popover>
 
         {(helper || error) && (
-          <div className={`pa-helper ${hasError ? 'pa-helper--error' : ''}`}>
+          <div
+            className={cn(
+              'pa-helper',
+              'oa-helper',
+              hasError && 'pa-helper--error',
+              hasError && 'oa-helper--error',
+            )}
+          >
             {error || helper}
           </div>
         )}

@@ -6,84 +6,103 @@
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { getTicketedEvents } from '@/data/services'
 import { useRouteLink } from '@/utils/routes'
 import { useOrganization } from '@/contexts/OrganizationContext'
 import PublicUrlBanner, { QUERY_KEY_ORG_SLUG } from '@/components/admin/PublicUrlBanner'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
+import { OrgAdminButton } from '@/components/admin/OrgAdminButton'
+import EmptyState from '@/components/platformAdmin/EmptyState'
 import { getPublicBaseUrl } from '@/utils/publicUrls'
 import type { TicketedEvent } from '@/types/ticketing'
 
+const CREATE_EVENT_ROUTE = 'admin.events.create'
+
 export default function TicketingEvents() {
   const { currentOrganization } = useOrganization()
+  const navigate = useNavigate()
+  const createEventPath = useRouteLink(CREATE_EVENT_ROUTE)
+  const hasOrg = Boolean(currentOrganization?.id)
 
-  const { data: eventsResponse } = useQuery({
-    queryKey: ['ticketed-events', 'admin'],
+  const { data: eventsResponse, isLoading } = useQuery<TicketedEvent[]>({
+    queryKey: ['ticketed-events', currentOrganization?.id],
+    enabled: hasOrg,
     queryFn: async () => {
-      // Get user's org_id
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return { data: [], error: new Error('Not authenticated') }
-      
-      const { data: userData } = await supabase
-        .from('users')
-        .select('org_id')
-        .eq('id', user.id)
-        .single()
-      
-      if (!userData?.org_id) return { data: [], error: null }
-      
-      return getTicketedEvents({ org_id: userData.org_id, upcoming_only: false })
+      if (!currentOrganization?.id) return []
+      return getTicketedEvents({ org_id: currentOrganization.id, upcoming_only: false })
     },
   })
 
-  const events = Array.isArray(eventsResponse) ? eventsResponse : eventsResponse?.data || []
+  const events = eventsResponse ?? []
+  const isEmpty = hasOrg && !isLoading && events.length === 0
+
+  const handleCreateEvent = () => {
+    navigate(createEventPath)
+  }
 
   return (
     <div className="pa-page-container">
-      <div className="pa-page-header">
-        <h1 className="pa-page-title">Ticketed Events</h1>
-        <Link
-          to={useRouteLink('admin.ticketingEvents.create')}
-          className="pa-button pa-button-primary"
-        >
-          Create Event
-        </Link>
-      </div>
+      <AdminPageHeader
+        title="Ticketed Events"
+        subtitle="Publish tickets for your next games, fundraisers, or tournaments."
+        actions={
+          <OrgAdminButton as={Link} to={createEventPath} icon="add">
+            Create Event
+          </OrgAdminButton>
+        }
+      />
 
-      {/* Public URL Banner */}
       {currentOrganization?.id && (
-        <PublicUrlBanner
-          orgId={currentOrganization.id}
-          title="Your public ticket page"
-          description="Share this link so guests can see events and buy tickets."
-          path="tickets"
-        />
+        <div className="pa-mb-6">
+          <PublicUrlBanner
+            orgId={currentOrganization.id}
+            title="Your public ticket page"
+            description="Share this link so guests can see ticketed events and buy tickets."
+            path="tickets"
+          />
+        </div>
       )}
 
-      {events.length === 0 ? (
-        <div className="pa-empty-state">
-          <p>No ticketed events yet. Create your first event to start selling tickets.</p>
-        </div>
-      ) : (
-        <div className="pa-table-container">
-          <table className="pa-table">
-            <thead>
-              <tr>
-                <th>Event</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {events.map((event) => (
-                <EventRow key={event.id} event={event} />
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <div className="pa-card pa-card--no-padding pa-shadow-sm">
+        {isLoading && events.length === 0 ? (
+          <div className="pa-py-9 pa-flex pa-justify-center">
+            <span
+              className="pa-spinner"
+              style={{ width: '32px', height: '32px', borderWidth: '3px' }}
+            />
+          </div>
+        ) : isEmpty ? (
+          <div className="pa-p-8">
+            <EmptyState
+              icon="event_available"
+              title="No ticketed events yet"
+              description="Publish an event under Events and enable tickets to start selling."
+              action={{ label: 'Create Event', onClick: handleCreateEvent }}
+              noCard
+            />
+          </div>
+        ) : (
+          <div className="pa-table-container">
+            <table className="pa-table">
+              <thead>
+                <tr>
+                  <th>Event</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {events.map((event) => (
+                  <EventRow key={event.id} event={event} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -111,15 +130,13 @@ function EventRow({ event }: { event: TicketedEvent }) {
   const handleCopyPublicUrl = async () => {
     if (!orgSlug) return
 
-    // Use shared util for URL construction
     const publicUrl = getPublicBaseUrl(orgSlug, `tickets/events/${event.id}`)
-    
+
     try {
       await navigator.clipboard.writeText(publicUrl)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
-      // Fallback: textarea method
       const textArea = document.createElement('textarea')
       textArea.value = publicUrl
       document.body.appendChild(textArea)
