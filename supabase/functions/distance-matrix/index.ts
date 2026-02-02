@@ -23,7 +23,7 @@ serve(async (req) => {
       })
     }
 
-    const apiKey = Deno.env.get('GOOGLE_PLACES_API_KEY')
+    const apiKey = Deno.env.get('GOOGLE_DISTANCE_MATRIX_API_KEY') || Deno.env.get('GOOGLE_PLACES_API_KEY')
     if (!apiKey) {
       return new Response(JSON.stringify({ error: 'API key not configured' }), {
         status: 500,
@@ -32,7 +32,7 @@ serve(async (req) => {
     }
 
     const departureTime = Math.floor(Date.now() / 1000)
-    const apiUrl = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origins)}&destinations=${encodeURIComponent(destinations)}&departure_time=${departureTime}&traffic_model=best_guess&key=${apiKey}`
+    const apiUrl = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origins)}&destinations=${encodeURIComponent(destinations)}&departure_time=${departureTime}&traffic_model=best_guess&units=imperial&key=${apiKey}`
 
     const response = await fetch(apiUrl)
     const data = await response.json()

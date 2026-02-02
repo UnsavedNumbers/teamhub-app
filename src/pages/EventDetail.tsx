@@ -55,8 +55,13 @@ interface Attendance {
 }
 
 // Helper function to build full address from EventLocation fields
-function buildVenueAddress(location: { venue_name?: string | null; address_line1?: string | null; address_line2?: string | null; city?: string | null; state?: string | null; postal_code?: string | null } | null): string {
+function buildVenueAddress(location: { venue_name?: string | null; venue_address?: string | null; address_line1?: string | null; address_line2?: string | null; city?: string | null; state?: string | null; postal_code?: string | null } | null): string {
   if (!location) return ''
+
+  // If venue_address is provided directly, use it
+  if (location.venue_address) {
+    return location.venue_address
+  }
 
   const parts: string[] = []
 
@@ -214,6 +219,16 @@ export default function EventDetail() {
     durationInTraffic?: string
   } | null>(null)
   const [loadingCommute, setLoadingCommute] = useState(false)
+  const [weatherData, setWeatherData] = useState<{
+    temperature: number
+    feelsLike: number
+    condition: string
+    description: string
+    humidity: number
+    windSpeed: number
+    precipitation: number
+  } | null>(null)
+  const [loadingWeather, setLoadingWeather] = useState(false)
 
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
@@ -263,7 +278,14 @@ export default function EventDetail() {
           },
         })
         
+        if (!response.ok) {
+          console.error('Distance matrix API error:', response.status, response.statusText)
+          setLoadingCommute(false)
+          return
+        }
+        
         const result = await response.json()
+        console.log('Distance matrix response:', result)
         
         if (result?.status === 'OK' && result.rows?.[0]?.elements?.[0]?.status === 'OK') {
           const element = result.rows[0].elements[0]
@@ -272,9 +294,11 @@ export default function EventDetail() {
             duration: element.duration?.text || '',
             durationInTraffic: element.duration_in_traffic?.text,
           })
+        } else {
+          console.error('Distance matrix failed:', result?.status, result?.rows?.[0]?.elements?.[0])
         }
       } catch (err) {
-        // Silently fail - commute info is nice-to-have
+        console.error('Error fetching commute summary:', err)
       } finally {
         setLoadingCommute(false)
       }
@@ -282,6 +306,63 @@ export default function EventDetail() {
     
     fetchCommuteSummary()
   }, [commuteStartLocation, event?.location])
+
+  // Fetch weather forecast for event date
+  useEffect(() => {
+    const fetchWeather = async () => {
+      if (!event?.location || !event?.start_time) {
+        setWeatherData(null)
+        return
+      }
+      
+      setLoadingWeather(true)
+      setWeatherData(null)
+      
+      try {
+        const location = encodeURIComponent(event.location)
+        const date = encodeURIComponent(event.start_time)
+        
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/weather?location=${location}&date=${date}`
+        const { data } = await supabase.auth.getSession()
+        
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${data.session?.access_token}`,
+          },
+        })
+        
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error('Weather API error:', response.status, response.statusText, errorText)
+          setLoadingWeather(false)
+          return
+        }
+        
+        const result = await response.json()
+        console.log('Weather response:', result)
+        
+        if (result.temperature !== undefined) {
+          setWeatherData({
+            temperature: result.temperature,
+            feelsLike: result.feelsLike,
+            condition: result.condition,
+            description: result.description,
+            humidity: result.humidity,
+            windSpeed: result.windSpeed,
+            precipitation: result.precipitation,
+          })
+        } else {
+          console.error('Weather data incomplete:', result)
+        }
+      } catch (err) {
+        console.error('Error fetching weather:', err)
+      } finally {
+        setLoadingWeather(false)
+      }
+    }
+    
+    fetchWeather()
+  }, [event?.location, event?.start_time])
 
   const fetchData = useCallback(async () => {
     if (!isReady || !eventId) return
@@ -324,7 +405,7 @@ export default function EventDetail() {
         start_time: eventData.start_time,
         end_time: eventData.end_time,
         arrival_time: eventData.arrival_time,
-        location: buildVenueAddress(eventData.event_location),
+        location: buildVenueAddress(eventData.event_location || null),
         notes: eventData.notes,
         team: {
           name: eventData.team?.name ?? 'Team',
@@ -614,7 +695,7 @@ export default function EventDetail() {
 
           {/* Venue Location */}
           {venueAddress ? (
-            <Card className="p-6 relative">
+            <Card className="p-6 relative rounded-tl-none">
               <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
                 <Icon name="location_on" size="text-2xl" />
                 Venue Location
@@ -727,7 +808,7 @@ export default function EventDetail() {
               </div>
             </Card>
           ) : (
-            <Card className="p-6 relative">
+            <Card className="p-6 relative rounded-tl-none">
               <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
                 <Icon name="location_off" size="text-2xl" />
                 No Location Info
@@ -754,9 +835,158 @@ export default function EventDetail() {
             </Card>
           )}
 
+          {/* Venue Insights */}
+          {event.event_location?.place_id && (
+            <VenueInsights placeId={event.event_location.place_id} />
+          )}
+
+          {/* Event Notes */}
+          {event.notes && (
+            <Card className="p-6 relative rounded-tl-none">
+              <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
+                <Icon name="notes" size="text-2xl" />
+                Event Notes
+              </div>
+              <div className="pt-12">
+                <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap bg-slate-50 dark:bg-slate-800/50 p-4 rounded">
+                  {event.notes}
+                </p>
+              </div>
+            </Card>
+          )}
+
+          {/* RSVP Section */}
+          <Card className="p-6 relative rounded-tl-none">
+            <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
+              <Icon name="how_to_reg" size="text-2xl" />
+              RSVP
+            </div>
+            <div className="pt-12">
+              {children.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-slate-500 dark:text-slate-400 mb-4">{t('portal.events.noChildren')}</p>
+                  <Button variant="primary" onClick={() => navigate('/portal/athletes')}>
+                    {t('portal.events.add')}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {children.map((child) => {
+                    const att = attendance[child.id]
+                    return (
+                      <div key={child.id} className="border-b border-slate-200 dark:border-slate-700 pb-4 last:border-b-0 last:pb-0">
+                        <div className="flex items-center justify-between mb-3">
+                          <CardTitle className="text-lg">{child.first_name} {child.last_name}</CardTitle>
+                          {saving === child.id && (
+                            <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Saving...</span>
+                          )}
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          {(['going', 'late', 'not_going'] as const).map((status) => (
+                            <button
+                              key={status}
+                              onClick={() => handleRsvp(child.id, status)}
+                              disabled={saving === child.id}
+                              className={`flex-1 py-3 px-4 rounded font-bold text-sm uppercase tracking-wide transition-colors min-h-[44px] ${
+                                att?.status === status
+                                  ? statusStyles[status]
+                                  : statusInactiveStyles
+                              }`}
+                            >
+                              {status === 'going' ? 'Going' : status === 'late' ? 'Running Late' : 'Not Going'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </Card>
+
+        </div>
+
+        {/* Right Column - Sidebar */}
+        <div className="space-y-6">
+          
+          {/* Event Photos */}
+          {eventId && (
+            <PhotoSection
+              entityType="event"
+              entityId={eventId}
+              title="Event Photos"
+            />
+          )}
+
+          {/* Add to Calendar */}
+          <Card className="p-6 relative rounded-tl-none">
+            <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
+              <Icon name="event" size="text-2xl" />
+              Add to Calendar
+            </div>
+            <div className="pt-12">
+              {googleCalendarLink({
+                title: event.title,
+                startTime: event.start_time,
+                endTime: event.end_time,
+                location: venueAddress || '',
+              }) ? (
+                <a
+                  href={googleCalendarLink({
+                    title: event.title,
+                    startTime: event.start_time,
+                    endTime: event.end_time,
+                    location: venueAddress || '',
+                  })!}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block"
+                >
+                  <Button variant="primary" className="w-full">
+                    <Icon name="event" size="text-sm" className="mr-2" />
+                    Google Calendar
+                  </Button>
+                </a>
+              ) : (
+                <Button variant="primary" className="w-full" disabled>
+                  <Icon name="event" size="text-sm" className="mr-2" />
+                  Google Calendar
+                </Button>
+              )}
+              {appleCalendarLink({
+                title: event.title,
+                startTime: event.start_time,
+                endTime: event.end_time,
+                location: venueAddress || '',
+              }) ? (
+                <a
+                  href={appleCalendarLink({
+                    title: event.title,
+                    startTime: event.start_time,
+                    endTime: event.end_time,
+                    location: venueAddress || '',
+                  })!}
+                  download={`${event.title}.ics`}
+                  className="block"
+                >
+                  <Button variant="primary" className="w-full">
+                    <Icon name="event" size="text-sm" className="mr-2" />
+                    Apple Calendar
+                  </Button>
+                </a>
+              ) : (
+                <Button variant="primary" className="w-full" disabled>
+                  <Icon name="event" size="text-sm" className="mr-2" />
+                  Apple Calendar
+                </Button>
+              )}
+            </div>
+          </Card>
+
           {/* Commute Info */}
           {venueAddress && (
-            <Card className="p-6 relative">
+            <Card className="p-6 relative rounded-tl-none">
               <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
                 <Icon name="directions_car" size="text-2xl" />
                 Commute Info
@@ -877,155 +1107,6 @@ export default function EventDetail() {
             </Card>
           )}
 
-          {/* Venue Insights */}
-          {event.event_location?.place_id && (
-            <VenueInsights placeId={event.event_location.place_id} />
-          )}
-
-          {/* Event Notes */}
-          {event.notes && (
-            <Card className="p-6 relative">
-              <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
-                <Icon name="notes" size="text-2xl" />
-                Event Notes
-              </div>
-              <div className="pt-12">
-                <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap bg-slate-50 dark:bg-slate-800/50 p-4 rounded">
-                  {event.notes}
-                </p>
-              </div>
-            </Card>
-          )}
-
-          {/* RSVP Section */}
-          <Card className="p-6 relative">
-            <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
-              <Icon name="how_to_reg" size="text-2xl" />
-              RSVP
-            </div>
-            <div className="pt-12">
-              {children.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-slate-500 dark:text-slate-400 mb-4">{t('portal.events.noChildren')}</p>
-                  <Button variant="primary" onClick={() => navigate('/portal/athletes')}>
-                    {t('portal.events.add')}
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {children.map((child) => {
-                    const att = attendance[child.id]
-                    return (
-                      <div key={child.id} className="border-b border-slate-200 dark:border-slate-700 pb-4 last:border-b-0 last:pb-0">
-                        <div className="flex items-center justify-between mb-3">
-                          <CardTitle className="text-lg">{child.first_name} {child.last_name}</CardTitle>
-                          {saving === child.id && (
-                            <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Saving...</span>
-                          )}
-                        </div>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          {(['going', 'late', 'not_going'] as const).map((status) => (
-                            <button
-                              key={status}
-                              onClick={() => handleRsvp(child.id, status)}
-                              disabled={saving === child.id}
-                              className={`flex-1 py-3 px-4 rounded font-bold text-sm uppercase tracking-wide transition-colors min-h-[44px] ${
-                                att?.status === status
-                                  ? statusStyles[status]
-                                  : statusInactiveStyles
-                              }`}
-                            >
-                              {status === 'going' ? 'Going' : status === 'late' ? 'Running Late' : 'Not Going'}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          </Card>
-
-        </div>
-
-        {/* Right Column - Sidebar */}
-        <div className="space-y-6">
-          
-          {/* Event Photos */}
-          {eventId && (
-            <PhotoSection
-              entityType="event"
-              entityId={eventId}
-              title="Event Photos"
-            />
-          )}
-
-          {/* Add to Calendar */}
-          <Card className="p-6">
-            <CardTitle className="text-lg mb-3 flex items-center gap-2">
-              <Icon name="calendar_today" />
-              Add to Calendar
-            </CardTitle>
-            <div className="space-y-2">
-              {googleCalendarLink({
-                title: event.title,
-                startTime: event.start_time,
-                endTime: event.end_time,
-                location: venueAddress || '',
-              }) ? (
-                <a
-                  href={googleCalendarLink({
-                    title: event.title,
-                    startTime: event.start_time,
-                    endTime: event.end_time,
-                    location: venueAddress || '',
-                  })!}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block"
-                >
-                  <Button variant="primary" className="w-full">
-                    <Icon name="event" size="text-sm" className="mr-2" />
-                    Google Calendar
-                  </Button>
-                </a>
-              ) : (
-                <Button variant="primary" className="w-full" disabled>
-                  <Icon name="event" size="text-sm" className="mr-2" />
-                  Google Calendar
-                </Button>
-              )}
-              {appleCalendarLink({
-                title: event.title,
-                startTime: event.start_time,
-                endTime: event.end_time,
-                location: venueAddress || '',
-              }) ? (
-                <a
-                  href={appleCalendarLink({
-                    title: event.title,
-                    startTime: event.start_time,
-                    endTime: event.end_time,
-                    location: venueAddress || '',
-                  })!}
-                  download={`${event.title}.ics`}
-                  className="block"
-                >
-                  <Button variant="primary" className="w-full">
-                    <Icon name="apple" size="text-sm" className="mr-2" />
-                    Apple Calendar
-                  </Button>
-                </a>
-              ) : (
-                <Button variant="primary" className="w-full" disabled>
-                  <Icon name="apple" size="text-sm" className="mr-2" />
-                  Apple Calendar
-                </Button>
-              )}
-            </div>
-          </Card>
-
           {/* Nearby Amenities */}
           {/* placeId (Google Place ID) is preferred over lat/lng for more accurate results */}
           <NearbyAmenities
@@ -1039,24 +1120,70 @@ export default function EventDetail() {
 
           {/* Weather */}
           {venueAddress && (
-            <Card className="p-6">
-              <CardTitle className="text-lg mb-3 flex items-center gap-2">
-                <Icon name="wb_sunny" />
+            <Card className="p-6 relative rounded-tl-none">
+              <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
+                <Icon name="wb_sunny" size="text-2xl" />
                 Weather Forecast
-              </CardTitle>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                Check the weather for event day
-              </p>
-              <a
-                href={`https://www.google.com/search?q=weather+${encodeURIComponent(venueAddress)}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <Button variant="secondary" className="w-full">
-                  <Icon name="cloud" size="text-sm" className="mr-2" />
-                  View Forecast
-                </Button>
-              </a>
+              </div>
+              <div className="pt-12">
+                {loadingWeather ? (
+                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-slate-900 dark:border-white mr-3"></div>
+                    <span className="text-sm text-slate-600 dark:text-slate-300">Loading forecast...</span>
+                  </div>
+                ) : weatherData ? (
+                  <div className="space-y-4">
+                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Temperature</p>
+                          <p className="text-lg font-black text-slate-900 dark:text-white">{weatherData.temperature}°F</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Feels like {weatherData.feelsLike}°F</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Conditions</p>
+                          <p className="text-lg font-black text-slate-900 dark:text-white capitalize">{weatherData.condition}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{weatherData.description}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Precipitation</p>
+                          <p className="text-lg font-black text-slate-900 dark:text-white">{weatherData.precipitation}%</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Wind Speed</p>
+                          <p className="text-lg font-black text-slate-900 dark:text-white">{weatherData.windSpeed} mph</p>
+                        </div>
+                      </div>
+                    </div>
+                    <a
+                      href={`https://www.google.com/search?q=weather+${encodeURIComponent(venueAddress)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <Button variant="secondary" className="w-full">
+                        <Icon name="cloud" size="text-sm" className="mr-2" />
+                        View Full Forecast
+                      </Button>
+                    </a>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+                      Weather forecast unavailable for this event.
+                    </p>
+                    <a
+                      href={`https://www.google.com/search?q=weather+${encodeURIComponent(venueAddress)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <Button variant="secondary" className="w-full">
+                        <Icon name="cloud" size="text-sm" className="mr-2" />
+                        View Forecast
+                      </Button>
+                    </a>
+                  </div>
+                )}
+              </div>
             </Card>
           )}
 
