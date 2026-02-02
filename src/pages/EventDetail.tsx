@@ -672,7 +672,6 @@ export default function EventDetail() {
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.entry')}</p>
               {event.ticketed_event ? (
                 <Button
-                  size="sm"
                   onClick={() => {
                     if (orgSlug) {
                       navigate(`/o/${orgSlug}/tickets/events/${event.ticketed_event?.id}`)
