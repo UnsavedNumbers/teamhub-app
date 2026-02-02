@@ -177,7 +177,7 @@ function mapPhotoRecord(photo: any): GalleryPhoto {
  * Returns galleries filtered by user's access (via RLS) with photo counts
  */
 export async function getGalleriesForUser(
-  _context: UserContext,
+  context: UserContext,
   params: GetGalleriesParams = {}
 ): Promise<{ data: Gallery[]; error: Error | null }> {
   if (USE_FAKE_DATA) {
@@ -924,7 +924,7 @@ export async function getOrCreateStaticGallery(
  * Check if user can upload to gallery (calls RLS function)
  */
 export async function checkCanUploadToGallery(
-  _context: UserContext,
+  context: UserContext,
   galleryId: string
 ): Promise<{ allowed: boolean; error: Error | null }> {
   if (USE_FAKE_DATA) {
@@ -1244,7 +1244,7 @@ export interface UpdateGalleryInput {
 }
 
 export async function updateGallery(
-  context: UserContext,
+  _context: UserContext,
   galleryId: string,
   payload: UpdateGalleryInput
 ): Promise<{ data: Gallery | null; error: Error | null }> {
