@@ -1,15 +1,16 @@
 ﻿
 import { useEffect, useMemo, useState } from 'react'
-import type { CSSProperties } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import { OrgAdminButton } from '@/components/admin/OrgAdminButton'
-import PublicUrlBanner from '@/components/admin/PublicUrlBanner'
+import { QUERY_KEY_ORG_SLUG } from '@/components/admin/PublicUrlBanner'
 import EmptyState from '@/components/platformAdmin/EmptyState'
-import { Badge, Button, PlatformDataTable, ProgressBar } from '@/components/platformAdmin'
+import { Badge, Button, PlatformDataTable, ProgressBar, DatePicker } from '@/components/platformAdmin'
 import { useOrganization } from '@/contexts/OrganizationContext'
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
+import { supabase } from '@/lib/supabase'
 import {
   bulkTicketingEvents,
   deleteTicketingEvent,
@@ -19,16 +20,24 @@ import {
   fetchTicketingSeasons,
   fetchTicketingVenues,
   type TicketingEventsQuery,
+  type TicketingEventsResponse,
 } from '@/data/services/ticketingEventsAdminService'
 import type { TicketSaleStatus, TicketedEvent, TicketingProgram, TicketingSeason, TicketingVenue } from '@/types/ticketing'
 import { formatCurrency } from '@/types/ticketing'
-import { useRouteLink } from '@/utils/routes'
+import { getPublicBaseUrl } from '@/utils/publicUrls'
+import { cn } from '@/utils/cn'
+import { getLink, RouteKeys, useRouteLink } from '@/utils/routes'
 import { showError, showSuccess } from '@/utils/toast'
 
 type ViewMode = 'grid' | 'list' | 'table' | 'calendar'
 
 interface Filters extends TicketingEventsQuery {
   view: ViewMode
+  programIds: string[]
+  seasonIds: string[]
+  venueIds: string[]
+  page: number
+  perPage: number
 }
 
 const EVENT_STATUS_OPTIONS: Array<{ value: TicketedEvent['status']; label: string }> = [
@@ -69,12 +78,33 @@ const formatDateTimeRange = (start: string, end: string, timezone?: string | nul
   return `${dateFormatter.format(startDate)} ${timeFormatter.format(startDate)} - ${dateFormatter.format(endDate)} ${timeFormatter.format(endDate)}`
 }
 
-const saleStatusTone: Record<TicketSaleStatus, { color: string; label: string }> = {
-  on_sale: { color: 'success', label: 'On sale' },
-  scheduled: { color: 'blue', label: 'Scheduled' },
-  ended: { color: 'secondary', label: 'Sales ended' },
-  sold_out: { color: 'volt', label: 'Sold out' },
-  off: { color: 'default', label: 'Offline' },
+const saleStatusTone: Record<TicketSaleStatus, { variant: 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'accent' | 'primary'; label: string }> = {
+  on_sale: { variant: 'success', label: 'On sale' },
+  scheduled: { variant: 'primary', label: 'Scheduled' },
+  ended: { variant: 'neutral', label: 'Sales ended' },
+  sold_out: { variant: 'warning', label: 'Sold out' },
+  off: { variant: 'neutral', label: 'Offline' },
+}
+
+const eventStatusVariant: Record<TicketedEvent['status'], 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'primary'> = {
+  published: 'success',
+  draft: 'neutral',
+  cancelled: 'danger',
+  completed: 'info',
+}
+
+const fetchOrgSlug = async (orgId: string) => {
+  const { data, error } = await supabase
+    .from('organizations')
+    .select('slug')
+    .eq('id', orgId)
+    .maybeSingle()
+
+  if (error || !data?.slug) {
+    return null
+  }
+
+  return data.slug as string
 }
 
 function parseFilters(params: URLSearchParams): Filters {
@@ -161,25 +191,23 @@ function ActiveFilterChips({
   if (chips.length === 0) return null
 
   return (
-    <div className="pa-flex pa-flex-wrap pa-gap-2 pa-mt-3">
+    <div className="pa-flex pa-flex-wrap pa-gap-2 pa-mt-3 oa-filter-chips">
       {chips.map((chip) => (
         <span
           key={`${chip.key}-${chip.value || 'all'}`}
-          className="pa-badge pa-badge-pill pa-badge-muted"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+          className="oa-filter-chip"
         >
-          {chip.label}
+          <span className="oa-filter-chip__label">{chip.label}</span>
           <button
-            className="pa-link"
+            className="oa-filter-chip__remove"
             onClick={() => onRemove(chip.key, chip.value)}
             aria-label="Remove filter"
-            style={{ fontSize: 12 }}
           >
             ×
           </button>
         </span>
       ))}
-      <Button variant="ghost" size="dense" onClick={onClearAll} icon="filter_alt_off">
+      <Button variant="ghost" size="dense" onClick={onClearAll} icon="filter_alt_off" className="oa-filter-chip__clear">
         Clear filters
       </Button>
     </div>
@@ -188,21 +216,73 @@ function ActiveFilterChips({
 
 function StatsBar({ total, ticketsSold, revenue }: { total?: number; ticketsSold?: number; revenue?: number }) {
   const stats = [
-    { label: 'Events', value: total ?? 0, icon: 'event' },
-    { label: 'Tickets sold', value: ticketsSold ?? 0, icon: 'confirmation_number' },
-    { label: 'Revenue', value: revenue !== undefined ? formatCurrency(revenue || 0) : '$0.00', icon: 'paid' },
+    { key: 'events', label: 'Total Events', value: total ?? 0 },
+    { key: 'tickets', label: 'Tickets Sold', value: ticketsSold ?? 0 },
+    { key: 'revenue', label: 'Revenue', value: revenue !== undefined ? formatCurrency(revenue || 0) : '$0.00' },
   ]
   return (
-    <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-3 pa-gap-3 pa-mb-4">
+    <div className="oa-ticketing-metrics">
       {stats.map((stat) => (
-        <div key={stat.label} className="pa-card pa-shadow-sm pa-p-4 pa-flex pa-items-center pa-gap-3">
-          <span className="material-symbols-outlined pa-text-lg" style={{ color: 'var(--pa-primary)' }}>{stat.icon}</span>
-          <div>
-            <div className="pa-text-sm pa-text-muted">{stat.label}</div>
-            <div className="pa-text-xl pa-font-semibold">{stat.value}</div>
-          </div>
+        <div key={stat.key} className={cn('oa-ticketing-metric', `oa-ticketing-metric--${stat.key}`)}>
+          <p className="oa-ticketing-metric__label">{stat.label}</p>
+          <p className="oa-ticketing-metric__value">{stat.value}</p>
         </div>
       ))}
+    </div>
+  )
+}
+
+function PublicTicketingHero({ orgId }: { orgId?: string }) {
+  const { copy } = useCopyToClipboard()
+  const [copied, setCopied] = useState(false)
+
+  const { data: orgSlug, isLoading } = useQuery({
+    queryKey: [QUERY_KEY_ORG_SLUG, orgId],
+    queryFn: () => fetchOrgSlug(orgId!),
+    enabled: !!orgId,
+  })
+
+  const publicUrl = orgSlug ? getPublicBaseUrl(orgSlug, 'tickets') : ''
+  const slugMissing = !isLoading && !orgSlug
+
+  const handleCopy = async () => {
+    if (!publicUrl) return
+    const ok = await copy(publicUrl)
+    if (ok) {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1600)
+    }
+  }
+
+  return (
+    <div className="oa-ticketing-hero-card">
+      <div className="oa-ticketing-hero-text">
+        <p className="oa-ticketing-hero-title">Your public ticketing page</p>
+        <p className="oa-ticketing-hero-subtitle">Share this link so guests can browse and buy tickets.</p>
+      </div>
+      <div className="oa-ticketing-hero-link">
+        <div className="oa-ticketing-hero-url" role="status" aria-live="polite">
+          {isLoading ? 'Loading public link…' : slugMissing ? 'Set your organization slug to enable public sales.' : publicUrl}
+        </div>
+        <div className="oa-ticketing-hero-actions">
+          {slugMissing ? (
+            <OrgAdminButton as={Link} to={getLink(RouteKeys.ADMIN_ONBOARDING)} icon="settings">
+              Set slug
+            </OrgAdminButton>
+          ) : (
+            <Button
+              variant="primary"
+              size="compact"
+              icon={copied ? 'check' : 'content_copy'}
+              onClick={handleCopy}
+              disabled={!publicUrl || isLoading}
+              className="oa-ticketing-copy-btn"
+            >
+              {copied ? 'Copied' : 'Copy link'}
+            </Button>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
@@ -215,13 +295,14 @@ function ViewToggle({ value, onChange }: { value: ViewMode; onChange: (v: ViewMo
     { value: 'calendar', icon: 'calendar_month', label: 'Calendar' },
   ]
   return (
-    <div className="pa-flex pa-gap-1" role="group" aria-label="View mode">
+    <div className="oa-view-toggle" role="group" aria-label="View mode">
       {options.map((opt) => (
         <Button
           key={opt.value}
-          variant={value === opt.value ? 'primary' : 'ghost'}
+          variant="ghost"
           size="compact"
           icon={opt.icon}
+          className={cn('oa-view-toggle__btn', value === opt.value && 'is-active')}
           onClick={() => onChange(opt.value)}
         >
           {opt.label}
@@ -280,19 +361,10 @@ function FilterDrawer({
     })
   }
 
-  const backdropStyle: CSSProperties = {
-    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 30,
-    display: open ? 'block' : 'none',
-  }
-  const panelStyle: CSSProperties = {
-    position: 'fixed', top: 0, right: 0, height: '100%', width: 'min(480px, 100%)', background: '#fff', zIndex: 31,
-    padding: 24, overflowY: 'auto', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', display: open ? 'block' : 'none',
-  }
-
   return (
     <>
-      <div style={backdropStyle} onClick={onClose} />
-      <div style={panelStyle}>
+      <div className={cn('oa-filter-backdrop', open && 'is-open')} onClick={onClose} />
+      <div className={cn('oa-filter-panel', open && 'is-open')}>
         <div className="pa-flex pa-items-center pa-justify-between pa-mb-4">
           <div className="pa-text-lg pa-font-semibold">Filters</div>
           <Button variant="ghost" icon="close" onClick={onClose} />
@@ -314,21 +386,18 @@ function FilterDrawer({
           </div>
           <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 pa-gap-3">
             <div>
-              <label className="pa-label">Start date</label>
-              <input
-                type="date"
-                className="pa-input"
+              <DatePicker
+                label="Start date"
                 value={draft.dateFrom || ''}
-                onChange={(e) => setDraft((prev) => ({ ...prev, dateFrom: e.target.value || null, page: 1 }))}
+                onChange={(date) => setDraft((prev) => ({ ...prev, dateFrom: date || null, page: 1 }))}
               />
             </div>
             <div>
-              <label className="pa-label">End date</label>
-              <input
-                type="date"
-                className="pa-input"
+              <DatePicker
+                label="End date"
                 value={draft.dateTo || ''}
-                onChange={(e) => setDraft((prev) => ({ ...prev, dateTo: e.target.value || null, page: 1 }))}
+                onChange={(date) => setDraft((prev) => ({ ...prev, dateTo: date || null, page: 1 }))}
+                maxValue={draft.dateFrom || undefined}
               />
             </div>
           </div>
@@ -425,90 +494,106 @@ function FilterDrawer({
     </>
   )
 }
+
+function TicketChip({ label, variant = 'neutral' }: { label: string; variant?: 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'primary' | 'accent' }) {
+  return <span className={cn('oa-ticket-chip', `oa-ticket-chip--${variant}`)}>{label}</span>
+}
+
 function GridView({ events, onView, onDuplicate, onDelete }: { events: TicketedEvent[]; onView: (id: string) => void; onDuplicate: (id: string) => void; onDelete: (id: string) => void }) {
   return (
-    <div className="pa-grid pa-grid-cols-1 md:pa-grid-cols-2 xl:pa-grid-cols-3 pa-gap-4">
-      {events.map((event) => (
-        <div key={event.id} className="pa-card pa-shadow-sm pa-flex pa-flex-col pa-gap-3 pa-p-4">
-          <div className="pa-flex pa-justify-between pa-items-start pa-gap-2">
-            <div>
-              <div className="pa-flex pa-gap-2 pa-items-center">
-                <Badge tone={event.status === 'published' ? 'success' : event.status === 'cancelled' ? 'danger' : 'secondary'}>
-                  {event.status}
-                </Badge>
-                {event.sale_status && (
-                  <Badge tone={saleStatusTone[event.sale_status].color as any}>{saleStatusTone[event.sale_status].label}</Badge>
-                )}
+    <div className="oa-ticketing-grid">
+      {events.map((event) => {
+        const showProgress = event.ticket_progress_pct !== null && event.ticket_progress_pct !== undefined
+        const hasCapacity = event.capacity_total !== null && event.capacity_total !== undefined
+        const progressValue = typeof event.ticket_progress_pct === 'number' ? event.ticket_progress_pct : 0
+        return (
+          <article key={event.id} className="oa-ticket-card">
+            <div className="oa-ticket-card__body">
+              <div className="oa-ticket-card__chips">
+                <TicketChip label={event.status} variant={eventStatusVariant[event.status] || 'neutral'} />
+                {event.sale_status && <TicketChip label={saleStatusTone[event.sale_status].label} variant={saleStatusTone[event.sale_status].variant} />}
               </div>
-              <h3 className="pa-text-lg pa-font-semibold pa-mt-1">{event.title}</h3>
-              <div className="pa-text-sm pa-text-muted">{formatDateTimeRange(event.starts_at, event.ends_at, event.timezone)}</div>
-              <div className="pa-text-sm pa-mt-1 pa-text-muted">
-                {event.venue?.name || event.venue_name || 'TBD'}
-                {event.program?.name ? ` · ${event.program.name}` : ''}
+              <h3 className="oa-ticket-card__title">{event.title}</h3>
+              <div className="oa-ticket-card__meta">
+                <span className="material-symbols-outlined oa-ticket-card__meta-icon">calendar_month</span>
+                <span>{formatDateTimeRange(event.starts_at, event.ends_at, event.timezone)}</span>
               </div>
-            </div>
-            <Button variant="ghost" size="dense" icon="open_in_new" onClick={() => onView(event.id)} />
-          </div>
-
-          <div className="pa-flex pa-gap-3 pa-items-center">
-            {event.ticket_progress_pct !== null && event.ticket_progress_pct !== undefined ? (
-              <div className="pa-flex-1">
-                <ProgressBar
-                  value={event.ticket_progress_pct}
-                  label="Ticket progress"
-                  showPercentage
-                />
-                <div className="pa-text-xs pa-text-muted pa-mt-1">
-                  {event.tickets_sold || 0} / {event.capacity_total || '—'} sold
+              <div className="oa-ticket-card__meta">
+                <span className="material-symbols-outlined oa-ticket-card__meta-icon">location_on</span>
+                <span>{event.venue?.name || event.venue_name || 'TBD'}</span>
+              </div>
+              {showProgress ? (
+                <div className="oa-ticket-card__progress">
+                  <div className="oa-ticket-card__progress-label">
+                    <span>Ticket progress</span>
+                    <span>{Math.round(progressValue)}%</span>
+                  </div>
+                  <ProgressBar value={progressValue} />
+                  <div className="oa-ticket-card__progress-meta">
+                    {event.tickets_sold || 0}{event.capacity_total ? ` / ${event.capacity_total} sold` : ''}
+                  </div>
+                </div>
+              ) : hasCapacity ? (
+                <div className="oa-ticket-card__progress-placeholder" />
+              ) : (
+                <p className="oa-ticket-card__note">No ticket limits</p>
+              )}
+              <div className="oa-ticket-card__footer">
+                <div className="oa-ticket-card__price">{formatCurrency(event.revenue_cents || 0)}</div>
+                <div className="oa-ticket-card__tags">
+                  {event.opponent && <Badge variant="neutral" size="small">{event.is_home ? 'Home' : 'Away'} vs {event.opponent}</Badge>}
+                  {event.program?.name && <Badge variant="neutral" size="small">{event.program.name}</Badge>}
                 </div>
               </div>
-            ) : (
-              <div className="pa-text-sm pa-text-muted">No ticket limits</div>
-            )}
-          </div>
-
-          <div className="pa-flex pa-justify-between pa-items-center">
-            <div className="pa-text-sm pa-font-semibold">{formatCurrency(event.revenue_cents || 0)}</div>
-            <div className="pa-flex pa-gap-2">
-              {event.opponent && <Badge tone="secondary">{event.is_home ? 'Home' : 'Away'} vs {event.opponent}</Badge>}
-              {event.program?.name && <Badge tone="secondary">{event.program.name}</Badge>}
             </div>
-          </div>
-          <div className="pa-flex pa-justify-end pa-gap-2">
-            <Button variant="secondary" size="dense" icon="content_copy" onClick={() => onDuplicate(event.id)}>Duplicate</Button>
-            <Button variant="danger" size="dense" icon="delete" onClick={() => onDelete(event.id)}>Delete</Button>
-          </div>
-        </div>
-      ))}
+            <div className="oa-ticket-card__actions">
+              <Button variant="secondary" size="dense" icon="content_copy" onClick={() => onDuplicate(event.id)} className="oa-ticket-card__action">
+                Duplicate
+              </Button>
+              <Button variant="danger" size="dense" icon="delete" onClick={() => onDelete(event.id)} className="oa-ticket-card__action">
+                Delete
+              </Button>
+              <Button variant="ghost" size="dense" icon="open_in_new" onClick={() => onView(event.id)} className="oa-ticket-card__action oa-ticket-card__action--ghost">
+                Open
+              </Button>
+            </div>
+          </article>
+        )
+      })}
     </div>
   )
 }
 
 function ListView({ events, onView, onDuplicate, onDelete }: { events: TicketedEvent[]; onView: (id: string) => void; onDuplicate: (id: string) => void; onDelete: (id: string) => void }) {
   return (
-    <div className="pa-card pa-shadow-sm pa-divide-y pa-divide-slate-200">
+    <div className="pa-card pa-shadow-sm oa-ticket-list">
       {events.map((event) => (
-        <div key={event.id} className="pa-p-3 pa-flex pa-gap-3 pa-justify-between pa-items-center">
-          <div className="pa-flex pa-gap-3 pa-items-center">
-            <Badge tone={event.status === 'published' ? 'success' : event.status === 'cancelled' ? 'danger' : 'secondary'}>{event.status}</Badge>
-            <div>
-              <div className="pa-font-semibold">{event.title}</div>
-              <div className="pa-text-sm pa-text-muted">
+        <div key={event.id} className="oa-ticket-list__row">
+          <div className="oa-ticket-list__info">
+            <div className="oa-ticket-list__chips">
+              <Badge variant={eventStatusVariant[event.status] || 'neutral'}>{event.status}</Badge>
+              {event.sale_status && (
+                <Badge variant={saleStatusTone[event.sale_status].variant}>{saleStatusTone[event.sale_status].label}</Badge>
+              )}
+            </div>
+            <div className="oa-ticket-list__titles">
+              <div className="oa-ticket-list__title">{event.title}</div>
+              <div className="oa-ticket-list__meta">
                 {formatDateTimeRange(event.starts_at, event.ends_at, event.timezone)}
                 {event.venue?.name ? ` · ${event.venue.name}` : ''}
               </div>
-              <div className="pa-text-xs pa-text-muted">
+              <div className="oa-ticket-list__meta oa-ticket-list__meta--sub">
                 {event.program?.name ? `${event.program.name}` : ''}{event.opponent ? ` · ${event.is_home ? 'Home' : 'Away'} vs ${event.opponent}` : ''}
               </div>
             </div>
           </div>
-          <div className="pa-flex pa-gap-3 pa-items-center">
+          <div className="oa-ticket-list__actions">
             {event.ticket_progress_pct !== null && event.ticket_progress_pct !== undefined && (
-              <div className="pa-text-sm pa-text-muted">
+              <div className="oa-ticket-list__stat">
                 {event.tickets_sold || 0}/{event.capacity_total || '—'}
               </div>
             )}
-            <div className="pa-font-semibold">{formatCurrency(event.revenue_cents || 0)}</div>
+            <div className="oa-ticket-list__price">{formatCurrency(event.revenue_cents || 0)}</div>
             <Button variant="secondary" size="dense" onClick={() => onView(event.id)} icon="visibility">View</Button>
             <Button variant="secondary" size="dense" onClick={() => onDuplicate(event.id)} icon="content_copy" />
             <Button variant="danger" size="dense" onClick={() => onDelete(event.id)} icon="delete" />
@@ -549,8 +634,8 @@ function TableView({
       { id: 'program', label: 'Program', render: (row: TicketedEvent) => row.program?.name || '—' },
       { id: 'season', label: 'Season', render: (row: TicketedEvent) => row.season?.name || '—' },
       { id: 'venue', label: 'Venue', render: (row: TicketedEvent) => row.venue?.name || row.venue_name || '—' },
-      { id: 'status', label: 'Status', render: (row: TicketedEvent) => <Badge tone={row.status === 'published' ? 'success' : row.status === 'cancelled' ? 'danger' : 'secondary'}>{row.status}</Badge> },
-      { id: 'sale_status', label: 'Sale', render: (row: TicketedEvent) => row.sale_status ? <Badge tone={saleStatusTone[row.sale_status].color as any}>{saleStatusTone[row.sale_status].label}</Badge> : '—' },
+      { id: 'status', label: 'Status', render: (row: TicketedEvent) => <Badge variant={eventStatusVariant[row.status] || 'neutral'}>{row.status}</Badge> },
+      { id: 'sale_status', label: 'Sale', render: (row: TicketedEvent) => row.sale_status ? <Badge variant={saleStatusTone[row.sale_status].variant}>{saleStatusTone[row.sale_status].label}</Badge> : '—' },
       { id: 'tickets', label: 'Tickets', sortable: true, render: (row: TicketedEvent) => `${row.tickets_sold || 0}${row.capacity_total ? ` / ${row.capacity_total}` : ''}` },
       { id: 'revenue', label: 'Revenue', sortable: true, render: (row: TicketedEvent) => formatCurrency(row.revenue_cents || 0) },
       { id: 'actions', label: '', render: (row: TicketedEvent) => (
@@ -601,33 +686,29 @@ function CalendarView({ events, month, onMonthChange }: { events: TicketedEvent[
   const cells = Array.from({ length: offset + daysInMonth }, (_, idx) => idx - offset + 1)
 
   return (
-    <div className="pa-card pa-shadow-sm pa-p-3">
-      <div className="pa-flex pa-justify-between pa-items-center pa-mb-3">
+    <div className="oa-calendar">
+      <div className="oa-calendar__header">
         <Button variant="ghost" icon="chevron_left" onClick={() => onMonthChange(new Date(month.getFullYear(), month.getMonth() - 1, 1))} />
-        <div className="pa-text-lg pa-font-semibold">
+        <div className="oa-calendar__heading">
           {month.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
         </div>
         <Button variant="ghost" icon="chevron_right" onClick={() => onMonthChange(new Date(month.getFullYear(), month.getMonth() + 1, 1))} />
       </div>
 
-      <div className="pa-grid pa-grid-cols-7 pa-gap-2 pa-text-xs pa-font-semibold pa-text-muted pa-mb-2">
+      <div className="oa-calendar__weekdays">
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-          <div key={d} className="pa-text-center">{d}</div>
+          <div key={d} className="oa-calendar__weekday">{d}</div>
         ))}
       </div>
-      <div className="pa-grid pa-grid-cols-7 pa-gap-2">
+      <div className="oa-calendar__grid">
         {cells.map((day, idx) => (
-          <div key={idx} className="pa-border pa-border-slate-200 pa-rounded pa-min-h-[90px] pa-p-2 pa-bg-white">
+          <div key={idx} className={cn('oa-calendar__cell', day <= 0 && 'is-empty')}>
             {day > 0 && (
               <>
-                <div className="pa-text-xs pa-font-semibold">{day}</div>
-                <div className="pa-flex pa-flex-col pa-gap-1 pa-mt-1">
+                <div className="oa-calendar__date">{day}</div>
+                <div className="oa-calendar__events">
                   {(dayEvents[day] || []).map((event) => (
-                    <div
-                      key={event.id}
-                      className="pa-text-[11px] pa-rounded pa-px-2 pa-py-1"
-                      style={{ background: event.program?.color || 'var(--pa-n100)', color: '#111' }}
-                    >
+                    <div key={event.id} className="oa-calendar-chip">
                       {event.title}
                     </div>
                   ))}
@@ -712,15 +793,16 @@ export default function TicketingEvents() {
     setSearchParams(buildSearchParams(next))
   }
 
-  const programsQuery = useQuery(['ticketing-programs', orgId], () => fetchTicketingPrograms(orgId!), { enabled: !!orgId })
-  const seasonsQuery = useQuery(['ticketing-seasons', orgId], () => fetchTicketingSeasons(orgId!), { enabled: !!orgId })
-  const venuesQuery = useQuery(['ticketing-venues', orgId], () => fetchTicketingVenues(orgId!), { enabled: !!orgId })
+  const programsQuery = useQuery({ queryKey: ['ticketing-programs', orgId], queryFn: () => fetchTicketingPrograms(orgId!), enabled: !!orgId })
+  const seasonsQuery = useQuery({ queryKey: ['ticketing-seasons', orgId], queryFn: () => fetchTicketingSeasons(orgId!), enabled: !!orgId })
+  const venuesQuery = useQuery({ queryKey: ['ticketing-venues', orgId], queryFn: () => fetchTicketingVenues(orgId!), enabled: !!orgId })
 
-  const eventsQuery = useQuery(
-    ['ticketing-events-admin', orgId, JSON.stringify({ ...filters, view: undefined })],
-    () => fetchTicketingEvents(orgId!, filters),
-    { enabled: !!orgId, keepPreviousData: true },
-  )
+  const eventsQuery = useQuery<TicketingEventsResponse>({
+    queryKey: ['ticketing-events-admin', orgId, JSON.stringify({ ...filters, view: undefined })],
+    queryFn: () => fetchTicketingEvents(orgId!, filters),
+    enabled: !!orgId,
+    placeholderData: (previousData) => previousData,
+  })
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteTicketingEvent(orgId!, id),
@@ -845,7 +927,7 @@ export default function TicketingEvents() {
   }
 
   return (
-    <div className="pa-page-container">
+    <div className="pa-page-container oa-ticketing-dashboard">
       <AdminPageHeader
         title="Ticketed Events"
         subtitle="Search, filter, and manage every ticketed event across programs and seasons."
@@ -858,12 +940,7 @@ export default function TicketingEvents() {
 
       {orgId && (
         <div className="pa-mb-4">
-          <PublicUrlBanner
-            orgId={orgId}
-            title="Your public ticketing page"
-            description="Share this link so guests can browse and buy tickets."
-            path="tickets"
-          />
+          <PublicTicketingHero orgId={orgId} />
         </div>
       )}
 
@@ -873,23 +950,24 @@ export default function TicketingEvents() {
         revenue={meta?.total_revenue_cents}
       />
 
-      <div className="pa-card pa-shadow-sm pa-p-4 pa-flex pa-flex-wrap pa-gap-3 pa-justify-between pa-items-center">
-        <div className="pa-flex pa-gap-2 pa-items-center pa-flex-wrap">
-          <div className="pa-relative">
-            <span className="material-symbols-outlined pa-text-muted" style={{ position: 'absolute', left: 10, top: 10 }}>search</span>
+      <div className="pa-card pa-shadow-sm oa-ticketing-toolbar">
+        <div className="oa-ticketing-toolbar__left">
+          <div className="oa-search">
+            <span className="material-symbols-outlined oa-search__icon">search</span>
             <input
-              className="pa-input"
-              style={{ paddingLeft: 36, minWidth: 240 }}
+              className="pa-input oa-search__input"
               placeholder="Search events, opponents, venues..."
               value={searchInput}
               onChange={(e) => handleSearchChange(e.target.value)}
             />
           </div>
-          <Button variant="secondary" icon="tune" onClick={() => setFiltersOpen(true)}>
+          <Button variant="secondary" icon="tune" onClick={() => setFiltersOpen(true)} className="oa-filter-btn">
             Filters
           </Button>
+        </div>
+        <div className="oa-ticketing-toolbar__right">
           <select
-            className="pa-input"
+            className="pa-input oa-sort-select"
             value={filters.sortBy || 'starts_at'}
             onChange={(e) => updateFilters({ sortBy: e.target.value, page: 1 })}
           >
@@ -898,8 +976,8 @@ export default function TicketingEvents() {
             <option value="tickets_sold">Sort: Tickets</option>
             <option value="created_at">Sort: Created</option>
           </select>
+          <ViewToggle value={filters.view} onChange={(v) => updateFilters({ view: v })} />
         </div>
-        <ViewToggle value={filters.view} onChange={(v) => updateFilters({ view: v })} />
       </div>
 
       <ActiveFilterChips
@@ -954,9 +1032,9 @@ export default function TicketingEvents() {
           <div className="pa-grid pa-grid-cols-1 md:pa-grid-cols-2 xl:pa-grid-cols-3 pa-gap-3">
             {[...Array(6)].map((_, idx) => (
               <div key={idx} className="pa-card pa-shadow-sm pa-p-4">
-                <div className="pa-skeleton pa-mb-3" style={{ height: 18, width: '50%' }} />
-                <div className="pa-skeleton pa-mb-3" style={{ height: 14, width: '80%' }} />
-                <div className="pa-skeleton" style={{ height: 8, width: '100%' }} />
+                <div className="pa-skeleton oa-skeleton-line oa-skeleton-line--short" />
+                <div className="pa-skeleton oa-skeleton-line oa-skeleton-line--medium" />
+                <div className="pa-skeleton oa-skeleton-line oa-skeleton-line--full" />
               </div>
             ))}
           </div>
@@ -1029,16 +1107,7 @@ export default function TicketingEvents() {
 
       {isMobile && (
         <button
-          className="pa-btn pa-btn--primary"
-          style={{
-            position: 'fixed',
-            bottom: '24px',
-            right: '24px',
-            borderRadius: '999px',
-            boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
-            padding: '12px 18px',
-            zIndex: 40,
-          }}
+          className="pa-btn pa-btn--primary oa-ticketing-fab"
           onClick={() => navigate(createEventPath)}
         >
           <span className="material-symbols-outlined">add</span> Create

@@ -12,7 +12,7 @@ import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import VenueInsights from '../components/portal/VenueInsights'
 import NearbyAmenities from '../components/portal/NearbyAmenities'
-import { GalleryLink } from '../components/gallery/GalleryLink'
+import { GallerySection } from '../components/galleries/GallerySection'
 import { useT } from '../i18n/useI18n'
 
 interface Event {
@@ -678,22 +678,12 @@ export default function EventDetail() {
           
           {/* Event Photos */}
           {eventId && (
-            <Card className="p-6">
-              <CardTitle className="text-lg mb-3 flex items-center gap-2">
-                <Icon name="photo_library" />
-                Event Photos
-              </CardTitle>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                View and share photos from this event
-              </p>
-              <GalleryLink
-                galleryType="event"
-                entityId={eventId}
-                entityName={event.title}
-                variant="button"
-                className="w-full"
-              />
-            </Card>
+            <GallerySection
+              entityType="event"
+              entityId={eventId}
+              title="Event Photos"
+              allowCreate
+            />
           )}
 
           {/* Add to Calendar */}

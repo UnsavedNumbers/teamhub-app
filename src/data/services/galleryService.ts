@@ -18,7 +18,28 @@ const supabaseAny = supabase as any
 // Type Definitions
 // ============================================================================
 
-export type GalleryType = 'org' | 'team' | 'athlete' | 'event' | 'travel'
+export type GalleryType = 'org' | 'team' | 'athlete' | 'event' | 'travel' | 'program' | 'season'
+
+// Friendly alias used by UI for clarity
+export type GalleryEntityType =
+  | 'organization'
+  | 'team'
+  | 'athlete'
+  | 'event'
+  | 'travel_plan'
+  | 'program'
+  | 'season'
+
+export function mapEntityToGalleryType(entityType: GalleryEntityType): GalleryType {
+  switch (entityType) {
+    case 'organization':
+      return 'org'
+    case 'travel_plan':
+      return 'travel'
+    default:
+      return entityType as GalleryType
+  }
+}
 
 export type PhotoStatus = 'pending' | 'approved' | 'rejected'
 
@@ -588,6 +609,37 @@ export async function createGalleryForEntity(
       data: null,
       error: err instanceof Error ? err : new Error('Unknown error'),
     }
+  }
+}
+
+/**
+ * Get or create a static gallery for an entity (org/team/athlete/season/program)
+ * Returns the gallery id.
+ */
+export async function getOrCreateStaticGallery(
+  context: UserContext,
+  galleryType: GalleryType,
+  entityId: string,
+  name: string = 'Photos'
+): Promise<{ id: string | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { id: null, error: null }
+  }
+
+  try {
+    if (!context.orgId) return { id: null, error: new Error('Organization context required') }
+    const { data, error } = await supabase.rpc('get_or_create_static_gallery', {
+      p_org_id: context.orgId,
+      p_entity_type: galleryType,
+      p_entity_id: entityId,
+      p_user_id: context.userId,
+    })
+    if (error) throw error
+    return { id: data as string, error: null }
+  } catch (err) {
+    console.error('[galleryService] Error get_or_create_static_gallery:', err)
+    return { id: null, error: err as Error }
   }
 }
 
