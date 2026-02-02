@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
+import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { getEventDetails, updateRSVP, getAthletes, deleteEvent } from '../data/services'
 import type { RSVPStatus } from '../types/calendar'
 import { getSportFromEvent } from '../utils/sportContext'
+import { getDisplayLocation } from '../utils/homeLocation'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
@@ -50,6 +52,30 @@ interface Attendance {
   athlete_id: string
   status: RSVPStatus
   note: string | null
+}
+
+// Helper function to build full address from EventLocation fields
+function buildVenueAddress(location: { venue_name?: string | null; address_line1?: string | null; address_line2?: string | null; city?: string | null; state?: string | null; postal_code?: string | null } | null): string {
+  if (!location) return ''
+
+  const parts: string[] = []
+
+  if (location.venue_name) {
+    parts.push(location.venue_name)
+  }
+
+  const streetParts: string[] = []
+  if (location.address_line1) streetParts.push(location.address_line1)
+  if (location.address_line2) streetParts.push(location.address_line2)
+  if (streetParts.length > 0) parts.push(streetParts.join(' '))
+
+  const cityParts: string[] = []
+  if (location.city) cityParts.push(location.city)
+  if (location.state) cityParts.push(location.state)
+  if (location.postal_code) cityParts.push(location.postal_code)
+  if (cityParts.length > 0) parts.push(cityParts.join(' '))
+
+  return parts.filter(Boolean).join(', ')
 }
 
 // Helper functions for links and integrations
@@ -167,6 +193,7 @@ async function copyToClipboard(text: string): Promise<{ success: boolean; error?
 export default function EventDetail() {
   const { eventId } = useParams<{ eventId: string }>()
   const t = useT()
+  const { profile } = useAuth()
   const [event, setEvent] = useState<Event | null>(null)
   const [children, setChildren] = useState<Child[]>([])
   const [attendance, setAttendance] = useState<Record<string, Attendance>>({})
@@ -175,6 +202,18 @@ export default function EventDetail() {
   const [copiedText, setCopiedText] = useState<string | null>(null)
   const [copyError, setCopyError] = useState<string | null>(null)
   const [orgSlug, setOrgSlug] = useState<string | null>(null)
+  const [commuteStartLocation, setCommuteStartLocation] = useState<string>(() => {
+    const saved = localStorage.getItem('commuteStartLocation')
+    return saved || ''
+  })
+  const [isEditingCommute, setIsEditingCommute] = useState(false)
+  const [commuteInputValue, setCommuteInputValue] = useState(commuteStartLocation)
+  const [commuteSummary, setCommuteSummary] = useState<{
+    distance: string
+    duration: string
+    durationInTraffic?: string
+  } | null>(null)
+  const [loadingCommute, setLoadingCommute] = useState(false)
 
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
@@ -188,6 +227,62 @@ export default function EventDetail() {
     }
   }, [])
 
+  // Default commute start location to user's home address if not already set
+  useEffect(() => {
+    if (!commuteStartLocation && profile) {
+      const homeLocation = getDisplayLocation(profile)
+      if (homeLocation) {
+        setCommuteStartLocation(homeLocation)
+        setCommuteInputValue(homeLocation)
+        localStorage.setItem('commuteStartLocation', homeLocation)
+      }
+    }
+  }, [profile, commuteStartLocation])
+
+  // Fetch commute summary when we have both start and destination
+  useEffect(() => {
+    const fetchCommuteSummary = async () => {
+      if (!commuteStartLocation || !event?.location) {
+        setCommuteSummary(null)
+        return
+      }
+      
+      setLoadingCommute(true)
+      setCommuteSummary(null)
+      
+      try {
+        const origins = encodeURIComponent(commuteStartLocation)
+        const destinations = encodeURIComponent(event.location)
+        
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/distance-matrix?origins=${origins}&destinations=${destinations}`
+        const { data } = await supabase.auth.getSession()
+        
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${data.session?.access_token}`,
+          },
+        })
+        
+        const result = await response.json()
+        
+        if (result?.status === 'OK' && result.rows?.[0]?.elements?.[0]?.status === 'OK') {
+          const element = result.rows[0].elements[0]
+          setCommuteSummary({
+            distance: element.distance?.text || '',
+            duration: element.duration?.text || '',
+            durationInTraffic: element.duration_in_traffic?.text,
+          })
+        }
+      } catch (err) {
+        // Silently fail - commute info is nice-to-have
+      } finally {
+        setLoadingCommute(false)
+      }
+    }
+    
+    fetchCommuteSummary()
+  }, [commuteStartLocation, event?.location])
+
   const fetchData = useCallback(async () => {
     if (!isReady || !eventId) return
     
@@ -196,6 +291,19 @@ export default function EventDetail() {
     try {
       // Fetch event details
       const { data: eventData, error: eventError } = await getEventDetails(context, eventId)
+
+      // If event_location is missing due to RLS, try to fetch it directly
+      if (eventData && !eventData.event_location) {
+        const { data: locationData, error: locationError } = await supabase
+          .from('event_locations')
+          .select('*')
+          .eq('event_id', eventId)
+          .maybeSingle()
+
+        if (!locationError && locationData && isMountedRef.current) {
+          ;(eventData as any).event_location = locationData
+        }
+      }
 
       if (!isMountedRef.current) return
 
@@ -216,16 +324,16 @@ export default function EventDetail() {
         start_time: eventData.start_time,
         end_time: eventData.end_time,
         arrival_time: eventData.arrival_time,
-        location: eventData.event_location?.venue_name ?? null,
+        location: buildVenueAddress(eventData.event_location),
         notes: eventData.notes,
-        team: { 
+        team: {
           name: eventData.team?.name ?? 'Team',
           id: eventData.team?.id ?? ''
         },
         event_location: eventData.event_location ? {
           place_id: eventData.event_location.place_id,
           venue_name: eventData.event_location.venue_name,
-          venue_address: (eventData.event_location as any).venue_address ?? null,
+          venue_address: buildVenueAddress(eventData.event_location),
           latitude: eventData.event_location.latitude ?? null,
           longitude: eventData.event_location.longitude ?? null,
         } : null,
@@ -364,6 +472,20 @@ export default function EventDetail() {
     }
   }
 
+  function handleSaveCommuteLocation() {
+    const trimmed = commuteInputValue.trim()
+    setCommuteStartLocation(trimmed)
+    localStorage.setItem('commuteStartLocation', trimmed)
+    setIsEditingCommute(false)
+  }
+
+  function getCommuteDirectionsUrl(): string | null {
+    if (!commuteStartLocation || !venueAddress) return null
+    const origin = encodeURIComponent(commuteStartLocation.trim())
+    const dest = encodeURIComponent(venueAddress.trim())
+    return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}&traffic=1`
+  }
+
   const canManage = context?.roles.includes('org_admin') || context?.roles.includes('coach')
 
   const statusStyles: Record<RSVPStatus, string> = {
@@ -489,19 +611,29 @@ export default function EventDetail() {
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Left Column - Main Info */}
         <div className="lg:col-span-2 space-y-6">
-          
+
           {/* Venue Location */}
-          {venueAddress && (
+          {venueAddress ? (
             <Card className="p-6 relative">
               <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
                 <Icon name="location_on" size="text-2xl" />
                 Venue Location
               </div>
               <div className="pt-12">
-                <CardTitle className="text-xl mb-2">{venueAddress.split(',')[0].trim()}</CardTitle>
-                {venueAddress.includes(',') && (
-                  <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-4">{venueAddress}</p>
+                {event.event_location?.venue_name && (
+                  <CardTitle className="text-xl mb-4">{event.event_location.venue_name}</CardTitle>
                 )}
+                <div className="mb-4 text-slate-700 dark:text-slate-300">
+                  {(event.event_location as any)?.address_line1 && (
+                    <p className="text-base">{(event.event_location as any).address_line1}</p>
+                  )}
+                  {(event.event_location as any)?.address_line2 && (
+                    <p className="text-base">{(event.event_location as any).address_line2}</p>
+                  )}
+                  <p className="text-base">
+                    {[(event.event_location as any)?.city, (event.event_location as any)?.state, (event.event_location as any)?.postal_code].filter(Boolean).join(', ')}
+                  </p>
+                </div>
 
                 {/* Smart Map Links */}
                 <div className="mb-4">
@@ -592,6 +724,155 @@ export default function EventDetail() {
                     )}
                   </div>
                 </div>
+              </div>
+            </Card>
+          ) : (
+            <Card className="p-6 relative">
+              <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
+                <Icon name="location_off" size="text-2xl" />
+                No Location Info
+              </div>
+              <div className="pt-12">
+                <p className="text-slate-600 dark:text-slate-300">
+                  This event doesn't have a venue location set yet.
+                </p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                  {canManage ? (
+                    <Button
+                      variant="primary"
+                      className="mt-4"
+                      onClick={() => navigate(`/portal/calendar/events/${eventId}/edit`)}
+                    >
+                      <Icon name="edit" size="text-sm" className="mr-2" />
+                      Add Location
+                    </Button>
+                  ) : (
+                    'Contact your team administrator to update the event location.'
+                  )}
+                </p>
+              </div>
+            </Card>
+          )}
+
+          {/* Commute Info */}
+          {venueAddress && (
+            <Card className="p-6 relative">
+              <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
+                <Icon name="directions_car" size="text-2xl" />
+                Commute Info
+              </div>
+              <div className="pt-12">
+                {!isEditingCommute ? (
+                  <div className="space-y-4">
+                    {commuteStartLocation ? (
+                      <>
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Your Starting Point</p>
+                            <p className="text-sm font-bold text-slate-900 dark:text-white">{commuteStartLocation}</p>
+                          </div>
+                          <Button
+                            variant="secondary"
+                            className="text-xs px-3 py-1"
+                            onClick={() => {
+                              setIsEditingCommute(true)
+                              setCommuteInputValue(commuteStartLocation)
+                            }}
+                          >
+                            <Icon name="edit" size="text-sm" className="mr-1" />
+                            Edit
+                          </Button>
+                        </div>
+                        
+                        {loadingCommute ? (
+                          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-slate-900 dark:border-white mr-3"></div>
+                            <span className="text-sm text-slate-600 dark:text-slate-300">Calculating route...</span>
+                          </div>
+                        ) : commuteSummary ? (
+                          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Distance</p>
+                                <p className="text-lg font-black text-slate-900 dark:text-white">{commuteSummary.distance}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
+                                  {commuteSummary.durationInTraffic ? 'With Traffic' : 'Duration'}
+                                </p>
+                                <p className="text-lg font-black text-slate-900 dark:text-white">
+                                  {commuteSummary.durationInTraffic || commuteSummary.duration}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ) : null}
+                        
+                        {getCommuteDirectionsUrl() && (
+                          <a
+                            href={getCommuteDirectionsUrl()!}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block"
+                          >
+                            <Button variant="primary" className="w-full">
+                              <Icon name="navigation" size="text-sm" className="mr-2" />
+                              Get Directions with Traffic
+                            </Button>
+                          </a>
+                        )}
+                      </>
+                    ) : (
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Set Your Starting Location</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+                          Save your home, work, or any starting point to quickly get directions with current traffic conditions.
+                        </p>
+                        <Button
+                          variant="primary"
+                          onClick={() => setIsEditingCommute(true)}
+                          className="w-full"
+                        >
+                          <Icon name="add_location" size="text-sm" className="mr-2" />
+                          Set Starting Location
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Enter Your Starting Location</p>
+                    <input
+                      type="text"
+                      value={commuteInputValue}
+                      onChange={(e) => setCommuteInputValue(e.target.value)}
+                      placeholder="e.g., 123 Main St, City, State"
+                      className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg,#137fec)]"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        variant="primary"
+                        onClick={handleSaveCommuteLocation}
+                        disabled={!commuteInputValue.trim()}
+                        className="flex-1"
+                      >
+                        <Icon name="check" size="text-sm" className="mr-1" />
+                        Save
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setIsEditingCommute(false)
+                          setCommuteInputValue(commuteStartLocation)
+                        }}
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </Card>
           )}
@@ -746,10 +1027,11 @@ export default function EventDetail() {
           </Card>
 
           {/* Nearby Amenities */}
+          {/* placeId (Google Place ID) is preferred over lat/lng for more accurate results */}
           <NearbyAmenities
+            placeId={event.event_location?.place_id}
             latitude={event.event_location?.latitude}
             longitude={event.event_location?.longitude}
-            placeId={event.event_location?.place_id}
             eventType={event.type}
             eventStartTime={event.start_time}
             variant="event"

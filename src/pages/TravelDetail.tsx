@@ -209,6 +209,12 @@ export default function TravelDetail() {
   const [planContactsRaw, setPlanContactsRaw] = useState<Record<TravelContactCategory, TravelPlanContactRow | null> | null>(null)
   const [defaultContact, setDefaultContact] = useState<OrganizationTravelContactRow | null>(null)
   const [orgFallbackContact, setOrgFallbackContact] = useState<{ email: string | null; phone: string | null } | null>(null)
+  const [commuteStartLocation, setCommuteStartLocation] = useState<string>(() => {
+    const saved = localStorage.getItem('commuteStartLocation')
+    return saved || ''
+  })
+  const [isEditingCommute, setIsEditingCommute] = useState(false)
+  const [commuteInputValue, setCommuteInputValue] = useState(commuteStartLocation)
   const isMountedRef = useRef(true)
 
   // Direct Google Places API call for Area Summary (bypasses edge function)
@@ -557,6 +563,20 @@ export default function TravelDetail() {
     }
   }
 
+  function handleSaveCommuteLocation() {
+    const trimmed = commuteInputValue.trim()
+    setCommuteStartLocation(trimmed)
+    localStorage.setItem('commuteStartLocation', trimmed)
+    setIsEditingCommute(false)
+  }
+
+  function getCommuteDirectionsUrl(destination: string | null | undefined): string | null {
+    if (!commuteStartLocation || !destination) return null
+    const origin = encodeURIComponent(commuteStartLocation.trim())
+    const dest = encodeURIComponent(destination.trim())
+    return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}&traffic=1`
+  }
+
   if (loading) {
     return (
       <PortalLayout
@@ -776,6 +796,106 @@ export default function TravelDetail() {
                     )}
                   </div>
                 </div>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* Commute Info */}
+          {plan.venue_address && (
+            <div>
+              <Card className="p-6 relative">
+                <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
+                  <Icon name="directions_car" size="text-2xl" />
+                  Commute Info
+                </div>
+                <div className="pt-12">
+                  {!isEditingCommute ? (
+                    <div className="space-y-4">
+                      {commuteStartLocation ? (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Your Starting Point</p>
+                              <p className="text-sm font-bold text-slate-900 dark:text-white">{commuteStartLocation}</p>
+                            </div>
+                            <Button
+                              variant="secondary"
+                              className="text-xs px-3 py-1"
+                              onClick={() => {
+                                setIsEditingCommute(true)
+                                setCommuteInputValue(commuteStartLocation)
+                              }}
+                            >
+                              <Icon name="edit" size="text-sm" className="mr-1" />
+                              Edit
+                            </Button>
+                          </div>
+                          {getCommuteDirectionsUrl(plan.venue_address) && (
+                            <a
+                              href={getCommuteDirectionsUrl(plan.venue_address)!}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="block"
+                            >
+                              <Button variant="primary" className="w-full">
+                                <Icon name="navigation" size="text-sm" className="mr-2" />
+                                Get Directions with Traffic
+                              </Button>
+                            </a>
+                          )}
+                        </>
+                      ) : (
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Set Your Starting Location</p>
+                          <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+                            Save your home, work, or any starting point to quickly get directions with current traffic conditions.
+                          </p>
+                          <Button
+                            variant="primary"
+                            onClick={() => setIsEditingCommute(true)}
+                            className="w-full"
+                          >
+                            <Icon name="add_location" size="text-sm" className="mr-2" />
+                            Set Starting Location
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Enter Your Starting Location</p>
+                      <input
+                        type="text"
+                        value={commuteInputValue}
+                        onChange={(e) => setCommuteInputValue(e.target.value)}
+                        placeholder="e.g., 123 Main St, City, State"
+                        className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg,#137fec)]"
+                        autoFocus
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          variant="primary"
+                          onClick={handleSaveCommuteLocation}
+                          disabled={!commuteInputValue.trim()}
+                          className="flex-1"
+                        >
+                          <Icon name="check" size="text-sm" className="mr-1" />
+                          Save
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          onClick={() => {
+                            setIsEditingCommute(false)
+                            setCommuteInputValue(commuteStartLocation)
+                          }}
+                          className="flex-1"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </Card>
             </div>
@@ -1282,11 +1402,13 @@ export default function TravelDetail() {
             />
           )}
 
+          {/* Nearby Amenities */}
+          {/* placeId (Google Place ID) is preferred over lat/lng for more accurate results */}
           <NearbyAmenities
             key={`${plan.venue_place_id || ''}-${plan.venue_lat || ''}-${plan.venue_lng || ''}`}
+            placeId={plan.venue_place_id}
             latitude={plan.venue_lat}
             longitude={plan.venue_lng}
-            placeId={plan.venue_place_id}
             eventType="tournament"
             eventStartTime={plan.start_date}
             variant="travel"
