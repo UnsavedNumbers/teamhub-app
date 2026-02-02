@@ -56,6 +56,8 @@ export default function EventDetailSlideOver({
 
     if (!eventId) return null
 
+    const isPast = event ? new Date(event.end_time || event.start_time) < new Date() : false
+
     return (
         <div 
             style={{ 
@@ -332,37 +334,56 @@ export default function EventDetailSlideOver({
                 {/* Footer Controls */}
                 {!loading && !error && event && (
                     <div className="oa-slideout-footer">
-                        <button 
-                            className="oa-action-primary-lg"
-                            onClick={() => {
-                                if (onEdit) onEdit(event.id)
-                                else navigate(getLink('admin.events.edit', { id: event.id }))
-                            }}
-                        >
-                            Edit Event
-                        </button>
-                        <div className="oa-action-group">
+                        <div className="oa-footer-stack">
+                            <button
+                                className="oa-btn oa-btn--primary"
+                                onClick={() => {
+                                    navigate(getLink('admin.events.detail', { id: event.id }))
+                                }}
+                            >
+                                View Event Page
+                            </button>
+                            {!isPast && (
+                                <button 
+                                    className="oa-btn oa-btn--primary"
+                                    onClick={() => {
+                                        if (onEdit) onEdit(event.id)
+                                        else navigate(getLink('admin.events.edit', { id: event.id }))
+                                    }}
+                                >
+                                    Edit Event
+                                </button>
+                            )}
+                        </div>
+                        <div className="oa-footer-stack">
                             <button 
-                                className="oa-icon-btn-lg"
+                                className="oa-btn oa-btn--primary"
                                 onClick={() => onDuplicate && onDuplicate(event.id)}
                                 title="Duplicate"
                             >
-                                <span className="material-symbols-outlined">content_copy</span>
+                                <span className="material-symbols-outlined" style={{ marginRight: 6 }}>content_copy</span>
+                                Duplicate
                             </button>
-                            <button 
-                                className="oa-icon-btn-lg"
-                                onClick={() => onCancel && onCancel(event.id)}
-                                title="Cancel"
-                            >
-                                <span className="material-symbols-outlined">cancel</span>
-                            </button>
-                            <button 
-                                className="oa-icon-btn-lg destructive"
-                                onClick={() => onDelete && onDelete(event.id)}
-                                title="Delete"
-                            >
-                                <span className="material-symbols-outlined">delete</span>
-                            </button>
+                            {!isPast && (
+                                <>
+                                    <button 
+                                        className="oa-btn oa-btn--primary"
+                                        onClick={() => onCancel && onCancel(event.id)}
+                                        title="Cancel"
+                                    >
+                                        <span className="material-symbols-outlined" style={{ marginRight: 6 }}>cancel</span>
+                                        Cancel
+                                    </button>
+                                    <button 
+                                        className="oa-btn oa-btn--primary"
+                                        onClick={() => onDelete && onDelete(event.id)}
+                                        title="Delete"
+                                    >
+                                        <span className="material-symbols-outlined" style={{ marginRight: 6 }}>delete</span>
+                                        Delete
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                 )}

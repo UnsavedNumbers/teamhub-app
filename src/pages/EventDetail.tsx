@@ -741,15 +741,15 @@ export default function EventDetail() {
                   download={`${event.title}.ics`}
                   className="block"
                 >
-                  <Button variant="secondary" className="w-full">
+                  <Button variant="primary" className="w-full">
                     <Icon name="apple" size="text-sm" className="mr-2" />
-                    Apple Calendar (.ics)
+                    Apple Calendar
                   </Button>
                 </a>
               ) : (
-                <Button variant="secondary" className="w-full" disabled>
+                <Button variant="primary" className="w-full" disabled>
                   <Icon name="apple" size="text-sm" className="mr-2" />
-                  Apple Calendar (.ics)
+                  Apple Calendar
                 </Button>
               )}
             </div>

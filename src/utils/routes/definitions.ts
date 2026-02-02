@@ -898,6 +898,13 @@ const admin = {
             description: 'Photo galleries',
             requiresOrg: true,
         },
+        detail: {
+            path: '/admin/photos/:id',
+            params: ['id'] as const,
+            label: 'Gallery',
+            icon: 'collections',
+            requiresOrg: true,
+        },
     },
 } as const satisfies Record<string, RouteDefinition | Record<string, RouteDefinition | Record<string, RouteDefinition>>>
 

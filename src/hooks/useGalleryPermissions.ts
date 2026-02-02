@@ -28,12 +28,11 @@ export function useGalleryPermissions(entityType: GalleryEntityType): GalleryPer
     }
 
     if (isCoach) {
-      const canCreate = ['event', 'travel_plan', 'team', 'season', 'program'].includes(entityType)
-      const canUpload = true
-      return { canView: true, canCreate, canUpload, canDelete: false }
+      // Coaches can create/manage galleries for all entity types in their org per requirement
+      return { canView: true, canCreate: true, canUpload: true, canDelete: true }
     }
 
-    // Parents and other roles: read-only
+    // Others: view only (visibility rules enforced server-side)
     return { canView: true, canCreate: false, canUpload: false, canDelete: false }
   }, [roles, entityType])
 }

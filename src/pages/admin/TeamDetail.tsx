@@ -15,6 +15,7 @@ import { TeamScheduleTab } from '../../components/admin/TeamScheduleTab'
 import { TeamAttendanceTab } from '../../components/admin/TeamAttendanceTab'
 import { TeamPaymentsTab } from '../../components/admin/TeamPaymentsTab'
 import { TeamSettingsTab } from '../../components/admin/TeamSettingsTab'
+import { GalleryManagementSection } from '@/components/admin/galleries/GalleryManagementSection'
 
 interface Team {
   id: string
@@ -287,7 +288,7 @@ export default function TeamDetail() {
   // Initialize tab from URL on mount
   useEffect(() => {
     const tabParam = searchParams.get('tab')
-    if (tabParam && ['overview', 'roster', 'schedule', 'attendance', 'payments', 'settings'].includes(tabParam)) {
+    if (tabParam && ['overview', 'roster', 'schedule', 'attendance', 'payments', 'settings', 'galleries'].includes(tabParam)) {
       // Tab is already set in URL, no need to update
     } else if (!tabParam) {
       // No tab in URL, set default to overview
@@ -611,7 +612,7 @@ export default function TeamDetail() {
             }}
             className="dark:border-slate-700"
           >
-            {['overview', 'roster', 'schedule', 'attendance', 'payments', 'settings'].map((tab) => (
+            {['overview', 'roster', 'schedule', 'attendance', 'payments', 'settings', 'galleries'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => handleTabChange(tab)}
@@ -1098,6 +1099,17 @@ export default function TeamDetail() {
             teamId={teamId}
             teamName={team.name}
           />
+        )}
+
+        {activeTab === 'galleries' && (
+          <div className="pa-mt-4">
+            <GalleryManagementSection
+              entityType="team"
+              entityId={teamId}
+              orgId={context.orgId}
+              title="Team galleries"
+            />
+          </div>
         )}
       </div>
 

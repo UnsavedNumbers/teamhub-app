@@ -63,6 +63,7 @@ export default function EditTravelPlan() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [itineraryFile, setItineraryFile] = useState<File | null>(null)
+  const [isPastPlan, setIsPastPlan] = useState(false)
   const isMountedRef = useRef(true)
 
   const { context, isReady } = useUserContext()
@@ -233,6 +234,7 @@ export default function EditTravelPlan() {
             }
         })
       })
+      setIsPastPlan(new Date(data.end_date) < new Date())
       if (isMountedRef.current) {
         setHasFormData(true)
         setError(null)
@@ -478,6 +480,7 @@ export default function EditTravelPlan() {
       <div className="pa-form-container">
         <Card>
           <form onSubmit={handleSubmit(onSubmit)}>
+            <fieldset disabled={isPastPlan}>
             {error && <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>{error}</div>}
             
             <div className="pa-mb-4">
@@ -614,8 +617,9 @@ export default function EditTravelPlan() {
 
             <div className="pa-form-actions">
               <OrgAdminButton variant="primary" onClick={() => navigate('/admin/travel')} disabled={saving} className="w-full sm:w-auto">Cancel</OrgAdminButton>
-              <Button type="submit" loading={saving} disabled={saving} className="pa-form-submit-btn w-full sm:w-auto">Save Changes</Button>
+              <Button type="submit" loading={saving} disabled={isPastPlan || saving} className="pa-form-submit-btn w-full sm:w-auto">Save Changes</Button>
             </div>
+            </fieldset>
           </form>
         </Card>
       </div>

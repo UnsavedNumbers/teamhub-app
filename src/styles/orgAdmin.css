@@ -2978,16 +2978,17 @@ html.dark .oa-equip-item {
 
 /* Footer Actions */
 .oa-slideout-footer {
-    position: absolute;
+    position: sticky;
     bottom: 0;
     left: 0;
     right: 0;
-    padding: 24px;
-    background: rgba(255, 255, 255, 0.9);
+    padding: 16px 24px;
+    background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(20px);
     border-top: 1px solid var(--org-border-default, var(--pa-n200));
-    display: flex;
-    gap: 16px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
     z-index: 20;
 }
 
@@ -3024,9 +3025,26 @@ html.dark .oa-slideout-footer {
 }
 
 .oa-action-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+}
+
+.oa-footer-stack {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    width: 100%;
+}
+
+.oa-btn.oa-btn--primary {
+    background: var(--org-btn-primary-bg, var(--pa-theme-action-primary, var(--pa-n900)));
+    color: var(--org-btn-primary-text, var(--pa-theme-text-on-action, var(--pa-white)));
+    white-space: nowrap;
+}
+
+.oa-btn.oa-btn--primary:hover {
+    background: var(--org-btn-primary-hover, var(--pa-theme-action-hover, var(--pa-n700)));
 }
 
 .oa-icon-btn-lg {
@@ -4271,7 +4289,8 @@ html.dark .oa-filter-panel {
 }
 
 .oa-ticket-list__info {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(110px, auto) 1fr;
     gap: var(--pa-space-3);
     align-items: flex-start;
     flex: 1;
@@ -4281,6 +4300,14 @@ html.dark .oa-filter-panel {
     display: flex;
     flex-direction: column;
     gap: 6px;
+    align-items: stretch;
+}
+
+.oa-ticket-list__chips .pa-badge,
+.oa-ticket-list__chips .oa-ticket-chip {
+    justify-content: center;
+    text-align: center;
+    width: 100%;
 }
 
 .oa-ticket-list__titles {
@@ -4328,6 +4355,10 @@ html.dark .oa-filter-panel {
     .oa-ticket-list__row {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .oa-ticket-list__info {
+        grid-template-columns: 1fr;
     }
 
     .oa-ticket-list__actions {

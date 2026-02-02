@@ -16,6 +16,7 @@ import { GuardianMatchIndicator } from '../../components/admin/GuardianMatchIndi
 import { checkGuardianMatch, debounce } from '../../utils/guardianMatching'
 import { useSportFieldDefinitions } from '../../hooks/useSportFieldDefinitions'
 import { useAthleteSportProfile } from '../../hooks/useAthleteSportProfile'
+import { GalleryManagementSection } from '@/components/admin/galleries/GalleryManagementSection'
 import type { Athlete, Guardian, GuardianMatch, PendingGuardianInvite } from '../../types/family'
 import type { AthleteSportWithDetails } from '../../data/services/athleteSportsService'
 import type { SportCode } from '../../types/sports'
@@ -1047,6 +1048,7 @@ export default function AthleteDetail() {
               )}
             </TabsTrigger>
             <TabsTrigger value="medical">{t('admin.athletes.tabs.medical')}</TabsTrigger>
+            <TabsTrigger value="galleries">Galleries</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
@@ -1431,6 +1433,18 @@ export default function AthleteDetail() {
                 )}
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="galleries">
+            <Card>
+              <h2 className="pa-card-title" style={{ marginBottom: 'var(--pa-space-3)' }}>Photos</h2>
+              <GalleryManagementSection
+                entityType="athlete"
+                entityId={athlete.id}
+                orgId={context?.orgId}
+                title="Athlete galleries"
+              />
+            </Card>
           </TabsContent>
           </Tabs>
         </div>

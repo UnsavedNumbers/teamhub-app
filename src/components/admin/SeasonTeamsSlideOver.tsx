@@ -15,6 +15,7 @@ interface SeasonTeamsSlideOverProps {
   onClose: () => void
   seasonName: string
   teams: SeasonTeamRow[]
+  seasonId?: string
 }
 
 export default function SeasonTeamsSlideOver({
@@ -22,6 +23,7 @@ export default function SeasonTeamsSlideOver({
   onClose,
   seasonName,
   teams,
+  seasonId,
 }: SeasonTeamsSlideOverProps) {
   if (!open) return null
 
@@ -120,6 +122,21 @@ export default function SeasonTeamsSlideOver({
             </div>
           )}
         </div>
+
+        {seasonId && (
+          <div className="oa-slideout-footer">
+            <button
+              type="button"
+              className="oa-btn oa-btn--primary"
+              onClick={() => {
+                onClose()
+                window.location.assign(getLink('admin.seasons.detail', { id: seasonId }))
+              }}
+            >
+              View Season Page
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
