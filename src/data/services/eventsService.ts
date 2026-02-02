@@ -491,8 +491,24 @@ export async function getEventDetails(
 
         if (error) throw error
 
+        // Debug: Log raw Supabase response
+        console.log('[eventsService] Raw Supabase response:', {
+            eventId,
+            hasData: !!data,
+            dataKeys: data ? Object.keys(data) : [],
+            hasEventLocation: !!data?.event_location,
+            eventLocation: data?.event_location,
+            fullData: data,
+        })
+
         // Normalize and map response
         const normalizedData = normalizeSupabaseResponse(data, false)
+        console.log('[eventsService] Normalized data:', {
+            hasNormalized: !!normalizedData,
+            normalizedKeys: normalizedData ? Object.keys(normalizedData) : [],
+            hasEventLocation: !!normalizedData?.event_location,
+            eventLocation: normalizedData?.event_location,
+        })
         if (!normalizedData) {
             return { data: null, error: null }
         }
