@@ -758,6 +758,15 @@ const admin = {
             icon: 'event',
             requiresOrg: true,
         },
+        ticketTypes: {
+            create: {
+                path: '/admin/ticketing/events/:id/ticket-types/new',
+                params: ['id'] as const,
+                label: 'Add Ticket Type',
+                icon: 'confirmation_number',
+                requiresOrg: true,
+            },
+        },
     },
     ticketingOrders: {
         path: '/admin/ticketing/orders',

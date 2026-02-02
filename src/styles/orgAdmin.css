@@ -449,6 +449,663 @@ html.dark .oa-theme-active textarea:focus {
 }
 
 /* =====================================================================
+   ORG ADMIN FORM SYSTEM
+   ===================================================================== */
+
+.oa-form-group {
+    margin-bottom: var(--pa-space-4);
+}
+
+.oa-label {
+    display: block;
+    font: 600 16px/1.4 var(--pa-font-body);
+    color: var(--pa-n500);
+    margin-bottom: var(--pa-space-2);
+}
+
+html.dark .oa-label {
+    color: var(--pa-text-secondary);
+}
+
+.oa-label--required::after {
+    content: ' *';
+    color: var(--pa-n500);
+}
+
+html.dark .oa-label--required::after {
+    color: var(--pa-text-muted);
+}
+
+.oa-input {
+    width: 100%;
+    height: 44px;
+
+    @media (max-width: 767px) {
+        height: 48px;
+        font-size: 16px;
+    }
+
+    padding: 0 var(--pa-space-3);
+    border: 1px solid var(--pa-n200);
+    border-radius: var(--pa-radius-s);
+    background: var(--pa-surface);
+    font: var(--pa-text-body-m);
+    color: var(--pa-n900);
+    transition: all var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.oa-input::placeholder {
+    color: var(--pa-n500);
+}
+
+.oa-input:hover {
+    border-color: var(--pa-n300);
+}
+
+.oa-input:focus {
+    border-color: var(--pa-n700);
+    outline: 2px solid rgba(43, 52, 61, 0.25);
+    box-shadow: var(--pa-shadow-1);
+}
+
+html.dark .oa-input {
+    background: var(--pa-surface);
+    border-color: #374151;
+    color: #f9fafb;
+}
+
+html.dark .oa-input::placeholder {
+    color: #9ca3af;
+}
+
+html.dark .oa-input:hover {
+    border-color: #4b5563;
+}
+
+html.dark .oa-input:focus {
+    border-color: #6b7280;
+    outline: 2px solid rgba(107, 114, 128, 0.25);
+}
+
+.oa-input--error {
+    border-color: var(--pa-n800);
+}
+
+.oa-input--error:focus {
+    outline-color: rgba(11, 15, 20, 0.25);
+}
+
+.oa-helper {
+    font: var(--pa-text-body-s);
+    color: var(--pa-n500);
+    margin-top: var(--pa-space-1);
+}
+
+.oa-helper--error {
+    color: var(--pa-n800);
+}
+
+.oa-helper-text {
+    font: var(--pa-text-body-s);
+    color: var(--pa-n500);
+    margin-top: var(--pa-space-1);
+}
+
+.oa-datepicker-group {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 44px;
+
+    @media (max-width: 767px) {
+        height: 48px;
+    }
+
+    border: 1px solid var(--pa-n200);
+    border-radius: var(--pa-radius-s);
+    background: var(--pa-surface);
+    transition: all var(--pa-motion-normal) var(--pa-ease-out);
+}
+
+.oa-datepicker-group:hover {
+    border-color: var(--pa-n300);
+}
+
+.oa-datepicker-group:focus-within {
+    border-color: var(--pa-n700);
+    outline: 2px solid rgba(43, 52, 61, 0.25);
+    box-shadow: var(--pa-shadow-1);
+}
+
+.oa-datepicker-group--error {
+    border-color: var(--pa-n800);
+}
+
+.oa-datepicker-group--error:focus-within {
+    outline-color: rgba(11, 15, 20, 0.25);
+}
+
+html.dark .oa-datepicker-group {
+    background: var(--pa-surface);
+    border-color: #374151;
+}
+
+html.dark .oa-datepicker-group:hover {
+    border-color: #4b5563;
+}
+
+html.dark .oa-datepicker-group:focus-within {
+    border-color: #6b7280;
+    outline: 2px solid rgba(107, 114, 128, 0.25);
+}
+
+.oa-datepicker-input {
+    flex: 1;
+    display: flex;
+    padding: 0 var(--pa-space-3);
+    font: var(--pa-text-body-m);
+    color: var(--pa-n900);
+}
+
+html.dark .oa-datepicker-input {
+    color: #f9fafb;
+}
+
+.oa-datepicker-segment {
+    padding: 2px;
+    font: var(--pa-text-body-m);
+    color: var(--pa-n900);
+    border-radius: 4px;
+    outline: none;
+}
+
+html.dark .oa-datepicker-segment {
+    color: #f9fafb;
+}
+
+.oa-datepicker-segment:focus {
+    background: var(--pa-n100);
+    color: var(--pa-n900);
+}
+
+html.dark .oa-datepicker-segment:focus {
+    background: #374151;
+    color: #f9fafb;
+}
+
+.oa-datepicker-segment[data-placeholder] {
+    color: var(--pa-n500);
+}
+
+html.dark .oa-datepicker-segment[data-placeholder] {
+    color: #9ca3af;
+}
+
+.oa-datepicker-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 var(--pa-space-2);
+    margin-right: var(--pa-space-1);
+    background: transparent;
+    border: none;
+    color: var(--pa-n500);
+    cursor: pointer;
+    border-radius: var(--pa-radius-s);
+    transition: all var(--pa-motion-fast) var(--pa-ease-out);
+}
+
+.oa-datepicker-button:hover {
+    background: var(--pa-n100);
+    color: var(--pa-n700);
+}
+
+html.dark .oa-datepicker-button {
+    color: #9ca3af;
+}
+
+html.dark .oa-datepicker-button:hover {
+    background: #374151;
+    color: #d1d5db;
+}
+
+.oa-datepicker-button:focus-visible {
+    outline: 2px solid var(--pa-n700);
+    outline-offset: 2px;
+}
+
+.oa-datepicker-popover {
+    background: var(--pa-surface);
+    border: 1px solid var(--pa-n200);
+    border-radius: var(--pa-radius-m);
+    box-shadow: var(--pa-shadow-4);
+    margin-top: var(--pa-space-1);
+    overflow: hidden;
+}
+
+html.dark .oa-datepicker-popover {
+    background: #1f2937;
+    border-color: #374151;
+}
+
+.oa-datepicker-popover[data-entering] {
+    animation: slideIn 200ms;
+}
+
+.oa-datepicker-popover[data-exiting] {
+    animation: slideOut 200ms;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+}
+
+.oa-datepicker-dialog {
+    padding: var(--pa-space-4);
+    outline: none;
+}
+
+.oa-datepicker-calendar {
+    width: 280px;
+}
+
+.oa-datepicker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--pa-space-3);
+}
+
+.oa-datepicker-heading {
+    flex: 1;
+    text-align: center;
+    font: var(--pa-text-heading-xs);
+    color: var(--pa-n900);
+    margin: 0;
+}
+
+html.dark .oa-datepicker-heading {
+    color: #f9fafb;
+}
+
+.oa-datepicker-nav-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: none;
+    border-radius: var(--pa-radius-s);
+    color: var(--pa-n700);
+    cursor: pointer;
+    transition: all var(--pa-motion-fast) var(--pa-ease-out);
+}
+
+.oa-datepicker-nav-button:hover {
+    background: var(--pa-n100);
+}
+
+html.dark .oa-datepicker-nav-button {
+    color: #d1d5db;
+}
+
+html.dark .oa-datepicker-nav-button:hover {
+    background: #374151;
+}
+
+.oa-datepicker-nav-button:focus-visible {
+    outline: 2px solid var(--pa-n700);
+    outline-offset: 2px;
+}
+
+.oa-datepicker-nav-button[data-disabled] {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.oa-datepicker-grid {
+    width: 100%;
+    border-spacing: 0;
+}
+
+.oa-datepicker-weekday {
+    font: var(--pa-text-body-s);
+    font-weight: 600;
+    color: var(--pa-n600);
+    text-align: center;
+    padding: var(--pa-space-1);
+}
+
+html.dark .oa-datepicker-weekday {
+    color: #9ca3af;
+}
+
+.oa-datepicker-cell {
+    width: 36px;
+    height: 36px;
+    text-align: center;
+    font: var(--pa-text-body-m);
+    color: var(--pa-n900);
+    border-radius: var(--pa-radius-s);
+    cursor: pointer;
+    outline: none;
+    border: 2px solid transparent;
+    transition: all var(--pa-motion-fast) var(--pa-ease-out);
+}
+
+html.dark .oa-datepicker-cell {
+    color: #f9fafb;
+}
+
+.oa-datepicker-cell:hover {
+    background: var(--pa-n100);
+}
+
+html.dark .oa-datepicker-cell:hover {
+    background: #374151;
+}
+
+.oa-datepicker-cell:focus-visible {
+    border-color: var(--pa-n700);
+}
+
+.oa-datepicker-cell[data-selected] {
+    background: var(--pa-n900);
+    color: var(--pa-white);
+}
+
+html.dark .oa-datepicker-cell[data-selected] {
+    background: #3b82f6;
+    color: #ffffff;
+}
+
+.oa-datepicker-cell[data-disabled] {
+    color: var(--pa-n300);
+    cursor: not-allowed;
+}
+
+html.dark .oa-datepicker-cell[data-disabled] {
+    color: #6b7280;
+}
+
+.oa-datepicker-cell[data-outside-month] {
+    color: var(--pa-n400);
+}
+
+html.dark .oa-datepicker-cell[data-outside-month] {
+    color: #6b7280;
+}
+
+.oa-datepicker-cell[data-unavailable] {
+    text-decoration: line-through;
+    color: var(--pa-n300);
+}
+
+html.dark .oa-datepicker-cell[data-unavailable] {
+    color: #6b7280;
+}
+
+.oa-timepicker-button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: 44px;
+    padding: 0 var(--pa-space-3);
+    border: 1px solid var(--pa-n200);
+    border-radius: var(--pa-radius-s);
+    background: var(--pa-surface);
+    font: var(--pa-text-body-m);
+    color: var(--pa-n900);
+    cursor: pointer;
+    transition: all var(--pa-motion-normal) var(--pa-ease-out);
+    text-align: left;
+
+    @media (max-width: 768px) {
+        height: 48px;
+    }
+}
+
+.oa-timepicker-button:hover:not(:disabled) {
+    border-color: var(--pa-n300);
+}
+
+.oa-timepicker-button:focus {
+    border-color: var(--pa-n700);
+    outline: 2px solid rgba(43, 52, 61, 0.25);
+    box-shadow: var(--pa-shadow-1);
+}
+
+.oa-timepicker-button--error {
+    border-color: var(--pa-n800);
+}
+
+.oa-timepicker-button--error:focus {
+    outline-color: rgba(11, 15, 20, 0.25);
+}
+
+.oa-timepicker-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+html.dark .oa-timepicker-button {
+    background: var(--pa-surface);
+    border-color: #374151;
+    color: #f9fafb;
+}
+
+html.dark .oa-timepicker-button:hover:not(:disabled) {
+    border-color: #4b5563;
+}
+
+html.dark .oa-timepicker-button:focus {
+    border-color: #6b7280;
+    outline: 2px solid rgba(107, 114, 128, 0.25);
+}
+
+.oa-timepicker-button-text {
+    flex: 1;
+}
+
+.oa-timepicker-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: var(--pa-space-1);
+    background: var(--pa-surface);
+    border: 1px solid var(--pa-n200);
+    border-radius: var(--pa-radius-m);
+    box-shadow: var(--pa-shadow-4);
+    display: flex;
+    gap: 1px;
+    overflow: hidden;
+    z-index: 1000;
+}
+
+html.dark .oa-timepicker-dropdown {
+    background: #1f2937;
+    border-color: #374151;
+}
+
+.oa-timepicker-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--pa-surface);
+}
+
+html.dark .oa-timepicker-column {
+    background: #1f2937;
+}
+
+.oa-timepicker-column--period {
+    flex: 0.6;
+}
+
+.oa-timepicker-column-header {
+    padding: var(--pa-space-2) var(--pa-space-3);
+    font: var(--pa-text-body-s);
+    font-weight: 600;
+    color: var(--pa-n600);
+    text-align: center;
+    border-bottom: 1px solid var(--pa-n200);
+    background: var(--pa-n50);
+}
+
+html.dark .oa-timepicker-column-header {
+    color: #9ca3af;
+    background: #111827;
+    border-color: #374151;
+}
+
+.oa-timepicker-column-scroll {
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.oa-timepicker-option {
+    display: block;
+    width: 100%;
+    padding: var(--pa-space-2) var(--pa-space-3);
+    font: var(--pa-text-body-m);
+    color: var(--pa-n900);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: center;
+    transition: all var(--pa-motion-fast) var(--pa-ease-out);
+}
+
+html.dark .oa-timepicker-option {
+    color: #f9fafb;
+}
+
+.oa-timepicker-option:hover {
+    background: var(--pa-n100);
+}
+
+html.dark .oa-timepicker-option:hover {
+    background: #374151;
+}
+
+.oa-timepicker-option--selected {
+    background: var(--pa-primary-500);
+    color: var(--pa-white);
+    font-weight: 600;
+}
+
+html.dark .oa-timepicker-option--selected {
+    background: #3b82f6;
+    color: #ffffff;
+}
+
+.oa-timepicker-option--selected:hover {
+    background: var(--pa-primary-600);
+}
+
+html.dark .oa-timepicker-option--selected:hover {
+    background: #2563eb;
+}
+
+.oa-checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+    cursor: pointer;
+    width: 100%;
+    justify-content: flex-start;
+}
+
+.oa-checkbox-input {
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    border: 1px solid var(--pa-n300);
+    background: var(--pa-surface);
+    appearance: none;
+    cursor: pointer;
+    transition: border-color 220ms ease, background-color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 12px 12px;
+    box-shadow: inset 0 0 0 1px var(--pa-n200);
+}
+
+.oa-checkbox-input:hover:not(:disabled) {
+    border-color: var(--pa-n500);
+}
+
+.oa-checkbox-input:checked {
+    background: var(--org-btn-primary-bg, var(--pa-n900));
+    border-color: var(--org-btn-primary-bg, var(--pa-n900));
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.15);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z'/%3E%3C/svg%3E");
+}
+
+/* Hide any duplicated font-icon check when using the SVG background-image.
+   Some checkbox markup renders a sibling Material Icons element; hide it
+   when the input is checked to avoid displaying two check marks. */
+.oa-checkbox-input:checked + .material-symbols-outlined,
+.oa-checkbox-input:checked ~ .material-symbols-outlined,
+.oa-checkbox-input:checked + .oa-checkbox-icon,
+.oa-checkbox-input:checked ~ .oa-checkbox-icon {
+    display: none;
+}
+
+/* Fallback using :has() to cover cases where the icon appears before the input
+   in the DOM. Modern browsers support :has(); if unsupported, the earlier
+   sibling selectors will still hide the icon when it's after the input. */
+.oa-checkbox:has(.oa-checkbox-input:checked) .material-symbols-outlined,
+.oa-checkbox:has(.oa-checkbox-input:checked) .oa-checkbox-icon {
+    display: none;
+}
+
+/* Ensure the checkbox is properly circular and the SVG check is centered */
+.oa-checkbox-input {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
+    border-radius: 999px;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 12px 12px;
+}
+
+.oa-checkbox-input:focus-visible {
+    outline: 3px solid var(--org-focus-ring, rgba(59, 130, 246, 0.45));
+    outline-offset: 2px;
+}
+
+/* =====================================================================
    ORG ADMIN SIDEBAR NAVIGATION - Uses org theme colors
    Secondary colors for structure, Tertiary for hover, Primary for active
    ===================================================================== */
@@ -1496,6 +2153,216 @@ html.dark .oa-text-danger {
     }
 }
 
+.oa-skeleton--tall {
+    min-height: 500px;
+}
+
+/* Alerts / Notices */
+.oa-alert {
+    border-radius: 16px;
+    padding: var(--pa-space-4);
+    border: 1px solid transparent;
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-1);
+    font-size: 0.95rem;
+}
+
+.oa-alert__meta {
+    font-size: 0.85rem;
+    color: var(--pa-text-secondary);
+}
+
+.oa-alert--error {
+    background: var(--pa-danger-bg);
+    border-color: var(--pa-danger);
+    color: var(--pa-danger);
+}
+
+.oa-alert--error .oa-alert__meta {
+    color: color-mix(in srgb, var(--pa-danger) 70%, var(--pa-text-muted) 30%);
+}
+
+.oa-alert--info {
+    background: var(--pa-n25);
+    border-color: var(--pa-n200);
+    color: var(--pa-text-primary);
+}
+
+.oa-alert--warning {
+    background: rgba(250, 204, 21, 0.12);
+    border-color: var(--pa-warning);
+    color: var(--pa-warning);
+    border-radius: 12px;
+}
+
+.oa-alert--warning .oa-alert__meta {
+    color: color-mix(in srgb, var(--pa-warning) 85%, var(--pa-text-muted) 15%);
+}
+
+.oa-alert--info .oa-alert__meta {
+    color: var(--pa-text-secondary);
+}
+
+.oa-status-icon-lg {
+    font-size: 48px;
+    color: var(--pa-warning);
+    margin-bottom: var(--pa-space-4);
+}
+
+.oa-action-icon {
+    font-size: 18px;
+    margin-right: var(--pa-space-1);
+}
+
+.oa-draft-saved {
+    border-radius: 12px;
+    border: 1px solid var(--pa-border);
+    background: var(--pa-n50);
+    color: var(--pa-text-muted);
+    padding: var(--pa-space-3) var(--pa-space-4);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--pa-space-2);
+    font-size: 0.875rem;
+}
+
+.oa-draft-saved__icon {
+    font-size: 1rem;
+    color: var(--org-btn-primary-bg, var(--pa-n900));
+}
+
+/* Form Section Layout */
+.oa-form-section {
+    margin-top: var(--pa-space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-5);
+}
+
+.oa-form-section:first-child {
+    margin-top: 0;
+}
+
+.oa-form-section-header {
+    border-radius: 16px;
+    border: 1px solid var(--pa-n200);
+    background: var(--pa-n25);
+    padding: var(--pa-space-4) var(--pa-space-5);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--pa-space-3);
+}
+
+.oa-form-section-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--pa-n900);
+}
+
+.oa-form-section-subtitle {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--pa-text-secondary);
+    max-width: 70ch;
+}
+
+.oa-form-section-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-4);
+    margin: 0;
+    padding: 0;
+}
+
+.oa-checkbox-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-3);
+    width: 100%;
+}
+
+.oa-checkbox-stack .oa-checkbox {
+    justify-content: flex-start;
+}
+
+@media (max-width: 639px) {
+    .oa-form-section-header {
+        padding: var(--pa-space-3);
+    }
+}
+
+html.dark .oa-form-section-header {
+    background: var(--pa-surface-panel);
+    border-color: var(--pa-border-subtle);
+}
+
+/* Ticketing helpers */
+.oa-ticket-card {
+    border: 1px solid var(--pa-border);
+    border-radius: 16px;
+    background: var(--pa-card-bg);
+    padding: var(--pa-space-5);
+}
+
+html.dark .oa-ticket-card {
+    background: var(--pa-surface-panel);
+    border-color: var(--pa-border-subtle);
+}
+
+.oa-ticket-type-card {
+    border: 1px solid var(--pa-border);
+    border-radius: 12px;
+    background: var(--pa-surface);
+    padding: var(--pa-space-4);
+}
+
+html.dark .oa-ticket-type-card {
+    border-color: var(--pa-border-subtle);
+    background: var(--pa-surface-panel);
+}
+
+.oa-ticket-type-actions {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--pa-space-2);
+}
+
+/* General notes helpers */
+.oa-notes-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pa-space-2);
+}
+
+.oa-textarea-expand {
+    width: 100%;
+    min-height: 140px;
+    resize: vertical;
+    display: block;
+}
+
+html.dark .oa-alert--error {
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.6);
+    color: var(--pa-danger);
+}
+
+html.dark .oa-alert--info {
+    background: var(--pa-surface-panel);
+    border-color: var(--pa-border-subtle);
+    color: var(--pa-text-primary);
+}
+
+html.dark .oa-draft-saved {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--pa-border-subtle);
+    color: var(--pa-text-secondary);
+}
+
 /* Inputs */
 .oa-input-group {
     display: flex;
@@ -1505,37 +2372,6 @@ html.dark .oa-text-danger {
 
 .oa-input-group--mb-0 {
     margin-bottom: 0;
-}
-
-.oa-label {
-    font-family: var(--pa-font-body);
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--pa-n500);
-}
-
-.oa-input {
-    width: 100%;
-    height: 44px;
-    padding: 0 12px;
-    border: 1px solid var(--pa-n200);
-    border-radius: 4px;
-    font-family: var(--pa-font-body);
-    font-size: 14px;
-    color: var(--pa-n900);
-    background: var(--pa-white);
-    transition: all var(--pa-motion-fast) var(--pa-ease-out);
-}
-
-.oa-input:focus {
-    border-color: var(--pa-n900);
-    outline: none;
-}
-
-.oa-input::placeholder {
-    color: var(--pa-n400);
 }
 
 /* Search Input */

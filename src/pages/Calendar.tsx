@@ -370,24 +370,34 @@ export default function Calendar() {
                 {currentDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
               </p>
             </div>
-            <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1 w-full sm:w-auto">
-              {(['agenda', 'week', 'month'] as CalendarViewMode[]).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => {
-                    setViewMode(v)
-                    setCurrentPage(1) // Reset page when changing view
-                  }}
-                  disabled={loading}
-                  className={`flex-1 sm:flex-none px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                    viewMode === v
-                      ? 'bg-[var(--org-btn-primary-bg)] text-white'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  {safeT(`calendar.views.${v}`, v)}
-                </button>
-              ))}
+            
+            <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
+              {(context?.roles.includes('org_admin') || context?.roles.includes('coach')) && (
+                 <Button onClick={() => navigate('/portal/calendar/new')} className="w-full sm:w-auto">
+                    <Icon name="add" className="mr-2" />
+                    Create Event
+                 </Button>
+              )}
+
+              <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1 w-full sm:w-auto">
+                {(['agenda', 'week', 'month'] as CalendarViewMode[]).map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => {
+                      setViewMode(v)
+                      setCurrentPage(1) // Reset page when changing view
+                    }}
+                    disabled={loading}
+                    className={`flex-1 sm:flex-none px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                      viewMode === v
+                        ? 'bg-[var(--org-btn-primary-bg)] text-white'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {safeT(`calendar.views.${v}`, v)}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>

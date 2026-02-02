@@ -25,13 +25,13 @@ export default function TicketEventDetail() {
 
   const { data: eventResponse } = useQuery({
     queryKey: ['ticketed-event', eventId],
-    queryFn: () => getTicketedEventById(eventId!),
+    queryFn: () => getTicketedEventById(eventId!, ''),
     enabled: !!eventId,
   })
 
   const { data: ticketTypesResponse } = useQuery({
     queryKey: ['ticket-types', eventId],
-    queryFn: () => getTicketTypesForEvent(eventId!),
+    queryFn: () => getTicketTypesForEvent(eventId!, ''),
     enabled: !!eventId,
   })
 

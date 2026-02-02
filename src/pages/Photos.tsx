@@ -17,11 +17,14 @@ import {
   type Gallery,
   type GalleryType,
 } from '../data/services/galleryService'
+import { getGuardianAthletes } from '../data/services/guardianService'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
+import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import { getLink } from '../utils/routes'
+import type { Athlete } from '../types/family'
 
 export default function Photos() {
   const { context, isReady } = useUserContext()
@@ -32,7 +35,26 @@ export default function Photos() {
     travel: [],
     org: [],
   })
+  const [athletes, setAthletes] = useState<Athlete[]>([])
   const [loading, setLoading] = useState(true)
+  const [isLoadingAthletes, setIsLoadingAthletes] = useState(true)
+
+  // Load guardian's linked athletes using the same method as /portal/athletes
+  useEffect(() => {
+    if (!isReady || !context.userId || !context.orgId) return
+    
+    const loadAthletes = async () => {
+      setIsLoadingAthletes(true)
+      const { data, error } = await getGuardianAthletes(context.userId, context.orgId)
+      
+      if (!error && data) {
+        setAthletes(data)
+      }
+      setIsLoadingAthletes(false)
+    }
+    
+    loadAthletes()
+  }, [context.userId, context.orgId, isReady])
 
   useEffect(() => {
     if (!isReady) return
@@ -105,6 +127,64 @@ export default function Photos() {
           </div>
         )}
       </div>
+    )
+  }
+
+  // Loading state
+  if (!isReady || loading || isLoadingAthletes) {
+    return (
+      <PortalLayout
+        breadcrumbs={[
+          { label: 'Home', path: '/portal/dashboard' },
+          { label: 'Photos' },
+        ]}
+      >
+        <div className="mb-8">
+          <PageTitle>Photos</PageTitle>
+          <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
+            View and share team and athlete photos.
+          </p>
+        </div>
+
+        {/* Loading Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <div className="h-48 bg-slate-200 dark:bg-slate-700 rounded"></div>
+              <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded mt-4"></div>
+            </Card>
+          ))}
+        </div>
+      </PortalLayout>
+    )
+  }
+
+  // No athletes linked
+  if (athletes.length === 0) {
+    return (
+      <PortalLayout
+        breadcrumbs={[
+          { label: 'Home', path: '/portal/dashboard' },
+          { label: 'Photos' },
+        ]}
+      >
+        <div className="mb-8">
+          <PageTitle>Photos</PageTitle>
+        </div>
+
+        <Card className="text-center py-12">
+          <Icon name="photo_library" size="text-4xl" className="text-slate-400 mb-4" />
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+            No Athletes Linked
+          </h3>
+          <p className="text-slate-500 mb-4">
+            Link an athlete to your account to view their photos.
+          </p>
+          <Button as={Link} to="/portal/athletes">
+            View My Athletes
+          </Button>
+        </Card>
+      </PortalLayout>
     )
   }
 

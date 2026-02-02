@@ -135,8 +135,9 @@ designs/
 docs
 *.md
 #*.sql
+/keys
 *.txt
-
+.env.prod
 # Logs
 logs
 *.log

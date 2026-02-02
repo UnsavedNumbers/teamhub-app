@@ -66,7 +66,7 @@ function EventCard({ event }: { event: TicketedEvent }) {
   // Get minimum price
   const { data: ticketTypesResponse } = useQuery({
     queryKey: ['ticket-types', event.id, 'min-price'],
-    queryFn: () => getTicketTypesForEvent(event.id),
+    queryFn: () => getTicketTypesForEvent(event.id, event.org_id),
     select: (data: any) => {
       const types = Array.isArray(data) ? data : data?.data || []
       if (types.length === 0) return null

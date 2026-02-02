@@ -714,13 +714,16 @@ export type Database = {
           family_id: string | null
           first_name: string
           gender: string | null
+          has_profile_photo: boolean | null
           height_cm: number | null
           id: string
           jersey_number: string | null
           last_name: string
           medical_notes: string | null
+          org_id: string | null
           phone: string | null
           preferred_name: string | null
+          profile_photo_updated_at: string | null
           shoe_size_system: string | null
           shoe_size_value: number | null
           shoe_width: string | null
@@ -742,13 +745,16 @@ export type Database = {
           family_id?: string | null
           first_name: string
           gender?: string | null
+          has_profile_photo?: boolean | null
           height_cm?: number | null
           id?: string
           jersey_number?: string | null
           last_name: string
           medical_notes?: string | null
+          org_id?: string | null
           phone?: string | null
           preferred_name?: string | null
+          profile_photo_updated_at?: string | null
           shoe_size_system?: string | null
           shoe_size_value?: number | null
           shoe_width?: string | null
@@ -770,13 +776,16 @@ export type Database = {
           family_id?: string | null
           first_name?: string
           gender?: string | null
+          has_profile_photo?: boolean | null
           height_cm?: number | null
           id?: string
           jersey_number?: string | null
           last_name?: string
           medical_notes?: string | null
+          org_id?: string | null
           phone?: string | null
           preferred_name?: string | null
+          profile_photo_updated_at?: string | null
           shoe_size_system?: string | null
           shoe_size_value?: number | null
           shoe_width?: string | null
@@ -786,6 +795,34 @@ export type Database = {
           weight_kg?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "athletes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "athletes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athletes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "athletes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "children_family_id_fkey"
             columns: ["family_id"]
@@ -4979,6 +5016,62 @@ export type Database = {
           },
         ]
       }
+      org_slug_history: {
+        Row: {
+          changed_at: string | null
+          created_at: string | null
+          expires_at: string
+          id: string
+          org_id: string
+          previous_slug: string
+        }
+        Insert: {
+          changed_at?: string | null
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          org_id: string
+          previous_slug: string
+        }
+        Update: {
+          changed_at?: string | null
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          org_id?: string
+          previous_slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_slug_history_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "org_slug_history_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_slug_history_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "org_slug_history_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_sport_profile_settings: {
         Row: {
           created_at: string
@@ -7286,6 +7379,50 @@ export type Database = {
           },
         ]
       }
+      stripe_connect_transactions: {
+        Row: {
+          application_fee_cents: number
+          connect_account_id: string
+          created_at: string
+          gross_amount_cents: number
+          id: string
+          net_amount_cents: number
+          stripe_application_fee_id: string | null
+          stripe_charge_id: string | null
+          ticket_order_id: string
+        }
+        Insert: {
+          application_fee_cents: number
+          connect_account_id: string
+          created_at?: string
+          gross_amount_cents: number
+          id?: string
+          net_amount_cents: number
+          stripe_application_fee_id?: string | null
+          stripe_charge_id?: string | null
+          ticket_order_id: string
+        }
+        Update: {
+          application_fee_cents?: number
+          connect_account_id?: string
+          created_at?: string
+          gross_amount_cents?: number
+          id?: string
+          net_amount_cents?: number
+          stripe_application_fee_id?: string | null
+          stripe_charge_id?: string | null
+          ticket_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stripe_connect_transactions_ticket_order_id_fkey"
+            columns: ["ticket_order_id"]
+            isOneToOne: true
+            referencedRelation: "ticket_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stripe_webhook_receipts: {
         Row: {
           created_at: string | null
@@ -7317,6 +7454,7 @@ export type Database = {
         Row: {
           athlete_id: string
           created_at: string | null
+          deleted_at: string | null
           id: string
           season_id: string
           status: Database["public"]["Enums"]["membership_status"]
@@ -7326,6 +7464,7 @@ export type Database = {
         Insert: {
           athlete_id: string
           created_at?: string | null
+          deleted_at?: string | null
           id?: string
           season_id: string
           status?: Database["public"]["Enums"]["membership_status"]
@@ -7335,6 +7474,7 @@ export type Database = {
         Update: {
           athlete_id?: string
           created_at?: string | null
+          deleted_at?: string | null
           id?: string
           season_id?: string
           status?: Database["public"]["Enums"]["membership_status"]
@@ -7686,12 +7826,18 @@ export type Database = {
           fees_cents: number
           id: string
           org_id: string
+          org_revenue_cents: number | null
+          platform_fee_cents: number | null
+          processed_at: string | null
           purchaser_email: string
           purchaser_name: string | null
           purchaser_user_id: string | null
           receipt_email_sent_at: string | null
           status: Database["public"]["Enums"]["ticket_order_status"]
+          stripe_application_fee_id: string | null
+          stripe_charge_id: string | null
           stripe_checkout_session_id: string | null
+          stripe_connect_account_id: string | null
           stripe_payment_intent_id: string | null
           subtotal_cents: number
           tax_cents: number
@@ -7704,12 +7850,18 @@ export type Database = {
           fees_cents?: number
           id?: string
           org_id: string
+          org_revenue_cents?: number | null
+          platform_fee_cents?: number | null
+          processed_at?: string | null
           purchaser_email: string
           purchaser_name?: string | null
           purchaser_user_id?: string | null
           receipt_email_sent_at?: string | null
           status?: Database["public"]["Enums"]["ticket_order_status"]
+          stripe_application_fee_id?: string | null
+          stripe_charge_id?: string | null
           stripe_checkout_session_id?: string | null
+          stripe_connect_account_id?: string | null
           stripe_payment_intent_id?: string | null
           subtotal_cents?: number
           tax_cents?: number
@@ -7722,12 +7874,18 @@ export type Database = {
           fees_cents?: number
           id?: string
           org_id?: string
+          org_revenue_cents?: number | null
+          platform_fee_cents?: number | null
+          processed_at?: string | null
           purchaser_email?: string
           purchaser_name?: string | null
           purchaser_user_id?: string | null
           receipt_email_sent_at?: string | null
           status?: Database["public"]["Enums"]["ticket_order_status"]
+          stripe_application_fee_id?: string | null
+          stripe_charge_id?: string | null
           stripe_checkout_session_id?: string | null
+          stripe_connect_account_id?: string | null
           stripe_payment_intent_id?: string | null
           subtotal_cents?: number
           tax_cents?: number
@@ -8068,6 +8226,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           ends_at: string
+          event_description: string | null
           event_id: string | null
           event_type: Database["public"]["Enums"]["ticketed_event_type"]
           id: string
@@ -8077,6 +8236,7 @@ export type Database = {
           starts_at: string
           status: Database["public"]["Enums"]["ticketed_event_status"]
           team_id: string | null
+          ticket_banner_url: string | null
           timezone: string
           title: string
           updated_at: string | null
@@ -8095,6 +8255,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           ends_at: string
+          event_description?: string | null
           event_id?: string | null
           event_type?: Database["public"]["Enums"]["ticketed_event_type"]
           id?: string
@@ -8104,6 +8265,7 @@ export type Database = {
           starts_at: string
           status?: Database["public"]["Enums"]["ticketed_event_status"]
           team_id?: string | null
+          ticket_banner_url?: string | null
           timezone?: string
           title: string
           updated_at?: string | null
@@ -8122,6 +8284,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           ends_at?: string
+          event_description?: string | null
           event_id?: string | null
           event_type?: Database["public"]["Enums"]["ticketed_event_type"]
           id?: string
@@ -8131,6 +8294,7 @@ export type Database = {
           starts_at?: string
           status?: Database["public"]["Enums"]["ticketed_event_status"]
           team_id?: string | null
+          ticket_banner_url?: string | null
           timezone?: string
           title?: string
           updated_at?: string | null
@@ -9640,6 +9804,684 @@ export type Database = {
         }
         Relationships: []
       }
+      video_athlete_links: {
+        Row: {
+          athlete_id: string
+          created_at: string
+          created_by: string | null
+          end_time_seconds: number | null
+          id: string
+          link_type: Database["public"]["Enums"]["video_link_type"]
+          start_time_seconds: number | null
+          video_id: string
+        }
+        Insert: {
+          athlete_id: string
+          created_at?: string
+          created_by?: string | null
+          end_time_seconds?: number | null
+          id?: string
+          link_type?: Database["public"]["Enums"]["video_link_type"]
+          start_time_seconds?: number | null
+          video_id: string
+        }
+        Update: {
+          athlete_id?: string
+          created_at?: string
+          created_by?: string | null
+          end_time_seconds?: number | null
+          id?: string
+          link_type?: Database["public"]["Enums"]["video_link_type"]
+          start_time_seconds?: number | null
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_athlete_links_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "admin_payments"
+            referencedColumns: ["athlete_id"]
+          },
+          {
+            foreignKeyName: "video_athlete_links_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athletes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_athlete_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_athlete_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_athlete_links_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_bookmarks: {
+        Row: {
+          created_at: string
+          id: string
+          label: string | null
+          timestamp_seconds: number
+          updated_at: string
+          user_id: string
+          video_id: string
+          visibility: Database["public"]["Enums"]["video_bookmark_visibility"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          timestamp_seconds: number
+          updated_at?: string
+          user_id: string
+          video_id: string
+          visibility?: Database["public"]["Enums"]["video_bookmark_visibility"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          timestamp_seconds?: number
+          updated_at?: string
+          user_id?: string
+          video_id?: string
+          visibility?: Database["public"]["Enums"]["video_bookmark_visibility"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_bookmarks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_bookmarks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_bookmarks_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_comments: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          parent_comment_id: string | null
+          timestamp_seconds: number | null
+          updated_at: string
+          video_id: string
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          parent_comment_id?: string | null
+          timestamp_seconds?: number | null
+          updated_at?: string
+          video_id: string
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          parent_comment_id?: string | null
+          timestamp_seconds?: number | null
+          updated_at?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_comments_parent_comment_id_fkey"
+            columns: ["parent_comment_id"]
+            isOneToOne: false
+            referencedRelation: "video_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_comments_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_note_targets: {
+        Row: {
+          athlete_id: string
+          created_at: string
+          id: string
+          note_id: string
+        }
+        Insert: {
+          athlete_id: string
+          created_at?: string
+          id?: string
+          note_id: string
+        }
+        Update: {
+          athlete_id?: string
+          created_at?: string
+          id?: string
+          note_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_note_targets_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "admin_payments"
+            referencedColumns: ["athlete_id"]
+          },
+          {
+            foreignKeyName: "video_note_targets_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athletes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_note_targets_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "video_notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_notes: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          deleted_at: string | null
+          drawing_data: Json | null
+          duration_seconds: number | null
+          id: string
+          scope: Database["public"]["Enums"]["video_note_scope"]
+          timestamp_seconds: number | null
+          updated_at: string
+          video_id: string
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          deleted_at?: string | null
+          drawing_data?: Json | null
+          duration_seconds?: number | null
+          id?: string
+          scope?: Database["public"]["Enums"]["video_note_scope"]
+          timestamp_seconds?: number | null
+          updated_at?: string
+          video_id: string
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          deleted_at?: string | null
+          drawing_data?: Json | null
+          duration_seconds?: number | null
+          id?: string
+          scope?: Database["public"]["Enums"]["video_note_scope"]
+          timestamp_seconds?: number | null
+          updated_at?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_notes_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_notes_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_notes_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_reviews: {
+        Row: {
+          athlete_id: string
+          created_at: string
+          guardian_id: string
+          id: string
+          notified_at: string
+          rating: number | null
+          responded_at: string | null
+          response_text: string | null
+          status: Database["public"]["Enums"]["video_review_status"]
+          updated_at: string
+          video_id: string
+          viewed_at: string | null
+        }
+        Insert: {
+          athlete_id: string
+          created_at?: string
+          guardian_id: string
+          id?: string
+          notified_at?: string
+          rating?: number | null
+          responded_at?: string | null
+          response_text?: string | null
+          status?: Database["public"]["Enums"]["video_review_status"]
+          updated_at?: string
+          video_id: string
+          viewed_at?: string | null
+        }
+        Update: {
+          athlete_id?: string
+          created_at?: string
+          guardian_id?: string
+          id?: string
+          notified_at?: string
+          rating?: number | null
+          responded_at?: string | null
+          response_text?: string | null
+          status?: Database["public"]["Enums"]["video_review_status"]
+          updated_at?: string
+          video_id?: string
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_reviews_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "admin_payments"
+            referencedColumns: ["athlete_id"]
+          },
+          {
+            foreignKeyName: "video_reviews_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athletes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_reviews_guardian_id_fkey"
+            columns: ["guardian_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_reviews_guardian_id_fkey"
+            columns: ["guardian_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_reviews_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_tag_links: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          tag_id: string
+          video_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          tag_id: string
+          video_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          tag_id?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_tag_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_tag_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_tag_links_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "video_tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_tag_links_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_tags: {
+        Row: {
+          color: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          org_id: string
+          tag_type: Database["public"]["Enums"]["video_tag_type"]
+          updated_at: string
+          usage_count: number
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          org_id: string
+          tag_type?: Database["public"]["Enums"]["video_tag_type"]
+          updated_at?: string
+          usage_count?: number
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          org_id?: string
+          tag_type?: Database["public"]["Enums"]["video_tag_type"]
+          updated_at?: string
+          usage_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_tags_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_tags_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_tags_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "video_tags_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_tags_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "video_tags_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      videos: {
+        Row: {
+          aspect_ratio: string | null
+          category: Database["public"]["Enums"]["video_category"]
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          duration_seconds: number | null
+          error_message: string | null
+          error_type: string | null
+          event_id: string | null
+          id: string
+          max_stored_frame_rate: number | null
+          max_stored_resolution: string | null
+          mux_asset_id: string | null
+          mux_playback_id: string | null
+          mux_upload_id: string | null
+          org_id: string
+          passthrough: Json | null
+          processing_completed_at: string | null
+          processing_started_at: string | null
+          recorded_at: string | null
+          resolution_tier: string | null
+          status: Database["public"]["Enums"]["video_status"]
+          team_id: string | null
+          thumbnail_time_offset: number | null
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          upload_completed_at: string | null
+          upload_started_at: string | null
+          uploaded_by: string
+          visibility: Database["public"]["Enums"]["video_visibility"]
+        }
+        Insert: {
+          aspect_ratio?: string | null
+          category?: Database["public"]["Enums"]["video_category"]
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          duration_seconds?: number | null
+          error_message?: string | null
+          error_type?: string | null
+          event_id?: string | null
+          id?: string
+          max_stored_frame_rate?: number | null
+          max_stored_resolution?: string | null
+          mux_asset_id?: string | null
+          mux_playback_id?: string | null
+          mux_upload_id?: string | null
+          org_id: string
+          passthrough?: Json | null
+          processing_completed_at?: string | null
+          processing_started_at?: string | null
+          recorded_at?: string | null
+          resolution_tier?: string | null
+          status?: Database["public"]["Enums"]["video_status"]
+          team_id?: string | null
+          thumbnail_time_offset?: number | null
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          upload_completed_at?: string | null
+          upload_started_at?: string | null
+          uploaded_by: string
+          visibility?: Database["public"]["Enums"]["video_visibility"]
+        }
+        Update: {
+          aspect_ratio?: string | null
+          category?: Database["public"]["Enums"]["video_category"]
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          duration_seconds?: number | null
+          error_message?: string | null
+          error_type?: string | null
+          event_id?: string | null
+          id?: string
+          max_stored_frame_rate?: number | null
+          max_stored_resolution?: string | null
+          mux_asset_id?: string | null
+          mux_playback_id?: string | null
+          mux_upload_id?: string | null
+          org_id?: string
+          passthrough?: Json | null
+          processing_completed_at?: string | null
+          processing_started_at?: string | null
+          recorded_at?: string | null
+          resolution_tier?: string | null
+          status?: Database["public"]["Enums"]["video_status"]
+          team_id?: string | null
+          thumbnail_time_offset?: number | null
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          upload_completed_at?: string | null
+          upload_started_at?: string | null
+          uploaded_by?: string
+          visibility?: Database["public"]["Enums"]["video_visibility"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "videos_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "videos_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_fees_status"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "videos_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "videos_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "videos_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "videos_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "admin_structure"
+            referencedColumns: ["team_id"]
+          },
+          {
+            foreignKeyName: "videos_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "videos_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "videos_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       waivers: {
         Row: {
           amount_cents: number
@@ -10641,6 +11483,10 @@ export type Database = {
         Args: { athlete_id_param: string; user_id_param?: string }
         Returns: boolean
       }
+      can_edit_video: {
+        Args: { p_user_id: string; p_video_id: string }
+        Returns: boolean
+      }
       can_fetch_gemini: { Args: { p_place_id: string }; Returns: boolean }
       can_fetch_nearby_gemini: {
         Args: {
@@ -10680,7 +11526,12 @@ export type Database = {
         Args: { gallery_id_param: string; user_id_param?: string }
         Returns: boolean
       }
+      can_view_video: {
+        Args: { p_user_id: string; p_video_id: string }
+        Returns: boolean
+      }
       check_platform_admin: { Args: never; Returns: boolean }
+      cleanup_expired_slug_redirects: { Args: never; Returns: number }
       clear_travel_override: {
         Args: { p_event_id: string }
         Returns: undefined
@@ -10944,6 +11795,10 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_guardian_video_athletes: {
+        Args: { p_org_id: string; p_user_id: string }
+        Returns: string[]
+      }
       get_invite_details: {
         Args: { p_token: string }
         Returns: {
@@ -11016,6 +11871,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["platform_admin_role"]
       }
+      get_public_org_theme: { Args: { org_id_input: string }; Returns: string }
       get_schema_columns: {
         Args: never
         Returns: {
@@ -11228,6 +12084,15 @@ export type Database = {
         }
         Returns: Json
       }
+      resolve_org_from_slug: {
+        Args: { p_slug: string }
+        Returns: {
+          current_slug: string
+          name: string
+          org_id: string
+          status: Database["public"]["Enums"]["org_status"]
+        }[]
+      }
       resolve_travel_contacts_for_plan: {
         Args: { p_plan_id: string }
         Returns: Json
@@ -11319,6 +12184,23 @@ export type Database = {
         Returns: boolean
       }
       trigger_notification_worker: { Args: never; Returns: undefined }
+      update_event_rsvp_config: {
+        Args: {
+          p_clear_existing: boolean
+          p_event_id: string
+          p_rsvp_enabled: boolean
+          p_rsvp_type: string
+        }
+        Returns: {
+          error: string
+          has_data: boolean
+          success: boolean
+        }[]
+      }
+      update_org_slug: {
+        Args: { p_new_slug: string; p_org_id: string }
+        Returns: undefined
+      }
       user_can_access_athlete: {
         Args: { p_athlete_id: string; p_user_id: string }
         Returns: boolean
@@ -11782,7 +12664,27 @@ export type Database = {
         | "USER_ROLE_CHANGED"
         | "USER_ORG_JOINED"
         | "USER_ORG_LEFT"
-      user_role: "parent" | "coach" | "admin"
+      user_role: "parent" | "coach" | "admin" | "org_admin" | "platform_admin"
+      video_bookmark_visibility: "private" | "shared"
+      video_category:
+        | "practice"
+        | "game"
+        | "highlight"
+        | "training"
+        | "event"
+        | "other"
+      video_link_type: "featured" | "appears" | "highlight"
+      video_note_scope: "private" | "coaches" | "guardians" | "all"
+      video_review_status: "pending" | "viewed" | "acknowledged" | "dismissed"
+      video_status:
+        | "pending_upload"
+        | "uploading"
+        | "processing"
+        | "ready"
+        | "errored"
+        | "deleted"
+      video_tag_type: "skill" | "drill" | "play" | "custom"
+      video_visibility: "private" | "team" | "organization" | "guardians"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -12360,7 +13262,29 @@ export const Constants = {
         "USER_ORG_JOINED",
         "USER_ORG_LEFT",
       ],
-      user_role: ["parent", "coach", "admin"],
+      user_role: ["parent", "coach", "admin", "org_admin", "platform_admin"],
+      video_bookmark_visibility: ["private", "shared"],
+      video_category: [
+        "practice",
+        "game",
+        "highlight",
+        "training",
+        "event",
+        "other",
+      ],
+      video_link_type: ["featured", "appears", "highlight"],
+      video_note_scope: ["private", "coaches", "guardians", "all"],
+      video_review_status: ["pending", "viewed", "acknowledged", "dismissed"],
+      video_status: [
+        "pending_upload",
+        "uploading",
+        "processing",
+        "ready",
+        "errored",
+        "deleted",
+      ],
+      video_tag_type: ["skill", "drill", "play", "custom"],
+      video_visibility: ["private", "team", "organization", "guardians"],
     },
   },
 } as const

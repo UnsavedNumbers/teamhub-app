@@ -70,6 +70,7 @@ serve(async (req) => {
   const ticketedEventId = payload?.ticketed_event_id as string | undefined
   const items = payload?.items as Array<{ ticket_type_id: string; quantity: number }> | undefined
   const purchaserEmail = payload?.purchaser_email as string | undefined
+  const orgSlug = payload?.org_slug as string | undefined
 
   if (!ticketedEventId || !items || !Array.isArray(items) || items.length === 0) {
     return json(req, { error: "Missing required fields: ticketed_event_id, items" }, 400)
@@ -107,6 +108,26 @@ serve(async (req) => {
 
     if (event.sales_end_at && new Date(event.sales_end_at) < now) {
       return json(req, { error: "Sales have ended" }, 400)
+    }
+
+    // Validate org Connect (must be done BEFORE creating order/holds)
+    const { data: org, error: orgError } = await supabase
+      .from("organizations")
+      .select("payout_account_id, payouts_enabled")
+      .eq("id", event.org_id)
+      .single()
+
+    if (orgError || !org) {
+      return json(req, { error: "Organization not found" }, 404)
+    }
+
+    if (!org.payout_account_id || !org.payouts_enabled) {
+      return json(req, { error: "Organization payment processing not available" }, 400)
+    }
+
+    // Validate Connect account ID format
+    if (!org.payout_account_id.startsWith("acct_")) {
+      return json(req, { error: "Invalid Connect account" }, 400)
     }
 
     // Load ticket types and validate
@@ -239,8 +260,14 @@ serve(async (req) => {
       return json(req, { error: "Failed to create holds" }, 500)
     }
 
-    // Update order totals (no tax/fees for MVP)
+    // Calculate platform fee ($1 per ticket) and org revenue
+    const totalTickets = items.reduce((sum, item) => sum + item.quantity, 0)
+    const platformFeePerTicket = 100 // $1 in cents
+    const platformFeeCents = totalTickets * platformFeePerTicket
     const totalCents = subtotalCents
+    const orgRevenueCents = totalCents - platformFeeCents
+
+    // Update order totals (no tax/fees for MVP)
     const { error: updateError } = await supabase
       .from("ticket_orders")
       .update({
@@ -254,7 +281,7 @@ serve(async (req) => {
       return json(req, { error: "Failed to update order totals" }, 500)
     }
 
-    // Create Stripe Checkout Session
+    // Create Stripe Checkout Session with destination charges
     const lineItems = items.map((item) => {
       const ticketType = ticketTypes.find((tt) => tt.id === item.ticket_type_id)!
       return {
@@ -271,10 +298,15 @@ serve(async (req) => {
     })
 
     const baseUrl = Deno.env.get("SITE_URL") || "http://localhost:3000"
-    const successUrl = `${baseUrl}/tickets/order/${order.id}`
-    const cancelUrl = `${baseUrl}/tickets/events/${ticketedEventId}`
+    // Use org-scoped URLs if org_slug is provided, otherwise fall back to old pattern
+    const successUrl = orgSlug 
+      ? `${baseUrl}/o/${orgSlug}/tickets/order/${order.id}`
+      : `${baseUrl}/tickets/order/${order.id}`
+    const cancelUrl = orgSlug
+      ? `${baseUrl}/o/${orgSlug}/tickets/events/${ticketedEventId}`
+      : `${baseUrl}/tickets/events/${ticketedEventId}`
 
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: any = {
       payment_method_types: ["card"],
       line_items: lineItems,
       mode: "payment",
@@ -284,14 +316,34 @@ serve(async (req) => {
       metadata: {
         order_id: order.id,
         org_id: event.org_id,
+        org_slug: orgSlug || "",
         ticketed_event_id: ticketedEventId,
+        stripe_connect_account_id: org.payout_account_id,
+        platform_fee_cents: platformFeeCents.toString(),
+        org_revenue_cents: orgRevenueCents.toString(),
+        total_tickets: totalTickets.toString(),
       },
-    })
+    }
 
-    // Update order with Stripe session ID
+    // Add destination charge configuration
+    sessionParams.payment_intent_data = {
+      application_fee_amount: platformFeeCents,
+      transfer_data: {
+        destination: org.payout_account_id,
+      },
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams)
+
+    // Update order with Stripe session ID and Connect fields
     await supabase
       .from("ticket_orders")
-      .update({ stripe_checkout_session_id: session.id })
+      .update({
+        stripe_checkout_session_id: session.id,
+        stripe_connect_account_id: org.payout_account_id,
+        platform_fee_cents: platformFeeCents,
+        org_revenue_cents: orgRevenueCents,
+      })
       .eq("id", order.id)
 
     return json(req, {

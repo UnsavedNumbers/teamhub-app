@@ -1,14 +1,17 @@
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { startTransition } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useLicense } from '../../hooks/useLicense'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { showSuccess, showError } from '../../utils/toast'
 import { refreshOrganizationTheme } from '../../hooks/useOrganizationTheme'
+import { validateSlugFormat, normalizeSlug, invalidateSlugCache } from '../../utils/orgResolution'
+import PublicUrlBanner, { QUERY_KEY_ORG_SLUG } from '@/components/admin/PublicUrlBanner'
 import { 
   AdminPageHeader, 
   Card, 
@@ -50,6 +53,7 @@ import {
   initiateStripeConnectOnboarding,
   getStripeConnectStatus,
   refreshStripeConnectStatus,
+  createStripeRemediationLink,
 } from '../../data/services/paymentSettingsService'
 
 import type { StripeConnectStatus } from '../../types/stripeConnect.types'
@@ -335,6 +339,31 @@ export default function OrganizationSettings() {
 
         <TabsContent value="overview">
           {orgDetails && <OverviewForm org={orgDetails} onSave={handleSaveOverview} loading={saving} />}
+
+          {/* Public URL slug — set/update slug for established orgs */}
+          {currentOrganization?.id && (
+            <div className="mt-6">
+              <PublicUrlSlugForm
+                orgId={currentOrganization.id}
+                initialSlug={orgDetails?.slug}
+              />
+            </div>
+          )}
+
+          {/* Public Links Card */}
+          {currentOrganization?.id && (
+            <div className="mt-6">
+              <PublicUrlBanner
+                orgId={currentOrganization.id}
+                title="Where to direct users (public links)"
+                description="Share these links with families and guests. Use the event detail page to share links to specific events."
+                links={[
+                  { label: 'Landing', path: '' },
+                  { label: 'Tickets', path: 'tickets' },
+                ]}
+              />
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="contact">
@@ -391,6 +420,167 @@ export default function OrganizationSettings() {
 }
 
 // --- Sub-Forms ---
+
+const SLUG_DEBOUNCE_MS = 500
+
+function PublicUrlSlugForm({ orgId, initialSlug }: { orgId: string; initialSlug?: string | null }) {
+  const queryClient = useQueryClient()
+  const { data: currentSlug, isFetched } = useQuery({
+    queryKey: [QUERY_KEY_ORG_SLUG, orgId],
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from('organizations')
+          .select('slug')
+          .eq('id', orgId)
+          .maybeSingle()
+        if (error || !data?.slug) return null
+        return data.slug
+      },
+    enabled: !!orgId,
+    initialData: initialSlug !== undefined ? initialSlug : undefined,
+  })
+
+  const [input, setInput] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [slugError, setSlugError] = useState<string | null>(null)
+  const [slugTaken, setSlugTaken] = useState<boolean>(false)
+  const [slugChecking, setSlugChecking] = useState(false)
+  const lastSyncedSlug = useRef<string | null | undefined>(undefined)
+  const resolvedSlug = currentSlug ?? (initialSlug ?? null)
+  const canSyncSlug = isFetched || initialSlug !== undefined
+
+  // Sync input from server slug when it loads or changes; avoid overwriting user edits
+  useEffect(() => {
+    if (!canSyncSlug) return
+    const serverSlug = resolvedSlug ?? ''
+    if (lastSyncedSlug.current === serverSlug) return
+    if (lastSyncedSlug.current !== undefined && input !== (lastSyncedSlug.current ?? '')) return
+    lastSyncedSlug.current = serverSlug
+    setInput(serverSlug)
+  }, [canSyncSlug, resolvedSlug, input])
+
+  // Debounced uniqueness check
+  useEffect(() => {
+    const normalized = normalizeSlug(input)
+    if (!normalized || normalized.length < 3) {
+      setSlugTaken(false)
+      setSlugChecking(false)
+      return
+    }
+    setSlugChecking(true)
+    const t = setTimeout(async () => {
+      const { data } = await supabase
+        .from('organizations')
+        .select('id')
+        .eq('slug', normalized)
+        .maybeSingle()
+      setSlugTaken(!!(data && data.id !== orgId))
+      setSlugChecking(false)
+    }, SLUG_DEBOUNCE_MS)
+    return () => clearTimeout(t)
+  }, [input, orgId])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSlugError(null)
+    const normalizedSlug = normalizeSlug(input)
+    const formatCheck = validateSlugFormat(normalizedSlug)
+    if (!formatCheck.valid) {
+      setSlugError(formatCheck.error ?? 'Invalid slug')
+      return
+    }
+    if (slugTaken) {
+      setSlugError('This URL slug is already taken.')
+      return
+    }
+    setSaving(true)
+    try {
+      const { error } = await (supabase as any).rpc('update_org_slug', {
+        p_org_id: orgId,
+        p_new_slug: normalizedSlug,
+      })
+      if (error) {
+        setSlugError(error.message)
+        setSaving(false)
+        return
+      }
+      const previousSlug = resolvedSlug ?? null
+      await queryClient.invalidateQueries({ queryKey: [QUERY_KEY_ORG_SLUG, orgId] })
+      await queryClient.refetchQueries({ queryKey: [QUERY_KEY_ORG_SLUG, orgId] })
+      if (previousSlug) invalidateSlugCache(previousSlug)
+      setInput(normalizedSlug)
+      showSuccess('Public URL slug updated.')
+    } catch (err) {
+      setSlugError(getErrorMessage(err) ?? 'Failed to update slug')
+      showError(getErrorMessage(err) ?? 'Failed to update slug')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleBlur = () => {
+    const n = normalizeSlug(input)
+    if (n !== input) setInput(n)
+  }
+
+  const isInvalidFormat = (() => {
+    const n = normalizeSlug(input)
+    if (!n) return false
+    return !validateSlugFormat(n).valid
+  })()
+
+  const canSubmit = !saving && normalizeSlug(input).length >= 3 && !slugTaken && !isInvalidFormat
+
+  return (
+    <Card>
+      <h3 className="pa-h3 pa-mb-2">Public URL slug</h3>
+      <p className="pa-text-muted pa-mb-4">
+        This slug is used in your public URLs (e.g. youthsports.team/o/{resolvedSlug || '{slug}'}/tickets). It must be unique and URL-friendly.
+      </p>
+      {resolvedSlug ? (
+        <p className="pa-text-sm pa-mb-4">
+          Current slug: <strong>{resolvedSlug}</strong>. Changing it will create a redirect from the old URL for 12 months.
+        </p>
+      ) : (
+        <p className="pa-text-sm pa-mb-4">Not set. Set your public URL slug below.</p>
+      )}
+      <form onSubmit={handleSubmit}>
+        <div className="pa-form-group pa-mb-4">
+          <Input
+            label="Slug"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onBlur={handleBlur}
+            placeholder="e.g. my-league"
+            disabled={saving}
+            aria-describedby={slugError ? 'slug-error' : undefined}
+          />
+          {slugError && (
+            <p id="slug-error" className="pa-text-sm pa-text-danger pa-mt-1" role="alert">
+              {slugError}
+            </p>
+          )}
+          {slugTaken && (
+            <p className="pa-text-sm pa-text-danger pa-mt-1">This URL slug is already taken.</p>
+          )}
+          {slugChecking && (
+            <p className="pa-text-sm pa-text-muted pa-mt-1">Checking availability…</p>
+          )}
+          {isInvalidFormat && input.trim().length > 0 && !slugError && (
+            <p className="pa-text-sm pa-text-danger pa-mt-1">
+              {validateSlugFormat(normalizeSlug(input)).error}
+            </p>
+          )}
+        </div>
+        <div className="pa-form-actions">
+          <Button type="submit" variant="primary" loading={saving} disabled={!canSubmit}>
+            Save slug
+          </Button>
+        </div>
+      </form>
+    </Card>
+  )
+}
 
 function OverviewForm({ org, onSave, loading }: { org: Organization, onSave: (data: OrganizationUpdateDTO, file?: File) => void, loading: boolean }) {
   const { control, handleSubmit, setValue, trigger } = useForm<OrganizationUpdateDTO>({
@@ -782,11 +972,43 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
   const [loading, setLoading] = useState(true)
   const [onboarding, setOnboarding] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [remediating, setRemediating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const [allowPartialPayments, setAllowPartialPayments] = useState<boolean>(true)
   const [policyLoading, setPolicyLoading] = useState(true)
   const [policySaving, setPolicySaving] = useState(false)
+
+  const formatDateTime = useCallback((iso?: string | null) => {
+    if (!iso) return ''
+    try {
+      const dt = new Date(iso)
+      return dt.toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+    } catch {
+      return iso
+    }
+  }, [])
+
+  const payoutsPaused = !!(connectStatus?.connected && connectStatus?.payoutsEnabled === false)
+  const hasDueRequirements = (connectStatus?.requirementsDue?.length ?? 0) > 0
+  const hasPendingReview = (connectStatus?.requirementsPending?.length ?? 0) > 0 || connectStatus?.disabledReason === 'requirements.pending_verification'
+  const isActionablePause = payoutsPaused && (connectStatus?.disabledReason === 'requirements.past_due' || hasDueRequirements)
+
+  const disabledCopy = useMemo(() => {
+    const reason = connectStatus?.disabledReason
+    if (!reason) return null
+    switch (reason) {
+      case 'requirements.past_due':
+        return 'Action required: verification information is overdue.'
+      case 'requirements.pending_verification':
+        return 'Stripe is reviewing your submitted information. No action needed yet.'
+      case 'under_review':
+        return 'Your account is under review. This usually resolves within 1-2 business days.'
+      default:
+        if (reason.startsWith('rejected.')) return 'Stripe restricted the account. Please contact support.'
+        return `Stripe reported: ${reason}`
+    }
+  }, [connectStatus?.disabledReason])
 
   const loadPolicy = useCallback(async () => {
     if (!organizationId) return
@@ -859,14 +1081,31 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
     if (!organizationId) return
     setRefreshing(true)
     setError(null)
-    const { error: refreshError } = await refreshStripeConnectStatus(organizationId)
+    const { error: refreshError, data: refreshed } = await refreshStripeConnectStatus(organizationId)
     if (refreshError) {
       setError(refreshError.message)
     } else {
-      await loadStatus()
+      if (refreshed) {
+        setConnectStatus(refreshed)
+      } else {
+        await loadStatus()
+      }
       showSuccess('Connect status refreshed')
     }
     setRefreshing(false)
+  }
+
+  const handleRemediationLink = async () => {
+    if (!organizationId) return
+    setRemediating(true)
+    setError(null)
+    const { url, error: linkError } = await createStripeRemediationLink(organizationId)
+    if (linkError || !url) {
+      setError(linkError?.message || 'Unable to generate remediation link')
+      setRemediating(false)
+      return
+    }
+    window.location.href = url
   }
 
   if (loading || policyLoading) {
@@ -904,6 +1143,72 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
         </div>
       )}
 
+      {connectStatus && payoutsPaused && (
+        <div className="pa-alert pa-mb-4" style={{ background: 'var(--pa-danger-bg)', color: 'var(--pa-danger)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--pa-danger-border, rgba(220,38,38,0.3))' }}>
+          <div className="pa-flex pa-justify-between pa-items-center pa-gap-3">
+            <div>
+              <div className="pa-h4 pa-mb-1">Payouts Paused</div>
+              <div className="pa-text-sm">
+                {disabledCopy || 'Stripe paused payouts for this account. Please resolve in Stripe to resume transfers.'}
+              </div>
+              {connectStatus.requirementsDeadline && (
+                <div className="pa-text-xs pa-mt-2">
+                  Deadline: {formatDateTime(connectStatus.requirementsDeadline)}
+                </div>
+              )}
+            </div>
+            <div className="pa-flex pa-gap-2">
+              {isActionablePause ? (
+                <Button
+                  variant="primary"
+                  onClick={handleRemediationLink}
+                  loading={remediating}
+                  disabled={remediating}
+                >
+                  Fix Now
+                </Button>
+              ) : (
+                connectStatus?.dashboardUrl && (
+                  <Button
+                    variant="ghost"
+                    icon="open_in_new"
+                    onClick={() => window.open(connectStatus.dashboardUrl!, '_blank')}
+                  >
+                    View in Stripe
+                  </Button>
+                )
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {connectStatus && !payoutsPaused && hasDueRequirements && (
+        <div className="pa-alert pa-mb-4" style={{ background: 'var(--pa-warning-bg, #FFF8E6)', color: 'var(--pa-text)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--pa-border-subtle, #F3D9A4)' }}>
+          <div className="pa-flex pa-justify-between pa-items-center pa-gap-3">
+            <div>
+              <div className="pa-h4 pa-mb-1">Verification needed</div>
+              <div className="pa-text-sm">
+                Complete the outstanding Stripe requirements to avoid payout interruptions.
+              </div>
+              {connectStatus.requirementsDeadline && (
+                <div className="pa-text-xs pa-mt-2">
+                  Deadline: {formatDateTime(connectStatus.requirementsDeadline)}
+                </div>
+              )}
+            </div>
+            <Button
+              variant="primary"
+              onClick={handleRemediationLink}
+              loading={remediating}
+              disabled={remediating}
+            >
+              Complete Now
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="pa-form-group pa-mb-6">
         <div className="pa-mb-4">
           <div className="pa-caption pa-text-muted pa-mb-2">Connection Status</div>
@@ -922,6 +1227,11 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
                 Refresh Status
               </Button>
             )}
+            {connectStatus?.lastStatusUpdated && (
+              <span className="pa-text-xs pa-text-muted">
+                Updated {formatDateTime(connectStatus.lastStatusUpdated)}
+              </span>
+            )}
           </div>
         </div>
 
@@ -929,8 +1239,8 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
           <>
             <div className="pa-mb-4">
               <div className="pa-caption pa-text-muted pa-mb-2">Payout Status</div>
-              <Badge variant={connectStatus.payoutsEnabled ? 'success' : 'neutral'}>
-                {connectStatus.payoutsEnabled ? 'Enabled' : 'Disabled'}
+              <Badge variant={connectStatus.payoutsEnabled ? 'success' : 'danger'}>
+                {connectStatus.payoutsEnabled ? 'Active' : 'Paused'}
               </Badge>
             </div>
 
@@ -948,6 +1258,46 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
                 {connectStatus.onboardingStatus}
               </Badge>
             </div>
+
+            <div className="pa-mb-4">
+              <div className="pa-caption pa-text-muted pa-mb-2">Stripe Reason</div>
+              <div className="pa-text-sm">
+                {disabledCopy || 'None reported'}
+              </div>
+            </div>
+
+            {hasPendingReview && (
+              <div className="pa-text-sm pa-text-muted pa-mb-4">
+                Stripe is reviewing recently submitted documents. You will be notified when this is complete.
+              </div>
+            )}
+
+            <div className="pa-mb-4">
+              <div className="pa-caption pa-text-muted pa-mb-2">Outstanding Requirements</div>
+              {connectStatus.requirementsDue?.length ? (
+                <ul className="pa-list pa-pl-4">
+                  {connectStatus.requirementsDue.map((req) => (
+                    <li key={req} className="pa-text-sm">{req}</li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="pa-text-sm pa-text-muted">No requirements currently due.</div>
+              )}
+            </div>
+
+            {connectStatus.requirementsErrors?.length > 0 && (
+              <div className="pa-mb-4">
+                <div className="pa-caption pa-text-muted pa-mb-2">Stripe reported issues</div>
+                <ul className="pa-list pa-pl-4">
+                  {connectStatus.requirementsErrors.map((err, idx) => (
+                    <li key={`${err.code}-${idx}`} className="pa-text-sm">
+                      {err.reason || err.code || 'Issue detected'}
+                      {err.requirement ? ` — ${err.requirement}` : ''}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {connectStatus.payoutDescriptor && (
               <div className="pa-mb-4">
@@ -968,7 +1318,28 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
               </div>
             )}
 
-            {connectStatus.onboardingStatus !== 'completed' && (
+            {(isActionablePause || hasDueRequirements) && (
+              <div className="pa-mb-4 pa-flex pa-gap-2">
+                <Button
+                  variant="primary"
+                  onClick={handleRemediationLink}
+                  disabled={remediating}
+                  loading={remediating}
+                >
+                  Fix Now
+                </Button>
+                {connectStatus.dashboardUrl && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => window.open(connectStatus.dashboardUrl!, '_blank')}
+                  >
+                    Open Stripe
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {connectStatus.onboardingStatus !== 'completed' && !isActionablePause && (
               <div className="pa-mb-4">
                 <Button
                   variant="primary"

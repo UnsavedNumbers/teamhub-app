@@ -14,7 +14,7 @@ export default function TicketAccess() {
 
   const { data: ticketsResponse, error } = useQuery({
     queryKey: ['tickets-access', token],
-    queryFn: () => getTicketsByAccessToken(token!),
+    queryFn: () => getTicketsByAccessToken(token!, ''),
     enabled: !!token,
   })
 
