@@ -49,6 +49,10 @@ export interface Gallery {
   gallery_type: GalleryType
   entity_id: string | null
   name: string
+  description?: string | null
+  visibility?: 'public' | 'team' | 'private'
+  cover_photo_id?: string | null
+  created_by_user_id?: string | null
   allow_contributions: boolean
   require_approval: boolean
   created_at: string
@@ -56,6 +60,7 @@ export interface Gallery {
   // Computed fields (from queries)
   photo_count?: number
   pending_count?: number
+  cover_url?: string | null
 }
 
 export interface GalleryAlbum {
@@ -72,6 +77,11 @@ export interface GalleryPhoto {
   album_id: string | null
   storage_path: string
   thumbnail_path: string | null
+  url?: string
+  thumbnail_url?: string | null
+  filename?: string | null
+  size_bytes?: number | null
+  sort_order?: number | null
   status: PhotoStatus
   uploaded_by_user_id: string
   taken_at: string | null
@@ -143,6 +153,20 @@ export function getGalleryPhotoThumbnailUrl(thumbnailPath: string | null, fallba
   return getGalleryPhotoUrl(fallbackPath)
 }
 
+function mapPhotoRecord(photo: any): GalleryPhoto {
+  const taggedAthletes =
+    photo.gallery_photo_tags
+      ?.map((tag: any) => tag.athlete)
+      .filter((athlete: any) => athlete !== null) || []
+
+  return {
+    ...photo,
+    url: getGalleryPhotoUrl(photo.storage_path),
+    thumbnail_url: getGalleryPhotoThumbnailUrl(photo.thumbnail_path, photo.storage_path),
+    tagged_athletes: taggedAthletes,
+  } as GalleryPhoto
+}
+
 // ============================================================================
 // Gallery Queries
 // ============================================================================
@@ -163,7 +187,7 @@ export async function getGalleriesForUser(
   try {
     let query = supabase
       .from('galleries')
-      .select('*')
+      .select('*, cover:cover_photo_id (thumbnail_path, storage_path)')
       .order('created_at', { ascending: false })
 
     // Filter by gallery type
@@ -187,7 +211,10 @@ export async function getGalleriesForUser(
 
     if (error) throw error
 
-    const galleryList = (galleries || []) as Gallery[]
+    const galleryList = (galleries || []).map((g: any) => ({
+      ...g,
+      cover_url: g.cover ? getGalleryPhotoThumbnailUrl(g.cover.thumbnail_path, g.cover.storage_path) : null,
+    })) as Gallery[]
 
     // Get photo counts for all galleries
     if (galleryList.length > 0) {
@@ -252,14 +279,14 @@ export async function getGalleryById(
 
     const { data, error } = await supabase
       .from('galleries')
-      .select('*')
+      .select('*, cover:cover_photo_id (thumbnail_path, storage_path)')
       .eq('id', galleryId)
       .maybeSingle()
 
     if (error) throw error
 
     return {
-      data: data as Gallery | null,
+      data: data ? { ...(data as any), cover_url: data.cover ? getGalleryPhotoThumbnailUrl(data.cover.thumbnail_path, data.cover.storage_path) : null } as Gallery : null,
       error: null,
     }
   } catch (err) {
@@ -369,9 +396,13 @@ export async function getPhotosForGallery(
     }
 
     // Ordering
-    const orderBy = params.order_by || 'created_at'
-    const orderDirection = params.order_direction || 'desc'
-    query = query.order(orderBy, { ascending: orderDirection === 'asc' })
+    const orderBy = params.order_by || 'sort_order'
+    const orderDirection = params.order_direction || 'asc'
+    if (orderBy === 'sort_order') {
+      query = query.order('sort_order', { ascending: true, nullsLast: true }).order('created_at', { ascending: false })
+    } else {
+      query = query.order(orderBy, { ascending: orderDirection === 'asc' })
+    }
 
     // Pagination
     if (params.limit) {
@@ -385,17 +416,7 @@ export async function getPhotosForGallery(
 
     if (error) throw error
 
-    // Transform the data to flatten tagged athletes
-    const photos: GalleryPhoto[] = (data || []).map((photo: any) => {
-      const taggedAthletes = photo.gallery_photo_tags
-        ?.map((tag: any) => tag.athlete)
-        .filter((athlete: any) => athlete !== null) || []
-
-      return {
-        ...photo,
-        tagged_athletes: taggedAthletes,
-      } as GalleryPhoto
-    })
+    const photos: GalleryPhoto[] = (data || []).map(mapPhotoRecord)
 
     return {
       data: photos,
@@ -561,7 +582,9 @@ export async function createGalleryForEntity(
   entityId: string,
   name: string,
   allowContributions: boolean = false,
-  requireApproval: boolean = true
+  requireApproval: boolean = true,
+  description?: string | null,
+  visibility: 'public' | 'team' | 'private' = 'team'
 ): Promise<{ data: Gallery | null; error: Error | null }> {
   if (USE_FAKE_DATA) {
     await simulateDelay()
@@ -591,6 +614,8 @@ export async function createGalleryForEntity(
         gallery_type: galleryType,
         entity_id: entityId,
         name,
+        description: description || null,
+        visibility,
         allow_contributions: allowContributions,
         require_approval: requireApproval,
       })
@@ -897,6 +922,9 @@ export async function uploadPhotoToGallery(
         gallery_id: galleryId,
         album_id: albumId || null,
         storage_path: storagePath,
+        filename: file.name,
+        size_bytes: file.size,
+        sort_order: Date.now(),
         status,
         uploaded_by_user_id: context.userId,
       })
@@ -949,5 +977,195 @@ export async function moderatePhotos(
     return {
       error: err instanceof Error ? err : new Error('Unknown error'),
     }
+  }
+}
+
+// ============================================================================
+// Admin Management Helpers (org admins & coaches)
+// ============================================================================
+
+export interface UpdateGalleryInput {
+  name?: string
+  description?: string | null
+  visibility?: 'public' | 'team' | 'private'
+  cover_photo_id?: string | null
+}
+
+export async function updateGallery(
+  context: UserContext,
+  galleryId: string,
+  payload: UpdateGalleryInput
+): Promise<{ data: Gallery | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { data: null, error: null }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('galleries')
+      .update({
+        ...payload,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', galleryId)
+      .select('*, cover:cover_photo_id (thumbnail_path, storage_path)')
+      .maybeSingle()
+
+    if (error) throw error
+
+    return {
+      data: data ? ({ ...(data as any), cover_url: data.cover ? getGalleryPhotoThumbnailUrl(data.cover.thumbnail_path, data.cover.storage_path) : null } as Gallery) : null,
+      error: null,
+    }
+  } catch (err) {
+    console.error('[galleryService] Error updating gallery:', err)
+    return { data: null, error: err as Error }
+  }
+}
+
+export async function setGalleryCover(
+  context: UserContext,
+  galleryId: string,
+  photoId: string | null
+): Promise<{ error: Error | null }> {
+  const { error } = await updateGallery(context, galleryId, { cover_photo_id: photoId })
+  return { error }
+}
+
+export async function deletePhotos(
+  context: UserContext,
+  galleryId: string,
+  photoIds: string[]
+): Promise<{ error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { error: null }
+  }
+
+  try {
+    if (photoIds.length === 0) return { error: null }
+
+    const { data: photos, error: fetchError } = await supabase
+      .from('gallery_photos')
+      .select('id, storage_path, thumbnail_path, size_bytes')
+      .eq('gallery_id', galleryId)
+      .in('id', photoIds)
+
+    if (fetchError) throw fetchError
+
+    const pathsToDelete: string[] = []
+    let reclaimedBytes = 0
+    ;(photos || []).forEach((p: any) => {
+      if (p.storage_path) pathsToDelete.push(p.storage_path)
+      if (p.thumbnail_path) pathsToDelete.push(p.thumbnail_path)
+      reclaimedBytes += Number(p.size_bytes || 0)
+    })
+
+    if (pathsToDelete.length > 0) {
+      const { error: storageError } = await supabase.storage
+        .from('public-media')
+        .remove(pathsToDelete)
+      if (storageError) console.warn('[galleryService] Storage delete warning:', storageError)
+    }
+
+    const { error: deleteRowsError } = await supabase
+      .from('gallery_photos')
+      .delete()
+      .eq('gallery_id', galleryId)
+      .in('id', photoIds)
+
+    if (deleteRowsError) throw deleteRowsError
+
+    if (reclaimedBytes > 0) {
+      await updateStorageUsage(context, -reclaimedBytes)
+    }
+
+    return { error: null }
+  } catch (err) {
+    console.error('[galleryService] Error deleting photos:', err)
+    return { error: err as Error }
+  }
+}
+
+export async function deleteGallery(
+  context: UserContext,
+  galleryId: string
+): Promise<{ error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { error: null }
+  }
+
+  try {
+    const { data: photos, error: photosError } = await supabase
+      .from('gallery_photos')
+      .select('id, storage_path, thumbnail_path, size_bytes')
+      .eq('gallery_id', galleryId)
+
+    if (photosError) throw photosError
+
+    const paths: string[] = []
+    let reclaimedBytes = 0
+    ;(photos || []).forEach((p: any) => {
+      if (p.storage_path) paths.push(p.storage_path)
+      if (p.thumbnail_path) paths.push(p.thumbnail_path)
+      reclaimedBytes += Number(p.size_bytes || 0)
+    })
+
+    if (paths.length > 0) {
+      const { error: storageError } = await supabase.storage.from('public-media').remove(paths)
+      if (storageError) console.warn('[galleryService] Storage delete warning:', storageError)
+    }
+
+    const { error: deletePhotosError } = await supabase
+      .from('gallery_photos')
+      .delete()
+      .eq('gallery_id', galleryId)
+    if (deletePhotosError) throw deletePhotosError
+
+    const { error: deleteGalleryError } = await supabase
+      .from('galleries')
+      .delete()
+      .eq('id', galleryId)
+    if (deleteGalleryError) throw deleteGalleryError
+
+    if (reclaimedBytes > 0) {
+      await updateStorageUsage(context, -reclaimedBytes)
+    }
+
+    return { error: null }
+  } catch (err) {
+    console.error('[galleryService] Error deleting gallery:', err)
+    return { error: err as Error }
+  }
+}
+
+export async function reorderGalleryPhotos(
+  _context: UserContext,
+  galleryId: string,
+  photoIds: string[]
+): Promise<{ error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { error: null }
+  }
+
+  try {
+    const updates = photoIds.map((id, index) => ({
+      id,
+      sort_order: index + 1,
+      gallery_id: galleryId,
+    }))
+
+    const { error } = await supabase
+      .from('gallery_photos')
+      .upsert(updates, { onConflict: 'id' })
+
+    if (error) throw error
+    return { error: null }
+  } catch (err) {
+    console.error('[galleryService] Error reordering photos:', err)
+    return { error: err as Error }
   }
 }

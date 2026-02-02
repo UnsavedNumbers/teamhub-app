@@ -16,6 +16,7 @@ import { supabase } from '../../lib/supabase'
 import SeasonTeamsSlideOver from '../../components/admin/SeasonTeamsSlideOver'
 import type { SeasonTeamRow } from '../../components/admin/SeasonTeamsSlideOver'
 import './SeasonDetail.css'
+import { GalleryManagementSection } from '@/components/admin/galleries/GalleryManagementSection'
 
 interface SeasonStats {
   teamsCount: number
@@ -457,6 +458,17 @@ export default function SeasonDetail() {
               </div>
             </div>
           </Card>
+
+          <Card className="pa-card" style={{ marginTop: 'var(--pa-space-4)' }}>
+            <h3 className="pa-card-title" style={{ marginBottom: 'var(--pa-space-3)' }}>Galleries</h3>
+            <GalleryManagementSection
+              entityType="season"
+              entityId={season.id}
+              orgId={context.orgId}
+              title="Season galleries"
+            />
+          </Card>
+
         </div>
 
         {/* Action Bar */}
@@ -497,6 +509,7 @@ export default function SeasonDetail() {
         onClose={() => setTeamsSlideOverOpen(false)}
         seasonName={season.name}
         teams={seasonTeams}
+        seasonId={season.id}
       />
 
       <ConfirmDialog

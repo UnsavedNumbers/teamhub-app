@@ -61,7 +61,6 @@ import { supabase } from '../../lib/supabase'
 
 import { type OrganizationSettings as OrgSettingsType } from '@/types/organizationSettings'
 import ContactSection from './organizationSettings/ContactSection'
-import TravelContactSection from './organizationSettings/TravelContactSection'
 
 import type { Organization } from '../../types/domain/Organization'
 
@@ -89,7 +88,7 @@ export default function OrganizationSettings() {
 
   // Valid tab values for URL parameter
   const validTabs = useMemo(() => {
-    const baseTabs = ['overview', 'contact', 'travel-contacts', 'general', 'appearance', 'attendance', 'registration', 'notifications', 'permissions', 'advanced']
+    const baseTabs = ['overview', 'contact', 'general', 'appearance', 'attendance', 'registration', 'notifications', 'permissions', 'advanced']
     if (hasPaymentAccess) {
       baseTabs.push('payments')
     }
@@ -326,7 +325,7 @@ export default function OrganizationSettings() {
         <TabsList className="pa-mb-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="contact">Contact</TabsTrigger>
-          <TabsTrigger value="travel-contacts">Travel Contacts</TabsTrigger>
+          {/* Travel contacts merged into Contact tab */}
           <TabsTrigger value="general">Configuration</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
@@ -370,9 +369,7 @@ export default function OrganizationSettings() {
             {currentOrganization?.id && <ContactSection orgId={currentOrganization.id} />}
         </TabsContent>
 
-        <TabsContent value="travel-contacts">
-            <TravelContactSection />
-        </TabsContent>
+        {/* Travel contacts merged into Contact tab; section removed */}
 
         <TabsContent value="general">
           {settings && <GeneralConfigForm settings={settings.general} onSave={(d) => handleSaveSettings('general', d)} loading={saving} />}
