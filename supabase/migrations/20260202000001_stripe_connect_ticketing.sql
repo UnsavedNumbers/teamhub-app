@@ -59,6 +59,7 @@ CREATE INDEX IF NOT EXISTS idx_ticket_orders_org_processed
 ALTER TABLE public.stripe_connect_transactions ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Service role can do everything (for edge functions)
+DROP POLICY IF EXISTS "Service role full access to stripe_connect_transactions" ON public.stripe_connect_transactions;
 CREATE POLICY "Service role full access to stripe_connect_transactions"
   ON public.stripe_connect_transactions
   FOR ALL
@@ -67,6 +68,7 @@ CREATE POLICY "Service role full access to stripe_connect_transactions"
   WITH CHECK (true);
 
 -- Policy: Org admins can read their org's transactions via ticket_orders join
+DROP POLICY IF EXISTS "Org admins can read their org's connect transactions" ON public.stripe_connect_transactions;
 CREATE POLICY "Org admins can read their org's connect transactions"
   ON public.stripe_connect_transactions
   FOR SELECT
