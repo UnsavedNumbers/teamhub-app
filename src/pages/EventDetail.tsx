@@ -584,7 +584,7 @@ export default function EventDetail() {
         breadcrumbs={[
           { label: 'Home', path: '/portal/dashboard' },
           { label: 'Calendar', path: '/portal/calendar' },
-          { label: 'Loading...' },
+          { label: t('common.loading') },
         ]}
       >
         <div className="flex justify-center py-12">
@@ -638,68 +638,58 @@ export default function EventDetail() {
 
         {/* Quick Summary Banner */}
         <Card className="bg-gradient-to-r from-[var(--org-btn-primary-bg, #137fec)]/5 to-slate-50 dark:to-slate-800/50 border-l-4 border-[var(--org-btn-primary-bg, #137fec)] p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Event Type</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.eventType')}</p>
               <p className="text-lg font-black text-slate-900 dark:text-white capitalize">{event.type}</p>
             </div>
             {event.arrival_time && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Arrive By</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.arriveBy', { time: formatTime(event.arrival_time) })}</p>
                 <p className="text-lg font-black text-slate-900 dark:text-white">{formatTime(event.arrival_time)}</p>
               </div>
             )}
             {venueAddress && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Location</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.location')}</p>
                 <p className="text-lg font-black text-slate-900 dark:text-white truncate">{venueAddress.split(',')[0]}</p>
               </div>
             )}
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Weather</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.weather')}</p>
               {loadingWeather ? (
-                <p className="text-lg font-black text-slate-900 dark:text-white">Loading...</p>
+                <p className="text-lg font-black text-slate-900 dark:text-white">{t('calendar.event.loading')}</p>
               ) : weatherData ? (
                 <div>
                   <p className="text-lg font-black text-slate-900 dark:text-white">{weatherData.temperature}°F • <span className="capitalize">{weatherData.description}</span></p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">{weatherData.precipitation}% precip • {weatherData.windSpeed} mph wind</p>
                 </div>
               ) : (
-                <p className="text-lg font-black text-slate-500 dark:text-slate-400">Unavailable</p>
+                <p className="text-lg font-black text-slate-500 dark:text-slate-400">{t('calendar.event.unavailable')}</p>
+              )}
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.entry')}</p>
+              {event.ticketed_event ? (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    if (orgSlug) {
+                      navigate(`/o/${orgSlug}/tickets/events/${event.ticketed_event?.id}`)
+                    }
+                  }}
+                  disabled={!orgSlug}
+                  className="w-full"
+                >
+                  {t('calendar.event.getTickets')}
+                </Button>
+              ) : (
+                <p className="text-lg font-black text-slate-900 dark:text-white">{t('calendar.event.freeEntry')}</p>
               )}
             </div>
           </div>
         </Card>
       </div>
-
-      {/* Tickets Required Banner */}
-      {event.ticketed_event && (
-        <Card className="mb-6 border-l-4 border-l-amber-500 bg-amber-50 dark:bg-amber-900/20">
-          <div className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h3 className="text-lg font-black uppercase text-slate-900 dark:text-white flex items-center gap-2">
-                <Icon name="confirmation_number" />
-                Tickets Required
-              </h3>
-              <p className="text-slate-600 dark:text-slate-300">
-                {event.ticketed_event.ticket_types.length > 0 && 
-                  `Starting from $${(Math.min(...event.ticketed_event.ticket_types.map(t => t.price_cents)) / 100).toFixed(2)}`
-                }
-              </p>
-            </div>
-            <Button
-              onClick={() => {
-                if (orgSlug) {
-                  navigate(`/o/${orgSlug}/tickets/events/${event.ticketed_event?.id}`)
-                }
-              }}
-              disabled={!orgSlug}
-            >
-              Get Tickets
-            </Button>
-          </div>
-        </Card>
-      )}
 
       {/* Main Content Grid */}
       <div className="grid lg:grid-cols-3 gap-6">
@@ -711,7 +701,7 @@ export default function EventDetail() {
             <Card className="p-6 relative rounded-tl-none">
               <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
                 <Icon name="location_on" size="text-2xl" />
-                Venue Location
+                {t('calendar.event.venueLocation')}
               </div>
               <div className="pt-12">
                 {event.event_location?.venue_name && (
@@ -824,7 +814,7 @@ export default function EventDetail() {
             <Card className="p-6 relative rounded-tl-none">
               <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
                 <Icon name="location_off" size="text-2xl" />
-                No Location Info
+                {t('calendar.event.noLocationInfo')}
               </div>
               <div className="pt-12">
                 <p className="text-slate-600 dark:text-slate-300">
@@ -858,7 +848,7 @@ export default function EventDetail() {
             <Card className="p-6 relative rounded-tl-none">
               <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
                 <Icon name="notes" size="text-2xl" />
-                Event Notes
+                {t('calendar.event.eventNotes')}
               </div>
               <div className="pt-12">
                 <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap bg-slate-50 dark:bg-slate-800/50 p-4 rounded">
@@ -872,7 +862,7 @@ export default function EventDetail() {
           <Card className="p-6 relative rounded-tl-none">
             <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
               <Icon name="how_to_reg" size="text-2xl" />
-              RSVP
+              {t('calendar.rsvp.title')}
             </div>
             <div className="pt-12">
               {children.length === 0 ? (
@@ -891,7 +881,7 @@ export default function EventDetail() {
                         <div className="flex items-center justify-between mb-3">
                           <CardTitle className="text-lg">{child.first_name} {child.last_name}</CardTitle>
                           {saving === child.id && (
-                            <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Saving...</span>
+                            <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">{t('calendar.rsvp.saving')}</span>
                           )}
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2">
@@ -906,7 +896,7 @@ export default function EventDetail() {
                                   : statusInactiveStyles
                               }`}
                             >
-                              {status === 'going' ? 'Going' : status === 'late' ? 'Running Late' : 'Not Going'}
+                              {status === 'going' ? t('calendar.rsvp.going') : status === 'late' ? t('calendar.rsvp.late') : t('calendar.rsvp.notGoing')}
                             </button>
                           ))}
                         </div>
@@ -928,7 +918,7 @@ export default function EventDetail() {
             <PhotoSection
               entityType="event"
               entityId={eventId}
-              title="Event Photos"
+              title={t('calendar.event.eventPhotos')}
             />
           )}
 
@@ -936,7 +926,7 @@ export default function EventDetail() {
           <Card className="p-6 relative rounded-tl-none">
             <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
               <Icon name="event" size="text-2xl" />
-              Add to Calendar
+              {t('calendar.event.addToCalendar')}
             </div>
             <div className="pt-12">
               {googleCalendarLink({
@@ -958,13 +948,13 @@ export default function EventDetail() {
                 >
                   <Button variant="primary" className="w-full">
                     <Icon name="event" size="text-sm" className="mr-2" />
-                    Google Calendar
+                    {t('calendar.event.googleCalendar')}
                   </Button>
                 </a>
               ) : (
                 <Button variant="primary" className="w-full" disabled>
                   <Icon name="event" size="text-sm" className="mr-2" />
-                  Google Calendar
+                  {t('calendar.event.googleCalendar')}
                 </Button>
               )}
               {appleCalendarLink({
@@ -981,17 +971,17 @@ export default function EventDetail() {
                     location: venueAddress || '',
                   })!}
                   download={`${event.title}.ics`}
-                  className="block"
+                  className="block mt-4"
                 >
                   <Button variant="primary" className="w-full">
                     <Icon name="event" size="text-sm" className="mr-2" />
-                    Apple Calendar
+                    {t('calendar.event.appleCalendar')}
                   </Button>
                 </a>
               ) : (
-                <Button variant="primary" className="w-full" disabled>
+                <Button variant="primary" className="w-full mt-4" disabled>
                   <Icon name="event" size="text-sm" className="mr-2" />
-                  Apple Calendar
+                  {t('calendar.event.appleCalendar')}
                 </Button>
               )}
             </div>
@@ -1002,7 +992,7 @@ export default function EventDetail() {
             <Card className="p-6 relative rounded-tl-none">
               <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
                 <Icon name="directions_car" size="text-2xl" />
-                Commute Info
+                {t('calendar.event.commuteInfo')}
               </div>
               <div className="pt-12">
                 {!isEditingCommute ? (
@@ -1048,6 +1038,35 @@ export default function EventDetail() {
                                 </p>
                               </div>
                             </div>
+                            {/* Need to Leave By */}
+                            {(() => {
+                              const targetTime = event.arrival_time || event.start_time
+                              const durationText = commuteSummary.durationInTraffic || commuteSummary.duration
+                              // Parse duration like "45 mins" or "1 hour 20 mins"
+                              const hoursMatch = durationText.match(/(\d+)\s*hour/)
+                              const minsMatch = durationText.match(/(\d+)\s*min/)
+                              const hours = hoursMatch ? parseInt(hoursMatch[1]) : 0
+                              const mins = minsMatch ? parseInt(minsMatch[1]) : 0
+                              const totalMinutes = hours * 60 + mins
+                              
+                              if (totalMinutes > 0) {
+                                const targetDate = new Date(targetTime)
+                                const leaveByDate = new Date(targetDate.getTime() - totalMinutes * 60 * 1000)
+                                const leaveByTime = leaveByDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+                                
+                                return (
+                                  <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Need to Leave By</p>
+                                    <p className="text-xl font-black text-[var(--org-btn-primary-bg,#137fec)]">{leaveByTime}</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                      To arrive by {new Date(targetTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                                      {event.arrival_time ? ' (arrival time)' : ' (start time)'}
+                                    </p>
+                                  </div>
+                                )
+                              }
+                              return null
+                            })()}
                           </div>
                         ) : null}
                         
