@@ -6,7 +6,7 @@
  * Renders as a collapsible section (collapsed by default).
  */
 
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 import { useVenueInsights, useRefreshVenueInsights } from '../../hooks/useVenueInsights'
 import { useUserContext } from '../../hooks/useUserContext'
 import VenuePhotoGallery from './VenuePhotoGallery'
@@ -46,7 +46,8 @@ export default function VenueInsights({ placeId, className = '' }: VenueInsights
   const errors = venueData?.errors
 
   // Determine if we should show the component
-  const hasData = placeDetails || photos.length > 0 || aiSummary || aiWhatToExpect || (placeDetails?.area_summary?.content_blocks && placeDetails.area_summary.content_blocks.length > 0)
+  const hasAreaSummary = placeDetails?.area_summary?.content_blocks && placeDetails.area_summary.content_blocks.length > 0
+  const hasData = placeDetails || photos.length > 0 || aiSummary || aiWhatToExpect || hasAreaSummary
   const hasErrors = errors?.place_details || errors?.gemini
 
   if (isLoading && !hasData) {
@@ -141,7 +142,7 @@ export default function VenueInsights({ placeId, className = '' }: VenueInsights
             )}
 
             {/* Area Summary (Google Places) */}
-            {placeDetails?.area_summary?.content_blocks && placeDetails.area_summary.content_blocks.length > 0 && (
+            {hasAreaSummary && (
               <div className="space-y-4">
                  <div className="flex items-center gap-2">
                   <h4 className="font-bold text-slate-900 dark:text-white text-sm">Area Overview</h4>
@@ -149,7 +150,7 @@ export default function VenueInsights({ placeId, className = '' }: VenueInsights
                     Google
                   </span>
                 </div>
-                {placeDetails.area_summary.content_blocks.map((block, idx) => (
+                {placeDetails!.area_summary!.content_blocks.map((block, idx) => (
                   <div key={idx}>
                     {block.topic !== 'overview' && (
                         <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
