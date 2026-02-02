@@ -146,8 +146,9 @@ export default function Travel() {
                 const { data, error } = await getTravelPlans(context, { upcomingOnly: true })
                 if (mounted) {
                     if (error) throw error
-                    setUpcomingPlans(data)
-                    loadSports(data)
+                    const resolved = Array.isArray(data) ? data : []
+                    setUpcomingPlans(resolved)
+                    loadSports(resolved)
                 }
             } catch (err) {
                 if (mounted) setError(err instanceof Error ? err : new Error('Failed to load travel plans'))
@@ -162,25 +163,43 @@ export default function Travel() {
 
     // 2. Load "All Plans" when tab switches to Past or All (if not loaded)
     useEffect(() => {
-        if (!isReady) return
-        if (activeTab === 'upcoming') return
-        if (allPlans !== null || isLoadingAll) return 
+        console.log('Effect running - activeTab:', activeTab, 'isReady:', isReady, 'allPlans:', allPlans?.length, 'isLoadingAll:', isLoadingAll)
+        
+        if (!isReady) {
+            console.log('Not ready yet')
+            return
+        }
+        if (activeTab === 'upcoming') {
+            console.log('Active tab is upcoming, skipping')
+            return
+        }
+        if (Array.isArray(allPlans)) {
+            console.log('allPlans already loaded')
+            return
+        }
+        if (isLoadingAll) {
+            console.log('Already loading')
+            return
+        }
 
         let mounted = true
         const loadAll = async () => {
             try {
                 setIsLoadingAll(true)
+                console.log('Loading all travel plans...')
                 // Use getTravelPlans without upcomingOnly (fetches everything)
                 // We rely on service caching or just simple fetch here. 
                 // Since this is a redesign, we assume we fetch fresh if not in state.
                 const { data, error } = await getTravelPlans(context, {})
+                console.log('All travel plans loaded:', data?.length, 'plans', data)
                 if (mounted) {
                     if (error) throw error
-                    setAllPlans(data)
-                    loadSports(data)
+                    const resolved = Array.isArray(data) ? data : []
+                    setAllPlans(resolved)
+                    loadSports(resolved)
                 }
             } catch (err) {
-                console.error(err)
+                console.error('Error loading all plans:', err)
                 if (mounted) {
                     setError(err instanceof Error ? err : new Error('Failed to load travel plans'))
                     setAllPlans([])
@@ -192,7 +211,8 @@ export default function Travel() {
 
         loadAll()
         return () => { mounted = false }
-    }, [activeTab, isReady, allPlans, isLoadingAll, context, retryCount])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab, isReady, context, retryCount])
 
     // Helper to load sports for new plans
     const loadSports = async (plans: FakeTravelPlan[]) => {
@@ -219,16 +239,36 @@ export default function Travel() {
     
     // Source plans based on tab
     const sourcePlans = useMemo(() => {
-        if (activeTab === 'upcoming') return upcomingPlans || []
+        console.log('sourcePlans recalculating:', { 
+            activeTab, 
+            upcomingPlansCount: upcomingPlans?.length, 
+            allPlansCount: allPlans?.length 
+        })
+        
+        if (activeTab === 'upcoming') return Array.isArray(upcomingPlans) ? upcomingPlans : []
         // For Past/All, we need the "allPlans" dataset
         // If not loaded yet, default to empty or upcoming (if sensible) 
         // But better to wait for allPlans. 
-        if (!allPlans) return []
-        
-        const today = new Date().toISOString().split('T')[0]
-        if (activeTab === 'past') {
-            return allPlans.filter(p => p.end_date < today)
+        if (!Array.isArray(allPlans)) {
+            console.log('allPlans is null, returning empty array')
+            return []
         }
+        
+        const today = getTodayLocalDateOnly()
+        console.log('Today:', today)
+        
+        if (activeTab === 'past') {
+            const pastPlans = allPlans.filter(p => {
+                const endDate = toDateOnly(p.end_date)
+                const isPast = endDate < today
+                console.log('Plan:', p.title, 'end_date:', p.end_date, 'isPast:', isPast)
+                return isPast
+            })
+            console.log('Past plans count:', pastPlans.length)
+            return pastPlans
+        }
+        
+        console.log('Returning all plans:', allPlans.length)
         return allPlans // 'all' tab
     }, [activeTab, upcomingPlans, allPlans])
 

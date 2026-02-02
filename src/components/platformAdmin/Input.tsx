@@ -40,14 +40,21 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
   const isRequired = required === true
 
   return (
-    <div className="pa-form-group">
+    <div className="pa-form-group oa-form-group">
       {label && (
-        <label className={cn('pa-label', isRequired && 'pa-label--required')}>
+        <label
+          className={cn(
+            'pa-label',
+            'oa-label',
+            isRequired && 'pa-label--required',
+            isRequired && 'oa-label--required',
+          )}
+        >
           {label}
         </label>
       )}
       
-      <div className="pa-input-wrapper">
+      <div className="pa-input-wrapper oa-input-wrapper">
         {icon && (
           <span className="pa-input-icon-left">
             <span className={cn('material-symbols-outlined', 'pa-icon-md')}>
@@ -60,10 +67,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
           ref={ref}
           className={cn(
             'pa-input',
+            'oa-input',
             hasError && 'pa-input--error',
+            hasError && 'oa-input--error',
             icon && 'pa-input--has-icon-left',
             iconRight && 'pa-input--has-icon-right',
-            className
+            className,
           )}
           {...props}
         />
@@ -78,7 +87,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
       </div>
       
       {(helper || error) && (
-        <div className={cn('pa-helper', hasError && 'pa-helper--error')}>
+        <div
+          className={cn(
+            'pa-helper',
+            'oa-helper',
+            hasError && 'pa-helper--error',
+            hasError && 'oa-helper--error',
+          )}
+        >
           {error || helper}
         </div>
       )}

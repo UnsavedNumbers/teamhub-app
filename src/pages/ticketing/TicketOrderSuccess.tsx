@@ -16,7 +16,7 @@ export default function TicketOrderSuccess() {
 
   const { data: orderResponse } = useQuery({
     queryKey: ['ticket-order', orderId],
-    queryFn: () => getTicketOrderById(orderId!),
+    queryFn: () => getTicketOrderById(orderId!, ''),
     enabled: !!orderId,
   })
 

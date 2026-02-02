@@ -174,6 +174,8 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
             { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', path: '/portal/tryouts', description: 'Tryout sessions' },
             { routeKey: 'portal.travel', text: 'Travel', icon: 'flight', path: '/portal/travel', description: 'Trip details' },
             { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', path: '/portal/messages', description: 'Communications' },
+            { routeKey: 'portal.photos', text: 'Photos', icon: 'photo_library', path: '/portal/photos', description: 'Team photos' },
+            { routeKey: 'portal.videos', text: 'Videos', icon: 'smart_display', path: '/portal/videos', description: 'Video library & feedback' },
             { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', path: '/portal/settings', description: 'Preferences' },
           ],
         },
@@ -259,6 +261,8 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
           label: 'Additional',
           items: [
             { routeKey: 'portal.uniforms', text: 'Uniforms', icon: 'checkroom', path: '/portal/uniforms', description: 'Uniform orders' },
+            { routeKey: 'portal.photos', text: 'Photos', icon: 'photo_library', path: '/portal/photos', description: 'Team photos' },
+            { routeKey: 'portal.videos', text: 'Videos', icon: 'smart_display', path: '/portal/videos', description: 'Coach feedback & video' },
             { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', path: '/portal/settings', description: 'Preferences' },
           ],
         },

@@ -82,12 +82,13 @@ serve(async (req) => {
   }
 
   try {
-    // Load order with event and items
+    // Load order with event, org, and items
     const { data: order, error: orderError } = await supabase
       .from("ticket_orders")
       .select(
         `
         id,
+        org_id,
         purchaser_email,
         purchaser_name,
         total_cents,
@@ -98,6 +99,9 @@ serve(async (req) => {
           venue_name,
           venue_city,
           venue_state
+        ),
+        organizations!ticket_orders_org_id_fkey (
+          slug
         )
       `,
       )
@@ -142,9 +146,13 @@ serve(async (req) => {
 
     // Build email content
     const baseUrl = Deno.env.get("SITE_URL") || "http://localhost:3000"
+    const orgSlug = (order.organizations as any)?.slug
+    // Use org-scoped URL if slug exists, otherwise fall back to legacy pattern
     const ticketUrl = order.purchaser_name
       ? `${baseUrl}/account/tickets` // Logged-in user
-      : `${baseUrl}/tickets/access/${token}` // Guest magic link
+      : orgSlug
+        ? `${baseUrl}/o/${orgSlug}/tickets/access/${token}` // Guest magic link with org context
+        : `${baseUrl}/tickets/access/${token}` // Legacy guest magic link
 
     const event = order.ticketed_events as any
     const eventDate = event?.starts_at ? new Date(event.starts_at).toLocaleDateString() : "TBD"

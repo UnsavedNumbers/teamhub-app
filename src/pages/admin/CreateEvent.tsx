@@ -114,9 +114,12 @@ export default function CreateEvent() {
     ticketing: {
       is_ticketed: false,
       event_type: 'other',
+      sales_immediate: true,
       sales_start_at: '',
       sales_end_at: '',
       status: 'draft',
+      event_description: '',
+      ticket_banner_url: '',
       ticket_types: []
     }
   })
@@ -192,6 +195,7 @@ export default function CreateEvent() {
   const watchSeasonId = watch('season_id')
   const watchRSVPEnabled = watch('rsvp_enabled')
   const watchTicketingEnabled = watch('ticketing.is_ticketed')
+  const watchTicketSalesImmediate = watch('ticketing.sales_immediate')
   
   // Watch all form values for persistence
   const formValues = watch()
@@ -469,14 +473,15 @@ export default function CreateEvent() {
       }
 
       // Ticketing sales window defaults
-      const salesStartAt = data.ticketing?.sales_start_at
-        ? new Date(data.ticketing.sales_start_at)
-        : null
-      const salesEndAt = data.ticketing?.sales_end_at
-        ? new Date(data.ticketing.sales_end_at)
-        : null
+      const salesImmediate = data.ticketing?.sales_immediate ?? true
+      const salesStartAt = salesImmediate
+        ? null
+        : (data.ticketing?.sales_start_at ? new Date(data.ticketing.sales_start_at) : null)
+      const salesEndAt = salesImmediate
+        ? null
+        : (data.ticketing?.sales_end_at ? new Date(data.ticketing.sales_end_at) : null)
       const resolvedSalesEnd =
-        data.ticketing?.is_ticketed && !salesEndAt
+        data.ticketing?.is_ticketed && !salesImmediate && !salesEndAt
           ? end
           : salesEndAt || null
 
@@ -528,13 +533,20 @@ export default function CreateEvent() {
 
       // 3. Handle Recurring
       if (data.recurring?.enabled) {
+          const recurringEndDate = data.recurring.end_date || null
+          let recurringMax = data.recurring.max_occurrences ? parseInt(data.recurring.max_occurrences) : null
+          // Constraint requires at least one end condition
+          if (!recurringEndDate && !recurringMax) {
+            recurringMax = 1
+          }
+
           type RecurringPatternInsert = Database['public']['Tables']['recurring_event_patterns']['Insert']
           const recurData = {
               parent_event_id: eventDataAny.id,
               frequency: data.recurring.frequency as Database['public']['Enums']['recurrence_frequency'],
               days_of_week: data.recurring.days_of_week.length > 0 ? data.recurring.days_of_week : [new Date(data.start_time).getDay()],
-              end_date: data.recurring.end_date || null,
-              max_occurrences: data.recurring.max_occurrences ? parseInt(data.recurring.max_occurrences) : null
+              end_date: recurringEndDate,
+              max_occurrences: recurringMax
           } satisfies RecurringPatternInsert
            const { error: recurError } = await supabase.from('recurring_event_patterns').insert(recurData)
            if (recurError) throw recurError
@@ -705,7 +717,7 @@ export default function CreateEvent() {
       label: EVENT_TYPE_LABELS[key]
   }))
 
-  if (loading) return <div className="pa-skeleton" style={{ height: '500px' }} />
+  if (loading) return <div className="pa-skeleton oa-skeleton--tall" />
 
   return (
     <div className="pa-root">
@@ -721,259 +733,278 @@ export default function CreateEvent() {
         <Card>
           <form onSubmit={handleSubmit(onSubmit, (errors) => console.error('Form validation errors:', errors))}>
             {error && (
-              <div className="pa-card pa-mb-4 pa-text-danger" style={{ background: 'var(--pa-danger-bg)', border: 'none' }}>
+              <div className="oa-alert oa-alert--error pa-mb-4">
                 <div>{error}</div>
-                {errorDetail && <div className="pa-mt-2 pa-text-muted" style={{ fontSize: '0.875rem' }}>{errorDetail}</div>}
+                {errorDetail && <div className="oa-alert__meta">{errorDetail}</div>}
               </div>
             )}
             
             {draftSaved && (
-              <div className="pa-mb-4 pa-flex pa-items-center pa-gap-2 pa-text-muted" style={{ fontSize: '0.875rem' }}>
-                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>check_circle</span>
+              <div className="oa-draft-saved pa-mb-4">
+                <span className="material-symbols-outlined oa-draft-saved__icon">check_circle</span>
                 <span>Draft saved</span>
               </div>
             )}
             
-            {/* SECTION 1: EVENT BASICS */}
-            <div className="pa-mb-4">
-              <Controller name="title" control={control} rules={{ required: t('admin.events.validation.titleRequired'), minLength: { value: 3, message: t('admin.events.validation.titleMinLength') } }} render={({ field }) => <Input {...field} label="Event Title" required error={errors.title?.message || undefined} />} />
-            </div>
-            
-            {/* Basic info: Sport → Program → Season → Team (each dropdown drives the next) */}
-            <div className="pa-form-grid pa-form-grid-4 pa-mb-4">
-              <div className="pa-select-wrapper">
-                <Controller
-                  name="sport_id"
-                  control={control}
-                  render={({ field }) => (
+            <section className="oa-form-section" aria-labelledby="event-basics-heading">
+              <div className="oa-form-section-header">
+                <div>
+                  <h3 id="event-basics-heading" className="oa-form-section-title">Event Basics</h3>
+                  <p className="oa-form-section-subtitle">Name the event and connect it to the correct sport, program, season, and team.</p>
+                </div>
+              </div>
+              <div className="oa-form-section-body">
+                <div className="pa-mb-4">
+                  <Controller name="title" control={control} rules={{ required: t('admin.events.validation.titleRequired'), minLength: { value: 3, message: t('admin.events.validation.titleMinLength') } }} render={({ field }) => <Input {...field} label="Event Title" required error={errors.title?.message || undefined} />} />
+                </div>
+                <div className="pa-form-grid pa-form-grid-4 pa-mb-4">
+                  <div className="pa-select-wrapper">
+                    <Controller
+                      name="sport_id"
+                      control={control}
+                      render={({ field }) => (
                     <Select
                       {...field}
                       value={field.value || ''}
-                      label="Sport"
-                      options={sports.map(s => ({ value: s.id, label: s.name }))}
-                      onChange={(value) => {
-                        field.onChange(value)
-                        setValue('program_id', '', { shouldValidate: false })
-                        setValue('season_id', '', { shouldValidate: false })
-                        setValue('team_id', '', { shouldValidate: false })
-                      }}
+                      label={t('admin.events.fields.sport')}
+                          options={sports.map(s => ({ value: s.id, label: s.name }))}
+                          onChange={(value) => {
+                            field.onChange(value)
+                            setValue('program_id', '', { shouldValidate: false })
+                            setValue('season_id', '', { shouldValidate: false })
+                            setValue('team_id', '', { shouldValidate: false })
+                          }}
+                        />
+                      )}
                     />
-                  )}
-                />
-              </div>
-              <div className="pa-select-wrapper">
-                <Controller
-                  name="program_id"
-                  control={control}
-                  render={({ field }) => (
+                  </div>
+                  <div className="pa-select-wrapper">
+                    <Controller
+                      name="program_id"
+                      control={control}
+                      render={({ field }) => (
                     <Select
                       {...field}
                       value={field.value || ''}
-                      label="Program"
-                      options={programs.map(p => ({ value: p.id, label: p.name }))}
-                      disabled={!watchSportId}
-                      onChange={(value) => {
-                        field.onChange(value)
-                        setValue('season_id', '', { shouldValidate: false })
-                        setValue('team_id', '', { shouldValidate: false })
-                      }}
+                      label={t('admin.events.fields.program')}
+                          options={programs.map(p => ({ value: p.id, label: p.name }))}
+                          disabled={!watchSportId}
+                          onChange={(value) => {
+                            field.onChange(value)
+                            setValue('season_id', '', { shouldValidate: false })
+                            setValue('team_id', '', { shouldValidate: false })
+                          }}
+                        />
+                      )}
                     />
-                  )}
-                />
-              </div>
-              <div className="pa-select-wrapper">
-                <Controller
-                  name="season_id"
-                  control={control}
-                  rules={{ required: t('admin.events.validation.seasonRequired') }}
-                  render={({ field }) => (
+                  </div>
+                  <div className="pa-select-wrapper">
+                    <Controller
+                      name="season_id"
+                      control={control}
+                      rules={{ required: t('admin.events.validation.seasonRequired') }}
+                      render={({ field }) => (
                     <Select
                       {...field}
                       value={field.value || ''}
-                      label="Season"
-                      options={seasons.map(s => ({ value: s.id, label: s.name }))}
-                      required
-                      disabled={!watchProgramId || loading}
-                      error={errors.season_id?.message || undefined}
-                      onChange={(value) => {
-                        field.onChange(value)
-                        setValue('team_id', '', { shouldValidate: false })
-                      }}
+                      label={t('admin.events.fields.season')}
+                          options={seasons.map(s => ({ value: s.id, label: s.name }))}
+                          required
+                          disabled={!watchProgramId || loading}
+                          error={errors.season_id?.message || undefined}
+                          onChange={(value) => {
+                            field.onChange(value)
+                            setValue('team_id', '', { shouldValidate: false })
+                          }}
+                        />
+                      )}
                     />
-                  )}
-                />
-              </div>
-              <div className="pa-select-wrapper">
-                <Controller
-                  name="team_id"
-                  control={control}
-                  rules={{ required: t('admin.events.validation.teamRequired') }}
-                  render={({ field }) => (
+                  </div>
+                  <div className="pa-select-wrapper">
+                    <Controller
+                      name="team_id"
+                      control={control}
+                      rules={{ required: t('admin.events.validation.teamRequired') }}
+                      render={({ field }) => (
                     <Select
                       {...field}
                       value={field.value || ''}
-                      label="Team"
-                      options={teams.map(t => ({ value: t.id, label: t.name }))}
-                      required
-                      disabled={!watchSeasonId || loading}
-                      error={errors.team_id?.message || undefined}
+                      label={t('admin.events.fields.team')}
+                          options={teams.map(t => ({ value: t.id, label: t.name }))}
+                          required
+                          disabled={!watchSeasonId || loading}
+                          error={errors.team_id?.message || undefined}
+                        />
+                      )}
                     />
-                  )}
-                />
+                  </div>
+                </div>
+                <div className="pa-form-grid pa-form-grid-3 pa-mb-4">
+                  <div className="pa-select-wrapper">
+                <Controller name="type" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label={t('admin.events.fields.eventType')} options={eventTypeOptions} />} />
+                  </div>
+                </div>
               </div>
-            </div>
-            {/* Event type (same row or next row) */}
-            <div className="pa-form-grid pa-form-grid-3 pa-mb-4">
-              <div className="pa-select-wrapper">
-                <Controller name="type" control={control} render={({ field }) => <Select {...field} value={field.value || ''} label="Event Type" options={eventTypeOptions} />} />
-              </div>
-            </div>
+            </section>
 
-            {/* SECTION 2: DATE + TIME */}
-            {/* Mobile: Single column | Tablet: Date + Start Time side-by-side | Desktop: Date + Start Time + End Time + Arrival Time (all in one row) */}
-            <div className="pa-mb-4">
-              <div className="pa-form-grid pa-form-grid-4 pa-form-grid-tablet-2col">
-                <Controller 
-                  name="start_time" 
-                  control={control} 
-                  rules={{ required: t('admin.events.validation.startTimeRequired') }} 
-                  render={({ field }) => (
-                    <DatePicker 
-                      label="Event Date" 
-                      value={field.value ? field.value.split('T')[0] : ''}
-                      onChange={(date) => {
-                        const time = field.value?.split('T')[1] || '09:00'
-                        field.onChange(`${date}T${time}`)
-                      }}
-                      minValue={new Date().toISOString().split('T')[0]}
-                      required
-                      error={errors.start_time?.message}
-                    />
-                  )} 
-                />
-                <div className="pa-max-w-xs">
+            <section className="oa-form-section" aria-labelledby="event-dates-heading">
+              <div className="oa-form-section-header">
+                <div>
+                  <h3 id="event-dates-heading" className="oa-form-section-title">Date &amp; Time</h3>
+                  <p className="oa-form-section-subtitle">Schedule the date, start, end, and arrival windows for this event.</p>
+                </div>
+              </div>
+              <div className="oa-form-section-body">
+                <div className="pa-form-grid pa-form-grid-4 pa-form-grid-tablet-2col">
                   <Controller 
                     name="start_time" 
                     control={control} 
+                    rules={{ required: t('admin.events.validation.startTimeRequired') }} 
                     render={({ field }) => (
-                      <TimePicker 
-                        label="Start Time" 
-                        value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
-                        onChange={(time) => {
-                          const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
+                      <DatePicker 
+                        label="Event Date" 
+                        value={field.value ? field.value.split('T')[0] : ''}
+                        onChange={(date) => {
+                          const time = field.value?.split('T')[1] || '09:00'
                           field.onChange(`${date}T${time}`)
                         }}
+                        minValue={new Date().toISOString().split('T')[0]}
                         required
+                        error={errors.start_time?.message}
                       />
                     )} 
                   />
-                </div>
-                <div className="pa-max-w-xs">
-                  <Controller 
-                    name="end_time" 
-                    control={control} 
-                    render={({ field }) => (
-                      <TimePicker 
-                        label="End Time" 
-                        value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
-                        onChange={(time) => {
-                          const startDate = watch('start_time')?.split('T')[0] || new Date().toISOString().split('T')[0]
-                          field.onChange(time ? `${startDate}T${time}` : '')
-                        }}
-                        error={errors.end_time?.message}
-                      />
-                    )} 
-                  />
-                </div>
-                <div className="pa-max-w-xs">
-                  <Controller 
-                    name="arrival_time" 
-                    control={control} 
-                    render={({ field }) => (
-                      <TimePicker 
-                        label="Arrival Time" 
-                        value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
-                        onChange={(time) => {
-                          const startDate = watch('start_time')?.split('T')[0] || new Date().toISOString().split('T')[0]
-                          field.onChange(time ? `${startDate}T${time}` : '')
-                        }}
-                      />
-                    )} 
-                  />
-                </div>
-              </div>
-            </div>
-
-          {/* SECTION 3: LOCATION */}
-          {/* Venue Name: search like CreateTravelPlan; Address: plain input auto-filled from venue */}
-          <div className="pa-mb-4">
-            <div className="pa-mb-2">
-              <Button type="button" variant="ghost" onClick={() => setShowLocationDetails(!showLocationDetails)}>{showLocationDetails ? 'Simple Location' : 'Detailed Location'}</Button>
-            </div>
-            
-            <div className="pa-space-y-4">
-              <div className="pa-form-grid pa-form-grid-2 pa-form-grid-tablet-2col">
-                <Controller
-                  name="location.venue_name"
-                  control={control}
-                  render={({ field }) => (
-                    <LocationAutocomplete
-                      value={field.value || ''}
-                      onInputChange={field.onChange}
-                      onChange={(address: StructuredAddress, placeResult?: google.maps.places.PlaceResult) => {
-                        startTransition(() => {
-                          const placeName = placeResult?.name && placeResult.name !== address.formatted_address
-                            ? placeResult.name
-                            : ''
-                          setValue('location.venue_name', placeName, { shouldValidate: false, shouldDirty: true })
-                          setValue('location.address_line1', address.formatted_address, { shouldValidate: false, shouldDirty: true })
-                          setValue('location.city', address.city, { shouldValidate: false, shouldDirty: true })
-                          setValue('location.state', address.state, { shouldValidate: false, shouldDirty: true })
-                          setValue('location.postal_code', address.postal_code, { shouldValidate: false, shouldDirty: true })
-                          setValue('location.place_id', address.place_id, { shouldValidate: false, shouldDirty: true })
-                          setValue('location.latitude', String(validateCoordinate(address.latitude) ?? ''), { shouldValidate: false, shouldDirty: true })
-                          setValue('location.longitude', String(validateCoordinate(address.longitude) ?? ''), { shouldValidate: false, shouldDirty: true })
-                          if (placeName) field.onChange(placeName)
-                        })
-                      }}
-                      label="Venue Name"
-                      placeholder="Search for venue..."
-                      types={['establishment', 'geocode']}
+                  <div className="pa-max-w-xs">
+                    <Controller 
+                      name="start_time" 
+                      control={control} 
+                      render={({ field }) => (
+                        <TimePicker 
+                          label="Start Time" 
+                          value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                          onChange={(time) => {
+                            const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
+                            field.onChange(`${date}T${time}`)
+                          }}
+                          required
+                        />
+                      )} 
                     />
-                  )}
-                />
-                <Controller
-                  name="location.address_line1"
-                  control={control}
-                  render={({ field }) => <Input {...field} label="Address" />}
-                />
+                  </div>
+                  <div className="pa-max-w-xs">
+                    <Controller 
+                      name="end_time" 
+                      control={control} 
+                      render={({ field }) => (
+                        <TimePicker 
+                          label="End Time" 
+                          value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                          onChange={(time) => {
+                            const startDate = watch('start_time')?.split('T')[0] || new Date().toISOString().split('T')[0]
+                            field.onChange(time ? `${startDate}T${time}` : '')
+                          }}
+                          error={errors.end_time?.message}
+                        />
+                      )} 
+                    />
+                  </div>
+                  <div className="pa-max-w-xs">
+                    <Controller 
+                      name="arrival_time" 
+                      control={control} 
+                      render={({ field }) => (
+                        <TimePicker 
+                          label="Arrival Time" 
+                          value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                          onChange={(time) => {
+                            const startDate = watch('start_time')?.split('T')[0] || new Date().toISOString().split('T')[0]
+                            field.onChange(time ? `${startDate}T${time}` : '')
+                          }}
+                        />
+                      )} 
+                    />
+                  </div>
+                </div>
               </div>
-              
-              {showLocationDetails && (
-                <>
-                  {/* Mobile: Single column | Tablet: City + State side-by-side, Zip single | Desktop: City + State + Zip side-by-side */}
-                  <div className="pa-form-grid pa-form-grid-3 pa-form-grid-tablet-2col">
-                    <Controller name="location.city" control={control} render={({ field }) => <Input {...field} label="City" />} />
-                    <Controller name="location.state" control={control} render={({ field }) => <Input {...field} label="State" />} />
-                    <Controller name="location.postal_code" control={control} render={({ field }) => <Input {...field} label="Zip Code" />} />
+            </section>
+
+            <section className="oa-form-section" aria-labelledby="event-location-heading">
+              <div className="oa-form-section-header">
+                <div>
+                  <h3 id="event-location-heading" className="oa-form-section-title">Location</h3>
+                  <p className="oa-form-section-subtitle">Point to a venue, mark the event as TBD, or capture a virtual link.</p>
+                </div>
+              </div>
+              <div className="oa-form-section-body">
+                <div className="pa-mb-2">
+                  <Button type="button" variant="ghost" onClick={() => setShowLocationDetails(!showLocationDetails)}>{showLocationDetails ? 'Simple Location' : 'Detailed Location'}</Button>
+                </div>
+                <div className="pa-space-y-4">
+                  <div className="pa-form-grid pa-form-grid-2 pa-form-grid-tablet-2col">
+                    <Controller
+                      name="location.venue_name"
+                      control={control}
+                      render={({ field }) => (
+                        <LocationAutocomplete
+                          value={field.value || ''}
+                          onInputChange={field.onChange}
+                          onChange={(address: StructuredAddress, placeResult?: google.maps.places.PlaceResult) => {
+                            startTransition(() => {
+                              const placeName = placeResult?.name && placeResult.name !== address.formatted_address
+                                ? placeResult.name
+                                : ''
+                              setValue('location.venue_name', placeName, { shouldValidate: false, shouldDirty: true })
+                              setValue('location.address_line1', address.formatted_address, { shouldValidate: false, shouldDirty: true })
+                              setValue('location.city', address.city, { shouldValidate: false, shouldDirty: true })
+                              setValue('location.state', address.state, { shouldValidate: false, shouldDirty: true })
+                              setValue('location.postal_code', address.postal_code, { shouldValidate: false, shouldDirty: true })
+                              setValue('location.place_id', address.place_id, { shouldValidate: false, shouldDirty: true })
+                              setValue('location.latitude', String(validateCoordinate(address.latitude) ?? ''), { shouldValidate: false, shouldDirty: true })
+                              setValue('location.longitude', String(validateCoordinate(address.longitude) ?? ''), { shouldValidate: false, shouldDirty: true })
+                              if (placeName) field.onChange(placeName)
+                            })
+                          }}
+                          label={t('admin.events.location.venueName')}
+                          placeholder="Search for venue..."
+                          types={['establishment', 'geocode']}
+                        />
+                      )}
+                    />
+                    <Controller
+                      name="location.address_line1"
+                      control={control}
+                      render={({ field }) => <Input {...field} label={t('admin.events.location.address')} />}
+                    />
                   </div>
-                  {/* Mobile: Vertical | Desktop: Inline */}
-                  <div className="pa-checkbox-group pa-checkbox-group--inline">
-                    <Controller name="location.is_tbd" control={control} render={({ field: { value, onChange } }) => <Checkbox checked={value} onChange={(e) => onChange(e.target.checked)} label="Location TBD" />} />
-                    <Controller name="location.is_virtual" control={control} render={({ field: { value, onChange } }) => <Checkbox checked={value} onChange={(e) => onChange(e.target.checked)} label="Virtual Event" />} />
-                  </div>
-                  <Controller name="location.virtual_link" control={control} render={({ field }) => <Input {...field} label="Virtual Link" placeholder="https://zoom.us/..." />} />
-                </>
-              )}
-            </div>
-          </div>
+                  
+                  {showLocationDetails && (
+                    <>
+                      <div className="pa-form-grid pa-form-grid-3 pa-form-grid-tablet-2col">
+                        <Controller name="location.city" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.city')} />} />
+                        <Controller name="location.state" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.state')} />} />
+                        <Controller name="location.postal_code" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.postalCode')} />} />
+                      </div>
+                      <div className="oa-checkbox-stack">
+                        <Controller name="location.is_tbd" control={control} render={({ field: { value, onChange } }) => <Checkbox checked={value} onChange={(e) => onChange(e.target.checked)} label={t('admin.events.location.isTBD')} />} />
+                        <Controller name="location.is_virtual" control={control} render={({ field: { value, onChange } }) => <Checkbox checked={value} onChange={(e) => onChange(e.target.checked)} label={t('admin.events.location.isVirtual')} />} />
+                      </div>
+                      <Controller name="location.virtual_link" control={control} render={({ field }) => <Input {...field} label={t('admin.events.location.virtualLink')} placeholder="https://zoom.us/..." />} />
+                    </>
+                  )}
+                </div>
+              </div>
+            </section>
           
-          {/* SECTION 3.5: TICKETING */}
           {!ticketingGateLoading && ticketingAllowed && (
-            <div className="pa-mb-4">
-              <div className="pa-checkbox-group pa-checkbox-group--inline pa-mb-4">
-                <div className="pa-flex pa-items-center pa-gap-2">
-                  <span className="pa-label">{t('admin.events.ticketing.isTicketed')}</span>
+            <section className="oa-form-section" aria-labelledby="event-ticketing-heading">
+              <div className="oa-form-section-header">
+                <div>
+                  <h3 id="event-ticketing-heading" className="oa-form-section-title">{t('admin.events.ticketing.title')}</h3>
+                  <p className="oa-form-section-subtitle">Activate ticket sales, control the sales window, and manage inventory.</p>
+                </div>
+              </div>
+              <div className="oa-form-section-body">
+                <div className="oa-checkbox-stack">
                   <Controller 
                     name="ticketing.is_ticketed" 
                     control={control} 
@@ -981,232 +1012,233 @@ export default function CreateEvent() {
                       <Checkbox 
                         checked={!!value} 
                         onChange={(e) => onChange(e.target.checked)} 
-                        label="" 
+                        label={t('admin.events.ticketing.isTicketed')}
                       />
                     )} 
                   />
                 </div>
-              </div>
 
-              {watchTicketingEnabled && (
-                <div className="pa-card pa-mb-4" style={{ background: 'var(--pa-card-bg)', border: '1px solid var(--pa-border)' }}>
-                  <h3 className="pa-heading-3 pa-mb-4">{t('admin.events.ticketing.title')}</h3>
-                  
-                  {/* Ticketed event type */}
-                  <div className="pa-mb-4">
-                    <Controller
-                      name="ticketing.event_type"
-                      control={control}
-                      render={({ field }) => (
-                        <Select
-                          {...field}
-                          value={field.value || 'other'}
-                          label={t('admin.events.ticketing.eventType.label')}
-                          options={[
-                            { value: 'game', label: t('admin.events.ticketing.eventType.game') },
-                            { value: 'tournament', label: t('admin.events.ticketing.eventType.tournament') },
-                            { value: 'concert', label: t('admin.events.ticketing.eventType.concert') },
-                            { value: 'fundraiser', label: t('admin.events.ticketing.eventType.fundraiser') },
-                            { value: 'other', label: t('admin.events.ticketing.eventType.other') },
-                          ]}
+                {watchTicketingEnabled && (
+                  <div className="pa-card oa-ticket-card pa-mb-4">
+                    <div className="pa-mb-4">
+                      <Controller
+                        name="ticketing.event_type"
+                        control={control}
+                        render={({ field }) => (
+                          <Select
+                            {...field}
+                            value={field.value || 'other'}
+                            label={t('admin.events.ticketing.eventType.label')}
+                            options={[
+                              { value: 'game', label: t('admin.events.ticketing.eventType.game') },
+                              { value: 'tournament', label: t('admin.events.ticketing.eventType.tournament') },
+                              { value: 'concert', label: t('admin.events.ticketing.eventType.concert') },
+                              { value: 'fundraiser', label: t('admin.events.ticketing.eventType.fundraiser') },
+                              { value: 'other', label: t('admin.events.ticketing.eventType.other') },
+                            ]}
+                          />
+                        )}
+                      />
+                      <p className="pa-text-xs pa-text-muted pa-mt-1">{t('admin.events.ticketing.eventType.helper')}</p>
+                    </div>
+
+                    <div className="pa-mb-4">
+                      <Controller
+                        name="ticketing.sales_immediate"
+                        control={control}
+                        render={({ field }) => (
+                          <Checkbox
+                            checked={!!field.value}
+                            onChange={(e) => {
+                              field.onChange(e.target.checked)
+                              if (e.target.checked) {
+                                setValue('ticketing.sales_start_at', '', { shouldValidate: false })
+                                setValue('ticketing.sales_end_at', '', { shouldValidate: false })
+                              }
+                            }}
+                            label="Immediately"
+                          />
+                        )}
+                      />
+                    </div>
+
+                    {!watchTicketSalesImmediate && (
+                      <div className="pa-form-grid pa-form-grid-4 pa-form-grid-tablet-2col pa-mb-4">
+                        <Controller
+                          name="ticketing.sales_start_at"
+                          control={control}
+                          rules={{
+                            validate: () => true
+                          }}
+                          render={({ field }) => (
+                            <DatePicker
+                              label={t('admin.events.ticketing.salesWindow.startDate' as any)}
+                              value={field.value ? field.value.split('T')[0] : ''}
+                              minValue={new Date().toISOString().slice(0, 10)}
+                              onChange={(date) => {
+                                const time = field.value?.split('T')[1] || '00:00'
+                                field.onChange(`${date}T${time}`)
+                              }}
+                              error={errors.ticketing?.sales_start_at?.message}
+                            />
+                          )}
                         />
-                      )}
-                    />
-                    <p className="pa-text-xs pa-text-muted pa-mt-1">{t('admin.events.ticketing.eventType.helper')}</p>
-                  </div>
-
-                  {/* Sales window */}
-                  <div className="pa-form-grid pa-form-grid-4 pa-form-grid-tablet-2col pa-mb-4">
-                    <Controller
-                      name="ticketing.sales_start_at"
-                      control={control}
-                      rules={{
-                        validate: (value) => {
-                          if (value) {
-                            const now = new Date()
-                            if (new Date(value) < now) {
-                              return t('admin.events.ticketing.salesWindow.startNotBeforeNow' as any)
+                        <div className="pa-max-w-xs">
+                          <Controller
+                            name="ticketing.sales_start_at"
+                            control={control}
+                            rules={{
+                              validate: (value) => {
+                                if (watchTicketSalesImmediate) return true
+                                return true
+                              }
+                            }}
+                            render={({ field }) => (
+                              <TimePicker
+                                label={t('admin.events.ticketing.salesWindow.startTime' as any)}
+                                value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                                onChange={(time) => {
+                                  const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
+                                  field.onChange(`${date}T${time}`)
+                                }}
+                                error={errors.ticketing?.sales_start_at?.message}
+                              />
+                            )}
+                          />
+                        </div>
+                        <Controller
+                          name="ticketing.sales_end_at"
+                          control={control}
+                          rules={{
+                            validate: (value) => {
+                              if (watchTicketSalesImmediate) return true
+                              const startAt = watch('ticketing.sales_start_at')
+                              if (startAt && value && new Date(value) <= new Date(startAt)) {
+                                return t('admin.events.ticketing.salesWindow.endAfterStart' as any)
+                              }
+                              const eventStart = watch('start_time')
+                              if (eventStart && value && new Date(value) > new Date(eventStart)) {
+                                return t('admin.events.ticketing.salesWindow.endNotAfterEventStart' as any)
+                              }
+                              return true
                             }
-                          }
-                          return true
-                        }
-                      }}
-                      render={({ field }) => (
-                        <DatePicker
-                          label={t('admin.events.ticketing.salesWindow.startDate' as any)}
-                          value={field.value ? field.value.split('T')[0] : ''}
-                          minValue={new Date().toISOString().slice(0, 10)}
-                          onChange={(date) => {
-                            const time = field.value?.split('T')[1] || '00:00'
-                            field.onChange(`${date}T${time}`)
                           }}
-                          error={errors.ticketing?.sales_start_at?.message}
+                          render={({ field }) => (
+                            <DatePicker
+                              label={t('admin.events.ticketing.salesWindow.endDate' as any)}
+                              value={field.value ? field.value.split('T')[0] : ''}
+                              maxValue={watch('start_time')?.split('T')[0]}
+                              onChange={(date) => {
+                                const time = field.value?.split('T')[1] || '23:59'
+                                field.onChange(`${date}T${time}`)
+                              }}
+                              error={errors.ticketing?.sales_end_at?.message}
+                            />
+                          )}
                         />
-                      )}
-                    />
-                    <div className="pa-max-w-xs">
+                        <div className="pa-max-w-xs">
+                          <Controller
+                            name="ticketing.sales_end_at"
+                            control={control}
+                            rules={{
+                              validate: (value) => {
+                                if (watchTicketSalesImmediate) return true
+                                const startAt = watch('ticketing.sales_start_at')
+                                if (startAt && value && new Date(value) <= new Date(startAt)) {
+                                  return t('admin.events.ticketing.salesWindow.endAfterStart' as any)
+                                }
+                                const eventStart = watch('start_time')
+                                if (eventStart && value && new Date(value) > new Date(eventStart)) {
+                                  return t('admin.events.ticketing.salesWindow.endNotAfterEventStart' as any)
+                                }
+                                return true
+                              }
+                            }}
+                            render={({ field }) => (
+                              <TimePicker
+                                label={t('admin.events.ticketing.salesWindow.endTime' as any)}
+                                value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
+                                onChange={(time) => {
+                                  const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
+                                  field.onChange(`${date}T${time}`)
+                                }}
+                                error={errors.ticketing?.sales_end_at?.message}
+                              />
+                            )}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="pa-mb-4">
                       <Controller
-                        name="ticketing.sales_start_at"
+                        name="ticketing.status"
                         control={control}
                         render={({ field }) => (
-                          <TimePicker
-                            label={t('admin.events.ticketing.salesWindow.startTime' as any)}
-                            value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
-                            onChange={(time) => {
-                              const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
-                              field.onChange(`${date}T${time}`)
-                            }}
-                            error={errors.ticketing?.sales_start_at?.message}
+                          <Select
+                            {...field}
+                            value={field.value || 'draft'}
+                            label={t('admin.events.ticketing.status.label')}
+                            options={[
+                              { value: 'draft', label: t('admin.events.ticketing.status.draft') },
+                              { value: 'published', label: t('admin.events.ticketing.status.published') },
+                            ]}
                           />
                         )}
                       />
                     </div>
-                    <Controller
-                      name="ticketing.sales_end_at"
-                      control={control}
-                      rules={{
-                        validate: (value) => {
-                          const startAt = watch('ticketing.sales_start_at')
-                          if (startAt && value && new Date(value) <= new Date(startAt)) {
-                            return t('admin.events.ticketing.salesWindow.endAfterStart' as any)
-                          }
-                          const eventStart = watch('start_time')
-                          if (eventStart && value && new Date(value) > new Date(eventStart)) {
-                            return t('admin.events.ticketing.salesWindow.endNotAfterEventStart' as any)
-                          }
-                          return true
-                        }
-                      }}
-                      render={({ field }) => (
-                        <DatePicker
-                          label={t('admin.events.ticketing.salesWindow.endDate' as any)}
-                          value={field.value ? field.value.split('T')[0] : ''}
-                          maxValue={watch('start_time')?.split('T')[0]}
-                          onChange={(date) => {
-                            const time = field.value?.split('T')[1] || '23:59'
-                            field.onChange(`${date}T${time}`)
-                          }}
-                          error={errors.ticketing?.sales_end_at?.message}
-                        />
-                      )}
-                    />
-                    <div className="pa-max-w-xs">
-                      <Controller
-                        name="ticketing.sales_end_at"
-                        control={control}
-                        render={({ field }) => (
-                          <TimePicker
-                            label={t('admin.events.ticketing.salesWindow.endTime' as any)}
-                            value={field.value ? field.value.split('T')[1]?.substring(0, 5) || '' : ''}
-                            onChange={(time) => {
-                              const date = field.value?.split('T')[0] || new Date().toISOString().split('T')[0]
-                              field.onChange(`${date}T${time}`)
-                            }}
-                            error={errors.ticketing?.sales_end_at?.message}
-                          />
-                        )}
-                      />
-                    </div>
-                  </div>
 
-                  {/* Status */}
-                  <div className="pa-mb-4">
-                    <Controller
-                      name="ticketing.status"
-                      control={control}
-                      render={({ field }) => (
-                        <Select
-                          {...field}
-                          value={field.value || 'draft'}
-                          label={t('admin.events.ticketing.status.label')}
-                          options={[
-                            { value: 'draft', label: t('admin.events.ticketing.status.draft') },
-                            { value: 'published', label: t('admin.events.ticketing.status.published') },
-                          ]}
-                        />
-                      )}
-                    />
-                  </div>
-
-                  {/* Ticket types */}
-                  <div className="pa-mb-4">
-                    <div className="pa-flex pa-items-center pa-justify-between pa-mb-2">
-                      <label className="pa-label">Ticket Types</label>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => appendTicketType({ name: '', price_dollars: '', capacity: '' })}
-                      >
-                        Add Ticket Type
-                      </Button>
-                    </div>
-                    
-                    {ticketTypeFields.length === 0 ? (
-                      <p className="pa-text-sm pa-text-muted">No ticket types added. You can add them later on the event detail page.</p>
-                    ) : (
-                      <div className="pa-space-y-3">
-                        {ticketTypeFields.map((field, index) => (
-                          <div key={field.id} className="pa-card pa-p-3" style={{ background: 'var(--pa-card-bg)', border: '1px solid var(--pa-border)' }}>
-                            <div className="pa-form-grid pa-form-grid-3 pa-mb-2">
-                              <Controller
-                                name={`ticketing.ticket_types.${index}.name`}
-                                control={control}
-                                rules={{
-                                  validate: (value) => {
-                                    const price = watch(`ticketing.ticket_types.${index}.price_dollars`)
-                                    const capacity = watch(`ticketing.ticket_types.${index}.capacity`)
-                                    if (price || capacity) {
-                                      return value?.trim() ? true : t('admin.events.ticketing.ticketTypes.name.required')
-                                    }
-                                    return true
-                                  }
-                                }}
-                                render={({ field }) => (
-                                  <Input
-                                    {...field}
-                                    label={t('admin.events.ticketing.ticketTypes.name.label')}
-                                    placeholder={t('admin.events.ticketing.ticketTypes.name.placeholder')}
-                                    error={errors.ticketing?.ticket_types?.[index]?.name?.message}
-                                  />
-                                )}
-                              />
-                              <Controller
-                                name={`ticketing.ticket_types.${index}.price_dollars`}
-                                control={control}
-                                rules={{
-                                  validate: (value) => {
-                                    const name = watch(`ticketing.ticket_types.${index}.name`)
-                                    if (name?.trim()) {
-                                      const parsed = parseFloat(value || '0')
-                                      if (isNaN(parsed) || parsed < 0) {
-                                        return 'Price must be a valid number >= 0'
-                                      }
-                                    }
-                                    return true
-                                  }
-                                }}
-                                render={({ field }) => (
-                                  <Input
-                                    {...field}
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    label="Price ($)"
-                                    placeholder="0.00"
-                                    error={errors.ticketing?.ticket_types?.[index]?.price_dollars?.message}
-                                  />
-                                )}
-                              />
-                              <div className="pa-flex pa-items-end pa-gap-2">
+                    <div className="pa-mb-4">
+                      <div className="pa-flex pa-items-center pa-justify-between pa-mb-2">
+                        <label className="pa-label">{t('admin.events.ticketing.ticketTypes.label')}</label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                            onClick={() => appendTicketType({ name: '', price_dollars: '', capacity: '', description: '' })}
+                        >
+                          {t('admin.events.ticketing.ticketTypes.add')}
+                        </Button>
+                      </div>
+                      
+                      {ticketTypeFields.length === 0 ? (
+                        <p className="pa-text-sm pa-text-muted">{t('admin.events.ticketing.ticketTypes.none')}</p>
+                      ) : (
+                        <div className="pa-space-y-3">
+                          {ticketTypeFields.map((field, index) => (
+                            <div key={field.id} className="oa-ticket-type-card">
+                              <div className="pa-form-grid pa-form-grid-3 pa-mb-2">
                                 <Controller
-                                  name={`ticketing.ticket_types.${index}.capacity`}
+                                  name={`ticketing.ticket_types.${index}.name`}
                                   control={control}
                                   rules={{
                                     validate: (value) => {
-                                      if (value?.trim()) {
-                                        const parsed = parseInt(value)
-                                        if (isNaN(parsed) || parsed <= 0) {
-                                          return t('admin.events.ticketing.ticketTypes.capacity.invalid')
+                                      const price = watch(`ticketing.ticket_types.${index}.price_dollars`)
+                                      const capacity = watch(`ticketing.ticket_types.${index}.capacity`)
+                                      if (price || capacity) {
+                                        return value?.trim() ? true : t('admin.events.ticketing.ticketTypes.name.required')
+                                      }
+                                      return true
+                                    }
+                                  }}
+                                  render={({ field }) => (
+                                    <Input
+                                      {...field}
+                                      label={t('admin.events.ticketing.ticketTypes.name.label')}
+                                      placeholder={t('admin.events.ticketing.ticketTypes.name.placeholder')}
+                                      error={errors.ticketing?.ticket_types?.[index]?.name?.message}
+                                    />
+                                  )}
+                                />
+                                <Controller
+                                  name={`ticketing.ticket_types.${index}.price_dollars`}
+                                  control={control}
+                                  rules={{
+                                    validate: (value) => {
+                                      const name = watch(`ticketing.ticket_types.${index}.name`)
+                                      if (name?.trim()) {
+                                        const parsed = parseFloat(value || '0')
+                                        if (isNaN(parsed) || parsed < 0) {
+                                          return 'Price must be a valid number >= 0'
                                         }
                                       }
                                       return true
@@ -1216,117 +1248,146 @@ export default function CreateEvent() {
                                     <Input
                                       {...field}
                                       type="number"
-                                      min="1"
-                                      label={t('admin.events.ticketing.ticketTypes.capacity.label')}
-                                      placeholder={t('admin.events.ticketing.ticketTypes.capacity.placeholder')}
-                                      error={errors.ticketing?.ticket_types?.[index]?.capacity?.message}
+                                      step="0.01"
+                                      min="0"
+                                      label="Price ($)"
+                                      placeholder="0.00"
+                                      error={errors.ticketing?.ticket_types?.[index]?.price_dollars?.message}
                                     />
                                   )}
                                 />
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  onClick={() => removeTicketType(index)}
-                                  style={{ marginBottom: '0' }}
-                                >
-                                  {t('admin.events.ticketing.ticketTypes.remove')}
-                                </Button>
+                                <div className="oa-ticket-type-actions">
+                                  <Controller
+                                    name={`ticketing.ticket_types.${index}.capacity`}
+                                    control={control}
+                                    rules={{
+                                      validate: (value) => {
+                                        if (value?.trim()) {
+                                          const parsed = parseInt(value)
+                                          if (isNaN(parsed) || parsed <= 0) {
+                                            return t('admin.events.ticketing.ticketTypes.capacity.invalid')
+                                          }
+                                        }
+                                        return true
+                                      }
+                                    }}
+                                    render={({ field }) => (
+                                      <Input
+                                        {...field}
+                                        type="number"
+                                        min="1"
+                                        label={t('admin.events.ticketing.ticketTypes.capacity.label')}
+                                        placeholder={t('admin.events.ticketing.ticketTypes.capacity.placeholder')}
+                                        error={errors.ticketing?.ticket_types?.[index]?.capacity?.message}
+                                      />
+                                    )}
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    onClick={() => removeTicketType(index)}
+                                  >
+                                    {t('admin.events.ticketing.ticketTypes.remove')}
+                                  </Button>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            </section>
           )}
           
-          {/* SECTION 4: RSVP + RECURRENCE (SETTINGS) */}
-          {/* Mobile: Vertical checkboxes | Desktop: Inline checkboxes */}
-          <div className="pa-mb-4">
-            <div className="pa-checkbox-group pa-checkbox-group--inline pa-mb-4">
-              <div className="pa-flex pa-items-center pa-gap-2">
-                <span className="pa-label">RSVP Required?</span>
-                <Controller name="rsvp_enabled" control={control} render={({ field: { value, onChange } }) => (
-                  <Checkbox checked={!!value} onChange={(e) => { 
-                    onChange(e.target.checked)
-                    if (!e.target.checked) {
-                      setValue('rsvp_type', null)
-                    }
-                  }} label="" />
-                )} />
-              </div>
-              <div className="pa-flex pa-items-center pa-gap-2">
-                <span className="pa-label">Recurring Event?</span>
-                <Controller name="recurring.enabled" control={control} render={({ field: { value, onChange } }) => (
-                  <Checkbox checked={!!value} onChange={(e) => { onChange(e.target.checked); setShowRecurring(e.target.checked); }} label="" />
-                )} />
-              </div>
-            </div>
-            
-            {watchRSVPEnabled && (
-              <div className="pa-mb-4">
-                <div className="pa-select-wrapper">
-                  <Controller 
-                    name="rsvp_type" 
-                    control={control} 
-                    rules={{ required: watchRSVPEnabled ? 'RSVP type is required' : false }}
-                    render={({ field }) => (
-                      <Select 
-                        {...field} 
-                        value={field.value || ''}
-                        label="RSVP Type" 
-                        options={[
-                          {value: 'general', label: t('admin.events.rsvpType.general')},
-                          {value: 'athlete', label: t('admin.events.rsvpType.athlete')}
-                        ]}
-                        required
-                        error={errors.rsvp_type?.message || undefined}
-                      />
-                    )} 
-                  />
+            <section className="oa-form-section" aria-labelledby="event-attendance-heading">
+              <div className="oa-form-section-header">
+                <div>
+                  <h3 id="event-attendance-heading" className="oa-form-section-title">RSVP &amp; Recurrence</h3>
+                  <p className="oa-form-section-subtitle">Collect RSVPs and set up recurring sessions for the event.</p>
                 </div>
               </div>
-            )}
-            
-            {showRecurring && (
-              <div className="pa-form-grid pa-form-grid-2 pa-form-grid-tablet-2col">
-                <div className="pa-select-wrapper">
-                  <Controller name="recurring.frequency" control={control} render={({ field }) => <Select {...field} label="Frequency" options={[{value:'weekly', label:'Weekly'}]} />} />
+              <div className="oa-form-section-body">
+                <div className="oa-checkbox-stack pa-mb-4">
+                  <Controller name="rsvp_enabled" control={control} render={({ field: { value, onChange } }) => (
+                    <Checkbox checked={!!value} onChange={(e) => { 
+                      onChange(e.target.checked)
+                      if (!e.target.checked) {
+                        setValue('rsvp_type', null)
+                      }
+                    }} label="RSVP Required?" />
+                  )} />
+                  <Controller name="recurring.enabled" control={control} render={({ field: { value, onChange } }) => (
+                    <Checkbox checked={!!value} onChange={(e) => { onChange(e.target.checked); setShowRecurring(e.target.checked); }} label="Recurring Event?" />
+                  )} />
                 </div>
-                <div className="pa-max-w-sm">
-                  <Controller name="recurring.end_date" control={control} render={({ field }) => <DatePicker {...field} label="Recurs Until" />} />
-                </div>
-              </div>
-            )}
-          </div>
 
-          {/* SECTION 5: NOTES + PREP */}
-          {/* Mobile: Single column | Tablet: Single column | Desktop: Uniform/Equipment (left) + General Notes (right) side-by-side */}
-          <div className="pa-form-grid pa-form-grid-2 pa-mb-6">
-            <div className="pa-space-y-2">
-              <Controller name="uniform_notes" control={control} render={({ field }) => <Input {...field} label="Uniform Notes" placeholder="e.g. Home Kit" />} />
-              <Controller name="equipment_notes" control={control} render={({ field }) => <Input {...field} label="Equipment Notes" placeholder="e.g. Bring water" />} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <label className="pa-label" style={{ display: 'block', marginBottom: 'var(--pa-space-2)' }}>General Notes</label>
-              <Controller name="notes" control={control} render={({ field }) => (
-                <textarea 
-                  className="pa-input pa-textarea" 
-                  {...field} 
-                  placeholder="General Notes..." 
-                  style={{ 
-                    flex: '1',
-                    minHeight: '80px',
-                    width: '100%',
-                    resize: 'vertical'
-                  }} 
-                />
-              )} />
-            </div>
-          </div>
+                {watchRSVPEnabled && (
+                  <div className="pa-mb-4">
+                    <div className="pa-select-wrapper">
+                      <Controller 
+                        name="rsvp_type" 
+                        control={control} 
+                        rules={{ required: watchRSVPEnabled ? 'RSVP type is required' : false }}
+                        render={({ field }) => (
+                          <Select 
+                            {...field} 
+                            value={field.value || ''}
+                            label="RSVP Type" 
+                            options={[
+                              {value: 'general', label: t('admin.events.rsvpType.general')},
+                              {value: 'athlete', label: t('admin.events.rsvpType.athlete')}
+                            ]}
+                            required
+                            error={errors.rsvp_type?.message || undefined}
+                          />
+                        )} 
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {showRecurring && (
+                  <div className="pa-form-grid pa-form-grid-2 pa-form-grid-tablet-2col">
+                    <div className="pa-select-wrapper">
+                      <Controller name="recurring.frequency" control={control} render={({ field }) => <Select {...field} label="Frequency" options={[{value:'weekly', label:'Weekly'}]} />} />
+                    </div>
+                    <div className="pa-max-w-sm">
+                      <Controller name="recurring.end_date" control={control} render={({ field }) => <DatePicker {...field} label="Recurs Until" />} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section className="oa-form-section" aria-labelledby="event-notes-heading">
+              <div className="oa-form-section-header">
+                <div>
+                  <h3 id="event-notes-heading" className="oa-form-section-title">Notes &amp; Prep</h3>
+                  <p className="oa-form-section-subtitle">Capture uniform, equipment, and general notes for coaches and families.</p>
+                </div>
+              </div>
+              <div className="oa-form-section-body">
+                <div className="pa-form-grid pa-form-grid-2 pa-mb-6">
+                  <div className="pa-space-y-2">
+                    <Controller name="uniform_notes" control={control} render={({ field }) => <Input {...field} label="Uniform Notes" placeholder="e.g. Home Kit" />} />
+                    <Controller name="equipment_notes" control={control} render={({ field }) => <Input {...field} label="Equipment Notes" placeholder="e.g. Bring water" />} />
+                  </div>
+                  <div className="oa-notes-group">
+                    <label className="pa-label">{t('admin.events.fields.generalNotes')}</label>
+                    <Controller name="notes" control={control} render={({ field }) => (
+                      <textarea 
+                        className="pa-input pa-textarea oa-textarea-expand" 
+                        {...field} 
+                        placeholder="General Notes..." 
+                      />
+                    )} />
+                  </div>
+                </div>
+              </div>
+            </section>
 
           {/* SECTION 6: ACTIONS */}
           {/* Mobile: Full-width stacked | Tablet: Full-width or right-aligned | Desktop: Right-aligned */}

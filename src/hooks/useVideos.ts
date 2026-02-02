@@ -1,0 +1,1247 @@
+/**
+ * Video Library Hooks
+ * 
+ * React hooks for video data access, upload management, and playback.
+ * Uses Supabase for data persistence and Mux Edge Functions for video operations.
+ */
+
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { supabase } from '@/lib/supabase'
+import type {
+  Video,
+  VideoFilters,
+  VideoPagination,
+  VideoTag,
+  VideoNote,
+  VideoBookmark,
+  VideoComment,
+  CreateVideoUploadRequest,
+  CreateVideoUploadResponse,
+  GetPlaybackTokenResponse,
+  UploadProgress,
+  VideoNoteScope,
+  VideoLinkType,
+} from '@/types/video'
+import type { Database, Json } from '@/lib/supabase.extended.types'
+import { useAuth } from './useAuth'
+
+// ============================================================================
+// Edge Function URL Configuration
+// ============================================================================
+
+const getEdgeFunctionUrl = (functionName: string): string => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  if (!supabaseUrl) {
+    throw new Error('VITE_SUPABASE_URL not configured')
+  }
+  return `${supabaseUrl}/functions/v1/${functionName}`
+}
+
+// ============================================================================
+// Video List Hook
+// ============================================================================
+
+interface UseVideosOptions {
+  orgId?: string
+  filters?: VideoFilters
+  pagination?: VideoPagination
+  enabled?: boolean
+}
+
+interface UseVideosReturn {
+  videos: Video[]
+  total: number
+  isLoading: boolean
+  error: Error | null
+  hasMore: boolean
+  refresh: () => Promise<void>
+  loadMore: () => Promise<void>
+}
+
+export function useVideos(options: UseVideosOptions = {}): UseVideosReturn {
+  const { orgId, filters = {}, pagination = {}, enabled = true } = options
+  const [videos, setVideos] = useState<Video[]>([])
+  const [total, setTotal] = useState(0)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
+  const [page, setPage] = useState(pagination.page || 1)
+  
+  const limit = pagination.limit || 20
+  const sortBy = pagination.sort_by || 'created_at'
+  const sortOrder = pagination.sort_order || 'desc'
+  
+  const fetchVideos = useCallback(async (isLoadMore = false) => {
+    if (!orgId || !enabled) return
+    
+    setIsLoading(true)
+    setError(null)
+    
+    try {
+      let query = supabase
+        .from('videos')
+        .select(`
+          *,
+          team:teams!videos_team_id_fkey(id, name),
+          event:events!videos_event_id_fkey(id, title, type),
+          video_athlete_links(id, athlete_id, link_type),
+          video_tag_links(id, tag_id, tag:video_tags(id, name, type, color))
+        `, { count: 'exact' })
+        .eq('org_id', orgId)
+        .neq('status', 'deleted')
+      
+      // Apply filters
+      if (filters.search) {
+        query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
+      }
+      
+      if (filters.category) {
+        const categories = Array.isArray(filters.category) ? filters.category : [filters.category]
+        query = query.in('category', categories)
+      }
+      
+      if (filters.visibility) {
+        const visibilities = Array.isArray(filters.visibility) ? filters.visibility : [filters.visibility]
+        query = query.in('visibility', visibilities)
+      }
+      
+      if (filters.status) {
+        const statuses = Array.isArray(filters.status) ? filters.status : [filters.status]
+        query = query.in('status', statuses)
+      }
+      
+      if (filters.team_id) {
+        query = query.eq('team_id', filters.team_id)
+      }
+      
+      if (filters.season_id) {
+        query = query.eq('season_id', filters.season_id)
+      }
+      
+      if (filters.event_id) {
+        query = query.eq('event_id', filters.event_id)
+      }
+      
+      if (filters.sport_id) {
+        query = query.eq('sport_id', filters.sport_id)
+      }
+      
+      if (filters.uploaded_by) {
+        query = query.eq('uploaded_by', filters.uploaded_by)
+      }
+      
+      if (filters.date_from) {
+        query = query.gte('recorded_at', filters.date_from)
+      }
+      
+      if (filters.date_to) {
+        query = query.lte('recorded_at', filters.date_to)
+      }
+      
+      // Apply sorting
+      query = query.order(sortBy, { ascending: sortOrder === 'asc' })
+      
+      // Apply pagination
+      const currentPage = isLoadMore ? page + 1 : 1
+      const offset = (currentPage - 1) * limit
+      query = query.range(offset, offset + limit - 1)
+      
+      const { data, error: fetchError, count } = await query
+      
+      if (fetchError) throw fetchError
+      
+      const fetchedVideos = (data || []) as unknown as Video[]
+      
+      if (isLoadMore) {
+        setVideos(prev => [...prev, ...fetchedVideos])
+        setPage(currentPage)
+      } else {
+        setVideos(fetchedVideos)
+        setPage(1)
+      }
+      
+      setTotal(count || 0)
+    } catch (err) {
+      console.error('Error fetching videos:', err)
+      setError(err instanceof Error ? err : new Error('Failed to fetch videos'))
+    } finally {
+      setIsLoading(false)
+    }
+  }, [orgId, filters, limit, sortBy, sortOrder, page, enabled])
+  
+  useEffect(() => {
+    fetchVideos(false)
+  }, [fetchVideos])
+  
+  const refresh = useCallback(() => fetchVideos(false), [fetchVideos])
+  const loadMore = useCallback(() => fetchVideos(true), [fetchVideos])
+  
+  const hasMore = useMemo(() => videos.length < total, [videos.length, total])
+  
+  return { videos, total, isLoading, error, hasMore, refresh, loadMore }
+}
+
+// ============================================================================
+// Single Video Hook
+// ============================================================================
+
+interface UseVideoOptions {
+  videoId?: string
+  enabled?: boolean
+}
+
+interface UseVideoReturn {
+  video: Video | null
+  isLoading: boolean
+  error: Error | null
+  refresh: () => Promise<void>
+}
+
+export function useVideo({ videoId, enabled = true }: UseVideoOptions): UseVideoReturn {
+  const [video, setVideo] = useState<Video | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
+  
+  const fetchVideo = useCallback(async () => {
+    if (!videoId || !enabled) return
+    
+    setIsLoading(true)
+    setError(null)
+    
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('videos')
+        .select(`
+          *,
+          team:teams!videos_team_id_fkey(id, name),
+          event:events!videos_event_id_fkey(id, title, type),
+          video_athlete_links(
+            id, athlete_id, link_type, timestamp_start, timestamp_end, notes,
+            athlete:athletes(id, first_name, last_name, jersey_number, photo_url)
+          ),
+          video_tag_links(
+            id, tag_id, timestamp_start, timestamp_end,
+            tag:video_tags(id, name, type, color)
+          ),
+          video_notes(
+            id, content, timestamp_seconds, duration_seconds, scope, author_id, created_at,
+            video_note_targets(id, athlete_id, athlete:athletes(id, first_name, last_name))
+          ),
+          video_comments(
+            id, content, timestamp_seconds, parent_comment_id, author_id, created_at
+          )
+        `)
+        .eq('id', videoId)
+        .neq('status', 'deleted')
+        .single()
+      
+      if (fetchError) throw fetchError
+      
+      setVideo(data as unknown as Video)
+    } catch (err) {
+      console.error('Error fetching video:', err)
+      setError(err instanceof Error ? err : new Error('Failed to fetch video'))
+    } finally {
+      setIsLoading(false)
+    }
+  }, [videoId, enabled])
+  
+  useEffect(() => {
+    fetchVideo()
+  }, [fetchVideo])
+  
+  return { video, isLoading, error, refresh: fetchVideo }
+}
+
+// ============================================================================
+// Video Upload Hook
+// ============================================================================
+
+interface UseVideoUploadOptions {
+  orgId: string
+  onUploadComplete?: (videoId: string) => void
+  onUploadError?: (error: Error) => void
+}
+
+interface UseVideoUploadReturn {
+  createUpload: (metadata: CreateVideoUploadRequest) => Promise<CreateVideoUploadResponse | null>
+  uploadProgress: UploadProgress | null
+  isUploading: boolean
+  error: Error | null
+  reset: () => void
+}
+
+export function useVideoUpload(options: UseVideoUploadOptions): UseVideoUploadReturn {
+  const { orgId, onUploadComplete, onUploadError } = options
+  const { session } = useAuth()
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
+  const subscriptionRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  
+  const createUpload = useCallback(async (
+    metadata: CreateVideoUploadRequest
+  ): Promise<CreateVideoUploadResponse | null> => {
+    if (!session?.access_token) {
+      const err = new Error('Not authenticated')
+      setError(err)
+      onUploadError?.(err)
+      return null
+    }
+    
+    setIsUploading(true)
+    setError(null)
+    
+    try {
+      const response = await fetch(getEdgeFunctionUrl('mux-create-direct-upload'), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          org_id: orgId,
+          ...metadata,
+        }),
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to create upload')
+      }
+      
+      const data: CreateVideoUploadResponse = await response.json()
+      
+      // Initialize upload progress
+      setUploadProgress({
+        videoId: data.video_id,
+        uploadId: data.upload_id,
+        status: 'pending',
+        progress: 0,
+        bytesUploaded: 0,
+        totalBytes: 0,
+        startedAt: new Date().toISOString(),
+      })
+      
+      // Subscribe to video status changes via realtime
+      subscriptionRef.current = supabase
+        .channel(`video-status-${data.video_id}`)
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'videos',
+          filter: `id=eq.${data.video_id}`,
+        }, (payload) => {
+          const newStatus = payload.new.status
+          
+          setUploadProgress(prev => {
+            if (!prev) return prev
+            
+            if (newStatus === 'processing') {
+              return { ...prev, status: 'processing', progress: 100 }
+            }
+            if (newStatus === 'ready') {
+              onUploadComplete?.(data.video_id)
+              return { 
+                ...prev, 
+                status: 'complete', 
+                progress: 100,
+                completedAt: new Date().toISOString(),
+              }
+            }
+            if (newStatus === 'errored') {
+              const err = new Error(payload.new.error_message || 'Processing failed')
+              onUploadError?.(err)
+              return { ...prev, status: 'error', error: err.message }
+            }
+            
+            return prev
+          })
+        })
+        .subscribe()
+      
+      return data
+    } catch (err) {
+      const uploadError = err instanceof Error ? err : new Error('Upload failed')
+      setError(uploadError)
+      onUploadError?.(uploadError)
+      setIsUploading(false)
+      return null
+    }
+  }, [orgId, session, onUploadComplete, onUploadError])
+  
+  const reset = useCallback(() => {
+    if (subscriptionRef.current) {
+      supabase.removeChannel(subscriptionRef.current)
+      subscriptionRef.current = null
+    }
+    setUploadProgress(null)
+    setIsUploading(false)
+    setError(null)
+  }, [])
+  
+  // Cleanup subscription on unmount
+  useEffect(() => {
+    return () => {
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current)
+      }
+    }
+  }, [])
+  
+  return { createUpload, uploadProgress, isUploading, error, reset }
+}
+
+// ============================================================================
+// Video Playback Token Hook
+// ============================================================================
+
+interface UsePlaybackTokenOptions {
+  videoId?: string
+  playbackId?: string
+  type?: 'video' | 'thumbnail' | 'gif' | 'storyboard'
+  expiration?: number
+  enabled?: boolean
+}
+
+interface UsePlaybackTokenReturn {
+  playbackData: GetPlaybackTokenResponse | null
+  isLoading: boolean
+  error: Error | null
+  refresh: () => Promise<void>
+}
+
+export function usePlaybackToken(options: UsePlaybackTokenOptions): UsePlaybackTokenReturn {
+  const { videoId, playbackId, type = 'video', expiration = 7200, enabled = true } = options
+  const { session } = useAuth()
+  const [playbackData, setPlaybackData] = useState<GetPlaybackTokenResponse | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
+  
+  const fetchToken = useCallback(async () => {
+    if ((!videoId && !playbackId) || !enabled || !session?.access_token) return
+    
+    setIsLoading(true)
+    setError(null)
+    
+    try {
+      const response = await fetch(getEdgeFunctionUrl('mux-signed-playback'), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          video_id: videoId,
+          playback_id: playbackId,
+          type,
+          expiration,
+        }),
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to get playback token')
+      }
+      
+      const data: GetPlaybackTokenResponse = await response.json()
+      setPlaybackData(data)
+    } catch (err) {
+      console.error('Error fetching playback token:', err)
+      setError(err instanceof Error ? err : new Error('Failed to get playback token'))
+    } finally {
+      setIsLoading(false)
+    }
+  }, [videoId, playbackId, type, expiration, enabled, session])
+  
+  useEffect(() => {
+    fetchToken()
+  }, [fetchToken])
+  
+  return { playbackData, isLoading, error, refresh: fetchToken }
+}
+
+// ============================================================================
+// Video Tags Hook
+// ============================================================================
+
+interface UseVideoTagsOptions {
+  orgId?: string
+  enabled?: boolean
+}
+
+interface UseVideoTagsReturn {
+  tags: VideoTag[]
+  isLoading: boolean
+  error: Error | null
+  createTag: (tag: Omit<VideoTag, 'id' | 'org_id' | 'usage_count' | 'created_by' | 'created_at' | 'updated_at'>) => Promise<VideoTag | null>
+  updateTag: (tagId: string, updates: Partial<VideoTag>) => Promise<boolean>
+  deleteTag: (tagId: string) => Promise<boolean>
+  refresh: () => Promise<void>
+}
+
+export function useVideoTags({ orgId, enabled = true }: UseVideoTagsOptions): UseVideoTagsReturn {
+  const { user } = useAuth()
+  const [tags, setTags] = useState<VideoTag[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
+  
+  const fetchTags = useCallback(async () => {
+    if (!orgId || !enabled) return
+    
+    setIsLoading(true)
+    setError(null)
+    
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('video_tags')
+        .select('*')
+        .eq('org_id', orgId)
+        .order('usage_count', { ascending: false })
+      
+      if (fetchError) throw fetchError
+      
+      setTags((data || []) as VideoTag[])
+    } catch (err) {
+      console.error('Error fetching video tags:', err)
+      setError(err instanceof Error ? err : new Error('Failed to fetch tags'))
+    } finally {
+      setIsLoading(false)
+    }
+  }, [orgId, enabled])
+  
+  useEffect(() => {
+    fetchTags()
+  }, [fetchTags])
+  
+  const createTag = useCallback(async (
+    tag: Omit<VideoTag, 'id' | 'org_id' | 'usage_count' | 'created_by' | 'created_at' | 'updated_at'>
+  ): Promise<VideoTag | null> => {
+    if (!orgId || !user?.id) return null
+    
+    try {
+      const { data, error: createError } = await supabase
+        .from('video_tags')
+        .insert({
+          ...tag,
+          org_id: orgId,
+          created_by: user.id,
+        })
+        .select()
+        .single()
+      
+      if (createError) throw createError
+      
+      setTags(prev => [data as VideoTag, ...prev])
+      return data as VideoTag
+    } catch (err) {
+      console.error('Error creating tag:', err)
+      return null
+    }
+  }, [orgId, user?.id])
+  
+  const updateTag = useCallback(async (
+    tagId: string,
+    updates: Partial<VideoTag>
+  ): Promise<boolean> => {
+    try {
+      const { error: updateError } = await supabase
+        .from('video_tags')
+        .update(updates)
+        .eq('id', tagId)
+      
+      if (updateError) throw updateError
+      
+      setTags(prev => prev.map(t => t.id === tagId ? { ...t, ...updates } : t))
+      return true
+    } catch (err) {
+      console.error('Error updating tag:', err)
+      return false
+    }
+  }, [])
+  
+  const deleteTag = useCallback(async (tagId: string): Promise<boolean> => {
+    try {
+      const { error: deleteError } = await supabase
+        .from('video_tags')
+        .delete()
+        .eq('id', tagId)
+      
+      if (deleteError) throw deleteError
+      
+      setTags(prev => prev.filter(t => t.id !== tagId))
+      return true
+    } catch (err) {
+      console.error('Error deleting tag:', err)
+      return false
+    }
+  }, [])
+  
+  return { tags, isLoading, error, createTag, updateTag, deleteTag, refresh: fetchTags }
+}
+
+// ============================================================================
+// Video Notes Hook
+// ============================================================================
+
+interface UseVideoNotesOptions {
+  videoId?: string
+  enabled?: boolean
+}
+
+interface UseVideoNotesReturn {
+  notes: VideoNote[]
+  isLoading: boolean
+  error: Error | null
+  createNote: (note: {
+    title?: string
+    content: string
+    timestamp_start?: number
+    timestamp_end?: number
+    scope?: VideoNoteScope
+    is_pinned?: boolean
+    drawing_data?: Record<string, unknown>
+    target_athlete_ids?: string[]
+  }) => Promise<VideoNote | null>
+  updateNote: (noteId: string, updates: Partial<VideoNote>) => Promise<boolean>
+  deleteNote: (noteId: string) => Promise<boolean>
+  refresh: () => Promise<void>
+}
+
+type VideoNoteInsert = Database['public']['Tables']['video_notes']['Insert']
+type VideoNoteUpdate = Database['public']['Tables']['video_notes']['Update']
+
+export function useVideoNotes({ videoId, enabled = true }: UseVideoNotesOptions): UseVideoNotesReturn {
+  const { user } = useAuth()
+  const [notes, setNotes] = useState<VideoNote[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
+  
+  const fetchNotes = useCallback(async () => {
+    if (!videoId || !enabled) return
+    
+    setIsLoading(true)
+    setError(null)
+    
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('video_notes')
+        .select(`
+          *,
+          video_note_targets(id, athlete_id, athlete:athletes(id, first_name, last_name))
+        `)
+        .eq('video_id', videoId)
+        .order('timestamp_seconds', { ascending: true, nullsFirst: true })
+      
+      if (fetchError) throw fetchError
+      
+      setNotes((data || []) as unknown as VideoNote[])
+    } catch (err) {
+      console.error('Error fetching video notes:', err)
+      setError(err instanceof Error ? err : new Error('Failed to fetch notes'))
+    } finally {
+      setIsLoading(false)
+    }
+  }, [videoId, enabled])
+  
+  useEffect(() => {
+    fetchNotes()
+  }, [fetchNotes])
+  
+  const createNote = useCallback(async (note: {
+    title?: string
+    content: string
+    timestamp_start?: number
+    timestamp_end?: number
+    scope?: VideoNoteScope
+    is_pinned?: boolean
+    drawing_data?: Record<string, unknown>
+    target_athlete_ids?: string[]
+  }): Promise<VideoNote | null> => {
+    if (!videoId || !user?.id) return null
+    
+    try {
+      const { target_athlete_ids, drawing_data } = note
+      const payload = {
+        video_id: videoId,
+        author_id: user.id,
+        content: note.content,
+        scope: note.scope,
+        timestamp_seconds: note.timestamp_start ?? null,
+        duration_seconds: note.timestamp_end ?? null,
+        drawing_data: (drawing_data ?? null) as Json | null,
+      } as VideoNoteInsert
+      
+      const { data, error: createError } = await supabase
+        .from('video_notes')
+        .insert(payload)
+        .select(`*`)
+        .single()
+      
+      if (createError) throw createError
+      
+      // Add athlete targets if specified
+      if (target_athlete_ids && target_athlete_ids.length > 0) {
+        await supabase
+          .from('video_note_targets')
+          .insert(
+            target_athlete_ids.map(athleteId => ({
+              note_id: data.id,
+              athlete_id: athleteId,
+            }))
+          )
+      }
+      
+      const newNote = data as unknown as VideoNote
+      setNotes(prev => [...prev, newNote])
+      return newNote
+    } catch (err) {
+      console.error('Error creating note:', err)
+      return null
+    }
+  }, [videoId, user?.id])
+  
+  const updateNote = useCallback(async (
+    noteId: string,
+    updates: Partial<VideoNote>
+  ): Promise<boolean> => {
+    try {
+      const dbUpdates = {
+        ...(updates.content !== undefined && { content: updates.content }),
+        ...(updates.scope !== undefined && { scope: updates.scope }),
+        ...(updates.timestamp_start !== undefined && { timestamp_seconds: updates.timestamp_start }),
+        ...(updates.timestamp_end !== undefined && { duration_seconds: updates.timestamp_end }),
+        ...(updates.drawing_data !== undefined && { drawing_data: updates.drawing_data as Json | null }),
+      } as VideoNoteUpdate
+        
+      const { error: updateError } = await supabase
+        .from('video_notes')
+        .update(dbUpdates)
+        .eq('id', noteId)
+      
+      if (updateError) throw updateError
+      
+      setNotes(prev => prev.map(n => n.id === noteId ? { ...n, ...updates } : n))
+      return true
+    } catch (err) {
+      console.error('Error updating note:', err)
+      return false
+    }
+  }, [])
+  
+  const deleteNote = useCallback(async (noteId: string): Promise<boolean> => {
+    try {
+      const { error: deleteError } = await supabase
+        .from('video_notes')
+        .delete()
+        .eq('id', noteId)
+      
+      if (deleteError) throw deleteError
+      
+      setNotes(prev => prev.filter(n => n.id !== noteId))
+      return true
+    } catch (err) {
+      console.error('Error deleting note:', err)
+      return false
+    }
+  }, [])
+  
+  return { notes, isLoading, error, createNote, updateNote, deleteNote, refresh: fetchNotes }
+}
+
+// ============================================================================
+// Video Bookmarks Hook
+// ============================================================================
+
+interface UseVideoBookmarksOptions {
+  videoId?: string
+  enabled?: boolean
+}
+
+interface UseVideoBookmarksReturn {
+  bookmarks: VideoBookmark[]
+  isLoading: boolean
+  error: Error | null
+  createBookmark: (timestamp: number, label?: string) => Promise<VideoBookmark | null>
+  updateBookmark: (bookmarkId: string, updates: Partial<VideoBookmark>) => Promise<boolean>
+  deleteBookmark: (bookmarkId: string) => Promise<boolean>
+  refresh: () => Promise<void>
+}
+
+export function useVideoBookmarks({ videoId, enabled = true }: UseVideoBookmarksOptions): UseVideoBookmarksReturn {
+  const { user } = useAuth()
+  const [bookmarks, setBookmarks] = useState<VideoBookmark[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
+  
+  const fetchBookmarks = useCallback(async () => {
+    if (!videoId || !enabled || !user?.id) return
+    
+    setIsLoading(true)
+    setError(null)
+    
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('video_bookmarks')
+        .select('*')
+        .eq('video_id', videoId)
+        .eq('user_id', user.id)
+        .order('timestamp_seconds', { ascending: true })
+      
+      if (fetchError) throw fetchError
+      
+      setBookmarks((data || []) as VideoBookmark[])
+    } catch (err) {
+      console.error('Error fetching bookmarks:', err)
+      setError(err instanceof Error ? err : new Error('Failed to fetch bookmarks'))
+    } finally {
+      setIsLoading(false)
+    }
+  }, [videoId, enabled, user?.id])
+  
+  useEffect(() => {
+    fetchBookmarks()
+  }, [fetchBookmarks])
+  
+  const createBookmark = useCallback(async (
+    timestamp: number,
+    label?: string
+  ): Promise<VideoBookmark | null> => {
+    if (!videoId || !user?.id) return null
+    
+    try {
+      const { data, error: createError } = await supabase
+        .from('video_bookmarks')
+        .insert({
+          video_id: videoId,
+          user_id: user.id,
+          timestamp_seconds: timestamp,
+          label,
+        })
+        .select()
+        .single()
+      
+      if (createError) throw createError
+      
+      const newBookmark = data as VideoBookmark
+      setBookmarks(prev => [...prev, newBookmark].sort((a, b) => a.timestamp_seconds - b.timestamp_seconds))
+      return newBookmark
+    } catch (err) {
+      console.error('Error creating bookmark:', err)
+      return null
+    }
+  }, [videoId, user?.id])
+  
+  const updateBookmark = useCallback(async (
+    bookmarkId: string,
+    updates: Partial<VideoBookmark>
+  ): Promise<boolean> => {
+    try {
+      const { error: updateError } = await supabase
+        .from('video_bookmarks')
+        .update(updates)
+        .eq('id', bookmarkId)
+      
+      if (updateError) throw updateError
+      
+      setBookmarks(prev => prev.map(b => b.id === bookmarkId ? { ...b, ...updates } : b))
+      return true
+    } catch (err) {
+      console.error('Error updating bookmark:', err)
+      return false
+    }
+  }, [])
+  
+  const deleteBookmark = useCallback(async (bookmarkId: string): Promise<boolean> => {
+    try {
+      const { error: deleteError } = await supabase
+        .from('video_bookmarks')
+        .delete()
+        .eq('id', bookmarkId)
+      
+      if (deleteError) throw deleteError
+      
+      setBookmarks(prev => prev.filter(b => b.id !== bookmarkId))
+      return true
+    } catch (err) {
+      console.error('Error deleting bookmark:', err)
+      return false
+    }
+  }, [])
+  
+  return { bookmarks, isLoading, error, createBookmark, updateBookmark, deleteBookmark, refresh: fetchBookmarks }
+}
+
+// ============================================================================
+// Video Comments Hook
+// ============================================================================
+
+interface UseVideoCommentsOptions {
+  videoId?: string
+  enabled?: boolean
+}
+
+interface UseVideoCommentsReturn {
+  comments: VideoComment[]
+  isLoading: boolean
+  error: Error | null
+  createComment: (content: string, options?: { timestamp?: number; parentId?: string }) => Promise<VideoComment | null>
+  updateComment: (commentId: string, content: string) => Promise<boolean>
+  deleteComment: (commentId: string) => Promise<boolean>
+  refresh: () => Promise<void>
+}
+
+export function useVideoComments({ videoId, enabled = true }: UseVideoCommentsOptions): UseVideoCommentsReturn {
+  const { user } = useAuth()
+  const [comments, setComments] = useState<VideoComment[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
+  
+  const fetchComments = useCallback(async () => {
+    if (!videoId || !enabled) return
+    
+    setIsLoading(true)
+    setError(null)
+    
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('video_comments')
+        .select(`*`)
+        .eq('video_id', videoId)
+        .order('created_at', { ascending: true })
+      
+      if (fetchError) throw fetchError
+      
+      setComments((data || []) as unknown as VideoComment[])
+    } catch (err) {
+      console.error('Error fetching comments:', err)
+      setError(err instanceof Error ? err : new Error('Failed to fetch comments'))
+    } finally {
+      setIsLoading(false)
+    }
+  }, [videoId, enabled])
+  
+  useEffect(() => {
+    fetchComments()
+  }, [fetchComments])
+  
+  const createComment = useCallback(async (
+    content: string,
+    options?: { timestamp?: number; parentId?: string }
+  ): Promise<VideoComment | null> => {
+    if (!videoId || !user?.id) return null
+    
+    try {
+      const { data, error: createError } = await supabase
+        .from('video_comments')
+        .insert({
+          video_id: videoId,
+          author_id: user.id,
+          content,
+          timestamp_seconds: options?.timestamp,
+          parent_comment_id: options?.parentId,
+        })
+        .select(`*`)
+        .single()
+      
+      if (createError) throw createError
+      
+      const newComment = data as unknown as VideoComment
+      setComments(prev => [...prev, newComment])
+      return newComment
+    } catch (err) {
+      console.error('Error creating comment:', err)
+      return null
+    }
+  }, [videoId, user?.id])
+  
+  const updateComment = useCallback(async (
+    commentId: string,
+    content: string
+  ): Promise<boolean> => {
+    try {
+      const { error: updateError } = await supabase
+        .from('video_comments')
+        .update({ content, is_edited: true })
+        .eq('id', commentId)
+      
+      if (updateError) throw updateError
+      
+      setComments(prev => prev.map(c => 
+        c.id === commentId ? { ...c, content, is_edited: true } : c
+      ))
+      return true
+    } catch (err) {
+      console.error('Error updating comment:', err)
+      return false
+    }
+  }, [])
+  
+  const deleteComment = useCallback(async (commentId: string): Promise<boolean> => {
+    try {
+      const { error: deleteError } = await supabase
+        .from('video_comments')
+        .delete()
+        .eq('id', commentId)
+      
+      if (deleteError) throw deleteError
+      
+      setComments(prev => prev.filter(c => c.id !== commentId))
+      return true
+    } catch (err) {
+      console.error('Error deleting comment:', err)
+      return false
+    }
+  }, [])
+  
+  return { comments, isLoading, error, createComment, updateComment, deleteComment, refresh: fetchComments }
+}
+
+// ============================================================================
+// Athlete Videos Hook (for Guardian Portal)
+// ============================================================================
+
+interface UseAthleteVideosOptions {
+  athleteId?: string
+  enabled?: boolean
+}
+
+interface UseAthleteVideosReturn {
+  videos: Video[]
+  total: number
+  isLoading: boolean
+  error: Error | null
+  refresh: () => Promise<void>
+}
+
+export function useAthleteVideos({ athleteId, enabled = true }: UseAthleteVideosOptions): UseAthleteVideosReturn {
+  const [videos, setVideos] = useState<Video[]>([])
+  const [total, setTotal] = useState(0)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
+  
+  const fetchVideos = useCallback(async () => {
+    if (!athleteId || !enabled) return
+    
+    setIsLoading(true)
+    setError(null)
+    
+    try {
+      // Fetch videos linked to this athlete
+      const { data: links, error: linksError } = await supabase
+        .from('video_athlete_links')
+        .select('video_id')
+        .eq('athlete_id', athleteId)
+      
+      if (linksError) throw linksError
+      
+      if (!links || links.length === 0) {
+        setVideos([])
+        setTotal(0)
+        return
+      }
+      
+      const videoIds = links.map(l => l.video_id)
+      
+      const { data, error: fetchError, count } = await supabase
+        .from('videos')
+        .select(`
+          *,
+          team:teams!videos_team_id_fkey(id, name),
+          video_athlete_links(id, link_type)
+        `, { count: 'exact' })
+        .in('id', videoIds)
+        .eq('status', 'ready')
+        .order('recorded_at', { ascending: false, nullsFirst: false })
+      
+      if (fetchError) throw fetchError
+      
+      setVideos((data || []) as unknown as Video[])
+      setTotal(count || 0)
+    } catch (err) {
+      console.error('Error fetching athlete videos:', err)
+      setError(err instanceof Error ? err : new Error('Failed to fetch videos'))
+    } finally {
+      setIsLoading(false)
+    }
+  }, [athleteId, enabled])
+  
+  useEffect(() => {
+    fetchVideos()
+  }, [fetchVideos])
+  
+  return { videos, total, isLoading, error, refresh: fetchVideos }
+}
+
+// ============================================================================
+// Video Mutations Hook
+// ============================================================================
+
+interface UseVideoMutationsReturn {
+  updateVideo: (videoId: string, updates: Partial<Video>) => Promise<boolean>
+  deleteVideo: (videoId: string) => Promise<boolean>
+  linkAthletes: (videoId: string, athleteIds: string[], linkType?: VideoLinkType) => Promise<boolean>
+  unlinkAthlete: (videoId: string, athleteId: string) => Promise<boolean>
+  linkTags: (videoId: string, tagIds: string[]) => Promise<boolean>
+  unlinkTag: (videoId: string, tagId: string) => Promise<boolean>
+}
+
+export function useVideoMutations(): UseVideoMutationsReturn {
+  const { user } = useAuth()
+  
+  const updateVideo = useCallback(async (
+    videoId: string,
+    updates: Partial<Video>
+  ): Promise<boolean> => {
+    try {
+      // Extract only the fields that can be safely updated
+      const { 
+        title, description, category, visibility, team_id, season_id, 
+        event_id, program_id, level_id, sport_id, recorded_at 
+      } = updates
+      const safeUpdates = {
+        ...(title !== undefined && { title }),
+        ...(description !== undefined && { description }),
+        ...(category !== undefined && { category }),
+        ...(visibility !== undefined && { visibility }),
+        ...(team_id !== undefined && { team_id }),
+        ...(season_id !== undefined && { season_id }),
+        ...(event_id !== undefined && { event_id }),
+        ...(program_id !== undefined && { program_id }),
+        ...(level_id !== undefined && { level_id }),
+        ...(sport_id !== undefined && { sport_id }),
+        ...(recorded_at !== undefined && { recorded_at }),
+      }
+      
+      const { error } = await supabase
+        .from('videos')
+        .update(safeUpdates)
+        .eq('id', videoId)
+      
+      if (error) throw error
+      return true
+    } catch (err) {
+      console.error('Error updating video:', err)
+      return false
+    }
+  }, [])
+  
+  const deleteVideo = useCallback(async (videoId: string): Promise<boolean> => {
+    try {
+      // Soft delete
+      const { error } = await supabase
+        .from('videos')
+        .update({ 
+          status: 'deleted',
+          deleted_at: new Date().toISOString(),
+        })
+        .eq('id', videoId)
+      
+      if (error) throw error
+      return true
+    } catch (err) {
+      console.error('Error deleting video:', err)
+      return false
+    }
+  }, [])
+  
+  const linkAthletes = useCallback(async (
+    videoId: string,
+    athleteIds: string[],
+    linkType: VideoLinkType = 'appears'
+  ): Promise<boolean> => {
+    if (!user?.id) return false
+    
+    try {
+      const { error } = await supabase
+        .from('video_athlete_links')
+        .upsert(
+          athleteIds.map(athleteId => ({
+            video_id: videoId,
+            athlete_id: athleteId,
+            link_type: linkType,
+            created_by: user.id,
+          })),
+          { onConflict: 'video_id,athlete_id' }
+        )
+      
+      if (error) throw error
+      return true
+    } catch (err) {
+      console.error('Error linking athletes:', err)
+      return false
+    }
+  }, [user?.id])
+  
+  const unlinkAthlete = useCallback(async (
+    videoId: string,
+    athleteId: string
+  ): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('video_athlete_links')
+        .delete()
+        .eq('video_id', videoId)
+        .eq('athlete_id', athleteId)
+      
+      if (error) throw error
+      return true
+    } catch (err) {
+      console.error('Error unlinking athlete:', err)
+      return false
+    }
+  }, [])
+  
+  const linkTags = useCallback(async (
+    videoId: string,
+    tagIds: string[]
+  ): Promise<boolean> => {
+    if (!user?.id) return false
+    
+    try {
+      const { error } = await supabase
+        .from('video_tag_links')
+        .upsert(
+          tagIds.map(tagId => ({
+            video_id: videoId,
+            tag_id: tagId,
+            created_by: user.id,
+          })),
+          { onConflict: 'video_id,tag_id' }
+        )
+      
+      if (error) throw error
+      return true
+    } catch (err) {
+      console.error('Error linking tags:', err)
+      return false
+    }
+  }, [user?.id])
+  
+  const unlinkTag = useCallback(async (
+    videoId: string,
+    tagId: string
+  ): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('video_tag_links')
+        .delete()
+        .eq('video_id', videoId)
+        .eq('tag_id', tagId)
+      
+      if (error) throw error
+      return true
+    } catch (err) {
+      console.error('Error unlinking tag:', err)
+      return false
+    }
+  }, [])
+  
+  return {
+    updateVideo,
+    deleteVideo,
+    linkAthletes,
+    unlinkAthlete,
+    linkTags,
+    unlinkTag,
+  }
+}
