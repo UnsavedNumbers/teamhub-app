@@ -17,7 +17,8 @@ BEGIN
   ) THEN
     ALTER TYPE public.gallery_type ADD VALUE 'season';
   END IF;
-END $$
+END $$;
+
 -- Helper: get or create static gallery for a polymorphic entity
 CREATE OR REPLACE FUNCTION public.get_or_create_static_gallery(
   p_org_id UUID,
@@ -63,4 +64,4 @@ BEGIN
 
   RETURN v_gallery_id;
 END;
-$$
+$$;
