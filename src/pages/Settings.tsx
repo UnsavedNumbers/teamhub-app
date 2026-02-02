@@ -30,8 +30,8 @@ import type { NotificationRole } from '../types/notifications'
 import { mergeNotificationPreferences, setPreferencesForContext, canonicalRole } from '../utils/notificationPreferencesConfig'
 import { showSuccess, showError } from '../utils/toast'
 import { CheckCircle, Mail, Loader2, AlertCircle } from 'lucide-react'
-import { REGEX_PATTERNS } from '../constants/validation'
-import { geocodeZipToHomeLocation, getDisplayZipCode } from '../utils/homeLocation'
+import { LocationAutocomplete } from '../components/common/LocationAutocomplete'
+import type { StructuredAddress, HomeLocation } from '../types/location'
 
 interface Child {
   id: string
@@ -68,8 +68,10 @@ export default function Settings() {
   const [notificationGroups, setNotificationGroups] = useState<NotificationGroup[]>([])
   const [savingNotifications, setSavingNotifications] = useState(false)
 
-  const [homeZip, setHomeZip] = useState('')
-  const [savingHomeZip, setSavingHomeZip] = useState(false)
+  const [homeAddressInput, setHomeAddressInput] = useState('')
+  const [homeAddressDisplay, setHomeAddressDisplay] = useState('')
+  const [selectedHomeLocation, setSelectedHomeLocation] = useState<HomeLocation | null>(null)
+  const [savingHomeAddress, setSavingHomeAddress] = useState(false)
 
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [newPassword, setNewPassword] = useState('')
@@ -157,7 +159,19 @@ export default function Settings() {
   }, [isReady, fetchData])
 
   useEffect(() => {
-    setHomeZip(getDisplayZipCode(profile) || '')
+    // Initialize home address from profile
+    if (profile?.home_location) {
+      const loc = profile.home_location as HomeLocation
+      setHomeAddressDisplay(loc.formatted_address || '')
+      setSelectedHomeLocation(loc)
+      // Don't set input value - let user type to search for new address
+    } else if (profile?.home_zipcode) {
+      // Legacy: only ZIP code stored
+      setHomeAddressDisplay(profile.home_zipcode)
+    } else {
+      setHomeAddressDisplay('')
+      setSelectedHomeLocation(null)
+    }
   }, [profile])
 
   // Debounced guardian email check
@@ -436,59 +450,77 @@ export default function Settings() {
     [persistNotificationGroups]
   )
 
-  const handleSaveHomeZip = useCallback(async () => {
+  const handleHomeAddressSelect = useCallback((address: StructuredAddress) => {
+    // Convert StructuredAddress to HomeLocation
+    const homeLocation: HomeLocation = {
+      place_id: address.place_id,
+      formatted_address: address.formatted_address,
+      zip_code: address.postal_code || '',
+      coordinates: {
+        lat: address.latitude,
+        lng: address.longitude,
+      },
+      city: address.city || undefined,
+      state: address.state || undefined,
+      country: address.country || 'United States',
+    }
+    
+    setSelectedHomeLocation(homeLocation)
+    setHomeAddressDisplay(address.formatted_address)
+    setHomeAddressInput('') // Clear the search input after selection
+  }, [])
+
+  const handleClearHomeAddress = useCallback(() => {
+    setSelectedHomeLocation(null)
+    setHomeAddressDisplay('')
+    setHomeAddressInput('')
+  }, [])
+
+  const handleSaveHomeAddress = useCallback(async () => {
     if (!user?.id) return
 
-    const trimmed = homeZip.trim()
-    if (trimmed && !REGEX_PATTERNS.ZIP_US.test(trimmed)) {
-      showError('Enter a valid ZIP code')
-      return
-    }
-
-    setSavingHomeZip(true)
+    setSavingHomeAddress(true)
     try {
-      if (!trimmed) {
+      // If no location selected, clear the home address
+      if (!selectedHomeLocation) {
         const { error } = await supabase
           .from('users')
           .update({ home_location: null, home_zipcode: null })
           .eq('id', user.id)
 
         if (error) {
-          showError(error.message || 'Failed to save ZIP code')
+          showError(error.message || 'Failed to clear home address')
           return
         }
 
-        setHomeZip('')
+        setHomeAddressDisplay('')
         await refreshProfile()
-        showSuccess('Home ZIP updated')
+        showSuccess('Home address cleared')
         return
       }
 
-      const homeLocation = await geocodeZipToHomeLocation(trimmed)
-      if (!homeLocation) {
-        showError('ZIP code not found')
-        return
-      }
-
+      // Save the selected home location
       const { error } = await supabase
         .from('users')
-        .update({ home_location: homeLocation as any, home_zipcode: trimmed })
+        .update({ 
+          home_location: selectedHomeLocation as any, 
+          home_zipcode: selectedHomeLocation.zip_code 
+        })
         .eq('id', user.id)
 
       if (error) {
-        showError(error.message || 'Failed to save ZIP code')
+        showError(error.message || 'Failed to save home address')
         return
       }
 
-      setHomeZip(homeLocation.zip_code)
       await refreshProfile()
-      showSuccess('Home ZIP updated')
+      showSuccess('Home address updated')
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'Failed to save ZIP code')
+      showError(err instanceof Error ? err.message : 'Failed to save home address')
     } finally {
-      setSavingHomeZip(false)
+      setSavingHomeAddress(false)
     }
-  }, [homeZip, refreshProfile, user])
+  }, [selectedHomeLocation, refreshProfile, user])
 
   async function handleChangePassword() {
     setPasswordError(null)
@@ -583,25 +615,63 @@ export default function Settings() {
                   </div>
                 </div>
               )}
-              <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-                <div className="flex-1">
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Home ZIP Code</p>
-                  <input
-                    value={homeZip}
-                    onChange={(e) => setHomeZip(e.target.value)}
-                    className="form-input"
-                    disabled={savingHomeZip}
-                    placeholder="e.g., 12345"
-                  />
+              <div className="p-4 sm:p-6 flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                  <div className="flex-1 space-y-4">
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Home Address</p>
+                    
+                    {/* Search input with LocationAutocomplete */}
+                    <div>
+                      <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">
+                        Name your home address
+                      </label>
+                      <LocationAutocomplete
+                        value={homeAddressInput}
+                        onInputChange={setHomeAddressInput}
+                        onChange={handleHomeAddressSelect}
+                        placeholder="Start typing your address..."
+                        disabled={savingHomeAddress}
+                        countryRestrictions={['us']}
+                        types={['address']}
+                      />
+                    </div>
+                    
+                    {/* Display selected address */}
+                    <div>
+                      <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">
+                        Full Address
+                      </label>
+                      <div className="relative">
+                        <input
+                          value={homeAddressDisplay}
+                          readOnly
+                          className="form-input bg-slate-50 dark:bg-slate-800/50 pr-10"
+                          placeholder="No address selected"
+                        />
+                        {homeAddressDisplay && (
+                          <button
+                            type="button"
+                            onClick={handleClearHomeAddress}
+                            disabled={savingHomeAddress}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-50"
+                            aria-label="Clear address"
+                          >
+                            <Icon name="close" size="text-lg" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Button
+                    variant="secondary"
+                    onClick={handleSaveHomeAddress}
+                    disabled={savingHomeAddress}
+                    className="w-full sm:w-auto sm:mt-6"
+                  >
+                    {savingHomeAddress ? 'Saving...' : 'Save'}
+                  </Button>
                 </div>
-                <Button
-                  variant="secondary"
-                  onClick={handleSaveHomeZip}
-                  disabled={savingHomeZip}
-                  className="w-full sm:w-auto"
-                >
-                  {savingHomeZip ? 'Saving...' : 'Save'}
-                </Button>
               </div>
             </Card>
           </section>
