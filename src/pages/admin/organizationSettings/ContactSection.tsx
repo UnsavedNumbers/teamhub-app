@@ -15,7 +15,7 @@ import {
   getOrganizationTravelContacts,
   upsertOrganizationTravelContact,
 } from '../../../data/services/organizationTravelContactsService'
-import { TRAVEL_CONTACT_CATEGORIES_ORG, type TravelContactCategoryOrg } from '../../../types/travelContacts'
+import { type TravelContactCategoryOrg } from '../../../types/travelContacts'
 import { 
   CONTACT_CATEGORIES, 
   type ContactCategory,
@@ -372,10 +372,10 @@ export default function ContactSection({ orgId }: { orgId: string }) {
                                             {sub === 'emergency' && 'Urgent issues during the trip.'}
                                           </div>
                                           
-                                          <Controller control={control} name={`categories.${index}.travel_contacts.${sub}.first_name`} render={({field: f}) => <Input {...f} label="First Name" />} />
-                                          <Controller control={control} name={`categories.${index}.travel_contacts.${sub}.last_name`} render={({field: f}) => <Input {...f} label="Last Name" />} />
-                                          <Controller control={control} name={`categories.${index}.travel_contacts.${sub}.email`} render={({field: f}) => <Input {...f} label="Email" type="email" />} />
-                                          <Controller control={control} name={`categories.${index}.travel_contacts.${sub}.phone`} render={({field: f}) => <Input {...f} label="Phone" type="tel" />} />
+                                          <Controller control={control} name={`categories.${index}.travel_contacts.${sub}.first_name` as any} render={({field: f}) => <Input {...f} value={(f.value as string) ?? ''} label="First Name" />} />
+                                          <Controller control={control} name={`categories.${index}.travel_contacts.${sub}.last_name` as any} render={({field: f}) => <Input {...f} value={(f.value as string) ?? ''} label="Last Name" />} />
+                                          <Controller control={control} name={`categories.${index}.travel_contacts.${sub}.email` as any} render={({field: f}) => <Input {...f} value={(f.value as string) ?? ''} label="Email" type="email" />} />
+                                          <Controller control={control} name={`categories.${index}.travel_contacts.${sub}.phone` as any} render={({field: f}) => <Input {...f} value={(f.value as string) ?? ''} label="Phone" type="tel" />} />
                                         </div>
                                       </Fragment>
                                     ))}

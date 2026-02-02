@@ -425,7 +425,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (homeLocation) {
           await supabase
             .from('users')
-            .update({ home_location: homeLocation, home_zipcode: trimmedZip })
+            .update({ home_location: homeLocation as any, home_zipcode: trimmedZip })
             .eq('id', data.session.user.id)
         }
       } catch (err) {

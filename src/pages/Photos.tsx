@@ -33,6 +33,8 @@ export default function Photos() {
     team: [],
     event: [],
     travel: [],
+    program: [],
+    season: [],
     org: [],
   })
   const [athletes, setAthletes] = useState<Athlete[]>([])
@@ -63,11 +65,13 @@ export default function Photos() {
       setLoading(true)
       
       // Load galleries by type
-      const [athleteGalleries, teamGalleries, eventGalleries, travelGalleries, orgGalleries] = await Promise.all([
+      const [athleteGalleries, teamGalleries, eventGalleries, travelGalleries, programGalleries, seasonGalleries, orgGalleries] = await Promise.all([
         getGalleriesForUser(context, { gallery_type: 'athlete' }),
         getGalleriesForUser(context, { gallery_type: 'team' }),
         getGalleriesForUser(context, { gallery_type: 'event' }),
         getGalleriesForUser(context, { gallery_type: 'travel' }),
+        getGalleriesForUser(context, { gallery_type: 'program' }),
+        getGalleriesForUser(context, { gallery_type: 'season' }),
         getGalleriesForUser(context, { gallery_type: 'org' }),
       ])
 
@@ -76,6 +80,8 @@ export default function Photos() {
         team: teamGalleries.data || [],
         event: eventGalleries.data || [],
         travel: travelGalleries.data || [],
+        program: programGalleries.data || [],
+        season: seasonGalleries.data || [],
         org: orgGalleries.data || [],
       })
       

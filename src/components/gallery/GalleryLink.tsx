@@ -34,7 +34,6 @@ const AUTO_GALLERY_TYPES: Set<GalleryType> = new Set(['athlete', 'team', 'event'
 export function GalleryLink({
   galleryType,
   entityId,
-  entityName,
   className = '',
   variant = 'link',
 }: GalleryLinkProps) {

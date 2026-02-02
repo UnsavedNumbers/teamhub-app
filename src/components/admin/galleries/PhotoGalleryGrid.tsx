@@ -100,7 +100,6 @@ export function PhotoGalleryGrid({ photos, coverPhotoId, onDelete, onSetCover }:
           open={confirmDelete}
           title="Delete photos"
           description={`Are you sure you want to delete ${selected.size} photo(s)? This cannot be undone.`}
-          confirmText="Delete"
           variant="danger"
           onCancel={() => setConfirmDelete(false)}
           onConfirm={handleDelete}

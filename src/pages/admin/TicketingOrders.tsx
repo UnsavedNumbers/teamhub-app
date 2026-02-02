@@ -18,7 +18,7 @@ export default function TicketingOrders() {
   const { currentOrganization } = useOrganization()
   const orgId = currentOrganization?.id
 
-  const { data: ordersResponse } = useQuery({
+  const { data: ordersResponse, isLoading, error, refetch } = useQuery({
     queryKey: ['ticket-orders', 'admin', orgId],
     queryFn: async () => {
       if (!orgId) return { data: [], error: null }

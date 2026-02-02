@@ -67,7 +67,7 @@ export function mapOrganizationToConnectStatus(org: {
   }))
 
   const onboardingStatus =
-    org.payoutOnboardingStatus === 'complete'
+    org.payoutOnboardingStatus === 'completed'
       ? 'completed'
       : org.payoutOnboardingStatus || 'pending'
 

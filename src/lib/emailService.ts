@@ -1,7 +1,7 @@
 import { Resend } from 'resend';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { EMAIL_FROM_ADDRESS, EMAIL_TEMPLATES } from '../constants/email';
+import { EMAIL_FROM_ADDRESS } from '../constants/email';
 
 // Initialize Resend client
 const resend = new Resend(import.meta.env.VITE_RESEND_API_KEY || '');

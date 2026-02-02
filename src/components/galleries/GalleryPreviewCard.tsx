@@ -26,7 +26,7 @@ export function GalleryPreviewCard({ gallery, onClick }: GalleryPreviewCardProps
           </div>
         </div>
         {gallery.pending_count !== undefined && gallery.pending_count > 0 && (
-          <Badge tone="warning">{gallery.pending_count} pending</Badge>
+          <Badge variant="warning">{gallery.pending_count} pending</Badge>
         )}
       </div>
     </button>

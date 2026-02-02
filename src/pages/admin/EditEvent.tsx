@@ -1197,7 +1197,6 @@ export default function EditEvent() {
                                 }
                               }}
                               label="Immediately"
-                              helper="Allow tickets to go on sale right away. Turn off to schedule a sales window."
                               disabled={hasPaidOrders}
                             />
                           )}
