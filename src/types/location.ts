@@ -21,6 +21,22 @@ export interface StructuredAddress {
 }
 
 /**
+ * Compact home location representation for ZIP-based storage
+ */
+export interface HomeLocation {
+  place_id: string
+  formatted_address: string
+  zip_code: string
+  coordinates: {
+    lat: number
+    lng: number
+  }
+  city?: string
+  state?: string
+  country: string
+}
+
+/**
  * Props for LocationAutocomplete component
  */
 export interface LocationAutocompleteProps {

@@ -10,6 +10,7 @@ import {
 import { AUTH_HERO_IMAGES } from '../utils/authImages'
 import { mapAuthError } from '../utils/authErrorMapper'
 import { supabase } from '../lib/supabase'
+import { REGEX_PATTERNS } from '../constants/validation'
 
 export default function Signup() {
   const [email, setEmail] = useState('')
@@ -172,17 +173,9 @@ export default function Signup() {
 
     // Zipcode validation (optional field, but if provided should be 5-10 characters)
     const trimmedZipcode = zipcode.trim()
-    if (trimmedZipcode.length > 0) {
-      // Basic format validation: digits and optional hyphen
-      const zipcodePattern = /^[0-9]{5}(-[0-9]{4})?$/
-      if (trimmedZipcode.length < 5 || trimmedZipcode.length > 10) {
-        setError('Zipcode must be between 5 and 10 characters')
-        return
-      }
-      if (!zipcodePattern.test(trimmedZipcode)) {
-        setError('Zipcode must be in format 12345 or 12345-6789')
-        return
-      }
+    if (trimmedZipcode.length > 0 && !REGEX_PATTERNS.ZIP_US.test(trimmedZipcode)) {
+      setError('Zipcode must be in format 12345 or 12345-6789')
+      return
     }
 
     if (password !== confirmPassword) {

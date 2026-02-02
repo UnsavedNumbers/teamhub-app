@@ -24,6 +24,7 @@ export const REGEX_PATTERNS = {
   SLUG: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
   UUID: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
   JERSEY_NUMBER: /^\d{1,2}$/,
+  ZIP_US: /^[0-9]{5}(-[0-9]{4})?$/,
 } as const
 
 // File size limits (in bytes)
