@@ -4,7 +4,7 @@ import { useUserContext } from '../hooks/useUserContext'
 import { supabase } from '../lib/supabase'
 import { getEventDetails, updateRSVP, getAthletes, deleteEvent } from '../data/services'
 import type { RSVPStatus } from '../types/calendar'
-import { getSportFromEvent, type SportInfo } from '../utils/sportContext'
+import { getSportFromEvent } from '../utils/sportContext'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
@@ -172,7 +172,6 @@ export default function EventDetail() {
   const [attendance, setAttendance] = useState<Record<string, Attendance>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
-  const [eventSport, setEventSport] = useState<SportInfo | null>(null)
   const [copiedText, setCopiedText] = useState<string | null>(null)
   const [copyError, setCopyError] = useState<string | null>(null)
   const [orgSlug, setOrgSlug] = useState<string | null>(null)
@@ -263,12 +262,8 @@ export default function EventDetail() {
         }
       }
 
-      // Load sport for event
       if (eventId) {
-        const sport = await getSportFromEvent(context, eventId)
-        if (isMountedRef.current && sport) {
-          setEventSport(sport)
-        }
+        await getSportFromEvent(context, eventId)
       }
     } catch (err) {
       console.error('Error fetching event details:', err)
@@ -697,7 +692,6 @@ export default function EventDetail() {
                 startTime: event.start_time,
                 endTime: event.end_time,
                 location: venueAddress || '',
-                notes: event.notes || '',
               }) ? (
                 <a
                   href={googleCalendarLink({
@@ -705,7 +699,6 @@ export default function EventDetail() {
                     startTime: event.start_time,
                     endTime: event.end_time,
                     location: venueAddress || '',
-                    notes: event.notes || '',
                   })!}
                   target="_blank"
                   rel="noreferrer"
@@ -727,7 +720,6 @@ export default function EventDetail() {
                 startTime: event.start_time,
                 endTime: event.end_time,
                 location: venueAddress || '',
-                notes: event.notes || '',
               }) ? (
                 <a
                   href={appleCalendarLink({
@@ -735,7 +727,6 @@ export default function EventDetail() {
                     startTime: event.start_time,
                     endTime: event.end_time,
                     location: venueAddress || '',
-                    notes: event.notes || '',
                   })!}
                   download={`${event.title}.ics`}
                   className="block"

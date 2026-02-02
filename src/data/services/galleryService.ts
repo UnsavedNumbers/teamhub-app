@@ -177,7 +177,7 @@ function mapPhotoRecord(photo: any): GalleryPhoto {
  * Returns galleries filtered by user's access (via RLS) with photo counts
  */
 export async function getGalleriesForUser(
-  context: UserContext,
+  _context: UserContext,
   params: GetGalleriesParams = {}
 ): Promise<{ data: Gallery[]; error: Error | null }> {
   if (USE_FAKE_DATA) {
@@ -349,7 +349,7 @@ export async function getGalleryByEntity(
  * @deprecated For org/season, use getGalleriesForUser instead (they have multiple user-created galleries).
  */
 export async function getEntityGallery(
-  context: UserContext,
+  _context: UserContext,
   entityType: GalleryEntityType,
   entityId: string
 ): Promise<{ data: Gallery | null; error: Error | null }> {
@@ -499,7 +499,7 @@ export async function ensureEntityGallery(
       p_entity_id: entityId,
       p_org_id: context.orgId,
       p_user_id: context.userId,
-      p_name: name || null,
+      p_name: name || undefined,
     })
 
     if (rpcError) throw rpcError
@@ -648,7 +648,7 @@ export async function getPhotosForGallery(
     const orderBy = params.order_by || 'sort_order'
     const orderDirection = params.order_direction || 'asc'
     if (orderBy === 'sort_order') {
-      query = query.order('sort_order', { ascending: true, nullsLast: true }).order('created_at', { ascending: false })
+      query = query.order('sort_order', { ascending: true }).order('created_at', { ascending: false })
     } else {
       query = query.order(orderBy, { ascending: orderDirection === 'asc' })
     }
@@ -897,7 +897,7 @@ export async function getOrCreateStaticGallery(
   context: UserContext,
   galleryType: GalleryType,
   entityId: string,
-  name: string = 'Photos'
+  _name: string = 'Photos'
 ): Promise<{ id: string | null; error: Error | null }> {
   if (USE_FAKE_DATA) {
     await simulateDelay()
@@ -924,7 +924,7 @@ export async function getOrCreateStaticGallery(
  * Check if user can upload to gallery (calls RLS function)
  */
 export async function checkCanUploadToGallery(
-  context: UserContext,
+  _context: UserContext,
   galleryId: string
 ): Promise<{ allowed: boolean; error: Error | null }> {
   if (USE_FAKE_DATA) {
@@ -1427,7 +1427,7 @@ export async function reorderGalleryPhotos(
 
     const { error } = await supabase
       .from('gallery_photos')
-      .upsert(updates, { onConflict: 'id' })
+      .upsert(updates as any, { onConflict: 'id' })
 
     if (error) throw error
     return { error: null }

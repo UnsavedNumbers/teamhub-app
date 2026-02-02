@@ -104,7 +104,11 @@ export function PhotoUploadZone({
   }
 
   const cancelQueue = () => {
-    setItems((prev) => prev.map((p) => (p.state === 'pending' ? { ...p, state: 'canceled' } : p)).filter((p) => p.state !== 'canceled'))
+    setItems((prev) =>
+      prev
+        .map((p) => (p.state === 'pending' ? ({ ...p, state: 'canceled' } as UploadItem) : p))
+        .filter((p) => p.state !== 'canceled')
+    )
   }
 
   return (

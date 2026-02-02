@@ -1,40 +1,37 @@
 import { REGEX_PATTERNS } from '../constants/validation'
 import type { HomeLocation } from '../types/location'
-import { isGoogleMapsLoaded, loadGoogleMapsScript } from './googleMapsLoader'
 
 type UserWithHomeLocation = {
   home_location?: HomeLocation | null
   home_zipcode?: string | null
 } | null | undefined
 
-async function ensureGeocoder(): Promise<boolean> {
-  if (typeof window === 'undefined') return false
-  if (isGoogleMapsLoaded() && window.google?.maps?.Geocoder) return true
-
-  const apiKey = import.meta.env.VITE_GOOGLE_PLACES_API_KEY
-  if (!apiKey) return false
-
-  try {
-    await loadGoogleMapsScript(apiKey)
-  } catch (err) {
-    console.error('Failed to load Google Maps script', err)
-    return false
-  }
-
-  return !!window.google?.maps?.Geocoder
+type GeocoderAddressComponent = {
+  long_name: string
+  short_name: string
+  types: string[]
 }
 
-function getComponentValue(
-  components: google.maps.GeocoderAddressComponent[] | undefined,
-  types: string[]
-): string {
+type GeocodeResult = {
+  place_id: string
+  formatted_address: string
+  geometry?: { location?: { lat: number; lng: number } }
+  address_components?: GeocoderAddressComponent[]
+}
+
+type GeocodeResponse = {
+  status: string
+  results: GeocodeResult[]
+}
+
+function getComponentValue(components: GeocoderAddressComponent[] | undefined, types: string[]): string {
   if (!components || components.length === 0) return ''
   const component = components.find((c) => types.some((t) => c.types?.includes(t)))
   return component?.long_name || ''
 }
 
 /**
- * Convert a US ZIP code into a HomeLocation via Google Maps Geocoder.
+ * Convert a US ZIP code into a HomeLocation via Google Geocoding API (REST).
  * Returns null for invalid ZIPs or if geocoding fails.
  */
 export async function geocodeZipToHomeLocation(zip: string): Promise<HomeLocation | null> {
@@ -43,61 +40,55 @@ export async function geocodeZipToHomeLocation(zip: string): Promise<HomeLocatio
     return null
   }
 
-  const ready = await ensureGeocoder()
-  if (!ready) return null
+  const apiKey = import.meta.env.VITE_GOOGLE_GEOCODING_API_KEY || import.meta.env.VITE_GOOGLE_PLACES_API_KEY
+  if (!apiKey) return null
 
-  return new Promise<HomeLocation | null>((resolve) => {
-    const geocoder = new window.google.maps.Geocoder()
-    geocoder.geocode(
-      {
-        address: trimmed,
-        componentRestrictions: { country: 'US', postalCode: trimmed },
-      },
-      (results, status) => {
-        if (status !== 'OK' || !results || results.length === 0) {
-          resolve(null)
-          return
-        }
+  const url = new URL('https://maps.googleapis.com/maps/api/geocode/json')
+  url.searchParams.set('address', trimmed)
+  url.searchParams.set('components', `country:US|postal_code:${trimmed}`)
+  url.searchParams.set('key', apiKey)
 
-        const first = results[0]
-        const location = first.geometry?.location
-        if (!first.place_id || !location) {
-          resolve(null)
-          return
-        }
+  try {
+    const resp = await fetch(url.toString())
+    if (!resp.ok) return null
 
-        const lat = typeof location.lat === 'function' ? location.lat() : location.lat
-        const lng = typeof location.lng === 'function' ? location.lng() : location.lng
-        if (lat === undefined || lng === undefined) {
-          resolve(null)
-          return
-        }
+    const data = (await resp.json()) as GeocodeResponse
+    if (data.status !== 'OK' || !data.results?.length) {
+      return null
+    }
 
-        const components = first.address_components || []
-        const zipCode = getComponentValue(components, ['postal_code']) || trimmed
-        const city =
-          getComponentValue(components, ['locality', 'postal_town', 'administrative_area_level_3']) ||
-          undefined
-        const state = getComponentValue(components, ['administrative_area_level_1']) || undefined
-        const country = getComponentValue(components, ['country']) || 'United States'
+    const first = data.results[0]
+    if (!first.place_id || !first.geometry?.location) {
+      return null
+    }
 
-        const homeLocation: HomeLocation = {
-          place_id: first.place_id,
-          formatted_address: first.formatted_address || '',
-          zip_code: zipCode,
-          coordinates: {
-            lat,
-            lng,
-          },
-          city,
-          state,
-          country,
-        }
+    const { lat, lng } = first.geometry.location
+    if (typeof lat !== 'number' || typeof lng !== 'number') {
+      return null
+    }
 
-        resolve(homeLocation)
-      }
-    )
-  })
+    const components = first.address_components || []
+    const zipCode = getComponentValue(components, ['postal_code']) || trimmed
+    const city =
+      getComponentValue(components, ['locality', 'postal_town', 'administrative_area_level_3']) || undefined
+    const state = getComponentValue(components, ['administrative_area_level_1']) || undefined
+    const country = getComponentValue(components, ['country']) || 'United States'
+
+    const homeLocation: HomeLocation = {
+      place_id: first.place_id,
+      formatted_address: first.formatted_address || '',
+      zip_code: zipCode,
+      coordinates: { lat, lng },
+      city,
+      state,
+      country,
+    }
+
+    return homeLocation
+  } catch (err) {
+    console.error('Geocoding failed', err)
+    return null
+  }
 }
 
 /**

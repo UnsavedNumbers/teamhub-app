@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useRelatedGalleries } from '@/hooks/useEntityGallery'
 import { type GalleryEntityType } from '@/data/services/galleryService'
-import { EmptyState } from '../platformAdmin'
 
 interface RelatedGalleriesSectionProps {
   entityType: Extract<GalleryEntityType, 'athlete' | 'team' | 'event' | 'travel_plan' | 'program'>

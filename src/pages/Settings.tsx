@@ -472,7 +472,7 @@ export default function Settings() {
 
       const { error } = await supabase
         .from('users')
-        .update({ home_location: homeLocation, home_zipcode: trimmed })
+        .update({ home_location: homeLocation as any, home_zipcode: trimmed })
         .eq('id', user.id)
 
       if (error) {

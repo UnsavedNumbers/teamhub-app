@@ -97,11 +97,6 @@ export default function AdminPhotos() {
         <PageHeader
           title="Photos"
           description="Create and manage galleries across teams, athletes, events, travel, seasons, and programs."
-          primaryAction={
-            <Button variant="primary" icon="add_a_photo" onClick={() => setShowManagement(true)}>
-              Create Gallery
-            </Button>
-          }
         />
 
         {error && <InlineNotice tone="error" title="Unable to load galleries" message={error} />}
@@ -171,11 +166,7 @@ export default function AdminPhotos() {
         <div className="stats-grid">
           <StatCard label="Galleries" value={totals.galleries} />
           <StatCard label="Photos" value={totals.photos} />
-          <StatCard
-            label="Pending approvals"
-            value={totals.pending}
-            trend={totals.pending > 0 ? 'warning' : 'positive'}
-          />
+          <StatCard label="Pending approvals" value={totals.pending} />
         </div>
 
         <div className="tabs-row">

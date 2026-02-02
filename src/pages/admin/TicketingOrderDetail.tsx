@@ -4,6 +4,7 @@
  * Admin page to view ticket order details and process refunds
  */
 
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useOrganization } from '@/contexts/OrganizationContext'
@@ -24,6 +25,7 @@ export default function TicketingOrderDetail() {
   const { currentOrganization } = useOrganization()
   const queryClient = useQueryClient()
   const orgId = currentOrganization?.id
+  const [isRefunding, setIsRefunding] = useState(false)
 
   const { data: orderResponse, isLoading, error, refetch } = useQuery({
     queryKey: ['ticket-order-admin', orderId],
@@ -31,7 +33,7 @@ export default function TicketingOrderDetail() {
     enabled: !!orderId,
   })
 
-  const order = orderResponse?.data || null
+  const order = orderResponse || null
 
   // Verify order belongs to current org
   if (order && orgId && order.org_id !== orgId) {
@@ -56,6 +58,7 @@ export default function TicketingOrderDetail() {
     }
 
     try {
+      setIsRefunding(true)
       const result = await processTicketOrderRefund(orderId)
       if (result.error) {
         throw result.error
@@ -72,6 +75,8 @@ export default function TicketingOrderDetail() {
       }, 2000)
     } catch (err) {
       showError(getErrorMessage(err) || 'Failed to process refund')
+    } finally {
+      setIsRefunding(false)
     }
   }
 

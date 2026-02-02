@@ -32,7 +32,7 @@ export default function GalleryDetail() {
     setLoading(true)
     const [gRes, pRes] = await Promise.all([
       getGalleryById(context, id),
-      getPhotosForGallery(context, { gallery_id: id, order_by: 'sort_order', order_direction: 'asc' }),
+      getPhotosForGallery(context, { gallery_id: id, order_by: 'created_at', order_direction: 'asc' }),
     ])
     if (gRes.error) showError(gRes.error.message)
     if (pRes.error) showError(pRes.error.message)
@@ -89,13 +89,11 @@ export default function GalleryDetail() {
         <PageHeader
           title={gallery?.name || 'Gallery'}
           description={gallery?.description || 'Manage photos for this gallery'}
-          primaryAction={
-            <Button variant="secondary" onClick={() => navigate(getLink('admin.photos.list'))}>
-              Back to galleries
-            </Button>
-          }
           actions={
             <>
+              <Button variant="secondary" onClick={() => navigate(getLink('admin.photos.list'))}>
+                Back to galleries
+              </Button>
               <Button variant="ghost" onClick={() => setEditOpen(true)}>
                 Edit
               </Button>

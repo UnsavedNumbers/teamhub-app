@@ -1090,7 +1090,7 @@ export default function CreateEvent() {
                             name="ticketing.sales_start_at"
                             control={control}
                             rules={{
-                              validate: (value) => {
+                              validate: (_value) => {
                                 if (watchTicketSalesImmediate) return true
                                 return true
                               }
