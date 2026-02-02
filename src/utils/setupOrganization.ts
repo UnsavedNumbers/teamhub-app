@@ -1,17 +1,19 @@
 /**
  * localStorage Utilities for Organization Setup Flow
- * 
- * Manages the setupOrganization flag used to track when a user is going
+ *
+ * Manages setupOrganization flag used to track when a user is going
  * through the onboarding flow. This flag survives page refreshes and OAuth
  * redirects.
- * 
+ *
  * Flag Schema:
  * - key: 'youthsports_setup_organization'
  * - value: JSON string with { flag: boolean, timestamp: number }
  */
 
-const STORAGE_KEY = 'youthsports_setup_organization'
-const EXPIRY_MS = 60 * 60 * 1000 // 1 hour in milliseconds
+import { STORAGE_KEYS, STORAGE_EXPIRY } from '../constants/storage'
+
+const STORAGE_KEY = STORAGE_KEYS.SETUP_ORGANIZATION
+const EXPIRY_MS = STORAGE_EXPIRY.FEATURE_FLAGS_CACHE
 
 interface SetupOrganizationData {
     flag: boolean
@@ -19,7 +21,7 @@ interface SetupOrganizationData {
 }
 
 /**
- * Check if the stored data is valid and not expired
+ * Check if stored data is valid and not expired
  */
 function isDataValid(data: SetupOrganizationData | null): boolean {
     if (!data || typeof data.flag !== 'boolean' || typeof data.timestamp !== 'number') {
@@ -81,7 +83,7 @@ export function setSetupOrganizationFlag(): void {
 
 /**
  * Get the setupOrganization flag from localStorage.
- * Returns true only if the flag exists and is not expired.
+ * Returns true only if flag exists and is not expired.
  */
 export function getSetupOrganizationFlag(): boolean {
     const data = parseStoredData()

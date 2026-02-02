@@ -6,13 +6,14 @@
 
 import { supabase } from '../supabase';
 import type { FeatureGateResult, FeatureGateContext, ReasonCode, GateAction } from './types';
+import { CACHE_TTL } from '../../constants/api';
 
 /**
  * Cache for feature gate results to reduce RPC calls
  * Key format: `${org_id}:${user_id}:${feature_key}`
  */
 const gateCache = new Map<string, { result: FeatureGateResult; timestamp: number }>();
-const CACHE_TTL_MS = 30000; // 30 seconds
+const CACHE_TTL_MS = CACHE_TTL.FEATURE_GATE_MS;
 
 /**
  * Clear the feature gate cache

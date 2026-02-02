@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { EMAIL_FROM_ADDRESS, EMAIL_TEMPLATES } from '../constants/email';
 
 // Initialize Resend client
 const resend = new Resend(import.meta.env.VITE_RESEND_API_KEY || '');
@@ -90,14 +91,14 @@ export async function sendNotificationEmail(job: NotificationJob): Promise<Email
       throw new Error(`Unknown email type: ${job.type}`);
     }
 
-    let subject = injectVariables(config.subject, job.payload);
+    const subject = injectVariables(config.subject, job.payload);
 
     // Generate plain text fallback
     const textContent = generatePlainText(htmlContent);
 
     // Send email via Resend
     const result = await resend.emails.send({
-      from: 'notifications@youthsports.team', // This should be configured in Resend
+      from: EMAIL_FROM_ADDRESS,
       to: job.email,
       subject,
       html: htmlContent,
