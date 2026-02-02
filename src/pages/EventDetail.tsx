@@ -638,7 +638,7 @@ export default function EventDetail() {
 
         {/* Quick Summary Banner */}
         <Card className="bg-gradient-to-r from-[var(--org-btn-primary-bg, #137fec)]/5 to-slate-50 dark:to-slate-800/50 border-l-4 border-[var(--org-btn-primary-bg, #137fec)] p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Event Type</p>
               <p className="text-lg font-black text-slate-900 dark:text-white capitalize">{event.type}</p>
@@ -655,6 +655,19 @@ export default function EventDetail() {
                 <p className="text-lg font-black text-slate-900 dark:text-white truncate">{venueAddress.split(',')[0]}</p>
               </div>
             )}
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Weather</p>
+              {loadingWeather ? (
+                <p className="text-lg font-black text-slate-900 dark:text-white">Loading...</p>
+              ) : weatherData ? (
+                <div>
+                  <p className="text-lg font-black text-slate-900 dark:text-white">{weatherData.temperature}°F • <span className="capitalize">{weatherData.description}</span></p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{weatherData.precipitation}% precip • {weatherData.windSpeed} mph wind</p>
+                </div>
+              ) : (
+                <p className="text-lg font-black text-slate-500 dark:text-slate-400">Unavailable</p>
+              )}
+            </div>
           </div>
         </Card>
       </div>
@@ -1118,74 +1131,7 @@ export default function EventDetail() {
             variant="event"
           />
 
-          {/* Weather */}
-          {venueAddress && (
-            <Card className="p-6 relative rounded-tl-none">
-              <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg flex items-center gap-2 text-xl font-black uppercase tracking-wider">
-                <Icon name="wb_sunny" size="text-2xl" />
-                Weather Forecast
-              </div>
-              <div className="pt-12">
-                {loadingWeather ? (
-                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-slate-900 dark:border-white mr-3"></div>
-                    <span className="text-sm text-slate-600 dark:text-slate-300">Loading forecast...</span>
-                  </div>
-                ) : weatherData ? (
-                  <div className="space-y-4">
-                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Temperature</p>
-                          <p className="text-lg font-black text-slate-900 dark:text-white">{weatherData.temperature}°F</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">Feels like {weatherData.feelsLike}°F</p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Conditions</p>
-                          <p className="text-lg font-black text-slate-900 dark:text-white capitalize">{weatherData.condition}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{weatherData.description}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Precipitation</p>
-                          <p className="text-lg font-black text-slate-900 dark:text-white">{weatherData.precipitation}%</p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Wind Speed</p>
-                          <p className="text-lg font-black text-slate-900 dark:text-white">{weatherData.windSpeed} mph</p>
-                        </div>
-                      </div>
-                    </div>
-                    <a
-                      href={`https://www.google.com/search?q=weather+${encodeURIComponent(venueAddress)}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <Button variant="secondary" className="w-full">
-                        <Icon name="cloud" size="text-sm" className="mr-2" />
-                        View Full Forecast
-                      </Button>
-                    </a>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
-                      Weather forecast unavailable for this event.
-                    </p>
-                    <a
-                      href={`https://www.google.com/search?q=weather+${encodeURIComponent(venueAddress)}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <Button variant="secondary" className="w-full">
-                        <Icon name="cloud" size="text-sm" className="mr-2" />
-                        View Forecast
-                      </Button>
-                    </a>
-                  </div>
-                )}
-              </div>
-            </Card>
-          )}
+
 
         </div>
       </div>
