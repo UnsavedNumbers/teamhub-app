@@ -455,7 +455,7 @@ export function deleteFakeTicketingEvent(orgId: string, id: string) {
 export function duplicateFakeTicketingEvent(orgId: string, id: string) {
   const source = events.find(e => e.id === id && e.org_id === orgId)
   if (!source) return null
-  const clone = { ...source, id: `evt-${events.length + 1}`, title: `${source.title} (Copy)`, status: 'draft' }
+  const clone: TicketingEventWithDerived = { ...source, id: `evt-${events.length + 1}`, title: `${source.title} (Copy)`, status: 'draft' }
   events = [clone, ...events]
   return deriveEvent(clone)
 }
