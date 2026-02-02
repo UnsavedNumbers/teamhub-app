@@ -16,7 +16,7 @@ import { GuardianMatchIndicator } from '../../components/admin/GuardianMatchIndi
 import { checkGuardianMatch, debounce } from '../../utils/guardianMatching'
 import { useSportFieldDefinitions } from '../../hooks/useSportFieldDefinitions'
 import { useAthleteSportProfile } from '../../hooks/useAthleteSportProfile'
-import { GalleryManagementSection } from '@/components/admin/galleries/GalleryManagementSection'
+import { PhotoSection } from '@/components/galleries/PhotoSection'
 import type { Athlete, Guardian, GuardianMatch, PendingGuardianInvite } from '../../types/family'
 import type { AthleteSportWithDetails } from '../../data/services/athleteSportsService'
 import type { SportCode } from '../../types/sports'
@@ -1438,11 +1438,10 @@ export default function AthleteDetail() {
           <TabsContent value="galleries">
             <Card>
               <h2 className="pa-card-title" style={{ marginBottom: 'var(--pa-space-3)' }}>Photos</h2>
-              <GalleryManagementSection
+              <PhotoSection
                 entityType="athlete"
                 entityId={athlete.id}
-                orgId={context?.orgId}
-                title="Athlete galleries"
+                title="Athlete Photos"
               />
             </Card>
           </TabsContent>

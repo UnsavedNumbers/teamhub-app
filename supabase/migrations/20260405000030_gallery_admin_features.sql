@@ -15,9 +15,18 @@ ALTER TABLE public.galleries
   ADD COLUMN IF NOT EXISTS created_by_user_id uuid;
 
 -- Cover FK (nullable)
-ALTER TABLE public.galleries
-  ADD CONSTRAINT IF NOT EXISTS galleries_cover_photo_fkey
-    FOREIGN KEY (cover_photo_id) REFERENCES public.gallery_photos(id) ON DELETE SET NULL;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'galleries_cover_photo_fkey'
+      AND conrelid = 'public.galleries'::regclass
+  ) THEN
+    ALTER TABLE public.galleries
+      ADD CONSTRAINT galleries_cover_photo_fkey
+      FOREIGN KEY (cover_photo_id) REFERENCES public.gallery_photos(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
 ALTER TABLE public.gallery_photos
   ADD COLUMN IF NOT EXISTS filename text,

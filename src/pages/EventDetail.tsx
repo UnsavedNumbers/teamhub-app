@@ -12,7 +12,7 @@ import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import VenueInsights from '../components/portal/VenueInsights'
 import NearbyAmenities from '../components/portal/NearbyAmenities'
-import { GallerySection } from '../components/galleries/GallerySection'
+import { PhotoSection } from '../components/galleries/PhotoSection'
 import { useT } from '../i18n/useI18n'
 
 interface Event {
@@ -678,11 +678,10 @@ export default function EventDetail() {
           
           {/* Event Photos */}
           {eventId && (
-            <GallerySection
+            <PhotoSection
               entityType="event"
               entityId={eventId}
               title="Event Photos"
-              allowCreate
             />
           )}
 

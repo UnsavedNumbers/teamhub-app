@@ -15,7 +15,7 @@ import { TeamScheduleTab } from '../../components/admin/TeamScheduleTab'
 import { TeamAttendanceTab } from '../../components/admin/TeamAttendanceTab'
 import { TeamPaymentsTab } from '../../components/admin/TeamPaymentsTab'
 import { TeamSettingsTab } from '../../components/admin/TeamSettingsTab'
-import { GalleryManagementSection } from '@/components/admin/galleries/GalleryManagementSection'
+import { PhotoSection } from '@/components/galleries/PhotoSection'
 
 interface Team {
   id: string
@@ -1103,11 +1103,10 @@ export default function TeamDetail() {
 
         {activeTab === 'galleries' && (
           <div className="pa-mt-4">
-            <GalleryManagementSection
+            <PhotoSection
               entityType="team"
               entityId={teamId}
-              orgId={context.orgId}
-              title="Team galleries"
+              title="Team Photos"
             />
           </div>
         )}

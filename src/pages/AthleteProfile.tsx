@@ -17,7 +17,7 @@ import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
-import { StaticGallerySection } from '../components/galleries/StaticGallerySection'
+import { PhotoSection } from '../components/galleries/PhotoSection'
 import { SportProfileCard } from '../components/athleteProfiles/SportProfileCard'
 import { UniversalFieldsForm } from '../components/athleteProfiles/UniversalFieldsForm'
 import { MedicalInfoForm } from '../components/athleteProfiles/MedicalInfoForm'
@@ -296,7 +296,7 @@ export default function AthleteProfilePage() {
             </p>
             {athleteId && (
               <div className="mt-4">
-                <StaticGallerySection
+                <PhotoSection
                   entityType="athlete"
                   entityId={athleteId}
                   title="Athlete Photos"

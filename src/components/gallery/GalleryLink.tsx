@@ -1,8 +1,13 @@
 /**
  * Gallery Link Component
- * 
- * Displays a link to a gallery for a given entity (team, athlete, event, travel).
- * Automatically creates the gallery if it doesn't exist.
+ *
+ * Displays a link to a gallery for a given entity.
+ *
+ * For auto-gallery entity types (athlete, team, event, travel, program),
+ * the link only shows if the system-generated gallery exists (no creation).
+ *
+ * For org/season types, the component should not be used - use
+ * GallerySection or GalleryManagementSection instead.
  */
 
 import { useEffect, useState } from 'react'
@@ -10,7 +15,6 @@ import { Link } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import {
   getGalleryByEntity,
-  createGalleryForEntity,
   type GalleryType,
 } from '../../data/services/galleryService'
 import { getLink } from '../../utils/routes'
@@ -23,6 +27,9 @@ interface GalleryLinkProps {
   className?: string
   variant?: 'button' | 'link'
 }
+
+// Auto-gallery entity types that have system-generated galleries
+const AUTO_GALLERY_TYPES: Set<GalleryType> = new Set(['athlete', 'team', 'event', 'travel', 'program'])
 
 export function GalleryLink({
   galleryType,
@@ -38,10 +45,10 @@ export function GalleryLink({
   useEffect(() => {
     if (!isReady || !entityId) return
 
-    const loadOrCreateGallery = async () => {
+    const loadGallery = async () => {
       setLoading(true)
-      
-      // Try to get existing gallery
+
+      // Only try to get existing gallery - no creation for auto-gallery types
       const { data: existingGallery } = await getGalleryByEntity(
         context,
         galleryType,
@@ -50,32 +57,16 @@ export function GalleryLink({
 
       if (existingGallery) {
         setGalleryId(existingGallery.id)
-        setLoading(false)
-        return
       }
 
-      // Create gallery if it doesn't exist
-      const galleryName = `${entityName} Gallery`
-      const { data: newGallery } = await createGalleryForEntity(
-        context,
-        galleryType,
-        entityId,
-        galleryName,
-        false, // allowContributions
-        true   // requireApproval
-      )
-
-      if (newGallery) {
-        setGalleryId(newGallery.id)
-      }
-      
       setLoading(false)
     }
 
-    loadOrCreateGallery()
-  }, [context, isReady, galleryType, entityId, entityName])
+    loadGallery()
+  }, [context, isReady, galleryType, entityId])
 
-  if (loading || !galleryId) {
+  // Don't render if loading, no gallery found, or for multi-gallery entity types
+  if (loading || !galleryId || !AUTO_GALLERY_TYPES.has(galleryType)) {
     return null
   }
 

@@ -55,6 +55,7 @@ export interface Gallery {
   created_by_user_id?: string | null
   allow_contributions: boolean
   require_approval: boolean
+  is_system_generated?: boolean
   created_at: string
   updated_at: string
   // Computed fields (from queries)
@@ -332,6 +333,176 @@ export async function getGalleryByEntity(
     }
   } catch (err) {
     console.error('[galleryService] Error getting gallery by entity:', err)
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error('Unknown error'),
+    }
+  }
+}
+
+/**
+ * Get the direct (system) gallery for an auto-gallery entity.
+ * For athlete, team, event, travel_plan, program: returns the system-generated gallery.
+ * These entities always have exactly one gallery after triggers + backfill.
+ * Returns null if gallery not found (should not happen after migration).
+ *
+ * @deprecated For org/season, use getGalleriesForUser instead (they have multiple user-created galleries).
+ */
+export async function getEntityGallery(
+  context: UserContext,
+  entityType: GalleryEntityType,
+  entityId: string
+): Promise<{ data: Gallery | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { data: null, error: null }
+  }
+
+  try {
+    if (!isValidUUID(entityId)) {
+      return { data: null, error: new Error('Invalid entity ID') }
+    }
+
+    const galleryType = mapEntityToGalleryType(entityType)
+
+    // Validate that this is an auto-gallery entity type
+    const autoGalleryTypes: GalleryType[] = ['athlete', 'team', 'event', 'travel', 'program']
+    if (!autoGalleryTypes.includes(galleryType)) {
+      return {
+        data: null,
+        error: new Error(`${entityType} is not an auto-gallery entity type. Use getGalleriesForUser for org/season.`)
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('galleries')
+      .select('*, cover:cover_photo_id (thumbnail_path, storage_path)')
+      .eq('gallery_type', galleryType)
+      .eq('entity_id', entityId)
+      .eq('is_system_generated', true)
+      .maybeSingle()
+
+    if (error) throw error
+
+    return {
+      data: data ? { ...(data as any), cover_url: data.cover ? getGalleryPhotoThumbnailUrl(data.cover.thumbnail_path, data.cover.storage_path) : null } as Gallery : null,
+      error: null,
+    }
+  } catch (err) {
+    console.error('[galleryService] Error getting entity gallery:', err)
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error('Unknown error'),
+    }
+  }
+}
+
+/**
+ * Related gallery interface for inheritance results
+ */
+export interface RelatedGallery {
+  relationshipType: string
+  galleryId: string
+  galleryName: string
+  photoCount: number
+}
+
+/**
+ * Get related galleries for an entity based on its relationships.
+ * Returns grouped galleries by relationship type (team, event, travel, season, program, athlete, org).
+ * Uses the get_related_galleries RPC which respects RLS.
+ */
+export async function getRelatedGalleries(
+  _context: UserContext,
+  entityType: GalleryEntityType,
+  entityId: string
+): Promise<{ data: RelatedGallery[]; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { data: [], error: null }
+  }
+
+  try {
+    if (!isValidUUID(entityId)) {
+      return { data: [], error: new Error('Invalid entity ID') }
+    }
+
+    const { data, error } = await supabase.rpc('get_related_galleries', {
+      p_entity_type: entityType,
+      p_entity_id: entityId,
+    })
+
+    if (error) throw error
+
+    // Transform the result to match our interface
+    const relatedGalleries: RelatedGallery[] = (data || []).map((item: any) => ({
+      relationshipType: item.relationship_type,
+      galleryId: item.gallery_id,
+      galleryName: item.gallery_name,
+      photoCount: Number(item.photo_count || 0),
+    }))
+
+    return {
+      data: relatedGalleries,
+      error: null,
+    }
+  } catch (err) {
+    console.error('[galleryService] Error getting related galleries:', err)
+    return {
+      data: [],
+      error: err instanceof Error ? err : new Error('Unknown error'),
+    }
+  }
+}
+
+/**
+ * Upload a photo directly to an entity's gallery.
+ * Resolves the entity's gallery via getEntityGallery and uploads to it.
+ * Only works for auto-gallery entity types (athlete, team, event, travel_plan, program).
+ */
+export async function uploadPhotoToEntityGallery(
+  context: UserContext,
+  entityType: GalleryEntityType,
+  entityId: string,
+  file: File,
+  albumId?: string | null,
+  status: PhotoStatus = 'approved'
+): Promise<{ data: GalleryPhoto | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { data: null, error: null }
+  }
+
+  try {
+    // Get the entity's gallery
+    const galleryResult = await getEntityGallery(context, entityType, entityId)
+
+    if (galleryResult.error) {
+      return {
+        data: null,
+        error: galleryResult.error,
+      }
+    }
+
+    if (!galleryResult.data) {
+      return {
+        data: null,
+        error: new Error(`Gallery not found for ${entityType} ${entityId}. The entity may not exist or the gallery has not been created yet.`),
+      }
+    }
+
+    // Upload to the gallery
+    const uploadResult = await uploadPhotoToGallery(
+      context,
+      galleryResult.data.id,
+      file,
+      albumId,
+      status
+    )
+
+    return uploadResult
+  } catch (err) {
+    console.error('[galleryService] Error uploading photo to entity gallery:', err)
     return {
       data: null,
       error: err instanceof Error ? err : new Error('Unknown error'),
@@ -1098,6 +1269,21 @@ export async function deleteGallery(
   }
 
   try {
+    // Check if this is a system-generated gallery - block deletion
+    const { data: gallery, error: galleryError } = await supabase
+      .from('galleries')
+      .select('id, is_system_generated')
+      .eq('id', galleryId)
+      .maybeSingle()
+
+    if (galleryError) throw galleryError
+
+    if (gallery?.is_system_generated) {
+      return {
+        error: new Error('Cannot delete system-generated gallery. Galleries are automatically managed for athletes, teams, events, travel plans, and programs.'),
+      }
+    }
+
     const { data: photos, error: photosError } = await supabase
       .from('gallery_photos')
       .select('id, storage_path, thumbnail_path, size_bytes')
