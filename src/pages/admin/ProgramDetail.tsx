@@ -15,7 +15,7 @@ import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { getLink } from '../../utils/routes'
 import { getRandomSportImagePath } from '../../utils/sportImages'
 import { cn } from '../../utils/cn'
-import { GalleryManagementSection } from '@/components/admin/galleries/GalleryManagementSection'
+import { PhotoSection } from '@/components/galleries/PhotoSection'
 
 type LevelRow = {
   id: string
@@ -740,12 +740,11 @@ export default function ProgramDetail() {
                 </Card>
 
                 <Card>
-                  <h3 className="pa-card-title" style={{ marginBottom: 'var(--pa-space-3)' }}>Galleries</h3>
-                  <GalleryManagementSection
+                  <h3 className="pa-card-title" style={{ marginBottom: 'var(--pa-space-3)' }}>Photos</h3>
+                  <PhotoSection
                     entityType="program"
                     entityId={programId}
-                    orgId={context.orgId}
-                    title="Program galleries"
+                    title="Program Photos"
                   />
                 </Card>
               </div>

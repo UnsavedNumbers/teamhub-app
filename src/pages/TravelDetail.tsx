@@ -18,7 +18,7 @@ import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import VenueInsights from '../components/portal/VenueInsights'
 import NearbyAmenities from '../components/portal/NearbyAmenities'
-import { GallerySection } from '../components/galleries/GallerySection'
+import { PhotoSection } from '../components/galleries/PhotoSection'
 import { useNeighborhoodSummaryDirect } from '../hooks/useVenueInsights'
 import { useT } from '../i18n/useI18n'
 
@@ -1184,13 +1184,13 @@ export default function TravelDetail() {
                   download={`${plan.title.replace(/[^a-z0-9]/gi, '_')}.ics`}
                   className="block"
                 >
-                  <Button variant="secondary" className="w-full text-sm justify-start">
+                  <Button variant="primary" className="w-full text-sm justify-start">
                     <Icon name="event" size="text-sm" className="mr-2" />
                     Apple Calendar
                   </Button>
                 </a>
               ) : (
-                <Button variant="secondary" className="w-full text-sm justify-start" disabled>
+                <Button variant="primary" className="w-full text-sm justify-start" disabled>
                   <Icon name="event" size="text-sm" className="mr-2" />
                   Apple Calendar
                 </Button>
@@ -1275,11 +1275,10 @@ export default function TravelDetail() {
           {/* Nearby Amenities */}
           {/* Travel Gallery */}
           {id && plan && (
-            <GallerySection
+            <PhotoSection
               entityType="travel_plan"
               entityId={id}
               title="Travel Photos"
-              allowCreate
             />
           )}
 
