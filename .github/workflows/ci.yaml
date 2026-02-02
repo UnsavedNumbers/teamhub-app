@@ -8,12 +8,15 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.base_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      # Reduce flaky lock timeouts during local DB init/migrations in CI
+      PGOPTIONS: "-c lock_timeout=60s -c statement_timeout=5min"
     steps:
       - uses: actions/checkout@v4
 
@@ -24,16 +27,37 @@ jobs:
       - name: Start local Supabase DB
         run: supabase db start
 
-      - name: Lint database (if you use it)
+      - name: Wait for local Supabase to be ready
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Waiting for Supabase to be ready..."
+          for i in {1..60}; do
+            if supabase status -o json >/dev/null 2>&1; then
+              echo "Supabase is ready"
+              supabase status
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Supabase did not become ready in time"
+          supabase status || true
+          exit 1
+
+      # Make the local DB state deterministic for lint/tests
+      - name: Reset local DB (reapply migrations)
+        run: supabase db reset
+
+      - name: Lint database
         run: supabase db lint
 
       - name: Run DB tests (pgTAP)
         run: supabase test db
 
-      # Recommended: compare against a committed types file path.
-      # Change "src/types/supabase.ts" to wherever your repo keeps the generated types.
       - name: Verify generated types are checked in
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p .tmp
           supabase gen types typescript --local > .tmp/types.ts
 
@@ -48,6 +72,12 @@ jobs:
     # Only run on PRs from same repo (fork PRs don't get secrets)
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
     runs-on: ubuntu-latest
+
+    # Serialize remote Supabase operations per target environment to avoid lock contention
+    concurrency:
+      group: supabase-remote-${{ github.base_ref == 'main' && 'prod' || 'dev' }}
+      cancel-in-progress: true
+
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       # Choose target by base branch of the PR
@@ -65,4 +95,4 @@ jobs:
         run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
 
       - name: Show what migrations would run (dry-run)
-        run: supabase db push --linked --dry-run
+        run: supabase db push --linked --dry-run --debug
