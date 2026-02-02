@@ -36,10 +36,11 @@ COMMENT ON COLUMN public.organizations.stripe_status_updated_at
   IS 'When we last refreshed payout status from Stripe (webhook or manual sync).';
 
 -- Normalize any legacy onboarding status values produced by earlier webhooks
+-- Compare as text so we don't require 'complete'/'in_review' to be valid enum values
 UPDATE public.organizations
 SET payout_onboarding_status = 'completed'
-WHERE payout_onboarding_status = 'complete';
+WHERE payout_onboarding_status::text = 'complete';
 
 UPDATE public.organizations
 SET payout_onboarding_status = 'pending'
-WHERE payout_onboarding_status = 'in_review';
+WHERE payout_onboarding_status::text = 'in_review';
