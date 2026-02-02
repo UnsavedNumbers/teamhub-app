@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo, startTransition } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
@@ -450,24 +450,30 @@ export default function Settings() {
     [persistNotificationGroups]
   )
 
-  const handleHomeAddressSelect = useCallback((address: StructuredAddress) => {
-    // Convert StructuredAddress to HomeLocation
-    const homeLocation: HomeLocation = {
-      place_id: address.place_id,
-      formatted_address: address.formatted_address,
-      zip_code: address.postal_code || '',
-      coordinates: {
-        lat: address.latitude,
-        lng: address.longitude,
-      },
-      city: address.city || undefined,
-      state: address.state || undefined,
-      country: address.country || 'United States',
-    }
-    
-    setSelectedHomeLocation(homeLocation)
-    setHomeAddressDisplay(address.formatted_address)
-    setHomeAddressInput('') // Clear the search input after selection
+  const handleHomeAddressSelect = useCallback((address: StructuredAddress, placeResult?: google.maps.places.PlaceResult) => {
+    startTransition(() => {
+      // Convert StructuredAddress to HomeLocation
+      const homeLocation: HomeLocation = {
+        place_id: address.place_id,
+        formatted_address: address.formatted_address,
+        zip_code: address.postal_code || '',
+        coordinates: {
+          lat: address.latitude,
+          lng: address.longitude,
+        },
+        city: address.city || undefined,
+        state: address.state || undefined,
+        country: address.country || 'United States',
+      }
+      
+      const shortAddress = placeResult?.name && placeResult.name !== address.formatted_address
+        ? placeResult.name
+        : address.address_line1
+      
+      setSelectedHomeLocation(homeLocation)
+      setHomeAddressDisplay(address.formatted_address)
+      setHomeAddressInput(shortAddress)
+    })
   }, [])
 
   const handleClearHomeAddress = useCallback(() => {
@@ -616,58 +622,55 @@ export default function Settings() {
                 </div>
               )}
               <div className="p-4 sm:p-6 flex flex-col gap-4">
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
-                  <div className="flex-1 space-y-4">
-                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Home Address</p>
-                    
-                    {/* Search input with LocationAutocomplete */}
-                    <div>
-                      <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">
-                        Name your home address
-                      </label>
-                      <LocationAutocomplete
-                        value={homeAddressInput}
-                        onInputChange={setHomeAddressInput}
-                        onChange={handleHomeAddressSelect}
-                        placeholder="Start typing your address..."
-                        disabled={savingHomeAddress}
-                        countryRestrictions={['us']}
-                        types={['address']}
-                      />
-                    </div>
-                    
-                    {/* Display selected address */}
-                    <div>
-                      <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">
-                        Full Address
-                      </label>
-                      <div className="relative">
-                        <input
-                          value={homeAddressDisplay}
-                          readOnly
-                          className="form-input bg-slate-50 dark:bg-slate-800/50 pr-10"
-                          placeholder="No address selected"
-                        />
-                        {homeAddressDisplay && (
-                          <button
-                            type="button"
-                            onClick={handleClearHomeAddress}
-                            disabled={savingHomeAddress}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-50"
-                            aria-label="Clear address"
-                          >
-                            <Icon name="close" size="text-lg" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Home Address</p>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="portal-location-autocomplete">
+                    <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">
+                      Search for your address
+                    </label>
+                    <LocationAutocomplete
+                      value={homeAddressInput}
+                      onInputChange={setHomeAddressInput}
+                      onChange={handleHomeAddressSelect}
+                      placeholder="Search for your home address..."
+                      disabled={savingHomeAddress}
+                      types={['geocode', 'establishment']}
+                    />
                   </div>
                   
+                  <div>
+                    <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">
+                      Full Address
+                    </label>
+                    <div className="relative">
+                      <input
+                        value={homeAddressDisplay}
+                        readOnly
+                        className="form-input bg-slate-50 dark:bg-slate-800/50 pr-10"
+                        placeholder="No address selected"
+                      />
+                      {homeAddressDisplay && (
+                        <button
+                          type="button"
+                          onClick={handleClearHomeAddress}
+                          disabled={savingHomeAddress}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-50"
+                          aria-label="Clear address"
+                        >
+                          <Icon name="close" size="text-lg" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-end">
                   <Button
                     variant="secondary"
                     onClick={handleSaveHomeAddress}
                     disabled={savingHomeAddress}
-                    className="w-full sm:w-auto sm:mt-6"
+                    className="w-full sm:w-auto"
                   >
                     {savingHomeAddress ? 'Saving...' : 'Save'}
                   </Button>
