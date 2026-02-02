@@ -1,4 +1,4 @@
-import { useState, FormEvent, useEffect } from 'react'
+import { useState, FormEvent, useEffect, startTransition } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
@@ -10,7 +10,8 @@ import {
 import { AUTH_HERO_IMAGES } from '../utils/authImages'
 import { mapAuthError } from '../utils/authErrorMapper'
 import { supabase } from '../lib/supabase'
-import { REGEX_PATTERNS } from '../constants/validation'
+import { LocationAutocomplete } from '../components/common/LocationAutocomplete'
+import type { StructuredAddress, HomeLocation } from '../types/location'
 
 export default function Signup() {
   const [email, setEmail] = useState('')
@@ -19,7 +20,9 @@ export default function Signup() {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [phone, setPhone] = useState('')
-  const [zipcode, setZipcode] = useState('')
+  const [homeAddressInput, setHomeAddressInput] = useState('')
+  const [homeAddressDisplay, setHomeAddressDisplay] = useState('')
+  const [selectedHomeLocation, setSelectedHomeLocation] = useState<HomeLocation | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -171,12 +174,8 @@ export default function Signup() {
     // Phone validation - Bug 6 prevention
     // Note: Basic phone validation (non-empty check above is sufficient for now)
 
-    // Zipcode validation (optional field, but if provided should be 5-10 characters)
-    const trimmedZipcode = zipcode.trim()
-    if (trimmedZipcode.length > 0 && !REGEX_PATTERNS.ZIP_US.test(trimmedZipcode)) {
-      setError('Zipcode must be in format 12345 or 12345-6789')
-      return
-    }
+    // Home address is optional - use zip_code from selected location if available
+    const trimmedZipcode = selectedHomeLocation?.zip_code || ''
 
     if (password !== confirmPassword) {
       setError('Passwords do not match')
@@ -398,27 +397,71 @@ export default function Signup() {
               </div>
             </div>
 
-            {/* Zipcode */}
+            {/* Home Address */}
             <div>
               <label 
-                htmlFor="zipcode" 
                 className="block text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-2 font-impact"
               >
-                HOME ZIPCODE <span className="text-slate-400 dark:text-slate-500 font-normal normal-case">(Optional)</span>
+                HOME ADDRESS <span className="text-slate-400 dark:text-slate-500 font-normal normal-case">(Optional)</span>
               </label>
-              <div className="mt-2">
-                <input
-                  id="zipcode"
-                  name="zipcode"
-                  type="text"
-                  autoComplete="postal-code"
-                  maxLength={10}
-                  tabIndex={4}
-                  value={zipcode}
-                  onChange={(e) => setZipcode(e.target.value)}
-                  placeholder="12345 or 12345-6789"
-                  className="block w-full rounded border-0 py-3 px-4 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[var(--org-btn-primary-bg, #137fec)] sm:text-sm text-base min-h-[44px]"
-                />
+              <div className="mt-2 flex flex-col gap-3">
+                <div className="signup-location-autocomplete">
+                  <LocationAutocomplete
+                    value={homeAddressInput}
+                    onInputChange={setHomeAddressInput}
+                    onChange={(address: StructuredAddress, placeResult?: google.maps.places.PlaceResult) => {
+                      startTransition(() => {
+                        const homeLocation: HomeLocation = {
+                          place_id: address.place_id,
+                          formatted_address: address.formatted_address,
+                          zip_code: address.postal_code || '',
+                          coordinates: {
+                            lat: address.latitude,
+                            lng: address.longitude,
+                          },
+                          city: address.city || undefined,
+                          state: address.state || undefined,
+                          country: address.country || 'United States',
+                        }
+                        
+                        const shortAddress = placeResult?.name && placeResult.name !== address.formatted_address
+                          ? placeResult.name
+                          : address.address_line1
+                        
+                        setSelectedHomeLocation(homeLocation)
+                        setHomeAddressDisplay(address.formatted_address)
+                        setHomeAddressInput(shortAddress)
+                      })
+                    }}
+                    placeholder="Start typing your address..."
+                    countryRestrictions={['us']}
+                    types={['geocode', 'establishment']}
+                  />
+                </div>
+                
+                <div className="relative">
+                  <input
+                    value={homeAddressDisplay}
+                    readOnly
+                    className="block w-full rounded border-0 py-3 px-4 dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm ring-1 ring-inset ring-slate-300 dark:ring-slate-600 placeholder:text-slate-400 sm:text-sm text-base min-h-[44px]"
+                    placeholder="No address selected"
+                    style={{ paddingRight: homeAddressDisplay ? '2.5rem' : undefined }}
+                  />
+                  {homeAddressDisplay && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedHomeLocation(null)
+                        setHomeAddressDisplay('')
+                        setHomeAddressInput('')
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                      aria-label="Clear address"
+                    >
+                      <span className="material-symbols-outlined text-lg">close</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
