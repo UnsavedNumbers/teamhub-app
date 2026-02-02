@@ -64,14 +64,17 @@ ALTER TABLE public.ticketed_events
   ADD COLUMN IF NOT EXISTS search_vector tsvector;
 
 -- Foreign keys (nullable, cascade-friendly)
+ALTER TABLE public.ticketed_events DROP CONSTRAINT IF EXISTS ticketed_events_program_id_fkey;
 ALTER TABLE public.ticketed_events
-  ADD CONSTRAINT IF NOT EXISTS ticketed_events_program_id_fkey FOREIGN KEY (program_id) REFERENCES public.programs(id) ON DELETE SET NULL;
+  ADD CONSTRAINT ticketed_events_program_id_fkey FOREIGN KEY (program_id) REFERENCES public.programs(id) ON DELETE SET NULL;
 
+ALTER TABLE public.ticketed_events DROP CONSTRAINT IF EXISTS ticketed_events_season_id_fkey;
 ALTER TABLE public.ticketed_events
-  ADD CONSTRAINT IF NOT EXISTS ticketed_events_season_id_fkey FOREIGN KEY (season_id) REFERENCES public.seasons(id) ON DELETE SET NULL;
+  ADD CONSTRAINT ticketed_events_season_id_fkey FOREIGN KEY (season_id) REFERENCES public.seasons(id) ON DELETE SET NULL;
 
+ALTER TABLE public.ticketed_events DROP CONSTRAINT IF EXISTS ticketed_events_venue_id_fkey;
 ALTER TABLE public.ticketed_events
-  ADD CONSTRAINT IF NOT EXISTS ticketed_events_venue_id_fkey FOREIGN KEY (venue_id) REFERENCES public.venues(id) ON DELETE SET NULL;
+  ADD CONSTRAINT ticketed_events_venue_id_fkey FOREIGN KEY (venue_id) REFERENCES public.venues(id) ON DELETE SET NULL;
 
 CREATE INDEX IF NOT EXISTS idx_ticketed_events_program ON public.ticketed_events (program_id);
 CREATE INDEX IF NOT EXISTS idx_ticketed_events_season ON public.ticketed_events (season_id);
@@ -177,11 +180,11 @@ SET program_name_cached = COALESCE(program_name_cached, (SELECT name FROM public
       COALESCE(venue_name, '') || ' ' ||
       COALESCE((SELECT name FROM public.programs p WHERE p.id = ticketed_events.program_id LIMIT 1), '')
     ),
-    sale_status = CASE
+    sale_status = (CASE
       WHEN status = 'published' AND sales_start_at IS NOT NULL AND sales_start_at > now() THEN 'scheduled'
       WHEN status = 'published' AND sales_end_at IS NOT NULL AND sales_end_at < now() THEN 'ended'
       WHEN status = 'published' THEN 'on_sale'
       ELSE 'off'
-    END;
+    END)::public.ticket_sale_status;
 
 CREATE INDEX IF NOT EXISTS idx_ticketed_events_search_vector ON public.ticketed_events USING GIN (search_vector);
