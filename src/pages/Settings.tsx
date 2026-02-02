@@ -30,6 +30,8 @@ import type { NotificationRole } from '../types/notifications'
 import { mergeNotificationPreferences, setPreferencesForContext, canonicalRole } from '../utils/notificationPreferencesConfig'
 import { showSuccess, showError } from '../utils/toast'
 import { CheckCircle, Mail, Loader2, AlertCircle } from 'lucide-react'
+import { REGEX_PATTERNS } from '../constants/validation'
+import { geocodeZipToHomeLocation, getDisplayZipCode } from '../utils/homeLocation'
 
 interface Child {
   id: string
@@ -140,8 +142,6 @@ export default function Settings() {
       name: t.name,
     })))
 
-    setHomeZip(profile?.home_zipcode || '')
-
     // Load notification preferences
     const { data: prefs } = await getUserPreferences(user.id)
     preferencesRef.current = prefs || {}
@@ -155,6 +155,10 @@ export default function Settings() {
   useEffect(() => {
     if (isReady) fetchData()
   }, [isReady, fetchData])
+
+  useEffect(() => {
+    setHomeZip(getDisplayZipCode(profile) || '')
+  }, [profile])
 
   // Debounced guardian email check
   const debouncedCheckGuardian = useMemo(
@@ -436,17 +440,39 @@ export default function Settings() {
     if (!user?.id) return
 
     const trimmed = homeZip.trim()
-    const zipcodePattern = /^[0-9]{5}(-[0-9]{4})?$/
-    if (trimmed && !zipcodePattern.test(trimmed)) {
+    if (trimmed && !REGEX_PATTERNS.ZIP_US.test(trimmed)) {
       showError('Enter a valid ZIP code')
       return
     }
 
     setSavingHomeZip(true)
     try {
+      if (!trimmed) {
+        const { error } = await supabase
+          .from('users')
+          .update({ home_location: null, home_zipcode: null })
+          .eq('id', user.id)
+
+        if (error) {
+          showError(error.message || 'Failed to save ZIP code')
+          return
+        }
+
+        setHomeZip('')
+        await refreshProfile()
+        showSuccess('Home ZIP updated')
+        return
+      }
+
+      const homeLocation = await geocodeZipToHomeLocation(trimmed)
+      if (!homeLocation) {
+        showError('ZIP code not found')
+        return
+      }
+
       const { error } = await supabase
         .from('users')
-        .update({ home_zipcode: trimmed || null })
+        .update({ home_location: homeLocation, home_zipcode: trimmed })
         .eq('id', user.id)
 
       if (error) {
@@ -454,6 +480,7 @@ export default function Settings() {
         return
       }
 
+      setHomeZip(homeLocation.zip_code)
       await refreshProfile()
       showSuccess('Home ZIP updated')
     } catch (err) {
@@ -563,6 +590,7 @@ export default function Settings() {
                     value={homeZip}
                     onChange={(e) => setHomeZip(e.target.value)}
                     className="form-input"
+                    disabled={savingHomeZip}
                     placeholder="e.g., 12345"
                   />
                 </div>
