@@ -456,6 +456,84 @@ export async function getRelatedGalleries(
 }
 
 /**
+ * Ensure an entity gallery exists for auto-gallery entities.
+ * Creates the system-generated gallery if it doesn't exist.
+ * Uses the elevated ensure_entity_gallery RPC which bypasses RLS.
+ *
+ * @param context User context
+ * @param entityType Entity type (athlete, team, event, travel_plan, program)
+ * @param entityId Entity ID
+ * @param name Optional custom gallery name
+ * @returns Gallery data or null
+ */
+export async function ensureEntityGallery(
+  context: UserContext,
+  entityType: GalleryEntityType,
+  entityId: string,
+  name?: string | null
+): Promise<{ data: Gallery | null; error: Error | null }> {
+  if (USE_FAKE_DATA) {
+    await simulateDelay()
+    return { data: null, error: null }
+  }
+
+  try {
+    if (!isValidUUID(entityId)) {
+      return { data: null, error: new Error('Invalid entity ID') }
+    }
+
+    const galleryType = mapEntityToGalleryType(entityType)
+
+    // Validate that this is an auto-gallery entity type
+    const autoGalleryTypes: GalleryType[] = ['athlete', 'team', 'event', 'travel', 'program']
+    if (!autoGalleryTypes.includes(galleryType)) {
+      return {
+        data: null,
+        error: new Error(`${entityType} is not an auto-gallery entity type. Use getGalleriesForUser for org/season.`)
+      }
+    }
+
+    // Call the elevated RPC to ensure gallery exists
+    const { data: galleryId, error: rpcError } = await supabase.rpc('ensure_entity_gallery', {
+      p_entity_type: galleryType,
+      p_entity_id: entityId,
+      p_org_id: context.orgId,
+      p_user_id: context.userId,
+      p_name: name || null,
+    })
+
+    if (rpcError) throw rpcError
+
+    if (!galleryId) {
+      return {
+        data: null,
+        error: new Error('Failed to ensure gallery exists'),
+      }
+    }
+
+    // Now fetch the full gallery data
+    const { data: gallery, error: fetchError } = await supabase
+      .from('galleries')
+      .select('*, cover:cover_photo_id (thumbnail_path, storage_path)')
+      .eq('id', galleryId)
+      .maybeSingle()
+
+    if (fetchError) throw fetchError
+
+    return {
+      data: gallery ? { ...(gallery as any), cover_url: gallery.cover ? getGalleryPhotoThumbnailUrl(gallery.cover.thumbnail_path, gallery.cover.storage_path) : null } as Gallery : null,
+      error: null,
+    }
+  } catch (err) {
+    console.error('[galleryService] Error ensuring entity gallery:', err)
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error('Unknown error'),
+    }
+  }
+}
+
+/**
  * Upload a photo directly to an entity's gallery.
  * Resolves the entity's gallery via getEntityGallery and uploads to it.
  * Only works for auto-gallery entity types (athlete, team, event, travel_plan, program).
@@ -475,7 +553,7 @@ export async function uploadPhotoToEntityGallery(
 
   try {
     // Get the entity's gallery
-    const galleryResult = await getEntityGallery(context, entityType, entityId)
+    const galleryResult = await ensureEntityGallery(context, entityType, entityId)
 
     if (galleryResult.error) {
       return {
@@ -755,7 +833,8 @@ export async function createGalleryForEntity(
   allowContributions: boolean = false,
   requireApproval: boolean = true,
   description?: string | null,
-  visibility: 'public' | 'team' | 'private' = 'team'
+  visibility: 'public' | 'team' | 'private' = 'team',
+  isSystemGenerated: boolean = false
 ): Promise<{ data: Gallery | null; error: Error | null }> {
   if (USE_FAKE_DATA) {
     await simulateDelay()
@@ -789,6 +868,8 @@ export async function createGalleryForEntity(
         visibility,
         allow_contributions: allowContributions,
         require_approval: requireApproval,
+        is_system_generated: isSystemGenerated,
+        created_by_user_id: context.userId,
       })
       .select()
       .single()

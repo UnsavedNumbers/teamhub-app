@@ -5,6 +5,8 @@
  * Prevents duplicate script loads and handles race conditions.
  */
 
+import { EXTERNAL_URLS, GOOGLE_API_KEY_MIN_LENGTH, GOOGLE_MAPS_RETRY } from '../constants/api'
+
 let loadPromise: Promise<void> | null = null
 
 /**
@@ -32,7 +34,7 @@ export function loadGoogleMapsScript(apiKey: string): Promise<void> {
           // If importLibrary fails, check if places becomes available after a short delay
           return new Promise((resolve) => {
             let attempts = 0
-            const maxAttempts = 50 // 5 seconds total
+            const maxAttempts = GOOGLE_MAPS_RETRY.MAX_ATTEMPTS
             const checkInterval = setInterval(() => {
               attempts++
               if (window.google?.maps?.places) {
@@ -51,7 +53,7 @@ export function loadGoogleMapsScript(apiKey: string): Promise<void> {
     if (window.google.maps) {
       return new Promise((resolve) => {
         let attempts = 0
-        const maxAttempts = 50 // 5 seconds total
+            const maxAttempts = GOOGLE_MAPS_RETRY.MAX_ATTEMPTS
         const checkInterval = setInterval(() => {
           attempts++
           if (window.google?.maps?.places) {
@@ -62,7 +64,7 @@ export function loadGoogleMapsScript(apiKey: string): Promise<void> {
             // Don't reject - let the component handle fallback mode
             resolve()
           }
-        }, 100)
+        }, GOOGLE_MAPS_RETRY.CHECK_INTERVAL_MS)
       })
     }
   }
@@ -73,7 +75,7 @@ export function loadGoogleMapsScript(apiKey: string): Promise<void> {
   }
 
   // Validate API key
-  if (!apiKey || apiKey.length < 20) {
+  if (!apiKey || apiKey.length < GOOGLE_API_KEY_MIN_LENGTH) {
     const error = new Error('Invalid Google Places API key')
     loadPromise = Promise.reject(error)
     return loadPromise
@@ -85,7 +87,7 @@ export function loadGoogleMapsScript(apiKey: string): Promise<void> {
     // Script tag exists but API not ready yet - poll until ready
     loadPromise = new Promise((resolve) => {
       let attempts = 0
-      const maxAttempts = 100 // 10 seconds total
+      const maxAttempts = GOOGLE_MAPS_RETRY.MAX_ATTEMPTS_LONG
       const checkInterval = setInterval(() => {
         attempts++
         if (window.google?.maps) {
@@ -118,7 +120,7 @@ export function loadGoogleMapsScript(apiKey: string): Promise<void> {
           // Don't reject - let the component handle fallback mode
           resolve()
         }
-      }, 100)
+      }, GOOGLE_MAPS_RETRY.CHECK_INTERVAL_MS)
     })
     return loadPromise
   }
@@ -126,7 +128,7 @@ export function loadGoogleMapsScript(apiKey: string): Promise<void> {
   // Create new script load promise
   loadPromise = new Promise((resolve) => {
     const script = document.createElement('script')
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`
+    script.src = `${EXTERNAL_URLS.GOOGLE_MAPS}?key=${apiKey}&libraries=places&loading=async`
     script.async = true
     script.defer = true
     

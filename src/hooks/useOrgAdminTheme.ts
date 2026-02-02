@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { EXTERNAL_URLS } from '../constants/api'
 
 type OrgAdminThemeState = {
     loaded: boolean
@@ -18,7 +19,7 @@ function loadGoogleFonts(): Promise<void> {
         const link = document.createElement('link')
         link.id = FONTS_CSS_ID
         link.rel = 'stylesheet'
-        link.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600;700&family=Roboto+Mono:wght@400;500&display=swap'
+        link.href = EXTERNAL_URLS.GOOGLE_FONTS
         link.onload = () => resolve()
         link.onerror = () => {
             console.warn('Failed to load Google Fonts for org admin theme')

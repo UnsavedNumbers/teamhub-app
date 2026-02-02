@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   getPhotosForGallery,
   getGalleryPhotoThumbnailUrl,
+  ensureEntityGallery,
   type Gallery,
   type GalleryEntityType,
   type GalleryPhoto,
@@ -14,7 +15,6 @@ import { PhotoUploadButton } from './PhotoUploadButton'
 import { PhotoThumbnailGrid } from './PhotoThumbnailGrid'
 import { RelatedGalleriesSection } from './RelatedGalleriesSection'
 import { showError } from '@/utils/toast'
-import { supabase } from '@/lib/supabase'
 
 interface PhotoSectionProps {
   entityType: Extract<GalleryEntityType, 'athlete' | 'team' | 'event' | 'travel_plan' | 'program'>
@@ -56,32 +56,15 @@ export function PhotoSection({
       setLoading(true)
       setError(null)
       try {
-        // Fetch photos for the entity's gallery
-        // Note: We directly query gallery_photos by joining with galleries
-        // since we know the gallery_type and entity_id
-        // Map entity types to gallery types
-        const galleryTypeMap: Record<string, string> = {
-          athlete: 'athlete',
-          team: 'team',
-          event: 'event',
-          travel_plan: 'travel',
-          program: 'program',
-        }
-        const galleryType = galleryTypeMap[entityType] || entityType
-
-        const { data: galleryData, error: galleryError } = await supabase
-          .from('galleries')
-          .select('*')
-          .eq('gallery_type', galleryType)
-          .eq('entity_id', entityId)
-          .eq('is_system_generated', true)
-          .maybeSingle()
+        const { data: galleryData, error: galleryError } = await ensureEntityGallery(
+          context,
+          entityType,
+          entityId
+        )
 
         if (galleryError) throw galleryError
 
         if (!galleryData) {
-          // Gallery not found - this shouldn't happen after migration
-          // but could be a timing issue during entity creation
           setError('Gallery not found. It may still be being created.')
           return
         }

@@ -15,6 +15,7 @@ import {
     buildVenueKey,
     type FetchNearbyAmenitiesParams,
 } from '../data/services/nearbyAmenitiesService'
+import { CACHE_TTL, QUERY_CONFIG } from '../constants/api'
 
 /**
  * Parameters for the useNearbyAmenities hook
@@ -71,9 +72,9 @@ export function useNearbyAmenities({
             return result.data
         },
         enabled: isEnabled,
-        staleTime: 5 * 60 * 1000, // 5 minutes - server handles longer cache
+        staleTime: CACHE_TTL.NEARBY_AMENITIES_MS,
         refetchOnWindowFocus: false,
-        retry: 1,
+        retry: QUERY_CONFIG.RETRY_COUNT,
         // Don't retry on 429 (fetch in progress)
         retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
     })

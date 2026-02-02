@@ -7,6 +7,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchVenueInsights, refreshVenueInsights, fetchNeighborhoodSummaryDirect } from '../data/services/venueInsightsService'
+import { CACHE_TTL, QUERY_CONFIG } from '../constants/api'
 
 /**
  * Hook to fetch venue insights for a given place_id
@@ -24,9 +25,9 @@ export function useVenueInsights(placeId: string | null) {
       return fetchVenueInsights(placeId, false)
     },
     enabled: !!placeId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: CACHE_TTL.VENUE_INSIGHTS_MS,
     refetchOnWindowFocus: false,
-    retry: 1,
+    retry: QUERY_CONFIG.RETRY_COUNT,
   })
 }
 
@@ -68,8 +69,8 @@ export function useNeighborhoodSummaryDirect(placeId: string | null) {
       return fetchNeighborhoodSummaryDirect(placeId)
     },
     enabled: !!placeId,
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: QUERY_CONFIG.STALE_TIME_MS * 2, // 10 minutes (2x standard stale time)
     refetchOnWindowFocus: false,
-    retry: 1,
+    retry: QUERY_CONFIG.RETRY_COUNT,
   })
 }

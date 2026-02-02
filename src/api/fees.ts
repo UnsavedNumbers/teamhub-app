@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { SUPABASE_FUNCTIONS, ENV_VAR_NAMES } from '../constants/api'
 
 export interface CreateFeeParams {
     org_id: string
@@ -71,12 +72,12 @@ export async function createFee(params: CreateFeeParams) {
     // First, test if other Edge Functions work to isolate the issue
     console.log('[createFee] Testing billing function to compare authentication...')
     try {
-        const { error: billingError } = await supabase.functions.invoke('billing-create-checkout-session', {
+        const { error: billingError } = await supabase.functions.invoke(SUPABASE_FUNCTIONS.BILLING_CREATE_CHECKOUT_SESSION, {
             body: {
                 organization_id: params.org_id,
                 requested_plan: 'starter',
-                success_url: 'http://localhost:5173/test',
-                cancel_url: 'http://localhost:5173/test'
+                success_url: import.meta.env[ENV_VAR_NAMES.FEES_TEST_SUCCESS_URL] || 'http://localhost:5173/test',
+                cancel_url: import.meta.env[ENV_VAR_NAMES.FEES_TEST_CANCEL_URL] || 'http://localhost:5173/test'
             }
         })
         console.log('[createFee] Billing function test result:', {

@@ -6,6 +6,7 @@
  */
 
 import { supabase } from '../lib/supabase'
+import { CACHE_TTL } from '../constants/api'
 
 export interface OrgContext {
   id: string
@@ -43,7 +44,7 @@ interface CacheEntry {
 }
 
 const slugCache = new Map<string, CacheEntry>()
-const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+const CACHE_TTL_MS = CACHE_TTL.ORG_RESOLUTION_MS
 
 /**
  * Validates that a slug is not a reserved path
