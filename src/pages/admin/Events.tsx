@@ -20,6 +20,7 @@ import EventDetailSlideOver from '../../components/admin/EventDetailSlideOver'
 import type { CalendarEvent } from '../../types/calendar'
 import type { EventTimeContext, EventViewMode, EventsFilters as EventsFiltersType } from '../../types/eventsManagement'
 
+const supabaseAny = supabase as any
 interface Team {
     id: string
     name: string
@@ -89,6 +90,7 @@ export default function Events() {
     const [seasons, setSeasons] = useState<Season[]>([])
     
     const { context, isReady } = useUserContext()
+    const { currentOrganization } = useOrganization()
     const navigate = useNavigate()
     const t = useT()
 
@@ -241,7 +243,7 @@ export default function Events() {
         setActionError(null)
 
         try {
-            const { data: eventData } = await supabase
+            const { data: eventData } = await supabaseAny
                 .from('events')
                 .select('id, start_time, is_cancelled, status, type, org_id, team_id')
                 .eq('id', cancelDialog.event.id)

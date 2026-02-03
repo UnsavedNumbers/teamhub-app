@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+﻿import { useState, useCallback, useEffect } from 'react'
 import { Control, FieldErrors, Controller } from 'react-hook-form'
 import { supabase } from '../../../lib/supabase'
 import { AUTH_HERO_IMAGES } from '../../../utils/authImages'
@@ -35,22 +35,11 @@ export default function OrganizationIdentityStep({
   const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle')
   const [slugError, setSlugError] = useState<string | null>(null)
   const [heroImage, setHeroImage] = useState<string>('')
-  const [imageError, setImageError] = useState(false)
 
-  // Select random hero image on mount
   useEffect(() => {
     if (AUTH_HERO_IMAGES.length > 0) {
       const randomImage = AUTH_HERO_IMAGES[Math.floor(Math.random() * AUTH_HERO_IMAGES.length)]
       setHeroImage(randomImage)
-    }
-  }, [])
-
-  // Prevent horizontal scrolling
-  useEffect(() => {
-    const originalOverflowX = document.body.style.overflowX
-    document.body.style.overflowX = 'hidden'
-    return () => {
-      document.body.style.overflowX = originalOverflowX
     }
   }, [])
 
@@ -78,247 +67,253 @@ export default function OrganizationIdentityStep({
 
   const isSubmitDisabled = loading || slugStatus === 'taken' || slugStatus === 'invalid' || slugStatus === 'checking'
 
-  const heroBackgroundStyle = heroImage && !imageError
-    ? {
-        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url(${heroImage})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      }
-    : {}
-
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] min-h-screen bg-white text-black overflow-x-hidden">
-      {/* Left side - Hero Image */}
+    <div className="h-screen w-screen overflow-hidden bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-white antialiased relative flex">
       <div
-        className="relative flex flex-col justify-between p-12 hidden lg:block bg-slate-900"
-        style={heroBackgroundStyle}
-      >
-        {/* Youth Sports Logo */}
-        <div className="flex items-center gap-3 text-white">
-          <svg className="size-8" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-            <path d="M13.8261 17.4264C16.7203 18.1174 20.2244 18.5217 24 18.5217C27.7756 18.5217 31.2797 18.1174 34.1739 17.4264C36.9144 16.7722 39.9967 15.2331 41.3563 14.1648L24.8486 40.6391C24.4571 41.267 23.5429 41.267 23.1514 40.6391L6.64374 14.1648C8.00331 15.2331 11.0856 16.7722 13.8261 17.4264Z" fill="currentColor"></path>
-          </svg>
-          <span className="text-xl font-black tracking-tighter uppercase font-impact">Youth Sports</span>
-        </div>
+        className="fixed inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.02] z-[-1]"
+        style={{
+          backgroundImage:
+            'linear-gradient(to right, #f3f4f6 1px, transparent 1px), linear-gradient(to bottom, #f3f4f6 1px, transparent 1px)',
+          backgroundSize: '100px 100px',
+        }}
+      />
 
-        {/* Tagline */}
-        <div className="max-w-md">
-          <div className="text-white/40 font-bold uppercase tracking-widest text-xs mb-4">The Standard of Youth Sports</div>
-          <h2 className="text-white text-4xl font-black uppercase italic tracking-tighter font-impact">Powering the next generation of athletes.</h2>
-        </div>
-
-        {/* Hidden image for error handling */}
-        {heroImage && !imageError && (
+      <div className="hidden lg:block relative w-0 flex-1">
+        {heroImage && (
           <img
+            alt="Youth sports organization"
+            className="absolute inset-0 h-full w-full object-cover"
             src={heroImage}
-            alt=""
-            className="hidden"
-            onError={() => setImageError(true)}
           />
         )}
+        <div className="absolute inset-0 bg-slate-900/60"></div>
+        <div className="absolute bottom-16 left-16 right-16 z-10">
+          <h2 className="text-5xl font-black tracking-tighter leading-none text-white mb-4 font-impact">
+            SETUP YOUR ORGANIZATION
+          </h2>
+          <p className="text-lg font-light tracking-wide text-white/80 max-w-lg leading-relaxed">
+            Define your identity. Set the standard. Create your organization profile to start managing your teams.
+          </p>
+        </div>
       </div>
 
-      {/* Right side - Form */}
-      <div className="bg-white flex flex-col justify-center px-12 lg:px-24 py-16 overflow-y-auto">
-        <div className="max-w-md w-full mx-auto">
+      <div className="flex-1 flex flex-col px-6 py-8 lg:px-20 xl:px-24 bg-white dark:bg-slate-900/50 overflow-y-auto">
+        <div className="mx-auto w-full max-w-sm lg:w-96 flex flex-col">
+          <div className="mb-8">
+            <h2 className="text-4xl font-black tracking-tighter leading-none text-slate-900 dark:text-white mb-2 font-impact">
+              ORGANIZATION SETUP
+            </h2>
+            <p className="text-lg font-light tracking-wide text-slate-500 dark:text-slate-400">
+              Define your identity. Set the standard.
+            </p>
+          </div>
+
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded text-sm">
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl text-red-600 dark:text-red-400 text-sm">
               {error}
             </div>
           )}
 
-          <header className="mb-12">
-            <h1 className="text-7xl lg:text-8xl uppercase mb-2 font-black leading-[0.9] tracking-[-0.05em] font-impact">
-              Organization Setup
-            </h1>
-            <p className="text-slate-500 font-medium text-lg">Define your identity. Set the standard.</p>
-          </header>
-
-          <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="space-y-8">
-            <div className="space-y-6">
-              {/* Organization Name */}
-              <div className="group border-b-2 border-slate-200 transition-colors focus-within:border-black">
+          <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="space-y-6">
+            <div>
+              <label
+                htmlFor="name"
+                className="block text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-2 font-impact"
+              >
+                ORGANIZATION NAME
+              </label>
+              <div className="mt-2">
                 <Controller
                   name="name"
                   control={control}
                   rules={{ required: 'Name is required' }}
                   render={({ field }) => (
                     <>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                        Organization Name
-                      </label>
                       <input
                         {...field}
-                        className="w-full py-4 bg-transparent border-none px-0 text-xl font-bold placeholder:text-slate-300 focus:outline-none focus-visible:outline-2 focus-visible:outline-black focus-visible:outline-offset-2"
-                        placeholder="e.g. NORTH SHORE ACADEMY"
+                        id="name"
                         type="text"
+                        placeholder="e.g. North Shore Academy"
+                        className="block w-full rounded border-0 py-3 px-4 bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm ring-1 ring-inset ring-slate-300 dark:ring-slate-600 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[var(--org-btn-primary-bg, #137fec)] sm:text-sm text-base min-h-[44px]"
                       />
                       {errors.name && (
-                        <div className="text-red-600 text-xs mt-1">{errors.name.message}</div>
+                        <p className="text-xs mt-1 text-red-500 dark:text-red-400">{errors.name.message}</p>
                       )}
                     </>
                   )}
                 />
               </div>
+            </div>
 
-              {/* Type and Slug */}
-              <div className="grid grid-cols-2 gap-8">
-                <div className="group border-b-2 border-slate-200 transition-colors focus-within:border-black">
-                  <Controller
-                    name="org_type"
-                    control={control}
-                    rules={{ required: 'Type is required' }}
-                    render={({ field }) => (
-                      <>
-                        <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                          Type
-                        </label>
-                        <select
-                          {...field}
-                          value={field.value || ''}
-                          className="w-full py-4 bg-transparent border-none px-0 text-lg font-bold appearance-none cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-black focus-visible:outline-offset-2"
-                        >
-                          <option value="">Select...</option>
-                          <option value="club">CLUB</option>
-                          <option value="school">SCHOOL</option>
-                          <option value="academy">ACADEMY</option>
-                          <option value="league">LEAGUE</option>
-                          <option value="aau">AAU</option>
-                        </select>
-                        {errors.org_type && (
-                          <div className="text-red-600 text-xs mt-1">{errors.org_type.message}</div>
-                        )}
-                      </>
-                    )}
-                  />
-                </div>
-
-                <div className="group border-b-2 border-slate-200 transition-colors focus-within:border-black">
-                  <Controller
-                    name="slug"
-                    control={control}
-                    rules={{ required: 'Slug is required' }}
-                    render={({ field }) => (
-                      <>
-                        <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                          Slug
-                        </label>
-                        <div className="flex items-center">
-                          <span className="text-slate-400 font-bold text-sm">youthsports.team/teams/</span>
-                          <input
-                            {...field}
-                            className="flex-1 py-4 bg-transparent border-none px-0 text-lg font-bold placeholder:text-slate-300 focus:outline-none focus-visible:outline-2 focus-visible:outline-black focus-visible:outline-offset-2"
-                            placeholder="your-name"
-                            type="text"
-                            onChange={(e) => {
-                              const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
-                              field.onChange(val)
-                            }}
-                          />
-                        </div>
-                        {slugError && (
-                          <div className="text-red-600 text-xs mt-1">{slugError}</div>
-                        )}
-                        {errors.slug && !slugError && (
-                          <div className="text-red-600 text-xs mt-1">{errors.slug.message}</div>
-                        )}
-                        {slugStatus === 'checking' && (
-                          <div className="text-slate-400 text-xs mt-1">Checking...</div>
-                        )}
-                        {slugStatus === 'available' && (
-                          <div className="text-green-600 text-xs mt-1 font-bold">AVAILABLE</div>
-                        )}
-                      </>
-                    )}
-                  />
-                </div>
+            <div>
+              <label
+                htmlFor="org_type"
+                className="block text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-2 font-impact"
+              >
+                ORGANIZATION TYPE
+              </label>
+              <div className="mt-2">
+                <Controller
+                  name="org_type"
+                  control={control}
+                  rules={{ required: 'Type is required' }}
+                  render={({ field }) => (
+                    <>
+                      <select
+                        {...field}
+                        id="org_type"
+                        value={field.value || ''}
+                        className="block w-full rounded border-0 py-3 px-4 bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm ring-1 ring-inset ring-slate-300 dark:ring-slate-600 focus:ring-2 focus:ring-inset focus:ring-[var(--org-btn-primary-bg, #137fec)] sm:text-sm text-base min-h-[44px]"
+                      >
+                        <option value="">Select type...</option>
+                        <option value="club">Club</option>
+                        <option value="school">School</option>
+                        <option value="academy">Academy</option>
+                        <option value="league">League</option>
+                        <option value="aau">AAU</option>
+                      </select>
+                      {errors.org_type && (
+                        <p className="text-xs mt-1 text-red-500 dark:text-red-400">{errors.org_type.message}</p>
+                      )}
+                    </>
+                  )}
+                />
               </div>
             </div>
 
-            {/* Contact Email and Office Location */}
-            <div className="space-y-6 pt-4">
-              <div className="group border-b-2 border-slate-200 transition-colors focus-within:border-black">
+            <div>
+              <label
+                htmlFor="slug"
+                className="block text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-2 font-impact"
+              >
+                URL SLUG
+              </label>
+              <div className="mt-2">
+                <Controller
+                  name="slug"
+                  control={control}
+                  rules={{ required: 'Slug is required' }}
+                  render={({ field }) => (
+                    <>
+                      <div className="flex items-stretch rounded shadow-sm ring-1 ring-inset ring-slate-300 dark:ring-slate-600 focus-within:ring-2 focus-within:ring-inset focus-within:ring-[var(--org-btn-primary-bg, #137fec)]">
+                        <span className="flex items-center px-3 text-slate-500 dark:text-slate-400 text-sm bg-slate-50 dark:bg-slate-800 border-r border-slate-300 dark:border-slate-600 rounded-l">
+                          youthsports.team/teams/
+                        </span>
+                        <input
+                          {...field}
+                          id="slug"
+                          type="text"
+                          placeholder="your-name"
+                          onChange={(e) => {
+                            const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
+                            field.onChange(val)
+                          }}
+                          className="flex-1 block w-full rounded-r border-0 py-3 px-4 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-0 sm:text-sm text-base min-h-[44px]"
+                        />
+                      </div>
+                      {slugError && (
+                        <p className="text-xs mt-1 text-red-500 dark:text-red-400">{slugError}</p>
+                      )}
+                      {errors.slug && !slugError && (
+                        <p className="text-xs mt-1 text-red-500 dark:text-red-400">{errors.slug.message}</p>
+                      )}
+                      {slugStatus === 'checking' && (
+                        <p className="text-xs mt-1 text-slate-500 dark:text-slate-400">Checking availability...</p>
+                      )}
+                      {slugStatus === 'available' && (
+                        <p className="text-xs mt-1 text-emerald-600 dark:text-emerald-400 font-bold">Available</p>
+                      )}
+                    </>
+                  )}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="contact_email"
+                className="block text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-2 font-impact"
+              >
+                PRIMARY CONTACT EMAIL
+              </label>
+              <div className="mt-2">
                 <Controller
                   name="contact_email"
                   control={control}
                   rules={{ required: 'Email is required' }}
                   render={({ field }) => (
                     <>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                        Primary Contact Email
-                      </label>
                       <input
                         {...field}
-                        className="w-full py-4 bg-transparent border-none px-0 text-lg font-bold placeholder:text-slate-300 focus:outline-none focus-visible:outline-2 focus-visible:outline-black focus-visible:outline-offset-2"
-                        placeholder="admin@organization.com"
+                        id="contact_email"
                         type="email"
+                        placeholder="admin@organization.com"
+                        className="block w-full rounded border-0 py-3 px-4 bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm ring-1 ring-inset ring-slate-300 dark:ring-slate-600 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[var(--org-btn-primary-bg, #137fec)] sm:text-sm text-base min-h-[44px]"
                       />
                       {errors.contact_email && (
-                        <div className="text-red-600 text-xs mt-1">{errors.contact_email.message}</div>
+                        <p className="text-xs mt-1 text-red-500 dark:text-red-400">{errors.contact_email.message}</p>
                       )}
                     </>
                   )}
                 />
               </div>
+            </div>
 
-              <div className="group border-b-2 border-slate-200 transition-colors focus-within:border-black">
+            <div>
+              <label
+                htmlFor="office_location"
+                className="block text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-2 font-impact"
+              >
+                OFFICE LOCATION <span className="text-slate-400 dark:text-slate-500 font-normal normal-case">(Optional)</span>
+              </label>
+              <div className="mt-2">
                 <Controller
                   name="office_location"
                   control={control}
                   render={({ field }) => (
-                    <>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                        Office Location
-                      </label>
-                      <input
-                        {...field}
-                        className="w-full py-4 bg-transparent border-none px-0 text-lg font-bold placeholder:text-slate-300 focus:outline-none focus-visible:outline-2 focus-visible:outline-black focus-visible:outline-offset-2"
-                        placeholder="CITY, STATE"
-                        type="text"
-                      />
-                    </>
+                    <input
+                      {...field}
+                      id="office_location"
+                      type="text"
+                      placeholder="City, State"
+                      className="block w-full rounded border-0 py-3 px-4 bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm ring-1 ring-inset ring-slate-300 dark:ring-slate-600 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[var(--org-btn-primary-bg, #137fec)] sm:text-sm text-base min-h-[44px]"
+                    />
                   )}
                 />
               </div>
             </div>
 
-            {/* Submit Button */}
-            <div className="pt-8">
-              <button
-                type="submit"
-                disabled={isSubmitDisabled}
-                className="w-full bg-black hover:bg-zinc-900 text-white font-black uppercase tracking-widest py-6 px-8 transition-all active:scale-[0.98] text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <span className="material-symbols-outlined animate-spin text-white" style={{ fontSize: '20px' }}>
-                      sync
-                    </span>
-                    Loading...
-                  </>
-                ) : (
-                  'Continue to License'
-                )}
-              </button>
-              <p className="mt-4 text-center text-slate-400 text-[10px] font-bold uppercase tracking-widest">
-                Step 1 of 2 • Identity & Compliance
-              </p>
-            </div>
+            <button
+              type="submit"
+              disabled={isSubmitDisabled}
+              className="bg-slate-900 dark:bg-white text-white dark:text-black px-8 py-3 font-black text-sm tracking-widest uppercase w-full hover:bg-[#5468FF] dark:hover:bg-[#5468FF] dark:hover:text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+            >
+              {loading ? 'CREATING ORGANIZATION...' : 'CONTINUE TO LICENSE'}
+            </button>
+
+            <p className="text-center text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              Step 1 of 2 - Identity and Compliance
+            </p>
           </form>
 
-          {/* Footer */}
-          <footer className="mt-16 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-black transition-colors"
-            >
-              Cancel Setup
-            </button>
-            <div className="flex gap-4">
-              <span className="material-symbols-outlined text-slate-300 cursor-help hover:text-black transition-colors">help</span>
-            </div>
-          </footer>
+          <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800">
+            <p className="text-center text-sm text-slate-500 dark:text-slate-400">
+              Need help?{' '}
+              <button
+                type="button"
+                onClick={onCancel}
+                className="font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors"
+              >
+                Cancel setup
+              </button>
+            </p>
+          </div>
+
+          <div className="mt-8 pt-8 text-center">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-600">
+              (c) {new Date().getFullYear()} YOUTHSPORTS PROFESSIONAL SPORTS MANAGEMENT
+            </p>
+          </div>
         </div>
       </div>
     </div>

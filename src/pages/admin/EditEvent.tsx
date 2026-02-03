@@ -501,14 +501,13 @@ export default function EditEvent() {
       }
 
       // Validate update permissions
-      const { data: currentEventData } = await supabase
+      const { data: currentEventData } = await supabaseAny
         .from('events')
         .select('id, start_time, is_cancelled, status, type, org_id, team_id')
         .eq('id', eventId)
         .single()
 
       if (currentEventData) {
-        const isMajorUpdate = !!(data.start_time || data.location.venue_name)
         const validation = await validateUpdateEvent(
           context,
           currentEventData,
@@ -1627,7 +1626,7 @@ export default function EditEvent() {
           setActionError(null)
           
           try {
-            const { data: eventData } = await supabase
+            const { data: eventData } = await supabaseAny
               .from('events')
               .select('id, start_time, is_cancelled, status, type, created_at, org_id, team_id, parent_tournament_id, is_recurring')
               .eq('id', eventId)
@@ -1681,7 +1680,7 @@ export default function EditEvent() {
           setActionError(null)
           
           try {
-            const { data: eventData } = await supabase
+            const { data: eventData } = await supabaseAny
               .from('events')
               .select('id, start_time, is_cancelled, status, type, org_id, team_id')
               .eq('id', eventId)

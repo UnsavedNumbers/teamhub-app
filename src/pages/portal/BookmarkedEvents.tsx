@@ -73,11 +73,11 @@ export default function BookmarkedEvents() {
                       <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
                         <div className="flex items-center gap-2">
                           <Icon name="calendar_today" className="text-base" />
-                          {formatEventDate(event.start_time)}
+                          {formatEventDate(event.start_time, (event as any).timezone || 'UTC')}
                         </div>
                         <div className="flex items-center gap-2">
                           <Icon name="schedule" className="text-base" />
-                          {formatEventTimeRange(event.start_time, event.end_time)}
+                          {formatEventTimeRange(event.start_time, event.end_time, (event as any).timezone || 'UTC')}
                         </div>
                         {event.location && (
                           <div className="flex items-center gap-2">
@@ -95,7 +95,7 @@ export default function BookmarkedEvents() {
                         View Details
                       </Button>
                       <Button
-                        variant="ghost"
+                        variant="secondary"
                         onClick={() => handleRemoveBookmark(bookmark.event_id)}
                       >
                         <Icon name="bookmark" />
