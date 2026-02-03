@@ -47,7 +47,6 @@ interface TicketedEventData {
 }
 
 async function getTicketCount(eventId: string, isTicketedEvent: boolean = false): Promise<number> {
-  const tableName = isTicketedEvent ? 'ticketed_events' : 'events'
   const eventIdColumn = isTicketedEvent ? 'ticketed_event_id' : 'event_id'
   
   const { data: orders, error } = await supabase
@@ -103,7 +102,7 @@ async function checkOrganizationAllowsCancellations(orgId: string): Promise<bool
 }
 
 export async function validateDeleteEvent(
-  context: UserContext,
+  _context: UserContext,
   event: EventData | TicketedEventData,
   organization: Organization | null,
   isTicketedEvent: boolean = false
@@ -111,7 +110,6 @@ export async function validateDeleteEvent(
   const now = new Date()
   const eventDate = new Date(isTicketedEvent ? (event as TicketedEventData).starts_at : (event as EventData).start_time)
   const eventStatus = isTicketedEvent ? (event as TicketedEventData).status : undefined
-  const isDraft = isTicketedEvent ? eventStatus === 'draft' : eventStatus === 'draft'
   const isPublished = isTicketedEvent ? eventStatus === 'published' : false
 
   if (!organization) {
@@ -170,7 +168,7 @@ export async function validateDeleteEvent(
 }
 
 export async function validateCancelEvent(
-  context: UserContext,
+  _context: UserContext,
   event: EventData | TicketedEventData,
   organization: Organization | null,
   isTicketedEvent: boolean = false
@@ -223,7 +221,7 @@ export async function validateCancelEvent(
 }
 
 export async function validateUpdateEvent(
-  context: UserContext,
+  _context: UserContext,
   event: EventData | TicketedEventData,
   organization: Organization | null,
   updates: {

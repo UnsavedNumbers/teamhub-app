@@ -30,9 +30,6 @@ export default function Signup() {
   const [heroImage, setHeroImage] = useState<string>('')
   const [inviteEmail, setInviteEmail] = useState<string | null>(null)
   const [isFromInvite, setIsFromInvite] = useState(false)
-  const [signupMode, setSignupMode] = useState<'fan' | 'parent'>(() =>
-    locationState?.signupAs === 'fan' ? 'fan' : 'parent'
-  )
 
   const { signUp } = useAuth()
   const { resolvedTheme } = useTheme()
@@ -49,6 +46,10 @@ export default function Signup() {
     athleteId?: string
     signupAs?: 'fan' | 'parent'
   } | null
+
+  const [signupMode, setSignupMode] = useState<'fan' | 'parent'>(() =>
+    locationState?.signupAs === 'fan' ? 'fan' : 'parent'
+  )
 
   // Determine if this is an organization setup flow
   const isOrgSetupFlow =

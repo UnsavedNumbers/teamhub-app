@@ -181,7 +181,7 @@ function TicketOrderSuccessContent({ org }: { org: OrgContext }) {
             {/* For guest users, link back to org tickets page */}
             {!order.purchaser_user_id && (
               <Link
-                to={getLink(RouteKeys.PORTAL_ORG_TICKETS, { orgSlug })}
+                to={getLink(RouteKeys.PORTAL_ORG_TICKETS, { orgSlug: orgSlug || '' })}
                 className="flex min-w-[84px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-[#137fec] text-white text-lg font-bold leading-normal tracking-[0.015em] w-full shadow-lg shadow-[#137fec]/20 hover:bg-blue-600 transition-colors"
               >
                 <span className="material-symbols-outlined">confirmation_number</span>
