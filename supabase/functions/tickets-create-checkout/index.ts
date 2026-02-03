@@ -58,6 +58,8 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
     global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
   })
+  // Service role client without user auth for RLS-protected tables
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
 
   // Parse payload
   let payload: any
@@ -89,12 +91,22 @@ serve(async (req) => {
     // Load event and validate
     const { data: event, error: eventError } = await supabase
       .from("ticketed_events")
-      .select("id, org_id, title, status, sales_start_at, sales_end_at, starts_at")
+      .select(
+        `
+        id,
+        org_id,
+        title,
+        status,
+        sales_start_at,
+        sales_end_at,
+        starts_at
+      `.trim().replace(/\s+/g, " ")
+      )
       .eq("id", ticketedEventId)
       .single()
 
     if (eventError || !event) {
-      return json(req, { error: "Event not found" }, 404)
+      return json(req, { error: "Event not found" }, 400)
     }
 
     if (event.status !== "published") {
@@ -110,15 +122,15 @@ serve(async (req) => {
       return json(req, { error: "Sales have ended" }, 400)
     }
 
-    // Validate org Connect (must be done BEFORE creating order/holds)
-    const { data: org, error: orgError } = await supabase
+    // Fetch organization using admin client to bypass RLS
+    const { data: org, error: orgError } = await supabaseAdmin
       .from("organizations")
-      .select("payout_account_id, payouts_enabled")
+      .select("id, payout_account_id, payouts_enabled, slug")
       .eq("id", event.org_id)
       .single()
 
     if (orgError || !org) {
-      return json(req, { error: "Organization not found" }, 404)
+      return json(req, { error: "Organization not found" }, 400)
     }
 
     if (!org.payout_account_id || !org.payouts_enabled) {
@@ -128,6 +140,26 @@ serve(async (req) => {
     // Validate Connect account ID format
     if (!org.payout_account_id.startsWith("acct_")) {
       return json(req, { error: "Invalid Connect account" }, 400)
+    }
+
+    // Verify Connect account exists in Stripe
+    try {
+      await stripe.accounts.retrieve(org.payout_account_id)
+    } catch (stripeError: any) {
+      console.error("Stripe Connect account validation failed:", {
+        account_id: org.payout_account_id,
+        error: stripeError.message,
+        type: stripeError.type,
+        code: stripeError.code,
+      })
+      return json(
+        req,
+        {
+          error: "Organization payment account is not properly configured",
+          details: stripeError.message,
+        },
+        400
+      )
     }
 
     // Load ticket types and validate
@@ -177,7 +209,7 @@ serve(async (req) => {
     const expiresAt = new Date(now.getTime() + holdExpiryMinutes * 60 * 1000)
 
     // Create order first (pending_payment)
-    const { data: order, error: orderError } = await supabase
+    const { data: order, error: orderError } = await supabaseAdmin
       .from("ticket_orders")
       .insert({
         org_id: event.org_id,
@@ -227,7 +259,7 @@ serve(async (req) => {
       // Decrement capacity (with row lock FOR UPDATE)
       if (ticketType.capacity_total !== null) {
         // Use direct update with row lock instead of RPC for now
-        const { error: capacityError } = await supabase
+        const { error: capacityError } = await supabaseAdmin
           .from("ticket_types")
           .update({
             capacity_remaining: ticketType.capacity_remaining - item.quantity,
@@ -238,25 +270,25 @@ serve(async (req) => {
 
         if (capacityError) {
           // Rollback: delete order and holds
-          await supabase.from("ticket_orders").delete().eq("id", order.id)
+          await supabaseAdmin.from("ticket_orders").delete().eq("id", order.id)
           return json(req, { error: "Failed to reserve capacity" }, 500)
         }
       }
     }
 
     // Insert order items
-    const { error: itemsError } = await supabase.from("ticket_order_items").insert(orderItems)
+    const { error: itemsError } = await supabaseAdmin.from("ticket_order_items").insert(orderItems)
 
     if (itemsError) {
-      await supabase.from("ticket_orders").delete().eq("id", order.id)
+      await supabaseAdmin.from("ticket_orders").delete().eq("id", order.id)
       return json(req, { error: "Failed to create order items" }, 500)
     }
 
     // Insert holds
-    const { error: holdsError } = await supabase.from("ticket_holds").insert(holds)
+    const { error: holdsError } = await supabaseAdmin.from("ticket_holds").insert(holds)
 
     if (holdsError) {
-      await supabase.from("ticket_orders").delete().eq("id", order.id)
+      await supabaseAdmin.from("ticket_orders").delete().eq("id", order.id)
       return json(req, { error: "Failed to create holds" }, 500)
     }
 
@@ -268,7 +300,7 @@ serve(async (req) => {
     const orgRevenueCents = totalCents - platformFeeCents
 
     // Update order totals (no tax/fees for MVP)
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from("ticket_orders")
       .update({
         subtotal_cents: subtotalCents,
@@ -277,7 +309,7 @@ serve(async (req) => {
       .eq("id", order.id)
 
     if (updateError) {
-      await supabase.from("ticket_orders").delete().eq("id", order.id)
+      await supabaseAdmin.from("ticket_orders").delete().eq("id", order.id)
       return json(req, { error: "Failed to update order totals" }, 500)
     }
 
@@ -299,11 +331,12 @@ serve(async (req) => {
 
     const baseUrl = Deno.env.get("SITE_URL") || "http://localhost:3000"
     // Use org-scoped URLs if org_slug is provided, otherwise fall back to old pattern
-    const successUrl = orgSlug 
-      ? `${baseUrl}/o/${orgSlug}/tickets/order/${order.id}`
+    const derivedOrgSlug = orgSlug || org.slug || ""
+    const successUrl = derivedOrgSlug
+      ? `${baseUrl}/o/${derivedOrgSlug}/tickets/order/${order.id}`
       : `${baseUrl}/tickets/order/${order.id}`
-    const cancelUrl = orgSlug
-      ? `${baseUrl}/o/${orgSlug}/tickets/events/${ticketedEventId}`
+    const cancelUrl = derivedOrgSlug
+      ? `${baseUrl}/o/${derivedOrgSlug}/tickets/events/${ticketedEventId}`
       : `${baseUrl}/tickets/events/${ticketedEventId}`
 
     const sessionParams: any = {
@@ -336,7 +369,7 @@ serve(async (req) => {
     const session = await stripe.checkout.sessions.create(sessionParams)
 
     // Update order with Stripe session ID and Connect fields
-    await supabase
+    await supabaseAdmin
       .from("ticket_orders")
       .update({
         stripe_checkout_session_id: session.id,

@@ -380,7 +380,21 @@ export async function createCheckoutSession(
     })
 
     if (!response.ok) {
-      const errorData = await response.json()
+      const errorData = await response.json().catch(() => ({}))
+      // #region agent log
+      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'ticketingService.ts:createCheckoutSession',
+          message: 'Checkout failed',
+          data: { status: response.status, errorData, requestPayload: request },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          hypothesisId: 'A',
+        }),
+      }).catch(() => {})
+      // #endregion
       return createServiceResponse<CreateCheckoutResponse>(null, new Error(errorData.error || 'Failed to create checkout'))
     }
 
