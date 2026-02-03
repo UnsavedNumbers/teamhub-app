@@ -12,6 +12,7 @@ import type { TicketedEvent, TicketType } from '@/types/ticketing'
 import { formatCurrency } from '@/types/ticketing'
 import type { OrgContext } from '@/utils/orgResolution'
 import { OrgScopedRoute } from '@/components/OrgScopedRoute'
+import { getLink, RouteKeys } from '@/utils/routes'
 
 function TicketEventListContent({ org }: { org: OrgContext }) {
   const orgSlug = org.slug
@@ -79,11 +80,9 @@ function EventCard({ event, orgSlug }: { event: TicketedEvent; orgSlug: string }
   const dayName = eventDate.toLocaleDateString('en-US', { weekday: 'short' })
   const dateStr = eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   const timeStr = eventDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
-  const eventUrl = `/o/${orgSlug}/tickets/events/${event.id}`
-
   return (
     <Link
-      to={eventUrl}
+      to={getLink(RouteKeys.PORTAL_ORG_TICKET_EVENT, { orgSlug, eventId: event.id })}
       className="flex flex-col bg-white dark:bg-[#1c2630] rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group"
     >
       {/* Image */}

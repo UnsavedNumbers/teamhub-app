@@ -13,6 +13,7 @@ import TicketCard from '@/components/ticketing/TicketCard'
 import type { OrgContext } from '@/utils/orgResolution'
 import { OrgScopedRoute } from '@/components/OrgScopedRoute'
 import type { TicketOrder, TicketOrderItem, TicketType, TicketedEvent, Ticket } from '@/types/ticketing'
+import { getLink, RouteKeys } from '@/utils/routes'
 
 type TicketOrderWithRelations = TicketOrder & {
   ticket_order_items?: Array<TicketOrderItem & {
@@ -174,7 +175,7 @@ function TicketOrderSuccessContent({ org }: { org: OrgContext }) {
             {/* For guest users, link back to org tickets page */}
             {!order.purchaser_user_id && (
               <Link
-                to={`/o/${orgSlug}/tickets`}
+                to={getLink(RouteKeys.PORTAL_ORG_TICKETS, { orgSlug })}
                 className="flex min-w-[84px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-[#137fec] text-white text-lg font-bold leading-normal tracking-[0.015em] w-full shadow-lg shadow-[#137fec]/20 hover:bg-blue-600 transition-colors"
               >
                 <span className="material-symbols-outlined">confirmation_number</span>
@@ -184,7 +185,7 @@ function TicketOrderSuccessContent({ org }: { org: OrgContext }) {
             {/* For logged-in users, link to portal */}
             {order.purchaser_user_id && (
               <Link
-                to="/portal/my-tickets"
+                to={getLink(RouteKeys.PORTAL_MY_TICKETS)}
                 className="flex min-w-[84px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-[#137fec] text-white text-lg font-bold leading-normal tracking-[0.015em] w-full shadow-lg shadow-[#137fec]/20 hover:bg-blue-600 transition-colors"
               >
                 <span className="material-symbols-outlined">confirmation_number</span>

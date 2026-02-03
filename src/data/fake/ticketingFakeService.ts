@@ -16,6 +16,7 @@ import {
   type TicketingEventsQuery,
 } from './fakeTicketingEvents'
 import { createServiceResponse } from '../services/responseHelpers'
+import { getLink, RouteKeys } from '@/utils/routes'
 
 const fakeOrders: TicketOrder[] = []
 const fakeOrderItems: TicketOrderItem[] = []
@@ -247,8 +248,8 @@ export async function createFakeCheckoutSession(
 
   const baseUrl = request.return_base_url || (typeof window !== 'undefined' ? window.location.origin : '')
   const orderPath = request.org_slug
-    ? `/o/${request.org_slug}/tickets/order/${orderId}`
-    : `/tickets/order/${orderId}`
+    ? getLink(RouteKeys.PORTAL_ORG_TICKET_ORDER, { orgSlug: request.org_slug, orderId })
+    : getLink(RouteKeys.PORTAL_TICKET_ORDER_SUCCESS, { orderId })
   const checkoutUrl = baseUrl ? `${baseUrl}${orderPath}` : orderPath
 
   return createServiceResponse({ checkout_url: checkoutUrl, order_id: orderId }, null)

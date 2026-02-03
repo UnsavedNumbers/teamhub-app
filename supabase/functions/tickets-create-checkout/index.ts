@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts"
 import Stripe from "https://esm.sh/stripe@12.18.0?dts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0"
+import { getOrgTicketOrderUrl, getOrgTicketEventUrl, getPaymentSuccessUrl, getPaymentCancelUrl, getFullUrl } from '../shared/url-generator.ts'
 
 // CORS helpers
 function buildCorsHeaders(req: Request) {
@@ -350,15 +351,15 @@ serve(async (req) => {
     const baseUrl = validatedBaseUrl || Deno.env.get("SITE_URL") || "http://localhost:3000"
     // Normalize baseUrl: trim and ensure no trailing slash (T9)
     const normalizedBaseUrl = baseUrl.trim().replace(/\/$/, "")
-    
+
     // Use org-scoped URLs if org_slug is provided, otherwise fall back to old pattern
     const derivedOrgSlug = orgSlug || org.slug || ""
     const successUrl = derivedOrgSlug
-      ? `${normalizedBaseUrl}/o/${derivedOrgSlug}/tickets/order/${order.id}`
-      : `${normalizedBaseUrl}/tickets/order/${order.id}`
+      ? getOrgTicketOrderUrl(derivedOrgSlug, normalizedBaseUrl)
+      : getFullUrl('portal.ticketOrderSuccess', normalizedBaseUrl) + `/order/${order.id}`
     const cancelUrl = derivedOrgSlug
-      ? `${normalizedBaseUrl}/o/${derivedOrgSlug}/tickets/events/${ticketedEventId}`
-      : `${normalizedBaseUrl}/tickets/events/${ticketedEventId}`
+      ? getOrgTicketEventUrl(derivedOrgSlug, ticketedEventId, normalizedBaseUrl)
+      : getFullUrl('portal.ticketEventDetail', normalizedBaseUrl) + `/events/${ticketedEventId}`
 
     const sessionParams: any = {
       payment_method_types: ["card"],

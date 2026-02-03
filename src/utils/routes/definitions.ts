@@ -210,6 +210,44 @@ const portal = {
         label: 'Role Selection',
         icon: 'switch_account',
     },
+
+    // Org-Scoped Public Routes
+    orgLanding: {
+        path: '/o/:orgSlug',
+        params: ['orgSlug'] as const,
+        label: 'Organization Landing',
+        icon: 'apartment',
+    },
+    orgTickets: {
+        path: '/o/:orgSlug/tickets',
+        params: ['orgSlug'] as const,
+        label: 'Organization Tickets',
+        icon: 'confirmation_number',
+    },
+    orgTicketEvent: {
+        path: '/o/:orgSlug/tickets/events/:eventId',
+        params: ['orgSlug', 'eventId'] as const,
+        label: 'Ticketed Event',
+        icon: 'event',
+    },
+    orgTicketOrder: {
+        path: '/o/:orgSlug/tickets/order/:orderId',
+        params: ['orgSlug', 'orderId'] as const,
+        label: 'Ticket Order',
+        icon: 'receipt_long',
+    },
+    orgTicketAccessLanding: {
+        path: '/o/:orgSlug/tickets/access',
+        params: ['orgSlug'] as const,
+        label: 'Ticket Access',
+        icon: 'qr_code_scanner',
+    },
+    orgTicketAccess: {
+        path: '/o/:orgSlug/tickets/access/:token',
+        params: ['orgSlug', 'token'] as const,
+        label: 'Ticket Access',
+        icon: 'qr_code_scanner',
+    },
 } as const satisfies Record<string, RouteDefinition>
 
 // ============================================================================

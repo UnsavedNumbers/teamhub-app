@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0"
 import { crypto } from "https://deno.land/std@0.208.0/crypto/mod.ts"
+import { getOrgTicketAccessUrl, getTicketAccessUrl } from '../shared/url-generator.ts'
 
 // CORS helpers
 function buildCorsHeaders(req: Request) {
@@ -100,11 +101,11 @@ async function generateAccessLink(ticketId: string, qrToken: string, baseUrl: st
   }
 
   const encrypted = await encryptAccessPayload(payload)
-  
+
   if (orgSlug) {
-    return `${baseUrl}/o/${orgSlug}/tickets/access?t=${encrypted}`
+    return getOrgTicketAccessUrl(orgSlug, encrypted, baseUrl)
   }
-  return `${baseUrl}/tickets/access?t=${encrypted}`
+  return getTicketAccessUrl(encrypted, baseUrl)
 }
 
 serve(async (req) => {

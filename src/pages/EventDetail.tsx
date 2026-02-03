@@ -16,6 +16,7 @@ import VenueInsights from '../components/portal/VenueInsights'
 import NearbyAmenities from '../components/portal/NearbyAmenities'
 import { PhotoSection } from '../components/galleries/PhotoSection'
 import { useT } from '../i18n/useI18n'
+import { getLink, RouteKeys } from '@/utils/routes'
 
 interface Event {
   id: string
@@ -675,9 +676,14 @@ export default function EventDetail() {
               {event.ticketed_event ? (
                 <Button
                   onClick={() => {
-                    if (orgSlug && event.ticketed_event?.id) {
-                      navigate(`/o/${orgSlug}/tickets/events/${event.ticketed_event.id}`)
-                    }
+                  if (orgSlug && event.ticketed_event?.id) {
+                    navigate(
+                      getLink(RouteKeys.PORTAL_ORG_TICKET_EVENT, {
+                        orgSlug,
+                        eventId: event.ticketed_event.id,
+                      })
+                    )
+                  }
                   }}
                   disabled={!orgSlug || !event.ticketed_event?.id}
                   className="w-full"

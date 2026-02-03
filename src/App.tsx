@@ -189,6 +189,7 @@ const CreateAthlete = lazy(() => import('./pages/admin/CreateAthlete'))
 const AthleteDetail = lazy(() => import('./pages/admin/AthleteDetail'))
 const EditAthlete = lazy(() => import('./pages/admin/EditAthlete'))
 const AdminChildren = lazy(() => import('./pages/admin/AdminChildren'))
+const AdminAthletes = lazy(() => import('./pages/admin/AdminAthletes'))
 const ImportAthletes = lazy(() => import('./pages/admin/ImportAthletes'))
 const GuardianAttachmentRequests = lazy(() => import('./pages/admin/GuardianAttachmentRequests').then(m => ({ default: m.default })))
 const AdminSportSettings = lazy(() => import('./pages/admin/AdminSportSettings'))
@@ -429,7 +430,7 @@ function AppWithTheme() {
               <Route path="athletes/:id" element={<AthleteDetail />} />
               <Route path="athletes/new" element={<CreateAthlete />} />
               <Route path="athletes/import" element={<FeatureGateRoute routeKey="admin.athletes.import"><ImportAthletes /></FeatureGateRoute>} />
-              <Route path="athletes" element={<AdminChildren />} />
+              <Route path="athletes" element={<AdminAthletes />} />
               <Route path="guardians/:familyId/athletes/new" element={<CreateChild />} />
               <Route path="guardians/new" element={<CreateFamily />} />
               <Route path="guardians/:id" element={<FamilyDetail />} />

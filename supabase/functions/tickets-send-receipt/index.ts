@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.208.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0"
 import { crypto } from "https://deno.land/std@0.208.0/crypto/mod.ts"
 import { qrcode } from "https://deno.land/x/qrcode/mod.ts"
+import { getOrgTicketAccessUrl, getTicketAccessUrl, getFullUrl } from '../shared/url-generator.ts'
 
 // CORS helpers
 function buildCorsHeaders(req: Request) {
@@ -281,16 +282,16 @@ serve(async (req) => {
     // For guest users, if token is null (link already exists), use org tickets page
     let ticketUrl: string
     if (order.purchaser_user_id) {
-      ticketUrl = `${baseUrl}/account/tickets` // Logged-in user
+      ticketUrl = getFullUrl('portal.myTickets', baseUrl)
     } else if (token && orgSlug) {
-      ticketUrl = `${baseUrl}/o/${orgSlug}/tickets/access/${token}` // Guest magic link with org context
+      ticketUrl = getOrgTicketAccessUrl(orgSlug, token, baseUrl) // Guest magic link with org context
     } else if (token) {
-      ticketUrl = `${baseUrl}/tickets/access/${token}` // Legacy guest magic link
+      ticketUrl = getTicketAccessUrl(token, baseUrl) // Legacy guest magic link
     } else if (orgSlug) {
       // Link already exists, direct to org tickets page
-      ticketUrl = `${baseUrl}/o/${orgSlug}/tickets`
+      ticketUrl = getFullUrl('portal.orgTickets', baseUrl, { orgSlug })
     } else {
-      ticketUrl = `${baseUrl}/tickets`
+      ticketUrl = getFullUrl('portal.tickets', baseUrl)
     }
 
     const event = order.ticketed_events as any
