@@ -370,13 +370,19 @@ export async function createCheckoutSession(
   request: CreateCheckoutRequest,
 ): Promise<{ data: CreateCheckoutResponse | null; error: Error | null }> {
   try {
+    // Always include return_base_url when window is available (T3)
+    const requestWithBaseUrl: CreateCheckoutRequest = {
+      ...request,
+      return_base_url: typeof window !== 'undefined' ? window.location.origin : request.return_base_url,
+    }
+    
     const response = await fetch(`${FUNCTIONS_URL}/tickets-create-checkout`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}`,
       },
-      body: JSON.stringify(request),
+      body: JSON.stringify(requestWithBaseUrl),
     })
 
     if (!response.ok) {
@@ -507,5 +513,38 @@ export async function processTicketOrderRefund(
     return createServiceResponse<{ refund_id: string; amount: number; status: string; message: string }>(data, null)
   } catch (error: any) {
     return createServiceResponse<{ refund_id: string; amount: number; status: string; message: string }>(null, error)
+  }
+}
+
+/**
+ * Manually complete a stuck ticket order
+ * Used when webhook fails and order is stuck in pending_payment
+ */
+export async function manuallyCompleteTicketOrder(
+  orderId: string,
+): Promise<{ data: { success: boolean; message: string; tickets_created: number } | null; error: Error | null }> {
+  try {
+    const session = await supabase.auth.getSession()
+    const response = await fetch(`${FUNCTIONS_URL}/tickets-manual-complete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.data.session?.access_token || ''}`,
+      },
+      body: JSON.stringify({ order_id: orderId }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      return createServiceResponse<{ success: boolean; message: string; tickets_created: number }>(
+        null,
+        new Error(errorData.error || 'Failed to complete order')
+      )
+    }
+
+    const data = await response.json()
+    return createServiceResponse<{ success: boolean; message: string; tickets_created: number }>(data, null)
+  } catch (error: any) {
+    return createServiceResponse<{ success: boolean; message: string; tickets_created: number }>(null, error)
   }
 }

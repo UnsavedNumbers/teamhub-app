@@ -73,6 +73,7 @@ serve(async (req) => {
   const items = payload?.items as Array<{ ticket_type_id: string; quantity: number }> | undefined
   const purchaserEmail = payload?.purchaser_email as string | undefined
   const orgSlug = payload?.org_slug as string | undefined
+  const returnBaseUrl = payload?.return_base_url as string | undefined
 
   if (!ticketedEventId || !items || !Array.isArray(items) || items.length === 0) {
     return json(req, { error: "Missing required fields: ticketed_event_id, items" }, 400)
@@ -329,15 +330,35 @@ serve(async (req) => {
       }
     })
 
-    const baseUrl = Deno.env.get("SITE_URL") || "http://localhost:3000"
+    // Validate and normalize return_base_url (T1, T2, T9)
+    let validatedBaseUrl: string | null = null
+    if (returnBaseUrl) {
+      try {
+        const url = new URL(returnBaseUrl)
+        // Require http or https protocol
+        if ((url.protocol === "http:" || url.protocol === "https:") && 
+            (url.pathname === "" || url.pathname === "/")) {
+          // Normalize: trim and remove trailing slash
+          validatedBaseUrl = url.origin.trim().replace(/\/$/, "")
+        }
+      } catch {
+        // Invalid URL, ignore and use fallback
+      }
+    }
+    
+    // Use validated return_base_url or fallback to SITE_URL
+    const baseUrl = validatedBaseUrl || Deno.env.get("SITE_URL") || "http://localhost:3000"
+    // Normalize baseUrl: trim and ensure no trailing slash (T9)
+    const normalizedBaseUrl = baseUrl.trim().replace(/\/$/, "")
+    
     // Use org-scoped URLs if org_slug is provided, otherwise fall back to old pattern
     const derivedOrgSlug = orgSlug || org.slug || ""
     const successUrl = derivedOrgSlug
-      ? `${baseUrl}/o/${derivedOrgSlug}/tickets/order/${order.id}`
-      : `${baseUrl}/tickets/order/${order.id}`
+      ? `${normalizedBaseUrl}/o/${derivedOrgSlug}/tickets/order/${order.id}`
+      : `${normalizedBaseUrl}/tickets/order/${order.id}`
     const cancelUrl = derivedOrgSlug
-      ? `${baseUrl}/o/${derivedOrgSlug}/tickets/events/${ticketedEventId}`
-      : `${baseUrl}/tickets/events/${ticketedEventId}`
+      ? `${normalizedBaseUrl}/o/${derivedOrgSlug}/tickets/events/${ticketedEventId}`
+      : `${normalizedBaseUrl}/tickets/events/${ticketedEventId}`
 
     const sessionParams: any = {
       payment_method_types: ["card"],

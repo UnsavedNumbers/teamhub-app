@@ -8,7 +8,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useOrganization } from '@/contexts/OrganizationContext'
-import { getTicketOrderByIdAdmin, processTicketOrderRefund } from '@/data/services/ticketingService'
+import { getTicketOrderByIdAdmin, processTicketOrderRefund, manuallyCompleteTicketOrder } from '@/data/services/ticketingService'
 import { formatCurrency } from '@/types/ticketing'
 import { showSuccess, showError } from '@/utils/toast'
 import { getErrorMessage } from '@/utils/errorUtils'
@@ -26,6 +26,7 @@ export default function TicketingOrderDetail() {
   const queryClient = useQueryClient()
   const orgId = currentOrganization?.id
   const [isRefunding, setIsRefunding] = useState(false)
+  const [isCompleting, setIsCompleting] = useState(false)
 
   const { data: orderResponse, isLoading, error, refetch } = useQuery({
     queryKey: ['ticket-order-admin', orderId],
@@ -80,6 +81,32 @@ export default function TicketingOrderDetail() {
     }
   }
 
+  const handleCompleteOrder = async () => {
+    if (!orderId || !order) return
+
+    if (!confirm('This will manually complete the order and generate tickets. This should only be used if the Stripe payment succeeded but the webhook failed. Continue?')) {
+      return
+    }
+
+    try {
+      setIsCompleting(true)
+      const result = await manuallyCompleteTicketOrder(orderId)
+      if (result.error) {
+        throw result.error
+      }
+
+      showSuccess(result.data?.message || 'Order completed successfully')
+      
+      // Invalidate and refetch order to get updated status
+      await queryClient.invalidateQueries({ queryKey: ['ticket-order-admin', orderId] })
+      await queryClient.refetchQueries({ queryKey: ['ticket-order-admin', orderId] })
+    } catch (err) {
+      showError(getErrorMessage(err) || 'Failed to complete order')
+    } finally {
+      setIsCompleting(false)
+    }
+  }
+
   // Validate orderId format
   if (orderId && !orderId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
     return (
@@ -131,6 +158,7 @@ export default function TicketingOrderDetail() {
   const event = (order as any).ticketed_events
   const orderItems = (order as any).ticket_order_items || []
   const canRefund = order.status === 'paid' && order.stripe_charge_id !== null
+  const isStuckOrder = order.status === 'pending_payment' && order.stripe_checkout_session_id !== null
 
   return (
     <div className="pa-root">
@@ -267,6 +295,26 @@ export default function TicketingOrderDetail() {
           )}
         </Card>
       </div>
+
+      {/* Complete Stuck Order */}
+      {isStuckOrder && (
+        <Card className="pa-mt-6">
+          <div className="pa-flex pa-items-center pa-justify-between">
+            <div>
+              <h3 className="pa-h3 pa-mb-2">⚠️ Stuck Order Detected</h3>
+              <p className="pa-body-xs pa-text-slate-500">
+                This order is stuck in pending_payment status. If the Stripe payment succeeded but the webhook failed, you can manually complete this order to generate tickets.
+              </p>
+              <p className="pa-body-xs pa-text-orange-600 pa-mt-2 pa-font-semibold">
+                ⚠️ Only use this if you've verified the payment succeeded in Stripe!
+              </p>
+            </div>
+            <Button variant="primary" onClick={handleCompleteOrder} disabled={isCompleting}>
+              {isCompleting ? 'Processing...' : 'Complete Order'}
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {/* Refund Action */}
       {canRefund && (
