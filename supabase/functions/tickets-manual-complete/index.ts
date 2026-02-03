@@ -32,7 +32,17 @@ function json(req: Request, body: unknown, status = 200) {
   })
 }
 
-// Generate QR token (128-bit+ opaque)
+// Generate QR token (128-bit+ opaque) - returns both raw and hash
+async function generateSecureToken(): Promise<{ raw: string; hash: string }> {
+  // Generate 64-character token (two UUIDs concatenated)
+  const uuid1 = crypto.randomUUID()
+  const uuid2 = crypto.randomUUID()
+  const raw = uuid1.replace(/-/g, '') + uuid2.replace(/-/g, '')
+  const hash = await hashToken(raw)
+  return { raw, hash }
+}
+
+// Legacy function for backward compatibility (deprecated)
 function generateQrToken(): string {
   const array = new Uint8Array(16)
   crypto.getRandomValues(array)
@@ -183,16 +193,17 @@ serve(async (req) => {
       return json(req, { error: "Failed to load order items" }, 500)
     }
 
-    // Create tickets
+    // Create tickets with raw tokens for email
     const tickets: any[] = []
+    const ticketsWithRawTokens: Array<{ ticket: any; qr_token_raw: string }> = []
+    
     for (const item of orderItems) {
       for (let i = 0; i < item.quantity; i++) {
-        const qrToken = generateQrToken()
+        const { raw: qrTokenRaw, hash: qrTokenHash } = await generateSecureToken()
         const entryCode = generateEntryCode()
-        const qrTokenHash = await hashToken(qrToken)
         const entryCodeNormalized = entryCode.toUpperCase().replace(/[^A-Z0-9]/g, "")
 
-        tickets.push({
+        const ticket = {
           org_id: order.org_id,
           ticketed_event_id: order.ticketed_event_id,
           order_id: orderId,
@@ -200,14 +211,21 @@ serve(async (req) => {
           status: "active",
           qr_token_hash: qrTokenHash,
           entry_code: entryCodeNormalized,
-        })
+        }
+        
+        tickets.push(ticket)
+        ticketsWithRawTokens.push({ ticket, qr_token_raw: qrTokenRaw })
       }
     }
 
-    // Insert tickets
-    const { error: ticketsError } = await supabase.from("tickets").insert(tickets)
-    if (ticketsError) {
-      return json(req, { error: `Failed to create tickets: ${ticketsError.message}` }, 500)
+    // Insert tickets and get IDs back
+    const { data: insertedTickets, error: ticketsError } = await supabase
+      .from("tickets")
+      .insert(tickets)
+      .select("id, entry_code, ticket_type_id")
+    
+    if (ticketsError || !insertedTickets) {
+      return json(req, { error: `Failed to create tickets: ${ticketsError?.message || "Unknown error"}` }, 500)
     }
 
     // Update order status
@@ -233,16 +251,34 @@ serve(async (req) => {
     // Delete holds
     await supabase.from("ticket_holds").delete().eq("order_id", orderId)
 
-    // Try to send receipt
+    // Try to send receipt with raw tokens
     const baseUrl = Deno.env.get("SUPABASE_URL")?.replace("/rest/v1", "") || ""
     try {
+      // Map inserted tickets with their raw tokens for email
+      const ticketsForEmail = insertedTickets.map((insertedTicket) => {
+        const match = ticketsWithRawTokens.find(
+          ({ ticket }) => 
+            ticket.entry_code === insertedTicket.entry_code &&
+            ticket.ticket_type_id === insertedTicket.ticket_type_id
+        )
+        return {
+          id: insertedTicket.id,
+          qr_token_raw: match?.qr_token_raw || "",
+          entry_code: insertedTicket.entry_code,
+          ticket_type_id: insertedTicket.ticket_type_id,
+        }
+      })
+      
       await fetch(`${baseUrl}/functions/v1/tickets-send-receipt`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${supabaseServiceRoleKey}`,
         },
-        body: JSON.stringify({ order_id: orderId }),
+        body: JSON.stringify({ 
+          order_id: orderId,
+          tickets_with_tokens: ticketsForEmail,
+        }),
       })
     } catch (receiptError) {
       console.error("Failed to send receipt:", receiptError)
@@ -252,7 +288,7 @@ serve(async (req) => {
     return json(req, {
       success: true,
       message: "Order completed successfully",
-      tickets_created: tickets.length,
+      tickets_created: insertedTickets.length,
     })
   } catch (error: any) {
     console.error("Error completing order:", error)

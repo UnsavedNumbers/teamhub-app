@@ -11997,6 +11997,7 @@ export type Database = {
         Args: { p_org_id: string }
         Returns: number
       }
+      get_org_slug_by_id: { Args: { p_org_id: string }; Returns: string }
       get_organization_users: {
         Args: { target_org_id: string }
         Returns: {

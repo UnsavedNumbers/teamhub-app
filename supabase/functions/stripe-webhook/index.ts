@@ -84,7 +84,17 @@ function buildWebhookResponse(options: {
   })
 }
 
-// Generate QR token (128-bit+ opaque)
+// Generate QR token (128-bit+ opaque) - returns both raw and hash
+async function generateSecureToken(): Promise<{ raw: string; hash: string }> {
+  // Generate 64-character token (two UUIDs concatenated)
+  const uuid1 = crypto.randomUUID()
+  const uuid2 = crypto.randomUUID()
+  const raw = uuid1.replace(/-/g, '') + uuid2.replace(/-/g, '')
+  const hash = await hashToken(raw)
+  return { raw, hash }
+}
+
+// Legacy function for backward compatibility (deprecated)
 function generateQrToken(): string {
   const array = new Uint8Array(16)
   crypto.getRandomValues(array)
@@ -443,17 +453,18 @@ serve(async (req) => {
             throw new Error("Failed to load order items")
           }
 
-          // Create tickets
+          // Create tickets with raw tokens for email
           const tickets: any[] = []
+          const ticketsWithRawTokens: Array<{ ticket: any; qr_token_raw: string }> = []
+          
           for (const item of orderItems) {
             for (let i = 0; i < item.quantity; i++) {
-              const qrToken = generateQrToken()
+              const { raw: qrTokenRaw, hash: qrTokenHash } = await generateSecureToken()
               const entryCode = generateEntryCode()
-              const qrTokenHash = await hashToken(qrToken)
               // Store entry code normalized (uppercase, no dashes)
               const entryCodeNormalized = entryCode.toUpperCase().replace(/[^A-Z0-9]/g, "")
 
-              tickets.push({
+              const ticket = {
                 org_id: order.org_id,
                 ticketed_event_id: order.ticketed_event_id,
                 order_id: orderId,
@@ -461,15 +472,21 @@ serve(async (req) => {
                 status: "active",
                 qr_token_hash: qrTokenHash,
                 entry_code: entryCodeNormalized,
-              })
+              }
+              
+              tickets.push(ticket)
+              ticketsWithRawTokens.push({ ticket, qr_token_raw: qrTokenRaw })
             }
           }
 
-          // Insert tickets
-          const { error: ticketsError } = await supabase.from("tickets").insert(tickets)
+          // Insert tickets and get IDs back
+          const { data: insertedTickets, error: ticketsError } = await supabase
+            .from("tickets")
+            .insert(tickets)
+            .select("id, entry_code, ticket_type_id")
 
-          if (ticketsError) {
-            throw new Error(`Failed to create tickets: ${ticketsError.message}`)
+          if (ticketsError || !insertedTickets) {
+            throw new Error(`Failed to create tickets: ${ticketsError?.message || "Unknown error"}`)
           }
 
           // Update order status and Connect fields
@@ -532,15 +549,27 @@ serve(async (req) => {
           await supabase.from("ticket_holds").delete().eq("order_id", orderId)
 
           // Send receipt (call tickets-send-receipt Edge Function)
+          // Pass raw tokens for QR code generation and access links
           const baseUrl = Deno.env.get("SUPABASE_URL")?.replace("/rest/v1", "") || ""
           try {
+            // Map tickets to include raw tokens for email
+            const ticketsForEmail = ticketsWithRawTokens.map(({ ticket, qr_token_raw }) => ({
+              id: ticket.id || null, // Will be set after insert
+              qr_token_raw,
+              entry_code: ticket.entry_code,
+              ticket_type_id: ticket.ticket_type_id,
+            }))
+            
             await fetch(`${baseUrl}/functions/v1/tickets-send-receipt`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${supabaseServiceRoleKey}`,
               },
-              body: JSON.stringify({ order_id: orderId }),
+              body: JSON.stringify({ 
+                order_id: orderId,
+                tickets_with_tokens: ticketsForEmail,
+              }),
             })
           } catch (receiptError) {
             console.error("Failed to send receipt:", receiptError)
@@ -557,8 +586,8 @@ serve(async (req) => {
           webhookResult.order_id = orderId
           webhookResult.org_id = metadataOrgId
           webhookResult.amount_cents = amountTotal
-          webhookResult.tickets_created = tickets.length
-          webhookResult.message = `Ticket sale completed: ${tickets.length} ticket(s) created for order ${orderId.slice(-8).toUpperCase()}`
+          webhookResult.tickets_created = insertedTickets.length
+          webhookResult.message = `Ticket sale completed: ${insertedTickets.length} ticket(s) created for order ${orderId.slice(-8).toUpperCase()}`
 
           break
         } else if (session.mode === "payment") {

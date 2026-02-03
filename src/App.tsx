@@ -58,7 +58,9 @@ import TicketEventDetail from './pages/ticketing/TicketEventDetail'
 import TicketOrderSuccess from './pages/ticketing/TicketOrderSuccess'
 import MyTickets from './pages/ticketing/MyTickets'
 import TicketAccess from './pages/ticketing/TicketAccess'
+import TicketAccessPage from './pages/ticketing/TicketAccessPage'
 import TicketScanner from './pages/ticketing/TicketScanner'
+import ResendTicketsPage from './pages/orders/ResendTicketsPage'
 // Org-scoped public ticketing routes
 import OrgScopedTicketEventList from './pages/ticketing/OrgScopedTicketEventList'
 import OrgScopedTicketEventDetail from './pages/ticketing/OrgScopedTicketEventDetail'
@@ -155,6 +157,8 @@ const TicketingOrderDetail = lazy(() => import('./pages/admin/TicketingOrderDeta
 const CreateTicketedEvent = lazy(() => import('./pages/admin/CreateTicketedEvent'))
 const CreateTicketType = lazy(() => import('./pages/admin/CreateTicketType'))
 const TicketedEventDetail = lazy(() => import('./pages/admin/TicketedEventDetail'))
+const CompTicketsPage = lazy(() => import('./pages/admin/CompTicketsPage'))
+const ValidationDashboard = lazy(() => import('./pages/admin/ValidationDashboard'))
 const CreateFee = lazy(() => import('./pages/admin/CreateFee'))
 const UniformOrders = lazy(() => import('./pages/admin/UniformOrders'))
 const CreateUniform = lazy(() => import('./pages/admin/CreateUniform'))
@@ -284,13 +288,16 @@ function AppWithTheme() {
           <Route path="/o/:orgSlug/tickets" element={<OrgScopedTicketEventList />} />
           <Route path="/o/:orgSlug/tickets/events/:eventId" element={<OrgScopedTicketEventDetail />} />
           <Route path="/o/:orgSlug/tickets/order/:orderId" element={<OrgScopedTicketOrderSuccess />} />
+          <Route path="/o/:orgSlug/tickets/access" element={<TicketAccessPage />} />
           <Route path="/o/:orgSlug/tickets/access/:token" element={<OrgScopedTicketAccess />} />
           
           {/* Legacy Public Ticketing Routes (deprecated - will be removed) */}
           <Route path="/tickets" element={<TicketEventList />} />
           <Route path="/tickets/events/:eventId" element={<TicketEventDetail />} />
           <Route path="/tickets/order/:orderId" element={<TicketOrderSuccess />} />
+          <Route path="/tickets/access" element={<TicketAccessPage />} />
           <Route path="/tickets/access/:token" element={<TicketAccess />} />
+          <Route path="/tickets/resend" element={<ResendTicketsPage />} />
           <Route path="/tickets/validate/:token" element={<TicketScanner />} />
           
           {/* Redirect /accept-invite to /portal/accept-invite for old email links */}
@@ -475,6 +482,8 @@ function AppWithTheme() {
               <Route path="ticketing/events/new" element={<FeatureGateRoute routeKey="admin.ticketingEvents.create"><Suspense fallback={<AdminLoadingSpinner />}><CreateTicketedEvent /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/events/:id/ticket-types/new" element={<FeatureGateRoute routeKey="admin.ticketingEvents.ticketTypes.create"><Suspense fallback={<AdminLoadingSpinner />}><CreateTicketType /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/events/:id" element={<FeatureGateRoute routeKey="admin.ticketingEvents.detail"><Suspense fallback={<AdminLoadingSpinner />}><TicketedEventDetail /></Suspense></FeatureGateRoute>} />
+              <Route path="ticketing/events/:id/dashboard" element={<FeatureGateRoute routeKey="admin.ticketingEvents.detail"><Suspense fallback={<AdminLoadingSpinner />}><ValidationDashboard /></Suspense></FeatureGateRoute>} />
+              <Route path="ticketing/comp-tickets" element={<FeatureGateRoute routeKey="admin.ticketingEvents.create"><Suspense fallback={<AdminLoadingSpinner />}><CompTicketsPage /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/orders" element={<FeatureGateRoute routeKey="admin.ticketingOrders"><Suspense fallback={<AdminLoadingSpinner />}><TicketingOrders /></Suspense></FeatureGateRoute>} />
               <Route path="ticketing/orders/:orderId" element={<FeatureGateRoute routeKey="admin.ticketingOrders"><Suspense fallback={<AdminLoadingSpinner />}><TicketingOrderDetail /></Suspense></FeatureGateRoute>} />
             

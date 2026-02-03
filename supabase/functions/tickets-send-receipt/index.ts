@@ -44,6 +44,79 @@ function generateToken(): string {
   return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("")
 }
 
+// Base64URL encode (URL-safe base64)
+function base64UrlEncode(buffer: Uint8Array): string {
+  const base64 = btoa(String.fromCharCode(...buffer))
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+}
+
+// Base64URL decode
+function base64UrlDecode(str: string): Uint8Array {
+  const base64 = str.replace(/-/g, '+').replace(/_/g, '/')
+  const padding = (4 - (base64.length % 4)) % 4
+  const padded = base64 + '='.repeat(padding)
+  const binary = atob(padded)
+  return new Uint8Array([...binary].map(char => char.charCodeAt(0)))
+}
+
+// Encrypt payload for access link
+async function encryptAccessPayload(payload: { ticket_id: string; qr_token: string; issued_at: number }): Promise<string> {
+  const secret = Deno.env.get("TICKET_LINK_SECRET") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
+  if (!secret) {
+    throw new Error("TICKET_LINK_SECRET not configured")
+  }
+
+  // Use AES-GCM for authenticated encryption
+  const encoder = new TextEncoder()
+  const payloadJson = JSON.stringify(payload)
+  const payloadData = encoder.encode(payloadJson)
+
+  // Derive key from secret using SHA-256
+  const secretKey = encoder.encode(secret)
+  const keyData = await crypto.subtle.digest("SHA-256", secretKey)
+  const key = await crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt"]
+  )
+
+  // Generate IV (12 bytes for GCM)
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+
+  // Encrypt
+  const encrypted = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    key,
+    payloadData
+  )
+
+  // Combine IV and encrypted data
+  const combined = new Uint8Array(iv.length + encrypted.byteLength)
+  combined.set(iv)
+  combined.set(new Uint8Array(encrypted), iv.length)
+
+  // Base64URL encode for URL safety
+  return base64UrlEncode(combined)
+}
+
+// Generate access link for a ticket
+async function generateAccessLink(ticketId: string, qrToken: string, baseUrl: string, orgSlug?: string): Promise<string> {
+  const payload = {
+    ticket_id: ticketId,
+    qr_token: qrToken,
+    issued_at: Date.now(),
+  }
+
+  const encrypted = await encryptAccessPayload(payload)
+  
+  if (orgSlug) {
+    return `${baseUrl}/o/${orgSlug}/tickets/access?t=${encrypted}`
+  }
+  return `${baseUrl}/tickets/access?t=${encrypted}`
+}
+
 serve(async (req) => {
   // Preflight
   if (req.method === "OPTIONS") {
@@ -121,16 +194,30 @@ serve(async (req) => {
       return json(req, { success: true, email_sent: true, skipped: true })
     }
 
-    // Load tickets to verify they exist and get entry_code for QR
+    // Load tickets with ticket types for email
     const { data: tickets, error: ticketsError } = await supabase
       .from("tickets")
-      .select("id, entry_code")
+      .select(`
+        id,
+        entry_code,
+        ticket_type_id,
+        ticket_types (
+          name
+        )
+      `)
       .eq("order_id", orderId)
-      .limit(1)
 
     if (ticketsError || !tickets || tickets.length === 0) {
       return json(req, { error: "No tickets found for order" }, 400)
     }
+
+    // If tickets_with_tokens provided, use those; otherwise fall back to loading from DB
+    const ticketsForEmail = ticketsWithTokens || tickets.map(t => ({
+      id: t.id,
+      qr_token_raw: "", // Will use entry_code fallback
+      entry_code: t.entry_code,
+      ticket_type_id: t.ticket_type_id,
+    }))
 
     // Load order items
     const { data: orderItems } = await supabase
@@ -219,18 +306,29 @@ serve(async (req) => {
       )
       .join("")
 
-    // Generate QR code from first ticket's entry_code (T7: exact entry_code, no transformation)
-    let qrImageDataUrl = ""
-    const firstTicket = tickets[0]
-    if (firstTicket?.entry_code) {
+    // Generate QR codes for tickets (prefer QR token, fallback to entry_code)
+    const ticketQRCodes: Array<{ ticket_id: string; qr_data_url: string }> = []
+    for (const ticketLink of ticketLinks) {
       try {
-        // Generate QR code as base64 (T7: encode exactly entry_code)
-        const qrBase64 = await qrcode(firstTicket.entry_code, { size: 250 })
-        qrImageDataUrl = `data:image/png;base64,${qrBase64}`
+        // Use QR token if available, otherwise use entry_code
+        const qrValue = ticketLink.qr_token_raw || ticketLink.entry_code
+        if (qrValue) {
+          const qrBase64 = await qrcode(qrValue, { size: 250 })
+          ticketQRCodes.push({
+            ticket_id: ticketLink.ticket_id,
+            qr_data_url: `data:image/png;base64,${qrBase64}`,
+          })
+        }
       } catch (qrError) {
-        console.error("Failed to generate QR code:", qrError)
-        // Continue without QR - email will still send with link only
+        console.error(`Failed to generate QR code for ticket ${ticketLink.ticket_id}:`, qrError)
+        // Continue without QR for this ticket
       }
+    }
+    
+    // Legacy: first ticket QR for backward compatibility
+    let qrImageDataUrl = ""
+    if (ticketQRCodes.length > 0) {
+      qrImageDataUrl = ticketQRCodes[0].qr_data_url
     }
 
     // Build payload for notification_jobs
@@ -241,7 +339,19 @@ serve(async (req) => {
       event_location: eventLocation,
       items_html: itemsHtml,
       total: `$${(order.total_cents / 100).toFixed(2)}`,
-      qr_image_data_url: qrImageDataUrl,
+      qr_image_data_url: qrImageDataUrl, // Legacy: first ticket QR
+      ticket_links: ticketLinks.map(link => ({
+        ticket_id: link.ticket_id,
+        ticket_type_name: link.ticket_type_name,
+        entry_code: link.entry_code,
+        access_link: link.access_link,
+        formatted_entry_code: link.entry_code.length >= 12
+          ? `${link.entry_code.slice(0, 4)}-${link.entry_code.slice(4, 8)}-${link.entry_code.slice(8)}`
+          : link.entry_code.length >= 8
+          ? `${link.entry_code.slice(0, 4)}-${link.entry_code.slice(4)}`
+          : link.entry_code,
+      })),
+      ticket_qr_codes: ticketQRCodes, // QR codes keyed by ticket_id
     }
 
     // Insert notification job

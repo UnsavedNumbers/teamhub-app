@@ -6,6 +6,7 @@
 
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
+import { USE_FAKE_DATA } from '../config'
 import type {
   TicketedEvent,
   TicketType,
@@ -21,6 +22,16 @@ import type {
 } from '../../types/ticketing'
 import { normalizeSupabaseResponse, createServiceResponse } from './responseHelpers'
 import { assertNotDemoMode } from '@/utils/demoMode'
+import { classifySupabaseError, ValidationError } from '@/utils/supabaseErrorHandler'
+import {
+  createFakeCheckoutSession,
+  getFakeMyTicketOrders,
+  getFakeTicketedEvent,
+  getFakeTicketedEvents,
+  getFakeTicketOrderById,
+  getFakeTicketTypes,
+  getFakeTicketsForOrder,
+} from '../fake/ticketingFakeService'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || ''
 const FUNCTIONS_URL = `${SUPABASE_URL.replace('/rest/v1', '')}/functions/v1`
@@ -34,26 +45,35 @@ export async function getTicketedEvents(filters?: {
   status?: 'published' | 'draft' | 'cancelled' | 'completed'
   upcoming_only?: boolean
 }) {
-  let query = supabase
-    .from('ticketed_events')
-    .select('*')
-    .order('starts_at', { ascending: true })
-
-  if (filters?.org_id) {
-    query = query.eq('org_id', filters.org_id)
+  if (USE_FAKE_DATA) {
+    return getFakeTicketedEvents(filters)
   }
 
-  if (filters?.status) {
-    query = query.eq('status', filters.status)
+  try {
+    let query = supabase
+      .from('ticketed_events')
+      .select('*')
+      .order('starts_at', { ascending: true })
+
+    if (filters?.org_id) {
+      query = query.eq('org_id', filters.org_id)
+    }
+
+    if (filters?.status) {
+      query = query.eq('status', filters.status)
+    }
+
+    if (filters?.upcoming_only) {
+      query = query.gte('starts_at', new Date().toISOString())
+    }
+
+    const { data, error } = await query
+    if (error) throw error
+
+    return normalizeSupabaseResponse<TicketedEvent[]>(data as unknown as TicketedEvent[], true)
+  } catch (error) {
+    throw classifySupabaseError(error, 'Ticketed events')
   }
-
-  if (filters?.upcoming_only) {
-    query = query.gte('starts_at', new Date().toISOString())
-  }
-
-  const { data } = await query
-
-  return normalizeSupabaseResponse<TicketedEvent[]>(data as unknown as TicketedEvent[], true)
 }
 
 /**
@@ -62,17 +82,58 @@ export async function getTicketedEvents(filters?: {
  */
 export async function getTicketedEventById(id: string, orgId: string) {
   if (!orgId) {
-    throw new Error('orgId is required for public event queries')
+    throw new ValidationError('Organization ID is required for public event queries')
   }
 
-  const { data } = await supabase
-    .from('ticketed_events')
-    .select('*')
-    .eq('id', id)
-    .eq('org_id', orgId) // CRITICAL: Always filter by org_id for public routes
-    .single()
+  if (USE_FAKE_DATA) {
+    const event = getFakeTicketedEvent(id, orgId)
+    if (!event) throw new Error('Ticketed event not found')
+    return event
+  }
 
-  return normalizeSupabaseResponse<TicketedEvent>(data as unknown as TicketedEvent, false)
+  try {
+    const { data, error } = await supabase
+      .from('ticketed_events')
+      .select('*')
+      .eq('id', id)
+      .eq('org_id', orgId) // CRITICAL: Always filter by org_id for public routes
+      .single()
+
+    if (error) throw error
+
+    return normalizeSupabaseResponse<TicketedEvent>(data as unknown as TicketedEvent, false)
+  } catch (error) {
+    throw classifySupabaseError(error, 'Ticketed event')
+  }
+}
+
+/**
+ * Get ticketed event by ID (public - no org scope)
+ * Only returns published events
+ */
+export async function getPublicTicketedEventById(id: string) {
+  if (USE_FAKE_DATA) {
+    const event = getFakeTicketedEvent(id, null)
+    if (!event || event.status !== 'published') {
+      throw new Error('Ticketed event not found')
+    }
+    return event
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('ticketed_events')
+      .select('*')
+      .eq('id', id)
+      .eq('status', 'published')
+      .single()
+
+    if (error) throw error
+
+    return normalizeSupabaseResponse<TicketedEvent>(data as unknown as TicketedEvent, false)
+  } catch (error) {
+    throw classifySupabaseError(error, 'Ticketed event')
+  }
 }
 
 /**
@@ -80,6 +141,12 @@ export async function getTicketedEventById(id: string, orgId: string) {
  * Only use this when org context is already enforced by RLS or admin context
  */
 export async function getTicketedEventByIdAdmin(id: string) {
+  if (USE_FAKE_DATA) {
+    const event = getFakeTicketedEvent(id, null)
+    if (!event) throw new Error('Ticketed event not found')
+    return event
+  }
+
   const { data } = await supabase
     .from('ticketed_events')
     .select('*')
@@ -98,35 +165,88 @@ export async function getTicketedEventByIdAdmin(id: string) {
  */
 export async function getTicketTypesForEvent(ticketedEventId: string, orgId: string) {
   if (!orgId) {
-    throw new Error('orgId is required for public ticket type queries')
+    throw new ValidationError('Organization ID is required for public ticket type queries')
   }
 
-  // First verify the event belongs to the org
-  const { data: event } = await supabase
-    .from('ticketed_events')
-    .select('id, org_id')
-    .eq('id', ticketedEventId)
-    .eq('org_id', orgId)
-    .single()
-
-  if (!event) {
-    return normalizeSupabaseResponse<TicketType[]>([], true)
+  if (USE_FAKE_DATA) {
+    return getFakeTicketTypes(ticketedEventId, orgId)
   }
 
-  const { data } = await supabase
-    .from('ticket_types')
-    .select('*')
-    .eq('ticketed_event_id', ticketedEventId)
-    .eq('is_active', true)
-    .order('sort_order', { ascending: true })
+  try {
+    // First verify the event belongs to the org
+    const { data: event, error: eventError } = await supabase
+      .from('ticketed_events')
+      .select('id, org_id')
+      .eq('id', ticketedEventId)
+      .eq('org_id', orgId)
+      .single()
 
-  return normalizeSupabaseResponse<TicketType[]>(data as unknown as TicketType[], true)
+    if (eventError) throw eventError
+
+    if (!event) {
+      return normalizeSupabaseResponse<TicketType[]>([], true)
+    }
+
+    const { data, error } = await supabase
+      .from('ticket_types')
+      .select('*')
+      .eq('ticketed_event_id', ticketedEventId)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+
+    if (error) throw error
+
+    return normalizeSupabaseResponse<TicketType[]>(data as unknown as TicketType[], true)
+  } catch (error) {
+    throw classifySupabaseError(error, 'Ticket types')
+  }
+}
+
+/**
+ * Get ticket types for an event (public - no org scope)
+ * Only returns types for published events
+ */
+export async function getPublicTicketTypesForEvent(ticketedEventId: string) {
+  if (USE_FAKE_DATA) {
+    return getFakeTicketTypes(ticketedEventId, null)
+  }
+
+  try {
+    const { data: event, error: eventError } = await supabase
+      .from('ticketed_events')
+      .select('id, status')
+      .eq('id', ticketedEventId)
+      .eq('status', 'published')
+      .single()
+
+    if (eventError) throw eventError
+    if (!event) {
+      return normalizeSupabaseResponse<TicketType[]>([], true)
+    }
+
+    const { data, error } = await supabase
+      .from('ticket_types')
+      .select('*')
+      .eq('ticketed_event_id', ticketedEventId)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+
+    if (error) throw error
+
+    return normalizeSupabaseResponse<TicketType[]>(data as unknown as TicketType[], true)
+  } catch (error) {
+    throw classifySupabaseError(error, 'Ticket types')
+  }
 }
 
 /**
  * Get ticket types for an event (admin/internal use)
  */
 export async function getTicketTypesForEventAdmin(ticketedEventId: string) {
+  if (USE_FAKE_DATA) {
+    return getFakeTicketTypes(ticketedEventId, null)
+  }
+
   const { data } = await supabase
     .from('ticket_types')
     .select('*')
@@ -168,51 +288,122 @@ export async function createTicketType(
  */
 export async function getTicketOrderById(orderId: string, orgId: string) {
   if (!orgId) {
-    throw new Error('orgId is required for public order queries')
+    throw new ValidationError('Organization ID is required for public order queries')
   }
 
-  const { data } = await supabase
-    .from('ticket_orders')
-    .select(`
-      *,
-      ticket_order_items (
-        *,
-        ticket_types (
-          name,
-          description
-        )
-      ),
-      ticketed_events (
-        id,
-        title,
-        starts_at,
-        ends_at,
-        venue_name,
-        venue_city,
-        venue_state
-      )
-    `)
-    .eq('id', orderId)
-    .eq('org_id', orgId) // CRITICAL: Always filter by org_id for public routes
-    .single()
+  if (USE_FAKE_DATA) {
+    const order = getFakeTicketOrderById(orderId, orgId)
+    if (!order) throw new Error('Order not found')
+    return order
+  }
 
-  return normalizeSupabaseResponse<TicketOrder & {
-    ticket_order_items: Array<TicketOrderItem & {
-      ticket_types: Pick<TicketType, 'name' | 'description'>
-    }>
-    ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
-  }>(data as unknown as (TicketOrder & {
-    ticket_order_items: Array<TicketOrderItem & {
-      ticket_types: Pick<TicketType, 'name' | 'description'>
-    }>
-    ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
-  }), false)
+  try {
+    const { data, error } = await supabase
+      .from('ticket_orders')
+      .select(`
+        *,
+        ticket_order_items (
+          *,
+          ticket_types (
+            name,
+            description
+          )
+        ),
+        ticketed_events (
+          id,
+          title,
+          starts_at,
+          ends_at,
+          venue_name,
+          venue_city,
+          venue_state
+        )
+      `)
+      .eq('id', orderId)
+      .eq('org_id', orgId) // CRITICAL: Always filter by org_id for public routes
+      .single()
+
+    if (error) throw error
+
+    return normalizeSupabaseResponse<TicketOrder & {
+      ticket_order_items: Array<TicketOrderItem & {
+        ticket_types: Pick<TicketType, 'name' | 'description'>
+      }>
+      ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
+    }>(data as unknown as (TicketOrder & {
+      ticket_order_items: Array<TicketOrderItem & {
+        ticket_types: Pick<TicketType, 'name' | 'description'>
+      }>
+      ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
+    }), false)
+  } catch (error) {
+    throw classifySupabaseError(error, 'Ticket order')
+  }
+}
+
+/**
+ * Get ticket order by ID (public - no org scope)
+ */
+export async function getPublicTicketOrderById(orderId: string) {
+  if (USE_FAKE_DATA) {
+    const order = getFakeTicketOrderById(orderId, null)
+    if (!order) throw new Error('Order not found')
+    return order
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('ticket_orders')
+      .select(`
+        *,
+        ticket_order_items (
+          *,
+          ticket_types (
+            name,
+            description
+          )
+        ),
+        ticketed_events (
+          id,
+          title,
+          starts_at,
+          ends_at,
+          venue_name,
+          venue_city,
+          venue_state
+        )
+      `)
+      .eq('id', orderId)
+      .single()
+
+    if (error) throw error
+
+    return normalizeSupabaseResponse<TicketOrder & {
+      ticket_order_items: Array<TicketOrderItem & {
+        ticket_types: Pick<TicketType, 'name' | 'description'>
+      }>
+      ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
+    }>(data as unknown as (TicketOrder & {
+      ticket_order_items: Array<TicketOrderItem & {
+        ticket_types: Pick<TicketType, 'name' | 'description'>
+      }>
+      ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
+    }), false)
+  } catch (error) {
+    throw classifySupabaseError(error, 'Ticket order')
+  }
 }
 
 /**
  * Get ticket order by ID (admin/internal use)
  */
 export async function getTicketOrderByIdAdmin(orderId: string) {
+  if (USE_FAKE_DATA) {
+    const order = getFakeTicketOrderById(orderId, null)
+    if (!order) throw new Error('Order not found')
+    return order
+  }
+
   const { data } = await supabase
     .from('ticket_orders')
     .select(`
@@ -254,6 +445,10 @@ export async function getTicketOrderByIdAdmin(orderId: string) {
 // (stripe_connect_account_id, platform_fee_cents, org_revenue_cents, stripe_charge_id, stripe_application_fee_id, processed_at)
 
 export async function getMyTicketOrders() {
+  if (USE_FAKE_DATA) {
+    return createServiceResponse<TicketOrder[]>(getFakeMyTicketOrders(), null)
+  }
+
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -283,34 +478,44 @@ export async function getMyTicketOrders() {
 // ============================================================================
 
 export async function getTicketsForOrder(orderId: string) {
-  const { data } = await supabase
-    .from('tickets')
-    .select(`
-      *,
-      ticket_types (
-        name,
-        description
-      ),
-      ticketed_events (
-        id,
-        title,
-        starts_at,
-        ends_at,
-        venue_name,
-        venue_city,
-        venue_state
-      )
-    `)
-    .eq('order_id', orderId)
-    .order('created_at', { ascending: true })
+  if (USE_FAKE_DATA) {
+    return getFakeTicketsForOrder(orderId)
+  }
 
-  return normalizeSupabaseResponse<Array<Ticket & {
-    ticket_types: Pick<TicketType, 'name' | 'description'>
-    ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
-  }>>(data as unknown as Array<Ticket & {
-    ticket_types: Pick<TicketType, 'name' | 'description'>
-    ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
-  }>, true)
+  try {
+    const { data, error } = await supabase
+      .from('tickets')
+      .select(`
+        *,
+        ticket_types (
+          name,
+          description
+        ),
+        ticketed_events (
+          id,
+          title,
+          starts_at,
+          ends_at,
+          venue_name,
+          venue_city,
+          venue_state
+        )
+      `)
+      .eq('order_id', orderId)
+      .order('created_at', { ascending: true })
+
+    if (error) throw error
+
+    return normalizeSupabaseResponse<Array<Ticket & {
+      ticket_types: Pick<TicketType, 'name' | 'description'>
+      ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
+    }>>(data as unknown as Array<Ticket & {
+      ticket_types: Pick<TicketType, 'name' | 'description'>
+      ticketed_events: Pick<TicketedEvent, 'id' | 'title' | 'starts_at' | 'ends_at' | 'venue_name' | 'venue_city' | 'venue_state'>
+    }>, true)
+  } catch (error) {
+    throw classifySupabaseError(error, 'Tickets')
+  }
 }
 
 /**
@@ -319,7 +524,15 @@ export async function getTicketsForOrder(orderId: string) {
  */
 export async function getTicketsByAccessToken(token: string, orgId: string) {
   if (!orgId) {
-    throw new Error('orgId is required for public ticket access queries')
+    throw new ValidationError('Organization ID is required for public ticket access queries')
+  }
+
+  if (USE_FAKE_DATA) {
+    const tickets = getFakeTicketsForOrder(token)
+    if (tickets.length === 0 || tickets[0].org_id !== orgId) {
+      throw new Error('Invalid access token')
+    }
+    return tickets
   }
 
   // Hash token and lookup access link
@@ -363,6 +576,51 @@ async function hashToken(token: string): Promise<string> {
 }
 
 // ============================================================================
+// Ticket Access Link Decryption
+// ============================================================================
+
+export interface DecryptAccessLinkResponse {
+  id: string
+  entry_code: string
+  qr_token: string
+  status: string
+  ticket_type_name: string
+  event_id: string
+  event_name: string
+  event_date: string
+  event_location: string
+  purchaser_name: string
+  purchaser_email: string
+}
+
+export async function decryptTicketAccessLink(
+  encryptedPayload: string,
+): Promise<{ data: DecryptAccessLinkResponse | null; error: Error | null }> {
+  try {
+    const response = await fetch(`${FUNCTIONS_URL}/tickets-decrypt-access`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ payload: encryptedPayload }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      return createServiceResponse<DecryptAccessLinkResponse>(
+        null,
+        new Error(errorData.error || 'Failed to decrypt access link')
+      )
+    }
+
+    const data = await response.json()
+    return createServiceResponse<DecryptAccessLinkResponse>(data, null)
+  } catch (error: any) {
+    return createServiceResponse<DecryptAccessLinkResponse>(null, error)
+  }
+}
+
+// ============================================================================
 // Checkout
 // ============================================================================
 
@@ -370,17 +628,36 @@ export async function createCheckoutSession(
   request: CreateCheckoutRequest,
 ): Promise<{ data: CreateCheckoutResponse | null; error: Error | null }> {
   try {
+    if (!request.ticketed_event_id) {
+      return createServiceResponse<CreateCheckoutResponse>(null, new ValidationError('Event is required'))
+    }
+    if (!request.items?.length) {
+      return createServiceResponse<CreateCheckoutResponse>(null, new ValidationError('Select at least one ticket'))
+    }
+    const email = request.purchaser_email?.trim() || ''
+    if (!email) {
+      return createServiceResponse<CreateCheckoutResponse>(null, new ValidationError('Email is required'))
+    }
+    if (request.items.some(item => !item.ticket_type_id || item.quantity <= 0)) {
+      return createServiceResponse<CreateCheckoutResponse>(null, new ValidationError('Ticket quantities must be greater than zero'))
+    }
+
+    if (USE_FAKE_DATA) {
+      return createFakeCheckoutSession(request)
+    }
+
     // Always include return_base_url when window is available (T3)
     const requestWithBaseUrl: CreateCheckoutRequest = {
       ...request,
       return_base_url: typeof window !== 'undefined' ? window.location.origin : request.return_base_url,
     }
-    
+    const session = await supabase.auth.getSession()
+    const accessToken = session.data.session?.access_token
     const response = await fetch(`${FUNCTIONS_URL}/tickets-create-checkout`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}`,
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       },
       body: JSON.stringify(requestWithBaseUrl),
     })
@@ -448,6 +725,110 @@ export async function validateTicketScan(
     return createServiceResponse<ValidateScanResponse>(data, null)
   } catch (error: any) {
     return createServiceResponse<ValidateScanResponse>(null, error)
+  }
+}
+
+// ============================================================================
+// Staff Link Exchange
+// ============================================================================
+
+// ============================================================================
+// Resend Tickets
+// ============================================================================
+
+export interface ResendTicketsRequest {
+  order_id: string
+  email: string
+}
+
+export interface ResendTicketsResponse {
+  success: boolean
+  message: string
+  tickets_resent: number
+}
+
+export async function resendTickets(
+  request: ResendTicketsRequest,
+): Promise<{ data: ResendTicketsResponse | null; error: Error | null }> {
+  try {
+    const response = await fetch(`${FUNCTIONS_URL}/resend-tickets`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      return createServiceResponse<ResendTicketsResponse>(
+        null,
+        new Error(errorData.error || 'Failed to resend tickets')
+      )
+    }
+
+    const data = await response.json()
+    return createServiceResponse<ResendTicketsResponse>(data, null)
+  } catch (error: any) {
+    return createServiceResponse<ResendTicketsResponse>(null, error)
+  }
+}
+
+// ============================================================================
+// Staff Link Exchange
+// ============================================================================
+
+// ============================================================================
+// Comp Ticket Generation
+// ============================================================================
+
+export interface GenerateCompTicketsRequest {
+  event_id: string
+  ticket_type_id: string
+  quantity: number
+  recipient_email: string
+  recipient_name?: string
+  notes?: string
+}
+
+export interface GenerateCompTicketsResponse {
+  success: boolean
+  order_id: string
+  tickets_created: number
+  message: string
+}
+
+export async function generateCompTickets(
+  request: GenerateCompTicketsRequest,
+): Promise<{ data: GenerateCompTicketsResponse | null; error: Error | null }> {
+  try {
+    const session = await supabase.auth.getSession()
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+
+    if (session.data.session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.data.session.access_token}`
+    }
+
+    const response = await fetch(`${FUNCTIONS_URL}/generate-comp-tickets`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(request),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      return createServiceResponse<GenerateCompTicketsResponse>(
+        null,
+        new Error(errorData.error || 'Failed to generate comp tickets')
+      )
+    }
+
+    const data = await response.json()
+    return createServiceResponse<GenerateCompTicketsResponse>(data, null)
+  } catch (error: any) {
+    return createServiceResponse<GenerateCompTicketsResponse>(null, error)
   }
 }
 
