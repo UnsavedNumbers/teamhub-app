@@ -1,4 +1,4 @@
-import { TicketSaleStatus, TicketedEvent, TicketingProgram, TicketingSeason, TicketingVenue } from '@/types/ticketing'
+import { TicketSaleStatus, TicketedEvent, TicketType, TicketingProgram, TicketingSeason, TicketingVenue } from '@/types/ticketing'
 import { DEMO_ORG_A_ID } from '../config'
 
 type TicketingEventWithDerived = TicketedEvent & {
@@ -253,6 +253,26 @@ const fakeOrdersByEvent: Record<string, { ticketsSold: number; revenueCents: num
   'evt-6': { ticketsSold: 0, revenueCents: 0 },
 }
 
+function mapTicketType(event: TicketingEventWithDerived, type: TicketingEventWithDerived['ticket_types'][number], index: number): TicketType {
+  return {
+    id: type.id,
+    org_id: event.org_id,
+    ticketed_event_id: event.id,
+    name: type.name,
+    description: null,
+    price_cents: type.price_cents,
+    currency: 'USD',
+    capacity_total: type.capacity_total ?? null,
+    capacity_remaining: type.capacity_remaining ?? null,
+    sales_start_at: event.sales_start_at ?? null,
+    sales_end_at: event.sales_end_at ?? null,
+    sort_order: index,
+    is_active: true,
+    created_at: event.created_at,
+    updated_at: event.updated_at,
+  }
+}
+
 function computeSaleStatus(event: TicketingEventWithDerived, ticketsSold: number, capacity: number | null): TicketSaleStatus {
   const now = new Date()
   if (event.status !== 'published') return 'off'
@@ -482,4 +502,31 @@ export function bulkFakeTicketingEvents(orgId: string, ids: string[], action: st
     return { duplicated: created.length, new_ids: created }
   }
   return { handled: false }
+}
+
+export function getFakeTicketedEventById(eventId: string, orgId?: string | null): TicketedEvent | null {
+  const match = events.find(event => event.id === eventId && (!orgId || event.org_id === orgId))
+  return match ? deriveEvent(match) : null
+}
+
+export function getFakeTicketTypesForEvent(eventId: string, orgId?: string | null): TicketType[] {
+  const match = events.find(event => event.id === eventId && (!orgId || event.org_id === orgId))
+  if (!match || !match.ticket_types) return []
+  return match.ticket_types.map((type, index) => mapTicketType(match, type, index))
+}
+
+export function adjustFakeTicketTypeCapacity(eventId: string, ticketTypeId: string, delta: number): boolean {
+  const eventIndex = events.findIndex(event => event.id === eventId)
+  if (eventIndex === -1) return false
+  const event = events[eventIndex]
+  if (!event.ticket_types) return false
+  const ticketType = event.ticket_types.find(type => type.id === ticketTypeId)
+  if (!ticketType) return false
+  if (ticketType.capacity_remaining === null || ticketType.capacity_remaining === undefined) {
+    return true
+  }
+  const nextRemaining = ticketType.capacity_remaining + delta
+  if (nextRemaining < 0) return false
+  ticketType.capacity_remaining = nextRemaining
+  return true
 }
